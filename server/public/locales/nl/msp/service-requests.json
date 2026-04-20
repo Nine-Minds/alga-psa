@@ -1,0 +1,270 @@
+{
+  "management": {
+    "title": "Serviceaanvragen",
+    "description": "Beheer concept-, gepubliceerde en gearchiveerde serviceaanvraagdefinities.",
+    "showArchived": "Gearchiveerde tonen",
+    "showArchivedWithCount": "Gearchiveerde tonen ({{count}})",
+    "createBlank": "Leeg aanmaken",
+    "startFromExample": "Starten vanuit voorbeeld",
+    "loading": "Serviceaanvragen laden…",
+    "columns": {
+      "name": "Naam",
+      "description": "Beschrijving",
+      "state": "Status",
+      "updated": "Bijgewerkt",
+      "actions": "Acties"
+    },
+    "actionsFor": "Acties voor {{name}}",
+    "actions": {
+      "duplicate": "Dupliceren",
+      "archive": "Archiveren",
+      "unarchive": "Dearchiveren"
+    },
+    "lifecycleLabels": {
+      "published": "Gepubliceerd",
+      "archived": "Gearchiveerd",
+      "draftChanges": "Conceptwijzigingen",
+      "draft": "Concept"
+    },
+    "templateOption": "{{templateName}} ({{providerDisplayName}})"
+  },
+  "editor": {
+    "backNav": "Terug naar Serviceaanvragen",
+    "loading": "Definitie-editor laden…",
+    "notFound": "Serviceaanvraagdefinitie niet gevonden.",
+    "currentState": "Huidige status: {{state}}",
+    "saveDraft": "Concept opslaan",
+    "createDraft": "Concept aanmaken",
+    "publish": "Publiceren",
+    "publishing": "Publiceren…",
+    "basics": {
+      "title": "Basisgegevens",
+      "name": "Naam",
+      "icon": "Pictogram",
+      "iconSelected": "Geselecteerd: {{label}}",
+      "noIconSelected": "Geen pictogram geselecteerd",
+      "description": "Beschrijving",
+      "category": "Categorie",
+      "sortOrder": "Sorteervolgorde",
+      "save": "Basisgegevens opslaan",
+      "uncategorized": "Niet-gecategoriseerd"
+    },
+    "preview": {
+      "title": "Voorbeeld",
+      "badge": "Live voorbeeld",
+      "cardSubheading": "Cataloguskaart",
+      "formSubheading": "Aanvraagformulier"
+    },
+    "linkage": {
+      "title": "Koppeling",
+      "linkedService": "Gekoppelde service",
+      "searchPlaceholder": "Servicecatalogus zoeken",
+      "search": "Zoeken",
+      "clear": "Wissen",
+      "select": "Selecteren",
+      "noDescription": "Geen beschrijving",
+      "unset": "-"
+    },
+    "form": {
+      "title": "Formulier",
+      "authorFields": "Velden beheren",
+      "fieldType": "Veldtype",
+      "addField": "Veld toevoegen",
+      "noFields": "Geen velden geconfigureerd.",
+      "preview": "Voorbeeld van weergegeven formulier",
+      "label": "Label",
+      "helpText": "Helptekst",
+      "required": "Verplicht",
+      "defaultValue": "Standaardwaarde",
+      "options": "Opties (één per regel: waarde:label)",
+      "moveUp": "Omhoog verplaatsen",
+      "moveDown": "Omlaag verplaatsen",
+      "remove": "Verwijderen",
+      "selectOption": "Selecteer een optie",
+      "checkboxDefaults": {
+        "none": "Geen standaardwaarde",
+        "checked": "Aangevinkt",
+        "unchecked": "Niet aangevinkt"
+      },
+      "types": {
+        "short-text": "short-text",
+        "long-text": "long-text",
+        "select": "select",
+        "checkbox": "checkbox",
+        "date": "date",
+        "file-upload": "file-upload"
+      }
+    },
+    "execution": {
+      "title": "Uitvoering",
+      "executionProvider": "Uitvoeringsprovider",
+      "formBehaviorProvider": "Provider voor formuliergedrag",
+      "visibilityProvider": "Zichtbaarheidsprovider",
+      "providerDisplay": "{{displayName}} ({{executionMode}})",
+      "ticketRouting": {
+        "title": "Configuratie ticketrouting",
+        "board": "Board",
+        "boardPlaceholder": "Board selecteren",
+        "status": "Status",
+        "statusPlaceholder": "Status selecteren",
+        "assignedUser": "Toegewezen gebruiker",
+        "assignedUserPlaceholder": "Niet toegewezen",
+        "category": "Categorie",
+        "categoryPlaceholder": "Categorie selecteren",
+        "priority": "Prioriteit",
+        "priorityPlaceholder": "Prioriteit selecteren",
+        "impact": "Impact",
+        "impactPlaceholder": "Impact selecteren",
+        "urgency": "Urgentie",
+        "urgencyPlaceholder": "Urgentie selecteren",
+        "priorityCalculated": "Prioriteit (berekend)",
+        "selectImpactAndUrgency": "Selecteer impact en urgentie",
+        "priorityFormula": "{{label}} (Impact {{impact}} x Urgentie {{urgency}})",
+        "titleFieldKey": "Sleutel titelveld",
+        "descriptionPrefix": "Beschrijvingsprefix",
+        "save": "Ticketrouting opslaan"
+      },
+      "workflow": {
+        "title": "Workflowconfiguratie",
+        "workflowId": "Workflow-ID",
+        "workflowIdPlaceholder": "workflow-id",
+        "inputMapping": "Workflow-invoertoewijzing (JSON-object)",
+        "inputMappingExample": "Voorbeeld: {\"requestedBy\":\"payload.request_title\",\"ticketReference\":\"ticketId\"}",
+        "save": "Workflow-instellingen opslaan"
+      },
+      "advanced": {
+        "title": "Geavanceerd formuliergedrag",
+        "config": "Configuratie formuliergedrag (JSON-object)",
+        "save": "Configuratie formuliergedrag opslaan"
+      },
+      "visibility": {
+        "title": "Zichtbaarheidsconfiguratie",
+        "config": "Zichtbaarheidsconfiguratie (JSON-object)",
+        "save": "Zichtbaarheidsconfiguratie opslaan"
+      },
+      "fields": {
+        "executionProvider": "Uitvoeringsprovider",
+        "executionConfig": "Uitvoeringsconfiguratie",
+        "formBehaviorProvider": "Provider voor formuliergedrag",
+        "visibilityProvider": "Zichtbaarheidsprovider"
+      },
+      "itilImpact": {
+        "1": "1 - Hoog (Kritieke bedrijfsfunctie getroffen)",
+        "2": "2 - Middelhoog (Belangrijke functie getroffen)",
+        "3": "3 - Gemiddeld (Ondergeschikte functie getroffen)",
+        "4": "4 - Middellaag (Minimale impact)",
+        "5": "5 - Laag (Geen bedrijfsimpact)"
+      },
+      "itilUrgency": {
+        "1": "1 - Hoog (Werk kan niet doorgaan)",
+        "2": "2 - Middelhoog (Werk ernstig belemmerd)",
+        "3": "3 - Gemiddeld (Werk gaat door met beperkingen)",
+        "4": "4 - Middellaag (Klein ongemak)",
+        "5": "5 - Laag (Werk gaat normaal door)"
+      }
+    },
+    "publishSection": {
+      "title": "Publiceren",
+      "currentDraftState": "Huidige conceptstatus",
+      "lastPublishedVersion": "Laatst gepubliceerde versie",
+      "versionPrefix": "v{{number}}",
+      "neverPublished": "Nooit gepubliceerd",
+      "publishedAt": "Gepubliceerd op",
+      "draftUpdatedAt": "Concept bijgewerkt op",
+      "validationTitle": "Publicatievalidatie",
+      "validationPassed": "Publicatievalidatie geslaagd.",
+      "errors": {
+        "nameRequired": "Naam is verplicht",
+        "linkedServiceMissing": "Gekoppelde service bestaat niet meer",
+        "executionBoardRequired": "Uitvoering: Ticketrouting-bord is verplicht",
+        "executionStatusRequired": "Uitvoering: Ticketrouting-status is verplicht",
+        "executionPriorityRequired": "Uitvoering: Ticketrouting-prioriteit is verplicht",
+        "executionItilImpactUrgencyMismatch": "Uitvoering: Ticketrouting vereist zowel ITIL-impact als -urgentie wanneer de prioriteit niet is ingesteld",
+        "unknownExecutionProvider": "Onbekende uitvoeringsprovider: {{key}}",
+        "unknownFormBehaviorProvider": "Onbekende formuliergedragsprovider: {{key}}",
+        "unknownVisibilityProvider": "Onbekende zichtbaarheidsprovider: {{key}}"
+      }
+    },
+    "submissions": {
+      "title": "Inzendingen",
+      "empty": "Nog geen inzendingen voor deze definitie.",
+      "viewDetail": "Details bekijken",
+      "detailTitle": "Inzendingsdetails",
+      "submissionId": "Inzending-ID",
+      "requesterUser": "Aanvragende gebruiker",
+      "client": "Klant",
+      "contact": "Contact",
+      "ticketReference": "Ticketreferentie",
+      "workflowReference": "Workflowreferentie",
+      "executionError": "Uitvoeringsfout",
+      "submittedAtStatus": "{{date}} · {{status}}",
+      "loadingTicket": "Laden…",
+      "ticketLoadError": "Ticketdetails konden niet worden geladen."
+    }
+  },
+  "icons": {
+    "file-text": "Algemene aanvraag",
+    "user-plus": "Nieuwe gebruiker",
+    "user-minus": "Uitdiensttreding",
+    "shield-check": "Beveiliging",
+    "key-round": "Toegang",
+    "laptop": "Laptop",
+    "monitor": "Werkstation",
+    "printer": "Printer",
+    "hard-drive": "Opslag",
+    "server": "Server",
+    "network": "Netwerk",
+    "wifi": "Wi-Fi",
+    "app-window": "Software",
+    "mail": "E-mail",
+    "phone": "Telefoon",
+    "folder-open": "Gedeelde bestanden",
+    "badge-help": "Help",
+    "clear": "Pictogram wissen"
+  },
+  "messages": {
+    "success": {
+      "definitionDuplicated": "Definitie gedupliceerd",
+      "definitionArchived": "Definitie gearchiveerd",
+      "definitionUnarchived": "Definitie gedearchiveerd",
+      "draftCreated": "Concept aangemaakt",
+      "draftCreatedFromExample": "Concept aangemaakt op basis van voorbeeld: {{name}}",
+      "draftSaved": "Concept opgeslagen",
+      "definitionPublished": "Definitie gepubliceerd",
+      "basicsUpdated": "Basisgegevens bijgewerkt",
+      "linkedServiceCleared": "Gekoppelde service gewist",
+      "linkedService": "Gekoppeld: {{name}}",
+      "fieldAdded": "Veld toegevoegd",
+      "fieldRemoved": "Veld verwijderd",
+      "executionProviderUpdated": "Uitvoeringsprovider bijgewerkt",
+      "formBehaviorProviderUpdated": "Provider voor formuliergedrag bijgewerkt",
+      "visibilityProviderUpdated": "Zichtbaarheidsprovider bijgewerkt",
+      "ticketRoutingUpdated": "Configuratie ticketrouting bijgewerkt",
+      "workflowConfigurationUpdated": "Workflowconfiguratie bijgewerkt",
+      "formBehaviorConfigUpdated": "Configuratie formuliergedrag bijgewerkt",
+      "visibilityConfigUpdated": "Zichtbaarheidsconfiguratie bijgewerkt"
+    },
+    "error": {
+      "loadFailed": "Serviceaanvragen konden niet worden geladen",
+      "duplicateFailed": "Definitie kon niet worden gedupliceerd",
+      "archiveFailed": "Definitie kon niet worden gearchiveerd",
+      "unarchiveFailed": "Definitie kon niet worden gedearchiveerd",
+      "createDraftFailed": "Concept kon niet worden aangemaakt",
+      "createFromExampleFailed": "Aanmaken op basis van voorbeeld is mislukt",
+      "saveDraftFailed": "Concept kon niet worden opgeslagen",
+      "publishFailed": "Definitie kon niet worden gepubliceerd",
+      "publishBlockedByValidation": "Publiceren is nog niet mogelijk – los de {{count}} validatieproblem(en) op die hieronder in het gedeelte \"Publicatievalidatie\" worden vermeld.",
+      "basicsUpdateFailed": "Basisgegevens konden niet worden bijgewerkt",
+      "addFieldFailed": "Formulierveld kon niet worden toegevoegd",
+      "executionProviderUpdateFailed": "Uitvoeringsprovider kon niet worden bijgewerkt",
+      "formBehaviorProviderUpdateFailed": "Provider voor formuliergedrag kon niet worden bijgewerkt",
+      "visibilityProviderUpdateFailed": "Zichtbaarheidsprovider kon niet worden bijgewerkt",
+      "workflowMappingNotObject": "Workflow-invoertoewijzing moet een JSON-object zijn",
+      "workflowConfigurationInvalid": "Ongeldige JSON voor workflowconfiguratie",
+      "formBehaviorNotObject": "Configuratie formuliergedrag moet een JSON-object zijn",
+      "formBehaviorInvalid": "Ongeldige JSON voor formuliergedrag",
+      "visibilityNotObject": "Zichtbaarheidsconfiguratie moet een JSON-object zijn",
+      "visibilityInvalid": "Ongeldige JSON voor zichtbaarheid"
+    }
+  }
+}

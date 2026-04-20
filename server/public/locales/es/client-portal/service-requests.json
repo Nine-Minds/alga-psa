@@ -1,0 +1,58 @@
+{
+  "catalog": {
+    "title": "Solicitar servicios",
+    "description": "Explora los servicios publicados y envía solicitudes estructuradas.",
+    "myRequests": "Mis solicitudes",
+    "empty": "Actualmente no hay servicios de solicitud disponibles.",
+    "fallbackCategory": "Servicio",
+    "noDescription": "No se proporcionó una descripción"
+  },
+  "detail": {
+    "version": "Versión {{version}}",
+    "submitted": "Solicitud enviada",
+    "requestIdLabel": "ID de la solicitud: ",
+    "ticketIdLabel": "ID del ticket: ",
+    "unableToSubmit": "No se puede enviar la solicitud",
+    "formTitle": "Formulario de solicitud",
+    "noFields": "No hay campos configurados.",
+    "selectOption": "Selecciona una opción",
+    "datePlaceholder": "Selecciona una fecha",
+    "optionLabel": "Opción {{index}}",
+    "submit": "Enviar solicitud",
+    "initialValuesTitle": "Valores iniciales",
+    "noInitialValues": "No hay valores predeterminados estáticos configurados."
+  },
+  "myRequests": {
+    "title": "Mis solicitudes",
+    "browseServices": "Explorar servicios",
+    "empty": "Aún no has enviado ninguna solicitud de servicio.",
+    "columns": {
+      "request": "Solicitud",
+      "submitted": "Enviada",
+      "status": "Estado",
+      "details": "Detalles"
+    },
+    "view": "Ver",
+    "unknownDate": "Desconocida",
+    "statuses": {
+      "pending": "Pendiente",
+      "succeeded": "Completada",
+      "failed": "Fallida"
+    }
+  },
+  "submissionDetail": {
+    "backToMyRequests": "Volver a Mis solicitudes",
+    "requestIdLabel": "ID de la solicitud:",
+    "statusSection": "Estado",
+    "submittedAt": "Enviada: {{date}}",
+    "executionStatus": "Estado de ejecución: {{status}}",
+    "ticketLabel": "Ticket:",
+    "workflowLabel": "Flujo de trabajo: {{id}}",
+    "submittedAnswersTitle": "Respuestas enviadas",
+    "noResponse": "Sin respuesta",
+    "attachmentsTitle": "Archivos adjuntos",
+    "noAttachments": "No se incluyeron archivos adjuntos.",
+    "fileIdLabel": "ID del archivo: {{id}}",
+    "fileTypeLabel": "Tipo: {{mime}}"
+  }
+}

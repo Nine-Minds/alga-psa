@@ -1,11 +1,14 @@
 import React from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import {
   getRequestServiceDefinitionDetailAction,
   submitRequestServiceDefinitionAction,
 } from './actions';
 import { ServiceRequestIcon } from '../ServiceRequestIcon';
+import { RequestServiceForm } from './RequestServiceForm';
 
 interface RequestServiceDetailPageProps {
   params: Promise<{
@@ -21,7 +24,10 @@ interface RequestServiceDetailPageProps {
 export default async function RequestServiceDetailPage(props: RequestServiceDetailPageProps) {
   const { definitionId } = await props.params;
   const resolvedSearchParams = props.searchParams ? await props.searchParams : undefined;
-  const detail = await getRequestServiceDefinitionDetailAction(definitionId);
+  const [detail, { t }] = await Promise.all([
+    getRequestServiceDefinitionDetailAction(definitionId),
+    getServerTranslation(undefined, 'client-portal/service-requests'),
+  ]);
 
   if (!detail) {
     notFound();
@@ -51,7 +57,7 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
         <h1 className="text-2xl font-semibold">{detail.title}</h1>
         <div className="mt-1 flex items-center gap-2 text-sm text-[rgb(var(--color-text-600))]">
           <ServiceRequestIcon iconName={detail.icon} className="h-4 w-4" />
-          <span>Version {detail.versionNumber}</span>
+          <span>{t('detail.version', { version: detail.versionNumber })}</span>
         </div>
       </div>
       {detail.description && (
@@ -59,161 +65,74 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
       )}
 
       {submittedRequestId && (
-        <section className="rounded border border-green-500 p-4 bg-green-50">
-          <h2 className="text-base font-semibold text-green-800">Request submitted</h2>
-          <p className="text-sm text-green-700">
-            Request ID: <span className="font-mono">{submittedRequestId}</span>
-          </p>
-          {submittedTicketId && (
-            <p className="text-sm text-green-700">
-              Ticket ID:{' '}
-              <Link
-                href={`/client-portal/tickets/${submittedTicketId}`}
-                className="font-mono underline"
-              >
-                {submittedTicketId}
-              </Link>
+        <Alert variant="success">
+          <AlertTitle>{t('detail.submitted')}</AlertTitle>
+          <AlertDescription>
+            <p>
+              {t('detail.requestIdLabel')}
+              <span className="font-mono">{submittedRequestId}</span>
             </p>
-          )}
-        </section>
+            {submittedTicketId && (
+              <p>
+                {t('detail.ticketIdLabel')}
+                <Link
+                  href={`/client-portal/tickets/${submittedTicketId}`}
+                  className="font-mono underline"
+                >
+                  {submittedTicketId}
+                </Link>
+              </p>
+            )}
+          </AlertDescription>
+        </Alert>
       )}
 
       {submitError && (
-        <section className="rounded border border-red-500 p-4 bg-red-50">
-          <h2 className="text-base font-semibold text-red-800">Unable to submit request</h2>
-          <p className="text-sm text-red-700">{submitError}</p>
-        </section>
+        <Alert variant="destructive">
+          <AlertTitle>{t('detail.unableToSubmit')}</AlertTitle>
+          <AlertDescription>{submitError}</AlertDescription>
+        </Alert>
       )}
 
       <section className="rounded border p-4 bg-[rgb(var(--color-background-100))]">
-        <h2 className="text-base font-semibold mb-2">Request Form</h2>
+        <h2 className="text-base font-semibold mb-2">{t('detail.formTitle')}</h2>
         {visibleFields.length === 0 ? (
-          <p className="text-sm text-[rgb(var(--color-text-600))]">No fields configured.</p>
+          <p className="text-sm text-[rgb(var(--color-text-600))]">{t('detail.noFields')}</p>
         ) : (
-          <form action={submitAction} encType="multipart/form-data" noValidate className="space-y-4">
-            {visibleFields.map((field: any, index: number) => {
-              const key = typeof field?.key === 'string' ? field.key : `field_${index}`;
-              const label = typeof field?.label === 'string' ? field.label : key;
-              const helpText = typeof field?.helpText === 'string' ? field.helpText : null;
-              const required = !!field?.required;
-              const initialValue = detail.initialValues[key];
-
-              if (field?.type === 'long-text') {
-                return (
-                  <label key={key} className="block space-y-1">
-                    <span className="text-sm font-medium">
-                      {label}
-                      {required ? ' *' : ''}
-                    </span>
-                    <textarea
-                      name={key}
-                      required={required}
-                      defaultValue={typeof initialValue === 'string' ? initialValue : ''}
-                      className="w-full rounded border p-2 text-sm"
-                      rows={4}
-                    />
-                    {helpText && <span className="text-xs text-[rgb(var(--color-text-600))]">{helpText}</span>}
-                  </label>
-                );
-              }
-
-              if (field?.type === 'select' && Array.isArray(field?.options)) {
-                return (
-                  <label key={key} className="block space-y-1">
-                    <span className="text-sm font-medium">
-                      {label}
-                      {required ? ' *' : ''}
-                    </span>
-                    <select
-                      name={key}
-                      required={required}
-                      defaultValue={typeof initialValue === 'string' ? initialValue : ''}
-                      className="w-full rounded border p-2 text-sm"
-                    >
-                      <option value="">Select an option</option>
-                      {field.options.map((option: any, optionIndex: number) => (
-                        <option key={`${key}-option-${optionIndex}`} value={option?.value ?? ''}>
-                          {option?.label ?? option?.value ?? `Option ${optionIndex + 1}`}
-                        </option>
-                      ))}
-                    </select>
-                    {helpText && <span className="text-xs text-[rgb(var(--color-text-600))]">{helpText}</span>}
-                  </label>
-                );
-              }
-
-              if (field?.type === 'checkbox') {
-                return (
-                  <label key={key} className="flex items-start gap-2">
-                    <input
-                      type="checkbox"
-                      name={key}
-                      defaultChecked={typeof initialValue === 'boolean' ? initialValue : false}
-                      className="mt-1"
-                    />
-                    <span className="text-sm">
-                      <span className="font-medium">
-                        {label}
-                        {required ? ' *' : ''}
-                      </span>
-                      {helpText && (
-                        <span className="block text-xs text-[rgb(var(--color-text-600))]">{helpText}</span>
-                      )}
-                    </span>
-                  </label>
-                );
-              }
-
-              if (field?.type === 'file-upload') {
-                return (
-                  <label key={key} className="block space-y-1">
-                    <span className="text-sm font-medium">
-                      {label}
-                      {required ? ' *' : ''}
-                    </span>
-                    <input
-                      name={key}
-                      type="file"
-                      required={required}
-                      className="w-full rounded border p-2 text-sm"
-                    />
-                    {helpText && <span className="text-xs text-[rgb(var(--color-text-600))]">{helpText}</span>}
-                  </label>
-                );
-              }
-
-              return (
-                <label key={key} className="block space-y-1">
-                  <span className="text-sm font-medium">
-                    {label}
-                    {required ? ' *' : ''}
-                  </span>
-                  <input
-                    type={field?.type === 'date' ? 'date' : 'text'}
-                    name={key}
-                    required={required}
-                    defaultValue={typeof initialValue === 'string' ? initialValue : ''}
-                    className="w-full rounded border p-2 text-sm"
-                  />
-                  {helpText && <span className="text-xs text-[rgb(var(--color-text-600))]">{helpText}</span>}
-                </label>
-              );
-            })}
-            <button
-              type="submit"
-              className="inline-flex items-center rounded bg-[rgb(var(--color-primary-600))] px-4 py-2 text-sm font-medium text-white"
-            >
-              Submit Request
-            </button>
-          </form>
+          <RequestServiceForm
+            action={submitAction}
+            fields={visibleFields.map((field: any, index: number) => ({
+              key: typeof field?.key === 'string' ? field.key : `field_${index}`,
+              label: typeof field?.label === 'string' ? field.label : (typeof field?.key === 'string' ? field.key : `field_${index}`),
+              type: typeof field?.type === 'string' ? field.type : undefined,
+              required: !!field?.required,
+              helpText: typeof field?.helpText === 'string' ? field.helpText : null,
+              options: Array.isArray(field?.options)
+                ? field.options.map((option: any, optionIndex: number) => {
+                    const value = typeof option?.value === 'string' ? option.value : '';
+                    const label =
+                      typeof option?.label === 'string'
+                        ? option.label
+                        : value || t('detail.optionLabel', { index: optionIndex + 1 });
+                    return { value, label };
+                  })
+                : undefined,
+            }))}
+            initialValues={detail.initialValues}
+            labels={{
+              selectPlaceholder: t('detail.selectOption'),
+              datePlaceholder: t('detail.datePlaceholder'),
+              submit: t('detail.submit'),
+            }}
+          />
         )}
       </section>
 
       <section className="rounded border p-4 bg-[rgb(var(--color-background-100))]">
-        <h2 className="text-base font-semibold mb-2">Initial Values</h2>
+        <h2 className="text-base font-semibold mb-2">{t('detail.initialValuesTitle')}</h2>
         {Object.keys(detail.initialValues).length === 0 ? (
           <p className="text-sm text-[rgb(var(--color-text-600))]">
-            No static defaults configured.
+            {t('detail.noInitialValues')}
           </p>
         ) : (
           <pre className="text-xs bg-white p-2 rounded overflow-auto">

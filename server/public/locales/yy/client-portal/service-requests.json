@@ -1,0 +1,58 @@
+{
+  "catalog": {
+    "title": "55555",
+    "description": "55555",
+    "myRequests": "55555",
+    "empty": "55555",
+    "fallbackCategory": "55555",
+    "noDescription": "55555"
+  },
+  "detail": {
+    "version": "55555 {{version}} 55555",
+    "submitted": "55555",
+    "requestIdLabel": "55555",
+    "ticketIdLabel": "55555",
+    "unableToSubmit": "55555",
+    "formTitle": "55555",
+    "noFields": "55555",
+    "selectOption": "55555",
+    "datePlaceholder": "55555",
+    "optionLabel": "55555 {{index}} 55555",
+    "submit": "55555",
+    "initialValuesTitle": "55555",
+    "noInitialValues": "55555"
+  },
+  "myRequests": {
+    "title": "55555",
+    "browseServices": "55555",
+    "empty": "55555",
+    "columns": {
+      "request": "55555",
+      "submitted": "55555",
+      "status": "55555",
+      "details": "55555"
+    },
+    "view": "55555",
+    "unknownDate": "55555",
+    "statuses": {
+      "pending": "55555",
+      "succeeded": "55555",
+      "failed": "55555"
+    }
+  },
+  "submissionDetail": {
+    "backToMyRequests": "55555",
+    "requestIdLabel": "55555",
+    "statusSection": "55555",
+    "submittedAt": "55555 {{date}} 55555",
+    "executionStatus": "55555 {{status}} 55555",
+    "ticketLabel": "55555",
+    "workflowLabel": "55555 {{id}} 55555",
+    "submittedAnswersTitle": "55555",
+    "noResponse": "55555",
+    "attachmentsTitle": "55555",
+    "noAttachments": "55555",
+    "fileIdLabel": "55555 {{id}} 55555",
+    "fileTypeLabel": "55555 {{mime}} 55555"
+  }
+}

@@ -1,0 +1,270 @@
+{
+  "management": {
+    "title": "Serviceanfragen",
+    "description": "Entwürfe, veröffentlichte und archivierte Serviceanfragen-Definitionen verwalten.",
+    "showArchived": "Archivierte anzeigen",
+    "showArchivedWithCount": "Archivierte anzeigen ({{count}})",
+    "createBlank": "Leere erstellen",
+    "startFromExample": "Mit Beispiel beginnen",
+    "loading": "Serviceanfragen werden geladen…",
+    "columns": {
+      "name": "Name",
+      "description": "Beschreibung",
+      "state": "Status",
+      "updated": "Aktualisiert",
+      "actions": "Aktionen"
+    },
+    "actionsFor": "Aktionen für {{name}}",
+    "actions": {
+      "duplicate": "Duplizieren",
+      "archive": "Archivieren",
+      "unarchive": "Wiederherstellen"
+    },
+    "lifecycleLabels": {
+      "published": "Veröffentlicht",
+      "archived": "Archiviert",
+      "draftChanges": "Entwurfsänderungen",
+      "draft": "Entwurf"
+    },
+    "templateOption": "{{templateName}} ({{providerDisplayName}})"
+  },
+  "editor": {
+    "backNav": "Zurück zu Serviceanfragen",
+    "loading": "Definitionseditor wird geladen…",
+    "notFound": "Serviceanfragen-Definition nicht gefunden.",
+    "currentState": "Aktueller Status: {{state}}",
+    "saveDraft": "Entwurf speichern",
+    "createDraft": "Entwurf erstellen",
+    "publish": "Veröffentlichen",
+    "publishing": "Veröffentlichen…",
+    "basics": {
+      "title": "Grunddaten",
+      "name": "Name",
+      "icon": "Symbol",
+      "iconSelected": "Ausgewählt: {{label}}",
+      "noIconSelected": "Kein Symbol ausgewählt",
+      "description": "Beschreibung",
+      "category": "Kategorie",
+      "sortOrder": "Sortierreihenfolge",
+      "save": "Grunddaten speichern",
+      "uncategorized": "Nicht kategorisiert"
+    },
+    "preview": {
+      "title": "Vorschau",
+      "badge": "Live-Vorschau",
+      "cardSubheading": "Katalogkarte",
+      "formSubheading": "Anforderungsformular"
+    },
+    "linkage": {
+      "title": "Verknüpfung",
+      "linkedService": "Verknüpfter Service",
+      "searchPlaceholder": "Servicekatalog durchsuchen",
+      "search": "Suchen",
+      "clear": "Löschen",
+      "select": "Auswählen",
+      "noDescription": "Keine Beschreibung",
+      "unset": "-"
+    },
+    "form": {
+      "title": "Formular",
+      "authorFields": "Autorfelder",
+      "fieldType": "Feldtyp",
+      "addField": "Feld hinzufügen",
+      "noFields": "Keine Felder konfiguriert.",
+      "preview": "Gerenderte Formularvorschau",
+      "label": "Bezeichnung",
+      "helpText": "Hilfetext",
+      "required": "Erforderlich",
+      "defaultValue": "Standardwert",
+      "options": "Optionen (eine pro Zeile: Wert:Bezeichnung)",
+      "moveUp": "Nach oben verschieben",
+      "moveDown": "Nach unten verschieben",
+      "remove": "Entfernen",
+      "selectOption": "Option auswählen",
+      "checkboxDefaults": {
+        "none": "Kein Standardwert",
+        "checked": "Aktiviert",
+        "unchecked": "Deaktiviert"
+      },
+      "types": {
+        "short-text": "short-text",
+        "long-text": "long-text",
+        "select": "select",
+        "checkbox": "checkbox",
+        "date": "date",
+        "file-upload": "file-upload"
+      }
+    },
+    "execution": {
+      "title": "Ausführung",
+      "executionProvider": "Ausführungsanbieter",
+      "formBehaviorProvider": "Formularverhalten-Anbieter",
+      "visibilityProvider": "Sichtbarkeitsanbieter",
+      "providerDisplay": "{{displayName}} ({{executionMode}})",
+      "ticketRouting": {
+        "title": "Konfiguration des Ticket-Routings",
+        "board": "Board",
+        "boardPlaceholder": "Board auswählen",
+        "status": "Status",
+        "statusPlaceholder": "Status auswählen",
+        "assignedUser": "Zugewiesener Benutzer",
+        "assignedUserPlaceholder": "Nicht zugewiesen",
+        "category": "Kategorie",
+        "categoryPlaceholder": "Kategorie auswählen",
+        "priority": "Priorität",
+        "priorityPlaceholder": "Priorität auswählen",
+        "impact": "Auswirkung",
+        "impactPlaceholder": "Auswirkung auswählen",
+        "urgency": "Dringlichkeit",
+        "urgencyPlaceholder": "Dringlichkeit auswählen",
+        "priorityCalculated": "Priorität (berechnet)",
+        "selectImpactAndUrgency": "Auswirkung und Dringlichkeit auswählen",
+        "priorityFormula": "{{label}} (Auswirkung {{impact}} x Dringlichkeit {{urgency}})",
+        "titleFieldKey": "Titel-Feldschlüssel",
+        "descriptionPrefix": "Beschreibungspräfix",
+        "save": "Ticket-Routing speichern"
+      },
+      "workflow": {
+        "title": "Workflow-Konfiguration",
+        "workflowId": "Workflow-ID",
+        "workflowIdPlaceholder": "workflow-id",
+        "inputMapping": "Workflow-Eingabezuordnung (JSON-Objekt)",
+        "inputMappingExample": "Beispiel: {\"requestedBy\":\"payload.request_title\",\"ticketReference\":\"ticketId\"}",
+        "save": "Workflow-Einstellungen speichern"
+      },
+      "advanced": {
+        "title": "Erweitertes Formularverhalten",
+        "config": "Formularverhalten-Konfiguration (JSON-Objekt)",
+        "save": "Formularverhalten-Konfiguration speichern"
+      },
+      "visibility": {
+        "title": "Sichtbarkeitskonfiguration",
+        "config": "Sichtbarkeitskonfiguration (JSON-Objekt)",
+        "save": "Sichtbarkeitskonfiguration speichern"
+      },
+      "fields": {
+        "executionProvider": "Ausführungsanbieter",
+        "executionConfig": "Ausführungskonfiguration",
+        "formBehaviorProvider": "Formularverhalten-Anbieter",
+        "visibilityProvider": "Sichtbarkeitsanbieter"
+      },
+      "itilImpact": {
+        "1": "1 - Hoch (Kritische Geschäftsfunktion betroffen)",
+        "2": "2 - Mittel-Hoch (Wichtige Funktion betroffen)",
+        "3": "3 - Mittel (Nebenfunktion betroffen)",
+        "4": "4 - Mittel-Niedrig (Minimale Auswirkung)",
+        "5": "5 - Niedrig (Keine geschäftliche Auswirkung)"
+      },
+      "itilUrgency": {
+        "1": "1 - Hoch (Arbeit kann nicht fortgesetzt werden)",
+        "2": "2 - Mittel-Hoch (Arbeit stark beeinträchtigt)",
+        "3": "3 - Mittel (Arbeit mit Einschränkungen möglich)",
+        "4": "4 - Mittel-Niedrig (Geringfügige Beeinträchtigung)",
+        "5": "5 - Niedrig (Arbeit läuft normal weiter)"
+      }
+    },
+    "publishSection": {
+      "title": "Veröffentlichen",
+      "currentDraftState": "Aktueller Entwurfsstatus",
+      "lastPublishedVersion": "Zuletzt veröffentlichte Version",
+      "versionPrefix": "v{{number}}",
+      "neverPublished": "Nie veröffentlicht",
+      "publishedAt": "Veröffentlicht am",
+      "draftUpdatedAt": "Entwurf aktualisiert am",
+      "validationTitle": "Veröffentlichungsvalidierung",
+      "validationPassed": "Veröffentlichungsvalidierung bestanden.",
+      "errors": {
+        "nameRequired": "Name ist erforderlich",
+        "linkedServiceMissing": "Verknüpfter Service existiert nicht mehr",
+        "executionBoardRequired": "Ausführung: Ticketweiterleitungs-Board ist erforderlich",
+        "executionStatusRequired": "Ausführung: Ticketweiterleitungs-Status ist erforderlich",
+        "executionPriorityRequired": "Ausführung: Ticketweiterleitungs-Priorität ist erforderlich",
+        "executionItilImpactUrgencyMismatch": "Ausführung: Ticketweiterleitung erfordert sowohl ITIL-Auswirkung als auch -Dringlichkeit, wenn keine Priorität gesetzt ist",
+        "unknownExecutionProvider": "Unbekannter Ausführungsanbieter: {{key}}",
+        "unknownFormBehaviorProvider": "Unbekannter Formularverhaltensanbieter: {{key}}",
+        "unknownVisibilityProvider": "Unbekannter Sichtbarkeitsanbieter: {{key}}"
+      }
+    },
+    "submissions": {
+      "title": "Einreichungen",
+      "empty": "Noch keine Einreichungen für diese Definition.",
+      "viewDetail": "Details anzeigen",
+      "detailTitle": "Einreichungsdetails",
+      "submissionId": "Einreichungs-ID",
+      "requesterUser": "Anfragender Benutzer",
+      "client": "Kunde",
+      "contact": "Kontakt",
+      "ticketReference": "Ticket-Referenz",
+      "workflowReference": "Workflow-Referenz",
+      "executionError": "Ausführungsfehler",
+      "submittedAtStatus": "{{date}} · {{status}}",
+      "loadingTicket": "Wird geladen…",
+      "ticketLoadError": "Ticketdetails konnten nicht geladen werden."
+    }
+  },
+  "icons": {
+    "file-text": "Allgemeine Anfrage",
+    "user-plus": "Neuer Benutzer",
+    "user-minus": "Offboarding",
+    "shield-check": "Sicherheit",
+    "key-round": "Zugriff",
+    "laptop": "Laptop",
+    "monitor": "Arbeitsplatz",
+    "printer": "Drucker",
+    "hard-drive": "Speicher",
+    "server": "Server",
+    "network": "Netzwerk",
+    "wifi": "WLAN",
+    "app-window": "Software",
+    "mail": "E-Mail",
+    "phone": "Telefon",
+    "folder-open": "Freigegebene Dateien",
+    "badge-help": "Hilfe",
+    "clear": "Symbol löschen"
+  },
+  "messages": {
+    "success": {
+      "definitionDuplicated": "Definition dupliziert",
+      "definitionArchived": "Definition archiviert",
+      "definitionUnarchived": "Definition wiederhergestellt",
+      "draftCreated": "Entwurf erstellt",
+      "draftCreatedFromExample": "Entwurf aus Beispiel erstellt: {{name}}",
+      "draftSaved": "Entwurf gespeichert",
+      "definitionPublished": "Definition veröffentlicht",
+      "basicsUpdated": "Grunddaten aktualisiert",
+      "linkedServiceCleared": "Verknüpfter Service entfernt",
+      "linkedService": "{{name}} verknüpft",
+      "fieldAdded": "Feld hinzugefügt",
+      "fieldRemoved": "Feld entfernt",
+      "executionProviderUpdated": "Ausführungsanbieter aktualisiert",
+      "formBehaviorProviderUpdated": "Formularverhalten-Anbieter aktualisiert",
+      "visibilityProviderUpdated": "Sichtbarkeitsanbieter aktualisiert",
+      "ticketRoutingUpdated": "Konfiguration des Ticket-Routings aktualisiert",
+      "workflowConfigurationUpdated": "Workflow-Konfiguration aktualisiert",
+      "formBehaviorConfigUpdated": "Formularverhalten-Konfiguration aktualisiert",
+      "visibilityConfigUpdated": "Sichtbarkeitskonfiguration aktualisiert"
+    },
+    "error": {
+      "loadFailed": "Serviceanfragen konnten nicht geladen werden",
+      "duplicateFailed": "Definition konnte nicht dupliziert werden",
+      "archiveFailed": "Definition konnte nicht archiviert werden",
+      "unarchiveFailed": "Definition konnte nicht wiederhergestellt werden",
+      "createDraftFailed": "Entwurf konnte nicht erstellt werden",
+      "createFromExampleFailed": "Erstellen aus Beispiel fehlgeschlagen",
+      "saveDraftFailed": "Entwurf konnte nicht gespeichert werden",
+      "publishFailed": "Definition konnte nicht veröffentlicht werden",
+      "publishBlockedByValidation": "Veröffentlichung nicht möglich – bitte beheben Sie die {{count}} Validierungsproblem(e), die im Abschnitt \"Veröffentlichungsvalidierung\" unten aufgeführt sind.",
+      "basicsUpdateFailed": "Grunddaten konnten nicht aktualisiert werden",
+      "addFieldFailed": "Formularfeld konnte nicht hinzugefügt werden",
+      "executionProviderUpdateFailed": "Ausführungsanbieter konnte nicht aktualisiert werden",
+      "formBehaviorProviderUpdateFailed": "Formularverhalten-Anbieter konnte nicht aktualisiert werden",
+      "visibilityProviderUpdateFailed": "Sichtbarkeitsanbieter konnte nicht aktualisiert werden",
+      "workflowMappingNotObject": "Workflow-Eingabezuordnung muss ein JSON-Objekt sein",
+      "workflowConfigurationInvalid": "Ungültige Workflow-Konfiguration (JSON)",
+      "formBehaviorNotObject": "Formularverhalten-Konfiguration muss ein JSON-Objekt sein",
+      "formBehaviorInvalid": "Ungültiges Formularverhalten-JSON",
+      "visibilityNotObject": "Sichtbarkeitskonfiguration muss ein JSON-Objekt sein",
+      "visibilityInvalid": "Ungültiges Sichtbarkeits-JSON"
+    }
+  }
+}

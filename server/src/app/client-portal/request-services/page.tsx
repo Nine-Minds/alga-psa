@@ -1,30 +1,34 @@
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { listRequestServiceCatalogGroupsAction } from './actions';
 import Link from 'next/link';
 import { ServiceRequestCard } from './ServiceRequestCard';
 
 export default async function RequestServicesPage() {
-  const groups = await listRequestServiceCatalogGroupsAction();
+  const [groups, { t }] = await Promise.all([
+    listRequestServiceCatalogGroupsAction(),
+    getServerTranslation(undefined, 'client-portal/service-requests'),
+  ]);
 
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold">Request Services</h1>
+          <h1 className="text-2xl font-semibold">{t('catalog.title')}</h1>
           <p className="text-sm text-[rgb(var(--color-text-600))]">
-            Browse published services and submit structured requests.
+            {t('catalog.description')}
           </p>
         </div>
         <Link
           href="/client-portal/request-services/my-requests"
           className="text-sm text-[rgb(var(--color-primary-600))] hover:underline"
         >
-          My Requests
+          {t('catalog.myRequests')}
         </Link>
       </div>
 
       {groups.length === 0 ? (
         <div className="rounded border p-4 text-sm text-[rgb(var(--color-text-600))]">
-          No request services are currently available.
+          {t('catalog.empty')}
         </div>
       ) : (
         <div className="space-y-6">
@@ -44,6 +48,8 @@ export default async function RequestServicesPage() {
                       description={item.description}
                       icon={item.icon}
                       categoryLabel={group.category}
+                      fallbackCategory={t('catalog.fallbackCategory')}
+                      noDescription={t('catalog.noDescription')}
                     />
                   </Link>
                 ))}

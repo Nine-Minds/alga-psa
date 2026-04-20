@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDrawer } from '@alga-psa/ui';
 import { useParams } from 'next/navigation';
-import { ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Eye, Plus, Trash2 } from 'lucide-react';
 import {
   addServiceRequestFormFieldAction,
   getServiceRequestDefinitionSubmissionDetailAction,
@@ -27,6 +27,7 @@ import {
   updateServiceRequestVisibilityProviderAction,
   validateServiceRequestDefinitionForPublishAction,
 } from './actions';
+import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { Card } from '@alga-psa/ui/components/Card';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -35,6 +36,8 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { MspTicketDetailsContainerClient } from '@alga-psa/msp-composition/tickets';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import type { TFunction } from 'i18next';
 import { ServiceRequestCard } from '../../client-portal/request-services/ServiceRequestCard';
 import { ServiceRequestIconPicker } from './ServiceRequestIconPicker';
 import { SERVICE_REQUEST_ICON_OPTIONS } from '../../../lib/service-requests/iconCatalog';
@@ -168,16 +171,20 @@ const FORM_FIELD_TYPES: Array<FormField['type']> = [
   'file-upload',
 ];
 
-const FORM_FIELD_TYPE_OPTIONS: SelectOption[] = FORM_FIELD_TYPES.map((fieldType) => ({
-  value: fieldType,
-  label: fieldType,
-}));
+function buildFormFieldTypeOptions(t: TFunction): SelectOption[] {
+  return FORM_FIELD_TYPES.map((fieldType) => ({
+    value: fieldType,
+    label: t(`editor.form.types.${fieldType}`, { defaultValue: fieldType }),
+  }));
+}
 
-const CHECKBOX_DEFAULT_OPTIONS: SelectOption[] = [
-  { value: '', label: 'No default' },
-  { value: 'true', label: 'Checked' },
-  { value: 'false', label: 'Unchecked' },
-];
+function buildCheckboxDefaultOptions(t: TFunction): SelectOption[] {
+  return [
+    { value: '', label: t('editor.form.checkboxDefaults.none') },
+    { value: 'true', label: t('editor.form.checkboxDefaults.checked') },
+    { value: 'false', label: t('editor.form.checkboxDefaults.unchecked') },
+  ];
+}
 
 function getSchemaFields(schema: Record<string, unknown>): FormField[] {
   const fields = schema.fields;
@@ -216,9 +223,12 @@ function formatSelectOptionsText(options: FormFieldOption[] | undefined): string
   return options.map((option) => `${option.value}:${option.label}`).join('\n');
 }
 
-function getSelectedIconLabel(iconValue: string): string {
+function getSelectedIconLabel(iconValue: string, t: TFunction): string {
   const match = SERVICE_REQUEST_ICON_OPTIONS.find((option) => option.value === iconValue);
-  return match?.label ?? 'No icon selected';
+  if (match) {
+    return t(`icons.${match.value}`, { defaultValue: match.label });
+  }
+  return t('editor.basics.noIconSelected');
 }
 
 function getCheckboxDefaultValue(defaultValue: FormField['defaultValue']): string {
@@ -268,21 +278,50 @@ function deriveSelectedRoutingCategories(config: {
   return [];
 }
 
-const ITIL_IMPACT_OPTIONS: SelectOption[] = [
-  { value: '1', label: '1 - High (Critical business function affected)' },
-  { value: '2', label: '2 - Medium-High (Important function affected)' },
-  { value: '3', label: '3 - Medium (Minor function affected)' },
-  { value: '4', label: '4 - Medium-Low (Minimal impact)' },
-  { value: '5', label: '5 - Low (No business impact)' },
-];
+const VALIDATION_ERROR_KEY_MAP: Record<string, string> = {
+  'Name is required': 'nameRequired',
+  'Linked service no longer exists': 'linkedServiceMissing',
+  'Execution: Ticket routing board is required': 'executionBoardRequired',
+  'Execution: Ticket routing status is required': 'executionStatusRequired',
+  'Execution: Ticket routing priority is required': 'executionPriorityRequired',
+  'Execution: Ticket routing requires both ITIL impact and urgency when priority is not set':
+    'executionItilImpactUrgencyMismatch',
+};
 
-const ITIL_URGENCY_OPTIONS: SelectOption[] = [
-  { value: '1', label: '1 - High (Work cannot continue)' },
-  { value: '2', label: '2 - Medium-High (Work severely impaired)' },
-  { value: '3', label: '3 - Medium (Work continues with limitations)' },
-  { value: '4', label: '4 - Medium-Low (Minor inconvenience)' },
-  { value: '5', label: '5 - Low (Work continues normally)' },
-];
+function translateValidationError(error: string, t: TFunction): string {
+  const known = VALIDATION_ERROR_KEY_MAP[error];
+  if (known) {
+    return t(`editor.publishSection.errors.${known}`, { defaultValue: error });
+  }
+
+  const unknownProviderMatch = error.match(/^Unknown (execution|form behavior|visibility) provider: (.+)$/);
+  if (unknownProviderMatch) {
+    const [, kind, key] = unknownProviderMatch;
+    const mapped =
+      kind === 'execution'
+        ? 'unknownExecutionProvider'
+        : kind === 'form behavior'
+          ? 'unknownFormBehaviorProvider'
+          : 'unknownVisibilityProvider';
+    return t(`editor.publishSection.errors.${mapped}`, { key, defaultValue: error });
+  }
+
+  return error;
+}
+
+function buildItilImpactOptions(t: TFunction): SelectOption[] {
+  return ['1', '2', '3', '4', '5'].map((value) => ({
+    value,
+    label: t(`editor.execution.itilImpact.${value}`),
+  }));
+}
+
+function buildItilUrgencyOptions(t: TFunction): SelectOption[] {
+  return ['1', '2', '3', '4', '5'].map((value) => ({
+    value,
+    label: t(`editor.execution.itilUrgency.${value}`),
+  }));
+}
 
 interface FormFieldEditorCardProps {
   definitionId: string;
@@ -299,6 +338,8 @@ function FormFieldEditorCard({
   allFields,
   reloadDefinitionEditorState,
 }: FormFieldEditorCardProps) {
+  const { t } = useTranslation('msp/service-requests');
+  const checkboxDefaultOptions = useMemo(() => buildCheckboxDefaultOptions(t), [t]);
   const key = field.key ?? `field_${index}`;
   const [labelValue, setLabelValue] = useState(field.label ?? key);
   const [helpTextValue, setHelpTextValue] = useState(field.helpText ?? '');
@@ -334,14 +375,15 @@ function FormFieldEditorCard({
     >
       <div className="flex items-center justify-between gap-2">
         <div className="text-sm font-medium">
-          {field.type} · <span className="font-mono">{key}</span>
+          {t(`editor.form.types.${field.type}`, { defaultValue: field.type })} · <span className="font-mono">{key}</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <Button
             id={`service-request-form-move-up-${key}`}
-            variant="soft"
-            size="sm"
-            className="gap-1.5"
+            variant="ghost"
+            size="icon"
+            tooltipText={t('editor.form.moveUp')}
+            disabled={index === 0}
             onClick={async () => {
               const nextKeys = allFields.map((candidate) => candidate.key);
               const currentIndex = nextKeys.indexOf(key);
@@ -357,13 +399,13 @@ function FormFieldEditorCard({
             }}
           >
             <ChevronUp className="h-4 w-4" />
-            Move Up
           </Button>
           <Button
             id={`service-request-form-move-down-${key}`}
-            variant="soft"
-            size="sm"
-            className="gap-1.5"
+            variant="ghost"
+            size="icon"
+            tooltipText={t('editor.form.moveDown')}
+            disabled={index === allFields.length - 1}
             onClick={async () => {
               const nextKeys = allFields.map((candidate) => candidate.key);
               const currentIndex = nextKeys.indexOf(key);
@@ -379,27 +421,26 @@ function FormFieldEditorCard({
             }}
           >
             <ChevronDown className="h-4 w-4" />
-            Move Down
           </Button>
           <Button
             id={`service-request-form-remove-field-${key}`}
-            variant="destructive"
-            size="sm"
-            className="gap-1.5"
+            variant="ghost"
+            size="icon"
+            tooltipText={t('editor.form.remove')}
+            className="text-[rgb(var(--color-accent-600))] hover:text-[rgb(var(--color-accent-700))] hover:bg-[rgb(var(--color-accent-50))]"
             onClick={async () => {
               await removeServiceRequestFormFieldAction(definitionId, key);
               await reloadDefinitionEditorState(definitionId);
-              toast.success('Field removed');
+              toast.success(t('messages.success.fieldRemoved'));
             }}
           >
             <Trash2 className="h-4 w-4" />
-            Remove
           </Button>
         </div>
       </div>
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
         <Input
-          label="Label"
+          label={t('editor.form.label')}
           containerClassName="mb-0"
           value={labelValue}
           onChange={(event) => setLabelValue(event.target.value)}
@@ -411,7 +452,7 @@ function FormFieldEditorCard({
           }}
         />
         <Input
-          label="Help Text"
+          label={t('editor.form.helpText')}
           containerClassName="mb-0"
           value={helpTextValue}
           onChange={(event) => setHelpTextValue(event.target.value)}
@@ -427,7 +468,7 @@ function FormFieldEditorCard({
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2 md:items-end">
         <Checkbox
           id={`service-request-form-required-${key}`}
-          label="Required"
+          label={t('editor.form.required')}
           containerClassName="mb-0 min-h-10"
           checked={Boolean(field.required)}
           onChange={async (event) => {
@@ -442,9 +483,9 @@ function FormFieldEditorCard({
             {field.type === 'checkbox' ? (
               <CustomSelect
                 id={`service-request-form-default-value-${key}`}
-                label="Default Value"
+                label={t('editor.form.defaultValue')}
                 value={defaultCheckboxValue}
-                options={CHECKBOX_DEFAULT_OPTIONS}
+                options={checkboxDefaultOptions}
                 onValueChange={async (value) => {
                   setDefaultCheckboxValue(value);
                   await updateServiceRequestFormFieldAction(definitionId, key, {
@@ -455,7 +496,7 @@ function FormFieldEditorCard({
               />
             ) : (
               <Input
-                label="Default Value"
+                label={t('editor.form.defaultValue')}
                 containerClassName="mb-0"
                 value={defaultStringValue}
                 onChange={(event) => setDefaultStringValue(event.target.value)}
@@ -473,7 +514,7 @@ function FormFieldEditorCard({
       </div>
       {field.type === 'select' && (
         <TextArea
-          label="Options (one per line: value:label)"
+          label={t('editor.form.options')}
           wrapperClassName="mb-0"
           className="font-mono min-h-[84px]"
           value={optionsTextValue}
@@ -497,6 +538,7 @@ function FormFieldPreview({
   field: FormField;
   index: number;
 }) {
+  const { t } = useTranslation('msp/service-requests');
   const key = field.key ?? `field_${index}`;
   const label = field.label ?? key;
   const helpText = field.helpText ?? null;
@@ -533,7 +575,7 @@ function FormFieldPreview({
             label: option.label,
           }))}
           onValueChange={() => {}}
-          placeholder="Select an option"
+          placeholder={t('editor.form.selectOption')}
           disabled
         />
         {helpText && <span className="text-xs text-[rgb(var(--color-text-600))]">{helpText}</span>}
@@ -592,11 +634,16 @@ function FormFieldPreview({
 }
 
 export default function ServiceRequestDefinitionEditorPage() {
+  const { t } = useTranslation('msp/service-requests');
   const params = useParams();
   const definitionId = String(params?.definitionId ?? '');
+  const formFieldTypeOptions = useMemo(() => buildFormFieldTypeOptions(t), [t]);
+  const itilImpactOptions = useMemo(() => buildItilImpactOptions(t), [t]);
+  const itilUrgencyOptions = useMemo(() => buildItilUrgencyOptions(t), [t]);
   const [data, setData] = useState<EditorData | null>(null);
   const [loading, setLoading] = useState(true);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [isPublishing, setIsPublishing] = useState(false);
   const [linkedServiceQuery, setLinkedServiceQuery] = useState('');
   const [linkedServiceResults, setLinkedServiceResults] = useState<
     Array<{ service_id: string; service_name: string; description: string | null }>
@@ -673,13 +720,13 @@ export default function ServiceRequestDefinitionEditorPage() {
   );
   const basicsCategoryOptions = useMemo<SelectOption[]>(
     () => [
-      { value: '', label: 'Uncategorized' },
+      { value: '', label: t('editor.basics.uncategorized') },
       ...data?.basics.availableCategories.map((category) => ({
         value: category.categoryId,
         label: category.categoryName,
       })) ?? [],
     ],
-    [data?.basics.availableCategories]
+    [data?.basics.availableCategories, t]
   );
   const ticketPriorityOptions = useMemo(
     () =>
@@ -699,7 +746,7 @@ export default function ServiceRequestDefinitionEditorPage() {
     }
 
     openDrawer(
-      <div className="p-4 text-sm text-[rgb(var(--color-text-600))]">Loading…</div>,
+      <div className="p-4 text-sm text-[rgb(var(--color-text-600))]">{t('editor.submissions.loadingTicket')}</div>,
       undefined,
       undefined,
       '900px'
@@ -728,7 +775,7 @@ export default function ServiceRequestDefinitionEditorPage() {
       console.error('[ServiceRequestDefinitionEditorPage] Failed to load ticket drawer', error);
       replaceDrawer(
         <div className="p-4 text-sm text-[rgb(var(--color-danger-600))]">
-          {error instanceof Error ? error.message : 'Failed to load ticket details.'}
+          {error instanceof Error ? error.message : t('editor.submissions.ticketLoadError')}
         </div>,
         undefined,
         '900px'
@@ -971,67 +1018,208 @@ export default function ServiceRequestDefinitionEditorPage() {
 
     await updateServiceRequestExecutionConfigAction(data.definitionId, nextExecutionConfig);
     await reloadDefinitionEditorState(data.definitionId);
-    toast.success('Ticket routing configuration updated');
+    toast.success(t('messages.success.ticketRoutingUpdated'));
+  };
+
+  const handleSaveAll = async () => {
+    if (!data) {
+      return;
+    }
+
+    const failures: string[] = [];
+
+    try {
+      await updateServiceRequestBasicsAction(data.definitionId, {
+        name: basicsInput.name,
+        description:
+          basicsInput.description.trim().length > 0 ? basicsInput.description : null,
+        icon: basicsInput.icon.trim().length > 0 ? basicsInput.icon : null,
+        categoryId:
+          basicsInput.categoryId.trim().length > 0 ? basicsInput.categoryId : null,
+        sortOrder: Number.parseInt(basicsInput.sortOrder, 10) || 0,
+      });
+    } catch (error) {
+      console.error('Save all: basics failed', error);
+      failures.push(t('editor.basics.title'));
+    }
+
+    if (isTicketOnlyExecution) {
+      try {
+        const selectedCategoryId = ticketRoutingSelectedCategories[0] ?? '';
+        const selectedCategory = ticketRoutingCategories.find(
+          (category) => category.category_id === selectedCategoryId
+        );
+        const nextExecutionConfig = buildTicketRoutingExecutionConfig({
+          existingExecutionConfig: data.execution.executionConfig,
+          ticketRoutingConfigInput,
+          selectedCategory,
+          boardPriorityType: ticketRoutingBoardConfig?.priority_type ?? null,
+        });
+        await updateServiceRequestExecutionConfigAction(data.definitionId, nextExecutionConfig);
+      } catch (error) {
+        console.error('Save all: ticket routing failed', error);
+        failures.push(t('editor.execution.ticketRouting.title'));
+      }
+    }
+
+    if (isWorkflowBackedExecution) {
+      try {
+        const parsedInputMapping = workflowInputMappingText.trim()
+          ? JSON.parse(workflowInputMappingText)
+          : {};
+        if (
+          !parsedInputMapping ||
+          typeof parsedInputMapping !== 'object' ||
+          Array.isArray(parsedInputMapping)
+        ) {
+          throw new Error('Workflow input mapping must be an object');
+        }
+        await updateServiceRequestExecutionConfigAction(data.definitionId, {
+          ...data.execution.executionConfig,
+          workflowId: workflowIdInput.trim(),
+          inputMapping: parsedInputMapping as Record<string, string>,
+        });
+      } catch (error) {
+        console.error('Save all: workflow config failed', error);
+        failures.push(t('editor.execution.workflow.title'));
+      }
+    }
+
+    if (data.execution.showAdvancedFormBehaviorConfigPanel) {
+      try {
+        const parsed = formBehaviorConfigText.trim() ? JSON.parse(formBehaviorConfigText) : {};
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+          throw new Error('Form behavior config must be a JSON object');
+        }
+        await updateServiceRequestFormBehaviorConfigAction(
+          data.definitionId,
+          parsed as Record<string, unknown>
+        );
+      } catch (error) {
+        console.error('Save all: form behavior config failed', error);
+        failures.push(t('editor.execution.advanced.title'));
+      }
+    }
+
+    try {
+      const parsed = visibilityConfigText.trim() ? JSON.parse(visibilityConfigText) : {};
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        throw new Error('Visibility config must be a JSON object');
+      }
+      await updateServiceRequestVisibilityConfigAction(
+        data.definitionId,
+        parsed as Record<string, unknown>
+      );
+    } catch (error) {
+      console.error('Save all: visibility config failed', error);
+      failures.push(t('editor.execution.visibility.title'));
+    }
+
+    await reloadDefinitionEditorState(data.definitionId);
+
+    if (failures.length > 0) {
+      toast.error(
+        t('messages.error.saveAllPartial', {
+          sections: failures.join(', '),
+          defaultValue: `Some sections couldn't be saved: ${failures.join(', ')}`,
+        })
+      );
+    } else {
+      toast.success(t('messages.success.draftSaved'));
+    }
   };
 
   if (loading) {
-    return <div className="p-6 text-sm text-[rgb(var(--color-text-600))]">Loading definition editor…</div>;
+    return <div className="p-6 text-sm text-[rgb(var(--color-text-600))]">{t('editor.loading')}</div>;
   }
 
   if (!data) {
-    return <div className="p-6 text-sm text-[rgb(var(--color-danger-600))]">Service request definition not found.</div>;
+    return <div className="p-6 text-sm text-[rgb(var(--color-danger-600))]">{t('editor.notFound')}</div>;
   }
 
   return (
     <div className="p-6 space-y-4">
       <div>
         <div className="mb-3">
-          <BackNav href="/msp/service-requests">Back to Service Requests</BackNav>
+          <BackNav href="/msp/service-requests">{t('editor.backNav')}</BackNav>
         </div>
         <h1 className="text-2xl font-semibold">{data.basics.name}</h1>
         <p className="text-sm text-[rgb(var(--color-text-600))]">
-          Current state: {draftLifecycleLabel}
+          {t('editor.currentState', { state: draftLifecycleLabel })}
         </p>
         <div className="mt-3 flex gap-2">
           <Button
             id="service-request-editor-save-draft"
             variant="outline"
             onClick={async () => {
+              if (data.lifecycleState === 'published') {
+                try {
+                  await saveServiceRequestDefinitionDraftAction(data.definitionId);
+                  toast.success(t('messages.success.draftSaved'));
+                } catch (error) {
+                  console.error('Failed to create draft', error);
+                  toast.error(t('messages.error.saveDraftFailed'));
+                }
+                return;
+              }
               try {
-                await saveServiceRequestDefinitionDraftAction(data.definitionId);
-                toast.success('Draft saved');
+                await handleSaveAll();
               } catch (error) {
                 console.error('Failed to save draft', error);
-                toast.error('Failed to save draft');
+                toast.error(t('messages.error.saveDraftFailed'));
               }
             }}
           >
-            {data.lifecycleState === 'published' ? 'Create Draft' : 'Save Draft'}
+            {data.lifecycleState === 'published' ? t('editor.createDraft') : t('editor.saveDraft')}
           </Button>
           <Button
             id="service-request-editor-publish"
+            disabled={isPublishing}
             onClick={async () => {
+              console.log('[publish] clicked', { definitionId: data.definitionId });
+              setIsPublishing(true);
               try {
-                await publishServiceRequestDefinitionAction(data.definitionId);
-                toast.success('Definition published');
+                const preCheck = await validateServiceRequestDefinitionForPublishAction(data.definitionId);
+                const preCheckErrors = preCheck.errors ?? [];
+                console.log('[publish] pre-check result', preCheck);
+                setValidationErrors(preCheckErrors);
+                if (preCheckErrors.length > 0) {
+                  toast.error(
+                    t('messages.error.publishBlockedByValidation', { count: preCheckErrors.length })
+                  );
+                  return;
+                }
+
+                const published = await publishServiceRequestDefinitionAction(data.definitionId);
+                console.log('[publish] server action returned', published);
+                toast.success(t('messages.success.definitionPublished'), { duration: 4000 });
                 await reloadDefinitionEditorState(data.definitionId, true);
               } catch (error) {
-                console.error('Failed to publish definition', error);
-                toast.error(error instanceof Error ? error.message : 'Failed to publish definition');
+                console.error('[publish] failed', error);
+                const rawMessage = error instanceof Error ? error.message : '';
+                const friendlyMessage = rawMessage.startsWith('Publish validation failed:')
+                  ? t('messages.error.publishBlockedByValidation', { count: validationErrors.length || 1 })
+                  : rawMessage || t('messages.error.publishFailed');
+                toast.error(friendlyMessage, { duration: 5000 });
+              } finally {
+                setIsPublishing(false);
               }
             }}
           >
-            Publish
+            {isPublishing ? t('editor.publishing') : t('editor.publish')}
           </Button>
         </div>
       </div>
 
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="space-y-4 lg:col-span-2">
+
       <Card id="service-request-editor-basics" className="p-4 space-y-3">
-        <h2 className="text-lg font-semibold">Basics</h2>
+        <h2 className="text-lg font-semibold">{t('editor.basics.title')}</h2>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <Input
             id="service-request-basics-name"
-            label="Name"
+            label={t('editor.basics.name')}
             containerClassName="mb-0"
             value={basicsInput.name}
             onChange={(event) =>
@@ -1042,7 +1230,7 @@ export default function ServiceRequestDefinitionEditorPage() {
             }
           />
           <div className="grid gap-1 text-sm md:col-span-2">
-            <span className="font-medium">Icon</span>
+            <span className="font-medium">{t('editor.basics.icon')}</span>
             <ServiceRequestIconPicker
               selectedIcon={basicsInput.icon}
               onChange={(icon) =>
@@ -1056,13 +1244,13 @@ export default function ServiceRequestDefinitionEditorPage() {
               id="service-request-basics-icon"
               className="text-xs text-[rgb(var(--color-text-600))]"
             >
-              Selected: {getSelectedIconLabel(basicsInput.icon)}
+              {t('editor.basics.iconSelected', { label: getSelectedIconLabel(basicsInput.icon, t) })}
             </span>
           </div>
           <div className="md:col-span-2">
             <TextArea
               id="service-request-basics-description"
-              label="Description"
+              label={t('editor.basics.description')}
               wrapperClassName="mb-0"
               className="min-h-[96px]"
               value={basicsInput.description}
@@ -1076,7 +1264,7 @@ export default function ServiceRequestDefinitionEditorPage() {
           </div>
           <CustomSelect
             id="service-request-basics-category"
-            label="Category"
+            label={t('editor.basics.category')}
             value={basicsInput.categoryId}
             options={basicsCategoryOptions}
             onValueChange={(value) =>
@@ -1088,7 +1276,7 @@ export default function ServiceRequestDefinitionEditorPage() {
           />
           <Input
             id="service-request-basics-sort-order"
-            label="Sort Order"
+            label={t('editor.basics.sortOrder')}
             containerClassName="mb-0"
             type="number"
             value={basicsInput.sortOrder}
@@ -1103,7 +1291,6 @@ export default function ServiceRequestDefinitionEditorPage() {
         <div>
           <Button
             id="service-request-basics-save"
-            variant="outline"
             onClick={async () => {
               try {
                 await updateServiceRequestBasicsAction(data.definitionId, {
@@ -1120,36 +1307,26 @@ export default function ServiceRequestDefinitionEditorPage() {
                   sortOrder: Number.parseInt(basicsInput.sortOrder, 10) || 0,
                 });
                 await reloadDefinitionEditorState(data.definitionId);
-                toast.success('Basics updated');
+                toast.success(t('messages.success.basicsUpdated'));
               } catch (error) {
                 console.error('Failed to update basics', error);
-                toast.error('Failed to update basics');
+                toast.error(t('messages.error.basicsUpdateFailed'));
               }
             }}
           >
-            Save Basics
+            {t('editor.basics.save')}
           </Button>
         </div>
       </Card>
 
-      <Card id="service-request-editor-service-preview" className="p-4 space-y-3">
-        <h2 className="text-lg font-semibold">Service Card Preview</h2>
-        <ServiceRequestCard
-          title={data.basics.name}
-          description={data.basics.description}
-          icon={data.basics.icon}
-          categoryLabel={data.basics.categoryName ?? data.basics.categoryId ?? 'Uncategorized'}
-        />
-      </Card>
-
       <Card id="service-request-editor-linkage" className="p-4 space-y-3">
-        <h2 className="text-lg font-semibold">Linkage</h2>
-        <FieldRow label="Linked Service" value={data.linkage.linkedServiceName ?? data.linkage.linkedServiceId ?? '-'} />
+        <h2 className="text-lg font-semibold">{t('editor.linkage.title')}</h2>
+        <FieldRow label={t('editor.linkage.linkedService')} value={data.linkage.linkedServiceName ?? data.linkage.linkedServiceId ?? '-'} />
         <div className="flex gap-2">
           <input
             id="service-request-linked-service-search"
             className="border rounded px-3 py-2 text-sm flex-1"
-            placeholder="Search service catalog"
+            placeholder={t('editor.linkage.searchPlaceholder')}
             value={linkedServiceQuery}
             onChange={(event) => setLinkedServiceQuery(event.target.value)}
           />
@@ -1161,7 +1338,7 @@ export default function ServiceRequestDefinitionEditorPage() {
               setLinkedServiceResults(results);
             }}
           >
-            Search
+            {t('editor.linkage.search')}
           </Button>
           <Button
             id="service-request-linked-service-clear"
@@ -1169,10 +1346,10 @@ export default function ServiceRequestDefinitionEditorPage() {
             onClick={async () => {
               await setLinkedServiceForDefinitionAction(data.definitionId, null);
               await reloadDefinitionEditorState(data.definitionId);
-              toast.success('Linked service cleared');
+              toast.success(t('messages.success.linkedServiceCleared'));
             }}
           >
-            Clear
+            {t('editor.linkage.clear')}
           </Button>
         </div>
         {linkedServiceResults.length > 0 && (
@@ -1185,7 +1362,7 @@ export default function ServiceRequestDefinitionEditorPage() {
                 <div>
                   <div className="font-medium">{result.service_name}</div>
                   <div className="text-xs text-[rgb(var(--color-text-600))]">
-                    {result.description ?? 'No description'}
+                    {result.description ?? t('editor.linkage.noDescription')}
                   </div>
                 </div>
                 <Button
@@ -1194,10 +1371,10 @@ export default function ServiceRequestDefinitionEditorPage() {
                   onClick={async () => {
                     await setLinkedServiceForDefinitionAction(data.definitionId, result.service_id);
                     await reloadDefinitionEditorState(data.definitionId);
-                    toast.success(`Linked ${result.service_name}`);
+                    toast.success(t('messages.success.linkedService', { name: result.service_name }));
                   }}
                 >
-                  Select
+                  {t('editor.linkage.select')}
                 </Button>
               </li>
             ))}
@@ -1206,21 +1383,21 @@ export default function ServiceRequestDefinitionEditorPage() {
       </Card>
 
       <Card id="service-request-editor-form" className="p-4 space-y-3">
-        <h2 className="text-lg font-semibold">Form</h2>
+        <h2 className="text-lg font-semibold">{t('editor.form.title')}</h2>
         <div className="rounded border p-3 bg-[rgb(var(--color-background-100))] space-y-3">
-          <div className="text-sm font-semibold">Author Fields</div>
+          <div className="text-sm font-semibold">{t('editor.form.authorFields')}</div>
           <div className="flex flex-wrap items-start gap-2">
             <div className="min-w-[220px] flex-1">
               <CustomSelect
                 id="service-request-form-new-field-type"
-                label="Field Type"
+                label={t('editor.form.fieldType')}
                 value={newFieldType}
-                options={FORM_FIELD_TYPE_OPTIONS}
+                options={formFieldTypeOptions}
                 onValueChange={(value) => setNewFieldType(value as FormField['type'])}
               />
             </div>
             <div className="flex flex-col">
-              <span className="mb-1 text-sm font-medium invisible select-none">Field Type</span>
+              <span className="mb-1 text-sm font-medium invisible select-none">{t('editor.form.fieldType')}</span>
               <Button
                 id="service-request-form-add-field"
                 variant="default"
@@ -1229,21 +1406,21 @@ export default function ServiceRequestDefinitionEditorPage() {
                   try {
                     await addServiceRequestFormFieldAction(data.definitionId, newFieldType);
                     await reloadDefinitionEditorState(data.definitionId);
-                    toast.success('Field added');
+                    toast.success(t('messages.success.fieldAdded'));
                   } catch (error) {
                     console.error('Failed to add form field', error);
-                    toast.error('Failed to add form field');
+                    toast.error(t('messages.error.addFieldFailed'));
                   }
                 }}
               >
                 <Plus className="h-4 w-4" />
-                Add Field
+                {t('editor.form.addField')}
               </Button>
             </div>
           </div>
           <div className="space-y-3">
             {getSchemaFields(data.form.schema).length === 0 ? (
-              <div className="text-sm text-[rgb(var(--color-text-600))]">No fields configured.</div>
+              <div className="text-sm text-[rgb(var(--color-text-600))]">{t('editor.form.noFields')}</div>
             ) : (
               getSchemaFields(data.form.schema).map((field, index, allFields) => (
                 <FormFieldEditorCard
@@ -1258,141 +1435,80 @@ export default function ServiceRequestDefinitionEditorPage() {
             )}
           </div>
         </div>
-        <div className="rounded border p-3 bg-[rgb(var(--color-background-100))]">
-          <div className="text-sm font-medium mb-2">Rendered Form Preview</div>
-          {getSchemaFields(data.form.schema).length > 0 ? (
-            <form className="space-y-3">
-              {getSchemaFields(data.form.schema).map((field, index) => (
-                <FormFieldPreview
-                  key={field.key ?? `field_${index}`}
-                  field={field}
-                  index={index}
-                />
-              ))}
-            </form>
-          ) : (
-            <ul className="space-y-1 text-sm">
-              <li>No fields configured.</li>
-            </ul>
-          )}
-        </div>
-        <pre className="text-xs bg-[rgb(var(--color-background-100))] p-3 rounded overflow-auto">
-          {JSON.stringify(data.form.schema, null, 2)}
-        </pre>
       </Card>
 
       <Card id="service-request-editor-execution" className="p-4 space-y-3">
-        <h2 className="text-lg font-semibold">Execution</h2>
-        <div className="grid gap-2">
-          <label
-            htmlFor="service-request-execution-provider-select"
-            className="text-sm font-medium text-[rgb(var(--color-text-700))]"
-          >
-            Execution Provider
-          </label>
-          <div className="flex items-center gap-2">
-            <select
-              id="service-request-execution-provider-select"
-              className="border rounded px-3 py-2 text-sm"
-              value={data.execution.executionProvider}
-              onChange={async (event) => {
-                try {
-                  await updateServiceRequestExecutionProviderAction(
-                    data.definitionId,
-                    event.target.value
-                  );
-                  await reloadDefinitionEditorState(data.definitionId);
-                  toast.success('Execution provider updated');
-                } catch (error) {
-                  console.error('Failed to update execution provider', error);
-                  toast.error('Failed to update execution provider');
-                }
-              }}
-            >
-              {data.execution.availableExecutionProviders.map((provider) => (
-                <option key={provider.key} value={provider.key}>
-                  {provider.displayName} ({provider.executionMode})
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <div className="grid gap-2">
-          <label
-            htmlFor="service-request-form-behavior-provider-select"
-            className="text-sm font-medium text-[rgb(var(--color-text-700))]"
-          >
-            Form Behavior Provider
-          </label>
-          <div className="flex items-center gap-2">
-            <select
-              id="service-request-form-behavior-provider-select"
-              className="border rounded px-3 py-2 text-sm"
-              value={formBehaviorProviderInput}
-              onChange={async (event) => {
-                try {
-                  setFormBehaviorProviderInput(event.target.value);
-                  await updateServiceRequestFormBehaviorProviderAction(
-                    data.definitionId,
-                    event.target.value
-                  );
-                  await reloadDefinitionEditorState(data.definitionId);
-                  toast.success('Form behavior provider updated');
-                } catch (error) {
-                  console.error('Failed to update form behavior provider', error);
-                  toast.error('Failed to update form behavior provider');
-                }
-              }}
-            >
-              {data.execution.availableFormBehaviorProviders.map((provider) => (
-                <option key={provider.key} value={provider.key}>
-                  {provider.displayName}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <div className="grid gap-2">
-          <label
-            htmlFor="service-request-visibility-provider-select"
-            className="text-sm font-medium text-[rgb(var(--color-text-700))]"
-          >
-            Visibility Provider
-          </label>
-          <div className="flex items-center gap-2">
-            <select
-              id="service-request-visibility-provider-select"
-              className="border rounded px-3 py-2 text-sm"
-              value={visibilityProviderInput}
-              onChange={async (event) => {
-                try {
-                  setVisibilityProviderInput(event.target.value);
-                  await updateServiceRequestVisibilityProviderAction(
-                    data.definitionId,
-                    event.target.value
-                  );
-                  await reloadDefinitionEditorState(data.definitionId);
-                  toast.success('Visibility provider updated');
-                } catch (error) {
-                  console.error('Failed to update visibility provider', error);
-                  toast.error('Failed to update visibility provider');
-                }
-              }}
-            >
-              {data.execution.availableVisibilityProviders.map((provider) => (
-                <option key={provider.key} value={provider.key}>
-                  {provider.displayName}
-                </option>
-              ))}
-            </select>
-          </div>
+        <h2 className="text-lg font-semibold">{t('editor.execution.title')}</h2>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <CustomSelect
+            id="service-request-execution-provider-select"
+            label={t('editor.execution.executionProvider')}
+            value={data.execution.executionProvider}
+            options={data.execution.availableExecutionProviders.map((provider) => ({
+              value: provider.key,
+              label: t('editor.execution.providerDisplay', {
+                displayName: provider.displayName,
+                executionMode: provider.executionMode,
+              }),
+            }))}
+            onValueChange={async (value) => {
+              try {
+                await updateServiceRequestExecutionProviderAction(data.definitionId, value);
+                await reloadDefinitionEditorState(data.definitionId);
+                toast.success(t('messages.success.executionProviderUpdated'));
+              } catch (error) {
+                console.error('Failed to update execution provider', error);
+                toast.error(t('messages.error.executionProviderUpdateFailed'));
+              }
+            }}
+          />
+          <CustomSelect
+            id="service-request-form-behavior-provider-select"
+            label={t('editor.execution.formBehaviorProvider')}
+            value={formBehaviorProviderInput}
+            options={data.execution.availableFormBehaviorProviders.map((provider) => ({
+              value: provider.key,
+              label: provider.displayName,
+            }))}
+            onValueChange={async (value) => {
+              try {
+                setFormBehaviorProviderInput(value);
+                await updateServiceRequestFormBehaviorProviderAction(data.definitionId, value);
+                await reloadDefinitionEditorState(data.definitionId);
+                toast.success(t('messages.success.formBehaviorProviderUpdated'));
+              } catch (error) {
+                console.error('Failed to update form behavior provider', error);
+                toast.error(t('messages.error.formBehaviorProviderUpdateFailed'));
+              }
+            }}
+          />
+          <CustomSelect
+            id="service-request-visibility-provider-select"
+            label={t('editor.execution.visibilityProvider')}
+            value={visibilityProviderInput}
+            options={data.execution.availableVisibilityProviders.map((provider) => ({
+              value: provider.key,
+              label: provider.displayName,
+            }))}
+            onValueChange={async (value) => {
+              try {
+                setVisibilityProviderInput(value);
+                await updateServiceRequestVisibilityProviderAction(data.definitionId, value);
+                await reloadDefinitionEditorState(data.definitionId);
+                toast.success(t('messages.success.visibilityProviderUpdated'));
+              } catch (error) {
+                console.error('Failed to update visibility provider', error);
+                toast.error(t('messages.error.visibilityProviderUpdateFailed'));
+              }
+            }}
+          />
         </div>
         {isTicketOnlyExecution && (
           <div className="space-y-3 rounded border p-3 bg-[rgb(var(--color-background-100))]">
-            <h3 className="text-sm font-semibold">Ticket Routing Configuration</h3>
+            <h3 className="text-sm font-semibold">{t('editor.execution.ticketRouting.title')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <div className="grid gap-1 text-sm md:col-span-2">
-                <span className="font-medium">Board</span>
+                <span className="font-medium">{t('editor.execution.ticketRouting.board')}</span>
                 <BoardPicker
                   id="service-request-ticket-board-id"
                   boards={ticketRoutingBoards}
@@ -1400,11 +1516,11 @@ export default function ServiceRequestDefinitionEditorPage() {
                   selectedBoardId={ticketRoutingConfigInput.boardId || null}
                   filterState={ticketRoutingBoardFilterState}
                   onFilterStateChange={setTicketRoutingBoardFilterState}
-                  placeholder="Select Board"
+                  placeholder={t('editor.execution.ticketRouting.boardPlaceholder')}
                 />
               </div>
               <div className="grid gap-1 text-sm">
-                <span className="font-medium">Status</span>
+                <span className="font-medium">{t('editor.execution.ticketRouting.status')}</span>
                 <CustomSelect
                   id="service-request-ticket-status-id"
                   value={ticketRoutingConfigInput.statusId}
@@ -1415,12 +1531,12 @@ export default function ServiceRequestDefinitionEditorPage() {
                     }))
                   }
                   options={ticketStatusOptions}
-                  placeholder="Select Status"
+                  placeholder={t('editor.execution.ticketRouting.statusPlaceholder')}
                   disabled={!ticketRoutingConfigInput.boardId || ticketRoutingLoading}
                 />
               </div>
               <div className="grid gap-1 text-sm">
-                <span className="font-medium">Assigned User</span>
+                <span className="font-medium">{t('editor.execution.ticketRouting.assignedUser')}</span>
                 <UserPicker
                   id="service-request-ticket-assigned-user-id"
                   value={ticketRoutingConfigInput.assignedToUserId}
@@ -1432,14 +1548,14 @@ export default function ServiceRequestDefinitionEditorPage() {
                   }
                   users={ticketRoutingUsers}
                   getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                  placeholder="Not assigned"
+                  placeholder={t('editor.execution.ticketRouting.assignedUserPlaceholder')}
                   userTypeFilter="internal"
                   buttonWidth="full"
                 />
               </div>
               {ticketRoutingConfigInput.boardId && (
                 <div className="grid gap-1 text-sm md:col-span-2">
-                  <span className="font-medium">Category</span>
+                  <span className="font-medium">{t('editor.execution.ticketRouting.category')}</span>
                   <CategoryPicker
                     id="service-request-ticket-category-id"
                     categories={ticketRoutingCategories}
@@ -1456,7 +1572,7 @@ export default function ServiceRequestDefinitionEditorPage() {
                           selectedCategory?.parent_category ? selectedCategory.category_id : '',
                       }));
                     }}
-                    placeholder="Select category"
+                    placeholder={t('editor.execution.ticketRouting.categoryPlaceholder')}
                     multiSelect={false}
                     allowEmpty={true}
                     showReset={true}
@@ -1465,7 +1581,7 @@ export default function ServiceRequestDefinitionEditorPage() {
               )}
               {ticketRoutingBoardConfig?.priority_type === 'custom' && (
                 <div className="grid gap-1 text-sm">
-                  <span className="font-medium">Priority</span>
+                  <span className="font-medium">{t('editor.execution.ticketRouting.priority')}</span>
                   <PrioritySelect
                     id="service-request-ticket-priority-id"
                     value={ticketRoutingConfigInput.priorityId || null}
@@ -1476,7 +1592,7 @@ export default function ServiceRequestDefinitionEditorPage() {
                       }))
                     }
                     options={ticketPriorityOptions}
-                    placeholder="Select Priority"
+                    placeholder={t('editor.execution.ticketRouting.priorityPlaceholder')}
                     disabled={!ticketRoutingConfigInput.boardId}
                   />
                 </div>
@@ -1484,7 +1600,7 @@ export default function ServiceRequestDefinitionEditorPage() {
               {ticketRoutingBoardConfig?.priority_type === 'itil' && (
                 <>
                   <div className="grid gap-1 text-sm">
-                    <span className="font-medium">Impact</span>
+                    <span className="font-medium">{t('editor.execution.ticketRouting.impact')}</span>
                     <CustomSelect
                       id="service-request-ticket-itil-impact"
                       value={ticketRoutingConfigInput.itilImpact}
@@ -1494,12 +1610,12 @@ export default function ServiceRequestDefinitionEditorPage() {
                           itilImpact: value,
                         }))
                       }
-                      options={ITIL_IMPACT_OPTIONS}
-                      placeholder="Select Impact"
+                      options={itilImpactOptions}
+                      placeholder={t('editor.execution.ticketRouting.impactPlaceholder')}
                     />
                   </div>
                   <div className="grid gap-1 text-sm">
-                    <span className="font-medium">Urgency</span>
+                    <span className="font-medium">{t('editor.execution.ticketRouting.urgency')}</span>
                     <CustomSelect
                       id="service-request-ticket-itil-urgency"
                       value={ticketRoutingConfigInput.itilUrgency}
@@ -1509,45 +1625,48 @@ export default function ServiceRequestDefinitionEditorPage() {
                           itilUrgency: value,
                         }))
                       }
-                      options={ITIL_URGENCY_OPTIONS}
-                      placeholder="Select Urgency"
+                      options={itilUrgencyOptions}
+                      placeholder={t('editor.execution.ticketRouting.urgencyPlaceholder')}
                     />
                   </div>
                   <div className="grid gap-1 text-sm md:col-span-2">
-                    <span className="font-medium">Priority (Calculated)</span>
+                    <span className="font-medium">{t('editor.execution.ticketRouting.priorityCalculated')}</span>
                     <div className="rounded border px-3 py-2 text-sm bg-[rgb(var(--color-background-50))]">
                       {calculatedItilPriority ? (
                         <span>
-                          {ItilLabels.priority[calculatedItilPriority]} (Impact {ticketRoutingConfigInput.itilImpact} x Urgency {ticketRoutingConfigInput.itilUrgency})
+                          {t('editor.execution.ticketRouting.priorityFormula', {
+                            label: ItilLabels.priority[calculatedItilPriority],
+                            impact: ticketRoutingConfigInput.itilImpact,
+                            urgency: ticketRoutingConfigInput.itilUrgency,
+                          })}
                         </span>
                       ) : (
                         <span className="text-[rgb(var(--color-text-600))]">
-                          Select impact and urgency
+                          {t('editor.execution.ticketRouting.selectImpactAndUrgency')}
                         </span>
                       )}
                     </div>
                   </div>
                 </>
               )}
-              <label className="grid gap-1 text-sm">
-                <span className="font-medium">Title Field Key</span>
-                <input
-                  id="service-request-ticket-title-field-key"
-                  className="border rounded px-3 py-2 text-sm"
-                  value={ticketRoutingConfigInput.titleFieldKey}
-                  onChange={(event) =>
-                    setTicketRoutingConfigInput((previous) => ({
-                      ...previous,
-                      titleFieldKey: event.target.value,
-                    }))
-                  }
-                />
-              </label>
-              <label className="grid gap-1 text-sm md:col-span-2">
-                <span className="font-medium">Description Prefix</span>
-                <textarea
+              <Input
+                id="service-request-ticket-title-field-key"
+                label={t('editor.execution.ticketRouting.titleFieldKey')}
+                containerClassName="mb-0"
+                value={ticketRoutingConfigInput.titleFieldKey}
+                onChange={(event) =>
+                  setTicketRoutingConfigInput((previous) => ({
+                    ...previous,
+                    titleFieldKey: event.target.value,
+                  }))
+                }
+              />
+              <div className="md:col-span-2">
+                <TextArea
                   id="service-request-ticket-description-prefix"
-                  className="border rounded px-3 py-2 text-sm min-h-[72px]"
+                  label={t('editor.execution.ticketRouting.descriptionPrefix')}
+                  wrapperClassName="mb-0"
+                  className="min-h-[72px]"
                   value={ticketRoutingConfigInput.descriptionPrefix}
                   onChange={(event) =>
                     setTicketRoutingConfigInput((previous) => ({
@@ -1556,58 +1675,45 @@ export default function ServiceRequestDefinitionEditorPage() {
                     }))
                   }
                 />
-              </label>
+              </div>
             </div>
             <div>
               <Button
                 id="service-request-ticket-config-save"
-                variant="outline"
                 onClick={() => void saveTicketRoutingConfig()}
               >
-                Save Ticket Routing
+                {t('editor.execution.ticketRouting.save')}
               </Button>
             </div>
           </div>
         )}
         {isWorkflowBackedExecution && (
           <div className="space-y-3 rounded border p-3 bg-[rgb(var(--color-background-100))]">
-            <h3 className="text-sm font-semibold">Workflow Configuration</h3>
-            <div className="grid gap-2">
-              <label
-                htmlFor="service-request-workflow-id-input"
-                className="text-sm font-medium text-[rgb(var(--color-text-700))]"
-              >
-                Workflow ID
-              </label>
-              <input
-                id="service-request-workflow-id-input"
-                className="border rounded px-3 py-2 text-sm"
-                placeholder="workflow-id"
-                value={workflowIdInput}
-                onChange={(event) => setWorkflowIdInput(event.target.value)}
-              />
-            </div>
-            <div className="grid gap-2">
-              <label
-                htmlFor="service-request-workflow-input-mapping"
-                className="text-sm font-medium text-[rgb(var(--color-text-700))]"
-              >
-                Workflow Input Mapping (JSON object)
-              </label>
-              <textarea
+            <h3 className="text-sm font-semibold">{t('editor.execution.workflow.title')}</h3>
+            <Input
+              id="service-request-workflow-id-input"
+              label={t('editor.execution.workflow.workflowId')}
+              containerClassName="mb-0"
+              placeholder={t('editor.execution.workflow.workflowIdPlaceholder')}
+              value={workflowIdInput}
+              onChange={(event) => setWorkflowIdInput(event.target.value)}
+            />
+            <div>
+              <TextArea
                 id="service-request-workflow-input-mapping"
-                className="border rounded px-3 py-2 text-sm font-mono min-h-[140px]"
+                label={t('editor.execution.workflow.inputMapping')}
+                wrapperClassName="mb-0"
+                className="min-h-[140px] font-mono"
                 value={workflowInputMappingText}
                 onChange={(event) => setWorkflowInputMappingText(event.target.value)}
               />
-              <p className="text-xs text-[rgb(var(--color-text-600))]">
-                Example: &#123;&quot;requestedBy&quot;:&quot;payload.request_title&quot;,&quot;ticketReference&quot;:&quot;ticketId&quot;&#125;
+              <p className="mt-1 text-xs text-[rgb(var(--color-text-600))]">
+                {t('editor.execution.workflow.inputMappingExample')}
               </p>
             </div>
             <div>
               <Button
                 id="service-request-workflow-config-save"
-                variant="outline"
                 onClick={async () => {
                   try {
                     const parsedInputMapping = workflowInputMappingText.trim()
@@ -1618,7 +1724,7 @@ export default function ServiceRequestDefinitionEditorPage() {
                       typeof parsedInputMapping !== 'object' ||
                       Array.isArray(parsedInputMapping)
                     ) {
-                      toast.error('Workflow input mapping must be a JSON object');
+                      toast.error(t('messages.error.workflowMappingNotObject'));
                       return;
                     }
 
@@ -1633,41 +1739,39 @@ export default function ServiceRequestDefinitionEditorPage() {
                       nextExecutionConfig
                     );
                     await reloadDefinitionEditorState(data.definitionId);
-                    toast.success('Workflow configuration updated');
+                    toast.success(t('messages.success.workflowConfigurationUpdated'));
                   } catch (error) {
                     console.error('Failed to update workflow configuration', error);
-                    toast.error('Invalid workflow configuration JSON');
+                    toast.error(t('messages.error.workflowConfigurationInvalid'));
                   }
                 }}
               >
-                Save Workflow Settings
+                {t('editor.execution.workflow.save')}
               </Button>
             </div>
           </div>
         )}
         {data.execution.showAdvancedFormBehaviorConfigPanel && (
           <div className="space-y-3 rounded border p-3 bg-[rgb(var(--color-background-100))]">
-            <div className="text-sm font-semibold">Advanced Form Behavior</div>
-            <label className="grid gap-1 text-sm">
-              <span className="font-medium">Form Behavior Config (JSON object)</span>
-              <textarea
-                id="service-request-form-behavior-config"
-                className="border rounded px-3 py-2 text-sm font-mono min-h-[140px]"
-                value={formBehaviorConfigText}
-                onChange={(event) => setFormBehaviorConfigText(event.target.value)}
-              />
-            </label>
+            <div className="text-sm font-semibold">{t('editor.execution.advanced.title')}</div>
+            <TextArea
+              id="service-request-form-behavior-config"
+              label={t('editor.execution.advanced.config')}
+              wrapperClassName="mb-0"
+              className="min-h-[140px] font-mono"
+              value={formBehaviorConfigText}
+              onChange={(event) => setFormBehaviorConfigText(event.target.value)}
+            />
             <div>
               <Button
                 id="service-request-form-behavior-config-save"
-                variant="outline"
                 onClick={async () => {
                   try {
                     const parsed = formBehaviorConfigText.trim()
                       ? JSON.parse(formBehaviorConfigText)
                       : {};
                     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-                      toast.error('Form behavior config must be a JSON object');
+                      toast.error(t('messages.error.formBehaviorNotObject'));
                       return;
                     }
                     await updateServiceRequestFormBehaviorConfigAction(
@@ -1675,40 +1779,38 @@ export default function ServiceRequestDefinitionEditorPage() {
                       parsed as Record<string, unknown>
                     );
                     await reloadDefinitionEditorState(data.definitionId);
-                    toast.success('Form behavior config updated');
+                    toast.success(t('messages.success.formBehaviorConfigUpdated'));
                   } catch (error) {
                     console.error('Failed to update form behavior config', error);
-                    toast.error('Invalid form behavior JSON');
+                    toast.error(t('messages.error.formBehaviorInvalid'));
                   }
                 }}
               >
-                Save Form Behavior Config
+                {t('editor.execution.advanced.save')}
               </Button>
             </div>
           </div>
         )}
         <div className="space-y-3 rounded border p-3 bg-[rgb(var(--color-background-100))]">
-          <div className="text-sm font-semibold">Visibility Configuration</div>
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium">Visibility Config (JSON object)</span>
-            <textarea
-              id="service-request-visibility-config"
-              className="border rounded px-3 py-2 text-sm font-mono min-h-[140px]"
-              value={visibilityConfigText}
-              onChange={(event) => setVisibilityConfigText(event.target.value)}
-            />
-          </label>
+          <div className="text-sm font-semibold">{t('editor.execution.visibility.title')}</div>
+          <TextArea
+            id="service-request-visibility-config"
+            label={t('editor.execution.visibility.config')}
+            wrapperClassName="mb-0"
+            className="min-h-[140px] font-mono"
+            value={visibilityConfigText}
+            onChange={(event) => setVisibilityConfigText(event.target.value)}
+          />
           <div>
             <Button
               id="service-request-visibility-config-save"
-              variant="outline"
               onClick={async () => {
                 try {
                   const parsed = visibilityConfigText.trim()
                     ? JSON.parse(visibilityConfigText)
                     : {};
                   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-                    toast.error('Visibility config must be a JSON object');
+                    toast.error(t('messages.error.visibilityNotObject'));
                     return;
                   }
                   await updateServiceRequestVisibilityConfigAction(
@@ -1716,55 +1818,61 @@ export default function ServiceRequestDefinitionEditorPage() {
                     parsed as Record<string, unknown>
                   );
                   await reloadDefinitionEditorState(data.definitionId);
-                  toast.success('Visibility config updated');
+                  toast.success(t('messages.success.visibilityConfigUpdated'));
                 } catch (error) {
                   console.error('Failed to update visibility config', error);
-                  toast.error('Invalid visibility JSON');
+                  toast.error(t('messages.error.visibilityInvalid'));
                 }
               }}
             >
-              Save Visibility Config
+              {t('editor.execution.visibility.save')}
             </Button>
           </div>
         </div>
-        <FieldRow label="Execution Provider" value={data.execution.executionProvider} />
-        <FieldRow label="Execution Config" value={JSON.stringify(data.execution.executionConfig)} />
-        <FieldRow label="Form Behavior Provider" value={data.execution.formBehaviorProvider} />
-        <FieldRow label="Visibility Provider" value={data.execution.visibilityProvider} />
+        <FieldRow label={t('editor.execution.fields.executionProvider')} value={data.execution.executionProvider} />
+        <FieldRow label={t('editor.execution.fields.executionConfig')} value={JSON.stringify(data.execution.executionConfig)} />
+        <FieldRow label={t('editor.execution.fields.formBehaviorProvider')} value={data.execution.formBehaviorProvider} />
+        <FieldRow label={t('editor.execution.fields.visibilityProvider')} value={data.execution.visibilityProvider} />
       </Card>
 
       <Card id="service-request-editor-publish" className="p-4 space-y-3">
-        <h2 className="text-lg font-semibold">Publish</h2>
-        <FieldRow label="Current Draft State" value={draftLifecycleLabel ?? '-'} />
+        <h2 className="text-lg font-semibold">{t('editor.publishSection.title')}</h2>
+        <FieldRow label={t('editor.publishSection.currentDraftState')} value={draftLifecycleLabel ?? '-'} />
         <FieldRow
-          label="Last Published Version"
-          value={data.publish.publishedVersionNumber ? `v${data.publish.publishedVersionNumber}` : 'Never published'}
+          label={t('editor.publishSection.lastPublishedVersion')}
+          value={
+            data.publish.publishedVersionNumber
+              ? t('editor.publishSection.versionPrefix', { number: data.publish.publishedVersionNumber })
+              : t('editor.publishSection.neverPublished')
+          }
         />
         <FieldRow
-          label="Published At"
+          label={t('editor.publishSection.publishedAt')}
           value={data.publish.publishedAt ? new Date(data.publish.publishedAt).toLocaleString() : '-'}
         />
-        <FieldRow label="Draft Updated At" value={new Date(data.publish.draftUpdatedAt).toLocaleString()} />
+        <FieldRow label={t('editor.publishSection.draftUpdatedAt')} value={new Date(data.publish.draftUpdatedAt).toLocaleString()} />
         {validationErrors.length > 0 ? (
-          <div className="rounded border border-[rgb(var(--color-danger-400))] bg-[rgb(var(--color-danger-100))] p-3 text-sm">
-            <div className="font-semibold mb-1">Publish Validation</div>
-            <ul className="list-disc pl-5">
-              {validationErrors.map((error) => (
-                <li key={error}>{error}</li>
-              ))}
-            </ul>
-          </div>
+          <Alert variant="destructive">
+            <AlertTitle>{t('editor.publishSection.validationTitle')}</AlertTitle>
+            <AlertDescription>
+              <ul className="list-disc pl-5">
+                {validationErrors.map((error) => (
+                  <li key={error}>{translateValidationError(error, t)}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
         ) : (
-          <div className="rounded border border-[rgb(var(--color-success-300))] bg-[rgb(var(--color-success-100))] p-3 text-sm">
-            Publish validation passed.
-          </div>
+          <Alert variant="success">
+            <AlertDescription>{t('editor.publishSection.validationPassed')}</AlertDescription>
+          </Alert>
         )}
       </Card>
 
       <Card id="service-request-editor-submissions" className="p-4 space-y-3">
-        <h2 className="text-lg font-semibold">Submissions</h2>
+        <h2 className="text-lg font-semibold">{t('editor.submissions.title')}</h2>
         {submissions.length === 0 ? (
-          <div className="text-sm text-[rgb(var(--color-text-600))]">No submissions yet for this definition.</div>
+          <div className="text-sm text-[rgb(var(--color-text-600))]">{t('editor.submissions.empty')}</div>
         ) : (
           <div className="space-y-2">
             {submissions.map((submission) => (
@@ -1775,7 +1883,10 @@ export default function ServiceRequestDefinitionEditorPage() {
                 <div className="text-sm">
                   <div className="font-medium">{submission.request_name}</div>
                   <div className="text-[rgb(var(--color-text-600))]">
-                    {new Date(submission.submitted_at).toLocaleString()} · {submission.execution_status}
+                    {t('editor.submissions.submittedAtStatus', {
+                      date: new Date(submission.submitted_at).toLocaleString(),
+                      status: submission.execution_status,
+                    })}
                   </div>
                 </div>
                 <Button
@@ -1790,7 +1901,7 @@ export default function ServiceRequestDefinitionEditorPage() {
                     setSelectedSubmissionDetail(detail as DefinitionSubmissionDetail | null);
                   }}
                 >
-                  View Detail
+                  {t('editor.submissions.viewDetail')}
                 </Button>
               </div>
             ))}
@@ -1798,10 +1909,10 @@ export default function ServiceRequestDefinitionEditorPage() {
         )}
         {selectedSubmissionDetail && (
           <div className="rounded border p-3 bg-[rgb(var(--color-background-100))] space-y-2">
-            <div className="text-sm font-semibold">Submission Detail</div>
-            <FieldRow label="Submission ID" value={selectedSubmissionDetail.submission_id} />
+            <div className="text-sm font-semibold">{t('editor.submissions.detailTitle')}</div>
+            <FieldRow label={t('editor.submissions.submissionId')} value={selectedSubmissionDetail.submission_id} />
             <FieldRow
-              label="Requester User"
+              label={t('editor.submissions.requesterUser')}
               value={
                 selectedSubmissionDetail.requester_user_name ??
                 selectedSubmissionDetail.requester_user_id ??
@@ -1809,15 +1920,15 @@ export default function ServiceRequestDefinitionEditorPage() {
               }
             />
             <FieldRow
-              label="Client"
+              label={t('editor.submissions.client')}
               value={selectedSubmissionDetail.client_name ?? selectedSubmissionDetail.client_id ?? '-'}
             />
             <FieldRow
-              label="Contact"
+              label={t('editor.submissions.contact')}
               value={selectedSubmissionDetail.contact_name ?? selectedSubmissionDetail.contact_id ?? '-'}
             />
             <FieldRow
-              label="Ticket Reference"
+              label={t('editor.submissions.ticketReference')}
               value={
                 selectedSubmissionDetail.created_ticket_id ? (
                   <Button
@@ -1834,9 +1945,9 @@ export default function ServiceRequestDefinitionEditorPage() {
                 )
               }
             />
-            <FieldRow label="Workflow Reference" value={selectedSubmissionDetail.workflow_execution_id ?? '-'} />
+            <FieldRow label={t('editor.submissions.workflowReference')} value={selectedSubmissionDetail.workflow_execution_id ?? '-'} />
             <FieldRow
-              label="Execution Error"
+              label={t('editor.submissions.executionError')}
               value={selectedSubmissionDetail.execution_error_summary ?? '-'}
             />
             <pre className="text-xs bg-white p-2 rounded overflow-auto">
@@ -1845,6 +1956,72 @@ export default function ServiceRequestDefinitionEditorPage() {
           </div>
         )}
       </Card>
+
+        </div>
+
+        <aside className="space-y-4 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
+          <Card
+            id="service-request-editor-preview"
+            className="border-dashed border-2 border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-background-50))] p-0 overflow-hidden"
+          >
+            <div className="flex items-center justify-between border-b border-dashed border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-background-100))] px-4 py-2">
+              <div className="flex items-center gap-2">
+                <Eye className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-[rgb(var(--color-text-600))]">
+                  {t('editor.preview.title')}
+                </h2>
+              </div>
+              <span className="rounded-full bg-[rgb(var(--color-primary-100))] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-primary-700))]">
+                {t('editor.preview.badge')}
+              </span>
+            </div>
+
+            <div className="space-y-6 p-5" aria-hidden="true">
+              <div className="space-y-2">
+                <div className="text-xs font-semibold uppercase tracking-wide text-[rgb(var(--color-text-500))]">
+                  {t('editor.preview.cardSubheading')}
+                </div>
+                <ServiceRequestCard
+                  title={data.basics.name}
+                  description={data.basics.description}
+                  icon={data.basics.icon}
+                  categoryLabel={data.basics.categoryName ?? data.basics.categoryId ?? t('editor.basics.uncategorized')}
+                  fallbackCategory={t('editor.basics.uncategorized')}
+                  noDescription={t('editor.linkage.noDescription')}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-xs font-semibold uppercase tracking-wide text-[rgb(var(--color-text-500))]">
+                  {t('editor.preview.formSubheading')}
+                </div>
+                <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-white shadow-md">
+                  <div className="flex items-center gap-1.5 border-b border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background-50))] px-3 py-2">
+                    <span className="h-2.5 w-2.5 rounded-full bg-[rgb(var(--color-accent-400))]" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-[rgb(var(--color-warning-400))]" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-[rgb(var(--color-success-400))]" />
+                  </div>
+                  <div className="p-4 pointer-events-none select-none">
+                    {getSchemaFields(data.form.schema).length > 0 ? (
+                      <form className="space-y-3">
+                        {getSchemaFields(data.form.schema).map((field, index) => (
+                          <FormFieldPreview
+                            key={field.key ?? `field_${index}`}
+                            field={field}
+                            index={index}
+                          />
+                        ))}
+                      </form>
+                    ) : (
+                      <p className="text-sm text-[rgb(var(--color-text-600))]">{t('editor.form.noFields')}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </aside>
+      </div>
     </div>
   );
 }
