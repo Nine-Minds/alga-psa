@@ -37,6 +37,13 @@ const EXCLUDED_TABLES: string[] = [
   'spatial_ref_sys',            // PostGIS system table
 ];
 
+// Foreign-key constraints that are exempt from the ordering check because
+// breakCircularDependencies() in tenant-deletion-activities.ts NULLs out the
+// referencing column before deletion begins. Add entries by constraint name.
+const EXEMPT_FK_CONSTRAINTS: Set<string> = new Set([
+  'statuses_tenant_board_id_fk', // NULL'd via breakCircularDependencies (statuses.board_id)
+]);
+
 interface FkOrderingViolation {
   childTable: string;
   parentTable: string;
@@ -241,6 +248,7 @@ async function validateDeletionOrder(): Promise<ValidationResult> {
     const fkOrderingViolations: FkOrderingViolation[] = [];
     for (const fk of foreignKeys) {
       if (fk.childTable === fk.parentTable) continue; // self-ref is fine
+      if (EXEMPT_FK_CONSTRAINTS.has(fk.constraintName)) continue; // handled via NULL-out
       const childIdx = orderIdx.get(fk.childTable);
       const parentIdx = orderIdx.get(fk.parentTable);
       if (childIdx === undefined || parentIdx === undefined) continue; // outside deletion scope
