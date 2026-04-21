@@ -55,8 +55,10 @@ export function MicrosoftCalendarProviderForm({
   const [calendarProviderId, setCalendarProviderId] = useState<string | undefined>(provider?.id);
   const [providerSetupReady, setProviderSetupReady] = useState(false);
   const [providerSetupLoading, setProviderSetupLoading] = useState(true);
-  const [providerSetupMessage, setProviderSetupMessage] = useState<string | null>(null);
-  const { t } = useTranslation();
+  const [providerSetupReasonCode, setProviderSetupReasonCode] = useState<
+    'unsupported_consumer' | 'binding_not_configured' | 'profile_missing' | 'profile_credentials_missing' | null
+  >(null);
+  const { t } = useTranslation('msp/calendar');
 
   const form = useForm<MicrosoftCalendarProviderFormData>({
     resolver: zodResolver(microsoftCalendarProviderSchema),
@@ -87,10 +89,10 @@ export function MicrosoftCalendarProviderForm({
       try {
         const res = await getMicrosoftCalendarSetupStatus();
         setProviderSetupReady(Boolean(res.success && res.ready));
-        setProviderSetupMessage(res.success ? res.message || null : null);
+        setProviderSetupReasonCode(res.success ? res.reasonCode || null : null);
       } catch {
         setProviderSetupReady(false);
-        setProviderSetupMessage(null);
+        setProviderSetupReasonCode(null);
       } finally {
         setProviderSetupLoading(false);
       }
@@ -332,8 +334,13 @@ export function MicrosoftCalendarProviderForm({
                   <div className="space-y-2">
                     <div className="font-medium">{t('calendar.providers.microsoft.configAlert.title', { defaultValue: 'Microsoft provider settings are not configured.' })}</div>
                     <div className="text-sm text-muted-foreground">
-                      {providerSetupMessage ||
-                        t('calendar.providers.microsoft.configAlert.body', { defaultValue: 'Configure Providers first in Settings → Integrations → Providers, then return here to connect Outlook Calendar.' })}
+                      {providerSetupReasonCode
+                        ? t(`calendar.providers.microsoft.setupReason.${providerSetupReasonCode}`, {
+                            defaultValue: t('calendar.providers.microsoft.configAlert.body', {
+                              defaultValue: 'Configure Providers first in Settings → Integrations → Providers, then return here to connect Outlook Calendar.',
+                            }),
+                          })
+                        : t('calendar.providers.microsoft.configAlert.body', { defaultValue: 'Configure Providers first in Settings → Integrations → Providers, then return here to connect Outlook Calendar.' })}
                     </div>
                     <Button
                       id="configure-microsoft-calendar-providers-link"

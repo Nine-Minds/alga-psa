@@ -50,7 +50,7 @@ export function GoogleCalendarProviderForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [calendarProviderId, setCalendarProviderId] = useState<string | undefined>(provider?.id);
   const [googleConfigReady, setGoogleConfigReady] = useState<boolean>(false);
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/calendar');
 
   const form = useForm<GoogleCalendarProviderFormData>({
     resolver: zodResolver(googleCalendarProviderSchema),

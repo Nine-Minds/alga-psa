@@ -2,7 +2,10 @@
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { withAuth } from '@alga-psa/auth/withAuth';
-import { resolveMicrosoftConsumerProfileConfig } from '../../microsoftConsumerProfileResolution';
+import {
+  resolveMicrosoftConsumerProfileConfig,
+  type MicrosoftConsumerProfileReasonCode,
+} from '../../microsoftConsumerProfileResolution';
 
 const GOOGLE_CLIENT_ID_SECRET = 'google_client_id';
 const GOOGLE_CLIENT_SECRET_SECRET = 'google_client_secret';
@@ -66,6 +69,7 @@ export const getMicrosoftCalendarSetupStatus = withAuth(async (
   ready?: boolean;
   profileId?: string | null;
   message?: string;
+  reasonCode?: MicrosoftConsumerProfileReasonCode;
 }> => {
   try {
     if ((user as any)?.user_type === 'client') {
@@ -79,6 +83,7 @@ export const getMicrosoftCalendarSetupStatus = withAuth(async (
         ready: false,
         profileId: profile.profileId || null,
         message: profile.message || 'No Microsoft profile is currently bound to Calendar.',
+        reasonCode: profile.reasonCode,
       };
     }
 

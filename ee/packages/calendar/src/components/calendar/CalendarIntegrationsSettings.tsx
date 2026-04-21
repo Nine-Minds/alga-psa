@@ -29,7 +29,7 @@ type ProviderType = 'google' | 'microsoft';
 export function CalendarIntegrationsSettings() {
   const tenant = useTenant();
   const { toast } = useToast();
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/calendar');
   const [providers, setProviders] = useState<CalendarProviderConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

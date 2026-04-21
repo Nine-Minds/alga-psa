@@ -24,7 +24,7 @@ export function CalendarSyncStatusDisplay({ entryId, compact = false }: Calendar
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const componentId = useId();
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/calendar');
 
   useEffect(() => {
     if (entryId) {
