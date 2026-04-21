@@ -509,9 +509,11 @@ export const sendInvoiceEmailAction = withAuth(async (
         customMessage: customMessage || '',
       };
 
-      const subject = Handlebars.compile(emailTemplate.subject)(templateContext);
+      // Subject and plain-text are not HTML — disable Handlebars' HTML escape
+      // so characters like `"` in client/invoice names don't render as `&quot;`.
+      const subject = Handlebars.compile(emailTemplate.subject, { noEscape: true })(templateContext);
       const html = Handlebars.compile(emailTemplate.html_content)(templateContext);
-      const text = Handlebars.compile(emailTemplate.text_content)(templateContext);
+      const text = Handlebars.compile(emailTemplate.text_content, { noEscape: true })(templateContext);
 
       const from: EmailAddress = { email: fromEmail, name: companyName };
       const to: EmailAddress[] = [{ email: recipientEmail, name: recipientName }];

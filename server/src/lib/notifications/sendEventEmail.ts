@@ -368,7 +368,11 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
 
     // Use Handlebars to compile and render the template with context
     const htmlTemplate = Handlebars.compile(templateContent);
-    const subjectTemplate = Handlebars.compile(emailSubject);
+    // Subject and plain-text fall-back are NOT HTML — compile with noEscape so
+    // interpolated values like a ticket/task title containing `"` render
+    // literally instead of as `&quot;`. Handlebars' default HTML-escape is
+    // correct for the HTML body only.
+    const subjectTemplate = Handlebars.compile(emailSubject, { noEscape: true });
 
     let html = htmlTemplate(params.context);
     let subject = subjectTemplate(params.context).replace(/[\r\n]+/g, ' ').trim();
@@ -381,7 +385,20 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       contextKeys: Object.keys(params.context)
     });
 
-    let text = html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+    // Plain-text fall-back: strip tags AND decode common HTML entities so
+    // literal characters like `"` and `&` don't leak through as `&quot;` /
+    // `&amp;` in clients that show the text/plain alternative.
+    let text = html
+      .replace(/<[^>]*>/g, '')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&#x27;/g, "'")
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/\s+/g, ' ')
+      .trim();
 
     let replyPayload: ReplyMarkerPayload | null = null;
     if (params.replyContext?.ticketId || params.replyContext?.projectId) {
