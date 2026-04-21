@@ -231,6 +231,12 @@
           "body": "Configureer eerst de providers in Instellingen → Integraties → Providers en kom dan terug om Outlook Calendar te verbinden.",
           "openSettings": "Providerinstellingen openen"
         },
+        "setupReason": {
+          "unsupported_consumer": "Niet-ondersteund Microsoft-consumententype voor Agenda.",
+          "binding_not_configured": "De agenda is nog niet gekoppeld aan een Microsoft-profiel. Configureer eerst de providers en kom dan terug om Outlook Calendar te verbinden.",
+          "profile_missing": "Het aan de agenda gekoppelde Microsoft-profiel ontbreekt of is gearchiveerd. Selecteer een actief profiel in Providers en kom dan terug.",
+          "profile_credentials_missing": "Het aan de agenda gekoppelde Microsoft-profiel mist de vereiste inloggegevens. Werk het profiel bij in Providers en kom dan terug."
+        },
         "defaults": {
           "providerName": "Outlook Calendar",
           "calendarId": "calendar"

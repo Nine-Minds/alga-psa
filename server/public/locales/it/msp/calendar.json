@@ -231,6 +231,12 @@
           "body": "Configura prima i provider in Impostazioni → Integrazioni → Provider, poi torna qui per collegare Outlook Calendar.",
           "openSettings": "Apri impostazioni provider"
         },
+        "setupReason": {
+          "unsupported_consumer": "Tipo di consumatore Microsoft non supportato per il calendario.",
+          "binding_not_configured": "Il calendario non è ancora associato a un profilo Microsoft. Configura prima i provider e torna qui per collegare Outlook Calendar.",
+          "profile_missing": "Il profilo Microsoft associato al calendario è mancante o archiviato. Seleziona un profilo attivo in Provider e torna qui.",
+          "profile_credentials_missing": "Al profilo Microsoft associato al calendario mancano le credenziali richieste. Aggiorna il profilo in Provider e torna qui."
+        },
         "defaults": {
           "providerName": "Outlook Calendar",
           "calendarId": "calendar"

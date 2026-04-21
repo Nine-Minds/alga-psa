@@ -231,6 +231,12 @@
           "body": "Configure primero los proveedores en Configuración → Integraciones → Proveedores y, a continuación, vuelva aquí para conectar Outlook Calendar.",
           "openSettings": "Abrir configuración de proveedores"
         },
+        "setupReason": {
+          "unsupported_consumer": "Tipo de consumidor de Microsoft no compatible para el calendario.",
+          "binding_not_configured": "El calendario aún no está vinculado a un perfil de Microsoft. Configure primero los proveedores y, a continuación, vuelva aquí para conectar Outlook Calendar.",
+          "profile_missing": "El perfil de Microsoft vinculado al calendario no existe o está archivado. Seleccione un perfil activo en Proveedores y vuelva aquí.",
+          "profile_credentials_missing": "Al perfil de Microsoft vinculado al calendario le faltan credenciales obligatorias. Actualice el perfil en Proveedores y vuelva aquí."
+        },
         "defaults": {
           "providerName": "Outlook Calendar",
           "calendarId": "calendar"

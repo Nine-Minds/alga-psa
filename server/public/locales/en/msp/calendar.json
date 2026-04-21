@@ -231,6 +231,12 @@
           "body": "Configure Providers first in Settings → Integrations → Providers, then return here to connect Outlook Calendar.",
           "openSettings": "Open Providers Settings"
         },
+        "setupReason": {
+          "unsupported_consumer": "Unsupported Microsoft consumer type for Calendar.",
+          "binding_not_configured": "Calendar is not yet bound to a Microsoft profile. Configure Providers first, then return here to connect Outlook Calendar.",
+          "profile_missing": "The Microsoft profile bound to Calendar is missing or archived. Select an active profile in Providers, then return here.",
+          "profile_credentials_missing": "The Microsoft profile bound to Calendar is missing required credentials. Update the profile in Providers, then return here."
+        },
         "defaults": {
           "providerName": "Outlook Calendar",
           "calendarId": "calendar"

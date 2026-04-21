@@ -231,6 +231,12 @@
           "body": "Configure primeiro os provedores em Definições → Integrações → Provedores e depois volte aqui para conectar o Outlook Calendar.",
           "openSettings": "Abrir definições de provedores"
         },
+        "setupReason": {
+          "unsupported_consumer": "Tipo de consumidor Microsoft não suportado para o Calendário.",
+          "binding_not_configured": "O Calendário ainda não está vinculado a um perfil Microsoft. Configure primeiro os provedores e depois volte aqui para conectar o Outlook Calendar.",
+          "profile_missing": "O perfil Microsoft vinculado ao Calendário está em falta ou arquivado. Selecione um perfil ativo em Provedores e volte aqui.",
+          "profile_credentials_missing": "Ao perfil Microsoft vinculado ao Calendário faltam credenciais obrigatórias. Atualize o perfil em Provedores e volte aqui."
+        },
         "defaults": {
           "providerName": "Outlook Calendar",
           "calendarId": "calendar"

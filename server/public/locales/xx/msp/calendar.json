@@ -231,6 +231,12 @@
           "body": "11111",
           "openSettings": "11111"
         },
+        "setupReason": {
+          "unsupported_consumer": "11111",
+          "binding_not_configured": "11111",
+          "profile_missing": "11111",
+          "profile_credentials_missing": "11111"
+        },
         "defaults": {
           "providerName": "11111",
           "calendarId": "11111"

@@ -231,6 +231,12 @@
           "body": "55555",
           "openSettings": "55555"
         },
+        "setupReason": {
+          "unsupported_consumer": "55555",
+          "binding_not_configured": "55555",
+          "profile_missing": "55555",
+          "profile_credentials_missing": "55555"
+        },
         "defaults": {
           "providerName": "55555",
           "calendarId": "55555"
