@@ -1880,5 +1880,399 @@
       "fixed": "Fecha y hora específicas",
       "expression": "Expresión avanzada"
     }
+  },
+  "automation": {
+    "createWorkflow": {
+      "dialogTitle": "Crear nuevo flujo de trabajo",
+      "fields": {
+        "name": "Nombre del flujo de trabajo",
+        "namePlaceholder": "p. ej., Enviar correo de bienvenida",
+        "triggerType": "Tipo de activador"
+      },
+      "validation": {
+        "nameRequired": "El nombre del flujo de trabajo es obligatorio",
+        "nameTooShort": "El nombre debe tener al menos 3 caracteres"
+      },
+      "actions": {
+        "cancel": "Cancelar",
+        "create": "Crear flujo de trabajo"
+      },
+      "triggers": {
+        "event": {
+          "title": "Basado en eventos",
+          "description": "Se activa automáticamente cuando ocurren eventos específicos (p. ej., ticket creado, factura pagada)."
+        },
+        "scheduled": {
+          "title": "Programado",
+          "description": "Se ejecuta según una programación recurrente usando expresiones cron (p. ej., diaria, semanal)."
+        },
+        "manual": {
+          "title": "Manual",
+          "description": "Iniciado bajo demanda por los usuarios o mediante llamadas a la API. Sin activadores automáticos."
+        }
+      }
+    },
+    "workflowList": {
+      "header": "Flujos de trabajo",
+      "stats": {
+        "total": "{{count}} en total",
+        "active": "{{count}} activos",
+        "draft": "{{count}} en borrador",
+        "paused": "{{count}} en pausa"
+      },
+      "actions": {
+        "eventCatalog": "Catálogo de eventos",
+        "newWorkflow": "Nuevo flujo de trabajo",
+        "createFirst": "Cree su primer flujo de trabajo",
+        "retry": "Reintentar",
+        "resetFilters": "Restablecer"
+      },
+      "searchPlaceholder": "Buscar flujos de trabajo...",
+      "statusFilter": {
+        "all": "Todos los estados",
+        "active": "Activo",
+        "draft": "Borrador",
+        "paused": "En pausa",
+        "archived": "Archivado"
+      },
+      "triggerFilter": {
+        "all": "Todos los activadores",
+        "event": "Basado en eventos",
+        "schedule": "Programación única",
+        "recurring": "Programación recurrente",
+        "manual": "Manual"
+      },
+      "triggerLabels": {
+        "manual": "Manual",
+        "schedule": "Programación única",
+        "recurring": "Programación recurrente",
+        "event": "Evento"
+      },
+      "bulk": {
+        "selectedSingular": "{{count}} flujo de trabajo seleccionado",
+        "selectedPlural": "{{count}} flujos de trabajo seleccionados",
+        "pause": "Pausar",
+        "resume": "Reanudar",
+        "delete": "Eliminar",
+        "clearSelection": "Borrar selección",
+        "deleteDialogTitle": "Eliminar flujos de trabajo seleccionados",
+        "deleteConfirmSingular": "Eliminar {{count}} flujo de trabajo",
+        "deleteConfirmPlural": "Eliminar {{count}} flujos de trabajo",
+        "deleteClose": "Cerrar",
+        "deleteCancel": "Cancelar",
+        "selectedSummarySingular": "Ha seleccionado <1>{{count}}</1> flujo de trabajo.",
+        "selectedSummaryPlural": "Ha seleccionado <1>{{count}}</1> flujos de trabajo.",
+        "willBeDeleted": "<1>{{count}}</1> se eliminará.",
+        "willBeSkipped": "<1>{{count}}</1> se omitirá.",
+        "skippedHeading": "Flujos de trabajo omitidos",
+        "systemWorkflowReason": "Flujo de trabajo del sistema"
+      },
+      "columns": {
+        "name": "Nombre",
+        "status": "Estado",
+        "version": "Versión",
+        "trigger": "Activador",
+        "lastModified": "Última modificación",
+        "actions": "Acciones"
+      },
+      "statusLabels": {
+        "active": "Activo",
+        "draft": "Borrador",
+        "archived": "Archivado",
+        "paused": "En pausa"
+      },
+      "tableValues": {
+        "system": "Sistema",
+        "draftVersion": "Borrador: v{{version}}"
+      },
+      "rowMenu": {
+        "ariaLabel": "Acciones del flujo de trabajo",
+        "resume": "Reanudar",
+        "pause": "Pausar",
+        "duplicate": "Duplicar",
+        "viewRuns": "Ver ejecuciones",
+        "delete": "Eliminar"
+      },
+      "states": {
+        "errorTitle": "No se pudieron cargar los flujos de trabajo",
+        "errorFallback": "No se pudieron obtener los flujos de trabajo",
+        "validationFailed": "Error al validar la eliminación. Inténtelo de nuevo.",
+        "emptyTitle": "Aún no hay flujos de trabajo",
+        "emptyDescription": "Cree su primer flujo de trabajo para automatizar tareas, responder a eventos y agilizar sus procesos.",
+        "noResultsTitle": "No se encontraron flujos de trabajo",
+        "noResultsDescription": "Intente ajustar la búsqueda o los filtros para encontrar lo que busca."
+      },
+      "deleteDialog": {
+        "fallbackEntityName": "este flujo de trabajo"
+      }
+    },
+    "eventsCatalog": {
+      "header": {
+        "title": "Catálogo de eventos de flujo de trabajo",
+        "subtitle": "Explore, gestione y diseñe flujos de trabajo para eventos y activadores del sistema.",
+        "defineCustomEvent": "Definir evento personalizado",
+        "managePermissionTitle": "Requiere el permiso workflow:manage"
+      },
+      "filters": {
+        "searchPlaceholder": "Buscar eventos (p. ej., ticket.create, email.receive)...",
+        "allCategories": "Todas las categorías",
+        "status": "Estado",
+        "statusOptions": {
+          "all": "Todos los estados",
+          "active": "Activo",
+          "beta": "Beta",
+          "draft": "Borrador",
+          "deprecated": "Obsoleto"
+        },
+        "source": "Origen",
+        "sourceOptions": {
+          "all": "Todos los orígenes",
+          "system": "Sistema",
+          "tenant": "Tenant"
+        },
+        "sort": "Ordenar",
+        "sortOptions": {
+          "categoryName": "Categoría · Nombre",
+          "mostActive": "Más activos (7 d)"
+        },
+        "apply": "Aplicar",
+        "clear": "Borrar",
+        "viewGrid": "Vista de cuadrícula",
+        "viewList": "Vista de lista"
+      },
+      "card": {
+        "workflowsCount": "{{count}} flujos de trabajo",
+        "actions": {
+          "simulate": "Simular",
+          "metrics": "Métricas",
+          "attachTitle": "Adjuntar (nuevo flujo de trabajo)"
+        },
+        "metrics": {
+          "executions": "Ejecuciones",
+          "successRate": "Tasa de éxito",
+          "avgLatency": "Latencia media"
+        }
+      },
+      "states": {
+        "noEventsTitle": "No se encontraron eventos",
+        "noEventsDescription": "Intente ajustar los filtros.",
+        "noEventsInRange": "No hay eventos en este intervalo.",
+        "noDataAvailable": "No hay datos disponibles.",
+        "loading": "Cargando…"
+      },
+      "pagination": {
+        "showing": "Mostrando {{start}} a {{end}} de {{total}} resultados",
+        "prev": "Anterior",
+        "next": "Siguiente",
+        "page": "Página {{page}} / {{total}}"
+      },
+      "badges": {
+        "system": "Sistema",
+        "tenant": "Tenant",
+        "noSchema": "Sin esquema",
+        "unknownSchema": "Esquema desconocido",
+        "schema": "Esquema"
+      },
+      "details": {
+        "title": "Detalles del evento",
+        "close": "Cerrar",
+        "simulate": "Simular",
+        "metrics": "Métricas",
+        "attach": "Adjuntar",
+        "schema": {
+          "heading": "Esquema",
+          "viewFull": "Ver esquema completo",
+          "managedNotice": "El esquema lo gestiona el registro de esquemas.",
+          "missingNotice": "No se ha establecido schemaRef; el evento podría no servir como activador de flujo de trabajo.",
+          "topLevelFields": "Campos de primer nivel",
+          "required": "obligatorio",
+          "moreFieldsHint": "Mostrando los primeros 12 campos. Use \"Ver esquema completo\" para ver más."
+        },
+        "attached": {
+          "heading": "Flujos de trabajo adjuntos",
+          "loading": "Cargando…",
+          "empty": "No hay flujos de trabajo adjuntos.",
+          "publishedBadge": "Publicado",
+          "systemBadge": "Sistema",
+          "pausedBadge": "En pausa",
+          "hiddenBadge": "Oculto",
+          "open": "Abrir",
+          "detach": "Desvincular",
+          "publishTooltip": "Requiere el permiso workflow:publish",
+          "adminTooltip": "Requiere workflow:admin para flujos de trabajo del sistema"
+        }
+      },
+      "schemaModal": {
+        "title": "Esquema",
+        "close": "Cerrar",
+        "headerTitle": "Esquema de payload",
+        "loading": "Cargando…",
+        "unavailable": "Esquema no disponible.",
+        "copy": "Copiar",
+        "copySuccess": "Copiado",
+        "copyFailed": "Error al copiar"
+      },
+      "metricsDialog": {
+        "title": "Métricas",
+        "close": "Cerrar",
+        "headerTitle": "Métricas · {{eventType}}",
+        "from": "Desde",
+        "to": "Hasta",
+        "refresh": "Actualizar",
+        "openWorkflowEditor": "Abrir editor de flujo de trabajo",
+        "loading": "Cargando…",
+        "totals": {
+          "totalEvents": "Eventos totales",
+          "matched": "Coincidencias",
+          "unmatched": "Sin coincidencias",
+          "errors": "Errores",
+          "runsStarted": "Ejecuciones iniciadas",
+          "runSuccessRate": "Tasa de éxito de ejecuciones",
+          "avgRunDuration": "Duración media de ejecución"
+        },
+        "executionsOverTime": "Ejecuciones a lo largo del tiempo",
+        "recentEvents": "Eventos recientes",
+        "viewInEvents": "Ver en eventos",
+        "openRun": "Ejecución",
+        "loadFailed": "No se pudieron cargar las métricas",
+        "rangeShowing": "Mostrando {{start}}–{{end}} de {{total}}",
+        "prev": "Anterior",
+        "next": "Siguiente"
+      },
+      "simulateDialog": {
+        "title": "Simular evento",
+        "headerTitle": "Simular · {{eventType}}",
+        "submit": "Simular",
+        "submitting": "Enviando…",
+        "close": "Cerrar",
+        "fields": {
+          "correlationKey": "Clave de correlación (opcional)",
+          "correlationKeyPlaceholder": "Se utiliza para resolver esperas de eventos",
+          "schemaRef": "Referencia del esquema de payload del evento (avanzado)",
+          "schemaRefPlaceholderEmpty": "Sin schemaRef para este evento",
+          "payloadJson": "Payload (JSON)",
+          "payload": "Payload"
+        },
+        "modes": {
+          "form": "Formulario",
+          "json": "JSON",
+          "noSchema": "No hay esquema disponible; modo formulario deshabilitado."
+        },
+        "errors": {
+          "schemaValidationTitle": "Errores de validación de esquema",
+          "moreErrors": "+{{count}} más",
+          "fixBeforeSubmit": "Corrija los errores de validación de esquema antes de enviar.",
+          "simulationTitle": "Error de simulación",
+          "submitFallback": "No se pudo simular",
+          "submitToast": "No se pudo simular",
+          "invalidJson": "JSON no válido.",
+          "valueMustBeAllowed": "El valor debe ser una de las opciones permitidas.",
+          "expectedObject": "Se esperaba un objeto.",
+          "expectedArray": "Se esperaba una matriz.",
+          "expectedString": "Se esperaba una cadena.",
+          "expectedNumber": "Se esperaba un número.",
+          "expectedBoolean": "Se esperaba un valor booleano.",
+          "requiredField": "Falta un campo obligatorio."
+        },
+        "result": {
+          "title": "Resultado",
+          "status": "Estado",
+          "eventId": "ID de evento",
+          "startedRuns": "Ejecuciones iniciadas",
+          "open": "Abrir",
+          "resumedRun": "Ejecución reanudada",
+          "openResumedRun": "Abrir ejecución reanudada"
+        },
+        "toasts": {
+          "success": "Evento simulado"
+        },
+        "form": {
+          "remove": "Quitar",
+          "addItem": "Añadir elemento",
+          "rootLabel": "Payload",
+          "payloadJsonLabel": "Payload (JSON)",
+          "true": "Verdadero",
+          "false": "Falso"
+        }
+      },
+      "defineEventDialog": {
+        "title": "Definir evento personalizado",
+        "headerTitle": "Definir evento personalizado",
+        "cancel": "Cancelar",
+        "submit": "Crear evento",
+        "submitting": "Creando…",
+        "fields": {
+          "eventType": "Tipo de evento",
+          "eventTypePlaceholder": "p. ej., ticket.created",
+          "name": "Nombre",
+          "namePlaceholder": "Nombre comprensible",
+          "category": "Categoría",
+          "categoryPlaceholder": "p. ej., Tickets",
+          "description": "Descripción",
+          "descriptionPlaceholder": "Descripción opcional",
+          "useSchemaRef": "Usar referencia de esquema",
+          "useInline": "Esquema en línea (avanzado)",
+          "selectSchemaRef": "Seleccionar referencia del esquema de payload",
+          "selectPlaceholder": "Seleccionar…",
+          "payloadSchemaJson": "Esquema de payload (JSON)"
+        },
+        "footer": "Los eventos personalizados están limitados al tenant y pueden usarse como activadores de flujo de trabajo.",
+        "validation": {
+          "typeAndNameRequired": "El tipo de evento y el nombre son obligatorios.",
+          "schemaRefRequired": "Seleccione una referencia de esquema de payload (o utilice un esquema en línea).",
+          "invalidJson": "El esquema de payload debe ser un JSON válido."
+        },
+        "toasts": {
+          "createSuccess": "Evento personalizado creado",
+          "createFailed": "No se pudo crear el evento"
+        }
+      },
+      "toasts": {
+        "loadEventsFailed": "No se pudieron cargar los eventos",
+        "workflowCreated": "Flujo de trabajo creado",
+        "createWorkflowFailed": "No se pudo crear el flujo de trabajo",
+        "detachConfirm": "¿Desvincular este flujo de trabajo del evento? Esto publica una nueva versión sin el activador.",
+        "detachValidationFailed": "Error al desvincular (errores de validación)",
+        "detached": "Desvinculado",
+        "detachFailed": "Error al desvincular"
+      }
+    },
+    "actionInput": {
+      "fallbacks": {
+        "loadingOptions": "Cargando opciones...",
+        "selectName": "Seleccionar {{name}}",
+        "ticketSearchPlaceholder": "Buscar tickets por número o título",
+        "ticketSelect": "Seleccionar ticket",
+        "ticketTypeAbove": "Escriba arriba para buscar tickets",
+        "selectBoard": "Seleccionar tablero",
+        "selectClient": "Seleccionar cliente",
+        "selectContact": "Seleccionar contacto",
+        "selectUser": "Seleccionar usuario",
+        "selectUserOrTeam": "Seleccionar usuario o equipo"
+      },
+      "errors": {
+        "loadTicket": "No se pudo cargar el ticket",
+        "searchTickets": "No se pudieron buscar los tickets",
+        "loadOptions": "No se pudieron cargar las opciones"
+      },
+      "dependencyHints": {
+        "contactClient": "Elija primero un cliente fijo para cargar las opciones de contacto.",
+        "locationClient": "Elija primero un cliente fijo para cargar las opciones de ubicación.",
+        "categoryBoard": "Elija primero un tablero fijo para cargar las opciones de categoría.",
+        "statusBoard": "Elija primero un tablero fijo para cargar las opciones de estado.",
+        "statusTicket": "Elija primero un ticket fijo para cargar las opciones de estado.",
+        "subcategoryBoard": "Elija primero un tablero fijo para cargar las opciones de subcategoría.",
+        "subcategoryCategory": "Elija primero una categoría fija para cargar las opciones de subcategoría."
+      }
+    }
+  },
+  "automationGate": {
+    "loading": "Cargando automatización de flujos de trabajo...",
+    "featureName": "Automatización de flujos de trabajo",
+    "notEnabled": "Esta función es experimental y no está habilitada para su tenant.",
+    "experimental": "Experimental",
+    "enableHint": "Habilite la automatización de flujos de trabajo en la configuración para acceder a ella.",
+    "goToExperimental": "Ir a funciones experimentales",
+    "openSettings": "Abrir configuración"
   }
 }

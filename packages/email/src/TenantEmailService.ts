@@ -9,9 +9,10 @@ import {
   EmailProviderConfig
 } from '@alga-psa/types';
 import logger from '@alga-psa/core/logger';
-import { 
+import {
   ITemplateProcessor
 } from './templateProcessors';
+import { SupportedLocale } from './lib/localeConfig';
 import { BaseEmailService, BaseEmailParams, EmailSendResult } from './BaseEmailService';
 import { SystemEmailProviderFactory } from './system/SystemEmailProviderFactory';
 import { isEnterprise } from './features';
@@ -31,6 +32,11 @@ export interface SendEmailParams {
   templateProcessor: ITemplateProcessor;
   headers?: Record<string, string>;
   providerId?: string;
+  /**
+   * Recipient locale, forwarded to the template processor for language-aware
+   * template lookup (system_email_templates.language_code).
+   */
+  locale?: SupportedLocale;
 }
 
 export interface EmailSettingsValidation {
@@ -290,9 +296,10 @@ export class TenantEmailService extends BaseEmailService {
       templateProcessor: params.templateProcessor,
       templateData: params.templateData,
       from: params.from,
-      tenantId
+      tenantId,
+      locale: params.locale
     };
-    
+
     return service.sendEmail(baseParams);
   }
 

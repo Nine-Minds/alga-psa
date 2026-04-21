@@ -14,7 +14,7 @@ export { default as knexConfig } from './lib/knexfile';
 export { default as Knex } from './lib/knex-turbopack';
 
 // Admin Connection
-export { getAdminConnection, destroyAdminConnection } from './lib/admin';
+export { getAdminConnection, destroyAdminConnection, refreshAdminConnection } from './lib/admin';
 
 // Tenant Connection
 export { getConnection, withTransaction, createTenantKnex, runWithTenant, getTenantContext, setTenantContext, resetTenantConnectionPool } from './lib/tenant';

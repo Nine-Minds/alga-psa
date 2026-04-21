@@ -13,9 +13,11 @@ import { LayoutGrid, List, ChevronDown, ChevronUp } from 'lucide-react';
 import { ActivityFilters as ActivityFiltersType, ActivityType } from '@alga-psa/types';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { Card, CardHeader } from '@alga-psa/ui/components/Card';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { DEFAULT_TABLE_TYPES } from './constants';
 
 export function UserActivitiesDashboard() {
+  const { t } = useTranslation('msp/user-activities');
   // Define view mode type
   type UserActivitiesViewMode = 'cards' | 'table';
   
@@ -71,11 +73,13 @@ export function UserActivitiesDashboard() {
   // Table view content - Defined before use and memoized to prevent unnecessary re-renders
   const tableViewContent = useMemo(() => (
     <ActivitiesDataTableSection
-      title={tableInitialFilters ? `Filtered Activities` : "All Activities"} // Dynamic title
+      title={tableInitialFilters
+        ? t('dashboard.filteredTitle', { defaultValue: 'Filtered Activities' })
+        : t('dashboard.allActivitiesTitle', { defaultValue: 'All Activities' })}
       initialFilters={currentTableFilters}
       id="all-activities-table-section"
     />
-  ), [currentTableFilters, tableInitialFilters]
+  ), [currentTableFilters, tableInitialFilters, t]
   );
 
   // Card view content - Defined before use and memoized to prevent unnecessary re-renders
@@ -88,7 +92,7 @@ export function UserActivitiesDashboard() {
           onClick={() => toggleSection('notifications')}
         >
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Notifications</h2>
+            <h2 className="text-lg font-semibold">{t('dashboard.sections.notifications', { defaultValue: 'Notifications' })}</h2>
             {expandedSections.notifications ? (
               <ChevronUp className="h-5 w-5 text-muted-foreground" />
             ) : (
@@ -111,7 +115,7 @@ export function UserActivitiesDashboard() {
           onClick={() => toggleSection('schedule')}
         >
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Schedule</h2>
+            <h2 className="text-lg font-semibold">{t('dashboard.sections.schedule', { defaultValue: 'Schedule' })}</h2>
             {expandedSections.schedule ? (
               <ChevronUp className="h-5 w-5 text-muted-foreground" />
             ) : (
@@ -153,8 +157,8 @@ export function UserActivitiesDashboard() {
 
   // Define options for the ViewSwitcher with explicit type
   const viewOptions: ViewSwitcherOption<UserActivitiesViewMode>[] = [
-    { value: 'cards', label: 'Cards', icon: LayoutGrid },
-    { value: 'table', label: 'Table', icon: List },
+    { value: 'cards', label: t('dashboard.viewSwitcher.cards', { defaultValue: 'Cards' }), icon: LayoutGrid },
+    { value: 'table', label: t('dashboard.viewSwitcher.table', { defaultValue: 'Table' }), icon: List },
   ];
 
   // Handler for view change
@@ -168,7 +172,7 @@ export function UserActivitiesDashboard() {
   return (
     <div className="container mx-auto p-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">User Activities</h1>
+        <h1 className="text-2xl font-bold">{t('dashboard.title', { defaultValue: 'User Activities' })}</h1>
         <div className="flex items-center gap-4">
           <ViewSwitcher
             options={viewOptions}

@@ -4,6 +4,7 @@ import React from 'react';
 import { Activity, ActivityType } from '@alga-psa/types';
 import type { ActivityGroup } from '@alga-psa/workflows/actions';
 import { Calendar, Layers, MessageSquare, ListChecks } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface PrintableActivitiesViewProps {
   activities: Activity[];
@@ -70,8 +71,10 @@ export function PrintableActivitiesView({
   grouped = false,
   serverGroups = [],
   ungroupedCollapsed = false,
-  title = 'Activities',
+  title,
 }: PrintableActivitiesViewProps) {
+  const { t } = useTranslation('msp/user-activities');
+  const effectiveTitle = title ?? t('printable.defaultTitle', { defaultValue: 'Activities' });
   const dateStr = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -115,7 +118,7 @@ export function PrintableActivitiesView({
   return (
     <div className="ua-print-root ua-print-only">
       <div className="ua-print-header">
-        {title}
+        {effectiveTitle}
         <span className="ua-print-header-date">{dateStr}</span>
       </div>
 
@@ -126,7 +129,7 @@ export function PrintableActivitiesView({
               <div className="ua-print-group-name">{g.name}</div>
               {g.activities.length === 0 ? (
                 <div className="ua-print-row" style={{ color: '#888', fontStyle: 'italic' }}>
-                  (empty)
+                  {t('printable.empty', { defaultValue: '(empty)' })}
                 </div>
               ) : (
                 g.activities.map((a) => <ActivityRow key={`${a.type}:${a.id}`} activity={a} />)
@@ -135,7 +138,7 @@ export function PrintableActivitiesView({
           ))}
           {ungroupedActivities.length > 0 && !ungroupedCollapsed && (
             <div className="ua-print-group">
-              <div className="ua-print-group-name">Ungrouped</div>
+              <div className="ua-print-group-name">{t('printable.ungroupedHeading', { defaultValue: 'Ungrouped' })}</div>
               {ungroupedActivities.map((a) => (
                 <ActivityRow key={`${a.type}:${a.id}`} activity={a} />
               ))}

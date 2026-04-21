@@ -1,0 +1,247 @@
+{
+  "calendar": {
+    "integrations": {
+      "loadError": "Kalenderanbieter konnten nicht geladen werden",
+      "header": {
+        "title": "Kalenderintegrationen",
+        "description": "Verbinden Sie Ihren persönlichen Google- oder Microsoft-Kalender, um Ihre zugewiesenen Termineinträge zu synchronisieren. Termine, die Sie in Alga erstellen, erscheinen in Ihrem externen Kalender, wenn Sie ihnen zugewiesen sind."
+      },
+      "buttons": {
+        "googleCalendar": "Google Calendar",
+        "outlookCalendar": "Outlook-Kalender",
+        "addGoogleCalendar": "Google Calendar hinzufügen",
+        "addOutlookCalendar": "Outlook-Kalender hinzufügen"
+      },
+      "proTip": {
+        "label": "Profi-Tipp",
+        "body": "Um einen Termin aus Ihrem externen Kalender in Alga zu importieren, fügen Sie einfach"
+      },
+      "proTipSuffix": "zum Titel oder zur Beschreibung hinzu.",
+      "empty": {
+        "title": "Keine Kalender verbunden",
+        "description": "Verbinden Sie einen Kalender, um Ihren Zeitplan automatisch zu synchronisieren und keine Zuweisung zu verpassen."
+      },
+      "providerLabels": {
+        "google": "Google",
+        "microsoft": "Microsoft",
+        "calendar": "Kalender"
+      },
+      "connectionStatus": {
+        "connected": "Verbunden",
+        "error": "Fehler",
+        "disconnected": "Getrennt",
+        "configuring": "Wird konfiguriert"
+      },
+      "oauthStatus": {
+        "actionRequired": "Aktion erforderlich",
+        "complete": "OAuth abgeschlossen"
+      },
+      "active": {
+        "active": "Aktiv",
+        "inactive": "Inaktiv"
+      },
+      "fields": {
+        "type": "Typ:",
+        "calendarId": "Kalender-ID:",
+        "syncDirection": "Synchronisierungsrichtung:",
+        "lastSync": "Letzte Synchronisierung:"
+      },
+      "providerType": {
+        "google": "Google Calendar",
+        "microsoft": "Microsoft Outlook Calendar"
+      },
+      "syncDirection": {
+        "bidirectional": "Bidirektional",
+        "toExternal": "Alga → Extern",
+        "fromExternal": "Extern → Alga"
+      },
+      "values": {
+        "notSet": "Nicht festgelegt",
+        "notYetRun": "Noch nicht ausgeführt"
+      },
+      "syncing": {
+        "inProgress": "Synchronisierung läuft..."
+      },
+      "actions": {
+        "syncing": "Synchronisiere…",
+        "syncNow": "Jetzt synchronisieren",
+        "edit": "Bearbeiten",
+        "delete": "Löschen"
+      },
+      "toasts": {
+        "deleted": {
+          "title": "Kalenderanbieter gelöscht",
+          "description": "{{name}} wurde erfolgreich entfernt."
+        },
+        "deleteFailed": {
+          "title": "Kalenderanbieter konnte nicht gelöscht werden",
+          "fallback": "Kalenderanbieter konnte nicht gelöscht werden"
+        },
+        "syncStarted": {
+          "title": "Synchronisierung gestartet",
+          "descriptionWithName": "Die Synchronisierung von {{name}} läuft im Hintergrund.",
+          "descriptionGeneric": "Die Kalendersynchronisierung läuft im Hintergrund."
+        },
+        "syncStartedFeedback": "Synchronisierung gestartet. Schauen Sie bald wieder vorbei, um die Ergebnisse zu sehen.",
+        "syncFailed": {
+          "title": "Synchronisierung konnte nicht gestartet werden",
+          "fallback": "Synchronisierung konnte nicht gestartet werden."
+        },
+        "syncException": {
+          "title": "Manuelle Synchronisierung fehlgeschlagen",
+          "fallback": "Kalenderanbieter konnte nicht synchronisiert werden"
+        }
+      },
+      "dialogs": {
+        "addTitle": "{{provider}}-Kalenderanbieter hinzufügen",
+        "addDescription": "Verbinden Sie Ihren persönlichen Kalender, um Termineinträge zu synchronisieren, denen Sie zugewiesen sind.",
+        "editTitle": "{{provider}}-Kalenderanbieter bearbeiten",
+        "editDescription": "Aktualisieren Sie die Verbindungseinstellungen Ihres persönlichen Kalenders.",
+        "delete": {
+          "title": "Kalenderanbieter löschen",
+          "messageWithName": "Wenn Sie {{name}} löschen, wird die zukünftige Synchronisierung gestoppt und zugehörige Webhooks werden entfernt. Diese Aktion kann nicht rückgängig gemacht werden.",
+          "messageGeneric": "Sind Sie sicher, dass Sie diesen Kalenderanbieter löschen möchten?",
+          "confirmLabel": "Anbieter löschen",
+          "cancelLabel": "Anbieter behalten"
+        }
+      }
+    },
+    "sync": {
+      "compact": {
+        "syncing": "Synchronisiere...",
+        "google": "Google",
+        "outlook": "Outlook"
+      },
+      "tooltip": {
+        "status": "Status: {{status}}",
+        "lastSync": "Letzte Synchronisierung: {{value}}",
+        "error": "Fehler: {{message}}"
+      },
+      "status": {
+        "synced": "Synchronisiert",
+        "pending": "Ausstehend",
+        "conflict": "Konflikt",
+        "error": "Fehler",
+        "unknown": "Unbekannt"
+      },
+      "header": {
+        "title": "Kalender-Synchronisierungsstatus",
+        "refresh": "Aktualisieren"
+      },
+      "empty": "Keine Kalenderintegrationen konfiguriert",
+      "inactive": "Inaktiv",
+      "fields": {
+        "syncDirection": "Synchronisierungsrichtung:",
+        "lastSync": "Letzte Synchronisierung:",
+        "externalId": "Externe ID:"
+      },
+      "loadError": "Synchronisierungsstatus konnte nicht geladen werden",
+      "conflictAlert": "Konflikt erkannt: Beide Kalender wurden geändert. Bitte lösen Sie den Konflikt in den Kalendereinstellungen."
+    },
+    "providers": {
+      "common": {
+        "oauth": {
+          "badge": {
+            "authorized": "Autorisiert",
+            "authorizing": "Autorisierung läuft",
+            "error": "Autorisierungsfehler",
+            "notAuthorized": "Nicht autorisiert"
+          },
+          "status": "Verbindungsstatus",
+          "connecting": "Verbinde...",
+          "connected": "Verbunden",
+          "connect": "Verbinden",
+          "popupBlocked": "Popup blockiert. Bitte erlauben Sie Popups für diese Website.",
+          "callbackFailed": "OAuth-Autorisierung fehlgeschlagen",
+          "initiateFailed": "OAuth konnte nicht gestartet werden"
+        },
+        "actions": {
+          "cancel": "Abbrechen",
+          "saving": "Speichere...",
+          "updateProvider": "Anbieter aktualisieren",
+          "createProvider": "Anbieter erstellen"
+        },
+        "errors": {
+          "createFailed": "Kalenderanbieter konnte nicht erstellt werden",
+          "saveFailed": "Anbieter konnte nicht gespeichert werden"
+        },
+        "syncDirections": {
+          "bidirectional": "Bidirektional (empfohlen)"
+        }
+      },
+      "google": {
+        "config": {
+          "title": "Google Calendar-Konfiguration",
+          "description": "Verbinden Sie Ihren Google Calendar, um Termineinträge zu synchronisieren"
+        },
+        "fields": {
+          "providerName": "Anbietername *",
+          "providerNamePlaceholder": "z. B. Mein Google Calendar",
+          "calendarId": "Kalender-ID *",
+          "calendarIdPlaceholder": "primary",
+          "calendarIdHint": "Normalerweise \"primary\" für Ihren Hauptkalender",
+          "syncDirection": "Synchronisierungsrichtung *",
+          "enableProvider": "Diesen Anbieter aktivieren"
+        },
+        "syncDirections": {
+          "toExternal": "Nur Alga → Google Calendar",
+          "fromExternal": "Nur Google Calendar → Alga"
+        },
+        "oauth": {
+          "title": "Google OAuth-Autorisierung",
+          "description": "Zugriff auf Ihren Google Calendar autorisieren"
+        },
+        "configAlert": {
+          "title": "Google ist für diesen Tenant nicht konfiguriert.",
+          "body": "Konfigurieren Sie zunächst das tenant-eigene Google OAuth unter <strong>Einstellungen → Integrationen → Anbieter</strong>.",
+          "openSettings": "Google-Einstellungen öffnen"
+        },
+        "errors": {
+          "notConfigured": "Die Google-Integration ist für diesen Tenant nicht konfiguriert. Konfigurieren Sie Google zuerst und versuchen Sie es dann erneut."
+        },
+        "defaults": {
+          "providerName": "Google Calendar",
+          "calendarId": "primary"
+        }
+      },
+      "microsoft": {
+        "config": {
+          "title": "Microsoft Outlook Calendar-Konfiguration",
+          "description": "Verbinden Sie Ihren Microsoft Outlook Calendar, um Termineinträge zu synchronisieren"
+        },
+        "fields": {
+          "providerName": "Anbietername *",
+          "providerNamePlaceholder": "z. B. Mein Outlook-Kalender",
+          "calendarId": "Kalender-ID *",
+          "calendarIdPlaceholder": "calendar",
+          "calendarIdHint": "Normalerweise \"calendar\" für Ihren Hauptkalender",
+          "syncDirection": "Synchronisierungsrichtung *",
+          "enableProvider": "Diesen Anbieter aktivieren"
+        },
+        "syncDirections": {
+          "toExternal": "Nur Alga → Outlook Calendar",
+          "fromExternal": "Nur Outlook Calendar → Alga"
+        },
+        "oauth": {
+          "title": "Microsoft OAuth-Autorisierung",
+          "description": "Zugriff auf Ihren Microsoft Outlook Calendar autorisieren"
+        },
+        "configAlert": {
+          "title": "Microsoft-Anbietereinstellungen sind nicht konfiguriert.",
+          "body": "Konfigurieren Sie zunächst die Anbieter unter Einstellungen → Integrationen → Anbieter und kehren Sie dann hierher zurück, um den Outlook Calendar zu verbinden.",
+          "openSettings": "Anbietereinstellungen öffnen"
+        },
+        "setupReason": {
+          "unsupported_consumer": "Nicht unterstützter Microsoft-Verbrauchertyp für Kalender.",
+          "binding_not_configured": "Der Kalender ist noch keinem Microsoft-Profil zugeordnet. Konfigurieren Sie zunächst die Anbieter und kehren Sie dann hierher zurück, um den Outlook Calendar zu verbinden.",
+          "profile_missing": "Das dem Kalender zugeordnete Microsoft-Profil fehlt oder ist archiviert. Wählen Sie ein aktives Profil unter Anbieter und kehren Sie dann hierher zurück.",
+          "profile_credentials_missing": "Dem dem Kalender zugeordneten Microsoft-Profil fehlen erforderliche Anmeldedaten. Aktualisieren Sie das Profil unter Anbieter und kehren Sie dann hierher zurück."
+        },
+        "defaults": {
+          "providerName": "Outlook Calendar",
+          "calendarId": "calendar"
+        }
+      }
+    }
+  }
+}

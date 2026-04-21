@@ -165,5 +165,12 @@
       "month": "month",
       "year": "year"
     }
+  },
+  "workflowDesigner": {
+    "enterpriseHeading": "Recurso Enterprise",
+    "unavailable": "O designer de fluxos de trabalho requer a edição Enterprise. Faça upgrade para acessar este recurso."
+  },
+  "runStudio": {
+    "unavailable": "Workflow Run Studio não está disponível nesta edição. (runId: {{runId}})"
   }
 }

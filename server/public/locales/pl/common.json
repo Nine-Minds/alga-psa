@@ -978,5 +978,19 @@
       "handoffFinalizeFailed": "Nie mogliśmy zakończyć logowania. Spróbuj zalogować się ponownie.",
       "handoffNetworkIssue": "Wykryto problem z siecią podczas finalizowania logowania. Spróbuj ponownie."
     }
+  },
+  "form": {
+    "selectPlaceholder": "Wybierz...",
+    "clearSelection": "Wyczyść wybór",
+    "fromDate": "Od",
+    "toDate": "Do",
+    "noResults": "Nie znaleziono wyników",
+    "searchPlaceholder": "Szukaj..."
+  },
+  "tagFilter": {
+    "placeholder": "Filtruj według tagów...",
+    "filter": "Filtruj",
+    "selectedCount": "Wybrano: {{count}}",
+    "clearAll": "Wyczyść wszystko"
   }
 }

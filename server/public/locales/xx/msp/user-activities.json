@@ -1,0 +1,419 @@
+{
+  "dashboard": {
+    "title": "11111",
+    "viewSwitcher": {
+      "cards": "11111",
+      "table": "11111"
+    },
+    "sections": {
+      "notifications": "11111",
+      "schedule": "11111"
+    },
+    "filteredTitle": "11111",
+    "allActivitiesTitle": "11111"
+  },
+  "table": {
+    "title": {
+      "all": "11111"
+    },
+    "columns": {
+      "type": "11111",
+      "title": "11111",
+      "status": "11111",
+      "priority": "11111",
+      "dueDate": "11111",
+      "actions": "11111"
+    },
+    "values": {
+      "noDueDate": "11111",
+      "emDash": "11111",
+      "unread": "11111",
+      "recurringEvent": "11111"
+    },
+    "actions": {
+      "refresh": "11111",
+      "print": "11111"
+    },
+    "viewSwitcher": {
+      "flat": "11111",
+      "grouped": "11111"
+    },
+    "states": {
+      "noActivities": "11111",
+      "noMatching": "11111"
+    },
+    "errors": {
+      "loadFailed": "11111"
+    },
+    "activityTypes": {
+      "schedule": "11111",
+      "projectTask": "11111",
+      "ticket": "11111",
+      "timeEntry": "11111",
+      "workflowTask": "11111",
+      "notification": "11111",
+      "unknown": "11111",
+      "activity": "11111"
+    }
+  },
+  "card": {
+    "noDescription": "11111",
+    "due": "11111 {{date}} 11111",
+    "recurringEvent": "11111",
+    "unread": "11111",
+    "noMessage": "11111",
+    "estimatedHours": "11111 {{hours}} 11111",
+    "duration": "11111 {{hours}} 11111",
+    "hasForm": "11111",
+    "roles": "11111 {{roles}} 11111"
+  },
+  "drawer": {
+    "loading": "11111",
+    "errorLoadingTitle": "11111",
+    "errorLoadingMessage": "11111",
+    "userNotAuthenticated": "11111",
+    "scheduleEntryNotFound": "11111",
+    "timeEntryNotFound": "11111",
+    "unknownWorkItem": "11111",
+    "timeEntryDetailsTitle": "11111",
+    "errorLoadingTimeEntry": "11111",
+    "workflowTaskTitle": "11111",
+    "noAdditionalDetails": "11111",
+    "failedToLoadDocument": "11111",
+    "notificationNotFound": "11111",
+    "failedToLoadTicket": "11111",
+    "failedToLoadTask": "11111",
+    "unsupportedTitle": "11111",
+    "unsupportedDescription": "11111 {{activityType}} 11111",
+    "saveDocumentSuccess": "11111",
+    "saveDocumentError": "11111",
+    "timeEntryUpdatedSuccess": "11111",
+    "timeEntryUpdatedError": "11111",
+    "backToNotification": "11111",
+    "documentTitleEdit": "11111",
+    "documentTitleViewer": "11111",
+    "actions": {
+      "edit": "11111",
+      "cancel": "11111",
+      "save": "11111",
+      "saving": "11111"
+    },
+    "menu": {
+      "openMenu": "11111",
+      "goToPage": "11111",
+      "dismissError": "11111 {{message}} 11111"
+    },
+    "retryLater": "11111"
+  },
+  "groupedView": {
+    "addGroup": "11111",
+    "groupNamePlaceholder": "11111",
+    "ariaLabels": {
+      "dragToReorder": "11111",
+      "dragToReorderGroup": "11111",
+      "expandGroup": "11111",
+      "collapseGroup": "11111",
+      "renameGroup": "11111",
+      "deleteGroup": "11111"
+    },
+    "dropActivitiesHere": "11111",
+    "ungroupedHeading": "11111",
+    "allInGroups": "11111",
+    "columns": {
+      "title": "11111",
+      "status": "11111",
+      "priority": "11111",
+      "dueDate": "11111"
+    }
+  },
+  "printable": {
+    "defaultTitle": "11111",
+    "ungroupedHeading": "11111",
+    "empty": "11111"
+  },
+  "sections": {
+    "projects": {
+      "title": "11111",
+      "actions": {
+        "refresh": "11111",
+        "filter": "11111",
+        "reset": "11111",
+        "viewAll": "11111"
+      },
+      "ariaLabels": {
+        "refresh": "11111",
+        "filter": "11111"
+      },
+      "states": {
+        "loading": "11111",
+        "empty": "11111"
+      },
+      "errors": {
+        "loadFailed": "11111"
+      },
+      "filterDialog": {
+        "title": "11111",
+        "description": "11111",
+        "fields": {
+          "search": "11111",
+          "searchPlaceholder": "11111",
+          "project": "11111",
+          "projectPlaceholder": "11111",
+          "allProjects": "11111",
+          "phase": "11111",
+          "phasePlaceholder": "11111",
+          "phaseLoadingPlaceholder": "11111",
+          "phaseSelectFirstPlaceholder": "11111",
+          "allPhases": "11111",
+          "priority": "11111",
+          "priorityPlaceholder": "11111",
+          "allPriorities": "11111",
+          "dueDateRange": "11111",
+          "showClosedTasks": "11111"
+        },
+        "actions": {
+          "reset": "11111",
+          "cancel": "11111",
+          "apply": "11111"
+        }
+      }
+    },
+    "tickets": {
+      "title": "11111",
+      "actions": {
+        "refresh": "11111",
+        "filter": "11111",
+        "reset": "11111",
+        "viewAll": "11111"
+      },
+      "ariaLabels": {
+        "refresh": "11111",
+        "filter": "11111"
+      },
+      "states": {
+        "loading": "11111",
+        "empty": "11111"
+      },
+      "errors": {
+        "loadFailed": "11111"
+      },
+      "filterDialog": {
+        "title": "11111",
+        "description": "11111",
+        "fields": {
+          "search": "11111",
+          "searchPlaceholder": "11111",
+          "client": "11111",
+          "contact": "11111",
+          "status": "11111",
+          "statusPlaceholder": "11111",
+          "allStatuses": "11111",
+          "priority": "11111",
+          "priorityPlaceholder": "11111",
+          "allPriorities": "11111",
+          "dueDateRange": "11111",
+          "showClosedTickets": "11111"
+        },
+        "actions": {
+          "reset": "11111",
+          "cancel": "11111",
+          "apply": "11111"
+        }
+      }
+    },
+    "workflowTasks": {
+      "title": "11111",
+      "drawerTitle": "11111",
+      "actions": {
+        "refresh": "11111",
+        "filter": "11111",
+        "reset": "11111",
+        "viewAll": "11111"
+      },
+      "ariaLabels": {
+        "refresh": "11111",
+        "filter": "11111"
+      },
+      "states": {
+        "loading": "11111",
+        "empty": "11111"
+      },
+      "errors": {
+        "loadFailed": "11111"
+      },
+      "filterDialog": {
+        "title": "11111",
+        "description": "11111",
+        "fields": {
+          "search": "11111",
+          "searchPlaceholder": "11111",
+          "workflowExecution": "11111",
+          "workflowExecutionPlaceholder": "11111",
+          "allExecutions": "11111",
+          "priority": "11111",
+          "priorityPlaceholder": "11111",
+          "allPriorities": "11111",
+          "priorityHigh": "11111",
+          "priorityMedium": "11111",
+          "priorityLow": "11111",
+          "dueDateRange": "11111",
+          "showClosedTasks": "11111",
+          "includeHiddenTasks": "11111"
+        },
+        "actions": {
+          "reset": "11111",
+          "cancel": "11111",
+          "apply": "11111"
+        }
+      },
+      "listDrawer": {
+        "searchPlaceholder": "11111",
+        "filters": "11111",
+        "refresh": "11111",
+        "sortBy": "11111",
+        "sortOptions": {
+          "priority": "11111",
+          "dueDate": "11111",
+          "createdAt": "11111",
+          "title": "11111"
+        },
+        "ascending": "11111",
+        "descending": "11111",
+        "states": {
+          "loading": "11111",
+          "empty": "11111"
+        },
+        "errors": {
+          "loadFailed": "11111"
+        }
+      }
+    },
+    "schedule": {
+      "title": "11111",
+      "actions": {
+        "refresh": "11111",
+        "filter": "11111",
+        "reset": "11111",
+        "viewAll": "11111"
+      },
+      "states": {
+        "loading": "11111",
+        "empty": "11111"
+      },
+      "errors": {
+        "loadFailed": "11111",
+        "refreshFailed": "11111"
+      },
+      "filterDialog": {
+        "title": "11111",
+        "description": "11111",
+        "fields": {
+          "search": "11111",
+          "searchPlaceholder": "11111",
+          "dateRange": "11111",
+          "workItemType": "11111",
+          "workItemTypePlaceholder": "11111",
+          "allTypes": "11111",
+          "ticket": "11111",
+          "projectTask": "11111",
+          "workflowTask": "11111",
+          "showClosedEntries": "11111",
+          "showRecurringOnly": "11111"
+        },
+        "actions": {
+          "reset": "11111",
+          "cancel": "11111",
+          "apply": "11111"
+        }
+      }
+    },
+    "notifications": {
+      "title": "11111",
+      "actions": {
+        "refresh": "11111",
+        "filter": "11111",
+        "reset": "11111",
+        "viewAll": "11111"
+      },
+      "ariaLabels": {
+        "refresh": "11111",
+        "filter": "11111"
+      },
+      "tabs": {
+        "unread": "11111",
+        "all": "11111",
+        "read": "11111"
+      },
+      "states": {
+        "loading": "11111",
+        "empty": "11111"
+      },
+      "errors": {
+        "loadFailed": "11111"
+      },
+      "filterDialog": {
+        "title": "11111",
+        "description": "11111",
+        "fields": {
+          "status": "11111",
+          "unreadOnly": "11111",
+          "showRead": "11111",
+          "category": "11111",
+          "categoryPlaceholder": "11111",
+          "allCategories": "11111",
+          "categories": {
+            "tickets": "11111",
+            "projects": "11111",
+            "invoices": "11111",
+            "system": "11111"
+          },
+          "dateRange": "11111"
+        },
+        "actions": {
+          "reset": "11111",
+          "cancel": "11111",
+          "apply": "11111"
+        }
+      }
+    }
+  },
+  "pickers": {
+    "priority": {
+      "loading": "11111",
+      "empty": "11111",
+      "none": "11111"
+    },
+    "status": {
+      "loading": "11111",
+      "empty": "11111",
+      "closedSuffix": "11111"
+    }
+  },
+  "filters": {
+    "labels": {
+      "types": "11111",
+      "tickets": "11111",
+      "tasks": "11111",
+      "priority": "11111",
+      "dueDate": "11111",
+      "showClosed": "11111"
+    },
+    "activityTypeOptions": {
+      "schedule": "11111",
+      "projectTask": "11111",
+      "ticket": "11111",
+      "workflowTask": "11111"
+    },
+    "placeholders": {
+      "allBoards": "11111",
+      "allStatuses": "11111",
+      "allProjects": "11111",
+      "allPriorities": "11111",
+      "selectPriority": "11111"
+    },
+    "actions": {
+      "reset": "11111"
+    },
+    "statusClosedSuffix": "11111"
+  }
+}

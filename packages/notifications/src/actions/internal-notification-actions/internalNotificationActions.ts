@@ -24,6 +24,7 @@ import {
   broadcastUnreadCount
 } from "../../realtime/internalNotificationBroadcaster";
 import logger from '@alga-psa/core/logger';
+import { featureFlags } from '@alga-psa/core/server';
 import { runPostCreationHooks } from './notificationHooks';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
@@ -33,19 +34,25 @@ import {
 
 /**
  * Get user's locale preference with fallback hierarchy:
- * MSP Internal Users: Always English (ignore preferences)
- * Client Portal Users:
+ *
+ * Internal (MSP) users:
+ * 1. User's language preference (user_preferences.locale)
+ * 2. Tenant MSP portal default (tenant_settings.settings.mspPortal.defaultLocale)
+ * 3. Tenant-wide default (tenant_settings.settings.defaultLocale)
+ * 4. System default ('en')
+ *
+ * Client portal users:
  * 1. User's language preference (user_preferences.locale)
  * 2. Client company language (clients.properties.defaultLocale)
- * 3. Tenant language (tenant_settings.settings.defaultLocale)
- * 4. Default to 'en'
+ * 3. Tenant client portal default (tenant_settings.settings.clientPortal.defaultLocale)
+ * 4. Tenant-wide default (tenant_settings.settings.defaultLocale)
+ * 5. System default ('en')
  */
 async function getUserLocale(
   trx: Knex.Transaction,
   tenant: string,
   userId: string
 ): Promise<string> {
-  // First, check user type
   const user = await trx('users as u')
     .select('u.user_type', 'u.contact_id', 'c.properties')
     .leftJoin('contacts as con', function() {
@@ -60,13 +67,29 @@ async function getUserLocale(
     .andWhere('u.tenant', tenant)
     .first();
 
-  // MSP internal users always get English, regardless of preferences
+  // Internal (MSP) users: force English when msp-i18n-enabled is off,
+  // mirroring the UI rollout gate on I18nWrapper.
   if (user?.user_type === 'internal') {
-    return 'en';
+    let mspI18nEnabled = false;
+    try {
+      mspI18nEnabled = await featureFlags.isEnabled('msp-i18n-enabled', {
+        tenantId: tenant,
+        userId,
+      });
+    } catch (error) {
+      logger.warn('[InternalNotificationActions] msp-i18n-enabled evaluation failed; defaulting to disabled', {
+        error: error instanceof Error ? error.message : String(error),
+        tenant,
+        userId,
+      });
+    }
+
+    if (!mspI18nEnabled) {
+      return 'en';
+    }
   }
 
-  // For client portal users, use preference hierarchy
-  // 1. Try user's language preference
+  // 1. User's language preference (applies to both internal and client users)
   const userPreference = await trx('user_preferences')
     .where({
       tenant,
@@ -76,25 +99,35 @@ async function getUserLocale(
     .first();
 
   if (userPreference?.setting_value) {
-    return userPreference.setting_value;
+    const raw = userPreference.setting_value;
+    const locale = typeof raw === 'string' ? raw.replace(/"/g, '') : raw;
+    if (locale) return locale;
   }
 
-  // 2. Try client company language
-  if (user?.properties?.defaultLocale) {
+  // 2. Client-specific default (client users only)
+  if (user?.user_type !== 'internal' && user?.properties?.defaultLocale) {
     return user.properties.defaultLocale;
   }
 
-  // 3. Try tenant-wide default language
+  // 3. Tenant settings — portal-specific default then tenant-wide default
   const tenantSettings = await trx('tenant_settings')
     .select('settings')
     .where({ tenant })
     .first();
 
+  if (user?.user_type === 'internal') {
+    const mspPortalLocale = tenantSettings?.settings?.mspPortal?.defaultLocale;
+    if (mspPortalLocale) return mspPortalLocale;
+  } else {
+    const clientPortalLocale = tenantSettings?.settings?.clientPortal?.defaultLocale;
+    if (clientPortalLocale) return clientPortalLocale;
+  }
+
   if (tenantSettings?.settings?.defaultLocale) {
     return tenantSettings.settings.defaultLocale;
   }
 
-  // 4. Default to English
+  // 4. System default
   return 'en';
 }
 

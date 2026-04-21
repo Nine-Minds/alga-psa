@@ -11,6 +11,7 @@ import { issueSurveyToken } from '@alga-psa/surveys/actions/surveyTokenService';
 import { TenantEmailService } from '@alga-psa/email';
 import { isValidEmail } from '@alga-psa/core';
 import { DatabaseTemplateProcessor } from '@alga-psa/email';
+import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { publishWorkflowEvent } from '../lib/eventBus/publishers';
 import {
   buildSurveyReminderSentPayload,
@@ -226,7 +227,17 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
     const ratingLinksText = buildRatingLinksText(ratingLinks, template.rating_type, template.rating_scale);
     const technicianName = formatFullName(ticket.technician_first_name, ticket.technician_last_name);
     const tenantDisplayName = tenant?.client_name || tenant?.name || 'Your Team';
-    const locale = params.locale ?? undefined;
+    // Resolve contact locale when caller didn't pass one — surveys always go to
+    // client-portal contacts, so the full hierarchy (user preference → client
+    // default → client portal default → tenant default → 'en') applies.
+    const locale = params.locale
+      ?? (contact.email
+        ? await resolveEmailLocale(params.tenantId, {
+            email: contact.email,
+            userType: 'client',
+            clientId: ticket.client_id ?? undefined,
+          })
+        : undefined);
 
     const templateData = {
       tenant_name: tenantDisplayName,

@@ -33,6 +33,7 @@ import { getAllPriorities, getStatuses } from '@alga-psa/reference-data/actions'
 import { getAllBoards } from '@alga-psa/reference-data/actions';
 import { findAllTagsByType } from '@alga-psa/tags/actions';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { DEFAULT_TABLE_TYPES } from './constants';
 
 interface ActivitiesDataTableSectionProps {
@@ -48,16 +49,17 @@ const DEFAULT_FILTERS: ActivityFilters = {
 
 type ListViewMode = 'flat' | 'grouped';
 
-const LIST_VIEW_OPTIONS: ViewSwitcherOption<ListViewMode>[] = [
-  { value: 'flat', label: 'Flat', icon: List },
-  { value: 'grouped', label: 'Grouped', icon: LayoutList },
-];
-
 export function ActivitiesDataTableSection({
-  title = "All Activities",
+  title,
   initialFilters = {},
   id = "activities-data-table-section"
 }: ActivitiesDataTableSectionProps) {
+  const { t } = useTranslation('msp/user-activities');
+  const effectiveTitle = title ?? t('table.title.all', { defaultValue: 'All Activities' });
+  const LIST_VIEW_OPTIONS: ViewSwitcherOption<ListViewMode>[] = [
+    { value: 'flat', label: t('table.viewSwitcher.flat', { defaultValue: 'Flat' }), icon: List },
+    { value: 'grouped', label: t('table.viewSwitcher.grouped', { defaultValue: 'Grouped' }), icon: LayoutList },
+  ];
   const [activities, setActivities] = useState<Activity[]>([]);
   const [error, setError] = useState<string | null>(null);
   const { openActivityDrawer } = useActivityDrawer();
@@ -248,9 +250,9 @@ export function ActivitiesDataTableSection({
       setError(null);
     } catch (err) {
       console.error(`Error loading activities:`, err);
-      setError('Failed to load activities. Please try again later.');
+      setError(t('table.errors.loadFailed', { defaultValue: 'Failed to load activities. Please try again later.' }));
     }
-  }, [filters, currentPage, pageSize, getActivities, sortBy, sortDirection, listViewMode]);
+  }, [filters, currentPage, pageSize, getActivities, sortBy, sortDirection, listViewMode, t]);
 
   // useEffect to trigger loadActivities when filters or pagination changes
   useEffect(() => {
@@ -322,7 +324,7 @@ export function ActivitiesDataTableSection({
     <>
     <Card id={id} className="ua-print-hide">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle>{title}</CardTitle>
+        <CardTitle>{effectiveTitle}</CardTitle>
         <div className="flex items-center gap-2">
           <ViewSwitcher<ListViewMode>
             options={LIST_VIEW_OPTIONS}
@@ -337,7 +339,7 @@ export function ActivitiesDataTableSection({
             disabled={isLoading}
           >
             <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
+            {t('table.actions.refresh', { defaultValue: 'Refresh' })}
           </Button>
           <div className="w-px h-6 bg-border" />
           <Button
@@ -348,7 +350,7 @@ export function ActivitiesDataTableSection({
             disabled={isLoading || activities.length === 0}
           >
             <Printer className="h-4 w-4 mr-2" />
-            Print
+            {t('table.actions.print', { defaultValue: 'Print' })}
           </Button>
         </div>
       </CardHeader>
@@ -371,11 +373,11 @@ export function ActivitiesDataTableSection({
           </div>
         ) : activities.length === 0 ? (
           <div className="flex justify-center items-center h-40">
-            <p className="text-gray-500">No activities found</p>
+            <p className="text-gray-500">{t('table.states.noActivities', { defaultValue: 'No activities found' })}</p>
           </div>
         ) : filteredActivitiesForTable.length === 0 ? (
           <div className="flex justify-center items-center h-40">
-            <p className="text-gray-500">No activities found matching filters</p>
+            <p className="text-gray-500">{t('table.states.noMatching', { defaultValue: 'No activities found matching filters' })}</p>
           </div>
         ) : listViewMode === 'grouped' ? (
           <GroupedActivitiesView
@@ -407,7 +409,7 @@ export function ActivitiesDataTableSection({
       grouped={listViewMode === 'grouped'}
       serverGroups={activityGroups}
       ungroupedCollapsed={ungroupedCollapsed}
-      title={title}
+      title={effectiveTitle}
     />
     </>
   );

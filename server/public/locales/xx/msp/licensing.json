@@ -165,5 +165,12 @@
       "month": "11111",
       "year": "11111"
     }
+  },
+  "workflowDesigner": {
+    "enterpriseHeading": "11111",
+    "unavailable": "11111"
+  },
+  "runStudio": {
+    "unavailable": "11111 {{runId}} 11111"
   }
 }

@@ -978,5 +978,19 @@
       "handoffFinalizeFailed": "We konden uw inloggen niet voltooien. Probeer opnieuw in te loggen.",
       "handoffNetworkIssue": "Netwerkprobleem gedetecteerd bij het voltooien van uw inloggen. Probeer het opnieuw."
     }
+  },
+  "form": {
+    "selectPlaceholder": "Selecteren...",
+    "clearSelection": "Selectie wissen",
+    "fromDate": "Van",
+    "toDate": "Tot",
+    "noResults": "Geen resultaten gevonden",
+    "searchPlaceholder": "Zoeken..."
+  },
+  "tagFilter": {
+    "placeholder": "Filter op tags...",
+    "filter": "Filteren",
+    "selectedCount": "{{count}} geselecteerd",
+    "clearAll": "Alles wissen"
   }
 }

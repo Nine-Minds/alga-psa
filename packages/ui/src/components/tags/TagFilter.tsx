@@ -9,6 +9,7 @@ import { filterTagsByText } from '../../lib/utils';
 import { ITag } from '@alga-psa/types';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { Button } from '../Button';
+import { useTranslation } from '../../lib/i18n/client';
 
 interface TagFilterProps {
   tags: ITag[];
@@ -23,8 +24,10 @@ export function TagFilter({
   selectedTags,
   onToggleTag,
   onClearTags,
-  placeholder = 'Filter by tags...',
+  placeholder,
 }: TagFilterProps) {
+  const { t } = useTranslation();
+  const resolvedPlaceholder = placeholder ?? t('tagFilter.placeholder', { defaultValue: 'Filter by tags...' });
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -35,7 +38,11 @@ export function TagFilter({
       <Popover.Trigger asChild>
         <Button id="tag-filter-trigger" variant="outline" className="h-9 gap-2">
           <TagIcon className="h-4 w-4" />
-          <span>{selectedTags.length > 0 ? `${selectedTags.length} selected` : 'Filter'}</span>
+          <span>
+            {selectedTags.length > 0
+              ? t('tagFilter.selectedCount', { count: selectedTags.length, defaultValue: '{{count}} selected' })
+              : t('tagFilter.filter', { defaultValue: 'Filter' })}
+          </span>
         </Button>
       </Popover.Trigger>
       <Popover.Portal>
@@ -45,7 +52,7 @@ export function TagFilter({
         >
           <div className="space-y-4">
             <Input
-              placeholder={placeholder}
+              placeholder={resolvedPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               autoFocus
@@ -58,7 +65,7 @@ export function TagFilter({
             {selectedTags.length > 0 && (
               <div className="pt-2 border-t flex justify-end">
                 <Button id="tag-filter-clear" variant="ghost" size="sm" onClick={onClearTags}>
-                  Clear all
+                  {t('tagFilter.clearAll', { defaultValue: 'Clear all' })}
                 </Button>
               </div>
             )}

@@ -978,5 +978,19 @@
       "handoffFinalizeFailed": "Non siamo riusciti a finalizzare il tuo accesso. Prova ad accedere di nuovo.",
       "handoffNetworkIssue": "Problema di rete rilevato durante la finalizzazione dell'accesso. Riprova."
     }
+  },
+  "form": {
+    "selectPlaceholder": "Seleziona...",
+    "clearSelection": "Cancella selezione",
+    "fromDate": "Dal",
+    "toDate": "Al",
+    "noResults": "Nessun risultato trovato",
+    "searchPlaceholder": "Cerca..."
+  },
+  "tagFilter": {
+    "placeholder": "Filtra per tag...",
+    "filter": "Filtra",
+    "selectedCount": "{{count}} selezionati",
+    "clearAll": "Cancella tutto"
   }
 }

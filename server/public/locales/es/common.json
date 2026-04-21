@@ -978,5 +978,19 @@
       "handoffFinalizeFailed": "No pudimos finalizar su inicio de sesión. Intente iniciar sesión de nuevo.",
       "handoffNetworkIssue": "Se detectó un problema de red al finalizar el inicio de sesión. Inténtelo de nuevo."
     }
+  },
+  "form": {
+    "selectPlaceholder": "Seleccionar...",
+    "clearSelection": "Borrar selección",
+    "fromDate": "Desde",
+    "toDate": "Hasta",
+    "noResults": "No se encontraron resultados",
+    "searchPlaceholder": "Buscar..."
+  },
+  "tagFilter": {
+    "placeholder": "Filtrar por etiquetas...",
+    "filter": "Filtrar",
+    "selectedCount": "{{count}} seleccionados",
+    "clearAll": "Borrar todo"
   }
 }

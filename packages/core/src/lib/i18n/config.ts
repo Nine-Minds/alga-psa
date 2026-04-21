@@ -169,13 +169,14 @@ export const ROUTE_NAMESPACES = {
   '/msp/time-management': ['common', 'msp/core', 'msp/time-entry'],
   '/msp/service-requests': ['common', 'msp/core', 'features/tickets', 'msp/service-requests'],
   '/msp/settings/extensions': ['common', 'msp/core', 'msp/settings', 'msp/extensions'],
-  '/msp/settings': ['common', 'msp/core', 'msp/settings', 'msp/admin', 'msp/email-providers', 'features/projects', 'features/tickets', 'msp/billing-settings', 'msp/service-catalog', 'features/billing'],
-  '/msp/profile': ['common', 'msp/core', 'msp/settings', 'msp/profile'],
+  '/msp/settings': ['common', 'msp/core', 'msp/settings', 'msp/admin', 'msp/email-providers', 'features/projects', 'features/tickets', 'msp/billing-settings', 'msp/service-catalog', 'features/billing', 'msp/calendar'],
+  '/msp/profile': ['common', 'msp/core', 'msp/settings', 'msp/profile', 'msp/calendar'],
   '/msp/security-settings': ['common', 'msp/core', 'msp/settings', 'msp/profile'],
   '/msp/platform-updates': ['common', 'msp/core', 'msp/profile'],
   '/msp/extensions': ['common', 'msp/core', 'msp/extensions'],
   '/msp/licenses': ['common', 'msp/core', 'msp/licensing'],
   '/msp/account': ['common', 'msp/core', 'msp/account', 'msp/licensing'],
+  '/msp/user-activities': ['common', 'msp/core', 'msp/user-activities', 'msp/workflows', 'features/tickets', 'features/projects', 'msp/schedule'],
 } as const;
 
 /**

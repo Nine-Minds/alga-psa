@@ -19,6 +19,7 @@ import { ISO8601String } from '@alga-psa/types';
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { IProject, IProjectPhase } from "@alga-psa/types";
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ProjectSectionFiltersDialogProps {
   isOpen: boolean;
@@ -39,6 +40,7 @@ export function ProjectSectionFiltersDialog({
   phases = [],
   priorities = [],
 }: ProjectSectionFiltersDialogProps) {
+  const { t } = useTranslation('msp/user-activities');
   // Local state excluding projectId and phaseId, which are handled separately
   const [localFilters, setLocalFilters] = useState<Omit<Partial<ActivityFilters>, 'projectId' | 'phaseId'>>(() => {
     const { projectId, phaseId, ...rest } = initialFilters;
@@ -148,10 +150,10 @@ useEffect(() => {
 
   const footer = (
     <div className="flex justify-between w-full">
-      <Button id="project-filter-clear" variant="outline" onClick={handleClear}>Reset</Button>
+      <Button id="project-filter-clear" variant="outline" onClick={handleClear}>{t('sections.projects.filterDialog.actions.reset', { defaultValue: 'Reset' })}</Button>
       <div>
-        <Button id="project-filter-cancel" variant="ghost" className="mr-2" onClick={() => onOpenChange(false)}>Cancel</Button>
-        <Button id="project-filter-apply" onClick={handleApply}>Apply Filters</Button>
+        <Button id="project-filter-cancel" variant="ghost" className="mr-2" onClick={() => onOpenChange(false)}>{t('sections.projects.filterDialog.actions.cancel', { defaultValue: 'Cancel' })}</Button>
+        <Button id="project-filter-apply" onClick={handleApply}>{t('sections.projects.filterDialog.actions.apply', { defaultValue: 'Apply Filters' })}</Button>
       </div>
     </div>
   );
@@ -160,28 +162,28 @@ useEffect(() => {
     <Dialog isOpen={isOpen} onClose={() => onOpenChange(false)} footer={footer}>
       <DialogContent className="sm:max-w-[700]">
         <DialogHeader>
-          <DialogTitle>Filter Project Tasks</DialogTitle>
+          <DialogTitle>{t('sections.projects.filterDialog.title', { defaultValue: 'Filter Project Tasks' })}</DialogTitle>
            <DialogDescription>
-             Select criteria to filter project task activities.
+             {t('sections.projects.filterDialog.description', { defaultValue: 'Select criteria to filter project task activities.' })}
            </DialogDescription>
         </DialogHeader>
         <div className="py-2 space-y-4">
 
           {/* Search Filter */}
           <div className="space-y-1">
-            <Label htmlFor="project-search" className="text-base font-semibold">Search</Label>
+            <Label htmlFor="project-search" className="text-base font-semibold">{t('sections.projects.filterDialog.fields.search', { defaultValue: 'Search' })}</Label>
             <Input
               id="project-search"
               value={localFilters.search || ''}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleSingleFilterChange('search', e.target.value)}
-              placeholder="Search title, description"
+              placeholder={t('sections.projects.filterDialog.fields.searchPlaceholder', { defaultValue: 'Search title, description' })}
             />
           </div>
 
           {/* Project and Phase Filters */}
           <div className="grid grid-cols-2 gap-x-6 gap-y-0">
             <div className="space-y-1">
-              <Label htmlFor="project-select" className="text-base font-semibold">Project</Label>
+              <Label htmlFor="project-select" className="text-base font-semibold">{t('sections.projects.filterDialog.fields.project', { defaultValue: 'Project' })}</Label>
               <CustomSelect
                 id="project-select"
                 value={selectedProjectId}
@@ -190,36 +192,40 @@ useEffect(() => {
                   setSelectedPhaseId('all');
                 }}
                 options={[
-                  { value: 'all', label: 'All Projects' },
+                  { value: 'all', label: t('sections.projects.filterDialog.fields.allProjects', { defaultValue: 'All Projects' }) },
                   ...projects.map(project => ({ value: project.project_id, label: project.project_name }))
                 ]}
-                placeholder="Select Project..."
+                placeholder={t('sections.projects.filterDialog.fields.projectPlaceholder', { defaultValue: 'Select Project...' })}
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="phase-select" className="text-base font-semibold">Phase</Label>
+              <Label htmlFor="phase-select" className="text-base font-semibold">{t('sections.projects.filterDialog.fields.phase', { defaultValue: 'Phase' })}</Label>
               <CustomSelect
                 id="phase-select"
                 value={selectedPhaseId}
                 onValueChange={(value) => setSelectedPhaseId(value)}
                 options={[
-                  { value: 'all', label: 'All Phases' },
+                  { value: 'all', label: t('sections.projects.filterDialog.fields.allPhases', { defaultValue: 'All Phases' }) },
                   ...projectPhases.map(phase => ({ value: phase.phase_id, label: phase.phase_name }))
                 ]}
-                placeholder={loadingPhases ? "Loading phases..." : selectedProjectId ? "Select Phase..." : "Select a project first"}
+                placeholder={loadingPhases
+                  ? t('sections.projects.filterDialog.fields.phaseLoadingPlaceholder', { defaultValue: 'Loading phases...' })
+                  : selectedProjectId
+                    ? t('sections.projects.filterDialog.fields.phasePlaceholder', { defaultValue: 'Select Phase...' })
+                    : t('sections.projects.filterDialog.fields.phaseSelectFirstPlaceholder', { defaultValue: 'Select a project first' })}
                 disabled={!selectedProjectId || loadingPhases}
               />
             </div>
             {/* Priority Filter */}
             {priorities.length > 0 && (
               <div className="space-y-1">
-                <Label htmlFor="project-priority-select" className="text-base font-semibold">Priority</Label>
+                <Label htmlFor="project-priority-select" className="text-base font-semibold">{t('sections.projects.filterDialog.fields.priority', { defaultValue: 'Priority' })}</Label>
                 <CustomSelect
                   id="project-priority-select"
                   value={selectedPriorityId}
                   onValueChange={(value) => setSelectedPriorityId(value)}
                   options={[
-                    { value: 'all', label: 'All Priorities' },
+                    { value: 'all', label: t('sections.projects.filterDialog.fields.allPriorities', { defaultValue: 'All Priorities' }) },
                     ...priorities.map(p => ({
                       value: p.priority_id,
                       label: (
@@ -234,7 +240,7 @@ useEffect(() => {
                       textValue: p.priority_name,
                     }))
                   ]}
-                  placeholder="Select Priority..."
+                  placeholder={t('sections.projects.filterDialog.fields.priorityPlaceholder', { defaultValue: 'Select Priority...' })}
                 />
               </div>
             )}
@@ -242,7 +248,7 @@ useEffect(() => {
 
           {/* Due Date Range */}
           <div className="space-y-1">
-             <Label htmlFor="project-due-date-range" className="text-base font-semibold">Due Date Range</Label>
+             <Label htmlFor="project-due-date-range" className="text-base font-semibold">{t('sections.projects.filterDialog.fields.dueDateRange', { defaultValue: 'Due Date Range' })}</Label>
              <StringDateRangePicker
                 id="project-due-date-range"
                 value={{
@@ -257,7 +263,7 @@ useEffect(() => {
           <div className="pt-2">
              <Checkbox
                 id="show-closed-tasks"
-                label="Show Closed Tasks"
+                label={t('sections.projects.filterDialog.fields.showClosedTasks', { defaultValue: 'Show Closed Tasks' })}
                 checked={localFilters.isClosed}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLocalFilters(prev => ({ ...prev, isClosed: e.target.checked }))}
               />

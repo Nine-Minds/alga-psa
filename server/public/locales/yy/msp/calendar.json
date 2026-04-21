@@ -1,0 +1,247 @@
+{
+  "calendar": {
+    "integrations": {
+      "loadError": "55555",
+      "header": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "buttons": {
+        "googleCalendar": "55555",
+        "outlookCalendar": "55555",
+        "addGoogleCalendar": "55555",
+        "addOutlookCalendar": "55555"
+      },
+      "proTip": {
+        "label": "55555",
+        "body": "55555"
+      },
+      "proTipSuffix": "55555",
+      "empty": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "providerLabels": {
+        "google": "55555",
+        "microsoft": "55555",
+        "calendar": "55555"
+      },
+      "connectionStatus": {
+        "connected": "55555",
+        "error": "55555",
+        "disconnected": "55555",
+        "configuring": "55555"
+      },
+      "oauthStatus": {
+        "actionRequired": "55555",
+        "complete": "55555"
+      },
+      "active": {
+        "active": "55555",
+        "inactive": "55555"
+      },
+      "fields": {
+        "type": "55555",
+        "calendarId": "55555",
+        "syncDirection": "55555",
+        "lastSync": "55555"
+      },
+      "providerType": {
+        "google": "55555",
+        "microsoft": "55555"
+      },
+      "syncDirection": {
+        "bidirectional": "55555",
+        "toExternal": "55555",
+        "fromExternal": "55555"
+      },
+      "values": {
+        "notSet": "55555",
+        "notYetRun": "55555"
+      },
+      "syncing": {
+        "inProgress": "55555"
+      },
+      "actions": {
+        "syncing": "55555",
+        "syncNow": "55555",
+        "edit": "55555",
+        "delete": "55555"
+      },
+      "toasts": {
+        "deleted": {
+          "title": "55555",
+          "description": "55555 {{name}} 55555"
+        },
+        "deleteFailed": {
+          "title": "55555",
+          "fallback": "55555"
+        },
+        "syncStarted": {
+          "title": "55555",
+          "descriptionWithName": "55555 {{name}} 55555",
+          "descriptionGeneric": "55555"
+        },
+        "syncStartedFeedback": "55555",
+        "syncFailed": {
+          "title": "55555",
+          "fallback": "55555"
+        },
+        "syncException": {
+          "title": "55555",
+          "fallback": "55555"
+        }
+      },
+      "dialogs": {
+        "addTitle": "55555 {{provider}} 55555",
+        "addDescription": "55555",
+        "editTitle": "55555 {{provider}} 55555",
+        "editDescription": "55555",
+        "delete": {
+          "title": "55555",
+          "messageWithName": "55555 {{name}} 55555",
+          "messageGeneric": "55555",
+          "confirmLabel": "55555",
+          "cancelLabel": "55555"
+        }
+      }
+    },
+    "sync": {
+      "compact": {
+        "syncing": "55555",
+        "google": "55555",
+        "outlook": "55555"
+      },
+      "tooltip": {
+        "status": "55555 {{status}} 55555",
+        "lastSync": "55555 {{value}} 55555",
+        "error": "55555 {{message}} 55555"
+      },
+      "status": {
+        "synced": "55555",
+        "pending": "55555",
+        "conflict": "55555",
+        "error": "55555",
+        "unknown": "55555"
+      },
+      "header": {
+        "title": "55555",
+        "refresh": "55555"
+      },
+      "empty": "55555",
+      "inactive": "55555",
+      "fields": {
+        "syncDirection": "55555",
+        "lastSync": "55555",
+        "externalId": "55555"
+      },
+      "loadError": "55555",
+      "conflictAlert": "55555"
+    },
+    "providers": {
+      "common": {
+        "oauth": {
+          "badge": {
+            "authorized": "55555",
+            "authorizing": "55555",
+            "error": "55555",
+            "notAuthorized": "55555"
+          },
+          "status": "55555",
+          "connecting": "55555",
+          "connected": "55555",
+          "connect": "55555",
+          "popupBlocked": "55555",
+          "callbackFailed": "55555",
+          "initiateFailed": "55555"
+        },
+        "actions": {
+          "cancel": "55555",
+          "saving": "55555",
+          "updateProvider": "55555",
+          "createProvider": "55555"
+        },
+        "errors": {
+          "createFailed": "55555",
+          "saveFailed": "55555"
+        },
+        "syncDirections": {
+          "bidirectional": "55555"
+        }
+      },
+      "google": {
+        "config": {
+          "title": "55555",
+          "description": "55555"
+        },
+        "fields": {
+          "providerName": "55555",
+          "providerNamePlaceholder": "55555",
+          "calendarId": "55555",
+          "calendarIdPlaceholder": "55555",
+          "calendarIdHint": "55555",
+          "syncDirection": "55555",
+          "enableProvider": "55555"
+        },
+        "syncDirections": {
+          "toExternal": "55555",
+          "fromExternal": "55555"
+        },
+        "oauth": {
+          "title": "55555",
+          "description": "55555"
+        },
+        "configAlert": {
+          "title": "55555",
+          "body": "55555",
+          "openSettings": "55555"
+        },
+        "errors": {
+          "notConfigured": "55555"
+        },
+        "defaults": {
+          "providerName": "55555",
+          "calendarId": "55555"
+        }
+      },
+      "microsoft": {
+        "config": {
+          "title": "55555",
+          "description": "55555"
+        },
+        "fields": {
+          "providerName": "55555",
+          "providerNamePlaceholder": "55555",
+          "calendarId": "55555",
+          "calendarIdPlaceholder": "55555",
+          "calendarIdHint": "55555",
+          "syncDirection": "55555",
+          "enableProvider": "55555"
+        },
+        "syncDirections": {
+          "toExternal": "55555",
+          "fromExternal": "55555"
+        },
+        "oauth": {
+          "title": "55555",
+          "description": "55555"
+        },
+        "configAlert": {
+          "title": "55555",
+          "body": "55555",
+          "openSettings": "55555"
+        },
+        "setupReason": {
+          "unsupported_consumer": "55555",
+          "binding_not_configured": "55555",
+          "profile_missing": "55555",
+          "profile_credentials_missing": "55555"
+        },
+        "defaults": {
+          "providerName": "55555",
+          "calendarId": "55555"
+        }
+      }
+    }
+  }
+}

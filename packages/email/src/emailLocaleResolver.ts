@@ -11,8 +11,12 @@
  * 5. System default ('en')
  *
  * Internal (MSP staff) users skip steps 2 and 3 and resolve directly to the
- * organization default; a legacy settings.mspPortal.defaultLocale is consulted
- * only if the org default is unset.
+ * organization default. Legacy settings.mspPortal.defaultLocale (from the
+ * retired split UI) is consulted only if the org default is unset.
+ *
+ * Feature-flag gate: when msp-i18n-enabled is off, internal users are forced
+ * to English regardless of the hierarchy. This matches the UI rollout so MSP
+ * staff don't start receiving non-English emails before the flag is flipped.
  *
  * Special handling for portal invitations: when sending invitations to
  * contacts without user accounts yet, provide the clientId so the client's
@@ -22,12 +26,37 @@
 import { getConnection } from '@alga-psa/db';
 import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from './lib/localeConfig';
 import logger from '@alga-psa/core/logger';
+import { featureFlags } from '@alga-psa/core/server';
 
 export interface EmailRecipient {
   email: string;
   userId?: string;
   userType?: 'client' | 'internal';
   clientId?: string;
+}
+
+/**
+ * Returns true when MSP i18n is enabled for this tenant/user. When disabled,
+ * internal (MSP) users must receive English emails regardless of preferences,
+ * matching the UI rollout gated by I18nWrapper.
+ */
+async function isMspI18nEnabled(
+  tenantId: string,
+  userId?: string
+): Promise<boolean> {
+  try {
+    return await featureFlags.isEnabled('msp-i18n-enabled', {
+      tenantId,
+      userId,
+    });
+  } catch (error) {
+    logger.warn('[EmailLocaleResolver] msp-i18n-enabled evaluation failed; defaulting to disabled', {
+      error: error instanceof Error ? error.message : String(error),
+      tenantId,
+      userId,
+    });
+    return false;
+  }
 }
 
 /**
@@ -76,19 +105,32 @@ export async function resolveEmailLocale(
     let userType = recipient.userType;
     let clientId = recipient.clientId;
 
+    // Resolve userType early so we can feature-flag gate internal users
+    if (recipient.userId && !userType) {
+      const user = await knex('users')
+        .where({
+          user_id: recipient.userId,
+          tenant: tenantId
+        })
+        .first();
+
+      userType = user?.user_type || 'internal';
+    }
+
+    // Internal (MSP) users: force English while msp-i18n-enabled is off
+    if (userType === 'internal') {
+      const enabled = await isMspI18nEnabled(tenantId, recipient.userId);
+      if (!enabled) {
+        logger.debug('[EmailLocaleResolver] msp-i18n-enabled is off; forcing English for internal user', {
+          tenantId,
+          userId: recipient.userId
+        });
+        return LOCALE_CONFIG.defaultLocale as SupportedLocale;
+      }
+    }
+
     // If we have a userId, check user preference and get user details
     if (recipient.userId) {
-      if (!userType) {
-        const user = await knex('users')
-          .where({
-            user_id: recipient.userId,
-            tenant: tenantId
-          })
-          .first();
-
-        userType = user?.user_type || 'internal';
-      }
-
       // 1. Check user preference
       const userPref = await knex('user_preferences')
         .where({
@@ -142,7 +184,7 @@ export async function resolveEmailLocale(
       }
     }
 
-    // 4. Organization default (applies to everyone)
+    // 4. Organization default (applies to everyone; legacy MSP fallback inside)
     const defaultLocale = await getTenantDefaultLocale(tenantId, userType || 'client');
     logger.debug('[EmailLocaleResolver] Using org/system default:', { locale: defaultLocale, userType: userType || 'client' });
     return defaultLocale;

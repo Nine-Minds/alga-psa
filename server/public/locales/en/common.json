@@ -42,6 +42,20 @@
     "confirmDeletion": "Confirm Deletion",
     "saving": "Saving..."
   },
+  "form": {
+    "selectPlaceholder": "Select...",
+    "clearSelection": "Clear selection",
+    "fromDate": "From date",
+    "toDate": "To date",
+    "noResults": "No results found",
+    "searchPlaceholder": "Search..."
+  },
+  "tagFilter": {
+    "placeholder": "Filter by tags...",
+    "filter": "Filter",
+    "selectedCount": "{{count}} selected",
+    "clearAll": "Clear all"
+  },
   "status": {
     "loading": "Loading...",
     "saving": "Saving...",

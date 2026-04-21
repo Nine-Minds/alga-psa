@@ -666,27 +666,78 @@
       "missingRequired": "Missing required: {{fields}}"
     },
     "fieldMetadata": {
-      "actionId": { "label": "Action", "description": "The action to invoke" },
-      "version": { "label": "Version", "description": "Action version number" },
-      "inputMapping": { "label": "Input Mapping", "description": "Map data to action inputs" },
-      "saveAs": { "label": "Save Result As", "description": "Variable name or assignment path (e.g., result, vars.result, payload.result)" },
+      "actionId": {
+        "label": "Action",
+        "description": "The action to invoke"
+      },
+      "version": {
+        "label": "Version",
+        "description": "Action version number"
+      },
+      "inputMapping": {
+        "label": "Input Mapping",
+        "description": "Map data to action inputs"
+      },
+      "saveAs": {
+        "label": "Save Result As",
+        "description": "Variable name or assignment path (e.g., result, vars.result, payload.result)"
+      },
       "idempotencyKey": {
         "label": "Idempotency Key",
         "description": "Expression that produces a unique key to prevent duplicate executions. If the same key is seen twice, the cached result is returned."
       },
-      "onError": { "label": "Error Handling", "description": "How to handle errors" },
-      "eventName": { "label": "Event Name", "description": "Name of the event to wait for" },
-      "correlationKey": { "label": "Correlation Key", "description": "Expression to match incoming events" },
-      "filters": { "label": "Payload Filters", "description": "Optional event payload filters (AND semantics)" },
-      "timeoutMs": { "label": "Timeout (ms)", "description": "Maximum time to wait in milliseconds" },
-      "mode": { "label": "Wait Mode", "description": "Duration or until time" },
-      "durationMs": { "label": "Duration", "description": "Relative duration stored in milliseconds" },
-      "until": { "label": "Until", "description": "Expression resolving to an absolute date/time" },
-      "state": { "label": "State Name", "description": "The state to transition to" },
-      "assign": { "label": "Assignments", "description": "Variables to assign" },
-      "taskType": { "label": "Task Type", "description": "Type of human task" },
-      "title": { "label": "Title", "description": "Task title shown to assignee" },
-      "contextData": { "label": "Context Data", "description": "Additional data to include with the task" }
+      "onError": {
+        "label": "Error Handling",
+        "description": "How to handle errors"
+      },
+      "eventName": {
+        "label": "Event Name",
+        "description": "Name of the event to wait for"
+      },
+      "correlationKey": {
+        "label": "Correlation Key",
+        "description": "Expression to match incoming events"
+      },
+      "filters": {
+        "label": "Payload Filters",
+        "description": "Optional event payload filters (AND semantics)"
+      },
+      "timeoutMs": {
+        "label": "Timeout (ms)",
+        "description": "Maximum time to wait in milliseconds"
+      },
+      "mode": {
+        "label": "Wait Mode",
+        "description": "Duration or until time"
+      },
+      "durationMs": {
+        "label": "Duration",
+        "description": "Relative duration stored in milliseconds"
+      },
+      "until": {
+        "label": "Until",
+        "description": "Expression resolving to an absolute date/time"
+      },
+      "state": {
+        "label": "State Name",
+        "description": "The state to transition to"
+      },
+      "assign": {
+        "label": "Assignments",
+        "description": "Variables to assign"
+      },
+      "taskType": {
+        "label": "Task Type",
+        "description": "Type of human task"
+      },
+      "title": {
+        "label": "Title",
+        "description": "Task title shown to assignee"
+      },
+      "contextData": {
+        "label": "Context Data",
+        "description": "Additional data to include with the task"
+      }
     },
     "actions": {
       "ai.infer": {
@@ -796,16 +847,46 @@
         }
       },
       "groups": {
-        "ticket": { "label": "Ticket", "description": "Ticket actions" },
-        "contact": { "label": "Contact", "description": "Contact actions" },
-        "client": { "label": "Client", "description": "Client actions" },
-        "communication": { "label": "Communication", "description": "Communication actions" },
-        "scheduling": { "label": "Scheduling", "description": "Scheduling actions" },
-        "project": { "label": "Project", "description": "Project actions" },
-        "time": { "label": "Time", "description": "Time actions" },
-        "crm": { "label": "CRM", "description": "CRM actions" },
-        "transform": { "label": "Transform", "description": "Transform actions" },
-        "ai": { "label": "AI", "description": "AI actions" }
+        "ticket": {
+          "label": "Ticket",
+          "description": "Ticket actions"
+        },
+        "contact": {
+          "label": "Contact",
+          "description": "Contact actions"
+        },
+        "client": {
+          "label": "Client",
+          "description": "Client actions"
+        },
+        "communication": {
+          "label": "Communication",
+          "description": "Communication actions"
+        },
+        "scheduling": {
+          "label": "Scheduling",
+          "description": "Scheduling actions"
+        },
+        "project": {
+          "label": "Project",
+          "description": "Project actions"
+        },
+        "time": {
+          "label": "Time",
+          "description": "Time actions"
+        },
+        "crm": {
+          "label": "CRM",
+          "description": "CRM actions"
+        },
+        "transform": {
+          "label": "Transform",
+          "description": "Transform actions"
+        },
+        "ai": {
+          "label": "AI",
+          "description": "AI actions"
+        }
       }
     },
     "stepCard": {
@@ -1799,5 +1880,399 @@
       "fixed": "Specific date & time",
       "expression": "Advanced expression"
     }
+  },
+  "automation": {
+    "createWorkflow": {
+      "dialogTitle": "Create New Workflow",
+      "fields": {
+        "name": "Workflow Name",
+        "namePlaceholder": "e.g., Send Welcome Email",
+        "triggerType": "Trigger Type"
+      },
+      "validation": {
+        "nameRequired": "Workflow name is required",
+        "nameTooShort": "Name must be at least 3 characters"
+      },
+      "actions": {
+        "cancel": "Cancel",
+        "create": "Create Workflow"
+      },
+      "triggers": {
+        "event": {
+          "title": "Event-based",
+          "description": "Triggered automatically when specific events occur (e.g., ticket created, invoice paid)."
+        },
+        "scheduled": {
+          "title": "Scheduled",
+          "description": "Runs on a recurring schedule using cron expressions (e.g., daily, weekly)."
+        },
+        "manual": {
+          "title": "Manual",
+          "description": "Started on-demand by users or via API calls. No automatic triggers."
+        }
+      }
+    },
+    "workflowList": {
+      "header": "Workflows",
+      "stats": {
+        "total": "{{count}} total",
+        "active": "{{count}} active",
+        "draft": "{{count}} draft",
+        "paused": "{{count}} paused"
+      },
+      "actions": {
+        "eventCatalog": "Event Catalog",
+        "newWorkflow": "New Workflow",
+        "createFirst": "Create Your First Workflow",
+        "retry": "Retry",
+        "resetFilters": "Reset"
+      },
+      "searchPlaceholder": "Search workflows...",
+      "statusFilter": {
+        "all": "All statuses",
+        "active": "Active",
+        "draft": "Draft",
+        "paused": "Paused",
+        "archived": "Archived"
+      },
+      "triggerFilter": {
+        "all": "All triggers",
+        "event": "Event-based",
+        "schedule": "One-time schedule",
+        "recurring": "Recurring schedule",
+        "manual": "Manual"
+      },
+      "triggerLabels": {
+        "manual": "Manual",
+        "schedule": "One-time schedule",
+        "recurring": "Recurring schedule",
+        "event": "Event"
+      },
+      "bulk": {
+        "selectedSingular": "{{count}} workflow selected",
+        "selectedPlural": "{{count}} workflows selected",
+        "pause": "Pause",
+        "resume": "Resume",
+        "delete": "Delete",
+        "clearSelection": "Clear selection",
+        "deleteDialogTitle": "Delete selected workflows",
+        "deleteConfirmSingular": "Delete {{count}} workflow",
+        "deleteConfirmPlural": "Delete {{count}} workflows",
+        "deleteClose": "Close",
+        "deleteCancel": "Cancel",
+        "selectedSummarySingular": "You selected <1>{{count}}</1> workflow.",
+        "selectedSummaryPlural": "You selected <1>{{count}}</1> workflows.",
+        "willBeDeleted": "<1>{{count}}</1> will be deleted.",
+        "willBeSkipped": "<1>{{count}}</1> will be skipped.",
+        "skippedHeading": "Skipped workflows",
+        "systemWorkflowReason": "System workflow"
+      },
+      "columns": {
+        "name": "Name",
+        "status": "Status",
+        "version": "Version",
+        "trigger": "Trigger",
+        "lastModified": "Last Modified",
+        "actions": "Actions"
+      },
+      "statusLabels": {
+        "active": "Active",
+        "draft": "Draft",
+        "archived": "Archived",
+        "paused": "Paused"
+      },
+      "tableValues": {
+        "system": "System",
+        "draftVersion": "Draft: v{{version}}"
+      },
+      "rowMenu": {
+        "ariaLabel": "Workflow actions",
+        "resume": "Resume",
+        "pause": "Pause",
+        "duplicate": "Duplicate",
+        "viewRuns": "View Runs",
+        "delete": "Delete"
+      },
+      "states": {
+        "errorTitle": "Failed to load workflows",
+        "errorFallback": "Failed to fetch workflows",
+        "validationFailed": "Failed to validate deletion. Please try again.",
+        "emptyTitle": "No workflows yet",
+        "emptyDescription": "Create your first workflow to automate tasks, respond to events, and streamline your processes.",
+        "noResultsTitle": "No workflows found",
+        "noResultsDescription": "Try adjusting your search or filters to find what you're looking for."
+      },
+      "deleteDialog": {
+        "fallbackEntityName": "this workflow"
+      }
+    },
+    "eventsCatalog": {
+      "header": {
+        "title": "Workflow Event Catalog",
+        "subtitle": "Explore, manage, and design workflows for system events and triggers.",
+        "defineCustomEvent": "Define Custom Event",
+        "managePermissionTitle": "Requires workflow:manage permission"
+      },
+      "filters": {
+        "searchPlaceholder": "Search events (e.g., ticket.create, email.receive)...",
+        "allCategories": "All Categories",
+        "status": "Status",
+        "statusOptions": {
+          "all": "All statuses",
+          "active": "Active",
+          "beta": "Beta",
+          "draft": "Draft",
+          "deprecated": "Deprecated"
+        },
+        "source": "Source",
+        "sourceOptions": {
+          "all": "All sources",
+          "system": "System",
+          "tenant": "Tenant"
+        },
+        "sort": "Sort",
+        "sortOptions": {
+          "categoryName": "Category · Name",
+          "mostActive": "Most active (7d)"
+        },
+        "apply": "Apply",
+        "clear": "Clear",
+        "viewGrid": "Grid view",
+        "viewList": "List view"
+      },
+      "card": {
+        "workflowsCount": "{{count}} workflows",
+        "actions": {
+          "simulate": "Simulate",
+          "metrics": "Metrics",
+          "attachTitle": "Attach (new workflow)"
+        },
+        "metrics": {
+          "executions": "Executions",
+          "successRate": "Success rate",
+          "avgLatency": "Avg latency"
+        }
+      },
+      "states": {
+        "noEventsTitle": "No events found",
+        "noEventsDescription": "Try adjusting your filters.",
+        "noEventsInRange": "No events in this range.",
+        "noDataAvailable": "No data available.",
+        "loading": "Loading…"
+      },
+      "pagination": {
+        "showing": "Showing {{start}} to {{end}} of {{total}} results",
+        "prev": "Prev",
+        "next": "Next",
+        "page": "Page {{page}} / {{total}}"
+      },
+      "badges": {
+        "system": "System",
+        "tenant": "Tenant",
+        "noSchema": "No schema",
+        "unknownSchema": "Unknown schema",
+        "schema": "Schema"
+      },
+      "details": {
+        "title": "Event details",
+        "close": "Close",
+        "simulate": "Simulate",
+        "metrics": "Metrics",
+        "attach": "Attach",
+        "schema": {
+          "heading": "Schema",
+          "viewFull": "View full schema",
+          "managedNotice": "Schema is managed by the schema registry.",
+          "missingNotice": "No schemaRef set; event may not be usable as a workflow trigger.",
+          "topLevelFields": "Top-level fields",
+          "required": "required",
+          "moreFieldsHint": "Showing first 12 fields. Use \"View full schema\" for more."
+        },
+        "attached": {
+          "heading": "Attached workflows",
+          "loading": "Loading…",
+          "empty": "No workflows attached.",
+          "publishedBadge": "Published",
+          "systemBadge": "System",
+          "pausedBadge": "Paused",
+          "hiddenBadge": "Hidden",
+          "open": "Open",
+          "detach": "Detach",
+          "publishTooltip": "Requires workflow:publish permission",
+          "adminTooltip": "Requires workflow:admin for system workflows"
+        }
+      },
+      "schemaModal": {
+        "title": "Schema",
+        "close": "Close",
+        "headerTitle": "Payload schema",
+        "loading": "Loading…",
+        "unavailable": "Schema not available.",
+        "copy": "Copy",
+        "copySuccess": "Copied",
+        "copyFailed": "Copy failed"
+      },
+      "metricsDialog": {
+        "title": "Metrics",
+        "close": "Close",
+        "headerTitle": "Metrics · {{eventType}}",
+        "from": "From",
+        "to": "To",
+        "refresh": "Refresh",
+        "openWorkflowEditor": "Open workflow editor",
+        "loading": "Loading…",
+        "totals": {
+          "totalEvents": "Total events",
+          "matched": "Matched",
+          "unmatched": "Unmatched",
+          "errors": "Errors",
+          "runsStarted": "Runs started",
+          "runSuccessRate": "Run success rate",
+          "avgRunDuration": "Avg run duration"
+        },
+        "executionsOverTime": "Executions over time",
+        "recentEvents": "Recent events",
+        "viewInEvents": "View in events",
+        "openRun": "Run",
+        "loadFailed": "Failed to load metrics",
+        "rangeShowing": "Showing {{start}}–{{end}} of {{total}}",
+        "prev": "Prev",
+        "next": "Next"
+      },
+      "simulateDialog": {
+        "title": "Simulate event",
+        "headerTitle": "Simulate · {{eventType}}",
+        "submit": "Simulate",
+        "submitting": "Submitting…",
+        "close": "Close",
+        "fields": {
+          "correlationKey": "Correlation key (optional)",
+          "correlationKeyPlaceholder": "Used to resolve event waits",
+          "schemaRef": "Event payload schema ref (advanced)",
+          "schemaRefPlaceholderEmpty": "No schemaRef for this event",
+          "payloadJson": "Payload (JSON)",
+          "payload": "Payload"
+        },
+        "modes": {
+          "form": "Form",
+          "json": "JSON",
+          "noSchema": "No schema available; form mode disabled."
+        },
+        "errors": {
+          "schemaValidationTitle": "Schema validation errors",
+          "moreErrors": "+{{count}} more",
+          "fixBeforeSubmit": "Fix schema validation errors before submitting.",
+          "simulationTitle": "Simulation error",
+          "submitFallback": "Failed to simulate",
+          "submitToast": "Failed to simulate",
+          "invalidJson": "Invalid JSON.",
+          "valueMustBeAllowed": "Value must be one of the allowed options.",
+          "expectedObject": "Expected object.",
+          "expectedArray": "Expected array.",
+          "expectedString": "Expected string.",
+          "expectedNumber": "Expected number.",
+          "expectedBoolean": "Expected boolean.",
+          "requiredField": "Required field missing."
+        },
+        "result": {
+          "title": "Result",
+          "status": "Status",
+          "eventId": "Event ID",
+          "startedRuns": "Started runs",
+          "open": "Open",
+          "resumedRun": "Resumed run",
+          "openResumedRun": "Open resumed run"
+        },
+        "toasts": {
+          "success": "Event simulated"
+        },
+        "form": {
+          "remove": "Remove",
+          "addItem": "Add item",
+          "rootLabel": "Payload",
+          "payloadJsonLabel": "Payload (JSON)",
+          "true": "True",
+          "false": "False"
+        }
+      },
+      "defineEventDialog": {
+        "title": "Define custom event",
+        "headerTitle": "Define Custom Event",
+        "cancel": "Cancel",
+        "submit": "Create event",
+        "submitting": "Creating…",
+        "fields": {
+          "eventType": "Event type",
+          "eventTypePlaceholder": "e.g. ticket.created",
+          "name": "Name",
+          "namePlaceholder": "Human-friendly name",
+          "category": "Category",
+          "categoryPlaceholder": "e.g. Tickets",
+          "description": "Description",
+          "descriptionPlaceholder": "Optional description",
+          "useSchemaRef": "Use schema ref",
+          "useInline": "Inline schema (advanced)",
+          "selectSchemaRef": "Select payload schema ref",
+          "selectPlaceholder": "Select…",
+          "payloadSchemaJson": "Payload schema (JSON)"
+        },
+        "footer": "Custom events are tenant-scoped and can be used as workflow triggers.",
+        "validation": {
+          "typeAndNameRequired": "Event type and name are required.",
+          "schemaRefRequired": "Select a payload schema ref (or use inline schema).",
+          "invalidJson": "Payload schema must be valid JSON."
+        },
+        "toasts": {
+          "createSuccess": "Custom event created",
+          "createFailed": "Failed to create event"
+        }
+      },
+      "toasts": {
+        "loadEventsFailed": "Failed to load events",
+        "workflowCreated": "Workflow created",
+        "createWorkflowFailed": "Failed to create workflow",
+        "detachConfirm": "Detach this workflow from the event? This publishes a new version with the trigger removed.",
+        "detachValidationFailed": "Detach failed (validation errors)",
+        "detached": "Detached",
+        "detachFailed": "Failed to detach"
+      }
+    },
+    "actionInput": {
+      "fallbacks": {
+        "loadingOptions": "Loading options...",
+        "selectName": "Select {{name}}",
+        "ticketSearchPlaceholder": "Search tickets by number or title",
+        "ticketSelect": "Select ticket",
+        "ticketTypeAbove": "Type above to search tickets",
+        "selectBoard": "Select Board",
+        "selectClient": "Select Client",
+        "selectContact": "Select Contact",
+        "selectUser": "Select User",
+        "selectUserOrTeam": "Select User or Team"
+      },
+      "errors": {
+        "loadTicket": "Failed to load ticket",
+        "searchTickets": "Failed to search tickets",
+        "loadOptions": "Failed to load options"
+      },
+      "dependencyHints": {
+        "contactClient": "Choose a fixed Client first to load contact options.",
+        "locationClient": "Choose a fixed Client first to load location options.",
+        "categoryBoard": "Choose a fixed Board first to load category options.",
+        "statusBoard": "Choose a fixed Board first to load status options.",
+        "statusTicket": "Choose a fixed Ticket first to load status options.",
+        "subcategoryBoard": "Choose a fixed Board first to load subcategory options.",
+        "subcategoryCategory": "Choose a fixed Category first to load subcategory options."
+      }
+    }
+  },
+  "automationGate": {
+    "loading": "Loading workflow automation...",
+    "featureName": "Workflow Automation",
+    "notEnabled": "This feature is experimental and is not enabled for your tenant.",
+    "experimental": "Experimental",
+    "enableHint": "Enable Workflow Automation in Settings to access workflow automation features.",
+    "goToExperimental": "Go to Experimental Features",
+    "openSettings": "Open settings"
   }
 }
