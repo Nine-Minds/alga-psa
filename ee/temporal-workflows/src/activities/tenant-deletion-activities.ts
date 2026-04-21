@@ -9,7 +9,7 @@
  */
 
 import { Context } from '@temporalio/activity';
-import { getAdminConnection } from '@alga-psa/db/admin.js';
+import { getAdminConnection, refreshAdminConnection } from '@alga-psa/db/admin.js';
 import { TagModel } from '@alga-psa/shared/models/tagModel.js';
 import { Knex } from 'knex';
 import type {
@@ -24,6 +24,24 @@ import type {
   DeleteTenantDataResult,
   SendCancellationEmailResult,
 } from '../types/tenant-deletion-types.js';
+
+/**
+ * PgBouncer transaction-pooling in front of a Citus/Patroni HA setup occasionally
+ * hands out a backend connection that has become read-only (e.g., after a failover
+ * the backend is now attached to a standby). The process-cached admin pool's
+ * own probe can pass on those connections, so queries fail later with
+ * "read-only transaction" or "writing to worker nodes is not currently allowed".
+ *
+ * Callers use `isReadOnlyError` to detect the pattern, then call
+ * `refreshAdminConnection()` to force-recreate the pool and retry once.
+ */
+const READ_ONLY_ERROR_RE =
+  /read-only transaction|writing to worker nodes|cannot execute [A-Z]+ in a read-only/i;
+
+function isReadOnlyError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err ?? '');
+  return READ_ONLY_ERROR_RE.test(msg);
+}
 
 /**
  * Comprehensive list of tables to delete from, in dependency order.
@@ -74,9 +92,11 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'ticket_bundle_mirrors',
 
   // Messages and comments
-  'comment_reactions', 'comments',
+  // vectors and email_reply_tokens reference comments with NO ACTION, so they
+  // must be deleted before comments to avoid FK violations.
+  'comment_reactions', 'vectors', 'email_reply_tokens', 'comments',
   'gmail_processed_history', 'email_processed_attachments', 'email_processed_messages',
-  'email_reply_tokens', 'email_sending_logs', 'email_rate_limits',
+  'email_sending_logs', 'email_rate_limits',
 
   // MSP SSO domain claim lifecycle (dependent challenges before claim rows)
   'msp_sso_domain_verification_challenges', 'msp_sso_tenant_login_domains',
@@ -110,6 +130,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'client_portal_visibility_group_boards',
 
   // Logs and notifications
+  // import_job_items / import_jobs reference jobs with NO ACTION, so they
+  // must be deleted before jobs.
+  'import_job_items', 'import_jobs',
   'job_details', 'jobs', 'audit_logs', 'notification_logs', 'internal_notifications',
   'platform_notification_recipients',
 
@@ -122,15 +145,15 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Chat and messages
   'messages', 'chats',
 
-  // Vector embeddings
-  'vectors',
-
   // Custom reports
   'custom_reports',
 
+  // External entity mappings references assets and import_sources with NO ACTION,
+  // so it must be deleted before both.
+  'external_entity_mappings',
+
   // Import/export
-  'import_job_items', 'import_jobs', 'import_sources',
-  'accounting_export_errors', 'accounting_export_lines', 'accounting_export_batches',
+  'import_sources',
 
   // Asset details
   'asset_maintenance_notifications', 'asset_maintenance_history', 'asset_service_history',
@@ -165,8 +188,11 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'payment_webhook_events', 'payment_provider_configs', 'client_payment_customers',
 
   // Billing details
+  // accounting_export_batches is referenced by transactions.accounting_export_batch_id
+  // with NO ACTION, so the accounting_export_* tables must be deleted after transactions.
   'credit_allocations', 'credit_reconciliation_reports', 'credit_tracking',
   'usage_tracking', 'bucket_usage', 'recurring_service_periods', 'transactions',
+  'accounting_export_errors', 'accounting_export_lines', 'accounting_export_batches',
   'client_contracts', 'contract_line_service_rate_tiers', 'contract_line_service_bucket_config',
   'contract_line_service_hourly_config', 'contract_line_service_hourly_configs', 'contract_line_service_usage_config',
   'contract_line_service_fixed_config', 'contract_line_service_configuration',
@@ -180,10 +206,14 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'contract_line_preset_fixed_config', 'contract_line_preset_services', 'contract_line_presets',
 
   // Contract templates (must be deleted before contracts)
+  // Hourly/usage configs reference contract_template_line_service_configuration
+  // with NO ACTION and must be deleted before it.
   'contract_template_compare_view', 'contract_template_line_defaults',
   'contract_template_line_fixed_config', 'contract_template_line_service_bucket_config',
-  'contract_template_line_service_configuration', 'contract_template_line_service_hourly_config',
-  'contract_template_line_service_usage_config', 'contract_template_line_services',
+  'contract_template_line_service_hourly_config',
+  'contract_template_line_service_usage_config',
+  'contract_template_line_service_configuration',
+  'contract_template_line_services',
   'contract_template_line_terms', 'contract_template_lines',
   'contract_template_pricing_schedules', 'contract_template_services', 'contract_templates',
 
@@ -238,8 +268,14 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Conditional display rules must come BEFORE invoice_templates
   'conditional_display_rules',
 
+  // layout_blocks references template_sections and template_sections references
+  // invoice_templates, both with NO ACTION, so they must be deleted before
+  // invoice_templates.
+  'layout_blocks',
+  'template_sections',
+
   // === LEVEL 4: Core business entities ===
-  // Invoice templates (after conditional_display_rules)
+  // Invoice templates (after conditional_display_rules, layout_blocks, template_sections)
   'invoice_templates',
 
   // Invoices (after invoice_templates)
@@ -272,8 +308,12 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // === LEVEL 7: Boards ===
   // References priorities (boards.default_priority_id → priorities.priority_id)
   // and statuses (boards.inbound_reply_reopen_status_id → statuses.status_id)
-  // with no ON DELETE rule (Citus does not support ON DELETE SET NULL here),
-  // so boards must be deleted BEFORE priorities and statuses.
+  // with no ON DELETE rule, so boards must be deleted BEFORE priorities and statuses.
+  //
+  // Note: statuses.board_id → boards is also NO ACTION (reverse direction),
+  // so breakCircularDependencies() NULLs out statuses.board_id for the tenant
+  // before running deletion. The validator exempts that constraint from the
+  // ordering check.
   'boards',
 
   // === LEVEL 8: Lookup tables previously referenced by boards and tickets ===
@@ -294,21 +334,29 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'permissions', 'roles', 'teams',
 
   // The correct order to avoid constraint violations:
-  // 0. Delete contact child rows first (phones/emails reference contacts and custom type definitions)
-  // 1. Delete custom type definitions after their dependent rows
+  // 0. Delete contact child rows first (phones/emails reference contacts)
+  // 1. Delete portal_invitations before contacts (portal_invitations.contact_id → contacts NO ACTION)
   // 2. Delete clients next (after NULLing account_manager)
   // 3. Delete contacts after clients (before users that reference them)
-  // 4. Delete users last (they have NOT NULL contact_id that references contacts)
+  // 4. Delete contact_email_type_definitions after contacts
+  //    (contacts.primary_email_custom_type_id → contact_email_type_definitions RESTRICT)
+  // 5. Delete password_reset_tokens, resources, tenant_telemetry_settings before users
+  //    (they all reference users via NO ACTION / RESTRICT)
+  // 6. Delete users last (they have NOT NULL contact_id that references contacts)
 
   'contact_phone_numbers',
   'contact_additional_email_addresses',
   'contact_phone_type_definitions',
-  'contact_email_type_definitions',
   // Client portal visibility groups depend on clients and are referenced by contacts via ON DELETE SET NULL.
   // Delete them before clients so tenant cleanup does not leave this table behind.
   'client_portal_visibility_groups',
+  'portal_invitations', // references contacts.contact_id with NO ACTION — must come before contacts
   'clients',    // Delete clients FIRST (after NULLing account_manager references)
   'contacts',   // Delete contacts SECOND (after clients, before users that have NOT NULL contact_id)
+  'contact_email_type_definitions', // contacts.primary_email_custom_type_id → this table (RESTRICT)
+  'password_reset_tokens',     // password_reset_tokens.user_id → users with NO ACTION
+  'resources',                 // resources.user_id → users with NO ACTION
+  'tenant_telemetry_settings', // tenant_telemetry_settings.updated_by → users with RESTRICT
   'users',      // Delete users LAST (they have NOT NULL contact_id → contacts)
 
   // SLA policies (referenced by clients.sla_policy_id and boards.sla_policy_id - must come after both)
@@ -319,11 +367,11 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // === LEVEL 9: Configuration and settings ===
   // API and auth
   'mobile_auth_otts', 'mobile_refresh_tokens',
-  'api_keys', 'portal_invitations', 'password_reset_tokens',
+  'api_keys',
   'portal_domain_session_otts', 'portal_domains',
 
-  // Policies and resources
-  'policies', 'resources',
+  // Policies (resources moved earlier, before users)
+  'policies',
 
   // Email configuration
   'google_email_provider_config', 'microsoft_email_provider_config', 'imap_email_provider_config',
@@ -331,35 +379,38 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'email_templates', 'email_domains', 'tenant_email_settings',
 
   // Storage configuration
+  // provider_events references storage_providers with NO ACTION, so it must be
+  // deleted before storage_providers.
   'storage_records', 'storage_schemas', 'storage_usage',
-  'storage_configurations', 'storage_providers',
+  'storage_configurations',
+  'provider_events',
+  'storage_providers',
   'ext_storage_records', 'ext_storage_schemas', 'ext_storage_usage',
 
   // Templates and layouts
-  'tenant_email_templates', 'template_sections',
+  'tenant_email_templates',
   'approval_levels',  // After approval_thresholds
 
   // Custom fields and attributes
   'attribute_definitions', 'custom_fields',
-  'layout_blocks', 'tag_definitions', 'custom_task_types',
+  'tag_definitions', 'custom_task_types',
 
   // Time period settings (tenant_time_period_settings must come BEFORE time_period_types)
   'tenant_time_period_settings',
   'time_periods', 'time_period_types', 'time_period_settings',
 
   // External entity mappings and tax
-  'external_entity_mappings', 'external_tax_imports',
+  'external_tax_imports',
 
   // Tenant notification settings
   'tenant_internal_notification_category_settings', 'tenant_internal_notification_subtype_settings',
   'tenant_notification_category_settings', 'tenant_notification_subtype_settings',
 
-  // Other tenant settings
-  'tenant_telemetry_settings',
+  // Other tenant settings (tenant_telemetry_settings moved earlier, before users)
   'tenant_external_entity_mappings', 'telemetry_consent_log',
   'default_billing_settings', 'notification_settings',
   'inbound_ticket_defaults', 'user_type_rates', 'next_number',
-  'event_catalog', 'provider_events',
+  'event_catalog',
 
   // Extension installation (must come before tenant_settings)
   'tenant_extension_schedule', 'tenant_extension_install_secrets',
@@ -1092,10 +1143,16 @@ async function getTableTenantColumn(
  * Break circular dependencies by nulling foreign key references.
  * This must be done before deleting records to avoid FK constraint violations.
  *
- * The circular dependency chain:
+ * The circular dependency chains:
  * - clients.account_manager_id → users.user_id
  * - users.contact_id → contacts.contact_id (NOT NULL constraint!)
  * - contacts.client_id → clients.client_id
+ *
+ * - boards.inbound_reply_reopen_status_id → statuses.status_id (NO ACTION)
+ * - statuses.board_id → boards.board_id (NO ACTION)
+ *   (Both NO ACTION form a cycle. Deletion order keeps boards before statuses
+ *    to respect the boards→statuses FK, so we null statuses.board_id here
+ *    to allow boards to be deleted first.)
  */
 async function breakCircularDependencies(
   knex: Knex,
@@ -1136,6 +1193,23 @@ async function breakCircularDependencies(
     });
   }
 
+  // Step 3: NULL out statuses.board_id so boards can be deleted before statuses
+  // without hitting the statuses_tenant_board_id_fk constraint (NO ACTION).
+  try {
+    const result3 = await knex('statuses')
+      .where({ tenant: tenantId })
+      .whereNotNull('board_id')
+      .update({ board_id: null });
+    if (result3 > 0) {
+      log.info('Cleared board_id references in statuses', { count: result3 });
+    }
+  } catch (error) {
+    // Ignore if column doesn't exist (older schemas)
+    log.debug('Could not clear board_id in statuses (column may not exist)', {
+      error: error instanceof Error ? error.message : 'Unknown',
+    });
+  }
+
   log.info('Circular dependencies broken successfully');
 }
 
@@ -1156,7 +1230,26 @@ export async function deleteTenantData(
   log.info('Starting comprehensive tenant data deletion', { tenantId, deletionId });
 
   try {
-    const adminKnex = await getAdminConnection();
+    let adminKnex = await getAdminConnection();
+
+    // Retry helper for transient read-only backends. See isReadOnlyError above
+    // for context. If the retry also fails, the error propagates.
+    const withReadOnlyRetry = async <T>(
+      op: (k: Knex) => Promise<T>,
+      label: string
+    ): Promise<T> => {
+      try {
+        return await op(adminKnex);
+      } catch (err) {
+        if (!isReadOnlyError(err)) throw err;
+        log.warn(
+          `[${label}] admin pool returned a read-only connection; refreshing pool and retrying once`,
+          { error: err instanceof Error ? err.message : String(err) }
+        );
+        adminKnex = await refreshAdminConnection();
+        return await op(adminKnex);
+      }
+    };
 
     // ============================================================
     // CRITICAL SAFEGUARD 1: Validate tenant is not master tenant
@@ -1199,7 +1292,10 @@ export async function deleteTenantData(
     const errors: string[] = [];
 
     // Step 1: Break circular dependencies first
-    await breakCircularDependencies(adminKnex, tenantId, log);
+    await withReadOnlyRetry(
+      (k) => breakCircularDependencies(k, tenantId, log),
+      'breakCircularDependencies'
+    );
 
     // Step 2: Delete from each table in order
     for (const tableName of TENANT_TABLES_DELETION_ORDER) {
@@ -1233,9 +1329,10 @@ export async function deleteTenantData(
             }
 
             // Delete records with explicit tenant filter
-            const deleted = await adminKnex(tableName)
-              .where({ [tenantColumn]: tenantId })
-              .delete();
+            const deleted = await withReadOnlyRetry(
+              (k) => k(tableName).where({ [tenantColumn]: tenantId }).delete(),
+              `delete:${tableName}`
+            );
 
             totalDeleted += deleted;
             tablesAffected++;
@@ -1256,10 +1353,14 @@ export async function deleteTenantData(
 
     // Step 3: Delete pending_tenant_deletions records for this tenant (except current)
     try {
-      const deletedPending = await adminKnex('pending_tenant_deletions')
-        .where({ tenant: tenantId })
-        .whereNot({ deletion_id: deletionId })
-        .delete();
+      const deletedPending = await withReadOnlyRetry(
+        (k) =>
+          k('pending_tenant_deletions')
+            .where({ tenant: tenantId })
+            .whereNot({ deletion_id: deletionId })
+            .delete(),
+        'delete:pending_tenant_deletions'
+      );
 
       if (deletedPending > 0) {
         log.info(`Deleted ${deletedPending} old pending deletion records`);
@@ -1278,9 +1379,10 @@ export async function deleteTenantData(
         throw new Error('BLOCKED: Final safety check failed - cannot delete management tenant');
       }
 
-      await adminKnex('tenants')
-        .where({ tenant: tenantId })
-        .delete();
+      await withReadOnlyRetry(
+        (k) => k('tenants').where({ tenant: tenantId }).delete(),
+        'delete:tenants'
+      );
 
       totalDeleted++;
       tablesAffected++;
