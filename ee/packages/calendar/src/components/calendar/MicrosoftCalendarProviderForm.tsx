@@ -25,6 +25,7 @@ import { getMicrosoftCalendarSetupStatus } from '../../lib/actions/integrations/
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { CalendarProviderConfig } from '@alga-psa/types';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const microsoftCalendarProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),
@@ -55,12 +56,13 @@ export function MicrosoftCalendarProviderForm({
   const [providerSetupReady, setProviderSetupReady] = useState(false);
   const [providerSetupLoading, setProviderSetupLoading] = useState(true);
   const [providerSetupMessage, setProviderSetupMessage] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   const form = useForm<MicrosoftCalendarProviderFormData>({
     resolver: zodResolver(microsoftCalendarProviderSchema),
     defaultValues: {
-      providerName: provider?.name || 'Outlook Calendar',
-      calendarId: provider?.calendar_id || 'calendar',
+      providerName: provider?.name || t('calendar.providers.microsoft.defaults.providerName', { defaultValue: 'Outlook Calendar' }),
+      calendarId: provider?.calendar_id || t('calendar.providers.microsoft.defaults.calendarId', { defaultValue: 'calendar' }),
       syncDirection: provider?.sync_direction || 'bidirectional',
       isActive: provider?.active ?? true,
     },
@@ -112,7 +114,7 @@ export function MicrosoftCalendarProviderForm({
           }
         } else {
           setOAuthStatus('error');
-          setOAuthError(event.data.errorDescription || 'OAuth authorization failed');
+          setOAuthError(event.data.errorDescription || t('calendar.providers.common.oauth.callbackFailed', { defaultValue: 'OAuth authorization failed' }));
         }
       }
     };
@@ -146,7 +148,7 @@ export function MicrosoftCalendarProviderForm({
         });
 
         if (!result.success || !result.provider) {
-          throw new Error(result.error || 'Failed to create calendar provider');
+          throw new Error(result.error || t('calendar.providers.common.errors.createFailed', { defaultValue: 'Failed to create calendar provider' }));
         }
 
         providerId = result.provider.id;
@@ -161,7 +163,7 @@ export function MicrosoftCalendarProviderForm({
       });
 
       if (!oauthResult.success) {
-        throw new Error((oauthResult as { success: false; error: string }).error || 'Failed to initiate OAuth');
+        throw new Error((oauthResult as { success: false; error: string }).error || t('calendar.providers.common.oauth.initiateFailed', { defaultValue: 'Failed to initiate OAuth' }));
       }
 
       // Open OAuth popup
@@ -172,7 +174,7 @@ export function MicrosoftCalendarProviderForm({
       );
 
       if (!popup) {
-        throw new Error('Popup blocked. Please allow popups for this site.');
+        throw new Error(t('calendar.providers.common.oauth.popupBlocked', { defaultValue: 'Popup blocked. Please allow popups for this site.' }));
       }
 
       // Check if popup was closed (user cancelled)
@@ -187,7 +189,7 @@ export function MicrosoftCalendarProviderForm({
 
     } catch (error: any) {
       setOAuthStatus('error');
-      setOAuthError(error.message || 'Failed to initiate OAuth');
+      setOAuthError(error.message || t('calendar.providers.common.oauth.initiateFailed', { defaultValue: 'Failed to initiate OAuth' }));
     }
   };
 
@@ -216,7 +218,7 @@ export function MicrosoftCalendarProviderForm({
         });
 
         if (!result.success) {
-          throw new Error(result.error || 'Failed to create calendar provider');
+          throw new Error(result.error || t('calendar.providers.common.errors.createFailed', { defaultValue: 'Failed to create calendar provider' }));
         }
 
         setCalendarProviderId(result.provider?.id);
@@ -226,7 +228,7 @@ export function MicrosoftCalendarProviderForm({
         onSuccess();
       }
     } catch (error: any) {
-      form.setError('root', { message: error.message || 'Failed to save provider' });
+      form.setError('root', { message: error.message || t('calendar.providers.common.errors.saveFailed', { defaultValue: 'Failed to save provider' }) });
     } finally {
       setIsSubmitting(false);
     }
@@ -240,10 +242,10 @@ export function MicrosoftCalendarProviderForm({
   };
 
   const getOAuthBadgeLabel = () => {
-    if (oauthStatus === 'success') return 'Authorized';
-    if (oauthStatus === 'authorizing') return 'Authorizing';
-    if (oauthStatus === 'error') return 'Authorization Error';
-    return 'Not Authorized';
+    if (oauthStatus === 'success') return t('calendar.providers.common.oauth.badge.authorized', { defaultValue: 'Authorized' });
+    if (oauthStatus === 'authorizing') return t('calendar.providers.common.oauth.badge.authorizing', { defaultValue: 'Authorizing' });
+    if (oauthStatus === 'error') return t('calendar.providers.common.oauth.badge.error', { defaultValue: 'Authorization Error' });
+    return t('calendar.providers.common.oauth.badge.notAuthorized', { defaultValue: 'Not Authorized' });
   };
 
   return (
@@ -251,19 +253,19 @@ export function MicrosoftCalendarProviderForm({
       {/* Basic Configuration */}
       <Card>
         <CardHeader>
-          <CardTitle>Microsoft Outlook Calendar Configuration</CardTitle>
+          <CardTitle>{t('calendar.providers.microsoft.config.title', { defaultValue: 'Microsoft Outlook Calendar Configuration' })}</CardTitle>
           <CardDescription>
-            Connect your Microsoft Outlook Calendar to sync schedule entries
+            {t('calendar.providers.microsoft.config.description', { defaultValue: 'Connect your Microsoft Outlook Calendar to sync schedule entries' })}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="microsoft-provider-name-input">Provider Name *</Label>
+              <Label htmlFor="microsoft-provider-name-input">{t('calendar.providers.microsoft.fields.providerName', { defaultValue: 'Provider Name *' })}</Label>
               <Input
                 id="microsoft-provider-name-input"
                 {...form.register('providerName')}
-                placeholder="e.g., My Outlook Calendar"
+                placeholder={t('calendar.providers.microsoft.fields.providerNamePlaceholder', { defaultValue: 'e.g., My Outlook Calendar' })}
                 className={hasAttemptedSubmit && form.formState.errors.providerName ? 'border-red-500' : ''}
               />
               {form.formState.errors.providerName && (
@@ -272,30 +274,30 @@ export function MicrosoftCalendarProviderForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="microsoft-calendar-id-input">Calendar ID *</Label>
+              <Label htmlFor="microsoft-calendar-id-input">{t('calendar.providers.microsoft.fields.calendarId', { defaultValue: 'Calendar ID *' })}</Label>
               <Input
                 id="microsoft-calendar-id-input"
                 {...form.register('calendarId')}
-                placeholder="calendar"
+                placeholder={t('calendar.providers.microsoft.fields.calendarIdPlaceholder', { defaultValue: 'calendar' })}
                 className={hasAttemptedSubmit && form.formState.errors.calendarId ? 'border-red-500' : ''}
               />
               {form.formState.errors.calendarId && (
                 <p className="text-sm text-red-500">{form.formState.errors.calendarId.message}</p>
               )}
-              <p className="text-xs text-muted-foreground">Usually "calendar" for your main calendar</p>
+              <p className="text-xs text-muted-foreground">{t('calendar.providers.microsoft.fields.calendarIdHint', { defaultValue: 'Usually "calendar" for your main calendar' })}</p>
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="microsoft-sync-direction-select">Sync Direction *</Label>
+            <Label htmlFor="microsoft-sync-direction-select">{t('calendar.providers.microsoft.fields.syncDirection', { defaultValue: 'Sync Direction *' })}</Label>
             <CustomSelect
               id="microsoft-sync-direction-select"
               value={form.watch('syncDirection')}
               onValueChange={(value) => form.setValue('syncDirection', value as any)}
               options={[
-                { value: 'bidirectional', label: 'Bidirectional (recommended)' },
-                { value: 'to_external', label: 'Alga → Outlook Calendar only' },
-                { value: 'from_external', label: 'Outlook Calendar → Alga only' },
+                { value: 'bidirectional', label: t('calendar.providers.common.syncDirections.bidirectional', { defaultValue: 'Bidirectional (recommended)' }) },
+                { value: 'to_external', label: t('calendar.providers.microsoft.syncDirections.toExternal', { defaultValue: 'Alga → Outlook Calendar only' }) },
+                { value: 'from_external', label: t('calendar.providers.microsoft.syncDirections.fromExternal', { defaultValue: 'Outlook Calendar → Alga only' }) },
               ]}
             />
             {form.formState.errors.syncDirection && (
@@ -309,7 +311,7 @@ export function MicrosoftCalendarProviderForm({
               checked={form.watch('isActive')}
               onCheckedChange={(checked: boolean) => form.setValue('isActive', checked)}
             />
-            <Label htmlFor="microsoft-provider-active-switch">Enable this provider</Label>
+            <Label htmlFor="microsoft-provider-active-switch">{t('calendar.providers.microsoft.fields.enableProvider', { defaultValue: 'Enable this provider' })}</Label>
           </div>
         </CardContent>
       </Card>
@@ -317,9 +319,9 @@ export function MicrosoftCalendarProviderForm({
       {/* OAuth Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Microsoft OAuth Authorization</CardTitle>
+          <CardTitle>{t('calendar.providers.microsoft.oauth.title', { defaultValue: 'Microsoft OAuth Authorization' })}</CardTitle>
           <CardDescription>
-            Authorize access to your Microsoft Outlook Calendar
+            {t('calendar.providers.microsoft.oauth.description', { defaultValue: 'Authorize access to your Microsoft Outlook Calendar' })}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -328,10 +330,10 @@ export function MicrosoftCalendarProviderForm({
               <Alert>
                 <AlertDescription>
                   <div className="space-y-2">
-                    <div className="font-medium">Microsoft provider settings are not configured.</div>
+                    <div className="font-medium">{t('calendar.providers.microsoft.configAlert.title', { defaultValue: 'Microsoft provider settings are not configured.' })}</div>
                     <div className="text-sm text-muted-foreground">
                       {providerSetupMessage ||
-                        'Configure Providers first in Settings → Integrations → Providers, then return here to connect Outlook Calendar.'}
+                        t('calendar.providers.microsoft.configAlert.body', { defaultValue: 'Configure Providers first in Settings → Integrations → Providers, then return here to connect Outlook Calendar.' })}
                     </div>
                     <Button
                       id="configure-microsoft-calendar-providers-link"
@@ -340,7 +342,7 @@ export function MicrosoftCalendarProviderForm({
                       size="sm"
                       onClick={() => window.location.assign('/msp/settings?category=providers')}
                     >
-                      Open Providers Settings
+                      {t('calendar.providers.microsoft.configAlert.openSettings', { defaultValue: 'Open Providers Settings' })}
                     </Button>
                   </div>
                 </AlertDescription>
@@ -352,7 +354,7 @@ export function MicrosoftCalendarProviderForm({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
-                    <h4 className="font-medium">Connection Status</h4>
+                    <h4 className="font-medium">{t('calendar.providers.common.oauth.status', { defaultValue: 'Connection Status' })}</h4>
                     <Badge
                       id="microsoft-oauth-status-badge"
                       variant={getOAuthBadgeVariant()}
@@ -375,19 +377,19 @@ export function MicrosoftCalendarProviderForm({
                   {oauthStatus === 'authorizing' && (
                     <>
                       <Clock className="h-4 w-4 mr-2 animate-spin" />
-                      Connecting...
+                      {t('calendar.providers.common.oauth.connecting', { defaultValue: 'Connecting...' })}
                     </>
                   )}
                   {oauthStatus === 'success' && (
                     <>
                       <CheckCircle className="h-4 w-4 mr-2" />
-                      Connected
+                      {t('calendar.providers.common.oauth.connected', { defaultValue: 'Connected' })}
                     </>
                   )}
                   {(oauthStatus === 'idle' || oauthStatus === 'error') && (
                     <>
                       <ExternalLink className="h-4 w-4 mr-2" />
-                      Connect
+                      {t('calendar.providers.common.oauth.connect', { defaultValue: 'Connect' })}
                     </>
                   )}
                 </Button>
@@ -414,7 +416,7 @@ export function MicrosoftCalendarProviderForm({
       <div className="flex justify-end space-x-2">
         {onCancel && (
           <Button id="microsoft-provider-cancel-button" type="button" variant="outline" onClick={onCancel}>
-            Cancel
+            {t('calendar.providers.common.actions.cancel', { defaultValue: 'Cancel' })}
           </Button>
         )}
         <Button
@@ -422,7 +424,11 @@ export function MicrosoftCalendarProviderForm({
           type="submit"
           disabled={isSubmitting || oauthStatus === 'authorizing'}
         >
-          {isSubmitting ? 'Saving...' : isEditing ? 'Update Provider' : 'Create Provider'}
+          {isSubmitting
+            ? t('calendar.providers.common.actions.saving', { defaultValue: 'Saving...' })
+            : isEditing
+              ? t('calendar.providers.common.actions.updateProvider', { defaultValue: 'Update Provider' })
+              : t('calendar.providers.common.actions.createProvider', { defaultValue: 'Create Provider' })}
         </Button>
       </div>
     </form>

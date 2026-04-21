@@ -1,0 +1,241 @@
+{
+  "calendar": {
+    "integrations": {
+      "loadError": "Kalenderproviders konden niet worden geladen",
+      "header": {
+        "title": "Kalenderintegraties",
+        "description": "Verbind uw persoonlijke Google- of Microsoft-kalender om uw toegewezen planningsitems te synchroniseren. Evenementen die u in Alga aanmaakt, verschijnen in uw externe kalender wanneer u eraan bent toegewezen."
+      },
+      "buttons": {
+        "googleCalendar": "Google Calendar",
+        "outlookCalendar": "Outlook-kalender",
+        "addGoogleCalendar": "Google Calendar toevoegen",
+        "addOutlookCalendar": "Outlook-kalender toevoegen"
+      },
+      "proTip": {
+        "label": "Pro-tip",
+        "body": "Om een evenement vanuit uw externe kalender naar Alga te importeren, voegt u eenvoudig"
+      },
+      "proTipSuffix": "toe aan de titel of beschrijving.",
+      "empty": {
+        "title": "Geen kalenders verbonden",
+        "description": "Verbind een kalender om uw planning automatisch te synchroniseren en geen toewijzing te missen."
+      },
+      "providerLabels": {
+        "google": "Google",
+        "microsoft": "Microsoft",
+        "calendar": "Kalender"
+      },
+      "connectionStatus": {
+        "connected": "Verbonden",
+        "error": "Fout",
+        "disconnected": "Verbinding verbroken",
+        "configuring": "Bezig met configureren"
+      },
+      "oauthStatus": {
+        "actionRequired": "Actie vereist",
+        "complete": "OAuth voltooid"
+      },
+      "active": {
+        "active": "Actief",
+        "inactive": "Inactief"
+      },
+      "fields": {
+        "type": "Type:",
+        "calendarId": "Kalender-ID:",
+        "syncDirection": "Synchronisatierichting:",
+        "lastSync": "Laatste synchronisatie:"
+      },
+      "providerType": {
+        "google": "Google Calendar",
+        "microsoft": "Microsoft Outlook Calendar"
+      },
+      "syncDirection": {
+        "bidirectional": "Bidirectioneel",
+        "toExternal": "Alga → Extern",
+        "fromExternal": "Extern → Alga"
+      },
+      "values": {
+        "notSet": "Niet ingesteld",
+        "notYetRun": "Nog niet uitgevoerd"
+      },
+      "syncing": {
+        "inProgress": "Synchronisatie bezig..."
+      },
+      "actions": {
+        "syncing": "Synchroniseren…",
+        "syncNow": "Nu synchroniseren",
+        "edit": "Bewerken",
+        "delete": "Verwijderen"
+      },
+      "toasts": {
+        "deleted": {
+          "title": "Kalenderprovider verwijderd",
+          "description": "{{name}} is succesvol verwijderd."
+        },
+        "deleteFailed": {
+          "title": "Kan kalenderprovider niet verwijderen",
+          "fallback": "Verwijderen van kalenderprovider mislukt"
+        },
+        "syncStarted": {
+          "title": "Synchronisatie gestart",
+          "descriptionWithName": "De synchronisatie van {{name}} loopt op de achtergrond.",
+          "descriptionGeneric": "De kalendersynchronisatie loopt op de achtergrond."
+        },
+        "syncStartedFeedback": "Synchronisatie gestart. Kom binnenkort terug voor de resultaten.",
+        "syncFailed": {
+          "title": "Synchronisatie kon niet worden gestart",
+          "fallback": "Synchronisatie kon niet worden gestart."
+        },
+        "syncException": {
+          "title": "Handmatige synchronisatie mislukt",
+          "fallback": "Synchronisatie van kalenderprovider mislukt"
+        }
+      },
+      "dialogs": {
+        "addTitle": "{{provider}}-kalenderprovider toevoegen",
+        "addDescription": "Verbind uw persoonlijke kalender om planningsitems te synchroniseren waaraan u bent toegewezen.",
+        "editTitle": "{{provider}}-kalenderprovider bewerken",
+        "editDescription": "Werk de verbindingsinstellingen van uw persoonlijke kalender bij.",
+        "delete": {
+          "title": "Kalenderprovider verwijderen",
+          "messageWithName": "Het verwijderen van {{name}} stopt toekomstige synchronisatie en verwijdert de bijbehorende webhooks. Deze actie kan niet ongedaan worden gemaakt.",
+          "messageGeneric": "Weet u zeker dat u deze kalenderprovider wilt verwijderen?",
+          "confirmLabel": "Provider verwijderen",
+          "cancelLabel": "Provider behouden"
+        }
+      }
+    },
+    "sync": {
+      "compact": {
+        "syncing": "Synchroniseren...",
+        "google": "Google",
+        "outlook": "Outlook"
+      },
+      "tooltip": {
+        "status": "Status: {{status}}",
+        "lastSync": "Laatste synchronisatie: {{value}}",
+        "error": "Fout: {{message}}"
+      },
+      "status": {
+        "synced": "Gesynchroniseerd",
+        "pending": "In afwachting",
+        "conflict": "Conflict",
+        "error": "Fout",
+        "unknown": "Onbekend"
+      },
+      "header": {
+        "title": "Status kalendersynchronisatie",
+        "refresh": "Vernieuwen"
+      },
+      "empty": "Geen kalenderintegraties geconfigureerd",
+      "inactive": "Inactief",
+      "fields": {
+        "syncDirection": "Synchronisatierichting:",
+        "lastSync": "Laatste synchronisatie:",
+        "externalId": "Externe ID:"
+      },
+      "loadError": "Synchronisatiestatus kon niet worden geladen",
+      "conflictAlert": "Conflict gedetecteerd: beide kalenders zijn gewijzigd. Los dit op in de kalenderinstellingen."
+    },
+    "providers": {
+      "common": {
+        "oauth": {
+          "badge": {
+            "authorized": "Geautoriseerd",
+            "authorizing": "Autoriseren",
+            "error": "Autorisatiefout",
+            "notAuthorized": "Niet geautoriseerd"
+          },
+          "status": "Verbindingsstatus",
+          "connecting": "Verbinden...",
+          "connected": "Verbonden",
+          "connect": "Verbinden",
+          "popupBlocked": "Pop-up geblokkeerd. Sta pop-ups toe voor deze site.",
+          "callbackFailed": "OAuth-autorisatie mislukt",
+          "initiateFailed": "OAuth kon niet worden gestart"
+        },
+        "actions": {
+          "cancel": "Annuleren",
+          "saving": "Opslaan...",
+          "updateProvider": "Provider bijwerken",
+          "createProvider": "Provider aanmaken"
+        },
+        "errors": {
+          "createFailed": "Kalenderprovider kon niet worden aangemaakt",
+          "saveFailed": "Provider kon niet worden opgeslagen"
+        },
+        "syncDirections": {
+          "bidirectional": "Bidirectioneel (aanbevolen)"
+        }
+      },
+      "google": {
+        "config": {
+          "title": "Google Calendar-configuratie",
+          "description": "Verbind uw Google Calendar om planningsitems te synchroniseren"
+        },
+        "fields": {
+          "providerName": "Providernaam *",
+          "providerNamePlaceholder": "bijv. Mijn Google Calendar",
+          "calendarId": "Kalender-ID *",
+          "calendarIdPlaceholder": "primary",
+          "calendarIdHint": "Meestal \"primary\" voor uw hoofdkalender",
+          "syncDirection": "Synchronisatierichting *",
+          "enableProvider": "Deze provider inschakelen"
+        },
+        "syncDirections": {
+          "toExternal": "Alleen Alga → Google Calendar",
+          "fromExternal": "Alleen Google Calendar → Alga"
+        },
+        "oauth": {
+          "title": "Google OAuth-autorisatie",
+          "description": "Geef toegang tot uw Google Calendar"
+        },
+        "configAlert": {
+          "title": "Google is niet geconfigureerd voor deze tenant.",
+          "body": "Configureer eerst tenant-eigen Google OAuth in <strong>Instellingen → Integraties → Providers</strong>.",
+          "openSettings": "Google-instellingen openen"
+        },
+        "errors": {
+          "notConfigured": "De Google-integratie is niet geconfigureerd voor deze tenant. Configureer Google eerst en probeer het opnieuw."
+        },
+        "defaults": {
+          "providerName": "Google Calendar",
+          "calendarId": "primary"
+        }
+      },
+      "microsoft": {
+        "config": {
+          "title": "Microsoft Outlook Calendar-configuratie",
+          "description": "Verbind uw Microsoft Outlook Calendar om planningsitems te synchroniseren"
+        },
+        "fields": {
+          "providerName": "Providernaam *",
+          "providerNamePlaceholder": "bijv. Mijn Outlook-kalender",
+          "calendarId": "Kalender-ID *",
+          "calendarIdPlaceholder": "calendar",
+          "calendarIdHint": "Meestal \"calendar\" voor uw hoofdkalender",
+          "syncDirection": "Synchronisatierichting *",
+          "enableProvider": "Deze provider inschakelen"
+        },
+        "syncDirections": {
+          "toExternal": "Alleen Alga → Outlook Calendar",
+          "fromExternal": "Alleen Outlook Calendar → Alga"
+        },
+        "oauth": {
+          "title": "Microsoft OAuth-autorisatie",
+          "description": "Geef toegang tot uw Microsoft Outlook Calendar"
+        },
+        "configAlert": {
+          "title": "De instellingen van de Microsoft-provider zijn niet geconfigureerd.",
+          "body": "Configureer eerst de providers in Instellingen → Integraties → Providers en kom dan terug om Outlook Calendar te verbinden.",
+          "openSettings": "Providerinstellingen openen"
+        },
+        "defaults": {
+          "providerName": "Outlook Calendar",
+          "calendarId": "calendar"
+        }
+      }
+    }
+  }
+}

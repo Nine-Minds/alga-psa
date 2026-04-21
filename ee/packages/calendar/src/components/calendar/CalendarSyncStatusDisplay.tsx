@@ -12,6 +12,7 @@ import { CheckCircle, Clock, XCircle, RefreshCw, AlertTriangle } from 'lucide-re
 import { getScheduleEntrySyncStatus } from '../../actions';
 import { CalendarSyncStatus } from '@alga-psa/types';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface CalendarSyncStatusDisplayProps {
   entryId: string;
@@ -23,6 +24,7 @@ export function CalendarSyncStatusDisplay({ entryId, compact = false }: Calendar
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const componentId = useId();
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (entryId) {
@@ -41,7 +43,7 @@ export function CalendarSyncStatusDisplay({ entryId, compact = false }: Calendar
         setError(result.error || null);
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to load sync status');
+      setError(err.message || t('calendar.sync.loadError', { defaultValue: 'Failed to load sync status' }));
     } finally {
       setLoading(false);
     }
@@ -51,7 +53,7 @@ export function CalendarSyncStatusDisplay({ entryId, compact = false }: Calendar
     return compact ? (
       <Badge variant="secondary" className="flex items-center gap-1">
         <Clock className="h-3 w-3 animate-pulse" />
-        Syncing...
+        {t('calendar.sync.compact.syncing', { defaultValue: 'Syncing...' })}
       </Badge>
     ) : null;
   }
@@ -80,15 +82,15 @@ export function CalendarSyncStatusDisplay({ entryId, compact = false }: Calendar
     const syncStatus = status.entrySyncStatus?.syncStatus;
     switch (syncStatus) {
       case 'synced':
-        return 'Synced';
+        return t('calendar.sync.status.synced', { defaultValue: 'Synced' });
       case 'pending':
-        return 'Pending';
+        return t('calendar.sync.status.pending', { defaultValue: 'Pending' });
       case 'conflict':
-        return 'Conflict';
+        return t('calendar.sync.status.conflict', { defaultValue: 'Conflict' });
       case 'error':
-        return 'Error';
+        return t('calendar.sync.status.error', { defaultValue: 'Error' });
       default:
-        return 'Unknown';
+        return t('calendar.sync.status.unknown', { defaultValue: 'Unknown' });
     }
   };
 
@@ -118,12 +120,12 @@ export function CalendarSyncStatusDisplay({ entryId, compact = false }: Calendar
             content={
               <div className="space-y-1">
                 <p className="font-semibold">{status.providerName}</p>
-                <p>Status: {getStatusLabel(status)}</p>
+                <p>{t('calendar.sync.tooltip.status', { defaultValue: 'Status: {{status}}', status: getStatusLabel(status) })}</p>
                 {status.lastSyncAt && (
-                  <p className="text-xs">Last sync: {new Date(status.lastSyncAt).toLocaleString()}</p>
+                  <p className="text-xs">{t('calendar.sync.tooltip.lastSync', { defaultValue: 'Last sync: {{value}}', value: new Date(status.lastSyncAt).toLocaleString() })}</p>
                 )}
                 {status.errorMessage && (
-                  <p className="text-xs text-red-600">Error: {status.errorMessage}</p>
+                  <p className="text-xs text-red-600">{t('calendar.sync.tooltip.error', { defaultValue: 'Error: {{message}}', message: status.errorMessage })}</p>
                 )}
               </div>
             }
@@ -135,7 +137,9 @@ export function CalendarSyncStatusDisplay({ entryId, compact = false }: Calendar
             >
               {getStatusIcon(status)}
               <span className="text-xs">
-                {status.providerType === 'google' ? 'Google' : 'Outlook'}
+                {status.providerType === 'google'
+                  ? t('calendar.sync.compact.google', { defaultValue: 'Google' })
+                  : t('calendar.sync.compact.outlook', { defaultValue: 'Outlook' })}
               </span>
             </Badge>
           </Tooltip>
@@ -148,19 +152,19 @@ export function CalendarSyncStatusDisplay({ entryId, compact = false }: Calendar
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-medium">Calendar Sync Status</h4>
+        <h4 className="text-sm font-medium">{t('calendar.sync.header.title', { defaultValue: 'Calendar Sync Status' })}</h4>
         <button
           id={`${componentId}-refresh-button`}
           onClick={loadSyncStatus}
           className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
         >
           <RefreshCw className="h-3 w-3" />
-          Refresh
+          {t('calendar.sync.header.refresh', { defaultValue: 'Refresh' })}
         </button>
       </div>
 
       {syncStatuses.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No calendar integrations configured</p>
+        <p className="text-sm text-muted-foreground">{t('calendar.sync.empty', { defaultValue: 'No calendar integrations configured' })}</p>
       ) : (
         <div className="space-y-2">
           {syncStatuses.map((status, index) => (
@@ -186,23 +190,23 @@ export function CalendarSyncStatusDisplay({ entryId, compact = false }: Calendar
                     variant="secondary"
                     className="text-xs"
                   >
-                    Inactive
+                    {t('calendar.sync.inactive', { defaultValue: 'Inactive' })}
                   </Badge>
                 )}
               </div>
               
               <div className="text-xs space-y-1 mt-2">
                 <p className="text-[rgb(var(--color-text-600))]">
-                  <span className="font-medium text-[rgb(var(--color-text-900))]">Sync Direction:</span> {status.syncDirection}
+                  <span className="font-medium text-[rgb(var(--color-text-900))]">{t('calendar.sync.fields.syncDirection', { defaultValue: 'Sync Direction:' })}</span> {status.syncDirection}
                 </p>
                 {status.lastSyncAt && (
                   <p className="text-[rgb(var(--color-text-600))]">
-                    <span className="font-medium text-[rgb(var(--color-text-900))]">Last Sync:</span> {new Date(status.lastSyncAt).toLocaleString()}
+                    <span className="font-medium text-[rgb(var(--color-text-900))]">{t('calendar.sync.fields.lastSync', { defaultValue: 'Last Sync:' })}</span> {new Date(status.lastSyncAt).toLocaleString()}
                   </p>
                 )}
                 {status.entrySyncStatus?.externalEventId && (
                   <div className="flex items-center gap-1 text-[rgb(var(--color-text-600))]">
-                    <span className="font-medium text-[rgb(var(--color-text-900))] flex-shrink-0">External ID:</span>
+                    <span className="font-medium text-[rgb(var(--color-text-900))] flex-shrink-0">{t('calendar.sync.fields.externalId', { defaultValue: 'External ID:' })}</span>
                     <code 
                       className="bg-[rgb(var(--color-secondary-50))] text-[rgb(var(--color-secondary-900))] px-1.5 py-0.5 rounded text-[10px] font-mono truncate max-w-[180px] inline-block align-middle border border-[rgb(var(--color-secondary-200))]" 
                       title={status.entrySyncStatus.externalEventId}
@@ -230,7 +234,7 @@ export function CalendarSyncStatusDisplay({ entryId, compact = false }: Calendar
                   className="mt-2 border-orange-500/30 bg-orange-500/10"
                 >
                   <AlertDescription className="text-xs">
-                    Conflict detected: Both calendars have been modified. Please resolve in Calendar Settings.
+                    {t('calendar.sync.conflictAlert', { defaultValue: 'Conflict detected: Both calendars have been modified. Please resolve in Calendar Settings.' })}
                   </AlertDescription>
                 </Alert>
               )}

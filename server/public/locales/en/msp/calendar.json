@@ -1,0 +1,241 @@
+{
+  "calendar": {
+    "integrations": {
+      "loadError": "Failed to load calendar providers",
+      "header": {
+        "title": "Calendar Integrations",
+        "description": "Connect your personal Google or Microsoft calendar to sync your assigned schedule entries. Events you create in Alga will appear on your external calendar when you're assigned to them."
+      },
+      "buttons": {
+        "googleCalendar": "Google Calendar",
+        "outlookCalendar": "Outlook Calendar",
+        "addGoogleCalendar": "Add Google Calendar",
+        "addOutlookCalendar": "Add Outlook Calendar"
+      },
+      "proTip": {
+        "label": "Pro Tip",
+        "body": "To import an event from your external calendar into Alga, simply add"
+      },
+      "proTipSuffix": "to its title or description.",
+      "empty": {
+        "title": "No calendars connected",
+        "description": "Connect a calendar to automatically sync your schedule and never miss an assignment."
+      },
+      "providerLabels": {
+        "google": "Google",
+        "microsoft": "Microsoft",
+        "calendar": "Calendar"
+      },
+      "connectionStatus": {
+        "connected": "Connected",
+        "error": "Error",
+        "disconnected": "Disconnected",
+        "configuring": "Configuring"
+      },
+      "oauthStatus": {
+        "actionRequired": "Action Required",
+        "complete": "OAuth Complete"
+      },
+      "active": {
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "fields": {
+        "type": "Type:",
+        "calendarId": "Calendar ID:",
+        "syncDirection": "Sync Direction:",
+        "lastSync": "Last Sync:"
+      },
+      "providerType": {
+        "google": "Google Calendar",
+        "microsoft": "Microsoft Outlook Calendar"
+      },
+      "syncDirection": {
+        "bidirectional": "Bidirectional",
+        "toExternal": "Alga → External",
+        "fromExternal": "External → Alga"
+      },
+      "values": {
+        "notSet": "Not set",
+        "notYetRun": "Not yet run"
+      },
+      "syncing": {
+        "inProgress": "Sync in progress..."
+      },
+      "actions": {
+        "syncing": "Syncing…",
+        "syncNow": "Sync Now",
+        "edit": "Edit",
+        "delete": "Delete"
+      },
+      "toasts": {
+        "deleted": {
+          "title": "Calendar provider deleted",
+          "description": "{{name}} was removed successfully."
+        },
+        "deleteFailed": {
+          "title": "Unable to delete calendar provider",
+          "fallback": "Failed to delete calendar provider"
+        },
+        "syncStarted": {
+          "title": "Sync started",
+          "descriptionWithName": "{{name}} sync is running in the background.",
+          "descriptionGeneric": "Calendar sync is running in the background."
+        },
+        "syncStartedFeedback": "Sync started. Check back shortly for results.",
+        "syncFailed": {
+          "title": "Failed to start sync",
+          "fallback": "Failed to start sync."
+        },
+        "syncException": {
+          "title": "Manual sync failed",
+          "fallback": "Failed to sync calendar provider"
+        }
+      },
+      "dialogs": {
+        "addTitle": "Add {{provider}} Calendar Provider",
+        "addDescription": "Connect your personal calendar to sync schedule entries you're assigned to.",
+        "editTitle": "Edit {{provider}} Calendar Provider",
+        "editDescription": "Update your personal calendar connection settings.",
+        "delete": {
+          "title": "Delete Calendar Provider",
+          "messageWithName": "Deleting {{name}} will stop future synchronisation and remove associated webhooks. This action cannot be undone.",
+          "messageGeneric": "Are you sure you want to delete this calendar provider?",
+          "confirmLabel": "Delete Provider",
+          "cancelLabel": "Keep Provider"
+        }
+      }
+    },
+    "sync": {
+      "compact": {
+        "syncing": "Syncing...",
+        "google": "Google",
+        "outlook": "Outlook"
+      },
+      "tooltip": {
+        "status": "Status: {{status}}",
+        "lastSync": "Last sync: {{value}}",
+        "error": "Error: {{message}}"
+      },
+      "status": {
+        "synced": "Synced",
+        "pending": "Pending",
+        "conflict": "Conflict",
+        "error": "Error",
+        "unknown": "Unknown"
+      },
+      "header": {
+        "title": "Calendar Sync Status",
+        "refresh": "Refresh"
+      },
+      "empty": "No calendar integrations configured",
+      "inactive": "Inactive",
+      "fields": {
+        "syncDirection": "Sync Direction:",
+        "lastSync": "Last Sync:",
+        "externalId": "External ID:"
+      },
+      "loadError": "Failed to load sync status",
+      "conflictAlert": "Conflict detected: Both calendars have been modified. Please resolve in Calendar Settings."
+    },
+    "providers": {
+      "common": {
+        "oauth": {
+          "badge": {
+            "authorized": "Authorized",
+            "authorizing": "Authorizing",
+            "error": "Authorization Error",
+            "notAuthorized": "Not Authorized"
+          },
+          "status": "Connection Status",
+          "connecting": "Connecting...",
+          "connected": "Connected",
+          "connect": "Connect",
+          "popupBlocked": "Popup blocked. Please allow popups for this site.",
+          "callbackFailed": "OAuth authorization failed",
+          "initiateFailed": "Failed to initiate OAuth"
+        },
+        "actions": {
+          "cancel": "Cancel",
+          "saving": "Saving...",
+          "updateProvider": "Update Provider",
+          "createProvider": "Create Provider"
+        },
+        "errors": {
+          "createFailed": "Failed to create calendar provider",
+          "saveFailed": "Failed to save provider"
+        },
+        "syncDirections": {
+          "bidirectional": "Bidirectional (recommended)"
+        }
+      },
+      "google": {
+        "config": {
+          "title": "Google Calendar Configuration",
+          "description": "Connect your Google Calendar to sync schedule entries"
+        },
+        "fields": {
+          "providerName": "Provider Name *",
+          "providerNamePlaceholder": "e.g., My Google Calendar",
+          "calendarId": "Calendar ID *",
+          "calendarIdPlaceholder": "primary",
+          "calendarIdHint": "Usually \"primary\" for your main calendar",
+          "syncDirection": "Sync Direction *",
+          "enableProvider": "Enable this provider"
+        },
+        "syncDirections": {
+          "toExternal": "Alga → Google Calendar only",
+          "fromExternal": "Google Calendar → Alga only"
+        },
+        "oauth": {
+          "title": "Google OAuth Authorization",
+          "description": "Authorize access to your Google Calendar"
+        },
+        "configAlert": {
+          "title": "Google is not configured for this tenant.",
+          "body": "Configure tenant-owned Google OAuth first in <strong>Settings → Integrations → Providers</strong>.",
+          "openSettings": "Open Google Settings"
+        },
+        "errors": {
+          "notConfigured": "Google integration is not configured for this tenant. Configure Google first, then retry."
+        },
+        "defaults": {
+          "providerName": "Google Calendar",
+          "calendarId": "primary"
+        }
+      },
+      "microsoft": {
+        "config": {
+          "title": "Microsoft Outlook Calendar Configuration",
+          "description": "Connect your Microsoft Outlook Calendar to sync schedule entries"
+        },
+        "fields": {
+          "providerName": "Provider Name *",
+          "providerNamePlaceholder": "e.g., My Outlook Calendar",
+          "calendarId": "Calendar ID *",
+          "calendarIdPlaceholder": "calendar",
+          "calendarIdHint": "Usually \"calendar\" for your main calendar",
+          "syncDirection": "Sync Direction *",
+          "enableProvider": "Enable this provider"
+        },
+        "syncDirections": {
+          "toExternal": "Alga → Outlook Calendar only",
+          "fromExternal": "Outlook Calendar → Alga only"
+        },
+        "oauth": {
+          "title": "Microsoft OAuth Authorization",
+          "description": "Authorize access to your Microsoft Outlook Calendar"
+        },
+        "configAlert": {
+          "title": "Microsoft provider settings are not configured.",
+          "body": "Configure Providers first in Settings → Integrations → Providers, then return here to connect Outlook Calendar.",
+          "openSettings": "Open Providers Settings"
+        },
+        "defaults": {
+          "providerName": "Outlook Calendar",
+          "calendarId": "calendar"
+        }
+      }
+    }
+  }
+}

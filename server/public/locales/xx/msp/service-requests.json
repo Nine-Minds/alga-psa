@@ -180,9 +180,9 @@
         "executionStatusRequired": "11111",
         "executionPriorityRequired": "11111",
         "executionItilImpactUrgencyMismatch": "11111",
-        "unknownExecutionProvider": "11111 {{key}}",
-        "unknownFormBehaviorProvider": "11111 {{key}}",
-        "unknownVisibilityProvider": "11111 {{key}}"
+        "unknownExecutionProvider": "11111 {{key}} 11111",
+        "unknownFormBehaviorProvider": "11111 {{key}} 11111",
+        "unknownVisibilityProvider": "11111 {{key}} 11111"
       }
     },
     "submissions": {
@@ -253,7 +253,7 @@
       "createFromExampleFailed": "11111",
       "saveDraftFailed": "11111",
       "publishFailed": "11111",
-      "publishBlockedByValidation": "11111",
+      "publishBlockedByValidation": "11111 {{count}} 11111",
       "basicsUpdateFailed": "11111",
       "addFieldFailed": "11111",
       "executionProviderUpdateFailed": "11111",
