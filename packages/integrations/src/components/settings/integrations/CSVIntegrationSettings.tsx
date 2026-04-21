@@ -8,6 +8,7 @@ import { CSVMappingManager } from '@alga-psa/integrations/components/csv/CSVMapp
 import { Button } from '@alga-psa/ui/components/Button';
 import { FileText, ExternalLink } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 /**
  * CSV Integration Settings Component
@@ -19,6 +20,7 @@ import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Ale
  * - External tax calculation with report-based feedback is needed
  */
 const CSVIntegrationSettings: React.FC = () => {
+  const { t } = useTranslation('msp/integrations');
   return (
     <div className="space-y-6">
       {/* Overview Card */}
@@ -26,27 +28,27 @@ const CSVIntegrationSettings: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5" />
-            QuickBooks CSV Integration
+            {t('integrations.csv.settings.qbo.title', { defaultValue: 'QuickBooks CSV Integration' })}
           </CardTitle>
           <CardDescription>
-            Export invoices to CSV for manual import into QuickBooks, and import tax data from QuickBooks reports.
+            {t('integrations.csv.settings.qbo.description', { defaultValue: 'Export invoices to CSV for manual import into QuickBooks, and import tax data from QuickBooks reports.' })}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="rounded border border-border/60 bg-muted/40 p-4 text-sm leading-6 text-muted-foreground space-y-3">
             <p>
-              This integration provides an alternative to OAuth-based QuickBooks connectivity:
+              {t('integrations.csv.settings.qbo.intro', { defaultValue: 'This integration provides an alternative to OAuth-based QuickBooks connectivity:' })}
             </p>
             <ul className="list-disc pl-5 space-y-1">
               <li>
-                <strong>Export</strong>: Generate CSV files compatible with QuickBooks&apos; invoice import feature
+                <strong>{t('integrations.csv.settings.qbo.bullets.exportLabel', { defaultValue: 'Export' })}</strong>: {t('integrations.csv.settings.qbo.bullets.exportText', { defaultValue: "Generate CSV files compatible with QuickBooks' invoice import feature" })}
               </li>
               <li>
-                <strong>Tax Import</strong>: When using external tax calculation, import tax amounts from QuickBooks tax reports
+                <strong>{t('integrations.csv.settings.qbo.bullets.taxImportLabel', { defaultValue: 'Tax Import' })}</strong>: {t('integrations.csv.settings.qbo.bullets.taxImportText', { defaultValue: 'When using external tax calculation, import tax amounts from QuickBooks tax reports' })}
               </li>
             </ul>
             <p className="text-xs">
-              Note: Configure mappings below before exporting. CSV exports and tax imports are managed from Billing → Accounting Exports.
+              {t('integrations.csv.settings.qbo.note', { defaultValue: 'Note: Configure mappings below before exporting. CSV exports and tax imports are managed from Billing → Accounting Exports.' })}
             </p>
           </div>
         </CardContent>
@@ -54,9 +56,9 @@ const CSVIntegrationSettings: React.FC = () => {
 
       <Card id="qbcsv-mapping-settings-card">
         <CardHeader>
-          <CardTitle>QuickBooks CSV Mappings</CardTitle>
+          <CardTitle>{t('integrations.csv.settings.qbo.mappings.title', { defaultValue: 'QuickBooks CSV Mappings' })}</CardTitle>
           <CardDescription>
-            Map Alga clients, services, tax codes, and payment terms to the identifiers used in your QuickBooks company. These values are used when generating the CSV export.
+            {t('integrations.csv.settings.qbo.mappings.description', { defaultValue: 'Map Alga clients, services, tax codes, and payment terms to the identifiers used in your QuickBooks company. These values are used when generating the CSV export.' })}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -68,28 +70,28 @@ const CSVIntegrationSettings: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            Accounting Exports
+            {t('integrations.csv.settings.exports.title', { defaultValue: 'Accounting Exports' })}
           </CardTitle>
           <CardDescription>
-            Create export batches, download CSV files, import tax reports, and review export history.
+            {t('integrations.csv.settings.exports.description', { defaultValue: 'Create export batches, download CSV files, import tax reports, and review export history.' })}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Alert variant="info">
-            <AlertTitle>Managed from Billing</AlertTitle>
+            <AlertTitle>{t('integrations.csv.settings.exports.managedTitle', { defaultValue: 'Managed from Billing' })}</AlertTitle>
             <AlertDescription>
-              Go to{' '}
+              {t('integrations.csv.settings.qbo.exports.managedPrefix', { defaultValue: 'Go to' })}{' '}
               <span className="inline-flex items-center rounded-md bg-muted px-2 py-1 text-xs font-mono text-muted-foreground">
-                Billing → Accounting Exports
+                {t('integrations.csv.settings.exports.path', { defaultValue: 'Billing → Accounting Exports' })}
               </span>{' '}
-              to select invoices, generate QuickBooks CSV exports, import tax reports, and manage batches.
+              {t('integrations.csv.settings.qbo.exports.managedSuffix', { defaultValue: 'to select invoices, generate QuickBooks CSV exports, import tax reports, and manage batches.' })}
             </AlertDescription>
           </Alert>
         </CardContent>
         <CardFooter className="justify-end">
           <Button id="qbcsv-open-accounting-exports" asChild size="lg">
             <Link href="/msp/billing?tab=accounting-exports" className="inline-flex items-center gap-2">
-              Open Accounting Exports
+              {t('integrations.csv.settings.exports.openButton', { defaultValue: 'Open Accounting Exports' })}
               <ExternalLink className="h-4 w-4 opacity-90" />
             </Link>
           </Button>

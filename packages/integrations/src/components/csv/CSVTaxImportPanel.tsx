@@ -8,6 +8,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Upload, FileText, AlertCircle, CheckCircle2, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { CSVImportPreview } from './CSVImportPreview';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface CSVTaxImportPanelProps {
   onImportComplete?: (result: { importId: string; invoiceCount: number }) => void;
@@ -45,6 +46,7 @@ interface ImportResult {
 }
 
 export function CSVTaxImportPanel({ onImportComplete }: CSVTaxImportPanelProps) {
+  const { t } = useTranslation('msp/integrations');
   const [file, setFile] = useState<File | null>(null);
   const [dateRange, setDateRange] = useState<{ from: string; to: string }>({
     from: '',
@@ -81,7 +83,7 @@ export function CSVTaxImportPanel({ onImportComplete }: CSVTaxImportPanelProps) 
 
   const handleValidate = useCallback(async () => {
     if (!file || !dateRange.from || !dateRange.to) {
-      setError('Please select a file and date range');
+      setError(t('integrations.csv.taxImport.errors.selectFileAndRange', { defaultValue: 'Please select a file and date range' }));
       return;
     }
 
@@ -107,20 +109,20 @@ export function CSVTaxImportPanel({ onImportComplete }: CSVTaxImportPanelProps) 
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.message || 'Validation failed');
+        throw new Error(t('integrations.csv.taxImport.errors.validationFailed', { defaultValue: 'Validation failed' }));
       }
 
       setValidationResult(result.validation);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Validation failed');
+      setError(t('integrations.csv.taxImport.errors.validationFailed', { defaultValue: 'Validation failed' }));
     } finally {
       setIsValidating(false);
     }
-  }, [file, dateRange]);
+  }, [file, dateRange, t]);
 
   const handleImport = useCallback(async () => {
     if (!file || !dateRange.from || !dateRange.to) {
-      setError('Please select a file and date range');
+      setError(t('integrations.csv.taxImport.errors.selectFileAndRange', { defaultValue: 'Please select a file and date range' }));
       return;
     }
 
@@ -146,7 +148,7 @@ export function CSVTaxImportPanel({ onImportComplete }: CSVTaxImportPanelProps) 
       const result: ImportResult = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Import failed');
+        throw new Error(t('integrations.csv.taxImport.errors.importFailed', { defaultValue: 'Import failed' }));
       }
 
       setImportResult(result);
@@ -158,17 +160,17 @@ export function CSVTaxImportPanel({ onImportComplete }: CSVTaxImportPanelProps) 
         });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Import failed');
+      setError(t('integrations.csv.taxImport.errors.importFailed', { defaultValue: 'Import failed' }));
     } finally {
       setIsImporting(false);
     }
-  }, [file, dateRange, onImportComplete]);
+  }, [file, dateRange, onImportComplete, t]);
 
   const handleDownloadTemplate = useCallback(async () => {
     try {
       const response = await fetch('/api/accounting/csv/import/tax/template');
       if (!response.ok) {
-        throw new Error('Failed to download template');
+        throw new Error(t('integrations.csv.taxImport.errors.templateDownloadFailed', { defaultValue: 'Failed to download template' }));
       }
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
@@ -180,9 +182,9 @@ export function CSVTaxImportPanel({ onImportComplete }: CSVTaxImportPanelProps) 
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to download template');
+      setError(t('integrations.csv.taxImport.errors.templateDownloadFailed', { defaultValue: 'Failed to download template' }));
     }
-  }, []);
+  }, [t]);
 
   const canValidate = file && dateRange.from && dateRange.to;
   const canImport = validationResult?.valid && !isValidating;
@@ -192,10 +194,10 @@ export function CSVTaxImportPanel({ onImportComplete }: CSVTaxImportPanelProps) 
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Upload className="h-5 w-5" />
-          Import Tax from QuickBooks CSV
+          {t('integrations.csv.taxImport.qbo.title', { defaultValue: 'Import Tax from QuickBooks CSV' })}
         </CardTitle>
         <CardDescription>
-          Import tax amounts from a QuickBooks tax report CSV file.
+          {t('integrations.csv.taxImport.qbo.description', { defaultValue: 'Import tax amounts from a QuickBooks tax report CSV file.' })}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -208,7 +210,7 @@ export function CSVTaxImportPanel({ onImportComplete }: CSVTaxImportPanelProps) 
           >
             <div className="flex items-center gap-2">
               <HelpCircle className="h-5 w-5 text-blue-500" />
-              <span className="font-medium">How to export tax data from QuickBooks</span>
+              <span className="font-medium">{t('integrations.csv.taxImport.qbo.help.title', { defaultValue: 'How to export tax data from QuickBooks' })}</span>
             </div>
             {showHelp ? (
               <ChevronUp className="h-5 w-5 text-muted-foreground" />
@@ -219,21 +221,21 @@ export function CSVTaxImportPanel({ onImportComplete }: CSVTaxImportPanelProps) 
           {showHelp && (
             <div className="px-4 pb-4 space-y-3 text-sm text-muted-foreground">
               <ol className="list-decimal list-inside space-y-2">
-                <li>In QuickBooks, go to <strong>Reports &gt; All Reports</strong></li>
-                <li>Select <strong>Sales Tax Liability</strong> or <strong>Transaction Detail by Account</strong></li>
-                <li>Set the date range to match your exported invoices</li>
-                <li>Click <strong>Export</strong> and choose <strong>Export to Excel</strong> or <strong>Export to CSV</strong></li>
-                <li>Save the file and upload it here</li>
+                <li>{t('integrations.csv.taxImport.qbo.help.steps.s1', { defaultValue: 'In QuickBooks, go to Reports > All Reports' })}</li>
+                <li>{t('integrations.csv.taxImport.qbo.help.steps.s2', { defaultValue: 'Select Sales Tax Liability or Transaction Detail by Account' })}</li>
+                <li>{t('integrations.csv.taxImport.qbo.help.steps.s3', { defaultValue: 'Set the date range to match your exported invoices' })}</li>
+                <li>{t('integrations.csv.taxImport.qbo.help.steps.s4', { defaultValue: 'Click Export and choose Export to Excel or Export to CSV' })}</li>
+                <li>{t('integrations.csv.taxImport.qbo.help.steps.s5', { defaultValue: 'Save the file and upload it here' })}</li>
               </ol>
               <p className="text-muted-foreground">
-                The CSV must include Invoice Number, Invoice Date, and Tax Amount columns.
+                {t('integrations.csv.taxImport.qbo.help.csvRequirement', { defaultValue: 'The CSV must include Invoice Number, Invoice Date, and Tax Amount columns.' })}
               </p>
               <button
                 type="button"
                 onClick={handleDownloadTemplate}
                 className="text-blue-600 hover:underline"
               >
-                Download template CSV
+                {t('integrations.csv.taxImport.qbo.help.downloadTemplate', { defaultValue: 'Download template CSV' })}
               </button>
             </div>
           )}
@@ -243,18 +245,18 @@ export function CSVTaxImportPanel({ onImportComplete }: CSVTaxImportPanelProps) 
         <div>
           <StringDateRangePicker
             id="csv-tax-import-date-range"
-            label="Date Range (required)"
+            label={t('integrations.csv.taxImport.fields.dateRangeRequired', { defaultValue: 'Date Range (required)' })}
             value={dateRange}
             onChange={setDateRange}
           />
           <p className="text-sm text-muted-foreground mt-1">
-            Only invoices within this date range will be processed.
+            {t('integrations.csv.taxImport.fields.dateRangeHelp', { defaultValue: 'Only invoices within this date range will be processed.' })}
           </p>
         </div>
 
         {/* File Upload */}
         <div className="space-y-2">
-          <Label>CSV File</Label>
+          <Label>{t('integrations.csv.taxImport.fields.csvFile', { defaultValue: 'CSV File' })}</Label>
           <div
             onDrop={handleDrop}
             onDragOver={(e) => e.preventDefault()}
@@ -275,13 +277,13 @@ export function CSVTaxImportPanel({ onImportComplete }: CSVTaxImportPanelProps) 
                 <FileText className="h-6 w-6" />
                 <span className="font-medium">{file.name}</span>
                 <span className="text-sm text-muted-foreground">
-                  ({(file.size / 1024).toFixed(1)} KB)
+                  {t('integrations.csv.taxImport.fields.fileSize', { defaultValue: '({{size}} KB)', size: (file.size / 1024).toFixed(1) })}
                 </span>
               </div>
             ) : (
               <div className="text-muted-foreground">
                 <Upload className="h-8 w-8 mx-auto mb-2" />
-                <p>Drag and drop a CSV file here, or click to browse</p>
+                <p>{t('integrations.csv.taxImport.fields.dropZone', { defaultValue: 'Drag and drop a CSV file here, or click to browse' })}</p>
               </div>
             )}
           </div>
@@ -303,9 +305,9 @@ export function CSVTaxImportPanel({ onImportComplete }: CSVTaxImportPanelProps) 
         {importResult?.success && (
           <Alert variant="success">
             <AlertDescription>
-              Successfully imported tax for {importResult.summary.successfulUpdates} invoice
-              {importResult.summary.successfulUpdates !== 1 ? 's' : ''}.
-              Total tax imported: ${(importResult.summary.totalImportedTax / 100).toFixed(2)}
+              {importResult.summary.successfulUpdates === 1
+                ? t('integrations.csv.taxImport.qbo.success.one', { defaultValue: 'Successfully imported tax for {{count}} invoice. Total tax imported: ${{amount}}', count: importResult.summary.successfulUpdates, amount: (importResult.summary.totalImportedTax / 100).toFixed(2) })
+                : t('integrations.csv.taxImport.qbo.success.other', { defaultValue: 'Successfully imported tax for {{count}} invoices. Total tax imported: ${{amount}}', count: importResult.summary.successfulUpdates, amount: (importResult.summary.totalImportedTax / 100).toFixed(2) })}
             </AlertDescription>
           </Alert>
         )}
@@ -321,10 +323,10 @@ export function CSVTaxImportPanel({ onImportComplete }: CSVTaxImportPanelProps) 
             {isValidating ? (
               <>
                 <span className="animate-spin mr-2">⏳</span>
-                Validating...
+                {t('integrations.csv.taxImport.actions.validating', { defaultValue: 'Validating...' })}
               </>
             ) : (
-              'Validate'
+              t('integrations.csv.taxImport.actions.validate', { defaultValue: 'Validate' })
             )}
           </Button>
           <Button
@@ -335,12 +337,12 @@ export function CSVTaxImportPanel({ onImportComplete }: CSVTaxImportPanelProps) 
             {isImporting ? (
               <>
                 <span className="animate-spin mr-2">⏳</span>
-                Importing...
+                {t('integrations.csv.taxImport.actions.importing', { defaultValue: 'Importing...' })}
               </>
             ) : (
               <>
                 <Upload className="h-4 w-4 mr-2" />
-                Import Tax Data
+                {t('integrations.csv.taxImport.actions.importTaxData', { defaultValue: 'Import Tax Data' })}
               </>
             )}
           </Button>

@@ -11,12 +11,14 @@ import {
   executeXeroCsvTaxImport
 } from '@alga-psa/integrations/actions';
 import type { TaxImportPreviewResult, TaxImportResult } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface XeroCsvTaxImportPanelProps {
   onImportComplete?: (result: { successCount: number; totalTaxImported: number }) => void;
 }
 
 export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPanelProps) {
+  const { t } = useTranslation('msp/integrations');
   const [file, setFile] = useState<File | null>(null);
   const [csvContent, setCsvContent] = useState<string | null>(null);
   const [isValidating, setIsValidating] = useState(false);
@@ -38,7 +40,7 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
         const content = await selectedFile.text();
         setCsvContent(content);
       } catch (err) {
-        setError('Failed to read file');
+        setError(t('integrations.csv.taxImport.errors.readFile', { defaultValue: 'Failed to read file' }));
         setCsvContent(null);
       }
     }
@@ -56,7 +58,7 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
         const content = await droppedFile.text();
         setCsvContent(content);
       } catch (err) {
-        setError('Failed to read file');
+        setError(t('integrations.csv.taxImport.errors.readFile', { defaultValue: 'Failed to read file' }));
         setCsvContent(null);
       }
     }
@@ -64,7 +66,7 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
 
   const handleValidate = useCallback(async () => {
     if (!csvContent) {
-      setError('Please select a CSV file');
+      setError(t('integrations.csv.taxImport.errors.selectFile', { defaultValue: 'Please select a CSV file' }));
       return;
     }
 
@@ -75,15 +77,15 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
       const result = await previewXeroCsvTaxImport(csvContent);
       setPreviewResult(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Validation failed');
+      setError(t('integrations.csv.taxImport.errors.validationFailed', { defaultValue: 'Validation failed' }));
     } finally {
       setIsValidating(false);
     }
-  }, [csvContent]);
+  }, [csvContent, t]);
 
   const handleImport = useCallback(async () => {
     if (!csvContent) {
-      setError('Please select a CSV file');
+      setError(t('integrations.csv.taxImport.errors.selectFile', { defaultValue: 'Please select a CSV file' }));
       return;
     }
 
@@ -101,11 +103,11 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
         });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Import failed');
+      setError(t('integrations.csv.taxImport.errors.importFailed', { defaultValue: 'Import failed' }));
     } finally {
       setIsImporting(false);
     }
-  }, [csvContent, onImportComplete]);
+  }, [csvContent, onImportComplete, t]);
 
   const canValidate = !!csvContent;
   const canImport = previewResult && previewResult.matchedCount > 0 && !isValidating;
@@ -122,10 +124,10 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Upload className="h-5 w-5" />
-          Import Tax from Xero CSV
+          {t('integrations.csv.taxImport.xero.title', { defaultValue: 'Import Tax from Xero CSV' })}
         </CardTitle>
         <CardDescription>
-          Import tax amounts from a Xero Invoice Details Report CSV file.
+          {t('integrations.csv.taxImport.xero.description', { defaultValue: 'Import tax amounts from a Xero Invoice Details Report CSV file.' })}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -138,7 +140,7 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
           >
             <div className="flex items-center gap-2">
               <HelpCircle className="h-5 w-5 text-blue-500" />
-              <span className="font-medium">How to export tax data from Xero</span>
+              <span className="font-medium">{t('integrations.csv.taxImport.xero.help.title', { defaultValue: 'How to export tax data from Xero' })}</span>
             </div>
             {showHelp ? (
               <ChevronUp className="h-5 w-5 text-muted-foreground" />
@@ -149,16 +151,15 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
           {showHelp && (
             <div className="px-4 pb-4 space-y-3 text-sm text-muted-foreground">
               <ol className="list-decimal list-inside space-y-2">
-                <li>In Xero, go to <strong>Reports &gt; All Reports</strong></li>
-                <li>Select <strong>Sales (Invoices and Revenue)</strong></li>
-                <li>Run the <strong>Invoice Details</strong> report</li>
-                <li>Set the date range to match your exported invoices</li>
-                <li>Click <strong>Export</strong> and choose <strong>CSV</strong></li>
-                <li>Upload the exported file here</li>
+                <li>{t('integrations.csv.taxImport.xero.help.steps.s1', { defaultValue: 'In Xero, go to Reports > All Reports' })}</li>
+                <li>{t('integrations.csv.taxImport.xero.help.steps.s2', { defaultValue: 'Select Sales (Invoices and Revenue)' })}</li>
+                <li>{t('integrations.csv.taxImport.xero.help.steps.s3', { defaultValue: 'Run the Invoice Details report' })}</li>
+                <li>{t('integrations.csv.taxImport.xero.help.steps.s4', { defaultValue: 'Set the date range to match your exported invoices' })}</li>
+                <li>{t('integrations.csv.taxImport.xero.help.steps.s5', { defaultValue: 'Click Export and choose CSV' })}</li>
+                <li>{t('integrations.csv.taxImport.xero.help.steps.s6', { defaultValue: 'Upload the exported file here' })}</li>
               </ol>
               <p className="text-muted-foreground">
-                The report should include columns for Invoice Number, Contact Name, Line Amount, and Tax Amount.
-                Invoices are matched using the Reference field or tracking categories set during export.
+                {t('integrations.csv.taxImport.xero.help.csvRequirement', { defaultValue: 'The report should include columns for Invoice Number, Contact Name, Line Amount, and Tax Amount. Invoices are matched using the Reference field or tracking categories set during export.' })}
               </p>
             </div>
           )}
@@ -166,7 +167,7 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
 
         {/* File Upload */}
         <div className="space-y-2">
-          <Label>CSV File</Label>
+          <Label>{t('integrations.csv.taxImport.fields.csvFile', { defaultValue: 'CSV File' })}</Label>
           <div
             onDrop={handleDrop}
             onDragOver={(e) => e.preventDefault()}
@@ -187,13 +188,13 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
                 <FileText className="h-6 w-6" />
                 <span className="font-medium">{file.name}</span>
                 <span className="text-sm text-muted-foreground">
-                  ({(file.size / 1024).toFixed(1)} KB)
+                  {t('integrations.csv.taxImport.fields.fileSize', { defaultValue: '({{size}} KB)', size: (file.size / 1024).toFixed(1) })}
                 </span>
               </div>
             ) : (
               <div className="text-muted-foreground">
                 <Upload className="h-8 w-8 mx-auto mb-2" />
-                <p>Drag and drop a Xero Invoice Details Report CSV here, or click to browse</p>
+                <p>{t('integrations.csv.taxImport.xero.dropZone', { defaultValue: 'Drag and drop a Xero Invoice Details Report CSV here, or click to browse' })}</p>
               </div>
             )}
           </div>
@@ -211,39 +212,39 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
           <div className="border rounded-lg p-4 space-y-4">
             <h4 className="font-medium flex items-center gap-2">
               <FileText className="h-4 w-4" />
-              Validation Results
+              {t('integrations.csv.taxImport.preview.title', { defaultValue: 'Validation Results' })}
             </h4>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center p-3 bg-muted/50 rounded">
                 <div className="text-2xl font-bold">{previewResult.invoiceCount}</div>
-                <div className="text-sm text-muted-foreground">Total Rows</div>
+                <div className="text-sm text-muted-foreground">{t('integrations.csv.taxImport.preview.totalRows', { defaultValue: 'Total Rows' })}</div>
               </div>
               <div className="text-center p-3 bg-muted/50 rounded">
                 <div className="text-2xl font-bold text-green-600">{previewResult.matchedCount}</div>
-                <div className="text-sm text-muted-foreground">Matched Invoices</div>
+                <div className="text-sm text-muted-foreground">{t('integrations.csv.taxImport.preview.matchedInvoices', { defaultValue: 'Matched Invoices' })}</div>
               </div>
               <div className="text-center p-3 bg-muted/50 rounded">
                 <div className="text-2xl font-bold text-red-600">{previewResult.unmatchedCount}</div>
-                <div className="text-sm text-muted-foreground">Unmatched</div>
+                <div className="text-sm text-muted-foreground">{t('integrations.csv.taxImport.preview.unmatched', { defaultValue: 'Unmatched' })}</div>
               </div>
               <div className="text-center p-3 bg-muted/50 rounded">
                 <div className="text-2xl font-bold text-blue-600">
                   {formatCurrency(previewResult.totalTaxToImport * 100)}
                 </div>
-                <div className="text-sm text-muted-foreground">Tax to Import</div>
+                <div className="text-sm text-muted-foreground">{t('integrations.csv.taxImport.preview.taxToImport', { defaultValue: 'Tax to Import' })}</div>
               </div>
             </div>
 
             {previewResult.alreadyImportedCount > 0 && (
               <Alert variant="warning">
-                <AlertDescription>{previewResult.alreadyImportedCount} invoice(s) already have imported tax and will be skipped.</AlertDescription>
+                <AlertDescription>{t('integrations.csv.taxImport.preview.alreadyImportedSkip', { defaultValue: '{{count}} invoice(s) already have imported tax and will be skipped.', count: previewResult.alreadyImportedCount })}</AlertDescription>
               </Alert>
             )}
 
             {previewResult.notPendingCount > 0 && (
               <Alert variant="warning">
-                <AlertDescription>{previewResult.notPendingCount} invoice(s) don't have pending external tax and will be skipped.</AlertDescription>
+                <AlertDescription>{t('integrations.csv.taxImport.preview.notPendingSkip', { defaultValue: "{{count}} invoice(s) don't have pending external tax and will be skipped.", count: previewResult.notPendingCount })}</AlertDescription>
               </Alert>
             )}
 
@@ -253,11 +254,11 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
                 <table className="min-w-full divide-y divide-border">
                   <thead className="bg-muted/50 sticky top-0">
                     <tr>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">Xero Invoice</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">Alga Invoice</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">Contact</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">Tax Amount</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">{t('integrations.csv.taxImport.preview.columns.status', { defaultValue: 'Status' })}</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">{t('integrations.csv.taxImport.preview.columns.xeroInvoice', { defaultValue: 'Xero Invoice' })}</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">{t('integrations.csv.taxImport.preview.columns.algaInvoice', { defaultValue: 'Alga Invoice' })}</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">{t('integrations.csv.taxImport.preview.columns.contact', { defaultValue: 'Contact' })}</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">{t('integrations.csv.taxImport.preview.columns.taxAmount', { defaultValue: 'Tax Amount' })}</th>
                     </tr>
                   </thead>
                   <tbody className="bg-card divide-y divide-border">
@@ -282,7 +283,7 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
                 </table>
                 {previewResult.preview.length > 20 && (
                   <div className="px-3 py-2 text-xs text-muted-foreground bg-muted/50">
-                    Showing first 20 of {previewResult.preview.length} rows
+                    {t('integrations.csv.taxImport.preview.showingFirst20', { defaultValue: 'Showing first 20 of {{count}} rows', count: previewResult.preview.length })}
                   </div>
                 )}
               </div>
@@ -291,7 +292,7 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
             {/* Unmatched reasons */}
             {previewResult.preview.filter(p => p.status === 'unmatched' && p.reason).length > 0 && (
               <div className="text-sm">
-                <h5 className="font-medium text-red-600 mb-2">Errors ({previewResult.unmatchedCount})</h5>
+                <h5 className="font-medium text-red-600 mb-2">{t('integrations.csv.taxImport.preview.errorsTitle', { defaultValue: 'Errors ({{count}})', count: previewResult.unmatchedCount })}</h5>
                 <div className="space-y-1 max-h-32 overflow-y-auto">
                   {previewResult.preview
                     .filter(p => p.status === 'unmatched' && p.reason)
@@ -311,10 +312,11 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
         {importResult && (
           <Alert variant={importResult.success ? 'success' : 'warning'}>
             <AlertDescription>
-              Imported tax for {importResult.successCount} invoice{importResult.successCount !== 1 ? 's' : ''}.
-              Total tax imported: {formatCurrency(importResult.totalTaxImported)}.
-              {importResult.failureCount > 0 && ` ${importResult.failureCount} failed.`}
-              {importResult.skippedCount > 0 && ` ${importResult.skippedCount} skipped.`}
+              {importResult.successCount === 1
+                ? t('integrations.csv.taxImport.result.one', { defaultValue: 'Imported tax for {{count}} invoice. Total tax imported: {{amount}}.', count: importResult.successCount, amount: formatCurrency(importResult.totalTaxImported) })
+                : t('integrations.csv.taxImport.result.other', { defaultValue: 'Imported tax for {{count}} invoices. Total tax imported: {{amount}}.', count: importResult.successCount, amount: formatCurrency(importResult.totalTaxImported) })}
+              {importResult.failureCount > 0 && ` ${t('integrations.csv.taxImport.result.failed', { defaultValue: '{{count}} failed.', count: importResult.failureCount })}`}
+              {importResult.skippedCount > 0 && ` ${t('integrations.csv.taxImport.result.skipped', { defaultValue: '{{count}} skipped.', count: importResult.skippedCount })}`}
             </AlertDescription>
           </Alert>
         )}
@@ -330,10 +332,10 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
             {isValidating ? (
               <>
                 <span className="animate-spin mr-2">⏳</span>
-                Validating...
+                {t('integrations.csv.taxImport.actions.validating', { defaultValue: 'Validating...' })}
               </>
             ) : (
-              'Validate'
+              t('integrations.csv.taxImport.actions.validate', { defaultValue: 'Validate' })
             )}
           </Button>
           <Button
@@ -344,12 +346,12 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
             {isImporting ? (
               <>
                 <span className="animate-spin mr-2">⏳</span>
-                Importing...
+                {t('integrations.csv.taxImport.actions.importing', { defaultValue: 'Importing...' })}
               </>
             ) : (
               <>
                 <Upload className="h-4 w-4 mr-2" />
-                Import Tax Data
+                {t('integrations.csv.taxImport.actions.importTaxData', { defaultValue: 'Import Tax Data' })}
               </>
             )}
           </Button>

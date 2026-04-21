@@ -8,8 +8,10 @@ import { Dialog } from '@alga-psa/ui/components/Dialog';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import { AlertCircle, RotateCcw } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export function CSVExportLockResetPanel() {
+  const { t } = useTranslation('msp/integrations');
   const [mode, setMode] = useState<'invoice' | 'batch'>('invoice');
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [batchId, setBatchId] = useState('');
@@ -37,7 +39,7 @@ export function CSVExportLockResetPanel() {
       if (!response.ok) {
         const message =
           (data && typeof data.message === 'string' && data.message) ||
-          'Unable to reset export lock';
+          t('integrations.csv.export.lockReset.errors.unable', { defaultValue: 'Unable to reset export lock' });
         setResult({ kind: 'error', message });
         return;
       }
@@ -47,24 +49,24 @@ export function CSVExportLockResetPanel() {
         setResult({
           kind: 'success',
           message: mode === 'batch'
-            ? 'No export locks were found for that batch.'
-            : 'No export lock found for that invoice.'
+            ? t('integrations.csv.export.lockReset.success.noBatchLocks', { defaultValue: 'No export locks were found for that batch.' })
+            : t('integrations.csv.export.lockReset.success.noInvoiceLock', { defaultValue: 'No export lock found for that invoice.' })
         });
       } else {
         setResult({
           kind: 'success',
           message: mode === 'batch'
-            ? 'Export locks cleared for this batch. You can export those invoices again.'
-            : 'Export lock cleared. You can export this invoice again.'
+            ? t('integrations.csv.export.lockReset.success.batchCleared', { defaultValue: 'Export locks cleared for this batch. You can export those invoices again.' })
+            : t('integrations.csv.export.lockReset.success.invoiceCleared', { defaultValue: 'Export lock cleared. You can export this invoice again.' })
         });
       }
     } catch (error: any) {
-      setResult({ kind: 'error', message: error?.message ?? 'Unable to reset export lock' });
+      setResult({ kind: 'error', message: error?.message ?? t('integrations.csv.export.lockReset.errors.unable', { defaultValue: 'Unable to reset export lock' }) });
     } finally {
       setIsLoading(false);
       setConfirmOpen(false);
     }
-  }, [invoiceNumber, batchId, mode]);
+  }, [invoiceNumber, batchId, mode, t]);
 
   const canSubmit =
     !isLoading &&
@@ -75,10 +77,10 @@ export function CSVExportLockResetPanel() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <RotateCcw className="h-5 w-5" />
-          Re-export an invoice
+          {t('integrations.csv.export.lockReset.title', { defaultValue: 'Re-export an invoice' })}
         </CardTitle>
         <CardDescription>
-          Clear export locks to allow re-exporting invoices via CSV.
+          {t('integrations.csv.export.lockReset.description', { defaultValue: 'Clear export locks to allow re-exporting invoices via CSV.' })}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -90,25 +92,25 @@ export function CSVExportLockResetPanel() {
             }
           }}
           options={[
-            { value: 'invoice' as const, label: 'Invoice', id: 'qbcsv-reset-export-lock-mode-invoice', disabled: isLoading },
-            { value: 'batch' as const, label: 'Batch', id: 'qbcsv-reset-export-lock-mode-batch', disabled: isLoading },
+            { value: 'invoice' as const, label: t('integrations.csv.export.lockReset.modes.invoice', { defaultValue: 'Invoice' }), id: 'qbcsv-reset-export-lock-mode-invoice', disabled: isLoading },
+            { value: 'batch' as const, label: t('integrations.csv.export.lockReset.modes.batch', { defaultValue: 'Batch' }), id: 'qbcsv-reset-export-lock-mode-batch', disabled: isLoading },
           ]}
-          aria-label="Reset export lock mode"
+          aria-label={t('integrations.csv.export.lockReset.modes.ariaLabel', { defaultValue: 'Reset export lock mode' })}
         />
 
         {mode === 'invoice' ? (
           <Input
             id="qbcsv-reset-export-lock-invoice-number"
-            label="Invoice number"
-            placeholder="e.g. INV-1001"
+            label={t('integrations.csv.export.lockReset.fields.invoiceNumber', { defaultValue: 'Invoice number' })}
+            placeholder={t('integrations.csv.export.lockReset.fields.invoiceNumberPlaceholder', { defaultValue: 'e.g. INV-1001' })}
             value={invoiceNumber}
             onChange={(e) => setInvoiceNumber(e.target.value)}
           />
         ) : (
           <Input
             id="qbcsv-reset-export-lock-batch-id"
-            label="Export batch ID"
-            placeholder="e.g. e793a514-34bd-4d7b-b266-9bb15f7087c4"
+            label={t('integrations.csv.export.lockReset.fields.batchId', { defaultValue: 'Export batch ID' })}
+            placeholder={t('integrations.csv.export.lockReset.fields.batchIdPlaceholder', { defaultValue: 'e.g. e793a514-34bd-4d7b-b266-9bb15f7087c4' })}
             value={batchId}
             onChange={(e) => setBatchId(e.target.value)}
           />
@@ -116,7 +118,7 @@ export function CSVExportLockResetPanel() {
 
         <div className="flex items-center justify-between gap-3">
           <div className="text-sm text-muted-foreground">
-            This may cause duplicates in QuickBooks if the invoice still exists there.
+            {t('integrations.csv.export.lockReset.warnings.duplicates', { defaultValue: 'This may cause duplicates in QuickBooks if the invoice still exists there.' })}
           </div>
           <Button
             id="qbcsv-reset-export-lock-button"
@@ -124,7 +126,7 @@ export function CSVExportLockResetPanel() {
             disabled={!canSubmit}
             onClick={() => setConfirmOpen(true)}
           >
-            Reset export lock
+            {t('integrations.csv.export.lockReset.actions.reset', { defaultValue: 'Reset export lock' })}
           </Button>
         </div>
 
@@ -138,25 +140,17 @@ export function CSVExportLockResetPanel() {
           id="qbcsv-reset-export-lock-confirm-dialog"
           isOpen={confirmOpen}
           onClose={() => setConfirmOpen(false)}
-          title="Reset export lock?"
+          title={t('integrations.csv.export.lockReset.dialog.title', { defaultValue: 'Reset export lock?' })}
         >
           <div className="space-y-4">
             <p className="text-sm text-foreground">
-              {mode === 'batch' ? (
-                <>
-                  This will allow Alga PSA to export invoices from batch <strong>{batchId.trim()}</strong> again.
-                  If any of these invoices still exist in QuickBooks, importing the CSV may create duplicates.
-                </>
-              ) : (
-                <>
-                  This will allow Alga PSA to export invoice <strong>{invoiceNumber.trim()}</strong> again.
-                  If this invoice still exists in QuickBooks, importing the CSV may create duplicates.
-                </>
-              )}
+              {mode === 'batch'
+                ? t('integrations.csv.export.lockReset.dialog.confirmBatch', { defaultValue: 'This will allow Alga PSA to export invoices from batch {{batchId}} again. If any of these invoices still exist in QuickBooks, importing the CSV may create duplicates.', batchId: batchId.trim() })
+                : t('integrations.csv.export.lockReset.dialog.confirmInvoice', { defaultValue: 'This will allow Alga PSA to export invoice {{invoiceNumber}} again. If this invoice still exists in QuickBooks, importing the CSV may create duplicates.', invoiceNumber: invoiceNumber.trim() })}
             </p>
             <Alert variant="warning">
               <AlertDescription>
-                Only proceed if you are sure the invoice was not imported, or you deleted/voided it in QuickBooks.
+                {t('integrations.csv.export.lockReset.dialog.warning', { defaultValue: 'Only proceed if you are sure the invoice was not imported, or you deleted/voided it in QuickBooks.' })}
               </AlertDescription>
             </Alert>
             <div className="flex justify-end gap-2">
@@ -166,14 +160,16 @@ export function CSVExportLockResetPanel() {
                 onClick={() => setConfirmOpen(false)}
                 disabled={isLoading}
               >
-                Cancel
+                {t('integrations.csv.export.lockReset.dialog.cancel', { defaultValue: 'Cancel' })}
               </Button>
               <Button
                 id="qbcsv-reset-export-lock-confirm"
                 onClick={resetLock}
                 disabled={!canSubmit}
               >
-                {isLoading ? 'Resetting…' : 'Reset lock'}
+                {isLoading
+                  ? t('integrations.csv.export.lockReset.dialog.resetting', { defaultValue: 'Resetting…' })
+                  : t('integrations.csv.export.lockReset.dialog.confirm', { defaultValue: 'Reset lock' })}
               </Button>
             </div>
           </div>
