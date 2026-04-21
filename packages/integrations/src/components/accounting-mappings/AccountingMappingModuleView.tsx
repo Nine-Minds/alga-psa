@@ -11,6 +11,7 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import type { ExternalEntityMapping } from '@alga-psa/integrations/actions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   AccountingMappingContext,
   AccountingMappingModule,
@@ -35,6 +36,7 @@ export function AccountingMappingModuleView({
   context,
   realmLabel
 }: AccountingMappingModuleViewProps) {
+  const { t } = useTranslation();
   const overrides = useOverrides(module, context);
 
   const [mappings, setMappings] = useState<DisplayMapping[]>([]);
@@ -62,12 +64,12 @@ export function AccountingMappingModuleView({
       setMappings(display);
     } catch (loadError) {
       const message =
-        loadError instanceof Error ? loadError.message : 'Failed to load mappings.';
+        loadError instanceof Error ? loadError.message : t('integrations.accounting.moduleView.errors.loadFailed', { defaultValue: 'Failed to load mappings.' });
       setError(message);
     } finally {
       setIsLoading(false);
     }
-  }, [context, module, overrides]);
+  }, [context, module, overrides, t]);
 
   useEffect(() => {
     void loadData();
@@ -129,10 +131,10 @@ export function AccountingMappingModuleView({
       await loadData();
     } catch (deleteError) {
       const message =
-        deleteError instanceof Error ? deleteError.message : 'Failed to delete mapping.';
+        deleteError instanceof Error ? deleteError.message : t('integrations.accounting.moduleView.errors.deleteFailed', { defaultValue: 'Failed to delete mapping.' });
       setError(message);
     }
-  }, [context, loadData, module, overrides, pendingDeleteId]);
+  }, [context, loadData, module, overrides, pendingDeleteId, t]);
 
   const columns = useMemo<ColumnDefinition<DisplayMapping>[]>(
     () => [
@@ -140,16 +142,16 @@ export function AccountingMappingModuleView({
         title: module.labels.algaColumn,
         dataIndex: 'algaName',
         render: (_value: unknown, record: DisplayMapping) =>
-          record.algaName ?? record.alga_entity_id ?? 'N/A'
+          record.algaName ?? record.alga_entity_id ?? t('integrations.accounting.moduleView.notAvailable', { defaultValue: 'N/A' })
       },
       {
         title: module.labels.externalColumn,
         dataIndex: 'externalName',
         render: (_value: unknown, record: DisplayMapping) =>
-          record.externalName ?? record.external_entity_id ?? 'N/A'
+          record.externalName ?? record.external_entity_id ?? t('integrations.accounting.moduleView.notAvailable', { defaultValue: 'N/A' })
       },
       {
-        title: 'Actions',
+        title: t('integrations.accounting.moduleView.actionsColumn', { defaultValue: 'Actions' }),
         dataIndex: 'id',
         sortable: false,
         width: '1%',
@@ -170,7 +172,7 @@ export function AccountingMappingModuleView({
                   className="h-8 w-8 p-0"
                   onClick={(event) => event.stopPropagation()}
                 >
-                  <span className="sr-only">Open menu</span>
+                  <span className="sr-only">{t('integrations.accounting.moduleView.openMenu', { defaultValue: 'Open menu' })}</span>
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -183,7 +185,7 @@ export function AccountingMappingModuleView({
                     setDialogOpen(true);
                   }}
                 >
-                  Edit
+                  {t('integrations.accounting.moduleView.edit', { defaultValue: 'Edit' })}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   id={deleteMenuId}
@@ -194,7 +196,7 @@ export function AccountingMappingModuleView({
                     setConfirmOpen(true);
                   }}
                 >
-                  Delete
+                  {t('integrations.accounting.moduleView.delete', { defaultValue: 'Delete' })}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -202,11 +204,11 @@ export function AccountingMappingModuleView({
         }
       }
     ],
-    [module.labels]
+    [module.labels, module.elements, module.id, t]
   );
 
   if (isLoading) {
-    return <div>Loading mappings…</div>;
+    return <div>{t('integrations.accounting.moduleView.loading', { defaultValue: 'Loading mappings…' })}</div>;
   }
 
   if (error) {
@@ -242,7 +244,7 @@ export function AccountingMappingModuleView({
 
       {mappings.length === 0 ? (
         <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-          No mappings found.
+          {t('integrations.accounting.moduleView.noMappings', { defaultValue: 'No mappings found.' })}
         </div>
       ) : (
         <DataTable
@@ -274,8 +276,8 @@ export function AccountingMappingModuleView({
           onConfirm={handleDelete}
           title={module.labels.deleteConfirmation.title}
           message={deleteMessage}
-          confirmLabel={module.labels.deleteConfirmation.confirmLabel ?? 'Delete'}
-          cancelLabel={module.labels.deleteConfirmation.cancelLabel ?? 'Cancel'}
+          confirmLabel={module.labels.deleteConfirmation.confirmLabel ?? t('integrations.accounting.moduleView.delete', { defaultValue: 'Delete' })}
+          cancelLabel={module.labels.deleteConfirmation.cancelLabel ?? t('integrations.accounting.dialog.cancel', { defaultValue: 'Cancel' })}
           isConfirming={false}
           id={`${deleteDialogPrefix}-${pendingDeleteId!}`}
         />

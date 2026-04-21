@@ -14,6 +14,7 @@ import {
   executeXeroCsvClientImport
 } from '@alga-psa/integrations/actions';
 import type { ClientImportPreviewResult, ClientImportResult } from '../../../services/xeroCsvClientSyncService';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type ImportStep = 'idle' | 'uploading' | 'preview' | 'importing' | 'complete';
 
@@ -36,6 +37,7 @@ const DEFAULT_OPTIONS: ImportOptions = {
  * and importing Xero Contacts CSV back into Alga.
  */
 export function XeroCsvClientSyncPanel() {
+  const { t } = useTranslation();
   const [isExporting, startExport] = useTransition();
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportSuccess, setExportSuccess] = useState<string | null>(null);
@@ -69,10 +71,10 @@ export function XeroCsvClientSyncPanel() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        setExportSuccess(`Exported ${result.clientCount} clients to ${result.filename}`);
+        setExportSuccess(t('integrations.xero.csv.clientSync.exportSuccess', { defaultValue: 'Exported {{count}} clients to {{filename}}', count: result.clientCount, filename: result.filename }));
         setTimeout(() => setExportSuccess(null), 5000);
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to export clients';
+        const message = err instanceof Error ? err.message : t('integrations.xero.csv.clientSync.errors.export', { defaultValue: 'Failed to export clients' });
         setExportError(message);
       }
     });
@@ -95,7 +97,7 @@ export function XeroCsvClientSyncPanel() {
       setPreviewResult(preview);
       setImportStep('preview');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to process CSV file';
+      const message = err instanceof Error ? err.message : t('integrations.xero.csv.clientSync.errors.processCsv', { defaultValue: 'Failed to process CSV file' });
       setImportError(message);
       setImportStep('idle');
     }
@@ -117,7 +119,7 @@ export function XeroCsvClientSyncPanel() {
       setImportResult(result);
       setImportStep('complete');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to import clients';
+      const message = err instanceof Error ? err.message : t('integrations.xero.csv.clientSync.errors.import', { defaultValue: 'Failed to import clients' });
       setImportError(message);
       setImportStep('preview');
     }
@@ -141,18 +143,18 @@ export function XeroCsvClientSyncPanel() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Users className="h-5 w-5" />
-          Client Sync
+          {t('integrations.xero.csv.clientSync.title', { defaultValue: 'Client Sync' })}
         </CardTitle>
         <CardDescription>
-          Export clients to Xero Contacts CSV or import contacts from Xero.
+          {t('integrations.xero.csv.clientSync.description', { defaultValue: 'Export clients to Xero Contacts CSV or import contacts from Xero.' })}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Export Section */}
         <div className="space-y-3">
-          <h4 className="text-sm font-medium text-foreground">Export Clients</h4>
+          <h4 className="text-sm font-medium text-foreground">{t('integrations.xero.csv.clientSync.exportClients', { defaultValue: 'Export Clients' })}</h4>
           <p className="text-sm text-muted-foreground">
-            Export your Alga clients to a CSV file that can be imported into Xero as Contacts.
+            {t('integrations.xero.csv.clientSync.exportDescription', { defaultValue: 'Export your Alga clients to a CSV file that can be imported into Xero as Contacts.' })}
           </p>
 
           {exportError && (
@@ -181,7 +183,7 @@ export function XeroCsvClientSyncPanel() {
             ) : (
               <Download className="h-4 w-4" />
             )}
-            Export Clients to CSV
+            {t('integrations.xero.csv.clientSync.exportButton', { defaultValue: 'Export Clients to CSV' })}
           </Button>
         </div>
 
@@ -189,9 +191,9 @@ export function XeroCsvClientSyncPanel() {
 
         {/* Import Section */}
         <div className="space-y-4">
-          <h4 className="text-sm font-medium text-foreground">Import Contacts</h4>
+          <h4 className="text-sm font-medium text-foreground">{t('integrations.xero.csv.clientSync.importContacts', { defaultValue: 'Import Contacts' })}</h4>
           <p className="text-sm text-muted-foreground">
-            Import contacts from a Xero Contacts CSV export. Existing clients can be matched and updated.
+            {t('integrations.xero.csv.clientSync.importDescription', { defaultValue: 'Import contacts from a Xero Contacts CSV export. Existing clients can be matched and updated.' })}
           </p>
 
           {importError && (
@@ -214,7 +216,7 @@ export function XeroCsvClientSyncPanel() {
                       updateExistingClients: e.target.checked
                     }))
                   }
-                  label="Update existing clients"
+                  label={t('integrations.xero.csv.clientSync.updateExisting', { defaultValue: 'Update existing clients' })}
                   containerClassName="mb-0"
                 />
                 <Checkbox
@@ -226,14 +228,14 @@ export function XeroCsvClientSyncPanel() {
                       createNewClients: e.target.checked
                     }))
                   }
-                  label="Create new clients"
+                  label={t('integrations.xero.csv.clientSync.createNew', { defaultValue: 'Create new clients' })}
                   containerClassName="mb-0"
                 />
               </div>
 
               <div>
                 <label htmlFor="match-by" className="text-sm text-muted-foreground block mb-1">
-                  Match contacts by:
+                  {t('integrations.xero.csv.clientSync.matchByLabel', { defaultValue: 'Match contacts by:' })}
                 </label>
                 <select
                   id="match-by"
@@ -246,9 +248,9 @@ export function XeroCsvClientSyncPanel() {
                   }
                   className="w-full max-w-xs rounded-md border px-3 py-2 text-sm"
                 >
-                  <option value="name">Contact Name</option>
-                  <option value="email">Email Address</option>
-                  <option value="xero_id">Alga Client ID (from tracking category)</option>
+                  <option value="name">{t('integrations.xero.csv.clientSync.matchBy.contactName', { defaultValue: 'Contact Name' })}</option>
+                  <option value="email">{t('integrations.xero.csv.clientSync.matchBy.emailAddress', { defaultValue: 'Email Address' })}</option>
+                  <option value="xero_id">{t('integrations.xero.csv.clientSync.matchBy.algaClientId', { defaultValue: 'Alga Client ID (from tracking category)' })}</option>
                 </select>
               </div>
 
@@ -268,7 +270,7 @@ export function XeroCsvClientSyncPanel() {
                   className="gap-2"
                 >
                   <Upload className="h-4 w-4" />
-                  Select CSV File
+                  {t('integrations.xero.csv.clientSync.selectCsvFile', { defaultValue: 'Select CSV File' })}
                 </Button>
               </div>
             </div>
@@ -279,7 +281,7 @@ export function XeroCsvClientSyncPanel() {
             <div className="flex items-center gap-3 p-4 bg-muted/40 rounded-lg">
               <LoadingIndicator spinnerProps={{ size: 'sm' }} />
               <span className="text-sm text-muted-foreground">
-                Processing {csvFilename}...
+                {t('integrations.xero.csv.clientSync.processing', { defaultValue: 'Processing {{filename}}...', filename: csvFilename ?? '' })}
               </span>
             </div>
           )}
@@ -295,29 +297,29 @@ export function XeroCsvClientSyncPanel() {
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div className="p-3 bg-success/10 rounded-lg">
                   <div className="text-2xl font-bold text-success">{previewResult.toUpdate}</div>
-                  <div className="text-xs text-success/80">To Update</div>
+                  <div className="text-xs text-success/80">{t('integrations.xero.csv.clientSync.preview.toUpdate', { defaultValue: 'To Update' })}</div>
                 </div>
                 <div className="p-3 bg-primary/10 rounded-lg">
                   <div className="text-2xl font-bold text-primary">{previewResult.toCreate}</div>
-                  <div className="text-xs text-primary/80">To Create</div>
+                  <div className="text-xs text-primary/80">{t('integrations.xero.csv.clientSync.preview.toCreate', { defaultValue: 'To Create' })}</div>
                 </div>
                 <div className="p-3 bg-muted rounded-lg">
                   <div className="text-2xl font-bold text-muted-foreground">{previewResult.toSkip}</div>
-                  <div className="text-xs text-muted-foreground">To Skip</div>
+                  <div className="text-xs text-muted-foreground">{t('integrations.xero.csv.clientSync.preview.toSkip', { defaultValue: 'To Skip' })}</div>
                 </div>
               </div>
 
               {previewResult.warnings.length > 0 && (
                 <Alert variant="warning">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Warnings</AlertTitle>
+                  <AlertTitle>{t('integrations.xero.csv.clientSync.preview.warnings', { defaultValue: 'Warnings' })}</AlertTitle>
                   <AlertDescription>
                     <ul className="list-disc pl-4 mt-1 text-sm">
                       {previewResult.warnings.slice(0, 5).map((warning, i) => (
                         <li key={i}>{warning}</li>
                       ))}
                       {previewResult.warnings.length > 5 && (
-                        <li>...and {previewResult.warnings.length - 5} more</li>
+                        <li>{t('integrations.xero.csv.clientSync.preview.moreWarnings', { defaultValue: '...and {{count}} more', count: previewResult.warnings.length - 5 })}</li>
                       )}
                     </ul>
                   </AlertDescription>
@@ -331,10 +333,10 @@ export function XeroCsvClientSyncPanel() {
                     <table className="w-full text-sm">
                       <thead className="bg-muted/50 sticky top-0">
                         <tr>
-                          <th className="px-3 py-2 text-left font-medium">Contact Name</th>
-                          <th className="px-3 py-2 text-left font-medium">Email</th>
-                          <th className="px-3 py-2 text-left font-medium">Action</th>
-                          <th className="px-3 py-2 text-left font-medium">Matched Client</th>
+                          <th className="px-3 py-2 text-left font-medium">{t('integrations.xero.csv.clientSync.preview.columns.contactName', { defaultValue: 'Contact Name' })}</th>
+                          <th className="px-3 py-2 text-left font-medium">{t('integrations.xero.csv.clientSync.preview.columns.email', { defaultValue: 'Email' })}</th>
+                          <th className="px-3 py-2 text-left font-medium">{t('integrations.xero.csv.clientSync.preview.columns.action', { defaultValue: 'Action' })}</th>
+                          <th className="px-3 py-2 text-left font-medium">{t('integrations.xero.csv.clientSync.preview.columns.matchedClient', { defaultValue: 'Matched Client' })}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
@@ -366,7 +368,7 @@ export function XeroCsvClientSyncPanel() {
                   </div>
                   {previewResult.rows.length > 20 && (
                     <div className="px-3 py-2 bg-muted/30 text-xs text-muted-foreground text-center">
-                      Showing 20 of {previewResult.rows.length} rows
+                      {t('integrations.xero.csv.clientSync.preview.showing20of', { defaultValue: 'Showing 20 of {{count}} rows', count: previewResult.rows.length })}
                     </div>
                   )}
                 </div>
@@ -374,10 +376,10 @@ export function XeroCsvClientSyncPanel() {
 
               <div className="flex gap-3">
                 <Button id="xero-csv-client-sync-execute-import-button" onClick={handleExecuteImport} disabled={previewResult.toUpdate + previewResult.toCreate === 0}>
-                  Import {previewResult.toUpdate + previewResult.toCreate} Contacts
+                  {t('integrations.xero.csv.clientSync.importContactsButton', { defaultValue: 'Import {{count}} Contacts', count: previewResult.toUpdate + previewResult.toCreate })}
                 </Button>
                 <Button id="xero-csv-client-sync-cancel-import-button" variant="outline" onClick={handleCancelImport}>
-                  Cancel
+                  {t('integrations.xero.csv.clientSync.cancel', { defaultValue: 'Cancel' })}
                 </Button>
               </div>
             </div>
@@ -387,7 +389,7 @@ export function XeroCsvClientSyncPanel() {
           {importStep === 'importing' && (
             <div className="flex items-center gap-3 p-4 bg-muted/40 rounded-lg">
               <LoadingIndicator spinnerProps={{ size: 'sm' }} />
-              <span className="text-sm text-muted-foreground">Importing contacts...</span>
+              <span className="text-sm text-muted-foreground">{t('integrations.xero.csv.clientSync.importing', { defaultValue: 'Importing contacts...' })}</span>
             </div>
           )}
 
@@ -396,44 +398,44 @@ export function XeroCsvClientSyncPanel() {
             <div className="space-y-4">
               <Alert variant="success">
                 <CheckCircle2 className="h-4 w-4" />
-                <AlertTitle>Import Complete</AlertTitle>
+                <AlertTitle>{t('integrations.xero.csv.clientSync.importCompleteTitle', { defaultValue: 'Import Complete' })}</AlertTitle>
                 <AlertDescription>
-                  Successfully processed {importResult.totalProcessed} contacts.
+                  {t('integrations.xero.csv.clientSync.importCompleteDescription', { defaultValue: 'Successfully processed {{count}} contacts.', count: importResult.totalProcessed })}
                 </AlertDescription>
               </Alert>
 
               <div className="grid grid-cols-4 gap-3 text-center">
                 <div className="p-3 bg-success/10 rounded-lg">
                   <div className="text-xl font-bold text-success">{importResult.updated}</div>
-                  <div className="text-xs text-success/80">Updated</div>
+                  <div className="text-xs text-success/80">{t('integrations.xero.csv.clientSync.result.updated', { defaultValue: 'Updated' })}</div>
                 </div>
                 <div className="p-3 bg-primary/10 rounded-lg">
                   <div className="text-xl font-bold text-primary">{importResult.created}</div>
-                  <div className="text-xs text-primary/80">Created</div>
+                  <div className="text-xs text-primary/80">{t('integrations.xero.csv.clientSync.result.created', { defaultValue: 'Created' })}</div>
                 </div>
                 <div className="p-3 bg-muted rounded-lg">
                   <div className="text-xl font-bold text-muted-foreground">{importResult.skipped}</div>
-                  <div className="text-xs text-muted-foreground">Skipped</div>
+                  <div className="text-xs text-muted-foreground">{t('integrations.xero.csv.clientSync.result.skipped', { defaultValue: 'Skipped' })}</div>
                 </div>
                 <div className="p-3 bg-purple-500/10 rounded-lg dark:bg-purple-400/10">
                   <div className="text-xl font-bold text-purple-700 dark:text-purple-400">{importResult.mappingsCreated}</div>
-                  <div className="text-xs text-purple-600 dark:text-purple-400/80">Mappings</div>
+                  <div className="text-xs text-purple-600 dark:text-purple-400/80">{t('integrations.xero.csv.clientSync.result.mappings', { defaultValue: 'Mappings' })}</div>
                 </div>
               </div>
 
               {importResult.errors.length > 0 && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Errors ({importResult.errors.length})</AlertTitle>
+                  <AlertTitle>{t('integrations.xero.csv.clientSync.errorsTitle', { defaultValue: 'Errors ({{count}})', count: importResult.errors.length })}</AlertTitle>
                   <AlertDescription>
                     <ul className="list-disc pl-4 mt-1 text-sm">
                       {importResult.errors.slice(0, 5).map((err, i) => (
                         <li key={i}>
-                          Row {err.rowIndex}: {err.contactName} - {err.error}
+                          {t('integrations.xero.csv.clientSync.errorRow', { defaultValue: 'Row {{row}}: {{name}} - {{error}}', row: err.rowIndex, name: err.contactName, error: err.error })}
                         </li>
                       ))}
                       {importResult.errors.length > 5 && (
-                        <li>...and {importResult.errors.length - 5} more errors</li>
+                        <li>{t('integrations.xero.csv.clientSync.moreErrors', { defaultValue: '...and {{count}} more errors', count: importResult.errors.length - 5 })}</li>
                       )}
                     </ul>
                   </AlertDescription>
@@ -441,7 +443,7 @@ export function XeroCsvClientSyncPanel() {
               )}
 
               <Button id="xero-csv-client-sync-start-new-import-button" variant="outline" onClick={handleStartNewImport}>
-                Start New Import
+                {t('integrations.xero.csv.clientSync.startNewImport', { defaultValue: 'Start New Import' })}
               </Button>
             </div>
           )}
@@ -450,12 +452,12 @@ export function XeroCsvClientSyncPanel() {
         {/* Workflow Guide */}
         <div className="border-t border-border pt-4">
           <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
-            <h5 className="text-sm font-medium text-foreground mb-2">Client Sync Workflow</h5>
+            <h5 className="text-sm font-medium text-foreground mb-2">{t('integrations.xero.csv.clientSync.workflowTitle', { defaultValue: 'Client Sync Workflow' })}</h5>
             <ol className="list-decimal pl-5 text-sm text-muted-foreground space-y-1">
-              <li>Export clients from Alga to Xero Contacts CSV</li>
-              <li>Import the CSV into Xero (Contacts → Import)</li>
-              <li>After changes in Xero, export contacts from Xero</li>
-              <li>Import the Xero contacts CSV back into Alga to sync updates</li>
+              <li>{t('integrations.xero.csv.clientSync.workflow.s1', { defaultValue: 'Export clients from Alga to Xero Contacts CSV' })}</li>
+              <li>{t('integrations.xero.csv.clientSync.workflow.s2', { defaultValue: 'Import the CSV into Xero (Contacts → Import)' })}</li>
+              <li>{t('integrations.xero.csv.clientSync.workflow.s3', { defaultValue: 'After changes in Xero, export contacts from Xero' })}</li>
+              <li>{t('integrations.xero.csv.clientSync.workflow.s4', { defaultValue: 'Import the Xero contacts CSV back into Alga to sync updates' })}</li>
             </ol>
           </div>
         </div>

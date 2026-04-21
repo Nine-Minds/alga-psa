@@ -9,6 +9,7 @@ import Spinner from '@alga-psa/ui/components/Spinner';
 import { cn } from '@alga-psa/ui/lib/utils';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import type { RmmProvider } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getAvailableRmmProviderRegistry,
   type RmmProviderMetadata
@@ -70,20 +71,39 @@ function IntegrationBanner({ option }: { option: RmmIntegrationOption }) {
   );
 }
 
+function NinjaOneLoading() {
+  const { t } = useTranslation();
+  return (
+    <Card>
+      <CardContent className="py-8">
+        <div className="flex flex-col items-center justify-center gap-2">
+          <Spinner size="md" />
+          <span className="text-sm text-muted-foreground">{t('integrations.rmm.ninjaOne.loading', { defaultValue: 'Loading NinjaOne integration settings...' })}</span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function TaniumLoading() {
+  const { t } = useTranslation();
+  return (
+    <Card>
+      <CardContent className="py-8">
+        <div className="flex flex-col items-center justify-center gap-2">
+          <Spinner size="md" />
+          <span className="text-sm text-muted-foreground">{t('integrations.rmm.tanium.loading', { defaultValue: 'Loading Tanium integration settings...' })}</span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // Dynamic import for NinjaOne (EE feature).
 const NinjaOneIntegrationSettings = dynamic(
   () => import('@enterprise/components/settings/integrations/NinjaOneIntegrationSettings'),
   {
-    loading: () => (
-      <Card>
-        <CardContent className="py-8">
-          <div className="flex flex-col items-center justify-center gap-2">
-            <Spinner size="md" />
-            <span className="text-sm text-muted-foreground">Loading NinjaOne integration settings...</span>
-          </div>
-        </CardContent>
-      </Card>
-    ),
+    loading: () => <NinjaOneLoading />,
     ssr: false
   }
 );
@@ -91,16 +111,7 @@ const NinjaOneIntegrationSettings = dynamic(
 const TaniumIntegrationSettings = dynamic(
   () => import('@enterprise/components/settings/integrations/TaniumIntegrationSettings'),
   {
-    loading: () => (
-      <Card>
-        <CardContent className="py-8">
-          <div className="flex flex-col items-center justify-center gap-2">
-            <Spinner size="md" />
-            <span className="text-sm text-muted-foreground">Loading Tanium integration settings...</span>
-          </div>
-        </CardContent>
-      </Card>
-    ),
+    loading: () => <TaniumLoading />,
     ssr: false
   }
 );
@@ -112,6 +123,7 @@ const providerSettingsComponents: Partial<Record<RmmProvider, React.ComponentTyp
 };
 
 export default function RmmIntegrationsSetup() {
+  const { t } = useTranslation();
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
   const tacticalFlag = useFeatureFlag('tactical-rmm-integration', { defaultValue: false });
   const taniumFlag = useFeatureFlag('tanium-rmm-integration', { defaultValue: false });
@@ -161,8 +173,8 @@ export default function RmmIntegrationsSetup() {
       return (
         <Card>
           <CardHeader>
-            <CardTitle>RMM Integrations</CardTitle>
-            <CardDescription>RMM integration coming soon</CardDescription>
+            <CardTitle>{t('integrations.rmm.setup.title', { defaultValue: 'RMM Integrations' })}</CardTitle>
+            <CardDescription>{t('integrations.rmm.setup.comingSoon', { defaultValue: 'RMM integration coming soon' })}</CardDescription>
           </CardHeader>
         </Card>
       );
@@ -211,7 +223,7 @@ export default function RmmIntegrationsSetup() {
                   onClick={() => setSelected(option.metadata.id)}
                   id={`rmm-integration-configure-${option.metadata.id}`}
                 >
-                  Configure Integration
+                  {t('integrations.rmm.setup.configure', { defaultValue: 'Configure Integration' })}
                 </Button>
               </CardFooter>
             </Card>
@@ -221,9 +233,9 @@ export default function RmmIntegrationsSetup() {
 
       <div className="border-t pt-6" id="rmm-integrations-active-config">
         <div className="mb-4 flex items-center justify-between gap-3">
-          <h3 className="text-base font-semibold">Active Configuration</h3>
+          <h3 className="text-base font-semibold">{t('integrations.rmm.setup.activeConfiguration', { defaultValue: 'Active Configuration' })}</h3>
           <span className="text-xs text-muted-foreground">
-            {selectedOption ? `${selectedOption.metadata.title} selected` : null}
+            {selectedOption ? t('integrations.rmm.setup.selected', { defaultValue: '{{title}} selected', title: selectedOption.metadata.title }) : null}
           </span>
         </div>
 

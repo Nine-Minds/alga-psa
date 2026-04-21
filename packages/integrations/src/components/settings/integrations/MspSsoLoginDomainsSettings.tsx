@@ -18,6 +18,7 @@ import {
   verifyMspSsoDomainClaimOwnership,
 } from '@alga-psa/integrations/actions';
 import { useToast } from '@alga-psa/ui/hooks/use-toast';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type ClaimStatus = 'advisory' | 'pending' | 'verified' | 'verified_legacy' | 'rejected' | 'revoked';
 type ClaimRow = {
@@ -30,9 +31,25 @@ type ClaimRow = {
 
 const isEnterprise = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
-function claimStatusLabel(status: ClaimStatus): string {
-  if (status === 'verified_legacy') return 'Verified (Legacy)';
-  return status.charAt(0).toUpperCase() + status.slice(1);
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
+
+function claimStatusLabel(status: ClaimStatus, t: TranslateFn): string {
+  switch (status) {
+    case 'advisory':
+      return t('integrations.sso.msp.claimStatus.advisory', { defaultValue: 'Advisory' });
+    case 'pending':
+      return t('integrations.sso.msp.claimStatus.pending', { defaultValue: 'Pending' });
+    case 'verified':
+      return t('integrations.sso.msp.claimStatus.verified', { defaultValue: 'Verified' });
+    case 'verified_legacy':
+      return t('integrations.sso.msp.claimStatus.verifiedLegacy', { defaultValue: 'Verified (Legacy)' });
+    case 'rejected':
+      return t('integrations.sso.msp.claimStatus.rejected', { defaultValue: 'Rejected' });
+    case 'revoked':
+      return t('integrations.sso.msp.claimStatus.revoked', { defaultValue: 'Revoked' });
+    default:
+      return status.charAt(0).toUpperCase() + status.slice(1);
+  }
 }
 
 function claimStatusVariant(status: ClaimStatus): 'info' | 'warning' | 'success' | 'error' | 'secondary' {
@@ -43,6 +60,7 @@ function claimStatusVariant(status: ClaimStatus): 'info' | 'warning' | 'success'
 }
 
 export function MspSsoLoginDomainsSettings() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
@@ -59,7 +77,7 @@ export function MspSsoLoginDomainsSettings() {
     if (isEnterprise) {
       const result = await listMspSsoDomainClaims();
       if (!result.success) {
-        setError(result.error || 'Unable to load MSP SSO domain claims.');
+        setError(result.error || t('integrations.sso.msp.errors.loadClaims', { defaultValue: 'Unable to load MSP SSO domain claims.' }));
         setLoading(false);
         return;
       }
@@ -78,14 +96,14 @@ export function MspSsoLoginDomainsSettings() {
 
     const result = await listMspSsoLoginDomains();
     if (!result.success) {
-      setError(result.error || 'Unable to load MSP SSO login domains.');
+      setError(result.error || t('integrations.sso.msp.errors.loadDomains', { defaultValue: 'Unable to load MSP SSO login domains.' }));
       setLoading(false);
       return;
     }
 
     setDomains(result.domains || []);
     setLoading(false);
-  }, []);
+  }, [t]);
 
   React.useEffect(() => {
     load();
@@ -114,12 +132,12 @@ export function MspSsoLoginDomainsSettings() {
 
       if (!result.success) {
         const conflictHint = result.conflicts?.length
-          ? ` Conflicts: ${result.conflicts.join(', ')}.`
+          ? ` ${t('integrations.sso.msp.errors.conflicts', { defaultValue: 'Conflicts: {{conflicts}}.', conflicts: result.conflicts.join(', ') })}`
           : '';
-        const message = `${result.error || 'Unable to save MSP SSO login domains.'}${conflictHint}`;
+        const message = `${result.error || t('integrations.sso.msp.errors.saveDomains', { defaultValue: 'Unable to save MSP SSO login domains.' })}${conflictHint}`;
         setError(message);
         toast({
-          title: 'Unable to save MSP SSO login domains',
+          title: t('integrations.sso.msp.toasts.saveDomainsFailedTitle', { defaultValue: 'Unable to save MSP SSO login domains' }),
           description: message,
           variant: 'destructive',
         });
@@ -128,8 +146,8 @@ export function MspSsoLoginDomainsSettings() {
 
       setDomains(result.domains || []);
       toast({
-        title: 'MSP SSO login domains saved',
-        description: 'Domain-based SSO discovery settings are updated.',
+        title: t('integrations.sso.msp.toasts.savedTitle', { defaultValue: 'MSP SSO login domains saved' }),
+        description: t('integrations.sso.msp.toasts.savedDescription', { defaultValue: 'Domain-based SSO discovery settings are updated.' }),
       });
     } finally {
       setSaving(false);
@@ -145,10 +163,10 @@ export function MspSsoLoginDomainsSettings() {
       setError(null);
       const result = await requestMspSsoDomainClaim({ domain: candidate });
       if (!result.success) {
-        const message = result.error || 'Unable to request domain claim.';
+        const message = result.error || t('integrations.sso.msp.errors.requestClaim', { defaultValue: 'Unable to request domain claim.' });
         setError(message);
         toast({
-          title: 'Unable to request domain claim',
+          title: t('integrations.sso.msp.toasts.requestClaimFailedTitle', { defaultValue: 'Unable to request domain claim' }),
           description: message,
           variant: 'destructive',
         });
@@ -157,10 +175,12 @@ export function MspSsoLoginDomainsSettings() {
 
       setNewDomain('');
       toast({
-        title: result.idempotent ? 'Domain claim unchanged' : 'Domain claim requested',
+        title: result.idempotent
+          ? t('integrations.sso.msp.toasts.claimUnchangedTitle', { defaultValue: 'Domain claim unchanged' })
+          : t('integrations.sso.msp.toasts.claimRequestedTitle', { defaultValue: 'Domain claim requested' }),
         description: result.idempotent
-          ? 'Existing pending claim and challenge are already active.'
-          : 'Pending domain claim created and verification challenge generated.',
+          ? t('integrations.sso.msp.toasts.claimUnchangedDescription', { defaultValue: 'Existing pending claim and challenge are already active.' })
+          : t('integrations.sso.msp.toasts.claimRequestedDescription', { defaultValue: 'Pending domain claim created and verification challenge generated.' }),
       });
       await load();
     } finally {
@@ -174,10 +194,10 @@ export function MspSsoLoginDomainsSettings() {
       setError(null);
       const result = await verifyMspSsoDomainClaimOwnership({ claimId });
       if (!result.success) {
-        const message = result.error || 'Unable to verify domain claim.';
+        const message = result.error || t('integrations.sso.msp.errors.verifyClaim', { defaultValue: 'Unable to verify domain claim.' });
         setError(message);
         toast({
-          title: 'Domain verification failed',
+          title: t('integrations.sso.msp.toasts.verifyFailedTitle', { defaultValue: 'Domain verification failed' }),
           description: message,
           variant: 'destructive',
         });
@@ -185,8 +205,8 @@ export function MspSsoLoginDomainsSettings() {
       }
 
       toast({
-        title: 'Domain claim verified',
-        description: 'Domain takeover is now eligible for tenant-scoped provider routing.',
+        title: t('integrations.sso.msp.toasts.verifiedTitle', { defaultValue: 'Domain claim verified' }),
+        description: t('integrations.sso.msp.toasts.verifiedDescription', { defaultValue: 'Domain takeover is now eligible for tenant-scoped provider routing.' }),
       });
       await load();
     } finally {
@@ -200,10 +220,10 @@ export function MspSsoLoginDomainsSettings() {
       setError(null);
       const result = await refreshMspSsoDomainClaimChallenge({ claimId });
       if (!result.success) {
-        const message = result.error || 'Unable to refresh challenge.';
+        const message = result.error || t('integrations.sso.msp.errors.refreshChallenge', { defaultValue: 'Unable to refresh challenge.' });
         setError(message);
         toast({
-          title: 'Unable to refresh challenge',
+          title: t('integrations.sso.msp.toasts.refreshFailedTitle', { defaultValue: 'Unable to refresh challenge' }),
           description: message,
           variant: 'destructive',
         });
@@ -211,8 +231,8 @@ export function MspSsoLoginDomainsSettings() {
       }
 
       toast({
-        title: 'Challenge refreshed',
-        description: 'A new verification challenge is active for this claim.',
+        title: t('integrations.sso.msp.toasts.refreshedTitle', { defaultValue: 'Challenge refreshed' }),
+        description: t('integrations.sso.msp.toasts.refreshedDescription', { defaultValue: 'A new verification challenge is active for this claim.' }),
       });
       await load();
     } finally {
@@ -226,10 +246,10 @@ export function MspSsoLoginDomainsSettings() {
       setError(null);
       const result = await revokeMspSsoDomainClaim({ claimId });
       if (!result.success) {
-        const message = result.error || 'Unable to revoke domain claim.';
+        const message = result.error || t('integrations.sso.msp.errors.revokeClaim', { defaultValue: 'Unable to revoke domain claim.' });
         setError(message);
         toast({
-          title: 'Unable to revoke claim',
+          title: t('integrations.sso.msp.toasts.revokeFailedTitle', { defaultValue: 'Unable to revoke claim' }),
           description: message,
           variant: 'destructive',
         });
@@ -237,8 +257,8 @@ export function MspSsoLoginDomainsSettings() {
       }
 
       toast({
-        title: 'Domain claim revoked',
-        description: 'Tenant takeover for this domain is disabled.',
+        title: t('integrations.sso.msp.toasts.revokedTitle', { defaultValue: 'Domain claim revoked' }),
+        description: t('integrations.sso.msp.toasts.revokedDescription', { defaultValue: 'Tenant takeover for this domain is disabled.' }),
       });
       await load();
     } finally {
@@ -249,17 +269,17 @@ export function MspSsoLoginDomainsSettings() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>MSP SSO Login Domains</CardTitle>
+        <CardTitle>{t('integrations.sso.msp.title', { defaultValue: 'MSP SSO Login Domains' })}</CardTitle>
         <CardDescription>
           {isEnterprise
-            ? 'Manage domain claim lifecycle for MSP login SSO provider discovery. Unclaimed or ineligible domains fall back to Nine Minds app-level providers.'
-            : 'Register advisory domains for MSP login SSO discovery. Ownership verification is not enforced in Community Edition, and unmanaged domains fall back to Nine Minds app-level providers.'}
+            ? t('integrations.sso.msp.descriptionEe', { defaultValue: 'Manage domain claim lifecycle for MSP login SSO provider discovery. Unclaimed or ineligible domains fall back to Nine Minds app-level providers.' })
+            : t('integrations.sso.msp.descriptionCe', { defaultValue: 'Register advisory domains for MSP login SSO discovery. Ownership verification is not enforced in Community Edition, and unmanaged domains fall back to Nine Minds app-level providers.' })}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <Alert variant="info">
           <AlertDescription>
-            Domains without an eligible tenant claim use the Nine Minds app-level SSO provider configuration.
+            {t('integrations.sso.msp.fallbackInfo', { defaultValue: 'Domains without an eligible tenant claim use the Nine Minds app-level SSO provider configuration.' })}
           </AlertDescription>
         </Alert>
         {error && (
@@ -269,11 +289,11 @@ export function MspSsoLoginDomainsSettings() {
         )}
 
         {loading ? (
-          <div className="text-sm text-muted-foreground">Loading…</div>
+          <div className="text-sm text-muted-foreground">{t('integrations.sso.msp.loading', { defaultValue: 'Loading…' })}</div>
         ) : isEnterprise ? (
           <>
             <div className="space-y-2">
-              <Label htmlFor="msp-sso-domain-claim-input">Request domain claim</Label>
+              <Label htmlFor="msp-sso-domain-claim-input">{t('integrations.sso.msp.requestClaimLabel', { defaultValue: 'Request domain claim' })}</Label>
               <div className="flex items-center gap-2">
                 <Input
                   id="msp-sso-domain-claim-input"
@@ -289,7 +309,7 @@ export function MspSsoLoginDomainsSettings() {
                   disabled={!newDomain.trim() || Boolean(claimActionKey)}
                 >
                   <Plus className="h-4 w-4 mr-1" />
-                  Request Claim
+                  {t('integrations.sso.msp.requestClaim', { defaultValue: 'Request Claim' })}
                 </Button>
               </div>
             </div>
@@ -297,7 +317,7 @@ export function MspSsoLoginDomainsSettings() {
             <div className="space-y-2">
               {claims.length === 0 ? (
                 <div className="rounded border border-dashed p-3 text-sm text-muted-foreground">
-                  No domain claims configured yet.
+                  {t('integrations.sso.msp.emptyClaims', { defaultValue: 'No domain claims configured yet.' })}
                 </div>
               ) : (
                 claims.map((claim) => (
@@ -309,19 +329,19 @@ export function MspSsoLoginDomainsSettings() {
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{claim.domain}</span>
                         <Badge variant={claimStatusVariant(claim.claim_status)}>
-                          {claimStatusLabel(claim.claim_status)}
+                          {claimStatusLabel(claim.claim_status, t)}
                         </Badge>
                       </div>
                       {claim.claim_status === 'pending' &&
                         claim.active_challenge_label &&
                         claim.active_challenge_value && (
                           <div className="rounded border border-dashed p-2 text-xs text-muted-foreground space-y-1">
-                            <div>Add DNS TXT record, then click Verify:</div>
+                            <div>{t('integrations.sso.msp.dnsInstructions', { defaultValue: 'Add DNS TXT record, then click Verify:' })}</div>
                             <div>
-                              Host: <code>{claim.active_challenge_label}</code>
+                              {t('integrations.sso.msp.dnsHost', { defaultValue: 'Host:' })} <code>{claim.active_challenge_label}</code>
                             </div>
                             <div>
-                              Value: <code>{claim.active_challenge_value}</code>
+                              {t('integrations.sso.msp.dnsValue', { defaultValue: 'Value:' })} <code>{claim.active_challenge_value}</code>
                             </div>
                           </div>
                         )}
@@ -337,7 +357,7 @@ export function MspSsoLoginDomainsSettings() {
                           onClick={() => handleRequestClaim(claim.domain)}
                           disabled={Boolean(claimActionKey)}
                         >
-                          Request
+                          {t('integrations.sso.msp.actions.request', { defaultValue: 'Request' })}
                         </Button>
                       )}
                       {claim.claim_status === 'pending' && (
@@ -349,7 +369,7 @@ export function MspSsoLoginDomainsSettings() {
                             onClick={() => handleVerifyClaim(claim.id)}
                             disabled={Boolean(claimActionKey)}
                           >
-                            Verify
+                            {t('integrations.sso.msp.actions.verify', { defaultValue: 'Verify' })}
                           </Button>
                           <Button
                             id={`msp-sso-domain-claim-reset-${claim.id}`}
@@ -358,7 +378,7 @@ export function MspSsoLoginDomainsSettings() {
                             onClick={() => handleRefreshChallenge(claim.id)}
                             disabled={Boolean(claimActionKey)}
                           >
-                            Reset Challenge
+                            {t('integrations.sso.msp.actions.resetChallenge', { defaultValue: 'Reset Challenge' })}
                           </Button>
                         </>
                       )}
@@ -372,7 +392,7 @@ export function MspSsoLoginDomainsSettings() {
                           onClick={() => handleRevokeClaim(claim.id)}
                           disabled={Boolean(claimActionKey)}
                         >
-                          Revoke
+                          {t('integrations.sso.msp.actions.revoke', { defaultValue: 'Revoke' })}
                         </Button>
                       )}
                     </div>
@@ -390,7 +410,7 @@ export function MspSsoLoginDomainsSettings() {
                 disabled={loading || Boolean(claimActionKey)}
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
+                {t('integrations.sso.msp.actions.refresh', { defaultValue: 'Refresh' })}
               </Button>
             </div>
           </>
@@ -398,12 +418,11 @@ export function MspSsoLoginDomainsSettings() {
           <>
             <Alert variant="info">
               <AlertDescription>
-                Advisory mode: domain registration helps route MSP SSO discovery but does not require ownership
-                verification in Community Edition.
+                {t('integrations.sso.msp.advisoryNotice', { defaultValue: 'Advisory mode: domain registration helps route MSP SSO discovery but does not require ownership verification in Community Edition.' })}
               </AlertDescription>
             </Alert>
             <div className="space-y-2">
-              <Label htmlFor="msp-sso-domain-add-input">Add login domain</Label>
+              <Label htmlFor="msp-sso-domain-add-input">{t('integrations.sso.msp.addDomainLabel', { defaultValue: 'Add login domain' })}</Label>
               <div className="flex items-center gap-2">
                 <Input
                   id="msp-sso-domain-add-input"
@@ -419,7 +438,7 @@ export function MspSsoLoginDomainsSettings() {
                   disabled={!newDomain.trim() || saving}
                 >
                   <Plus className="h-4 w-4 mr-1" />
-                  Add
+                  {t('integrations.sso.msp.actions.add', { defaultValue: 'Add' })}
                 </Button>
               </div>
             </div>
@@ -427,7 +446,7 @@ export function MspSsoLoginDomainsSettings() {
             <div className="space-y-2">
               {domains.length === 0 ? (
                 <div className="rounded border border-dashed p-3 text-sm text-muted-foreground">
-                  No domains configured. Unknown domains will use app-level provider fallback.
+                  {t('integrations.sso.msp.emptyDomains', { defaultValue: 'No domains configured. Unknown domains will use app-level provider fallback.' })}
                 </div>
               ) : (
                 domains.map((domain, index) => (
@@ -442,7 +461,7 @@ export function MspSsoLoginDomainsSettings() {
                       id={`msp-sso-domain-remove-${index}`}
                       type="button"
                       variant="ghost"
-                      aria-label={`Remove domain ${index + 1}`}
+                      aria-label={t('integrations.sso.msp.removeDomainAria', { defaultValue: 'Remove domain {{number}}', number: index + 1 })}
                       onClick={() => handleRemoveDomain(index)}
                       disabled={saving}
                     >
@@ -462,7 +481,7 @@ export function MspSsoLoginDomainsSettings() {
                 disabled={loading || saving}
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
+                {t('integrations.sso.msp.actions.refresh', { defaultValue: 'Refresh' })}
               </Button>
 
               <Button
@@ -471,7 +490,9 @@ export function MspSsoLoginDomainsSettings() {
                 onClick={handleSave}
                 disabled={saving}
               >
-                {saving ? 'Saving…' : 'Save Domains'}
+                {saving
+                  ? t('integrations.sso.msp.actions.saving', { defaultValue: 'Saving…' })
+                  : t('integrations.sso.msp.actions.saveDomains', { defaultValue: 'Save Domains' })}
               </Button>
             </div>
           </>

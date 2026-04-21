@@ -24,6 +24,7 @@ import {
   RefreshCw,
   Save,
 } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type MicrosoftIntegrationStatus = Awaited<ReturnType<typeof getMicrosoftIntegrationStatus>>;
 type MicrosoftProfile = NonNullable<MicrosoftIntegrationStatus['profiles']>[number];
@@ -41,29 +42,41 @@ type TeamsFormState = {
 
 type TeamsCheckboxGroupField = 'enabledCapabilities' | 'notificationCategories' | 'allowedActions';
 
-const TEAMS_CAPABILITY_OPTIONS = [
-  { value: 'personal_tab', label: 'Personal tab', description: 'Launch the PSA personal tab entry point.' },
-  { value: 'personal_bot', label: 'Personal bot', description: 'Enable personal-scope bot commands for technicians.' },
-  { value: 'group_chat_bot', label: 'Group chat bot', description: 'Allow the bot to respond in Teams group chats. Bot replies (including ticket details) are visible to every member of the chat.' },
-  { value: 'message_extension', label: 'Message extension', description: 'Enable lookup and message-driven PSA actions.' },
-  { value: 'activity_notifications', label: 'Activity notifications', description: 'Deliver personal Teams activity-feed notifications.' },
-] as const;
+const TEAMS_CAPABILITY_VALUES = ['personal_tab', 'personal_bot', 'group_chat_bot', 'message_extension', 'activity_notifications'] as const;
+const TEAMS_NOTIFICATION_VALUES = ['assignment', 'customer_reply', 'approval_request', 'escalation', 'sla_risk'] as const;
+const TEAMS_ALLOWED_ACTION_VALUES = ['assign_ticket', 'add_note', 'reply_to_contact', 'log_time', 'approval_response'] as const;
 
-const TEAMS_NOTIFICATION_OPTIONS = [
-  { value: 'assignment', label: 'Assignment events', description: 'Notify technicians when work is assigned.' },
-  { value: 'customer_reply', label: 'Customer replies', description: 'Notify technicians when customers respond.' },
-  { value: 'approval_request', label: 'Approval requests', description: 'Notify approvers about pending decisions.' },
-  { value: 'escalation', label: 'Escalations', description: 'Notify owners when work escalates.' },
-  { value: 'sla_risk', label: 'SLA risk', description: 'Notify technicians when SLA risk thresholds are reached.' },
-] as const;
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 
-const TEAMS_ALLOWED_ACTION_OPTIONS = [
-  { value: 'assign_ticket', label: 'Assign ticket', description: 'Allow ticket assignment quick actions.' },
-  { value: 'add_note', label: 'Add note', description: 'Allow internal note quick actions.' },
-  { value: 'reply_to_contact', label: 'Reply to contact', description: 'Allow customer-visible reply quick actions.' },
-  { value: 'log_time', label: 'Log time', description: 'Allow time-entry quick actions.' },
-  { value: 'approval_response', label: 'Approval response', description: 'Allow approve and reject quick actions.' },
-] as const;
+function getTeamsCapabilityOptions(t: TranslateFn) {
+  return [
+    { value: 'personal_tab', label: t('integrations.teams.settings.capabilities.personalTab.label', { defaultValue: 'Personal tab' }), description: t('integrations.teams.settings.capabilities.personalTab.description', { defaultValue: 'Launch the PSA personal tab entry point.' }) },
+    { value: 'personal_bot', label: t('integrations.teams.settings.capabilities.personalBot.label', { defaultValue: 'Personal bot' }), description: t('integrations.teams.settings.capabilities.personalBot.description', { defaultValue: 'Enable personal-scope bot commands for technicians.' }) },
+    { value: 'group_chat_bot', label: t('integrations.teams.settings.capabilities.groupChatBot.label', { defaultValue: 'Group chat bot' }), description: t('integrations.teams.settings.capabilities.groupChatBot.description', { defaultValue: 'Allow the bot to respond in Teams group chats. Bot replies (including ticket details) are visible to every member of the chat.' }) },
+    { value: 'message_extension', label: t('integrations.teams.settings.capabilities.messageExtension.label', { defaultValue: 'Message extension' }), description: t('integrations.teams.settings.capabilities.messageExtension.description', { defaultValue: 'Enable lookup and message-driven PSA actions.' }) },
+    { value: 'activity_notifications', label: t('integrations.teams.settings.capabilities.activityNotifications.label', { defaultValue: 'Activity notifications' }), description: t('integrations.teams.settings.capabilities.activityNotifications.description', { defaultValue: 'Deliver personal Teams activity-feed notifications.' }) },
+  ];
+}
+
+function getTeamsNotificationOptions(t: TranslateFn) {
+  return [
+    { value: 'assignment', label: t('integrations.teams.settings.notifications.assignment.label', { defaultValue: 'Assignment events' }), description: t('integrations.teams.settings.notifications.assignment.description', { defaultValue: 'Notify technicians when work is assigned.' }) },
+    { value: 'customer_reply', label: t('integrations.teams.settings.notifications.customerReply.label', { defaultValue: 'Customer replies' }), description: t('integrations.teams.settings.notifications.customerReply.description', { defaultValue: 'Notify technicians when customers respond.' }) },
+    { value: 'approval_request', label: t('integrations.teams.settings.notifications.approvalRequest.label', { defaultValue: 'Approval requests' }), description: t('integrations.teams.settings.notifications.approvalRequest.description', { defaultValue: 'Notify approvers about pending decisions.' }) },
+    { value: 'escalation', label: t('integrations.teams.settings.notifications.escalation.label', { defaultValue: 'Escalations' }), description: t('integrations.teams.settings.notifications.escalation.description', { defaultValue: 'Notify owners when work escalates.' }) },
+    { value: 'sla_risk', label: t('integrations.teams.settings.notifications.slaRisk.label', { defaultValue: 'SLA risk' }), description: t('integrations.teams.settings.notifications.slaRisk.description', { defaultValue: 'Notify technicians when SLA risk thresholds are reached.' }) },
+  ];
+}
+
+function getTeamsAllowedActionOptions(t: TranslateFn) {
+  return [
+    { value: 'assign_ticket', label: t('integrations.teams.settings.actions.assignTicket.label', { defaultValue: 'Assign ticket' }), description: t('integrations.teams.settings.actions.assignTicket.description', { defaultValue: 'Allow ticket assignment quick actions.' }) },
+    { value: 'add_note', label: t('integrations.teams.settings.actions.addNote.label', { defaultValue: 'Add note' }), description: t('integrations.teams.settings.actions.addNote.description', { defaultValue: 'Allow internal note quick actions.' }) },
+    { value: 'reply_to_contact', label: t('integrations.teams.settings.actions.replyToContact.label', { defaultValue: 'Reply to contact' }), description: t('integrations.teams.settings.actions.replyToContact.description', { defaultValue: 'Allow customer-visible reply quick actions.' }) },
+    { value: 'log_time', label: t('integrations.teams.settings.actions.logTime.label', { defaultValue: 'Log time' }), description: t('integrations.teams.settings.actions.logTime.description', { defaultValue: 'Allow time-entry quick actions.' }) },
+    { value: 'approval_response', label: t('integrations.teams.settings.actions.approvalResponse.label', { defaultValue: 'Approval response' }), description: t('integrations.teams.settings.actions.approvalResponse.description', { defaultValue: 'Allow approve and reject quick actions.' }) },
+  ];
+}
 
 const EMPTY_FORM_STATE: TeamsFormState = {
   selectedProfileId: '',
@@ -115,10 +128,14 @@ function ChecklistItem({
   label,
   detail,
   complete,
+  readyLabel,
+  needsActionLabel,
 }: {
   label: string;
   detail: string;
   complete: boolean;
+  readyLabel: string;
+  needsActionLabel: string;
 }) {
   return (
     <div className="flex items-start justify-between gap-4 rounded-md border bg-muted/10 p-3">
@@ -126,30 +143,30 @@ function ChecklistItem({
         <div className="text-sm font-medium">{label}</div>
         <div className="mt-1 text-xs text-muted-foreground">{detail}</div>
       </div>
-      <Badge variant={complete ? 'success' : 'warning'}>{complete ? 'Ready' : 'Needs action'}</Badge>
+      <Badge variant={complete ? 'success' : 'warning'}>{complete ? readyLabel : needsActionLabel}</Badge>
     </div>
   );
 }
 
-function getInstallStatusBadge(installStatus: TeamsIntegration['installStatus']) {
+function getInstallStatusBadge(installStatus: TeamsIntegration['installStatus'], t: TranslateFn) {
   switch (installStatus) {
     case 'active':
-      return { label: 'Active', variant: 'success' as const };
+      return { label: t('integrations.teams.settings.installStatus.active', { defaultValue: 'Active' }), variant: 'success' as const };
     case 'install_pending':
-      return { label: 'Install Pending', variant: 'warning' as const };
+      return { label: t('integrations.teams.settings.installStatus.installPending', { defaultValue: 'Install Pending' }), variant: 'warning' as const };
     case 'error':
-      return { label: 'Error', variant: 'error' as const };
+      return { label: t('integrations.teams.settings.installStatus.error', { defaultValue: 'Error' }), variant: 'error' as const };
     default:
-      return { label: 'Not Configured', variant: 'secondary' as const };
+      return { label: t('integrations.teams.settings.installStatus.notConfigured', { defaultValue: 'Not Configured' }), variant: 'secondary' as const };
   }
 }
 
 function mapIntegrationToForm(integration?: TeamsIntegration | null): TeamsFormState {
   return {
     selectedProfileId: integration?.selectedProfileId ?? '',
-    enabledCapabilities: integration?.enabledCapabilities ?? TEAMS_CAPABILITY_OPTIONS.map((option) => option.value),
-    notificationCategories: integration?.notificationCategories ?? TEAMS_NOTIFICATION_OPTIONS.map((option) => option.value),
-    allowedActions: integration?.allowedActions ?? TEAMS_ALLOWED_ACTION_OPTIONS.map((option) => option.value),
+    enabledCapabilities: integration?.enabledCapabilities ?? [...TEAMS_CAPABILITY_VALUES],
+    notificationCategories: integration?.notificationCategories ?? [...TEAMS_NOTIFICATION_VALUES],
+    allowedActions: integration?.allowedActions ?? [...TEAMS_ALLOWED_ACTION_VALUES],
   };
 }
 
@@ -163,7 +180,7 @@ function toggleValue(values: string[], value: string, checked: boolean): string[
   return [...next];
 }
 
-async function getDownloadErrorMessage(response: Response): Promise<string> {
+async function getDownloadErrorMessage(response: Response, t: TranslateFn): Promise<string> {
   const contentType = response.headers.get('content-type') || '';
 
   if (contentType.includes('application/json')) {
@@ -174,10 +191,14 @@ async function getDownloadErrorMessage(response: Response): Promise<string> {
   }
 
   const text = await response.text().catch(() => '');
-  return text.trim() || 'Failed to download Teams app package';
+  return text.trim() || t('integrations.teams.settings.errors.downloadPackage', { defaultValue: 'Failed to download Teams app package' });
 }
 
 export function TeamsIntegrationSettings() {
+  const { t } = useTranslation();
+  const TEAMS_CAPABILITY_OPTIONS = React.useMemo(() => getTeamsCapabilityOptions(t), [t]);
+  const TEAMS_NOTIFICATION_OPTIONS = React.useMemo(() => getTeamsNotificationOptions(t), [t]);
+  const TEAMS_ALLOWED_ACTION_OPTIONS = React.useMemo(() => getTeamsAllowedActionOptions(t), [t]);
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [packageLoading, setPackageLoading] = React.useState(false);
@@ -204,20 +225,20 @@ export function TeamsIntegrationSettings() {
       setTeamsStatus(teamsResult);
 
       if (!microsoftResult.success) {
-        throw new Error(microsoftResult.error || 'Failed to load Teams setup guidance');
+        throw new Error(microsoftResult.error || t('integrations.teams.settings.errors.loadGuidance', { defaultValue: 'Failed to load Teams setup guidance' }));
       }
 
       if (!teamsResult.success) {
-        throw new Error(teamsResult.error || 'Failed to load Teams setup guidance');
+        throw new Error(teamsResult.error || t('integrations.teams.settings.errors.loadGuidance', { defaultValue: 'Failed to load Teams setup guidance' }));
       }
 
       setFormState(mapIntegrationToForm(teamsResult.integration));
     } catch (err: any) {
-      setError(err?.message || 'Failed to load Teams setup guidance');
+      setError(err?.message || t('integrations.teams.settings.errors.loadGuidance', { defaultValue: 'Failed to load Teams setup guidance' }));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   React.useEffect(() => {
     void load();
@@ -228,7 +249,7 @@ export function TeamsIntegrationSettings() {
   const hasEligibleProfiles = eligibleProfiles.length > 0;
   const currentIntegration = teamsStatus?.success ? teamsStatus.integration ?? null : null;
   const installStatus = currentIntegration?.installStatus ?? 'not_configured';
-  const installStatusBadge = getInstallStatusBadge(installStatus);
+  const installStatusBadge = getInstallStatusBadge(installStatus, t);
 
   const selectedProfile = eligibleProfiles.find((profile) => profile.profileId === formState.selectedProfileId) ?? null;
   const selectedProfileRecord = profiles.find((profile) => profile.profileId === formState.selectedProfileId) ?? null;
@@ -248,29 +269,33 @@ export function TeamsIntegrationSettings() {
   const selectedProfileSummary = selectedProfile
     ? selectedProfile.displayName
     : selectedProfileInvalid
-      ? 'Selected profile needs repair'
-      : 'No profile selected';
+      ? t('integrations.teams.settings.profileSummary.needsRepair', { defaultValue: 'Selected profile needs repair' })
+      : t('integrations.teams.settings.profileSummary.none', { defaultValue: 'No profile selected' });
 
   const checklist = [
     {
-      label: 'Microsoft profile selected',
-      detail: selectedProfile ? `${selectedProfile.displayName} is bound for Teams.` : 'Select one eligible Microsoft profile before saving or activating Teams.',
+      label: t('integrations.teams.settings.checklist.profileSelected.label', { defaultValue: 'Microsoft profile selected' }),
+      detail: selectedProfile
+        ? t('integrations.teams.settings.checklist.profileSelected.completed', { defaultValue: '{{name}} is bound for Teams.', name: selectedProfile.displayName })
+        : t('integrations.teams.settings.checklist.profileSelected.pending', { defaultValue: 'Select one eligible Microsoft profile before saving or activating Teams.' }),
       complete: Boolean(selectedProfile),
     },
     {
-      label: 'Profile ready for Teams install',
-      detail: selectedProfile ? 'The selected profile has client ID, tenant ID, and stored secret material.' : 'No selected Teams profile is ready yet.',
+      label: t('integrations.teams.settings.checklist.profileReady.label', { defaultValue: 'Profile ready for Teams install' }),
+      detail: selectedProfile
+        ? t('integrations.teams.settings.checklist.profileReady.completed', { defaultValue: 'The selected profile has client ID, tenant ID, and stored secret material.' })
+        : t('integrations.teams.settings.checklist.profileReady.pending', { defaultValue: 'No selected Teams profile is ready yet.' }),
       complete: Boolean(selectedProfile?.readiness.ready),
     },
     {
-      label: 'Teams install state',
+      label: t('integrations.teams.settings.checklist.installState.label', { defaultValue: 'Teams install state' }),
       detail: installStatus === 'active'
-        ? 'Teams is active for this tenant.'
+        ? t('integrations.teams.settings.checklist.installState.active', { defaultValue: 'Teams is active for this tenant.' })
         : installStatus === 'install_pending'
-          ? 'Draft setup is saved and ready for install or consent.'
+          ? t('integrations.teams.settings.checklist.installState.pending', { defaultValue: 'Draft setup is saved and ready for install or consent.' })
           : installStatus === 'error'
-            ? currentIntegration?.lastError || 'Teams setup has an error that needs remediation.'
-            : 'Save a draft or activate Teams when setup is ready.',
+            ? currentIntegration?.lastError || t('integrations.teams.settings.checklist.installState.error', { defaultValue: 'Teams setup has an error that needs remediation.' })
+            : t('integrations.teams.settings.checklist.installState.notConfigured', { defaultValue: 'Save a draft or activate Teams when setup is ready.' }),
       complete: installStatus === 'active' || installStatus === 'install_pending',
     },
   ];
@@ -302,24 +327,24 @@ export function TeamsIntegrationSettings() {
       });
 
       if (!result.success) {
-        throw new Error(result.error || 'Failed to save Teams settings');
+        throw new Error(result.error || t('integrations.teams.settings.errors.saveSettings', { defaultValue: 'Failed to save Teams settings' }));
       }
 
       setTeamsStatus(result);
       setFormState(mapIntegrationToForm(result.integration));
       setStatusMessage(
         resolvedStatus === 'active' && !isActive
-          ? 'Teams setup activated.'
+          ? t('integrations.teams.settings.statusMessage.activated', { defaultValue: 'Teams setup activated.' })
           : resolvedStatus === 'not_configured'
-            ? 'Teams setup deactivated.'
-            : 'Teams setup saved.'
+            ? t('integrations.teams.settings.statusMessage.deactivated', { defaultValue: 'Teams setup deactivated.' })
+            : t('integrations.teams.settings.statusMessage.saved', { defaultValue: 'Teams setup saved.' })
       );
     } catch (err: any) {
-      setError(err?.message || 'Failed to save Teams settings');
+      setError(err?.message || t('integrations.teams.settings.errors.saveSettings', { defaultValue: 'Failed to save Teams settings' }));
     } finally {
       setSaving(false);
     }
-  }, [canPersist, formState, isActive]);
+  }, [canPersist, formState, isActive, t]);
 
   const handlePackageRefresh = React.useCallback(async () => {
     setPackageLoading(true);
@@ -329,17 +354,17 @@ export function TeamsIntegrationSettings() {
     try {
       const result = await getTeamsAppPackageStatus();
       if (!result.success || !result.package) {
-        throw new Error(result.error || 'Failed to generate Teams app package');
+        throw new Error(result.error || t('integrations.teams.settings.errors.generatePackage', { defaultValue: 'Failed to generate Teams app package' }));
       }
 
       setPackageStatus(result.package);
-      setStatusMessage('Teams app package generated.');
+      setStatusMessage(t('integrations.teams.settings.statusMessage.packageGenerated', { defaultValue: 'Teams app package generated.' }));
     } catch (err: any) {
-      setPackageError(err?.message || 'Failed to generate Teams app package');
+      setPackageError(err?.message || t('integrations.teams.settings.errors.generatePackage', { defaultValue: 'Failed to generate Teams app package' }));
     } finally {
       setPackageLoading(false);
     }
-  }, []);
+  }, [t]);
 
   const handleZipDownload = React.useCallback(async () => {
     if (!packageStatus) {
@@ -357,7 +382,7 @@ export function TeamsIntegrationSettings() {
       });
 
       if (!response.ok) {
-        throw new Error(await getDownloadErrorMessage(response));
+        throw new Error(await getDownloadErrorMessage(response, t));
       }
 
       const blob = await response.blob();
@@ -369,13 +394,13 @@ export function TeamsIntegrationSettings() {
       anchor.click();
       anchor.remove();
       URL.revokeObjectURL(objectUrl);
-      setStatusMessage('Teams app package downloaded.');
+      setStatusMessage(t('integrations.teams.settings.statusMessage.packageDownloaded', { defaultValue: 'Teams app package downloaded.' }));
     } catch (err: any) {
-      setPackageError(err?.message || 'Failed to download Teams app package');
+      setPackageError(err?.message || t('integrations.teams.settings.errors.downloadPackage', { defaultValue: 'Failed to download Teams app package' }));
     } finally {
       setDownloadLoading(false);
     }
-  }, [packageStatus]);
+  }, [packageStatus, t]);
 
   if (loading) {
     return (
@@ -404,9 +429,9 @@ export function TeamsIntegrationSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Microsoft Teams</CardTitle>
+          <CardTitle>{t('integrations.teams.settings.title', { defaultValue: 'Microsoft Teams' })}</CardTitle>
           <CardDescription>
-            Bind Teams to a Microsoft profile, enable capabilities, and generate the tenant package.
+            {t('integrations.teams.settings.description', { defaultValue: 'Bind Teams to a Microsoft profile, enable capabilities, and generate the tenant package.' })}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -417,23 +442,23 @@ export function TeamsIntegrationSettings() {
 
           <div className="space-y-3">
             {checklist.map((item) => (
-              <ChecklistItem key={item.label} {...item} />
+              <ChecklistItem key={item.label} {...item} readyLabel={t('integrations.teams.settings.checklist.ready', { defaultValue: 'Ready' })} needsActionLabel={t('integrations.teams.settings.checklist.needsAction', { defaultValue: 'Needs action' })} />
             ))}
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">
             <GuidanceBlock
-              title="Required scopes"
+              title={t('integrations.teams.settings.guidance.requiredScopes', { defaultValue: 'Required scopes' })}
               items={teamsScopes.map((value) => ({ label: value, value }))}
             />
             <GuidanceBlock
-              title="Redirect URIs"
+              title={t('integrations.teams.settings.guidance.redirectUris', { defaultValue: 'Redirect URIs' })}
               items={[
-                { label: 'Personal tab', value: redirectUris?.teamsTab || 'Unavailable' },
-                { label: 'Personal bot', value: redirectUris?.teamsBot || 'Unavailable' },
+                { label: t('integrations.teams.settings.guidance.personalTab', { defaultValue: 'Personal tab' }), value: redirectUris?.teamsTab || t('integrations.teams.settings.guidance.unavailable', { defaultValue: 'Unavailable' }) },
+                { label: t('integrations.teams.settings.guidance.personalBot', { defaultValue: 'Personal bot' }), value: redirectUris?.teamsBot || t('integrations.teams.settings.guidance.unavailable', { defaultValue: 'Unavailable' }) },
                 {
-                  label: 'Message extension',
-                  value: redirectUris?.teamsMessageExtension || 'Unavailable',
+                  label: t('integrations.teams.settings.guidance.messageExtension', { defaultValue: 'Message extension' }),
+                  value: redirectUris?.teamsMessageExtension || t('integrations.teams.settings.guidance.unavailable', { defaultValue: 'Unavailable' }),
                 },
               ]}
             />
@@ -441,14 +466,14 @@ export function TeamsIntegrationSettings() {
 
           {teamsApplicationIdUri ? (
             <GuidanceBlock
-              title="Application ID URI"
-              items={[{ label: 'Teams app ID URI', value: teamsApplicationIdUri }]}
+              title={t('integrations.teams.settings.guidance.applicationIdUri', { defaultValue: 'Application ID URI' })}
+              items={[{ label: t('integrations.teams.settings.guidance.teamsAppIdUri', { defaultValue: 'Teams app ID URI' }), value: teamsApplicationIdUri }]}
             />
           ) : null}
 
           <div className="space-y-4">
             <div>
-              <Label htmlFor="teams-profile">Microsoft profile</Label>
+              <Label htmlFor="teams-profile">{t('integrations.teams.settings.profileLabel', { defaultValue: 'Microsoft profile' })}</Label>
               <select
                 id="teams-profile"
                 className="mt-2 flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm"
@@ -460,7 +485,7 @@ export function TeamsIntegrationSettings() {
                   }));
                 }}
               >
-                <option value="">Select profile</option>
+                <option value="">{t('integrations.teams.settings.selectProfile', { defaultValue: 'Select profile' })}</option>
                 {eligibleProfiles.map((profile) => (
                   <option key={profile.profileId} value={profile.profileId}>
                     {profile.displayName}
@@ -473,14 +498,14 @@ export function TeamsIntegrationSettings() {
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
-                  No Microsoft profiles are ready for Teams. Finish Microsoft setup first.
+                  {t('integrations.teams.settings.noEligibleProfiles', { defaultValue: 'No Microsoft profiles are ready for Teams. Finish Microsoft setup first.' })}
                 </AlertDescription>
               </Alert>
             ) : null}
 
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-3">
-                <div className="text-sm font-medium">Capabilities</div>
+                <div className="text-sm font-medium">{t('integrations.teams.settings.section.capabilities', { defaultValue: 'Capabilities' })}</div>
                 {TEAMS_CAPABILITY_OPTIONS.map((option) => (
                   <label key={option.value} className="flex items-start gap-3 rounded-md border p-3">
                     <Checkbox
@@ -499,7 +524,7 @@ export function TeamsIntegrationSettings() {
               </div>
 
               <div className="space-y-3">
-                <div className="text-sm font-medium">Notifications</div>
+                <div className="text-sm font-medium">{t('integrations.teams.settings.section.notifications', { defaultValue: 'Notifications' })}</div>
                 {TEAMS_NOTIFICATION_OPTIONS.map((option) => (
                   <label key={option.value} className="flex items-start gap-3 rounded-md border p-3">
                     <Checkbox
@@ -518,7 +543,7 @@ export function TeamsIntegrationSettings() {
               </div>
 
               <div className="space-y-3">
-                <div className="text-sm font-medium">Allowed actions</div>
+                <div className="text-sm font-medium">{t('integrations.teams.settings.section.allowedActions', { defaultValue: 'Allowed actions' })}</div>
                 {TEAMS_ALLOWED_ACTION_OPTIONS.map((option) => (
                   <label key={option.value} className="flex items-start gap-3 rounded-md border p-3">
                     <Checkbox
@@ -541,7 +566,11 @@ export function TeamsIntegrationSettings() {
           <div className="flex flex-wrap gap-3">
             <Button id="teams-save-draft" onClick={() => void handleSave()} disabled={saving || !canPersist}>
               <Save className="mr-2 h-4 w-4" />
-              {saving ? 'Saving...' : isActive ? 'Save changes' : 'Save draft'}
+              {saving
+                ? t('integrations.teams.settings.actions.saving', { defaultValue: 'Saving...' })
+                : isActive
+                  ? t('integrations.teams.settings.actions.saveChanges', { defaultValue: 'Save changes' })
+                  : t('integrations.teams.settings.actions.saveDraft', { defaultValue: 'Save draft' })}
             </Button>
             <Button
               id="teams-activate"
@@ -550,7 +579,9 @@ export function TeamsIntegrationSettings() {
               disabled={saving || !canActivate}
             >
               <CheckCircle2 className="mr-2 h-4 w-4" />
-              {isActive ? 'Teams active' : 'Activate Teams'}
+              {isActive
+                ? t('integrations.teams.settings.actions.teamsActive', { defaultValue: 'Teams active' })
+                : t('integrations.teams.settings.actions.activate', { defaultValue: 'Activate Teams' })}
             </Button>
             <Button
               id="teams-deactivate"
@@ -558,11 +589,11 @@ export function TeamsIntegrationSettings() {
               onClick={() => void handleSave('not_configured')}
               disabled={saving || !canDeactivate}
             >
-              Deactivate
+              {t('integrations.teams.settings.actions.deactivate', { defaultValue: 'Deactivate' })}
             </Button>
             <Button id="teams-reload" variant="outline" onClick={() => void load()} disabled={loading}>
               <RefreshCw className="mr-2 h-4 w-4" />
-              Reload
+              {t('integrations.teams.settings.actions.reload', { defaultValue: 'Reload' })}
             </Button>
           </div>
         </CardContent>
@@ -570,9 +601,9 @@ export function TeamsIntegrationSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Teams Package</CardTitle>
+          <CardTitle>{t('integrations.teams.settings.package.title', { defaultValue: 'Teams Package' })}</CardTitle>
           <CardDescription>
-            Generate the app manifest and installation links for the selected Microsoft profile.
+            {t('integrations.teams.settings.package.description', { defaultValue: 'Generate the app manifest and installation links for the selected Microsoft profile.' })}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -590,7 +621,9 @@ export function TeamsIntegrationSettings() {
               disabled={packageLoading || !hasSavedPackageContext}
             >
               <Package className="mr-2 h-4 w-4" />
-              {packageLoading ? 'Generating...' : 'Generate package'}
+              {packageLoading
+                ? t('integrations.teams.settings.package.generating', { defaultValue: 'Generating...' })
+                : t('integrations.teams.settings.package.generate', { defaultValue: 'Generate package' })}
             </Button>
           </div>
 
@@ -598,34 +631,34 @@ export function TeamsIntegrationSettings() {
             <div className="space-y-4 rounded-md border p-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <GuidanceBlock
-                  title="Package"
+                  title={t('integrations.teams.settings.package.section', { defaultValue: 'Package' })}
                   items={[
-                    { label: 'Manifest version', value: packageStatus.manifestVersion },
-                    { label: 'Package version', value: packageStatus.packageVersion },
-                    { label: 'File name', value: packageStatus.fileName },
+                    { label: t('integrations.teams.settings.package.manifestVersion', { defaultValue: 'Manifest version' }), value: packageStatus.manifestVersion },
+                    { label: t('integrations.teams.settings.package.packageVersion', { defaultValue: 'Package version' }), value: packageStatus.packageVersion },
+                    { label: t('integrations.teams.settings.package.fileName', { defaultValue: 'File name' }), value: packageStatus.fileName },
                   ]}
                 />
                 <GuidanceBlock
-                  title="App IDs"
+                  title={t('integrations.teams.settings.package.appIds', { defaultValue: 'App IDs' })}
                   items={[
-                    { label: 'App ID', value: packageStatus.appId },
-                    { label: 'Bot ID', value: packageStatus.botId },
-                    { label: 'Web application resource', value: packageStatus.webApplicationInfo.resource },
+                    { label: t('integrations.teams.settings.package.appId', { defaultValue: 'App ID' }), value: packageStatus.appId },
+                    { label: t('integrations.teams.settings.package.botId', { defaultValue: 'Bot ID' }), value: packageStatus.botId },
+                    { label: t('integrations.teams.settings.package.webResource', { defaultValue: 'Web application resource' }), value: packageStatus.webApplicationInfo.resource },
                   ]}
                 />
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <GuidanceBlock
-                  title="Valid domains"
+                  title={t('integrations.teams.settings.package.validDomains', { defaultValue: 'Valid domains' })}
                   items={packageStatus.validDomains.map((value) => ({ label: value, value }))}
                 />
                 <GuidanceBlock
-                  title="Deep links"
+                  title={t('integrations.teams.settings.package.deepLinks', { defaultValue: 'Deep links' })}
                   items={[
-                    { label: 'My work', value: packageStatus.deepLinks.myWork },
-                    { label: 'Ticket template', value: packageStatus.deepLinks.ticketTemplate },
-                    { label: 'Project task template', value: packageStatus.deepLinks.projectTaskTemplate },
+                    { label: t('integrations.teams.settings.package.myWork', { defaultValue: 'My work' }), value: packageStatus.deepLinks.myWork },
+                    { label: t('integrations.teams.settings.package.ticketTemplate', { defaultValue: 'Ticket template' }), value: packageStatus.deepLinks.ticketTemplate },
+                    { label: t('integrations.teams.settings.package.projectTaskTemplate', { defaultValue: 'Project task template' }), value: packageStatus.deepLinks.projectTaskTemplate },
                   ]}
                 />
               </div>
@@ -638,24 +671,26 @@ export function TeamsIntegrationSettings() {
                   disabled={downloadLoading}
                 >
                   <Download className="mr-2 h-4 w-4" />
-                  {downloadLoading ? 'Downloading...' : 'Download app package (.zip)'}
+                  {downloadLoading
+                    ? t('integrations.teams.settings.package.downloading', { defaultValue: 'Downloading...' })
+                    : t('integrations.teams.settings.package.downloadZip', { defaultValue: 'Download app package (.zip)' })}
                 </Button>
                 <Button id="teams-download-manifest" asChild variant="secondary">
                   <a href={`data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(packageStatus.manifest, null, 2))}`} download={`${packageStatus.fileName.replace(/\.zip$/, '')}.json`}>
                     <Download className="mr-2 h-4 w-4" />
-                    Download manifest JSON
+                    {t('integrations.teams.settings.package.downloadManifest', { defaultValue: 'Download manifest JSON' })}
                   </a>
                 </Button>
                 <Button id="teams-open-deeplink" asChild variant="outline">
                   <a href={packageStatus.deepLinks.myWork} target="_blank" rel="noreferrer">
                     <MessageSquareShare className="mr-2 h-4 w-4" />
-                    Open Teams deep link
+                    {t('integrations.teams.settings.package.openDeeplink', { defaultValue: 'Open Teams deep link' })}
                   </a>
                 </Button>
                 <Button id="teams-open-base-url" asChild variant="outline">
                   <a href={packageStatus.baseUrl} target="_blank" rel="noreferrer">
                     <ArrowUpRight className="mr-2 h-4 w-4" />
-                    Open PSA base URL
+                    {t('integrations.teams.settings.package.openBaseUrl', { defaultValue: 'Open PSA base URL' })}
                   </a>
                 </Button>
               </div>

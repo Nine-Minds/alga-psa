@@ -9,6 +9,7 @@ import CSVIntegrationSettings from './CSVIntegrationSettings';
 import XeroIntegrationSettings from './XeroIntegrationSettings';
 import XeroCsvIntegrationSettings from './XeroCsvIntegrationSettings';
 import { cn } from '@alga-psa/ui/lib/utils';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type AccountingIntegrationId = 'quickbooks_online' | 'xero' | 'quickbooks_csv' | 'xero_csv';
 
@@ -69,6 +70,7 @@ function IntegrationBanner({ option }: { option: AccountingIntegrationOption }) 
 }
 
 export default function AccountingIntegrationsSetup() {
+  const { t } = useTranslation();
   const searchParams = useSearchParams();
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
@@ -78,11 +80,11 @@ export default function AccountingIntegrationsSetup() {
         {
           id: 'quickbooks_online',
           title: 'QuickBooks Online',
-          description: 'Connect your realm to sync invoices and manage mappings.',
+          description: t('integrations.accounting.setup.options.qbo.description', { defaultValue: 'Connect your realm to sync invoices and manage mappings.' }),
           disabled: true,
           highlights: [
-            { label: 'Sync', value: '2-way' },
-            { label: 'Delivery', value: 'Instant' }
+            { label: t('integrations.accounting.setup.highlights.sync', { defaultValue: 'Sync' }), value: t('integrations.accounting.setup.highlightValues.twoWay', { defaultValue: '2-way' }) },
+            { label: t('integrations.accounting.setup.highlights.delivery', { defaultValue: 'Delivery' }), value: t('integrations.accounting.setup.highlightValues.instant', { defaultValue: 'Instant' }) }
           ]
         }
       ];
@@ -91,11 +93,11 @@ export default function AccountingIntegrationsSetup() {
         next.push({
           id: 'xero',
           title: 'Xero',
-          description: 'Connect your organisation with tenant-owned OAuth credentials for live accounting exports and mappings.',
-          badge: { label: 'Enterprise', variant: 'secondary' },
+          description: t('integrations.accounting.setup.options.xero.description', { defaultValue: 'Connect your organisation with tenant-owned OAuth credentials for live accounting exports and mappings.' }),
+          badge: { label: t('integrations.accounting.setup.badges.enterprise', { defaultValue: 'Enterprise' }), variant: 'secondary' },
           highlights: [
-            { label: 'Sync', value: '2-way' },
-            { label: 'Delivery', value: 'Live' }
+            { label: t('integrations.accounting.setup.highlights.sync', { defaultValue: 'Sync' }), value: t('integrations.accounting.setup.highlightValues.twoWay', { defaultValue: '2-way' }) },
+            { label: t('integrations.accounting.setup.highlights.delivery', { defaultValue: 'Delivery' }), value: t('integrations.accounting.setup.highlightValues.live', { defaultValue: 'Live' }) }
           ]
         });
       }
@@ -104,26 +106,26 @@ export default function AccountingIntegrationsSetup() {
         {
           id: 'quickbooks_csv',
           title: 'QuickBooks CSV',
-          description: 'Export invoices to CSV for manual import into QuickBooks and import tax data from reports.',
+          description: t('integrations.accounting.setup.options.qboCsv.description', { defaultValue: 'Export invoices to CSV for manual import into QuickBooks and import tax data from reports.' }),
           highlights: [
-            { label: 'Export', value: 'Manual' },
-            { label: 'Format', value: 'CSV' }
+            { label: t('integrations.accounting.setup.highlights.export', { defaultValue: 'Export' }), value: t('integrations.accounting.setup.highlightValues.manual', { defaultValue: 'Manual' }) },
+            { label: t('integrations.accounting.setup.highlights.format', { defaultValue: 'Format' }), value: t('integrations.accounting.setup.highlightValues.csv', { defaultValue: 'CSV' }) }
           ]
         },
         {
           id: 'xero_csv',
           title: 'Xero CSV',
-          description: 'Export invoices to CSV for manual import into Xero and import tax data from Xero reports.',
+          description: t('integrations.accounting.setup.options.xeroCsv.description', { defaultValue: 'Export invoices to CSV for manual import into Xero and import tax data from Xero reports.' }),
           highlights: [
-            { label: 'Export', value: 'Manual' },
-            { label: 'Format', value: 'CSV' }
+            { label: t('integrations.accounting.setup.highlights.export', { defaultValue: 'Export' }), value: t('integrations.accounting.setup.highlightValues.manual', { defaultValue: 'Manual' }) },
+            { label: t('integrations.accounting.setup.highlights.format', { defaultValue: 'Format' }), value: t('integrations.accounting.setup.highlightValues.csv', { defaultValue: 'CSV' }) }
           ]
         }
       );
 
       return next;
     },
-    [isEEAvailable]
+    [isEEAvailable, t]
   );
 
   const requestedIntegration = searchParams?.get('accounting_integration');
@@ -217,7 +219,9 @@ export default function AccountingIntegrationsSetup() {
                   }}
                   id={`accounting-integration-configure-${option.id}`}
                 >
-                  {isDisabled ? 'Coming Soon' : 'Configure Integration'}
+                  {isDisabled
+                    ? t('integrations.accounting.setup.comingSoon', { defaultValue: 'Coming Soon' })
+                    : t('integrations.accounting.setup.configure', { defaultValue: 'Configure Integration' })}
                 </Button>
               </CardFooter>
 
@@ -231,9 +235,9 @@ export default function AccountingIntegrationsSetup() {
 
       <div className="border-t pt-6" id="accounting-integrations-active-config">
         <div className="mb-4 flex items-center justify-between gap-3">
-          <h3 className="text-base font-semibold">Active Configuration</h3>
+          <h3 className="text-base font-semibold">{t('integrations.accounting.setup.activeConfiguration', { defaultValue: 'Active Configuration' })}</h3>
           <span className="text-xs text-muted-foreground">
-            {selectedOption ? `${selectedOption.title} selected` : null}
+            {selectedOption ? t('integrations.accounting.setup.selected', { defaultValue: '{{title}} selected', title: selectedOption.title }) : null}
           </span>
         </div>
 
@@ -246,9 +250,9 @@ export default function AccountingIntegrationsSetup() {
         ) : (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Configuration unavailable</CardTitle>
+              <CardTitle className="text-base">{t('integrations.accounting.setup.unavailable.title', { defaultValue: 'Configuration unavailable' })}</CardTitle>
               <CardDescription>
-                This integration is not yet available. Select QuickBooks CSV or Xero CSV to configure manual exports.
+                {t('integrations.accounting.setup.unavailable.description', { defaultValue: 'This integration is not yet available. Select QuickBooks CSV or Xero CSV to configure manual exports.' })}
               </CardDescription>
             </CardHeader>
           </Card>

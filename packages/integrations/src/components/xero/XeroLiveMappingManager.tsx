@@ -5,12 +5,14 @@ import { AccountingMappingManager } from '@alga-psa/integrations/components';
 import type { AccountingMappingContext } from '@alga-psa/integrations/components';
 import type { XeroConnectionSummary } from '../../lib/xero/xeroClientService';
 import { createXeroLiveMappingModules } from './xeroLiveMappingModules';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface XeroLiveMappingManagerProps {
   defaultConnection: XeroConnectionSummary;
 }
 
 export function XeroLiveMappingManager({ defaultConnection }: XeroLiveMappingManagerProps) {
+  const { t } = useTranslation();
   const modules = useMemo(() => createXeroLiveMappingModules(), []);
   const context = useMemo<AccountingMappingContext>(() => ({
     realmId: defaultConnection.xeroTenantId,
@@ -27,7 +29,7 @@ export function XeroLiveMappingManager({ defaultConnection }: XeroLiveMappingMan
     <AccountingMappingManager
       modules={modules}
       context={context}
-      realmLabel="Default Xero Organisation"
+      realmLabel={t('integrations.xero.live.defaultOrganisation', { defaultValue: 'Default Xero Organisation' })}
       tabStyles={tabStyles}
       defaultTabId="Items / Services"
       urlParamKey="xeroMappingTab"
