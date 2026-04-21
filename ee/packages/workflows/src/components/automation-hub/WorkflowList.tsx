@@ -11,6 +11,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   Plus,
   Play,
@@ -133,16 +134,18 @@ const getStatusBadgeVariant = (status: string, isPaused?: boolean): BadgeVariant
   }
 };
 
-const getStatusLabel = (status: string, isPaused?: boolean): string => {
-  if (isPaused) return 'Paused';
+type TFn = (key: string, options?: Record<string, unknown>) => string;
+
+const getStatusLabel = (status: string, isPaused: boolean | undefined, t: TFn): string => {
+  if (isPaused) return t('automation.workflowList.statusLabels.paused', { defaultValue: 'Paused' });
   switch (status) {
     case 'active':
     case 'published':
-      return 'Active';
+      return t('automation.workflowList.statusLabels.active', { defaultValue: 'Active' });
     case 'draft':
-      return 'Draft';
+      return t('automation.workflowList.statusLabels.draft', { defaultValue: 'Draft' });
     case 'archived':
-      return 'Archived';
+      return t('automation.workflowList.statusLabels.archived', { defaultValue: 'Archived' });
     default:
       return status;
   }
@@ -164,20 +167,20 @@ const getTriggerIcon = (trigger?: Record<string, unknown> | null) => {
   return <MousePointer className="w-4 h-4 text-[rgb(var(--color-text-400))]" />;
 };
 
-const getTriggerLabel = (trigger?: Record<string, unknown> | null): string => {
-  if (!trigger) return 'Manual';
+const getTriggerLabel = (trigger: Record<string, unknown> | null | undefined, t: TFn): string => {
+  if (!trigger) return t('automation.workflowList.triggerLabels.manual', { defaultValue: 'Manual' });
 
   const triggerType = trigger.type as string | undefined;
   if (triggerType === 'schedule') {
-    return 'One-time schedule';
+    return t('automation.workflowList.triggerLabels.schedule', { defaultValue: 'One-time schedule' });
   }
   if (triggerType === 'recurring') {
-    return 'Recurring schedule';
+    return t('automation.workflowList.triggerLabels.recurring', { defaultValue: 'Recurring schedule' });
   }
   if (triggerType === 'event') {
-    return 'Event';
+    return t('automation.workflowList.triggerLabels.event', { defaultValue: 'Event' });
   }
-  return 'Manual';
+  return t('automation.workflowList.triggerLabels.manual', { defaultValue: 'Manual' });
 };
 
 export default function WorkflowList({
@@ -189,6 +192,7 @@ export default function WorkflowList({
 }: WorkflowListProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useTranslation('msp/workflows');
   const didUnmount = useRef(false);
   const searchDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -225,18 +229,18 @@ export default function WorkflowList({
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   const statusOptions = [
-    { value: 'all', label: 'All statuses' },
-    { value: 'active', label: 'Active' },
-    { value: 'draft', label: 'Draft' },
-    { value: 'paused', label: 'Paused' }
+    { value: 'all', label: t('automation.workflowList.statusFilter.all', { defaultValue: 'All statuses' }) },
+    { value: 'active', label: t('automation.workflowList.statusFilter.active', { defaultValue: 'Active' }) },
+    { value: 'draft', label: t('automation.workflowList.statusFilter.draft', { defaultValue: 'Draft' }) },
+    { value: 'paused', label: t('automation.workflowList.statusFilter.paused', { defaultValue: 'Paused' }) }
   ];
 
   const triggerOptions = [
-    { value: 'all', label: 'All triggers' },
-    { value: 'event', label: 'Event-based' },
-    { value: 'schedule', label: 'One-time schedule' },
-    { value: 'recurring', label: 'Recurring schedule' },
-    { value: 'manual', label: 'Manual' }
+    { value: 'all', label: t('automation.workflowList.triggerFilter.all', { defaultValue: 'All triggers' }) },
+    { value: 'event', label: t('automation.workflowList.triggerFilter.event', { defaultValue: 'Event-based' }) },
+    { value: 'schedule', label: t('automation.workflowList.triggerFilter.schedule', { defaultValue: 'One-time schedule' }) },
+    { value: 'recurring', label: t('automation.workflowList.triggerFilter.recurring', { defaultValue: 'Recurring schedule' }) },
+    { value: 'manual', label: t('automation.workflowList.triggerFilter.manual', { defaultValue: 'Manual' }) }
   ];
 
   // Update URL when filters change
@@ -300,7 +304,7 @@ export default function WorkflowList({
       } catch (err) {
         console.error('Failed to fetch workflows:', err);
         if (!didUnmount.current) {
-          setError(err instanceof Error ? err.message : 'Failed to fetch workflows');
+          setError(err instanceof Error ? err.message : t('automation.workflowList.states.errorFallback', { defaultValue: 'Failed to fetch workflows' }));
           setWorkflows([]);
           setTotalItems(0);
         }
@@ -450,7 +454,7 @@ export default function WorkflowList({
       setDeleteValidation({
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: 'Failed to validate deletion. Please try again.',
+        message: t('automation.workflowList.states.validationFailed', { defaultValue: 'Failed to validate deletion. Please try again.' }),
         dependencies: [],
         alternatives: []
       });
@@ -565,7 +569,7 @@ export default function WorkflowList({
       )
     },
     {
-      title: 'Name',
+      title: t('automation.workflowList.columns.name', { defaultValue: 'Name' }),
       dataIndex: 'name',
       sortable: true,
       render: (value: unknown, record: WorkflowDefinitionListItem) => (
@@ -584,7 +588,7 @@ export default function WorkflowList({
               <FileText className="w-4 h-4 text-[rgb(var(--color-primary-500))]" />
               <span className="font-medium text-[rgb(var(--color-text-900))]">{record.name}</span>
               {record.is_system && (
-                <Badge variant="outline" className="text-xs">System</Badge>
+                <Badge variant="outline" className="text-xs">{t('automation.workflowList.tableValues.system', { defaultValue: 'System' })}</Badge>
               )}
             </div>
             {record.description && (
@@ -597,18 +601,18 @@ export default function WorkflowList({
       )
     },
     {
-      title: 'Status',
+      title: t('automation.workflowList.columns.status', { defaultValue: 'Status' }),
       dataIndex: 'status',
       sortable: true,
       width: '120px',
       render: (value: unknown, record: WorkflowDefinitionListItem) => (
         <Badge variant={getStatusBadgeVariant(record.status, record.is_paused)}>
-          {getStatusLabel(record.status, record.is_paused)}
+          {getStatusLabel(record.status, record.is_paused, t)}
         </Badge>
       )
     },
     {
-      title: 'Version',
+      title: t('automation.workflowList.columns.version', { defaultValue: 'Version' }),
       dataIndex: 'draft_version',
       sortable: false,
       width: '100px',
@@ -619,14 +623,14 @@ export default function WorkflowList({
           </span>
           {record.published_version && record.draft_version > record.published_version && (
             <span className="text-xs text-[rgb(var(--color-accent-500))]">
-              Draft: v{record.draft_version}
+              {t('automation.workflowList.tableValues.draftVersion', { defaultValue: 'Draft: v{{version}}', version: record.draft_version })}
             </span>
           )}
         </div>
       )
     },
     {
-      title: 'Trigger',
+      title: t('automation.workflowList.columns.trigger', { defaultValue: 'Trigger' }),
       dataIndex: 'trigger',
       sortable: false,
       width: '120px',
@@ -634,13 +638,13 @@ export default function WorkflowList({
         <div className="flex items-center gap-2">
           {getTriggerIcon(record.trigger)}
           <span className="text-sm text-[rgb(var(--color-text-600))]">
-            {getTriggerLabel(record.trigger)}
+            {getTriggerLabel(record.trigger, t)}
           </span>
         </div>
       )
     },
     {
-      title: 'Last Modified',
+      title: t('automation.workflowList.columns.lastModified', { defaultValue: 'Last Modified' }),
       dataIndex: 'updated_at',
       sortable: true,
       width: '150px',
@@ -652,7 +656,7 @@ export default function WorkflowList({
       )
     },
     {
-      title: 'Actions',
+      title: t('automation.workflowList.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'workflow_id',
       sortable: false,
       width: '80px',
@@ -662,7 +666,7 @@ export default function WorkflowList({
             <DropdownMenu.Trigger asChild>
               <button
                 className="p-1.5 rounded-md hover:bg-[rgb(var(--color-border-100))] transition-colors"
-                aria-label="Workflow actions"
+                aria-label={t('automation.workflowList.rowMenu.ariaLabel', { defaultValue: 'Workflow actions' })}
               >
                 <MoreVertical className="w-4 h-4 text-[rgb(var(--color-text-500))]" />
               </button>
@@ -680,12 +684,12 @@ export default function WorkflowList({
                   {record.is_paused ? (
                     <>
                       <Play className="w-4 h-4" />
-                      Resume
+                      {t('automation.workflowList.rowMenu.resume', { defaultValue: 'Resume' })}
                     </>
                   ) : (
                     <>
                       <Pause className="w-4 h-4" />
-                      Pause
+                      {t('automation.workflowList.rowMenu.pause', { defaultValue: 'Pause' })}
                     </>
                   )}
                 </DropdownMenu.Item>
@@ -694,14 +698,14 @@ export default function WorkflowList({
                   onSelect={(e) => handleDuplicate(record, e as unknown as React.MouseEvent)}
                 >
                   <Copy className="w-4 h-4" />
-                  Duplicate
+                  {t('automation.workflowList.rowMenu.duplicate', { defaultValue: 'Duplicate' })}
                 </DropdownMenu.Item>
                 <DropdownMenu.Item
                   className="flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-50))] cursor-pointer outline-none"
                   onSelect={(e) => handleViewRuns(record, e as unknown as React.MouseEvent)}
                 >
                   <History className="w-4 h-4" />
-                  View Runs
+                  {t('automation.workflowList.rowMenu.viewRuns', { defaultValue: 'View Runs' })}
                 </DropdownMenu.Item>
                 {!record.is_system && (
                   <>
@@ -711,7 +715,7 @@ export default function WorkflowList({
                       onSelect={(e) => handleDeleteClick(record, e as unknown as React.MouseEvent)}
                     >
                       <Trash2 className="w-4 h-4" />
-                      Delete
+                      {t('automation.workflowList.rowMenu.delete', { defaultValue: 'Delete' })}
                     </DropdownMenu.Item>
                   </>
                 )}
@@ -740,14 +744,14 @@ export default function WorkflowList({
             <FileText className="w-8 h-8 text-destructive" />
           </div>
           <h3 className="text-lg font-semibold text-[rgb(var(--color-text-900))] mb-2">
-            Failed to load workflows
+            {t('automation.workflowList.states.errorTitle', { defaultValue: 'Failed to load workflows' })}
           </h3>
           <p className="text-sm text-[rgb(var(--color-text-500))] text-center max-w-md mb-6">
             {error}
           </p>
           <div className="flex items-center gap-2">
             <Button id="workflow-list-retry-btn" variant="outline" onClick={() => setRefreshKey((v) => v + 1)}>
-              Retry
+              {t('automation.workflowList.actions.retry', { defaultValue: 'Retry' })}
             </Button>
             <Button
               id="workflow-list-create-btn"
@@ -757,7 +761,7 @@ export default function WorkflowList({
               }}
             >
               <Plus className="w-4 h-4 mr-2" />
-              New Workflow
+              {t('automation.workflowList.actions.newWorkflow', { defaultValue: 'New Workflow' })}
             </Button>
           </div>
         </div>
@@ -776,10 +780,10 @@ export default function WorkflowList({
             <FileText className="w-8 h-8 text-[rgb(var(--color-primary-500))]" />
           </div>
           <h3 className="text-lg font-semibold text-[rgb(var(--color-text-900))] mb-2">
-            No workflows yet
+            {t('automation.workflowList.states.emptyTitle', { defaultValue: 'No workflows yet' })}
           </h3>
           <p className="text-sm text-[rgb(var(--color-text-500))] text-center max-w-md mb-6">
-            Create your first workflow to automate tasks, respond to events, and streamline your processes.
+            {t('automation.workflowList.states.emptyDescription', { defaultValue: 'Create your first workflow to automate tasks, respond to events, and streamline your processes.' })}
           </p>
           <div className="flex items-center gap-2">
             <Button
@@ -788,7 +792,7 @@ export default function WorkflowList({
               onClick={handleOpenEventCatalog}
             >
               <Zap className="w-4 h-4 mr-2" />
-              Event Catalog
+              {t('automation.workflowList.actions.eventCatalog', { defaultValue: 'Event Catalog' })}
             </Button>
             <Button
               id="create-first-workflow-btn"
@@ -798,7 +802,7 @@ export default function WorkflowList({
               }}
             >
               <Plus className="w-4 h-4 mr-2" />
-              Create Your First Workflow
+              {t('automation.workflowList.actions.createFirst', { defaultValue: 'Create Your First Workflow' })}
             </Button>
           </div>
         </div>
@@ -815,7 +819,7 @@ export default function WorkflowList({
     .map((workflow) => ({
       workflowId: workflow.workflow_id,
       name: workflow.name,
-      reason: 'System workflow'
+      reason: t('automation.workflowList.bulk.systemWorkflowReason', { defaultValue: 'System workflow' })
     }));
 
   return (
@@ -824,17 +828,17 @@ export default function WorkflowList({
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-semibold text-[rgb(var(--color-text-900))]">Workflows</h2>
+            <h2 className="text-lg font-semibold text-[rgb(var(--color-text-900))]">{t('automation.workflowList.header', { defaultValue: 'Workflows' })}</h2>
             <div className="flex items-center gap-2 text-sm text-[rgb(var(--color-text-500))]">
-              <span>{counts.total} total</span>
+              <span>{t('automation.workflowList.stats.total', { defaultValue: '{{count}} total', count: counts.total })}</span>
               <span className="text-[rgb(var(--color-border-300))]">•</span>
-              <span className="text-success">{counts.active} active</span>
+              <span className="text-success">{t('automation.workflowList.stats.active', { defaultValue: '{{count}} active', count: counts.active })}</span>
               <span className="text-[rgb(var(--color-border-300))]">•</span>
-              <span className="text-[rgb(var(--color-secondary-600))]">{counts.draft} draft</span>
+              <span className="text-[rgb(var(--color-secondary-600))]">{t('automation.workflowList.stats.draft', { defaultValue: '{{count}} draft', count: counts.draft })}</span>
               {counts.paused > 0 && (
                 <>
                   <span className="text-[rgb(var(--color-border-300))]">•</span>
-                  <span className="text-amber-600">{counts.paused} paused</span>
+                  <span className="text-amber-600">{t('automation.workflowList.stats.paused', { defaultValue: '{{count}} paused', count: counts.paused })}</span>
                 </>
               )}
             </div>
@@ -846,7 +850,7 @@ export default function WorkflowList({
               onClick={handleOpenEventCatalog}
             >
               <Zap className="w-4 h-4 mr-2" />
-              Event Catalog
+              {t('automation.workflowList.actions.eventCatalog', { defaultValue: 'Event Catalog' })}
             </Button>
             <Button
               id="create-workflow-btn"
@@ -856,7 +860,7 @@ export default function WorkflowList({
               }}
             >
               <Plus className="w-4 h-4 mr-2" />
-              New Workflow
+              {t('automation.workflowList.actions.newWorkflow', { defaultValue: 'New Workflow' })}
             </Button>
           </div>
         </div>
@@ -867,7 +871,7 @@ export default function WorkflowList({
             <SearchInput
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search workflows..."
+              placeholder={t('automation.workflowList.searchPlaceholder', { defaultValue: 'Search workflows...' })}
               className="w-full"
             />
           </div>
@@ -899,7 +903,9 @@ export default function WorkflowList({
         {selectedWorkflows.size > 0 && (
           <div className="mb-4 p-3 bg-[rgb(var(--color-primary-50))] border border-[rgb(var(--color-primary-200))] rounded-lg flex items-center justify-between">
             <span className="text-sm text-[rgb(var(--color-primary-700))]">
-              {selectedWorkflows.size} workflow{selectedWorkflows.size !== 1 ? 's' : ''} selected
+              {selectedWorkflows.size === 1
+                ? t('automation.workflowList.bulk.selectedSingular', { defaultValue: '{{count}} workflow selected', count: selectedWorkflows.size })
+                : t('automation.workflowList.bulk.selectedPlural', { defaultValue: '{{count}} workflows selected', count: selectedWorkflows.size })}
             </span>
             <div className="flex items-center gap-2">
               <Button
@@ -909,7 +915,7 @@ export default function WorkflowList({
                 onClick={handleBulkPause}
               >
                 <Pause className="w-3.5 h-3.5 mr-1.5" />
-                Pause
+                {t('automation.workflowList.bulk.pause', { defaultValue: 'Pause' })}
               </Button>
               <Button
                 id="bulk-resume-btn"
@@ -918,7 +924,7 @@ export default function WorkflowList({
                 onClick={handleBulkResume}
               >
                 <Play className="w-3.5 h-3.5 mr-1.5" />
-                Resume
+                {t('automation.workflowList.bulk.resume', { defaultValue: 'Resume' })}
               </Button>
               <Button
                 id="bulk-delete-btn"
@@ -928,13 +934,13 @@ export default function WorkflowList({
                 className="text-[rgb(var(--color-destructive))] border-destructive/30 hover:bg-destructive/10"
               >
                 <Trash2 className="w-3.5 h-3.5 mr-1.5" />
-                Delete
+                {t('automation.workflowList.bulk.delete', { defaultValue: 'Delete' })}
               </Button>
               <button
                 className="ml-2 text-sm text-[rgb(var(--color-text-500))] hover:text-[rgb(var(--color-text-700))]"
                 onClick={() => setSelectedWorkflows(new Set())}
               >
-                Clear selection
+                {t('automation.workflowList.bulk.clearSelection', { defaultValue: 'Clear selection' })}
               </button>
             </div>
           </div>
@@ -947,10 +953,10 @@ export default function WorkflowList({
               <FileText className="w-6 h-6 text-[rgb(var(--color-text-400))]" />
             </div>
             <h3 className="text-base font-medium text-[rgb(var(--color-text-700))] mb-1">
-              No workflows found
+              {t('automation.workflowList.states.noResultsTitle', { defaultValue: 'No workflows found' })}
             </h3>
             <p className="text-sm text-[rgb(var(--color-text-500))] text-center max-w-sm">
-              Try adjusting your search or filters to find what you're looking for.
+              {t('automation.workflowList.states.noResultsDescription', { defaultValue: "Try adjusting your search or filters to find what you're looking for." })}
             </p>
             <button
               className="mt-4 text-sm text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-600))] font-medium"
@@ -963,7 +969,7 @@ export default function WorkflowList({
                 updateUrlParams({ search: null, status: null, trigger: null });
               }}
             >
-              Reset
+              {t('automation.workflowList.actions.resetFilters', { defaultValue: 'Reset' })}
             </button>
           </div>
         ) : (
@@ -992,7 +998,7 @@ export default function WorkflowList({
           isOpen={isDeleteDialogOpen}
           onClose={resetDeleteState}
           onConfirmDelete={handleConfirmDelete}
-          entityName={workflowToDelete?.name || 'this workflow'}
+          entityName={workflowToDelete?.name || t('automation.workflowList.deleteDialog.fallbackEntityName', { defaultValue: 'this workflow' })}
           validationResult={deleteValidation}
           isValidating={isDeleteValidating}
           isDeleting={isDeleting}
@@ -1003,28 +1009,33 @@ export default function WorkflowList({
           isOpen={isBulkDeleteDialogOpen}
           onClose={() => setIsBulkDeleteDialogOpen(false)}
           onConfirm={handleConfirmBulkDelete}
-          title="Delete selected workflows"
+          title={t('automation.workflowList.bulk.deleteDialogTitle', { defaultValue: 'Delete selected workflows' })}
           confirmLabel={bulkDeleteEligibleWorkflows.length > 0
-            ? `Delete ${bulkDeleteEligibleWorkflows.length} workflow${bulkDeleteEligibleWorkflows.length !== 1 ? 's' : ''}`
-            : 'Close'}
-          cancelLabel="Cancel"
+            ? (bulkDeleteEligibleWorkflows.length === 1
+              ? t('automation.workflowList.bulk.deleteConfirmSingular', { defaultValue: 'Delete {{count}} workflow', count: bulkDeleteEligibleWorkflows.length })
+              : t('automation.workflowList.bulk.deleteConfirmPlural', { defaultValue: 'Delete {{count}} workflows', count: bulkDeleteEligibleWorkflows.length }))
+            : t('automation.workflowList.bulk.deleteClose', { defaultValue: 'Close' })}
+          cancelLabel={t('automation.workflowList.bulk.deleteCancel', { defaultValue: 'Cancel' })}
           isConfirming={isBulkDeleting}
           message={(
             <div className="space-y-3">
               <p>
-                You selected <strong>{selectedWorkflowRecords.length}</strong> workflow{selectedWorkflowRecords.length !== 1 ? 's' : ''}.
+                {selectedWorkflowRecords.length === 1
+                  ? <>{t('automation.workflowList.bulk.selectedSummarySingular', { defaultValue: 'You selected <1>{{count}}</1> workflow.', count: selectedWorkflowRecords.length }).split(/<1>|<\/1>/).map((part, i) => i === 1 ? <strong key={i}>{part}</strong> : part)}</>
+                  : <>{t('automation.workflowList.bulk.selectedSummaryPlural', { defaultValue: 'You selected <1>{{count}}</1> workflows.', count: selectedWorkflowRecords.length }).split(/<1>|<\/1>/).map((part, i) => i === 1 ? <strong key={i}>{part}</strong> : part)}</>
+                }
               </p>
               <div className="space-y-1 text-sm">
                 <div>
-                  <strong>{bulkDeleteEligibleWorkflows.length}</strong> will be deleted.
+                  {t('automation.workflowList.bulk.willBeDeleted', { defaultValue: '<1>{{count}}</1> will be deleted.', count: bulkDeleteEligibleWorkflows.length }).split(/<1>|<\/1>/).map((part, i) => i === 1 ? <strong key={i}>{part}</strong> : part)}
                 </div>
                 <div>
-                  <strong>{bulkDeleteSkippedWorkflows.length}</strong> will be skipped.
+                  {t('automation.workflowList.bulk.willBeSkipped', { defaultValue: '<1>{{count}}</1> will be skipped.', count: bulkDeleteSkippedWorkflows.length }).split(/<1>|<\/1>/).map((part, i) => i === 1 ? <strong key={i}>{part}</strong> : part)}
                 </div>
               </div>
               {bulkDeleteSkippedWorkflows.length > 0 && (
                 <div className="rounded border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-3">
-                  <div className="mb-2 text-sm font-medium text-[rgb(var(--color-text-700))]">Skipped workflows</div>
+                  <div className="mb-2 text-sm font-medium text-[rgb(var(--color-text-700))]">{t('automation.workflowList.bulk.skippedHeading', { defaultValue: 'Skipped workflows' })}</div>
                   <ul className="space-y-1 text-sm text-[rgb(var(--color-text-600))]">
                     {bulkDeleteSkippedWorkflows.map((workflow) => (
                       <li key={workflow.workflowId}>

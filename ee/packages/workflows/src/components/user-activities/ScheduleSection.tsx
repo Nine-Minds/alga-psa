@@ -10,6 +10,7 @@ import { fetchScheduleActivities } from '@alga-psa/workflows/actions';
 import { ScheduleSectionFiltersDialog } from './filters/ScheduleSectionFiltersDialog';
 import { FilterIcon, XCircle } from 'lucide-react';
 import { useActivityDrawer } from './ActivityDrawerProvider';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ScheduleSectionProps {
   limit?: number;
@@ -18,6 +19,7 @@ interface ScheduleSectionProps {
 }
 
 export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: ScheduleSectionProps) {
+  const { t } = useTranslation('msp/user-activities');
   const [activities, setActivities] = useState<ScheduleActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const { openActivityDrawer } = useActivityDrawer();
@@ -96,7 +98,7 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: Schedu
       setError(null);
     } catch (err) {
       console.error('Error loading schedule activities:', err);
-      setError('Failed to load schedule activities. Please try again later.');
+      setError(t('sections.schedule.errors.loadFailed', { defaultValue: 'Failed to load schedule activities. Please try again later.' }));
     } finally {
       setLoading(false);
     }
@@ -137,7 +139,7 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: Schedu
       setError(null);
     } catch (err) {
       console.error('Error refreshing schedule activities:', err);
-      setError('Failed to refresh schedule activities. Please try again later.');
+      setError(t('sections.schedule.errors.refreshFailed', { defaultValue: 'Failed to refresh schedule activities. Please try again later.' }));
     } finally {
       setLoading(false);
     }
@@ -149,7 +151,7 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: Schedu
 
   const headerContent = (
     <div className="flex flex-row items-center justify-between pb-2 px-6 pt-6">
-      {!noCard && <h3 className="text-lg font-semibold">Schedule</h3>}
+      {!noCard && <h3 className="text-lg font-semibold">{t('sections.schedule.title', { defaultValue: 'Schedule' })}</h3>}
       <div className="flex items-center gap-2">
         <Button
           id="refresh-schedule-button"
@@ -169,7 +171,7 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: Schedu
             className="gap-1"
           >
             <XCircle className="h-4 w-4" />
-            Reset
+            {t('sections.schedule.actions.reset', { defaultValue: 'Reset' })}
           </Button>
         ) : (
           <Button
@@ -180,7 +182,7 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: Schedu
             className="gap-1"
           >
             <FilterIcon className="h-4 w-4" />
-            Filter
+            {t('sections.schedule.actions.filter', { defaultValue: 'Filter' })}
           </Button>
         )}
         <Button
@@ -199,7 +201,7 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: Schedu
     <div className="px-6 pb-6">
       {loading ? (
         <div className="flex justify-center items-center h-40">
-          <p className="text-gray-500">Loading schedule activities...</p>
+          <p className="text-gray-500">{t('sections.schedule.states.loading', { defaultValue: 'Loading schedule activities...' })}</p>
         </div>
       ) : error ? (
         <div className="flex justify-center items-center h-40">
@@ -207,7 +209,7 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: Schedu
         </div>
       ) : activities.length === 0 ? (
         <div className="flex justify-center items-center h-40">
-          <p className="text-gray-500">No schedule activities found</p>
+          <p className="text-gray-500">{t('sections.schedule.states.empty', { defaultValue: 'No schedule activities found' })}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4">
@@ -242,7 +244,7 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: Schedu
   return (
     <Card id="schedule-activities-card" className="col-span-1 md:col-span-2">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle>Schedule</CardTitle>
+        <CardTitle>{t('sections.schedule.title', { defaultValue: 'Schedule' })}</CardTitle>
         <div className="flex items-center gap-2">
           <Button
             id="refresh-schedule-button"
@@ -251,7 +253,7 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: Schedu
             onClick={handleRefresh}
             disabled={loading}
           >
-            Refresh
+            {t('sections.schedule.actions.refresh', { defaultValue: 'Refresh' })}
           </Button>
           {isFiltersActive() ? (
             <Button
@@ -282,14 +284,14 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: Schedu
             size="sm"
             onClick={onViewAll}
           >
-            View All
+            {t('sections.schedule.actions.viewAll', { defaultValue: 'View All' })}
           </Button>
         </div>
       </CardHeader>
       <CardContent>
         {loading ? (
           <div className="flex justify-center items-center h-40">
-            <p className="text-gray-500">Loading schedule activities...</p>
+            <p className="text-gray-500">{t('sections.schedule.states.loading', { defaultValue: 'Loading schedule activities...' })}</p>
           </div>
         ) : error ? (
           <div className="flex justify-center items-center h-40">
@@ -297,7 +299,7 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: Schedu
           </div>
         ) : activities.length === 0 ? (
           <div className="flex justify-center items-center h-40">
-            <p className="text-gray-500">No schedule activities found</p>
+            <p className="text-gray-500">{t('sections.schedule.states.empty', { defaultValue: 'No schedule activities found' })}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4">

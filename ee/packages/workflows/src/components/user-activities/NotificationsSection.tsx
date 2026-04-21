@@ -16,6 +16,7 @@ import { Badge } from "@alga-psa/ui/components/Badge";
 import { useInternalNotifications } from "@alga-psa/notifications/hooks";
 import { useSession } from 'next-auth/react';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface NotificationsSectionProps {
   limit?: number;
@@ -26,6 +27,7 @@ interface NotificationsSectionProps {
 const DEFAULT_TAB = 'unread';
 
 export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: NotificationsSectionProps) {
+  const { t } = useTranslation('msp/user-activities');
   const { data: session } = useSession();
   const searchParams = useSearchParams();
   const notificationTabParam = searchParams?.get('notificationTab');
@@ -77,7 +79,7 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
       setActivities(sortedActivities.slice(0, limit));
     } catch (err) {
       console.error('Error loading notification activities:', err);
-      setError('Failed to load notification activities. Please try again later.');
+      setError(t('sections.notifications.errors.loadFailed', { defaultValue: 'Failed to load notification activities. Please try again later.' }));
     } finally {
       setLoading(false);
     }
@@ -195,7 +197,7 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
   const headerContent = (
     <div className="flex flex-row items-center justify-between pb-2 px-6 pt-6">
       <div className="flex items-center gap-2">
-        {!noCard && <h3 className="text-lg font-semibold">Notifications</h3>}
+        {!noCard && <h3 className="text-lg font-semibold">{t('sections.notifications.title', { defaultValue: 'Notifications' })}</h3>}
         {realTimeHook.unreadCount > 0 && (
           <Badge variant="primary">
             {realTimeHook.unreadCount}
@@ -209,9 +211,9 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
           size="sm"
           onClick={handleRefresh}
           disabled={loading}
-          aria-label="Refresh Notifications"
+          aria-label={t('sections.notifications.ariaLabels.refresh', { defaultValue: 'Refresh Notifications' })}
         >
-          Refresh
+          {t('sections.notifications.actions.refresh', { defaultValue: 'Refresh' })}
         </Button>
         {isFiltersActive() ? (
           <Button
@@ -223,7 +225,7 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
             className="gap-1"
           >
             <XCircle className="h-4 w-4" />
-            Reset
+            {t('sections.notifications.actions.reset', { defaultValue: 'Reset' })}
           </Button>
         ) : (
           <Button
@@ -232,9 +234,9 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
             size="sm"
             onClick={() => setIsFilterDialogOpen(true)}
             disabled={loading}
-            aria-label="Filter Notifications"
+            aria-label={t('sections.notifications.ariaLabels.filter', { defaultValue: 'Filter Notifications' })}
           >
-            <Filter size={16} className="mr-1" /> Filter
+            <Filter size={16} className="mr-1" /> {t('sections.notifications.actions.filter', { defaultValue: 'Filter' })}
           </Button>
         )}
         <Button
@@ -243,7 +245,7 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
           size="sm"
           onClick={onViewAll}
         >
-          View All
+          {t('sections.notifications.actions.viewAll', { defaultValue: 'View All' })}
         </Button>
       </div>
     </div>
@@ -254,7 +256,7 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
     if (loading) {
       return (
         <div className="flex justify-center items-center h-40">
-          <p className="text-gray-500">Loading notification activities...</p>
+          <p className="text-gray-500">{t('sections.notifications.states.loading', { defaultValue: 'Loading notification activities...' })}</p>
         </div>
       );
     }
@@ -270,7 +272,7 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
     if (activities.length === 0) {
       return (
         <div className="flex justify-center items-center h-40">
-          <p className="text-gray-500">No notification activities found</p>
+          <p className="text-gray-500">{t('sections.notifications.states.empty', { defaultValue: 'No notification activities found' })}</p>
         </div>
       );
     }
@@ -292,17 +294,17 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
   const tabContent = [
     {
       id: 'unread',
-      label: "Unread",
+      label: t('sections.notifications.tabs.unread', { defaultValue: 'Unread' }),
       content: renderNotifications()
     },
     {
       id: 'all',
-      label: "All",
+      label: t('sections.notifications.tabs.all', { defaultValue: 'All' }),
       content: renderNotifications()
     },
     {
       id: 'read',
-      label: "Read",
+      label: t('sections.notifications.tabs.read', { defaultValue: 'Read' }),
       content: renderNotifications()
     }
   ];
@@ -344,7 +346,7 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
     <Card id="notifications-activities-card">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div className="flex items-center gap-2">
-          <CardTitle>Notifications</CardTitle>
+          <CardTitle>{t('sections.notifications.title', { defaultValue: 'Notifications' })}</CardTitle>
           {realTimeHook.unreadCount > 0 && (
             <Badge variant="primary">
               {realTimeHook.unreadCount}

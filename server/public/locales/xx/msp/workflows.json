@@ -1880,5 +1880,390 @@
       "fixed": "11111",
       "expression": "11111"
     }
+  },
+  "automation": {
+    "createWorkflow": {
+      "dialogTitle": "11111",
+      "fields": {
+        "name": "11111",
+        "namePlaceholder": "11111",
+        "triggerType": "11111"
+      },
+      "validation": {
+        "nameRequired": "11111",
+        "nameTooShort": "11111"
+      },
+      "actions": {
+        "cancel": "11111",
+        "create": "11111"
+      },
+      "triggers": {
+        "event": {
+          "title": "11111",
+          "description": "11111"
+        },
+        "scheduled": {
+          "title": "11111",
+          "description": "11111"
+        },
+        "manual": {
+          "title": "11111",
+          "description": "11111"
+        }
+      }
+    },
+    "workflowList": {
+      "header": "11111",
+      "stats": {
+        "total": "11111 {{count}} 11111",
+        "active": "11111 {{count}} 11111",
+        "draft": "11111 {{count}} 11111",
+        "paused": "11111 {{count}} 11111"
+      },
+      "actions": {
+        "eventCatalog": "11111",
+        "newWorkflow": "11111",
+        "createFirst": "11111",
+        "retry": "11111",
+        "resetFilters": "11111"
+      },
+      "searchPlaceholder": "11111",
+      "statusFilter": {
+        "all": "11111",
+        "active": "11111",
+        "draft": "11111",
+        "paused": "11111",
+        "archived": "11111"
+      },
+      "triggerFilter": {
+        "all": "11111",
+        "event": "11111",
+        "schedule": "11111",
+        "recurring": "11111",
+        "manual": "11111"
+      },
+      "triggerLabels": {
+        "manual": "11111",
+        "schedule": "11111",
+        "recurring": "11111",
+        "event": "11111"
+      },
+      "bulk": {
+        "selectedSingular": "11111 {{count}} 11111",
+        "selectedPlural": "11111 {{count}} 11111",
+        "pause": "11111",
+        "resume": "11111",
+        "delete": "11111",
+        "clearSelection": "11111",
+        "deleteDialogTitle": "11111",
+        "deleteConfirmSingular": "11111 {{count}} 11111",
+        "deleteConfirmPlural": "11111 {{count}} 11111",
+        "deleteClose": "11111",
+        "deleteCancel": "11111",
+        "selectedSummarySingular": "11111 {{count}} 11111",
+        "selectedSummaryPlural": "11111 {{count}} 11111",
+        "willBeDeleted": "11111 {{count}} 11111",
+        "willBeSkipped": "11111 {{count}} 11111",
+        "skippedHeading": "11111",
+        "systemWorkflowReason": "11111"
+      },
+      "columns": {
+        "name": "11111",
+        "status": "11111",
+        "version": "11111",
+        "trigger": "11111",
+        "lastModified": "11111",
+        "actions": "11111"
+      },
+      "statusLabels": {
+        "active": "11111",
+        "draft": "11111",
+        "archived": "11111",
+        "paused": "11111"
+      },
+      "tableValues": {
+        "system": "11111",
+        "draftVersion": "11111 {{version}} 11111"
+      },
+      "rowMenu": {
+        "ariaLabel": "11111",
+        "resume": "11111",
+        "pause": "11111",
+        "duplicate": "11111",
+        "viewRuns": "11111",
+        "delete": "11111"
+      },
+      "states": {
+        "errorTitle": "11111",
+        "errorFallback": "11111",
+        "validationFailed": "11111",
+        "emptyTitle": "11111",
+        "emptyDescription": "11111",
+        "noResultsTitle": "11111",
+        "noResultsDescription": "11111"
+      },
+      "deleteDialog": {
+        "fallbackEntityName": "11111"
+      }
+    },
+    "eventsCatalog": {
+      "header": {
+        "title": "11111",
+        "subtitle": "11111",
+        "defineCustomEvent": "11111",
+        "managePermissionTitle": "11111"
+      },
+      "filters": {
+        "searchPlaceholder": "11111",
+        "allCategories": "11111",
+        "status": "11111",
+        "statusOptions": {
+          "all": "11111",
+          "active": "11111",
+          "beta": "11111",
+          "draft": "11111",
+          "deprecated": "11111"
+        },
+        "source": "11111",
+        "sourceOptions": {
+          "all": "11111",
+          "system": "11111",
+          "tenant": "11111"
+        },
+        "sort": "11111",
+        "sortOptions": {
+          "categoryName": "11111",
+          "mostActive": "11111"
+        },
+        "apply": "11111",
+        "clear": "11111",
+        "viewGrid": "11111",
+        "viewList": "11111"
+      },
+      "card": {
+        "workflowsCount": "11111 {{count}} 11111",
+        "actions": {
+          "simulate": "11111",
+          "metrics": "11111",
+          "attachTitle": "11111"
+        },
+        "metrics": {
+          "executions": "11111",
+          "successRate": "11111",
+          "avgLatency": "11111"
+        }
+      },
+      "states": {
+        "noEventsTitle": "11111",
+        "noEventsDescription": "11111",
+        "noEventsInRange": "11111",
+        "noDataAvailable": "11111",
+        "loading": "11111"
+      },
+      "pagination": {
+        "showing": "11111 {{start}} 11111 {{end}} 11111 {{total}} 11111",
+        "prev": "11111",
+        "next": "11111",
+        "page": "11111 {{page}} 11111 {{total}} 11111"
+      },
+      "badges": {
+        "system": "11111",
+        "tenant": "11111",
+        "noSchema": "11111",
+        "unknownSchema": "11111",
+        "schema": "11111"
+      },
+      "details": {
+        "title": "11111",
+        "close": "11111",
+        "simulate": "11111",
+        "metrics": "11111",
+        "attach": "11111",
+        "schema": {
+          "heading": "11111",
+          "viewFull": "11111",
+          "managedNotice": "11111",
+          "missingNotice": "11111",
+          "topLevelFields": "11111",
+          "required": "11111",
+          "moreFieldsHint": "11111"
+        },
+        "attached": {
+          "heading": "11111",
+          "loading": "11111",
+          "empty": "11111",
+          "publishedBadge": "11111",
+          "systemBadge": "11111",
+          "pausedBadge": "11111",
+          "hiddenBadge": "11111",
+          "open": "11111",
+          "detach": "11111",
+          "publishTooltip": "11111",
+          "adminTooltip": "11111"
+        }
+      },
+      "schemaModal": {
+        "title": "11111",
+        "close": "11111",
+        "headerTitle": "11111",
+        "loading": "11111",
+        "unavailable": "11111",
+        "copy": "11111",
+        "copySuccess": "11111",
+        "copyFailed": "11111"
+      },
+      "metricsDialog": {
+        "title": "11111",
+        "close": "11111",
+        "headerTitle": "11111 {{eventType}} 11111",
+        "from": "11111",
+        "to": "11111",
+        "refresh": "11111",
+        "openWorkflowEditor": "11111",
+        "loading": "11111",
+        "totals": {
+          "totalEvents": "11111",
+          "matched": "11111",
+          "unmatched": "11111",
+          "errors": "11111",
+          "runsStarted": "11111",
+          "runSuccessRate": "11111",
+          "avgRunDuration": "11111"
+        },
+        "executionsOverTime": "11111",
+        "recentEvents": "11111",
+        "viewInEvents": "11111",
+        "openRun": "11111",
+        "loadFailed": "11111",
+        "rangeShowing": "11111 {{start}} 11111 {{end}} 11111 {{total}} 11111",
+        "prev": "11111",
+        "next": "11111"
+      },
+      "simulateDialog": {
+        "title": "11111",
+        "headerTitle": "11111 {{eventType}} 11111",
+        "submit": "11111",
+        "submitting": "11111",
+        "close": "11111",
+        "fields": {
+          "correlationKey": "11111",
+          "correlationKeyPlaceholder": "11111",
+          "schemaRef": "11111",
+          "schemaRefPlaceholderEmpty": "11111",
+          "payloadJson": "11111",
+          "payload": "11111"
+        },
+        "modes": {
+          "form": "11111",
+          "json": "11111",
+          "noSchema": "11111"
+        },
+        "errors": {
+          "schemaValidationTitle": "11111",
+          "moreErrors": "11111 {{count}} 11111",
+          "fixBeforeSubmit": "11111",
+          "simulationTitle": "11111",
+          "submitFallback": "11111",
+          "submitToast": "11111",
+          "invalidJson": "11111",
+          "valueMustBeAllowed": "11111",
+          "expectedObject": "11111",
+          "expectedArray": "11111",
+          "expectedString": "11111",
+          "expectedNumber": "11111",
+          "expectedBoolean": "11111",
+          "requiredField": "11111"
+        },
+        "result": {
+          "title": "11111",
+          "status": "11111",
+          "eventId": "11111",
+          "startedRuns": "11111",
+          "open": "11111",
+          "resumedRun": "11111",
+          "openResumedRun": "11111"
+        },
+        "toasts": {
+          "success": "11111"
+        },
+        "form": {
+          "remove": "11111",
+          "addItem": "11111",
+          "rootLabel": "11111",
+          "payloadJsonLabel": "11111",
+          "true": "11111",
+          "false": "11111"
+        }
+      },
+      "defineEventDialog": {
+        "title": "11111",
+        "headerTitle": "11111",
+        "cancel": "11111",
+        "submit": "11111",
+        "submitting": "11111",
+        "fields": {
+          "eventType": "11111",
+          "eventTypePlaceholder": "11111",
+          "name": "11111",
+          "namePlaceholder": "11111",
+          "category": "11111",
+          "categoryPlaceholder": "11111",
+          "description": "11111",
+          "descriptionPlaceholder": "11111",
+          "useSchemaRef": "11111",
+          "useInline": "11111",
+          "selectSchemaRef": "11111",
+          "selectPlaceholder": "11111",
+          "payloadSchemaJson": "11111"
+        },
+        "footer": "11111",
+        "validation": {
+          "typeAndNameRequired": "11111",
+          "schemaRefRequired": "11111",
+          "invalidJson": "11111"
+        },
+        "toasts": {
+          "createSuccess": "11111",
+          "createFailed": "11111"
+        }
+      },
+      "toasts": {
+        "loadEventsFailed": "11111",
+        "workflowCreated": "11111",
+        "createWorkflowFailed": "11111",
+        "detachConfirm": "11111",
+        "detachValidationFailed": "11111",
+        "detached": "11111",
+        "detachFailed": "11111"
+      }
+    },
+    "actionInput": {
+      "fallbacks": {
+        "loadingOptions": "11111",
+        "selectName": "11111 {{name}} 11111",
+        "ticketSearchPlaceholder": "11111",
+        "ticketSelect": "11111",
+        "ticketTypeAbove": "11111",
+        "selectBoard": "11111",
+        "selectClient": "11111",
+        "selectContact": "11111",
+        "selectUser": "11111",
+        "selectUserOrTeam": "11111"
+      },
+      "errors": {
+        "loadTicket": "11111",
+        "searchTickets": "11111",
+        "loadOptions": "11111"
+      },
+      "dependencyHints": {
+        "contactClient": "11111",
+        "locationClient": "11111",
+        "categoryBoard": "11111",
+        "statusBoard": "11111",
+        "statusTicket": "11111",
+        "subcategoryBoard": "11111",
+        "subcategoryCategory": "11111"
+      }
+    }
   }
 }

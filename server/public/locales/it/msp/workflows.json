@@ -1880,5 +1880,390 @@
       "fixed": "Data e ora specifiche",
       "expression": "Espressione avanzata"
     }
+  },
+  "automation": {
+    "createWorkflow": {
+      "dialogTitle": "Crea nuovo workflow",
+      "fields": {
+        "name": "Nome workflow",
+        "namePlaceholder": "ad es. Invia e-mail di benvenuto",
+        "triggerType": "Tipo di trigger"
+      },
+      "validation": {
+        "nameRequired": "Il nome del workflow è obbligatorio",
+        "nameTooShort": "Il nome deve contenere almeno 3 caratteri"
+      },
+      "actions": {
+        "cancel": "Annulla",
+        "create": "Crea workflow"
+      },
+      "triggers": {
+        "event": {
+          "title": "Basato su evento",
+          "description": "Attivato automaticamente quando si verificano eventi specifici (ad es. ticket creato, fattura pagata)."
+        },
+        "scheduled": {
+          "title": "Pianificato",
+          "description": "Viene eseguito secondo una pianificazione ricorrente con espressioni cron (ad es. giornaliera, settimanale)."
+        },
+        "manual": {
+          "title": "Manuale",
+          "description": "Avviato su richiesta dagli utenti o tramite chiamate API. Nessun trigger automatico."
+        }
+      }
+    },
+    "workflowList": {
+      "header": "Workflow",
+      "stats": {
+        "total": "{{count}} totali",
+        "active": "{{count}} attivi",
+        "draft": "{{count}} in bozza",
+        "paused": "{{count}} in pausa"
+      },
+      "actions": {
+        "eventCatalog": "Catalogo eventi",
+        "newWorkflow": "Nuovo workflow",
+        "createFirst": "Crei il suo primo workflow",
+        "retry": "Riprova",
+        "resetFilters": "Reimposta"
+      },
+      "searchPlaceholder": "Cerca workflow...",
+      "statusFilter": {
+        "all": "Tutti gli stati",
+        "active": "Attivo",
+        "draft": "Bozza",
+        "paused": "In pausa",
+        "archived": "Archiviato"
+      },
+      "triggerFilter": {
+        "all": "Tutti i trigger",
+        "event": "Basato su evento",
+        "schedule": "Pianificazione singola",
+        "recurring": "Pianificazione ricorrente",
+        "manual": "Manuale"
+      },
+      "triggerLabels": {
+        "manual": "Manuale",
+        "schedule": "Pianificazione singola",
+        "recurring": "Pianificazione ricorrente",
+        "event": "Evento"
+      },
+      "bulk": {
+        "selectedSingular": "{{count}} workflow selezionato",
+        "selectedPlural": "{{count}} workflow selezionati",
+        "pause": "Metti in pausa",
+        "resume": "Riprendi",
+        "delete": "Elimina",
+        "clearSelection": "Annulla selezione",
+        "deleteDialogTitle": "Elimina i workflow selezionati",
+        "deleteConfirmSingular": "Elimina {{count}} workflow",
+        "deleteConfirmPlural": "Elimina {{count}} workflow",
+        "deleteClose": "Chiudi",
+        "deleteCancel": "Annulla",
+        "selectedSummarySingular": "Ha selezionato <1>{{count}}</1> workflow.",
+        "selectedSummaryPlural": "Ha selezionato <1>{{count}}</1> workflow.",
+        "willBeDeleted": "<1>{{count}}</1> verrà eliminato.",
+        "willBeSkipped": "<1>{{count}}</1> verrà ignorato.",
+        "skippedHeading": "Workflow ignorati",
+        "systemWorkflowReason": "Workflow di sistema"
+      },
+      "columns": {
+        "name": "Nome",
+        "status": "Stato",
+        "version": "Versione",
+        "trigger": "Trigger",
+        "lastModified": "Ultima modifica",
+        "actions": "Azioni"
+      },
+      "statusLabels": {
+        "active": "Attivo",
+        "draft": "Bozza",
+        "archived": "Archiviato",
+        "paused": "In pausa"
+      },
+      "tableValues": {
+        "system": "Sistema",
+        "draftVersion": "Bozza: v{{version}}"
+      },
+      "rowMenu": {
+        "ariaLabel": "Azioni del workflow",
+        "resume": "Riprendi",
+        "pause": "Metti in pausa",
+        "duplicate": "Duplica",
+        "viewRuns": "Visualizza esecuzioni",
+        "delete": "Elimina"
+      },
+      "states": {
+        "errorTitle": "Impossibile caricare i workflow",
+        "errorFallback": "Impossibile recuperare i workflow",
+        "validationFailed": "Convalida dell'eliminazione non riuscita. Riprovi.",
+        "emptyTitle": "Ancora nessun workflow",
+        "emptyDescription": "Crei il suo primo workflow per automatizzare attività, rispondere a eventi e ottimizzare i processi.",
+        "noResultsTitle": "Nessun workflow trovato",
+        "noResultsDescription": "Provi a modificare la ricerca o i filtri per trovare ciò che cerca."
+      },
+      "deleteDialog": {
+        "fallbackEntityName": "questo workflow"
+      }
+    },
+    "eventsCatalog": {
+      "header": {
+        "title": "Catalogo eventi del workflow",
+        "subtitle": "Esplori, gestisca e progetti i workflow per gli eventi e i trigger di sistema.",
+        "defineCustomEvent": "Definisci evento personalizzato",
+        "managePermissionTitle": "Richiede l'autorizzazione workflow:manage"
+      },
+      "filters": {
+        "searchPlaceholder": "Cerca eventi (ad es. ticket.create, email.receive)...",
+        "allCategories": "Tutte le categorie",
+        "status": "Stato",
+        "statusOptions": {
+          "all": "Tutti gli stati",
+          "active": "Attivo",
+          "beta": "Beta",
+          "draft": "Bozza",
+          "deprecated": "Deprecato"
+        },
+        "source": "Origine",
+        "sourceOptions": {
+          "all": "Tutte le origini",
+          "system": "Sistema",
+          "tenant": "Tenant"
+        },
+        "sort": "Ordinamento",
+        "sortOptions": {
+          "categoryName": "Categoria · Nome",
+          "mostActive": "Più attivi (7 g)"
+        },
+        "apply": "Applica",
+        "clear": "Cancella",
+        "viewGrid": "Vista a griglia",
+        "viewList": "Vista a elenco"
+      },
+      "card": {
+        "workflowsCount": "{{count}} workflow",
+        "actions": {
+          "simulate": "Simula",
+          "metrics": "Metriche",
+          "attachTitle": "Allega (nuovo workflow)"
+        },
+        "metrics": {
+          "executions": "Esecuzioni",
+          "successRate": "Tasso di successo",
+          "avgLatency": "Latenza media"
+        }
+      },
+      "states": {
+        "noEventsTitle": "Nessun evento trovato",
+        "noEventsDescription": "Provi a modificare i filtri.",
+        "noEventsInRange": "Nessun evento in questo intervallo.",
+        "noDataAvailable": "Nessun dato disponibile.",
+        "loading": "Caricamento…"
+      },
+      "pagination": {
+        "showing": "Mostra da {{start}} a {{end}} di {{total}} risultati",
+        "prev": "Prec.",
+        "next": "Succ.",
+        "page": "Pagina {{page}} / {{total}}"
+      },
+      "badges": {
+        "system": "Sistema",
+        "tenant": "Tenant",
+        "noSchema": "Nessuno schema",
+        "unknownSchema": "Schema sconosciuto",
+        "schema": "Schema"
+      },
+      "details": {
+        "title": "Dettagli evento",
+        "close": "Chiudi",
+        "simulate": "Simula",
+        "metrics": "Metriche",
+        "attach": "Allega",
+        "schema": {
+          "heading": "Schema",
+          "viewFull": "Visualizza schema completo",
+          "managedNotice": "Lo schema è gestito dal registro degli schemi.",
+          "missingNotice": "Nessun schemaRef impostato; l'evento potrebbe non essere utilizzabile come trigger del workflow.",
+          "topLevelFields": "Campi di primo livello",
+          "required": "obbligatorio",
+          "moreFieldsHint": "Vengono mostrati i primi 12 campi. Usi \"Visualizza schema completo\" per vederne altri."
+        },
+        "attached": {
+          "heading": "Workflow allegati",
+          "loading": "Caricamento…",
+          "empty": "Nessun workflow allegato.",
+          "publishedBadge": "Pubblicato",
+          "systemBadge": "Sistema",
+          "pausedBadge": "In pausa",
+          "hiddenBadge": "Nascosto",
+          "open": "Apri",
+          "detach": "Scollega",
+          "publishTooltip": "Richiede l'autorizzazione workflow:publish",
+          "adminTooltip": "Richiede workflow:admin per i workflow di sistema"
+        }
+      },
+      "schemaModal": {
+        "title": "Schema",
+        "close": "Chiudi",
+        "headerTitle": "Schema del payload",
+        "loading": "Caricamento…",
+        "unavailable": "Schema non disponibile.",
+        "copy": "Copia",
+        "copySuccess": "Copiato",
+        "copyFailed": "Copia non riuscita"
+      },
+      "metricsDialog": {
+        "title": "Metriche",
+        "close": "Chiudi",
+        "headerTitle": "Metriche · {{eventType}}",
+        "from": "Da",
+        "to": "A",
+        "refresh": "Aggiorna",
+        "openWorkflowEditor": "Apri editor del workflow",
+        "loading": "Caricamento…",
+        "totals": {
+          "totalEvents": "Eventi totali",
+          "matched": "Corrispondenze",
+          "unmatched": "Senza corrispondenza",
+          "errors": "Errori",
+          "runsStarted": "Esecuzioni avviate",
+          "runSuccessRate": "Tasso di successo delle esecuzioni",
+          "avgRunDuration": "Durata media dell'esecuzione"
+        },
+        "executionsOverTime": "Esecuzioni nel tempo",
+        "recentEvents": "Eventi recenti",
+        "viewInEvents": "Visualizza negli eventi",
+        "openRun": "Esecuzione",
+        "loadFailed": "Impossibile caricare le metriche",
+        "rangeShowing": "Mostra {{start}}–{{end}} di {{total}}",
+        "prev": "Prec.",
+        "next": "Succ."
+      },
+      "simulateDialog": {
+        "title": "Simula evento",
+        "headerTitle": "Simula · {{eventType}}",
+        "submit": "Simula",
+        "submitting": "Invio…",
+        "close": "Chiudi",
+        "fields": {
+          "correlationKey": "Chiave di correlazione (facoltativa)",
+          "correlationKeyPlaceholder": "Utilizzata per risolvere le attese degli eventi",
+          "schemaRef": "Riferimento allo schema del payload dell'evento (avanzato)",
+          "schemaRefPlaceholderEmpty": "Nessun schemaRef per questo evento",
+          "payloadJson": "Payload (JSON)",
+          "payload": "Payload"
+        },
+        "modes": {
+          "form": "Modulo",
+          "json": "JSON",
+          "noSchema": "Nessuno schema disponibile; modalità modulo disabilitata."
+        },
+        "errors": {
+          "schemaValidationTitle": "Errori di convalida dello schema",
+          "moreErrors": "+{{count}} altri",
+          "fixBeforeSubmit": "Corregga gli errori di convalida dello schema prima di inviare.",
+          "simulationTitle": "Errore di simulazione",
+          "submitFallback": "Simulazione non riuscita",
+          "submitToast": "Simulazione non riuscita",
+          "invalidJson": "JSON non valido.",
+          "valueMustBeAllowed": "Il valore deve essere una delle opzioni consentite.",
+          "expectedObject": "Oggetto previsto.",
+          "expectedArray": "Array previsto.",
+          "expectedString": "Stringa prevista.",
+          "expectedNumber": "Numero previsto.",
+          "expectedBoolean": "Valore booleano previsto.",
+          "requiredField": "Campo obbligatorio mancante."
+        },
+        "result": {
+          "title": "Risultato",
+          "status": "Stato",
+          "eventId": "ID evento",
+          "startedRuns": "Esecuzioni avviate",
+          "open": "Apri",
+          "resumedRun": "Esecuzione ripresa",
+          "openResumedRun": "Apri l'esecuzione ripresa"
+        },
+        "toasts": {
+          "success": "Evento simulato"
+        },
+        "form": {
+          "remove": "Rimuovi",
+          "addItem": "Aggiungi elemento",
+          "rootLabel": "Payload",
+          "payloadJsonLabel": "Payload (JSON)",
+          "true": "Vero",
+          "false": "Falso"
+        }
+      },
+      "defineEventDialog": {
+        "title": "Definisci evento personalizzato",
+        "headerTitle": "Definisci evento personalizzato",
+        "cancel": "Annulla",
+        "submit": "Crea evento",
+        "submitting": "Creazione…",
+        "fields": {
+          "eventType": "Tipo di evento",
+          "eventTypePlaceholder": "ad es. ticket.created",
+          "name": "Nome",
+          "namePlaceholder": "Nome leggibile",
+          "category": "Categoria",
+          "categoryPlaceholder": "ad es. Ticket",
+          "description": "Descrizione",
+          "descriptionPlaceholder": "Descrizione facoltativa",
+          "useSchemaRef": "Usa riferimento allo schema",
+          "useInline": "Schema inline (avanzato)",
+          "selectSchemaRef": "Selezioni il riferimento allo schema del payload",
+          "selectPlaceholder": "Selezioni…",
+          "payloadSchemaJson": "Schema del payload (JSON)"
+        },
+        "footer": "Gli eventi personalizzati sono limitati al tenant e possono essere usati come trigger del workflow.",
+        "validation": {
+          "typeAndNameRequired": "Il tipo di evento e il nome sono obbligatori.",
+          "schemaRefRequired": "Selezioni un riferimento allo schema del payload (o usi uno schema inline).",
+          "invalidJson": "Lo schema del payload deve essere un JSON valido."
+        },
+        "toasts": {
+          "createSuccess": "Evento personalizzato creato",
+          "createFailed": "Impossibile creare l'evento"
+        }
+      },
+      "toasts": {
+        "loadEventsFailed": "Impossibile caricare gli eventi",
+        "workflowCreated": "Workflow creato",
+        "createWorkflowFailed": "Impossibile creare il workflow",
+        "detachConfirm": "Scollegare questo workflow dall'evento? Questa operazione pubblica una nuova versione senza il trigger.",
+        "detachValidationFailed": "Scollegamento non riuscito (errori di convalida)",
+        "detached": "Scollegato",
+        "detachFailed": "Scollegamento non riuscito"
+      }
+    },
+    "actionInput": {
+      "fallbacks": {
+        "loadingOptions": "Caricamento delle opzioni...",
+        "selectName": "Seleziona {{name}}",
+        "ticketSearchPlaceholder": "Cerca ticket per numero o titolo",
+        "ticketSelect": "Seleziona ticket",
+        "ticketTypeAbove": "Digiti sopra per cercare i ticket",
+        "selectBoard": "Seleziona board",
+        "selectClient": "Seleziona cliente",
+        "selectContact": "Seleziona contatto",
+        "selectUser": "Seleziona utente",
+        "selectUserOrTeam": "Seleziona utente o team"
+      },
+      "errors": {
+        "loadTicket": "Impossibile caricare il ticket",
+        "searchTickets": "Impossibile cercare i ticket",
+        "loadOptions": "Impossibile caricare le opzioni"
+      },
+      "dependencyHints": {
+        "contactClient": "Scelga prima un cliente fisso per caricare le opzioni di contatto.",
+        "locationClient": "Scelga prima un cliente fisso per caricare le opzioni di posizione.",
+        "categoryBoard": "Scelga prima una board fissa per caricare le opzioni di categoria.",
+        "statusBoard": "Scelga prima una board fissa per caricare le opzioni di stato.",
+        "statusTicket": "Scelga prima un ticket fisso per caricare le opzioni di stato.",
+        "subcategoryBoard": "Scelga prima una board fissa per caricare le opzioni di sottocategoria.",
+        "subcategoryCategory": "Scelga prima una categoria fissa per caricare le opzioni di sottocategoria."
+      }
+    }
   }
 }

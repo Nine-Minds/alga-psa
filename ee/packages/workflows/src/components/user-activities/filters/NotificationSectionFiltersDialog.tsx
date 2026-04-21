@@ -16,6 +16,7 @@ import { StringDateRangePicker } from "@alga-psa/ui/components/DateRangePicker";
 import { ActivityFilters } from "@alga-psa/types";
 import { ISO8601String } from '@alga-psa/types';
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface NotificationSectionFiltersDialogProps {
   isOpen: boolean;
@@ -24,20 +25,21 @@ interface NotificationSectionFiltersDialogProps {
   onApplyFilters: (filters: Partial<ActivityFilters>) => void;
 }
 
-// Notification categories mapping
-const NOTIFICATION_CATEGORIES = [
-  { value: 'tickets', label: 'Tickets' },
-  { value: 'projects', label: 'Projects' },
-  { value: 'invoices', label: 'Invoices' },
-  { value: 'system', label: 'System' },
-];
-
 export function NotificationSectionFiltersDialog({
   isOpen,
   onOpenChange,
   initialFilters,
   onApplyFilters,
 }: NotificationSectionFiltersDialogProps) {
+  const { t } = useTranslation('msp/user-activities');
+
+  // Notification categories mapping
+  const NOTIFICATION_CATEGORIES = [
+    { value: 'tickets', label: t('sections.notifications.filterDialog.fields.categories.tickets', { defaultValue: 'Tickets' }) },
+    { value: 'projects', label: t('sections.notifications.filterDialog.fields.categories.projects', { defaultValue: 'Projects' }) },
+    { value: 'invoices', label: t('sections.notifications.filterDialog.fields.categories.invoices', { defaultValue: 'Invoices' }) },
+    { value: 'system', label: t('sections.notifications.filterDialog.fields.categories.system', { defaultValue: 'System' }) },
+  ];
   // Local state for filters
   const [localFilters, setLocalFilters] = useState<Partial<ActivityFilters>>(() => initialFilters);
   const [selectedCategory, setSelectedCategory] = useState<string>(initialFilters.search || 'all');
@@ -90,10 +92,10 @@ export function NotificationSectionFiltersDialog({
 
   const footer = (
     <div className="flex justify-between w-full">
-      <Button id="notification-filter-clear" variant="outline" onClick={handleClear}>Reset</Button>
+      <Button id="notification-filter-clear" variant="outline" onClick={handleClear}>{t('sections.notifications.filterDialog.actions.reset', { defaultValue: 'Reset' })}</Button>
       <div>
-        <Button id="notification-filter-cancel" variant="ghost" className="mr-2" onClick={() => onOpenChange(false)}>Cancel</Button>
-        <Button id="notification-filter-apply" onClick={handleApply}>Apply Filters</Button>
+        <Button id="notification-filter-cancel" variant="ghost" className="mr-2" onClick={() => onOpenChange(false)}>{t('sections.notifications.filterDialog.actions.cancel', { defaultValue: 'Cancel' })}</Button>
+        <Button id="notification-filter-apply" onClick={handleApply}>{t('sections.notifications.filterDialog.actions.apply', { defaultValue: 'Apply Filters' })}</Button>
       </div>
     </div>
   );
@@ -102,20 +104,20 @@ export function NotificationSectionFiltersDialog({
     <Dialog isOpen={isOpen} onClose={() => onOpenChange(false)} footer={footer}>
       <DialogContent className="sm:max-w-[700]">
         <DialogHeader>
-          <DialogTitle>Filter Notifications</DialogTitle>
+          <DialogTitle>{t('sections.notifications.filterDialog.title', { defaultValue: 'Filter Notifications' })}</DialogTitle>
           <DialogDescription>
-            Select criteria to filter notification activities.
+            {t('sections.notifications.filterDialog.description', { defaultValue: 'Select criteria to filter notification activities.' })}
           </DialogDescription>
         </DialogHeader>
         <div className="py-2 space-y-4">
 
           {/* Read/Unread Filter */}
           <div className="space-y-1">
-            <Label className="text-base font-semibold">Status</Label>
+            <Label className="text-base font-semibold">{t('sections.notifications.filterDialog.fields.status', { defaultValue: 'Status' })}</Label>
             <div className="flex items-center space-x-4 pt-1">
               <Checkbox
                 id="show-unread-only"
-                label="Unread Only"
+                label={t('sections.notifications.filterDialog.fields.unreadOnly', { defaultValue: 'Unread Only' })}
                 checked={!localFilters.isClosed}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setLocalFilters(prev => ({ ...prev, isClosed: !e.target.checked }))
@@ -123,7 +125,7 @@ export function NotificationSectionFiltersDialog({
               />
               <Checkbox
                 id="show-read-notifications"
-                label="Show Read"
+                label={t('sections.notifications.filterDialog.fields.showRead', { defaultValue: 'Show Read' })}
                 checked={localFilters.isClosed === true}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setLocalFilters(prev => ({ ...prev, isClosed: e.target.checked }))
@@ -134,22 +136,22 @@ export function NotificationSectionFiltersDialog({
 
           {/* Category Filter */}
           <div className="space-y-1">
-            <Label htmlFor="notification-category-select" className="text-base font-semibold">Category</Label>
+            <Label htmlFor="notification-category-select" className="text-base font-semibold">{t('sections.notifications.filterDialog.fields.category', { defaultValue: 'Category' })}</Label>
             <CustomSelect
               id="notification-category-select"
               value={selectedCategory}
               onValueChange={(value) => setSelectedCategory(value)}
               options={[
-                { value: 'all', label: 'All Categories' },
+                { value: 'all', label: t('sections.notifications.filterDialog.fields.allCategories', { defaultValue: 'All Categories' }) },
                 ...NOTIFICATION_CATEGORIES
               ]}
-              placeholder="Select Category..."
+              placeholder={t('sections.notifications.filterDialog.fields.categoryPlaceholder', { defaultValue: 'Select Category...' })}
             />
           </div>
 
           {/* Date Range */}
           <div className="space-y-1">
-            <Label htmlFor="notification-date-range" className="text-base font-semibold">Date Range</Label>
+            <Label htmlFor="notification-date-range" className="text-base font-semibold">{t('sections.notifications.filterDialog.fields.dateRange', { defaultValue: 'Date Range' })}</Label>
             <StringDateRangePicker
               id="notification-date-range"
               value={{

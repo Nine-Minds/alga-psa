@@ -1880,5 +1880,390 @@
       "fixed": "Konkretna data i godzina",
       "expression": "Zaawansowane wyrażenie"
     }
+  },
+  "automation": {
+    "createWorkflow": {
+      "dialogTitle": "Utwórz nowy przepływ pracy",
+      "fields": {
+        "name": "Nazwa przepływu pracy",
+        "namePlaceholder": "np. Wyślij e-mail powitalny",
+        "triggerType": "Typ wyzwalacza"
+      },
+      "validation": {
+        "nameRequired": "Nazwa przepływu pracy jest wymagana",
+        "nameTooShort": "Nazwa musi mieć co najmniej 3 znaki"
+      },
+      "actions": {
+        "cancel": "Anuluj",
+        "create": "Utwórz przepływ pracy"
+      },
+      "triggers": {
+        "event": {
+          "title": "Oparty na zdarzeniu",
+          "description": "Wyzwalany automatycznie, gdy występują określone zdarzenia (np. utworzenie zgłoszenia, opłacenie faktury)."
+        },
+        "scheduled": {
+          "title": "Zaplanowany",
+          "description": "Uruchamiany według cyklicznego harmonogramu z wykorzystaniem wyrażeń cron (np. codziennie, co tydzień)."
+        },
+        "manual": {
+          "title": "Ręczny",
+          "description": "Uruchamiany na żądanie przez użytkowników lub poprzez wywołania API. Brak automatycznych wyzwalaczy."
+        }
+      }
+    },
+    "workflowList": {
+      "header": "Przepływy pracy",
+      "stats": {
+        "total": "{{count}} łącznie",
+        "active": "{{count}} aktywnych",
+        "draft": "{{count}} wersji roboczych",
+        "paused": "{{count}} wstrzymanych"
+      },
+      "actions": {
+        "eventCatalog": "Katalog zdarzeń",
+        "newWorkflow": "Nowy przepływ pracy",
+        "createFirst": "Utwórz swój pierwszy przepływ pracy",
+        "retry": "Ponów",
+        "resetFilters": "Resetuj"
+      },
+      "searchPlaceholder": "Szukaj przepływów pracy...",
+      "statusFilter": {
+        "all": "Wszystkie statusy",
+        "active": "Aktywny",
+        "draft": "Wersja robocza",
+        "paused": "Wstrzymany",
+        "archived": "Zarchiwizowany"
+      },
+      "triggerFilter": {
+        "all": "Wszystkie wyzwalacze",
+        "event": "Oparty na zdarzeniu",
+        "schedule": "Harmonogram jednorazowy",
+        "recurring": "Harmonogram cykliczny",
+        "manual": "Ręczny"
+      },
+      "triggerLabels": {
+        "manual": "Ręczny",
+        "schedule": "Harmonogram jednorazowy",
+        "recurring": "Harmonogram cykliczny",
+        "event": "Zdarzenie"
+      },
+      "bulk": {
+        "selectedSingular": "Wybrano {{count}} przepływ pracy",
+        "selectedPlural": "Wybrano {{count}} przepływów pracy",
+        "pause": "Wstrzymaj",
+        "resume": "Wznów",
+        "delete": "Usuń",
+        "clearSelection": "Wyczyść zaznaczenie",
+        "deleteDialogTitle": "Usuń wybrane przepływy pracy",
+        "deleteConfirmSingular": "Usuń {{count}} przepływ pracy",
+        "deleteConfirmPlural": "Usuń {{count}} przepływów pracy",
+        "deleteClose": "Zamknij",
+        "deleteCancel": "Anuluj",
+        "selectedSummarySingular": "Wybrano <1>{{count}}</1> przepływ pracy.",
+        "selectedSummaryPlural": "Wybrano <1>{{count}}</1> przepływów pracy.",
+        "willBeDeleted": "<1>{{count}}</1> zostanie usunięty.",
+        "willBeSkipped": "<1>{{count}}</1> zostanie pominięty.",
+        "skippedHeading": "Pominięte przepływy pracy",
+        "systemWorkflowReason": "Systemowy przepływ pracy"
+      },
+      "columns": {
+        "name": "Nazwa",
+        "status": "Status",
+        "version": "Wersja",
+        "trigger": "Wyzwalacz",
+        "lastModified": "Ostatnia modyfikacja",
+        "actions": "Akcje"
+      },
+      "statusLabels": {
+        "active": "Aktywny",
+        "draft": "Wersja robocza",
+        "archived": "Zarchiwizowany",
+        "paused": "Wstrzymany"
+      },
+      "tableValues": {
+        "system": "System",
+        "draftVersion": "Wersja robocza: v{{version}}"
+      },
+      "rowMenu": {
+        "ariaLabel": "Akcje przepływu pracy",
+        "resume": "Wznów",
+        "pause": "Wstrzymaj",
+        "duplicate": "Duplikuj",
+        "viewRuns": "Wyświetl uruchomienia",
+        "delete": "Usuń"
+      },
+      "states": {
+        "errorTitle": "Nie udało się załadować przepływów pracy",
+        "errorFallback": "Nie udało się pobrać przepływów pracy",
+        "validationFailed": "Walidacja usunięcia nie powiodła się. Proszę spróbować ponownie.",
+        "emptyTitle": "Brak przepływów pracy",
+        "emptyDescription": "Proszę utworzyć pierwszy przepływ pracy, aby zautomatyzować zadania, reagować na zdarzenia i usprawnić swoje procesy.",
+        "noResultsTitle": "Nie znaleziono przepływów pracy",
+        "noResultsDescription": "Proszę spróbować dostosować wyszukiwanie lub filtry, aby znaleźć to, czego Pan/Pani szuka."
+      },
+      "deleteDialog": {
+        "fallbackEntityName": "ten przepływ pracy"
+      }
+    },
+    "eventsCatalog": {
+      "header": {
+        "title": "Katalog zdarzeń przepływu pracy",
+        "subtitle": "Proszę przeglądać, zarządzać i projektować przepływy pracy dla zdarzeń i wyzwalaczy systemowych.",
+        "defineCustomEvent": "Zdefiniuj zdarzenie niestandardowe",
+        "managePermissionTitle": "Wymaga uprawnienia workflow:manage"
+      },
+      "filters": {
+        "searchPlaceholder": "Szukaj zdarzeń (np. ticket.create, email.receive)...",
+        "allCategories": "Wszystkie kategorie",
+        "status": "Status",
+        "statusOptions": {
+          "all": "Wszystkie statusy",
+          "active": "Aktywny",
+          "beta": "Beta",
+          "draft": "Wersja robocza",
+          "deprecated": "Wycofany"
+        },
+        "source": "Źródło",
+        "sourceOptions": {
+          "all": "Wszystkie źródła",
+          "system": "System",
+          "tenant": "Tenant"
+        },
+        "sort": "Sortowanie",
+        "sortOptions": {
+          "categoryName": "Kategoria · Nazwa",
+          "mostActive": "Najaktywniejsze (7 dni)"
+        },
+        "apply": "Zastosuj",
+        "clear": "Wyczyść",
+        "viewGrid": "Widok siatki",
+        "viewList": "Widok listy"
+      },
+      "card": {
+        "workflowsCount": "{{count}} przepływów pracy",
+        "actions": {
+          "simulate": "Symuluj",
+          "metrics": "Metryki",
+          "attachTitle": "Dołącz (nowy przepływ pracy)"
+        },
+        "metrics": {
+          "executions": "Wykonania",
+          "successRate": "Wskaźnik sukcesu",
+          "avgLatency": "Śr. opóźnienie"
+        }
+      },
+      "states": {
+        "noEventsTitle": "Nie znaleziono zdarzeń",
+        "noEventsDescription": "Proszę spróbować dostosować filtry.",
+        "noEventsInRange": "Brak zdarzeń w tym zakresie.",
+        "noDataAvailable": "Brak dostępnych danych.",
+        "loading": "Ładowanie…"
+      },
+      "pagination": {
+        "showing": "Wyświetlanie {{start}} do {{end}} z {{total}} wyników",
+        "prev": "Wstecz",
+        "next": "Dalej",
+        "page": "Strona {{page}} / {{total}}"
+      },
+      "badges": {
+        "system": "System",
+        "tenant": "Tenant",
+        "noSchema": "Brak schematu",
+        "unknownSchema": "Nieznany schemat",
+        "schema": "Schemat"
+      },
+      "details": {
+        "title": "Szczegóły zdarzenia",
+        "close": "Zamknij",
+        "simulate": "Symuluj",
+        "metrics": "Metryki",
+        "attach": "Dołącz",
+        "schema": {
+          "heading": "Schemat",
+          "viewFull": "Wyświetl pełny schemat",
+          "managedNotice": "Schemat jest zarządzany przez rejestr schematów.",
+          "missingNotice": "Nie ustawiono schemaRef; zdarzenie może nie być użyteczne jako wyzwalacz przepływu pracy.",
+          "topLevelFields": "Pola najwyższego poziomu",
+          "required": "wymagane",
+          "moreFieldsHint": "Wyświetlanie pierwszych 12 pól. Proszę użyć opcji \"Wyświetl pełny schemat\", aby zobaczyć więcej."
+        },
+        "attached": {
+          "heading": "Dołączone przepływy pracy",
+          "loading": "Ładowanie…",
+          "empty": "Brak dołączonych przepływów pracy.",
+          "publishedBadge": "Opublikowano",
+          "systemBadge": "System",
+          "pausedBadge": "Wstrzymano",
+          "hiddenBadge": "Ukryto",
+          "open": "Otwórz",
+          "detach": "Odłącz",
+          "publishTooltip": "Wymaga uprawnienia workflow:publish",
+          "adminTooltip": "Wymaga workflow:admin dla systemowych przepływów pracy"
+        }
+      },
+      "schemaModal": {
+        "title": "Schemat",
+        "close": "Zamknij",
+        "headerTitle": "Schemat ładunku",
+        "loading": "Ładowanie…",
+        "unavailable": "Schemat niedostępny.",
+        "copy": "Kopiuj",
+        "copySuccess": "Skopiowano",
+        "copyFailed": "Kopiowanie nie powiodło się"
+      },
+      "metricsDialog": {
+        "title": "Metryki",
+        "close": "Zamknij",
+        "headerTitle": "Metryki · {{eventType}}",
+        "from": "Od",
+        "to": "Do",
+        "refresh": "Odśwież",
+        "openWorkflowEditor": "Otwórz edytor przepływu pracy",
+        "loading": "Ładowanie…",
+        "totals": {
+          "totalEvents": "Łączna liczba zdarzeń",
+          "matched": "Dopasowane",
+          "unmatched": "Niedopasowane",
+          "errors": "Błędy",
+          "runsStarted": "Uruchomione wykonania",
+          "runSuccessRate": "Wskaźnik sukcesu wykonań",
+          "avgRunDuration": "Śr. czas trwania wykonania"
+        },
+        "executionsOverTime": "Wykonania w czasie",
+        "recentEvents": "Ostatnie zdarzenia",
+        "viewInEvents": "Wyświetl w zdarzeniach",
+        "openRun": "Wykonanie",
+        "loadFailed": "Nie udało się załadować metryk",
+        "rangeShowing": "Wyświetlanie {{start}}–{{end}} z {{total}}",
+        "prev": "Wstecz",
+        "next": "Dalej"
+      },
+      "simulateDialog": {
+        "title": "Symuluj zdarzenie",
+        "headerTitle": "Symuluj · {{eventType}}",
+        "submit": "Symuluj",
+        "submitting": "Wysyłanie…",
+        "close": "Zamknij",
+        "fields": {
+          "correlationKey": "Klucz korelacji (opcjonalny)",
+          "correlationKeyPlaceholder": "Używany do rozwiązywania oczekiwań na zdarzenia",
+          "schemaRef": "Odniesienie do schematu ładunku zdarzenia (zaawansowane)",
+          "schemaRefPlaceholderEmpty": "Brak schemaRef dla tego zdarzenia",
+          "payloadJson": "Ładunek (JSON)",
+          "payload": "Ładunek"
+        },
+        "modes": {
+          "form": "Formularz",
+          "json": "JSON",
+          "noSchema": "Brak dostępnego schematu; tryb formularza jest wyłączony."
+        },
+        "errors": {
+          "schemaValidationTitle": "Błędy walidacji schematu",
+          "moreErrors": "+{{count}} więcej",
+          "fixBeforeSubmit": "Proszę poprawić błędy walidacji schematu przed wysłaniem.",
+          "simulationTitle": "Błąd symulacji",
+          "submitFallback": "Symulacja nie powiodła się",
+          "submitToast": "Symulacja nie powiodła się",
+          "invalidJson": "Nieprawidłowy JSON.",
+          "valueMustBeAllowed": "Wartość musi być jedną z dozwolonych opcji.",
+          "expectedObject": "Oczekiwano obiektu.",
+          "expectedArray": "Oczekiwano tablicy.",
+          "expectedString": "Oczekiwano ciągu znaków.",
+          "expectedNumber": "Oczekiwano liczby.",
+          "expectedBoolean": "Oczekiwano wartości logicznej.",
+          "requiredField": "Brak wymaganego pola."
+        },
+        "result": {
+          "title": "Wynik",
+          "status": "Status",
+          "eventId": "ID zdarzenia",
+          "startedRuns": "Uruchomione wykonania",
+          "open": "Otwórz",
+          "resumedRun": "Wznowione wykonanie",
+          "openResumedRun": "Otwórz wznowione wykonanie"
+        },
+        "toasts": {
+          "success": "Zdarzenie zasymulowane"
+        },
+        "form": {
+          "remove": "Usuń",
+          "addItem": "Dodaj element",
+          "rootLabel": "Ładunek",
+          "payloadJsonLabel": "Ładunek (JSON)",
+          "true": "Prawda",
+          "false": "Fałsz"
+        }
+      },
+      "defineEventDialog": {
+        "title": "Zdefiniuj zdarzenie niestandardowe",
+        "headerTitle": "Zdefiniuj zdarzenie niestandardowe",
+        "cancel": "Anuluj",
+        "submit": "Utwórz zdarzenie",
+        "submitting": "Tworzenie…",
+        "fields": {
+          "eventType": "Typ zdarzenia",
+          "eventTypePlaceholder": "np. ticket.created",
+          "name": "Nazwa",
+          "namePlaceholder": "Przyjazna dla użytkownika nazwa",
+          "category": "Kategoria",
+          "categoryPlaceholder": "np. Zgłoszenia",
+          "description": "Opis",
+          "descriptionPlaceholder": "Opcjonalny opis",
+          "useSchemaRef": "Użyj odniesienia do schematu",
+          "useInline": "Schemat wbudowany (zaawansowane)",
+          "selectSchemaRef": "Proszę wybrać odniesienie do schematu ładunku",
+          "selectPlaceholder": "Proszę wybrać…",
+          "payloadSchemaJson": "Schemat ładunku (JSON)"
+        },
+        "footer": "Niestandardowe zdarzenia są ograniczone do tenantu i mogą być używane jako wyzwalacze przepływu pracy.",
+        "validation": {
+          "typeAndNameRequired": "Typ zdarzenia i nazwa są wymagane.",
+          "schemaRefRequired": "Proszę wybrać odniesienie do schematu ładunku (lub użyć schematu wbudowanego).",
+          "invalidJson": "Schemat ładunku musi być prawidłowym kodem JSON."
+        },
+        "toasts": {
+          "createSuccess": "Utworzono zdarzenie niestandardowe",
+          "createFailed": "Nie udało się utworzyć zdarzenia"
+        }
+      },
+      "toasts": {
+        "loadEventsFailed": "Nie udało się załadować zdarzeń",
+        "workflowCreated": "Utworzono przepływ pracy",
+        "createWorkflowFailed": "Nie udało się utworzyć przepływu pracy",
+        "detachConfirm": "Odłączyć ten przepływ pracy od zdarzenia? Spowoduje to opublikowanie nowej wersji bez wyzwalacza.",
+        "detachValidationFailed": "Odłączanie nie powiodło się (błędy walidacji)",
+        "detached": "Odłączono",
+        "detachFailed": "Odłączanie nie powiodło się"
+      }
+    },
+    "actionInput": {
+      "fallbacks": {
+        "loadingOptions": "Ładowanie opcji...",
+        "selectName": "Wybierz: {{name}}",
+        "ticketSearchPlaceholder": "Szukaj zgłoszeń według numeru lub tytułu",
+        "ticketSelect": "Wybierz zgłoszenie",
+        "ticketTypeAbove": "Proszę wpisać powyżej, aby wyszukać zgłoszenia",
+        "selectBoard": "Wybierz tablicę",
+        "selectClient": "Wybierz klienta",
+        "selectContact": "Wybierz kontakt",
+        "selectUser": "Wybierz użytkownika",
+        "selectUserOrTeam": "Wybierz użytkownika lub zespół"
+      },
+      "errors": {
+        "loadTicket": "Nie udało się załadować zgłoszenia",
+        "searchTickets": "Nie udało się wyszukać zgłoszeń",
+        "loadOptions": "Nie udało się załadować opcji"
+      },
+      "dependencyHints": {
+        "contactClient": "Proszę najpierw wybrać stałego klienta, aby załadować opcje kontaktów.",
+        "locationClient": "Proszę najpierw wybrać stałego klienta, aby załadować opcje lokalizacji.",
+        "categoryBoard": "Proszę najpierw wybrać stałą tablicę, aby załadować opcje kategorii.",
+        "statusBoard": "Proszę najpierw wybrać stałą tablicę, aby załadować opcje statusu.",
+        "statusTicket": "Proszę najpierw wybrać stałe zgłoszenie, aby załadować opcje statusu.",
+        "subcategoryBoard": "Proszę najpierw wybrać stałą tablicę, aby załadować opcje podkategorii.",
+        "subcategoryCategory": "Proszę najpierw wybrać stałą kategorię, aby załadować opcje podkategorii."
+      }
+    }
   }
 }

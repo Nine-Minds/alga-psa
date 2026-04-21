@@ -1880,5 +1880,390 @@
       "fixed": "Bestimmtes Datum & Uhrzeit",
       "expression": "Erweiterter Ausdruck"
     }
+  },
+  "automation": {
+    "createWorkflow": {
+      "dialogTitle": "Neuen Workflow erstellen",
+      "fields": {
+        "name": "Workflow-Name",
+        "namePlaceholder": "z. B. Begrüßungs-E-Mail senden",
+        "triggerType": "Auslösertyp"
+      },
+      "validation": {
+        "nameRequired": "Workflow-Name ist erforderlich",
+        "nameTooShort": "Der Name muss mindestens 3 Zeichen lang sein"
+      },
+      "actions": {
+        "cancel": "Abbrechen",
+        "create": "Workflow erstellen"
+      },
+      "triggers": {
+        "event": {
+          "title": "Ereignisbasiert",
+          "description": "Wird automatisch ausgelöst, wenn bestimmte Ereignisse eintreten (z. B. Ticket erstellt, Rechnung bezahlt)."
+        },
+        "scheduled": {
+          "title": "Geplant",
+          "description": "Wird nach einem wiederkehrenden Zeitplan mit Cron-Ausdrücken ausgeführt (z. B. täglich, wöchentlich)."
+        },
+        "manual": {
+          "title": "Manuell",
+          "description": "Wird auf Anforderung von Benutzern oder über API-Aufrufe gestartet. Keine automatischen Auslöser."
+        }
+      }
+    },
+    "workflowList": {
+      "header": "Workflows",
+      "stats": {
+        "total": "{{count}} insgesamt",
+        "active": "{{count}} aktiv",
+        "draft": "{{count}} Entwurf",
+        "paused": "{{count}} pausiert"
+      },
+      "actions": {
+        "eventCatalog": "Ereigniskatalog",
+        "newWorkflow": "Neuer Workflow",
+        "createFirst": "Erstellen Sie Ihren ersten Workflow",
+        "retry": "Wiederholen",
+        "resetFilters": "Zurücksetzen"
+      },
+      "searchPlaceholder": "Workflows durchsuchen...",
+      "statusFilter": {
+        "all": "Alle Status",
+        "active": "Aktiv",
+        "draft": "Entwurf",
+        "paused": "Pausiert",
+        "archived": "Archiviert"
+      },
+      "triggerFilter": {
+        "all": "Alle Auslöser",
+        "event": "Ereignisbasiert",
+        "schedule": "Einmaliger Zeitplan",
+        "recurring": "Wiederkehrender Zeitplan",
+        "manual": "Manuell"
+      },
+      "triggerLabels": {
+        "manual": "Manuell",
+        "schedule": "Einmaliger Zeitplan",
+        "recurring": "Wiederkehrender Zeitplan",
+        "event": "Ereignis"
+      },
+      "bulk": {
+        "selectedSingular": "{{count}} Workflow ausgewählt",
+        "selectedPlural": "{{count}} Workflows ausgewählt",
+        "pause": "Pausieren",
+        "resume": "Fortsetzen",
+        "delete": "Löschen",
+        "clearSelection": "Auswahl aufheben",
+        "deleteDialogTitle": "Ausgewählte Workflows löschen",
+        "deleteConfirmSingular": "{{count}} Workflow löschen",
+        "deleteConfirmPlural": "{{count}} Workflows löschen",
+        "deleteClose": "Schließen",
+        "deleteCancel": "Abbrechen",
+        "selectedSummarySingular": "Sie haben <1>{{count}}</1> Workflow ausgewählt.",
+        "selectedSummaryPlural": "Sie haben <1>{{count}}</1> Workflows ausgewählt.",
+        "willBeDeleted": "<1>{{count}}</1> wird gelöscht.",
+        "willBeSkipped": "<1>{{count}}</1> wird übersprungen.",
+        "skippedHeading": "Übersprungene Workflows",
+        "systemWorkflowReason": "System-Workflow"
+      },
+      "columns": {
+        "name": "Name",
+        "status": "Status",
+        "version": "Version",
+        "trigger": "Auslöser",
+        "lastModified": "Zuletzt geändert",
+        "actions": "Aktionen"
+      },
+      "statusLabels": {
+        "active": "Aktiv",
+        "draft": "Entwurf",
+        "archived": "Archiviert",
+        "paused": "Pausiert"
+      },
+      "tableValues": {
+        "system": "System",
+        "draftVersion": "Entwurf: v{{version}}"
+      },
+      "rowMenu": {
+        "ariaLabel": "Workflow-Aktionen",
+        "resume": "Fortsetzen",
+        "pause": "Pausieren",
+        "duplicate": "Duplizieren",
+        "viewRuns": "Ausführungen anzeigen",
+        "delete": "Löschen"
+      },
+      "states": {
+        "errorTitle": "Workflows konnten nicht geladen werden",
+        "errorFallback": "Workflows konnten nicht abgerufen werden",
+        "validationFailed": "Validierung der Löschung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+        "emptyTitle": "Noch keine Workflows",
+        "emptyDescription": "Erstellen Sie Ihren ersten Workflow, um Aufgaben zu automatisieren, auf Ereignisse zu reagieren und Ihre Prozesse zu optimieren.",
+        "noResultsTitle": "Keine Workflows gefunden",
+        "noResultsDescription": "Passen Sie Ihre Suche oder Filter an, um das Gewünschte zu finden."
+      },
+      "deleteDialog": {
+        "fallbackEntityName": "diesen Workflow"
+      }
+    },
+    "eventsCatalog": {
+      "header": {
+        "title": "Workflow-Ereigniskatalog",
+        "subtitle": "Erkunden, verwalten und gestalten Sie Workflows für Systemereignisse und Auslöser.",
+        "defineCustomEvent": "Benutzerdefiniertes Ereignis definieren",
+        "managePermissionTitle": "Erfordert die Berechtigung workflow:manage"
+      },
+      "filters": {
+        "searchPlaceholder": "Ereignisse suchen (z. B. ticket.create, email.receive)...",
+        "allCategories": "Alle Kategorien",
+        "status": "Status",
+        "statusOptions": {
+          "all": "Alle Status",
+          "active": "Aktiv",
+          "beta": "Beta",
+          "draft": "Entwurf",
+          "deprecated": "Veraltet"
+        },
+        "source": "Quelle",
+        "sourceOptions": {
+          "all": "Alle Quellen",
+          "system": "System",
+          "tenant": "Tenant"
+        },
+        "sort": "Sortierung",
+        "sortOptions": {
+          "categoryName": "Kategorie · Name",
+          "mostActive": "Aktivste (7 Tage)"
+        },
+        "apply": "Anwenden",
+        "clear": "Löschen",
+        "viewGrid": "Rasteransicht",
+        "viewList": "Listenansicht"
+      },
+      "card": {
+        "workflowsCount": "{{count}} Workflows",
+        "actions": {
+          "simulate": "Simulieren",
+          "metrics": "Metriken",
+          "attachTitle": "Anhängen (neuer Workflow)"
+        },
+        "metrics": {
+          "executions": "Ausführungen",
+          "successRate": "Erfolgsquote",
+          "avgLatency": "Durchschn. Latenz"
+        }
+      },
+      "states": {
+        "noEventsTitle": "Keine Ereignisse gefunden",
+        "noEventsDescription": "Passen Sie Ihre Filter an.",
+        "noEventsInRange": "Keine Ereignisse in diesem Zeitraum.",
+        "noDataAvailable": "Keine Daten verfügbar.",
+        "loading": "Wird geladen…"
+      },
+      "pagination": {
+        "showing": "Zeige {{start}} bis {{end}} von {{total}} Ergebnissen",
+        "prev": "Zurück",
+        "next": "Weiter",
+        "page": "Seite {{page}} / {{total}}"
+      },
+      "badges": {
+        "system": "System",
+        "tenant": "Tenant",
+        "noSchema": "Kein Schema",
+        "unknownSchema": "Unbekanntes Schema",
+        "schema": "Schema"
+      },
+      "details": {
+        "title": "Ereignisdetails",
+        "close": "Schließen",
+        "simulate": "Simulieren",
+        "metrics": "Metriken",
+        "attach": "Anhängen",
+        "schema": {
+          "heading": "Schema",
+          "viewFull": "Vollständiges Schema anzeigen",
+          "managedNotice": "Das Schema wird von der Schema-Registry verwaltet.",
+          "missingNotice": "Kein schemaRef gesetzt; das Ereignis ist möglicherweise nicht als Workflow-Auslöser nutzbar.",
+          "topLevelFields": "Felder der obersten Ebene",
+          "required": "erforderlich",
+          "moreFieldsHint": "Es werden die ersten 12 Felder angezeigt. Verwenden Sie \"Vollständiges Schema anzeigen\" für mehr."
+        },
+        "attached": {
+          "heading": "Angehängte Workflows",
+          "loading": "Wird geladen…",
+          "empty": "Keine Workflows angehängt.",
+          "publishedBadge": "Veröffentlicht",
+          "systemBadge": "System",
+          "pausedBadge": "Pausiert",
+          "hiddenBadge": "Ausgeblendet",
+          "open": "Öffnen",
+          "detach": "Lösen",
+          "publishTooltip": "Erfordert die Berechtigung workflow:publish",
+          "adminTooltip": "Erfordert workflow:admin für System-Workflows"
+        }
+      },
+      "schemaModal": {
+        "title": "Schema",
+        "close": "Schließen",
+        "headerTitle": "Payload-Schema",
+        "loading": "Wird geladen…",
+        "unavailable": "Schema nicht verfügbar.",
+        "copy": "Kopieren",
+        "copySuccess": "Kopiert",
+        "copyFailed": "Kopieren fehlgeschlagen"
+      },
+      "metricsDialog": {
+        "title": "Metriken",
+        "close": "Schließen",
+        "headerTitle": "Metriken · {{eventType}}",
+        "from": "Von",
+        "to": "Bis",
+        "refresh": "Aktualisieren",
+        "openWorkflowEditor": "Workflow-Editor öffnen",
+        "loading": "Wird geladen…",
+        "totals": {
+          "totalEvents": "Ereignisse insgesamt",
+          "matched": "Übereinstimmungen",
+          "unmatched": "Ohne Übereinstimmung",
+          "errors": "Fehler",
+          "runsStarted": "Gestartete Ausführungen",
+          "runSuccessRate": "Erfolgsquote der Ausführungen",
+          "avgRunDuration": "Durchschn. Ausführungsdauer"
+        },
+        "executionsOverTime": "Ausführungen im Zeitverlauf",
+        "recentEvents": "Letzte Ereignisse",
+        "viewInEvents": "In Ereignissen anzeigen",
+        "openRun": "Ausführung",
+        "loadFailed": "Metriken konnten nicht geladen werden",
+        "rangeShowing": "Zeige {{start}}–{{end}} von {{total}}",
+        "prev": "Zurück",
+        "next": "Weiter"
+      },
+      "simulateDialog": {
+        "title": "Ereignis simulieren",
+        "headerTitle": "Simulieren · {{eventType}}",
+        "submit": "Simulieren",
+        "submitting": "Wird gesendet…",
+        "close": "Schließen",
+        "fields": {
+          "correlationKey": "Korrelationsschlüssel (optional)",
+          "correlationKeyPlaceholder": "Wird verwendet, um Ereignis-Wartezustände aufzulösen",
+          "schemaRef": "Schema-Referenz für Ereignis-Payload (erweitert)",
+          "schemaRefPlaceholderEmpty": "Kein schemaRef für dieses Ereignis",
+          "payloadJson": "Payload (JSON)",
+          "payload": "Payload"
+        },
+        "modes": {
+          "form": "Formular",
+          "json": "JSON",
+          "noSchema": "Kein Schema verfügbar; Formularmodus deaktiviert."
+        },
+        "errors": {
+          "schemaValidationTitle": "Schema-Validierungsfehler",
+          "moreErrors": "+{{count}} weitere",
+          "fixBeforeSubmit": "Beheben Sie die Schema-Validierungsfehler vor dem Absenden.",
+          "simulationTitle": "Simulationsfehler",
+          "submitFallback": "Simulation fehlgeschlagen",
+          "submitToast": "Simulation fehlgeschlagen",
+          "invalidJson": "Ungültiges JSON.",
+          "valueMustBeAllowed": "Der Wert muss eine der zulässigen Optionen sein.",
+          "expectedObject": "Objekt erwartet.",
+          "expectedArray": "Array erwartet.",
+          "expectedString": "Zeichenfolge erwartet.",
+          "expectedNumber": "Zahl erwartet.",
+          "expectedBoolean": "Boolescher Wert erwartet.",
+          "requiredField": "Pflichtfeld fehlt."
+        },
+        "result": {
+          "title": "Ergebnis",
+          "status": "Status",
+          "eventId": "Ereignis-ID",
+          "startedRuns": "Gestartete Ausführungen",
+          "open": "Öffnen",
+          "resumedRun": "Fortgesetzte Ausführung",
+          "openResumedRun": "Fortgesetzte Ausführung öffnen"
+        },
+        "toasts": {
+          "success": "Ereignis simuliert"
+        },
+        "form": {
+          "remove": "Entfernen",
+          "addItem": "Eintrag hinzufügen",
+          "rootLabel": "Payload",
+          "payloadJsonLabel": "Payload (JSON)",
+          "true": "Wahr",
+          "false": "Falsch"
+        }
+      },
+      "defineEventDialog": {
+        "title": "Benutzerdefiniertes Ereignis definieren",
+        "headerTitle": "Benutzerdefiniertes Ereignis definieren",
+        "cancel": "Abbrechen",
+        "submit": "Ereignis erstellen",
+        "submitting": "Wird erstellt…",
+        "fields": {
+          "eventType": "Ereignistyp",
+          "eventTypePlaceholder": "z. B. ticket.created",
+          "name": "Name",
+          "namePlaceholder": "Benutzerfreundlicher Name",
+          "category": "Kategorie",
+          "categoryPlaceholder": "z. B. Tickets",
+          "description": "Beschreibung",
+          "descriptionPlaceholder": "Optionale Beschreibung",
+          "useSchemaRef": "Schema-Referenz verwenden",
+          "useInline": "Inline-Schema (erweitert)",
+          "selectSchemaRef": "Payload-Schema-Referenz auswählen",
+          "selectPlaceholder": "Auswählen…",
+          "payloadSchemaJson": "Payload-Schema (JSON)"
+        },
+        "footer": "Benutzerdefinierte Ereignisse gelten je Tenant und können als Workflow-Auslöser verwendet werden.",
+        "validation": {
+          "typeAndNameRequired": "Ereignistyp und Name sind erforderlich.",
+          "schemaRefRequired": "Wählen Sie eine Payload-Schema-Referenz aus (oder verwenden Sie ein Inline-Schema).",
+          "invalidJson": "Das Payload-Schema muss gültiges JSON sein."
+        },
+        "toasts": {
+          "createSuccess": "Benutzerdefiniertes Ereignis erstellt",
+          "createFailed": "Ereignis konnte nicht erstellt werden"
+        }
+      },
+      "toasts": {
+        "loadEventsFailed": "Ereignisse konnten nicht geladen werden",
+        "workflowCreated": "Workflow erstellt",
+        "createWorkflowFailed": "Workflow konnte nicht erstellt werden",
+        "detachConfirm": "Diesen Workflow vom Ereignis lösen? Dadurch wird eine neue Version ohne den Auslöser veröffentlicht.",
+        "detachValidationFailed": "Lösen fehlgeschlagen (Validierungsfehler)",
+        "detached": "Gelöst",
+        "detachFailed": "Lösen fehlgeschlagen"
+      }
+    },
+    "actionInput": {
+      "fallbacks": {
+        "loadingOptions": "Optionen werden geladen...",
+        "selectName": "{{name}} auswählen",
+        "ticketSearchPlaceholder": "Tickets nach Nummer oder Titel suchen",
+        "ticketSelect": "Ticket auswählen",
+        "ticketTypeAbove": "Geben Sie oben etwas ein, um Tickets zu suchen",
+        "selectBoard": "Board auswählen",
+        "selectClient": "Kunde auswählen",
+        "selectContact": "Kontakt auswählen",
+        "selectUser": "Benutzer auswählen",
+        "selectUserOrTeam": "Benutzer oder Team auswählen"
+      },
+      "errors": {
+        "loadTicket": "Ticket konnte nicht geladen werden",
+        "searchTickets": "Tickets konnten nicht gesucht werden",
+        "loadOptions": "Optionen konnten nicht geladen werden"
+      },
+      "dependencyHints": {
+        "contactClient": "Wählen Sie zuerst einen festen Kunden, um Kontaktoptionen zu laden.",
+        "locationClient": "Wählen Sie zuerst einen festen Kunden, um Standortoptionen zu laden.",
+        "categoryBoard": "Wählen Sie zuerst ein festes Board, um Kategorieoptionen zu laden.",
+        "statusBoard": "Wählen Sie zuerst ein festes Board, um Statusoptionen zu laden.",
+        "statusTicket": "Wählen Sie zuerst ein festes Ticket, um Statusoptionen zu laden.",
+        "subcategoryBoard": "Wählen Sie zuerst ein festes Board, um Unterkategorieoptionen zu laden.",
+        "subcategoryCategory": "Wählen Sie zuerst eine feste Kategorie, um Unterkategorieoptionen zu laden."
+      }
+    }
   }
 }

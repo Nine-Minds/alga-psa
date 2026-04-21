@@ -165,5 +165,12 @@
       "month": "maand",
       "year": "jaar"
     }
+  },
+  "workflowDesigner": {
+    "enterpriseHeading": "Enterprise-functie",
+    "unavailable": "De workflow-designer vereist de Enterprise Edition. Voer een upgrade uit om deze functie te gebruiken."
+  },
+  "runStudio": {
+    "unavailable": "Workflow Run Studio is niet beschikbaar in deze editie. (runId: {{runId}})"
   }
 }
