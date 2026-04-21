@@ -37,12 +37,22 @@ const EXCLUDED_TABLES: string[] = [
   'spatial_ref_sys',            // PostGIS system table
 ];
 
+interface FkOrderingViolation {
+  childTable: string;
+  parentTable: string;
+  constraintName: string;
+  deleteRule: string;
+  childIdx: number;
+  parentIdx: number;
+}
+
 interface ValidationResult {
   success: boolean;
   missingTables: string[];
   duplicatesInOrder: string[];
   tablesInDatabase: string[];
   tablesInDeletionOrder: string[];
+  fkOrderingViolations: FkOrderingViolation[];
 }
 
 /**
@@ -89,6 +99,51 @@ function parseDeletionOrderFromSource(): string[] {
   }
 
   return tableNames;
+}
+
+/**
+ * Query all foreign keys in the public schema.
+ * Returns { childTable, parentTable, constraintName, deleteRule }.
+ *
+ * The child is the table declaring the FK; the parent is the table it references.
+ * For deletion ordering, the child must be deleted BEFORE the parent (unless the
+ * FK cascades or sets null on delete).
+ */
+interface ForeignKey {
+  childTable: string;
+  parentTable: string;
+  constraintName: string;
+  deleteRule: string;
+}
+
+async function getForeignKeys(db: Knex): Promise<ForeignKey[]> {
+  const result = await db.raw(`
+    SELECT DISTINCT
+      tc.table_name  AS child_table,
+      ccu.table_name AS parent_table,
+      tc.constraint_name,
+      rc.delete_rule
+    FROM information_schema.table_constraints tc
+    JOIN information_schema.referential_constraints rc
+      ON rc.constraint_name = tc.constraint_name
+     AND rc.constraint_schema = tc.table_schema
+    JOIN information_schema.constraint_column_usage ccu
+      ON ccu.constraint_name = rc.unique_constraint_name
+     AND ccu.constraint_schema = rc.unique_constraint_schema
+    WHERE tc.table_schema = 'public'
+      AND tc.constraint_type = 'FOREIGN KEY'
+      AND tc.table_name NOT LIKE 'pg_%'
+      AND tc.table_name NOT LIKE 'citus_%'
+      AND ccu.table_name NOT LIKE 'pg_%'
+      AND ccu.table_name NOT LIKE 'citus_%'
+  `);
+
+  return result.rows.map((row: any) => ({
+    childTable: row.child_table,
+    parentTable: row.parent_table,
+    constraintName: row.constraint_name,
+    deleteRule: row.delete_rule,
+  }));
 }
 
 /**
@@ -167,12 +222,51 @@ async function validateDeletionOrder(): Promise<ValidationResult> {
     const deletionOrderSet = new Set(tablesInDeletionOrder);
     const missingTables = relevantDbTables.filter((t) => !deletionOrderSet.has(t));
 
+    // === FK ordering check ===
+    // For every FK between two tables that both appear in the deletion order,
+    // the child (referencing) table must come BEFORE the parent (referenced)
+    // table — otherwise the parent DELETE will hit the FK and fail.
+    // FKs with CASCADE / SET NULL / SET DEFAULT can tolerate either order, so
+    // we only enforce ordering for restrictive rules (NO ACTION, RESTRICT).
+    console.log('\nChecking FK ordering...');
+    const foreignKeys = await getForeignKeys(db);
+    console.log(`  Found ${foreignKeys.length} foreign keys to inspect`);
+
+    const orderIdx = new Map<string, number>();
+    tablesInDeletionOrder.forEach((t, i) => {
+      // First occurrence wins — duplicates are already reported separately
+      if (!orderIdx.has(t)) orderIdx.set(t, i);
+    });
+
+    const fkOrderingViolations: FkOrderingViolation[] = [];
+    for (const fk of foreignKeys) {
+      if (fk.childTable === fk.parentTable) continue; // self-ref is fine
+      const childIdx = orderIdx.get(fk.childTable);
+      const parentIdx = orderIdx.get(fk.parentTable);
+      if (childIdx === undefined || parentIdx === undefined) continue; // outside deletion scope
+      if (fk.deleteRule !== 'NO ACTION' && fk.deleteRule !== 'RESTRICT') continue;
+      if (childIdx >= parentIdx) {
+        fkOrderingViolations.push({
+          childTable: fk.childTable,
+          parentTable: fk.parentTable,
+          constraintName: fk.constraintName,
+          deleteRule: fk.deleteRule,
+          childIdx,
+          parentIdx,
+        });
+      }
+    }
+
     return {
-      success: missingTables.length === 0 && duplicatesInOrder.length === 0,
+      success:
+        missingTables.length === 0 &&
+        duplicatesInOrder.length === 0 &&
+        fkOrderingViolations.length === 0,
       missingTables,
       duplicatesInOrder,
       tablesInDatabase: relevantDbTables,
       tablesInDeletionOrder,
+      fkOrderingViolations,
     };
   } finally {
     await db.destroy();
@@ -213,6 +307,20 @@ async function main() {
       console.log('   - Leaf tables (no dependencies) should be deleted first');
       console.log('\n   ⚠️  IMPORTANT: After adding missing tables, a new Temporal deployment is required');
       console.log('   to pick up the updated deletion order.');
+    }
+
+    if (result.fkOrderingViolations.length > 0) {
+      console.log('\n❌ FK ORDERING VIOLATIONS (parent referenced by child but deleted first):');
+      for (const v of result.fkOrderingViolations) {
+        console.log(
+          `   - ${v.childTable} (idx ${v.childIdx}) must be deleted BEFORE ${v.parentTable} (idx ${v.parentIdx})`
+        );
+        console.log(`       constraint: ${v.constraintName}, ON DELETE ${v.deleteRule}`);
+      }
+      console.log('\n   These FKs have restrictive ON DELETE (NO ACTION/RESTRICT), so the DELETE on');
+      console.log('   the parent row will fail while child rows still reference it. Move the child');
+      console.log('   table to an earlier position than the parent in TENANT_TABLES_DELETION_ORDER.');
+      console.log('\n   (CASCADE and SET NULL FKs are allowed in either order and are not flagged.)');
     }
 
     if (result.success) {
