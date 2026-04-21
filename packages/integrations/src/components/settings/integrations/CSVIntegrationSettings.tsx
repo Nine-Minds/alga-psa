@@ -20,7 +20,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
  * - External tax calculation with report-based feedback is needed
  */
 const CSVIntegrationSettings: React.FC = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/integrations');
   return (
     <div className="space-y-6">
       {/* Overview Card */}

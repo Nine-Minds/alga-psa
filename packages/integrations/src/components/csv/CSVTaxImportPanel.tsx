@@ -46,7 +46,7 @@ interface ImportResult {
 }
 
 export function CSVTaxImportPanel({ onImportComplete }: CSVTaxImportPanelProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/integrations');
   const [file, setFile] = useState<File | null>(null);
   const [dateRange, setDateRange] = useState<{ from: string; to: string }>({
     from: '',
@@ -109,12 +109,12 @@ export function CSVTaxImportPanel({ onImportComplete }: CSVTaxImportPanelProps) 
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.message || t('integrations.csv.taxImport.errors.validationFailed', { defaultValue: 'Validation failed' }));
+        throw new Error(t('integrations.csv.taxImport.errors.validationFailed', { defaultValue: 'Validation failed' }));
       }
 
       setValidationResult(result.validation);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('integrations.csv.taxImport.errors.validationFailed', { defaultValue: 'Validation failed' }));
+      setError(t('integrations.csv.taxImport.errors.validationFailed', { defaultValue: 'Validation failed' }));
     } finally {
       setIsValidating(false);
     }
@@ -148,7 +148,7 @@ export function CSVTaxImportPanel({ onImportComplete }: CSVTaxImportPanelProps) 
       const result: ImportResult = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || t('integrations.csv.taxImport.errors.importFailed', { defaultValue: 'Import failed' }));
+        throw new Error(t('integrations.csv.taxImport.errors.importFailed', { defaultValue: 'Import failed' }));
       }
 
       setImportResult(result);
@@ -160,7 +160,7 @@ export function CSVTaxImportPanel({ onImportComplete }: CSVTaxImportPanelProps) 
         });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('integrations.csv.taxImport.errors.importFailed', { defaultValue: 'Import failed' }));
+      setError(t('integrations.csv.taxImport.errors.importFailed', { defaultValue: 'Import failed' }));
     } finally {
       setIsImporting(false);
     }
@@ -182,7 +182,7 @@ export function CSVTaxImportPanel({ onImportComplete }: CSVTaxImportPanelProps) 
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('integrations.csv.taxImport.errors.templateDownloadFailed', { defaultValue: 'Failed to download template' }));
+      setError(t('integrations.csv.taxImport.errors.templateDownloadFailed', { defaultValue: 'Failed to download template' }));
     }
   }, [t]);
 

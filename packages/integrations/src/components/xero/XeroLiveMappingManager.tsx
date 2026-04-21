@@ -12,8 +12,8 @@ interface XeroLiveMappingManagerProps {
 }
 
 export function XeroLiveMappingManager({ defaultConnection }: XeroLiveMappingManagerProps) {
-  const { t } = useTranslation();
-  const modules = useMemo(() => createXeroLiveMappingModules(), []);
+  const { t } = useTranslation('msp/integrations');
+  const modules = useMemo(() => createXeroLiveMappingModules(t), [t]);
   const context = useMemo<AccountingMappingContext>(() => ({
     realmId: defaultConnection.xeroTenantId,
     connectionId: defaultConnection.connectionId,

@@ -53,7 +53,7 @@ function statusBadgeVariant(status?: 'connected' | 'expired'): 'success' | 'seco
 }
 
 export default function XeroIntegrationSettings() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/integrations');
   const searchParams = useSearchParams();
   const [status, setStatus] = React.useState<XeroStatus | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -77,7 +77,7 @@ export default function XeroIntegrationSettings() {
       const result = await getXeroConnectionStatus();
       setStatus(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('integrations.xero.settings.errors.load', { defaultValue: 'Failed to load Xero settings.' }));
+      setError(t('integrations.xero.settings.errors.load', { defaultValue: 'Failed to load Xero settings.' }));
     } finally {
       setLoading(false);
     }
@@ -111,7 +111,7 @@ export default function XeroIntegrationSettings() {
       });
 
       if (!result.success) {
-        setError(result.error || t('integrations.xero.settings.errors.saveCredentials', { defaultValue: 'Failed to save Xero credentials.' }));
+        setError(t('integrations.xero.settings.errors.saveCredentials', { defaultValue: 'Failed to save Xero credentials.' }));
         return;
       }
 
@@ -132,7 +132,7 @@ export default function XeroIntegrationSettings() {
     try {
       const result = await disconnectXero();
       if (!result.success) {
-        setError(result.error || t('integrations.xero.settings.errors.disconnect', { defaultValue: 'Failed to disconnect Xero.' }));
+        setError(t('integrations.xero.settings.errors.disconnect', { defaultValue: 'Failed to disconnect Xero.' }));
         return;
       }
 

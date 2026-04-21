@@ -195,7 +195,7 @@ async function getDownloadErrorMessage(response: Response, t: TranslateFn): Prom
 }
 
 export function TeamsIntegrationSettings() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/integrations');
   const TEAMS_CAPABILITY_OPTIONS = React.useMemo(() => getTeamsCapabilityOptions(t), [t]);
   const TEAMS_NOTIFICATION_OPTIONS = React.useMemo(() => getTeamsNotificationOptions(t), [t]);
   const TEAMS_ALLOWED_ACTION_OPTIONS = React.useMemo(() => getTeamsAllowedActionOptions(t), [t]);
@@ -327,7 +327,7 @@ export function TeamsIntegrationSettings() {
       });
 
       if (!result.success) {
-        throw new Error(result.error || t('integrations.teams.settings.errors.saveSettings', { defaultValue: 'Failed to save Teams settings' }));
+        throw new Error(t('integrations.teams.settings.errors.saveSettings', { defaultValue: 'Failed to save Teams settings' }));
       }
 
       setTeamsStatus(result);
@@ -354,7 +354,7 @@ export function TeamsIntegrationSettings() {
     try {
       const result = await getTeamsAppPackageStatus();
       if (!result.success || !result.package) {
-        throw new Error(result.error || t('integrations.teams.settings.errors.generatePackage', { defaultValue: 'Failed to generate Teams app package' }));
+        throw new Error(t('integrations.teams.settings.errors.generatePackage', { defaultValue: 'Failed to generate Teams app package' }));
       }
 
       setPackageStatus(result.package);

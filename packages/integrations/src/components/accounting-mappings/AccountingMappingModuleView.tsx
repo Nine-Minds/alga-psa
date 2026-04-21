@@ -36,7 +36,7 @@ export function AccountingMappingModuleView({
   context,
   realmLabel
 }: AccountingMappingModuleViewProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/integrations');
   const overrides = useOverrides(module, context);
 
   const [mappings, setMappings] = useState<DisplayMapping[]>([]);
@@ -64,7 +64,7 @@ export function AccountingMappingModuleView({
       setMappings(display);
     } catch (loadError) {
       const message =
-        loadError instanceof Error ? loadError.message : t('integrations.accounting.moduleView.errors.loadFailed', { defaultValue: 'Failed to load mappings.' });
+        t('integrations.accounting.moduleView.errors.loadFailed', { defaultValue: 'Failed to load mappings.' });
       setError(message);
     } finally {
       setIsLoading(false);
@@ -131,7 +131,7 @@ export function AccountingMappingModuleView({
       await loadData();
     } catch (deleteError) {
       const message =
-        deleteError instanceof Error ? deleteError.message : t('integrations.accounting.moduleView.errors.deleteFailed', { defaultValue: 'Failed to delete mapping.' });
+        t('integrations.accounting.moduleView.errors.deleteFailed', { defaultValue: 'Failed to delete mapping.' });
       setError(message);
     }
   }, [context, loadData, module, overrides, pendingDeleteId, t]);

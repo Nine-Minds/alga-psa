@@ -1,1094 +1,319 @@
 {
-  "accounting": {
-    "dialog": {
-      "cancel": "55555",
-      "enterPlaceholder": "55555 {{field}} 55555",
-      "errors": {
-        "enterExternal": "55555 {{field}} 55555",
-        "invalidJson": "55555",
-        "saveFailed": "55555",
-        "selectAlga": "55555 {{field}} 55555",
-        "selectExternal": "55555 {{field}} 55555"
-      },
-      "manualEntryHelp": "55555",
-      "metadataLabel": "55555",
-      "metadataPlaceholder": "55555",
-      "realmIdLabel": "55555",
-      "saveMapping": "55555",
-      "saving": "55555",
-      "selectPlaceholder": "55555 {{field}} 55555"
-    },
-    "manager": {
-      "noModules": "55555"
-    },
-    "moduleView": {
-      "actionsColumn": "55555",
-      "delete": "55555",
-      "edit": "55555",
-      "errors": {
-        "deleteFailed": "55555",
-        "loadFailed": "55555"
-      },
-      "loading": "55555",
-      "noMappings": "55555",
-      "notAvailable": "55555",
-      "openMenu": "55555"
-    },
-    "setup": {
-      "activeConfiguration": "55555",
-      "badges": {
-        "enterprise": "55555"
-      },
-      "comingSoon": "55555",
-      "configure": "55555",
-      "highlightValues": {
-        "csv": "55555",
-        "instant": "55555",
-        "live": "55555",
-        "manual": "55555",
-        "twoWay": "55555"
-      },
-      "highlights": {
-        "delivery": "55555",
-        "export": "55555",
-        "format": "55555",
-        "sync": "55555"
-      },
-      "options": {
-        "qbo": {
-          "description": "55555"
-        },
-        "qboCsv": {
-          "description": "55555"
-        },
-        "xero": {
-          "description": "55555"
-        },
-        "xeroCsv": {
-          "description": "55555"
-        }
-      },
-      "selected": "55555 {{title}} 55555",
-      "unavailable": {
-        "description": "55555",
-        "title": "55555"
-      }
-    }
-  },
-  "calendar": {
-    "enterprise": {
-      "loading": "55555"
-    }
-  },
-  "csv": {
-    "export": {
-      "actions": {
-        "exportCsv": "55555",
-        "generating": "55555"
-      },
-      "description": "55555",
-      "errors": {
-        "configureMissingMappings": "55555",
-        "failed": "55555",
-        "missingItemMapping": "55555",
-        "missingItemMappingId": "55555 {{serviceId}} 55555",
-        "missingItemMappingNamed": "55555 {{serviceName}} 55555"
-      },
-      "fields": {
-        "dateRange": "55555",
-        "invoiceStatuses": "55555"
-      },
-      "lockReset": {
-        "actions": {
-          "reset": "55555"
-        },
-        "description": "55555",
-        "dialog": {
-          "cancel": "55555",
-          "confirm": "55555",
-          "confirmBatch": "55555 {{batchId}} 55555",
-          "confirmInvoice": "55555 {{invoiceNumber}} 55555",
-          "resetting": "55555",
-          "title": "55555",
-          "warning": "55555"
-        },
+  "integrations": {
+    "accounting": {
+      "dialog": {
+        "cancel": "55555",
+        "enterPlaceholder": "55555 {{field}} 55555",
         "errors": {
-          "unable": "55555"
+          "enterExternal": "55555 {{field}} 55555",
+          "invalidJson": "55555",
+          "saveFailed": "55555",
+          "selectAlga": "55555 {{field}} 55555",
+          "selectExternal": "55555 {{field}} 55555"
         },
-        "fields": {
-          "batchId": "55555",
-          "batchIdPlaceholder": "55555",
-          "invoiceNumber": "55555",
-          "invoiceNumberPlaceholder": "55555"
+        "manualEntryHelp": "55555",
+        "metadataLabel": "55555",
+        "metadataPlaceholder": "55555",
+        "realmIdLabel": "55555",
+        "saveMapping": "55555",
+        "saving": "55555",
+        "selectPlaceholder": "55555 {{field}} 55555"
+      },
+      "manager": {
+        "noModules": "55555"
+      },
+      "moduleView": {
+        "actionsColumn": "55555",
+        "delete": "55555",
+        "edit": "55555",
+        "errors": {
+          "deleteFailed": "55555",
+          "loadFailed": "55555"
         },
-        "modes": {
-          "ariaLabel": "55555",
-          "batch": "55555",
-          "invoice": "55555"
+        "loading": "55555",
+        "noMappings": "55555",
+        "notAvailable": "55555",
+        "openMenu": "55555"
+      },
+      "setup": {
+        "activeConfiguration": "55555",
+        "badges": {
+          "enterprise": "55555"
         },
-        "success": {
-          "batchCleared": "55555",
-          "invoiceCleared": "55555",
-          "noBatchLocks": "55555",
-          "noInvoiceLock": "55555"
+        "comingSoon": "55555",
+        "configure": "55555",
+        "highlightValues": {
+          "csv": "55555",
+          "instant": "55555",
+          "live": "55555",
+          "manual": "55555",
+          "twoWay": "55555"
         },
-        "title": "55555",
-        "warnings": {
-          "duplicates": "55555"
-        }
-      },
-      "success": {
-        "one": "55555 {{count}} 55555 {{filename}} 55555",
-        "other": "55555 {{count}} 55555 {{filename}} 55555"
-      },
-      "title": "55555"
-    },
-    "preview": {
-      "duplicates": {
-        "description": "55555",
-        "title": "55555 {{count}} 55555"
-      },
-      "errors": {
-        "more": "55555 {{count}} 55555",
-        "title": "55555 {{count}} 55555"
-      },
-      "importResults": "55555",
-      "importSummary": {
-        "difference": "55555",
-        "failedUpdates": "55555",
-        "importedTax": "55555",
-        "originalTax": "55555",
-        "successfulUpdates": "55555",
-        "title": "55555"
-      },
-      "rowLabel": "55555 {{row}} 55555",
-      "stats": {
-        "matchedInvoices": "55555",
-        "totalRows": "55555",
-        "uniqueInvoices": "55555",
-        "validRows": "55555"
-      },
-      "status": {
-        "databaseMatch": "55555",
-        "rowData": "55555",
-        "structure": "55555"
-      },
-      "validationPassed": {
-        "one": "55555 {{count}} 55555",
-        "other": "55555 {{count}} 55555"
-      },
-      "validationResults": "55555",
-      "warnings": {
-        "more": "55555 {{count}} 55555",
-        "title": "55555 {{count}} 55555"
-      }
-    },
-    "settings": {
-      "exports": {
-        "description": "55555",
-        "managedTitle": "55555",
-        "openButton": "55555",
-        "path": "55555",
-        "title": "55555"
-      },
-      "qbo": {
-        "bullets": {
-          "exportLabel": "55555",
-          "exportText": "55555",
-          "taxImportLabel": "55555",
-          "taxImportText": "55555"
+        "highlights": {
+          "delivery": "55555",
+          "export": "55555",
+          "format": "55555",
+          "sync": "55555"
         },
-        "description": "55555",
-        "exports": {
-          "managedPrefix": "55555",
-          "managedSuffix": "55555"
+        "options": {
+          "qbo": {
+            "description": "55555"
+          },
+          "qboCsv": {
+            "description": "55555"
+          },
+          "xero": {
+            "description": "55555"
+          },
+          "xeroCsv": {
+            "description": "55555"
+          }
         },
-        "intro": "55555",
-        "mappings": {
+        "selected": "55555 {{title}} 55555",
+        "unavailable": {
           "description": "55555",
           "title": "55555"
-        },
-        "note": "55555",
-        "title": "55555"
+        }
+      },
+      "modules": {
+        "tabs": {
+          "clients": "55555",
+          "itemsServices": "55555",
+          "taxCodes": "55555",
+          "paymentTerms": "55555"
+        }
       }
     },
-    "taxImport": {
-      "actions": {
-        "importTaxData": "55555",
-        "importing": "55555",
-        "validate": "55555",
-        "validating": "55555"
-      },
-      "errors": {
-        "importFailed": "55555",
-        "readFile": "55555",
-        "selectFile": "55555",
-        "selectFileAndRange": "55555",
-        "templateDownloadFailed": "55555",
-        "validationFailed": "55555"
-      },
-      "fields": {
-        "csvFile": "55555",
-        "dateRangeHelp": "55555",
-        "dateRangeRequired": "55555",
-        "dropZone": "55555",
-        "fileSize": "55555 {{size}} 55555"
+    "calendar": {
+      "enterprise": {
+        "loading": "55555"
+      }
+    },
+    "csv": {
+      "export": {
+        "actions": {
+          "exportCsv": "55555",
+          "generating": "55555"
+        },
+        "description": "55555",
+        "errors": {
+          "configureMissingMappings": "55555",
+          "failed": "55555",
+          "missingItemMapping": "55555",
+          "missingItemMappingId": "55555 {{serviceId}} 55555",
+          "missingItemMappingNamed": "55555 {{serviceName}} 55555"
+        },
+        "fields": {
+          "dateRange": "55555",
+          "invoiceStatuses": "55555"
+        },
+        "lockReset": {
+          "actions": {
+            "reset": "55555"
+          },
+          "description": "55555",
+          "dialog": {
+            "cancel": "55555",
+            "confirm": "55555",
+            "confirmBatch": "55555 {{batchId}} 55555",
+            "confirmInvoice": "55555 {{invoiceNumber}} 55555",
+            "resetting": "55555",
+            "title": "55555",
+            "warning": "55555"
+          },
+          "errors": {
+            "unable": "55555"
+          },
+          "fields": {
+            "batchId": "55555",
+            "batchIdPlaceholder": "55555",
+            "invoiceNumber": "55555",
+            "invoiceNumberPlaceholder": "55555"
+          },
+          "modes": {
+            "ariaLabel": "55555",
+            "batch": "55555",
+            "invoice": "55555"
+          },
+          "success": {
+            "batchCleared": "55555",
+            "invoiceCleared": "55555",
+            "noBatchLocks": "55555",
+            "noInvoiceLock": "55555"
+          },
+          "title": "55555",
+          "warnings": {
+            "duplicates": "55555"
+          }
+        },
+        "success": {
+          "one": "55555 {{count}} 55555 {{filename}} 55555",
+          "other": "55555 {{count}} 55555 {{filename}} 55555"
+        },
+        "title": "55555"
       },
       "preview": {
-        "alreadyImported": "55555 {{count}} 55555",
-        "alreadyImportedSkip": "55555 {{count}} 55555",
-        "badges": {
+        "duplicates": {
+          "description": "55555",
+          "title": "55555 {{count}} 55555"
+        },
+        "errors": {
+          "more": "55555 {{count}} 55555",
+          "title": "55555 {{count}} 55555"
+        },
+        "importResults": "55555",
+        "importSummary": {
+          "difference": "55555",
+          "failedUpdates": "55555",
+          "importedTax": "55555",
+          "originalTax": "55555",
+          "successfulUpdates": "55555",
+          "title": "55555"
+        },
+        "rowLabel": "55555 {{row}} 55555",
+        "stats": {
+          "matchedInvoices": "55555",
+          "totalRows": "55555",
+          "uniqueInvoices": "55555",
+          "validRows": "55555"
+        },
+        "status": {
           "databaseMatch": "55555",
           "rowData": "55555",
           "structure": "55555"
         },
-        "columns": {
-          "algaInvoice": "55555",
-          "contact": "55555",
-          "status": "55555",
-          "taxAmount": "55555",
-          "xeroInvoice": "55555"
+        "validationPassed": {
+          "one": "55555 {{count}} 55555",
+          "other": "55555 {{count}} 55555"
         },
-        "errorsTitle": "55555 {{count}} 55555",
-        "matched": "55555",
-        "matchedInvoices": "55555",
-        "notPendingDescription": "55555",
-        "notPendingSkip": "55555 {{count}} 55555",
-        "notPendingTitle": "55555 {{count}} 55555",
-        "showingFirst20": "55555 {{count}} 55555",
-        "taxToImport": "55555",
-        "title": "55555",
-        "totalRows": "55555",
-        "uniqueInvoices": "55555",
-        "unmatched": "55555",
-        "validRows": "55555",
-        "warningsTitle": "55555 {{count}} 55555"
-      },
-      "qbo": {
-        "description": "55555",
-        "help": {
-          "csvRequirement": "55555",
-          "downloadTemplate": "55555",
-          "steps": {
-            "s1": "55555",
-            "s2": "55555",
-            "s3": "55555",
-            "s4": "55555",
-            "s5": "55555"
-          },
-          "title": "55555"
-        },
-        "success": {
-          "one": "55555 {{count}} 55555 {{amount}} 55555",
-          "other": "55555 {{count}} 55555 {{amount}} 55555"
-        },
-        "title": "55555"
-      },
-      "result": {
-        "failed": "55555 {{count}} 55555",
-        "one": "55555 {{count}} 55555 {{amount}} 55555",
-        "other": "55555 {{count}} 55555 {{amount}} 55555",
-        "skipped": "55555 {{count}} 55555"
-      },
-      "unified": {
-        "description": "55555",
-        "qbResult": {
-          "one": "55555 {{count}} 55555 {{amount}} 55555",
-          "other": "55555 {{count}} 55555 {{amount}} 55555"
-        },
-        "source": {
-          "ariaLabel": "55555",
-          "quickbooks": "55555",
-          "xero": "55555"
-        },
-        "title": "55555",
-        "xeroCsvDescription": "55555",
-        "xeroHelp": {
-          "note": "55555",
-          "s1": "55555",
-          "s2": "55555",
-          "s3": "55555",
-          "s4": "55555",
-          "s5": "55555",
-          "s6": "55555"
-        },
-        "xeroResult": {
-          "one": "55555 {{count}} 55555 {{amount}} 55555",
-          "other": "55555 {{count}} 55555 {{amount}} 55555"
+        "validationResults": "55555",
+        "warnings": {
+          "more": "55555 {{count}} 55555",
+          "title": "55555 {{count}} 55555"
         }
-      },
-      "xero": {
-        "description": "55555",
-        "dropZone": "55555",
-        "help": {
-          "csvRequirement": "55555",
-          "steps": {
-            "s1": "55555",
-            "s2": "55555",
-            "s3": "55555",
-            "s4": "55555",
-            "s5": "55555",
-            "s6": "55555"
-          },
-          "title": "55555"
-        },
-        "title": "55555"
-      }
-    }
-  },
-  "google": {
-    "settings": {
-      "actions": {
-        "refresh": "55555",
-        "resetProviders": "55555",
-        "resetting": "55555",
-        "save": "55555",
-        "saving": "55555"
-      },
-      "afterSaveNotice": "55555",
-      "consoleLink": "55555",
-      "description": "55555",
-      "errors": {
-        "loadFailed": "55555",
-        "resetFailed": "55555",
-        "saveFailed": "55555"
-      },
-      "fields": {
-        "projectIdHelp": "55555",
-        "projectIdLabel": "55555",
-        "projectIdPlaceholder": "55555"
-      },
-      "loading": "55555",
-      "oauth": {
-        "calendarClientId": "55555",
-        "calendarClientSecret": "55555",
-        "enterSecret": "55555",
-        "gmailClientId": "55555",
-        "gmailClientSecret": "55555",
-        "sectionTitle": "55555",
-        "shareApp": "55555",
-        "shareAppHelp": "55555",
-        "storedSecret": "55555 {{secret}} 55555"
-      },
-      "redirectUrisLabel": "55555",
-      "scopes": "55555",
-      "scopesCalendar": "55555 {{scopes}} 55555",
-      "scopesGmail": "55555 {{scopes}} 55555",
-      "serviceAccount": {
-        "alreadyStored": "55555",
-        "description": "55555",
-        "title": "55555"
-      },
-      "setupGuide": "55555",
-      "title": "55555",
-      "toasts": {
-        "resetDescription": "55555",
-        "resetFailedTitle": "55555",
-        "resetTitle": "55555",
-        "saveFailedTitle": "55555",
-        "savedDescription": "55555",
-        "savedTitle": "55555",
-        "unknownError": "55555"
-      }
-    }
-  },
-  "microsoft": {
-    "settings": {
-      "actions": {
-        "entraLink": "55555",
-        "newProfile": "55555",
-        "openTeamsSetup": "55555",
-        "refresh": "55555",
-        "resetProviders": "55555",
-        "resetting": "55555"
-      },
-      "archiveDialog": {
-        "archiving": "55555",
-        "cancel": "55555",
-        "confirm": "55555",
-        "message": "55555 {{name}} 55555",
-        "title": "55555"
-      },
-      "binding": {
-        "bound": "55555",
-        "boundProfileLabel": "55555",
-        "createFirst": "55555",
-        "needsAttention": "55555",
-        "saving": "55555",
-        "selectProfile": "55555",
-        "unbound": "55555"
-      },
-      "bindings": {
-        "summaryBound": "55555 {{consumer}} 55555 {{profile}} 55555",
-        "summaryNone": "55555 {{consumer}} 55555",
-        "summaryUnavailable": "55555 {{consumer}} 55555",
-        "warningArchived": "55555 {{consumer}} 55555",
-        "warningNoBinding": "55555 {{consumer}} 55555",
-        "warningNotReady": "55555 {{consumer}} 55555 {{profile}} 55555",
-        "warningProfileMissing": "55555 {{consumer}} 55555"
-      },
-      "bindingsAlertCe": "55555",
-      "bindingsAlertEe": "55555",
-      "consumerBindings": {
-        "descriptionCe": "55555",
-        "descriptionEe": "55555",
-        "title": "55555"
-      },
-      "consumers": {
-        "calendar": {
-          "description": "55555",
-          "label": "55555",
-          "reconnect": "55555"
-        },
-        "email": {
-          "description": "55555",
-          "label": "55555",
-          "reconnect": "55555"
-        },
-        "mspSso": {
-          "description": "55555",
-          "label": "55555"
-        },
-        "teams": {
-          "description": "55555",
-          "label": "55555"
-        }
-      },
-      "descriptionCe": "55555",
-      "descriptionEe": "55555",
-      "dialog": {
-        "cancel": "55555",
-        "clientId": "55555",
-        "clientSecret": "55555",
-        "clientSecretPlaceholder": "55555",
-        "clientSecretPlaceholderEdit": "55555",
-        "createProfile": "55555",
-        "createTitle": "55555",
-        "descriptionCreate": "55555",
-        "descriptionEdit": "55555",
-        "displayName": "55555",
-        "displayNamePlaceholder": "55555",
-        "editTitle": "55555",
-        "saveChanges": "55555",
-        "saving": "55555",
-        "setDefault": "55555",
-        "setDefaultHelp": "55555",
-        "storedSecretHint": "55555 {{secret}} 55555",
-        "tenantId": "55555"
-      },
-      "empty": {
-        "createButton": "55555",
-        "descriptionCe": "55555",
-        "descriptionEe": "55555",
-        "title": "55555"
-      },
-      "errors": {
-        "archive": "55555",
-        "loadBindings": "55555",
-        "loadStatus": "55555",
-        "resetProviders": "55555",
-        "saveProfile": "55555",
-        "setDefault": "55555",
-        "updateBinding": "55555"
-      },
-      "guidance": {
-        "applicationIdUri": "55555",
-        "calendarRedirect": "55555",
-        "calendarTitle": "55555",
-        "clientId": "55555",
-        "currentProfileTitle": "55555",
-        "emailRedirect": "55555",
-        "emailTitle": "55555",
-        "mspSsoTitle": "55555",
-        "notConfigured": "55555",
-        "redirectUri": "55555",
-        "requiresBaseUrl": "55555",
-        "scopes": "55555",
-        "teamsBotRedirect": "55555",
-        "teamsMessageRedirect": "55555",
-        "teamsScopes": "55555",
-        "teamsTabRedirect": "55555",
-        "teamsTitle": "55555",
-        "tenantId": "55555",
-        "unavailable": "55555"
-      },
-      "profileCard": {
-        "activeBindings": "55555",
-        "archive": "55555",
-        "clientId": "55555",
-        "defaultBadge": "55555",
-        "edit": "55555",
-        "guidanceSummary": "55555",
-        "noVisibleBindings": "55555",
-        "readinessTitle": "55555",
-        "readyCe": "55555",
-        "readyEe": "55555",
-        "readyEeTeams": "55555",
-        "setDefault": "55555",
-        "storedSecret": "55555",
-        "teamsAppIdUri": "55555",
-        "tenantIdLabel": "55555",
-        "updating": "55555"
-      },
-      "providerReconnect": {
-        "description": "55555",
-        "title": "55555"
-      },
-      "readiness": {
-        "archived": "55555",
-        "clientIdMissing": "55555",
-        "clientSecretMissing": "55555",
-        "tenantIdMissing": "55555"
-      },
-      "statusBadges": {
-        "archived": "55555",
-        "needsAttention": "55555",
-        "ready": "55555"
-      },
-      "title": "55555",
-      "toasts": {
-        "archiveFailedTitle": "55555",
-        "archivedDescription": "55555 {{name}} 55555",
-        "archivedTitle": "55555",
-        "bindingFailedTitle": "55555 {{consumer}} 55555",
-        "bindingUpdatedDescription": "55555 {{consumer}} 55555 {{profile}} 55555",
-        "bindingUpdatedTitle": "55555 {{consumer}} 55555",
-        "defaultUpdatedDescription": "55555 {{name}} 55555",
-        "defaultUpdatedTitle": "55555",
-        "profileCreated": "55555",
-        "profileCreatedDescription": "55555",
-        "profileUpdated": "55555",
-        "profileUpdatedDescription": "55555",
-        "resetDescription": "55555",
-        "resetFailedTitle": "55555",
-        "resetTitle": "55555",
-        "saveFailedTitle": "55555",
-        "selectedProfile": "55555",
-        "setDefaultFailedTitle": "55555"
-      },
-      "validation": {
-        "clientIdRequired": "55555",
-        "clientSecretRequired": "55555",
-        "displayNameRequired": "55555",
-        "tenantIdRequired": "55555"
-      }
-    }
-  },
-  "qbo": {
-    "callback": {
-      "completed": "55555",
-      "errorDetail": "55555 {{error}} 55555",
-      "errored": "55555",
-      "failed": "55555",
-      "realmId": "55555 {{realmId}} 55555",
-      "returnButton": "55555",
-      "success": "55555",
-      "title": "55555"
-    }
-  },
-  "rmm": {
-    "ninjaOne": {
-      "loading": "55555"
-    },
-    "setup": {
-      "activeConfiguration": "55555",
-      "comingSoon": "55555",
-      "configure": "55555",
-      "selected": "55555 {{title}} 55555",
-      "title": "55555"
-    },
-    "tactical": {
-      "actions": {
-        "disconnect": "55555",
-        "disconnecting": "55555",
-        "ingestSoftware": "55555",
-        "ingesting": "55555",
-        "refresh": "55555",
-        "save": "55555",
-        "saving": "55555",
-        "syncAlerts": "55555",
-        "syncClients": "55555",
-        "syncDevices": "55555",
-        "syncing": "55555",
-        "testConnection": "55555",
-        "testing": "55555"
-      },
-      "auth": {
-        "apiKey": "55555",
-        "enterApiKey": "55555",
-        "enterPassword": "55555",
-        "enterUsername": "55555",
-        "knox": "55555",
-        "knoxOption": "55555",
-        "knoxTokenSaved": "55555 {{value}} 55555",
-        "mode": "55555",
-        "password": "55555",
-        "saved": "55555 {{value}} 55555",
-        "savedEnterToUpdate": "55555",
-        "totp": "55555",
-        "username": "55555"
-      },
-      "autoSync": "55555",
-      "client": {
-        "loading": "55555",
-        "select": "55555"
-      },
-      "counts": {
-        "activeAlerts": "55555",
-        "lastSync": "55555",
-        "mappedOrgs": "55555",
-        "never": "55555",
-        "syncedDevices": "55555"
-      },
-      "description": "55555",
-      "errors": {
-        "backfillAlerts": "55555",
-        "connectionTest": "55555",
-        "disconnect": "55555",
-        "ingestSoftware": "55555",
-        "loadOrgMappings": "55555",
-        "loadSettings": "55555",
-        "saveConfig": "55555",
-        "someAlertsFailed": "55555 {{errors}} 55555",
-        "someDevicesFailed": "55555 {{errors}} 55555",
-        "someOrgsFailed": "55555 {{errors}} 55555",
-        "someSoftwareFailed": "55555 {{errors}} 55555",
-        "syncDevices": "55555",
-        "syncOrgs": "55555",
-        "totpRequired": "55555",
-        "updateMapping": "55555"
-      },
-      "fields": {
-        "instanceUrl": "55555",
-        "instanceUrlHelp": "55555"
-      },
-      "lastError": "55555 {{error}} 55555",
-      "loadingSettings": "55555",
-      "sections": {
-        "alerts": "55555",
-        "alertsDescription": "55555",
-        "devices": "55555",
-        "devicesDescription": "55555",
-        "orgMapping": "55555",
-        "orgMappingDescription": "55555",
-        "orgMappingEmpty": "55555",
-        "organizations": "55555",
-        "organizationsDescription": "55555",
-        "softwareInventory": "55555",
-        "softwareInventoryDescription": "55555",
-        "webhooks": "55555",
-        "webhooksDescription": "55555"
-      },
-      "status": {
-        "authPrefix": "55555",
-        "connected": "55555",
-        "disconnected": "55555",
-        "instanceUrlNotSet": "55555"
-      },
-      "statusLine": {
-        "configured": "55555",
-        "notConfigured": "55555"
-      },
-      "success": {
-        "alertBackfillCompleted": "55555 {{processed}} 55555 {{created}} 55555 {{updated}} 55555 {{failed}} 55555",
-        "connection": "55555",
-        "deviceSyncCompleted": "55555 {{processed}} 55555 {{created}} 55555 {{updated}} 55555 {{deleted}} 55555 {{failed}} 55555",
-        "disconnected": "55555",
-        "orgSyncCompleted": "55555 {{processed}} 55555 {{created}} 55555 {{updated}} 55555 {{failed}} 55555",
-        "saved": "55555",
-        "softwareIngestionCompleted": "55555 {{processed}} 55555 {{created}} 55555 {{updated}} 55555 {{failed}} 55555"
-      },
-      "tacticalIdLabel": "55555 {{id}} 55555",
-      "title": "55555",
-      "toasts": {
-        "alertsSyncedDescription": "55555",
-        "alertsSyncedTitle": "55555",
-        "backfillFailedTitle": "55555",
-        "connectedDescription": "55555",
-        "connectedTitle": "55555",
-        "connectionFailedTitle": "55555",
-        "devicesSyncedDescription": "55555",
-        "devicesSyncedTitle": "55555",
-        "disconnectFailedTitle": "55555",
-        "disconnectedDescription": "55555",
-        "disconnectedTitle": "55555",
-        "ingestionFailedTitle": "55555",
-        "orgsSyncedDescription": "55555",
-        "orgsSyncedTitle": "55555",
-        "saveFailedTitle": "55555",
-        "savedDescription": "55555",
-        "savedTitle": "55555",
-        "softwareIngestedDescription": "55555",
-        "softwareIngestedTitle": "55555",
-        "syncFailedTitle": "55555",
-        "unknownError": "55555",
-        "updateFailedTitle": "55555"
-      },
-      "webhook": {
-        "copiedTitle": "55555",
-        "copy": "55555",
-        "headerName": "55555",
-        "payloadTemplate": "55555",
-        "secret": "55555",
-        "secretCopied": "55555",
-        "unavailable": "55555",
-        "url": "55555",
-        "urlCopied": "55555"
-      }
-    },
-    "tanium": {
-      "loading": "55555"
-    }
-  },
-  "sso": {
-    "msp": {
-      "actions": {
-        "add": "55555",
-        "refresh": "55555",
-        "request": "55555",
-        "resetChallenge": "55555",
-        "revoke": "55555",
-        "saveDomains": "55555",
-        "saving": "55555",
-        "verify": "55555"
-      },
-      "addDomainLabel": "55555",
-      "advisoryNotice": "55555",
-      "claimStatus": {
-        "advisory": "55555",
-        "pending": "55555",
-        "rejected": "55555",
-        "revoked": "55555",
-        "verified": "55555",
-        "verifiedLegacy": "55555"
-      },
-      "descriptionCe": "55555",
-      "descriptionEe": "55555",
-      "dnsHost": "55555",
-      "dnsInstructions": "55555",
-      "dnsValue": "55555",
-      "emptyClaims": "55555",
-      "emptyDomains": "55555",
-      "errors": {
-        "conflicts": "55555 {{conflicts}} 55555",
-        "loadClaims": "55555",
-        "loadDomains": "55555",
-        "refreshChallenge": "55555",
-        "requestClaim": "55555",
-        "revokeClaim": "55555",
-        "saveDomains": "55555",
-        "verifyClaim": "55555"
-      },
-      "fallbackInfo": "55555",
-      "loading": "55555",
-      "removeDomainAria": "55555 {{number}} 55555",
-      "requestClaim": "55555",
-      "requestClaimLabel": "55555",
-      "title": "55555",
-      "toasts": {
-        "claimRequestedDescription": "55555",
-        "claimRequestedTitle": "55555",
-        "claimUnchangedDescription": "55555",
-        "claimUnchangedTitle": "55555",
-        "refreshFailedTitle": "55555",
-        "refreshedDescription": "55555",
-        "refreshedTitle": "55555",
-        "requestClaimFailedTitle": "55555",
-        "revokeFailedTitle": "55555",
-        "revokedDescription": "55555",
-        "revokedTitle": "55555",
-        "saveDomainsFailedTitle": "55555",
-        "savedDescription": "55555",
-        "savedTitle": "55555",
-        "verifiedDescription": "55555",
-        "verifiedTitle": "55555",
-        "verifyFailedTitle": "55555"
-      }
-    }
-  },
-  "teams": {
-    "settings": {
-      "actions": {
-        "activate": "55555",
-        "addNote": {
-          "description": "55555",
-          "label": "55555"
-        },
-        "approvalResponse": {
-          "description": "55555",
-          "label": "55555"
-        },
-        "assignTicket": {
-          "description": "55555",
-          "label": "55555"
-        },
-        "deactivate": "55555",
-        "logTime": {
-          "description": "55555",
-          "label": "55555"
-        },
-        "reload": "55555",
-        "replyToContact": {
-          "description": "55555",
-          "label": "55555"
-        },
-        "saveChanges": "55555",
-        "saveDraft": "55555",
-        "saving": "55555",
-        "teamsActive": "55555"
-      },
-      "capabilities": {
-        "activityNotifications": {
-          "description": "55555",
-          "label": "55555"
-        },
-        "groupChatBot": {
-          "description": "55555",
-          "label": "55555"
-        },
-        "messageExtension": {
-          "description": "55555",
-          "label": "55555"
-        },
-        "personalBot": {
-          "description": "55555",
-          "label": "55555"
-        },
-        "personalTab": {
-          "description": "55555",
-          "label": "55555"
-        }
-      },
-      "checklist": {
-        "installState": {
-          "active": "55555",
-          "error": "55555",
-          "label": "55555",
-          "notConfigured": "55555",
-          "pending": "55555"
-        },
-        "needsAction": "55555",
-        "profileReady": {
-          "completed": "55555",
-          "label": "55555",
-          "pending": "55555"
-        },
-        "profileSelected": {
-          "completed": "55555 {{name}} 55555",
-          "label": "55555",
-          "pending": "55555"
-        },
-        "ready": "55555"
-      },
-      "description": "55555",
-      "errors": {
-        "downloadPackage": "55555",
-        "generatePackage": "55555",
-        "loadGuidance": "55555",
-        "saveSettings": "55555"
-      },
-      "guidance": {
-        "applicationIdUri": "55555",
-        "messageExtension": "55555",
-        "personalBot": "55555",
-        "personalTab": "55555",
-        "redirectUris": "55555",
-        "requiredScopes": "55555",
-        "teamsAppIdUri": "55555",
-        "unavailable": "55555"
-      },
-      "installStatus": {
-        "active": "55555",
-        "error": "55555",
-        "installPending": "55555",
-        "notConfigured": "55555"
-      },
-      "noEligibleProfiles": "55555",
-      "notifications": {
-        "approvalRequest": {
-          "description": "55555",
-          "label": "55555"
-        },
-        "assignment": {
-          "description": "55555",
-          "label": "55555"
-        },
-        "customerReply": {
-          "description": "55555",
-          "label": "55555"
-        },
-        "escalation": {
-          "description": "55555",
-          "label": "55555"
-        },
-        "slaRisk": {
-          "description": "55555",
-          "label": "55555"
-        }
-      },
-      "package": {
-        "appId": "55555",
-        "appIds": "55555",
-        "botId": "55555",
-        "deepLinks": "55555",
-        "description": "55555",
-        "downloadManifest": "55555",
-        "downloadZip": "55555",
-        "downloading": "55555",
-        "fileName": "55555",
-        "generate": "55555",
-        "generating": "55555",
-        "manifestVersion": "55555",
-        "myWork": "55555",
-        "openBaseUrl": "55555",
-        "openDeeplink": "55555",
-        "packageVersion": "55555",
-        "projectTaskTemplate": "55555",
-        "section": "55555",
-        "ticketTemplate": "55555",
-        "title": "55555",
-        "validDomains": "55555",
-        "webResource": "55555"
-      },
-      "profileLabel": "55555",
-      "profileSummary": {
-        "needsRepair": "55555",
-        "none": "55555"
-      },
-      "section": {
-        "allowedActions": "55555",
-        "capabilities": "55555",
-        "notifications": "55555"
-      },
-      "selectProfile": "55555",
-      "statusMessage": {
-        "activated": "55555",
-        "deactivated": "55555",
-        "packageDownloaded": "55555",
-        "packageGenerated": "55555",
-        "saved": "55555"
-      },
-      "title": "55555"
-    }
-  },
-  "xero": {
-    "csv": {
-      "clientSync": {
-        "cancel": "55555",
-        "createNew": "55555",
-        "description": "55555",
-        "errorRow": "55555 {{row}} 55555 {{name}} 55555 {{error}} 55555",
-        "errors": {
-          "export": "55555",
-          "import": "55555",
-          "processCsv": "55555"
-        },
-        "errorsTitle": "55555 {{count}} 55555",
-        "exportButton": "55555",
-        "exportClients": "55555",
-        "exportDescription": "55555",
-        "exportSuccess": "55555 {{count}} 55555 {{filename}} 55555",
-        "importCompleteDescription": "55555 {{count}} 55555",
-        "importCompleteTitle": "55555",
-        "importContacts": "55555",
-        "importContactsButton": "55555 {{count}} 55555",
-        "importDescription": "55555",
-        "importing": "55555",
-        "matchBy": {
-          "algaClientId": "55555",
-          "contactName": "55555",
-          "emailAddress": "55555"
-        },
-        "matchByLabel": "55555",
-        "moreErrors": "55555 {{count}} 55555",
-        "preview": {
-          "columns": {
-            "action": "55555",
-            "contactName": "55555",
-            "email": "55555",
-            "matchedClient": "55555"
-          },
-          "moreWarnings": "55555 {{count}} 55555",
-          "showing20of": "55555 {{count}} 55555",
-          "toCreate": "55555",
-          "toSkip": "55555",
-          "toUpdate": "55555",
-          "warnings": "55555"
-        },
-        "processing": "55555 {{filename}} 55555",
-        "result": {
-          "created": "55555",
-          "mappings": "55555",
-          "skipped": "55555",
-          "updated": "55555"
-        },
-        "selectCsvFile": "55555",
-        "startNewImport": "55555",
-        "title": "55555",
-        "updateExisting": "55555",
-        "workflow": {
-          "s1": "55555",
-          "s2": "55555",
-          "s3": "55555",
-          "s4": "55555"
-        },
-        "workflowTitle": "55555"
       },
       "settings": {
-        "dateFormat": "55555",
-        "dateFormatHelp": "55555",
-        "dateFormatOptions": {
-          "dmy": "55555",
-          "mdy": "55555"
-        },
-        "defaultCurrency": "55555",
-        "defaultCurrencyHelp": "55555",
-        "errors": {
-          "load": "55555",
-          "save": "55555"
-        },
-        "exportSettings": {
+        "exports": {
           "description": "55555",
+          "managedTitle": "55555",
+          "openButton": "55555",
+          "path": "55555",
           "title": "55555"
         },
-        "loading": "55555",
-        "managedPrefix": "55555",
-        "managedSuffix": "55555",
-        "mappings": {
+        "qbo": {
+          "bullets": {
+            "exportLabel": "55555",
+            "exportText": "55555",
+            "taxImportLabel": "55555",
+            "taxImportText": "55555"
+          },
           "description": "55555",
-          "title": "55555"
-        },
-        "overview": {
-          "description": "55555",
-          "exportLabel": "55555",
-          "exportText": "55555",
+          "exports": {
+            "managedPrefix": "55555",
+            "managedSuffix": "55555"
+          },
           "intro": "55555",
+          "mappings": {
+            "description": "55555",
+            "title": "55555"
+          },
           "note": "55555",
-          "taxImportLabel": "55555",
-          "taxImportText": "55555",
+          "title": "55555"
+        }
+      },
+      "taxImport": {
+        "actions": {
+          "importTaxData": "55555",
+          "importing": "55555",
+          "validate": "55555",
+          "validating": "55555"
+        },
+        "errors": {
+          "importFailed": "55555",
+          "readFile": "55555",
+          "selectFile": "55555",
+          "selectFileAndRange": "55555",
+          "templateDownloadFailed": "55555",
+          "validationFailed": "55555"
+        },
+        "fields": {
+          "csvFile": "55555",
+          "dateRangeHelp": "55555",
+          "dateRangeRequired": "55555",
+          "dropZone": "55555",
+          "fileSize": "55555 {{size}} 55555"
+        },
+        "preview": {
+          "alreadyImported": "55555 {{count}} 55555",
+          "alreadyImportedSkip": "55555 {{count}} 55555",
+          "badges": {
+            "databaseMatch": "55555",
+            "rowData": "55555",
+            "structure": "55555"
+          },
+          "columns": {
+            "algaInvoice": "55555",
+            "contact": "55555",
+            "status": "55555",
+            "taxAmount": "55555",
+            "xeroInvoice": "55555"
+          },
+          "errorsTitle": "55555 {{count}} 55555",
+          "matched": "55555",
+          "matchedInvoices": "55555",
+          "notPendingDescription": "55555",
+          "notPendingSkip": "55555 {{count}} 55555",
+          "notPendingTitle": "55555 {{count}} 55555",
+          "showingFirst20": "55555 {{count}} 55555",
+          "taxToImport": "55555",
+          "title": "55555",
+          "totalRows": "55555",
+          "uniqueInvoices": "55555",
+          "unmatched": "55555",
+          "validRows": "55555",
+          "warningsTitle": "55555 {{count}} 55555"
+        },
+        "qbo": {
+          "description": "55555",
+          "help": {
+            "csvRequirement": "55555",
+            "downloadTemplate": "55555",
+            "steps": {
+              "s1": "55555",
+              "s2": "55555",
+              "s3": "55555",
+              "s4": "55555",
+              "s5": "55555"
+            },
+            "title": "55555"
+          },
+          "success": {
+            "one": "55555 {{count}} 55555 {{amount}} 55555",
+            "other": "55555 {{count}} 55555 {{amount}} 55555"
+          },
           "title": "55555"
         },
-        "savedMessage": "55555",
-        "selectCurrency": "55555",
-        "setup": {
-          "acknowledge": "55555",
-          "description": "55555",
-          "externalInvoiceId": "55555",
-          "externalInvoiceIdHelp": "55555",
-          "sourceSystem": "55555",
-          "sourceSystemHelp": "55555",
-          "step1Description": "55555",
-          "step1Title": "55555",
-          "step2Description": "55555",
-          "step2Title": "55555",
-          "step3Description": "55555",
-          "step3Title": "55555",
-          "title": "55555"
+        "result": {
+          "failed": "55555 {{count}} 55555",
+          "one": "55555 {{count}} 55555 {{amount}} 55555",
+          "other": "55555 {{count}} 55555 {{amount}} 55555",
+          "skipped": "55555 {{count}} 55555"
         },
-        "useInvoiceCurrency": "55555",
-        "workflow": {
+        "unified": {
           "description": "55555",
-          "export": {
+          "qbResult": {
+            "one": "55555 {{count}} 55555 {{amount}} 55555",
+            "other": "55555 {{count}} 55555 {{amount}} 55555"
+          },
+          "source": {
+            "ariaLabel": "55555",
+            "quickbooks": "55555",
+            "xero": "55555"
+          },
+          "title": "55555",
+          "xeroCsvDescription": "55555",
+          "xeroHelp": {
+            "note": "55555",
             "s1": "55555",
             "s2": "55555",
             "s3": "55555",
@@ -1096,95 +321,1026 @@
             "s5": "55555",
             "s6": "55555"
           },
-          "exportInvoices": "55555",
-          "import": {
-            "s1": "55555",
-            "s2": "55555",
-            "s3": "55555",
-            "s4": "55555",
-            "s5": "55555"
+          "xeroResult": {
+            "one": "55555 {{count}} 55555 {{amount}} 55555",
+            "other": "55555 {{count}} 55555 {{amount}} 55555"
+          }
+        },
+        "xero": {
+          "description": "55555",
+          "dropZone": "55555",
+          "help": {
+            "csvRequirement": "55555",
+            "steps": {
+              "s1": "55555",
+              "s2": "55555",
+              "s3": "55555",
+              "s4": "55555",
+              "s5": "55555",
+              "s6": "55555"
+            },
+            "title": "55555"
           },
-          "importTax": "55555",
-          "title": "55555",
-          "trackingDescription": "55555",
-          "trackingTitle": "55555"
+          "title": "55555"
         }
       }
     },
-    "live": {
-      "defaultOrganisation": "55555"
-    },
-    "settings": {
-      "actions": {
-        "connect": "55555",
-        "disconnect": "55555",
-        "disconnecting": "55555",
-        "reconnect": "55555",
-        "refresh": "55555",
-        "saveCredentials": "55555",
-        "saving": "55555"
-      },
-      "badges": {
-        "connectionExpired": "55555",
-        "credentialsReady": "55555",
-        "credentialsRequired": "55555",
-        "defaultConnected": "55555",
-        "noOrganisation": "55555"
-      },
-      "callback": {
-        "accessDenied": "55555",
-        "configMissing": "55555",
-        "connectionsUnmapped": "55555",
-        "generic": "55555 {{code}} 55555",
-        "invalidState": "55555",
-        "missingParams": "55555",
-        "noConnections": "55555",
-        "oauthFailed": "55555"
-      },
-      "clientIdLabel": "55555",
-      "clientIdPlaceholder": "55555",
-      "clientSecretLabel": "55555",
-      "clientSecretPlaceholder": "55555",
-      "connectSuccess": "55555",
-      "connection": {
-        "connectionId": "55555 {{id}} 55555",
-        "defaultOrganisation": "55555",
+    "google": {
+      "settings": {
+        "actions": {
+          "refresh": "55555",
+          "resetProviders": "55555",
+          "resetting": "55555",
+          "save": "55555",
+          "saving": "55555"
+        },
+        "afterSaveNotice": "55555",
+        "consoleLink": "55555",
         "description": "55555",
-        "notConnected": "55555",
+        "errors": {
+          "loadFailed": "55555",
+          "resetFailed": "55555",
+          "saveFailed": "55555"
+        },
+        "fields": {
+          "projectIdHelp": "55555",
+          "projectIdLabel": "55555",
+          "projectIdPlaceholder": "55555"
+        },
+        "loading": "55555",
+        "oauth": {
+          "calendarClientId": "55555",
+          "calendarClientSecret": "55555",
+          "enterSecret": "55555",
+          "gmailClientId": "55555",
+          "gmailClientSecret": "55555",
+          "sectionTitle": "55555",
+          "shareApp": "55555",
+          "shareAppHelp": "55555",
+          "storedSecret": "55555 {{secret}} 55555"
+        },
+        "redirectUrisLabel": "55555",
+        "scopes": "55555",
+        "scopesCalendar": "55555 {{scopes}} 55555",
+        "scopesGmail": "55555 {{scopes}} 55555",
+        "serviceAccount": {
+          "alreadyStored": "55555",
+          "description": "55555",
+          "title": "55555"
+        },
+        "setupGuide": "55555",
         "title": "55555",
-        "unknown": "55555"
+        "toasts": {
+          "resetDescription": "55555",
+          "resetFailedTitle": "55555",
+          "resetTitle": "55555",
+          "saveFailedTitle": "55555",
+          "savedDescription": "55555",
+          "savedTitle": "55555",
+          "unknownError": "55555"
+        }
+      }
+    },
+    "microsoft": {
+      "settings": {
+        "actions": {
+          "entraLink": "55555",
+          "newProfile": "55555",
+          "openTeamsSetup": "55555",
+          "refresh": "55555",
+          "resetProviders": "55555",
+          "resetting": "55555"
+        },
+        "archiveDialog": {
+          "archiving": "55555",
+          "cancel": "55555",
+          "confirm": "55555",
+          "message": "55555 {{name}} 55555",
+          "title": "55555"
+        },
+        "binding": {
+          "bound": "55555",
+          "boundProfileLabel": "55555",
+          "createFirst": "55555",
+          "needsAttention": "55555",
+          "saving": "55555",
+          "selectProfile": "55555",
+          "unbound": "55555"
+        },
+        "bindings": {
+          "summaryBound": "55555 {{consumer}} 55555 {{profile}} 55555",
+          "summaryNone": "55555 {{consumer}} 55555",
+          "summaryUnavailable": "55555 {{consumer}} 55555",
+          "warningArchived": "55555 {{consumer}} 55555",
+          "warningNoBinding": "55555 {{consumer}} 55555",
+          "warningNotReady": "55555 {{consumer}} 55555 {{profile}} 55555",
+          "warningProfileMissing": "55555 {{consumer}} 55555"
+        },
+        "bindingsAlertCe": "55555",
+        "bindingsAlertEe": "55555",
+        "consumerBindings": {
+          "descriptionCe": "55555",
+          "descriptionEe": "55555",
+          "title": "55555"
+        },
+        "consumers": {
+          "calendar": {
+            "description": "55555",
+            "label": "55555",
+            "reconnect": "55555"
+          },
+          "email": {
+            "description": "55555",
+            "label": "55555",
+            "reconnect": "55555"
+          },
+          "mspSso": {
+            "description": "55555",
+            "label": "55555"
+          },
+          "teams": {
+            "description": "55555",
+            "label": "55555"
+          }
+        },
+        "descriptionCe": "55555",
+        "descriptionEe": "55555",
+        "dialog": {
+          "cancel": "55555",
+          "clientId": "55555",
+          "clientSecret": "55555",
+          "clientSecretPlaceholder": "55555",
+          "clientSecretPlaceholderEdit": "55555",
+          "createProfile": "55555",
+          "createTitle": "55555",
+          "descriptionCreate": "55555",
+          "descriptionEdit": "55555",
+          "displayName": "55555",
+          "displayNamePlaceholder": "55555",
+          "editTitle": "55555",
+          "saveChanges": "55555",
+          "saving": "55555",
+          "setDefault": "55555",
+          "setDefaultHelp": "55555",
+          "storedSecretHint": "55555 {{secret}} 55555",
+          "tenantId": "55555"
+        },
+        "empty": {
+          "createButton": "55555",
+          "descriptionCe": "55555",
+          "descriptionEe": "55555",
+          "title": "55555"
+        },
+        "errors": {
+          "archive": "55555",
+          "loadBindings": "55555",
+          "loadStatus": "55555",
+          "resetProviders": "55555",
+          "saveProfile": "55555",
+          "setDefault": "55555",
+          "updateBinding": "55555"
+        },
+        "guidance": {
+          "applicationIdUri": "55555",
+          "calendarRedirect": "55555",
+          "calendarTitle": "55555",
+          "clientId": "55555",
+          "currentProfileTitle": "55555",
+          "emailRedirect": "55555",
+          "emailTitle": "55555",
+          "mspSsoTitle": "55555",
+          "notConfigured": "55555",
+          "redirectUri": "55555",
+          "requiresBaseUrl": "55555",
+          "scopes": "55555",
+          "teamsBotRedirect": "55555",
+          "teamsMessageRedirect": "55555",
+          "teamsScopes": "55555",
+          "teamsTabRedirect": "55555",
+          "teamsTitle": "55555",
+          "tenantId": "55555",
+          "unavailable": "55555"
+        },
+        "profileCard": {
+          "activeBindings": "55555",
+          "archive": "55555",
+          "clientId": "55555",
+          "defaultBadge": "55555",
+          "edit": "55555",
+          "guidanceSummary": "55555",
+          "noVisibleBindings": "55555",
+          "readinessTitle": "55555",
+          "readyCe": "55555",
+          "readyEe": "55555",
+          "readyEeTeams": "55555",
+          "setDefault": "55555",
+          "storedSecret": "55555",
+          "teamsAppIdUri": "55555",
+          "tenantIdLabel": "55555",
+          "updating": "55555"
+        },
+        "providerReconnect": {
+          "description": "55555",
+          "title": "55555"
+        },
+        "readiness": {
+          "archived": "55555",
+          "clientIdMissing": "55555",
+          "clientSecretMissing": "55555",
+          "tenantIdMissing": "55555"
+        },
+        "statusBadges": {
+          "archived": "55555",
+          "needsAttention": "55555",
+          "ready": "55555"
+        },
+        "title": "55555",
+        "toasts": {
+          "archiveFailedTitle": "55555",
+          "archivedDescription": "55555 {{name}} 55555",
+          "archivedTitle": "55555",
+          "bindingFailedTitle": "55555 {{consumer}} 55555",
+          "bindingUpdatedDescription": "55555 {{consumer}} 55555 {{profile}} 55555",
+          "bindingUpdatedTitle": "55555 {{consumer}} 55555",
+          "defaultUpdatedDescription": "55555 {{name}} 55555",
+          "defaultUpdatedTitle": "55555",
+          "profileCreated": "55555",
+          "profileCreatedDescription": "55555",
+          "profileUpdated": "55555",
+          "profileUpdatedDescription": "55555",
+          "resetDescription": "55555",
+          "resetFailedTitle": "55555",
+          "resetTitle": "55555",
+          "saveFailedTitle": "55555",
+          "selectedProfile": "55555",
+          "setDefaultFailedTitle": "55555"
+        },
+        "validation": {
+          "clientIdRequired": "55555",
+          "clientSecretRequired": "55555",
+          "displayNameRequired": "55555",
+          "tenantIdRequired": "55555"
+        }
+      }
+    },
+    "qbo": {
+      "callback": {
+        "completed": "55555",
+        "errorDetail": "55555 {{error}} 55555",
+        "errored": "55555",
+        "failed": "55555",
+        "realmId": "55555 {{realmId}} 55555",
+        "returnButton": "55555",
+        "success": "55555",
+        "title": "55555"
+      }
+    },
+    "rmm": {
+      "ninjaOne": {
+        "loading": "55555",
+        "card": {
+          "title": "55555",
+          "description": "55555",
+          "skeletonDescription": "55555"
+        },
+        "status": {
+          "checking": "55555",
+          "notConnected": {
+            "title": "55555",
+            "description": "55555"
+          },
+          "connected": "55555",
+          "connectedWithErrors": "55555",
+          "instanceLabel": "55555",
+          "organizations": "55555 {{count}} 55555",
+          "devices": "55555 {{count}} 55555",
+          "activeAlerts": "55555 {{count}} 55555",
+          "lastSynced": "55555 {{time}} 55555"
+        },
+        "setup": {
+          "title": "55555",
+          "steps": {
+            "login": "55555",
+            "navigate": "55555",
+            "addClient": "55555",
+            "platform": "55555",
+            "name": "55555",
+            "redirectUri": "55555",
+            "scopes": "55555",
+            "grantTypes": "55555",
+            "addAndCopy": "55555"
+          },
+          "docsPrefix": "55555",
+          "docsSection": "55555",
+          "docsSuffix": "55555",
+          "openApiSettings": "55555"
+        },
+        "credentials": {
+          "title": "55555",
+          "saved": "55555",
+          "clientIdLabel": "55555",
+          "clientIdPlaceholder": "55555",
+          "clientSecretLabel": "55555",
+          "clientSecretPlaceholder": "55555",
+          "clientSecretUpdatePlaceholder": "55555",
+          "secretMaskedLabel": "55555",
+          "saving": "55555",
+          "save": "55555"
+        },
+        "region": {
+          "hint": "55555",
+          "label": "55555"
+        },
+        "actions": {
+          "refreshing": "55555",
+          "refreshStatus": "55555",
+          "syncing": "55555",
+          "syncOrganizations": "55555",
+          "syncingDevices": "55555",
+          "syncDevices": "55555",
+          "disconnecting": "55555",
+          "disconnect": "55555",
+          "connect": "55555"
+        },
+        "disconnectModal": {
+          "title": "55555",
+          "description": "55555",
+          "cancel": "55555",
+          "confirm": "55555"
+        },
+        "toasts": {
+          "connectSuccess": "55555",
+          "connectFailed": "55555",
+          "connectFailedWithDetail": "55555 {{detail}} 55555",
+          "disconnectSuccess": "55555",
+          "credentialsSaved": "55555",
+          "orgSyncSuccess": "55555 {{processed}} {{created}} {{updated}} 55555",
+          "deviceSyncSuccess": "55555 {{processed}} {{created}} {{updated}} 55555"
+        },
+        "errors": {
+          "loadStatus": "55555",
+          "saveCredentials": "55555",
+          "connect": "55555",
+          "disconnect": "55555",
+          "disconnectUnexpected": "55555",
+          "orgSyncFailed": "55555",
+          "deviceSyncFailed": "55555"
+        }
       },
-      "credentialsSaved": "55555",
-      "csvAvailableMiddle": "55555",
-      "csvAvailablePrefix": "55555",
-      "csvAvailableTitle": "55555",
-      "description": "55555",
-      "disconnectSuccess": "55555",
-      "errors": {
-        "disconnect": "55555",
-        "load": "55555",
-        "saveCredentials": "55555"
-      },
-      "howItWorksDescription": "55555",
-      "howItWorksTitle": "55555",
-      "loading": "55555",
-      "mapping": {
-        "alert": "55555",
-        "descriptionPrefix": "55555",
-        "placeholderAlert": "55555",
-        "placeholderDescription": "55555",
+      "setup": {
+        "activeConfiguration": "55555",
+        "comingSoon": "55555",
+        "configure": "55555",
+        "selected": "55555 {{title}} 55555",
         "title": "55555"
       },
-      "noClientId": "55555",
-      "noClientSecret": "55555",
-      "redirectUri": "55555",
-      "requiredScopes": "55555",
-      "storedClientId": "55555 {{value}} 55555",
-      "storedClientSecret": "55555 {{value}} 55555",
-      "tenantOauthDescription": "55555",
-      "tenantOauthTitle": "55555",
+      "tactical": {
+        "actions": {
+          "disconnect": "55555",
+          "disconnecting": "55555",
+          "ingestSoftware": "55555",
+          "ingesting": "55555",
+          "refresh": "55555",
+          "save": "55555",
+          "saving": "55555",
+          "syncAlerts": "55555",
+          "syncClients": "55555",
+          "syncDevices": "55555",
+          "syncing": "55555",
+          "testConnection": "55555",
+          "testing": "55555"
+        },
+        "auth": {
+          "apiKey": "55555",
+          "enterApiKey": "55555",
+          "enterPassword": "55555",
+          "enterUsername": "55555",
+          "knox": "55555",
+          "knoxOption": "55555",
+          "knoxTokenSaved": "55555 {{value}} 55555",
+          "mode": "55555",
+          "password": "55555",
+          "saved": "55555 {{value}} 55555",
+          "savedEnterToUpdate": "55555",
+          "totp": "55555",
+          "username": "55555"
+        },
+        "autoSync": "55555",
+        "client": {
+          "loading": "55555",
+          "select": "55555"
+        },
+        "counts": {
+          "activeAlerts": "55555",
+          "lastSync": "55555",
+          "mappedOrgs": "55555",
+          "never": "55555",
+          "syncedDevices": "55555"
+        },
+        "description": "55555",
+        "errors": {
+          "backfillAlerts": "55555",
+          "connectionTest": "55555",
+          "disconnect": "55555",
+          "ingestSoftware": "55555",
+          "loadOrgMappings": "55555",
+          "loadSettings": "55555",
+          "saveConfig": "55555",
+          "someAlertsFailed": "55555 {{errors}} 55555",
+          "someDevicesFailed": "55555 {{errors}} 55555",
+          "someOrgsFailed": "55555 {{errors}} 55555",
+          "someSoftwareFailed": "55555 {{errors}} 55555",
+          "syncDevices": "55555",
+          "syncOrgs": "55555",
+          "totpRequired": "55555",
+          "updateMapping": "55555"
+        },
+        "fields": {
+          "instanceUrl": "55555",
+          "instanceUrlHelp": "55555"
+        },
+        "lastError": "55555 {{error}} 55555",
+        "loadingSettings": "55555",
+        "sections": {
+          "alerts": "55555",
+          "alertsDescription": "55555",
+          "devices": "55555",
+          "devicesDescription": "55555",
+          "orgMapping": "55555",
+          "orgMappingDescription": "55555",
+          "orgMappingEmpty": "55555",
+          "organizations": "55555",
+          "organizationsDescription": "55555",
+          "softwareInventory": "55555",
+          "softwareInventoryDescription": "55555",
+          "webhooks": "55555",
+          "webhooksDescription": "55555"
+        },
+        "status": {
+          "authPrefix": "55555",
+          "connected": "55555",
+          "disconnected": "55555",
+          "instanceUrlNotSet": "55555"
+        },
+        "statusLine": {
+          "configured": "55555",
+          "notConfigured": "55555"
+        },
+        "success": {
+          "alertBackfillCompleted": "55555 {{processed}} 55555 {{created}} 55555 {{updated}} 55555 {{failed}} 55555",
+          "connection": "55555",
+          "deviceSyncCompleted": "55555 {{processed}} 55555 {{created}} 55555 {{updated}} 55555 {{deleted}} 55555 {{failed}} 55555",
+          "disconnected": "55555",
+          "orgSyncCompleted": "55555 {{processed}} 55555 {{created}} 55555 {{updated}} 55555 {{failed}} 55555",
+          "saved": "55555",
+          "softwareIngestionCompleted": "55555 {{processed}} 55555 {{created}} 55555 {{updated}} 55555 {{failed}} 55555"
+        },
+        "tacticalIdLabel": "55555 {{id}} 55555",
+        "title": "55555",
+        "toasts": {
+          "alertsSyncedDescription": "55555",
+          "alertsSyncedTitle": "55555",
+          "backfillFailedTitle": "55555",
+          "connectedDescription": "55555",
+          "connectedTitle": "55555",
+          "connectionFailedTitle": "55555",
+          "devicesSyncedDescription": "55555",
+          "devicesSyncedTitle": "55555",
+          "disconnectFailedTitle": "55555",
+          "disconnectedDescription": "55555",
+          "disconnectedTitle": "55555",
+          "ingestionFailedTitle": "55555",
+          "orgsSyncedDescription": "55555",
+          "orgsSyncedTitle": "55555",
+          "saveFailedTitle": "55555",
+          "savedDescription": "55555",
+          "savedTitle": "55555",
+          "softwareIngestedDescription": "55555",
+          "softwareIngestedTitle": "55555",
+          "syncFailedTitle": "55555",
+          "unknownError": "55555",
+          "updateFailedTitle": "55555"
+        },
+        "webhook": {
+          "copiedTitle": "55555",
+          "copy": "55555",
+          "headerName": "55555",
+          "payloadTemplate": "55555",
+          "secret": "55555",
+          "secretCopied": "55555",
+          "unavailable": "55555",
+          "url": "55555",
+          "urlCopied": "55555"
+        }
+      },
+      "tanium": {
+        "loading": "55555"
+      }
+    },
+    "sso": {
+      "msp": {
+        "actions": {
+          "add": "55555",
+          "refresh": "55555",
+          "request": "55555",
+          "resetChallenge": "55555",
+          "revoke": "55555",
+          "saveDomains": "55555",
+          "saving": "55555",
+          "verify": "55555"
+        },
+        "addDomainLabel": "55555",
+        "advisoryNotice": "55555",
+        "claimStatus": {
+          "advisory": "55555",
+          "pending": "55555",
+          "rejected": "55555",
+          "revoked": "55555",
+          "verified": "55555",
+          "verifiedLegacy": "55555"
+        },
+        "descriptionCe": "55555",
+        "descriptionEe": "55555",
+        "dnsHost": "55555",
+        "dnsInstructions": "55555",
+        "dnsValue": "55555",
+        "emptyClaims": "55555",
+        "emptyDomains": "55555",
+        "errors": {
+          "conflicts": "55555 {{conflicts}} 55555",
+          "loadClaims": "55555",
+          "loadDomains": "55555",
+          "refreshChallenge": "55555",
+          "requestClaim": "55555",
+          "revokeClaim": "55555",
+          "saveDomains": "55555",
+          "verifyClaim": "55555"
+        },
+        "fallbackInfo": "55555",
+        "loading": "55555",
+        "removeDomainAria": "55555 {{number}} 55555",
+        "requestClaim": "55555",
+        "requestClaimLabel": "55555",
+        "title": "55555",
+        "toasts": {
+          "claimRequestedDescription": "55555",
+          "claimRequestedTitle": "55555",
+          "claimUnchangedDescription": "55555",
+          "claimUnchangedTitle": "55555",
+          "refreshFailedTitle": "55555",
+          "refreshedDescription": "55555",
+          "refreshedTitle": "55555",
+          "requestClaimFailedTitle": "55555",
+          "revokeFailedTitle": "55555",
+          "revokedDescription": "55555",
+          "revokedTitle": "55555",
+          "saveDomainsFailedTitle": "55555",
+          "savedDescription": "55555",
+          "savedTitle": "55555",
+          "verifiedDescription": "55555",
+          "verifiedTitle": "55555",
+          "verifyFailedTitle": "55555"
+        }
+      }
+    },
+    "teams": {
+      "settings": {
+        "actions": {
+          "activate": "55555",
+          "addNote": {
+            "description": "55555",
+            "label": "55555"
+          },
+          "approvalResponse": {
+            "description": "55555",
+            "label": "55555"
+          },
+          "assignTicket": {
+            "description": "55555",
+            "label": "55555"
+          },
+          "deactivate": "55555",
+          "logTime": {
+            "description": "55555",
+            "label": "55555"
+          },
+          "reload": "55555",
+          "replyToContact": {
+            "description": "55555",
+            "label": "55555"
+          },
+          "saveChanges": "55555",
+          "saveDraft": "55555",
+          "saving": "55555",
+          "teamsActive": "55555"
+        },
+        "capabilities": {
+          "activityNotifications": {
+            "description": "55555",
+            "label": "55555"
+          },
+          "groupChatBot": {
+            "description": "55555",
+            "label": "55555"
+          },
+          "messageExtension": {
+            "description": "55555",
+            "label": "55555"
+          },
+          "personalBot": {
+            "description": "55555",
+            "label": "55555"
+          },
+          "personalTab": {
+            "description": "55555",
+            "label": "55555"
+          }
+        },
+        "checklist": {
+          "installState": {
+            "active": "55555",
+            "error": "55555",
+            "label": "55555",
+            "notConfigured": "55555",
+            "pending": "55555"
+          },
+          "needsAction": "55555",
+          "profileReady": {
+            "completed": "55555",
+            "label": "55555",
+            "pending": "55555"
+          },
+          "profileSelected": {
+            "completed": "55555 {{name}} 55555",
+            "label": "55555",
+            "pending": "55555"
+          },
+          "ready": "55555"
+        },
+        "description": "55555",
+        "errors": {
+          "downloadPackage": "55555",
+          "generatePackage": "55555",
+          "loadGuidance": "55555",
+          "saveSettings": "55555"
+        },
+        "guidance": {
+          "applicationIdUri": "55555",
+          "messageExtension": "55555",
+          "personalBot": "55555",
+          "personalTab": "55555",
+          "redirectUris": "55555",
+          "requiredScopes": "55555",
+          "teamsAppIdUri": "55555",
+          "unavailable": "55555"
+        },
+        "installStatus": {
+          "active": "55555",
+          "error": "55555",
+          "installPending": "55555",
+          "notConfigured": "55555"
+        },
+        "noEligibleProfiles": "55555",
+        "notifications": {
+          "approvalRequest": {
+            "description": "55555",
+            "label": "55555"
+          },
+          "assignment": {
+            "description": "55555",
+            "label": "55555"
+          },
+          "customerReply": {
+            "description": "55555",
+            "label": "55555"
+          },
+          "escalation": {
+            "description": "55555",
+            "label": "55555"
+          },
+          "slaRisk": {
+            "description": "55555",
+            "label": "55555"
+          }
+        },
+        "package": {
+          "appId": "55555",
+          "appIds": "55555",
+          "botId": "55555",
+          "deepLinks": "55555",
+          "description": "55555",
+          "downloadManifest": "55555",
+          "downloadZip": "55555",
+          "downloading": "55555",
+          "fileName": "55555",
+          "generate": "55555",
+          "generating": "55555",
+          "manifestVersion": "55555",
+          "myWork": "55555",
+          "openBaseUrl": "55555",
+          "openDeeplink": "55555",
+          "packageVersion": "55555",
+          "projectTaskTemplate": "55555",
+          "section": "55555",
+          "ticketTemplate": "55555",
+          "title": "55555",
+          "validDomains": "55555",
+          "webResource": "55555"
+        },
+        "profileLabel": "55555",
+        "profileSummary": {
+          "needsRepair": "55555",
+          "none": "55555"
+        },
+        "section": {
+          "allowedActions": "55555",
+          "capabilities": "55555",
+          "notifications": "55555"
+        },
+        "selectProfile": "55555",
+        "statusMessage": {
+          "activated": "55555",
+          "deactivated": "55555",
+          "packageDownloaded": "55555",
+          "packageGenerated": "55555",
+          "saved": "55555"
+        },
+        "title": "55555"
+      }
+    },
+    "xero": {
+      "csv": {
+        "clientSync": {
+          "cancel": "55555",
+          "createNew": "55555",
+          "description": "55555",
+          "errorRow": "55555 {{row}} 55555 {{name}} 55555 {{error}} 55555",
+          "errors": {
+            "export": "55555",
+            "import": "55555",
+            "processCsv": "55555"
+          },
+          "errorsTitle": "55555 {{count}} 55555",
+          "exportButton": "55555",
+          "exportClients": "55555",
+          "exportDescription": "55555",
+          "exportSuccess": "55555 {{count}} 55555 {{filename}} 55555",
+          "importCompleteDescription": "55555 {{count}} 55555",
+          "importCompleteTitle": "55555",
+          "importContacts": "55555",
+          "importContactsButton": "55555 {{count}} 55555",
+          "importDescription": "55555",
+          "importing": "55555",
+          "matchBy": {
+            "algaClientId": "55555",
+            "contactName": "55555",
+            "emailAddress": "55555"
+          },
+          "matchByLabel": "55555",
+          "moreErrors": "55555 {{count}} 55555",
+          "preview": {
+            "columns": {
+              "action": "55555",
+              "contactName": "55555",
+              "email": "55555",
+              "matchedClient": "55555"
+            },
+            "moreWarnings": "55555 {{count}} 55555",
+            "showing20of": "55555 {{count}} 55555",
+            "toCreate": "55555",
+            "toSkip": "55555",
+            "toUpdate": "55555",
+            "warnings": "55555"
+          },
+          "processing": "55555 {{filename}} 55555",
+          "result": {
+            "created": "55555",
+            "mappings": "55555",
+            "skipped": "55555",
+            "updated": "55555"
+          },
+          "selectCsvFile": "55555",
+          "startNewImport": "55555",
+          "title": "55555",
+          "updateExisting": "55555",
+          "workflow": {
+            "s1": "55555",
+            "s2": "55555",
+            "s3": "55555",
+            "s4": "55555"
+          },
+          "workflowTitle": "55555"
+        },
+        "settings": {
+          "dateFormat": "55555",
+          "dateFormatHelp": "55555",
+          "dateFormatOptions": {
+            "dmy": "55555",
+            "mdy": "55555"
+          },
+          "defaultCurrency": "55555",
+          "defaultCurrencyHelp": "55555",
+          "errors": {
+            "load": "55555",
+            "save": "55555"
+          },
+          "exportSettings": {
+            "description": "55555",
+            "title": "55555"
+          },
+          "loading": "55555",
+          "managedPrefix": "55555",
+          "managedSuffix": "55555",
+          "mappings": {
+            "description": "55555",
+            "title": "55555"
+          },
+          "overview": {
+            "description": "55555",
+            "exportLabel": "55555",
+            "exportText": "55555",
+            "intro": "55555",
+            "note": "55555",
+            "taxImportLabel": "55555",
+            "taxImportText": "55555",
+            "title": "55555"
+          },
+          "savedMessage": "55555",
+          "selectCurrency": "55555",
+          "setup": {
+            "acknowledge": "55555",
+            "description": "55555",
+            "externalInvoiceId": "55555",
+            "externalInvoiceIdHelp": "55555",
+            "sourceSystem": "55555",
+            "sourceSystemHelp": "55555",
+            "step1Description": "55555",
+            "step1Title": "55555",
+            "step2Description": "55555",
+            "step2Title": "55555",
+            "step3Description": "55555",
+            "step3Title": "55555",
+            "title": "55555"
+          },
+          "useInvoiceCurrency": "55555",
+          "workflow": {
+            "description": "55555",
+            "export": {
+              "s1": "55555",
+              "s2": "55555",
+              "s3": "55555",
+              "s4": "55555",
+              "s5": "55555",
+              "s6": "55555"
+            },
+            "exportInvoices": "55555",
+            "import": {
+              "s1": "55555",
+              "s2": "55555",
+              "s3": "55555",
+              "s4": "55555",
+              "s5": "55555"
+            },
+            "importTax": "55555",
+            "title": "55555",
+            "trackingDescription": "55555",
+            "trackingTitle": "55555"
+          }
+        }
+      },
+      "live": {
+        "defaultOrganisation": "55555"
+      },
+      "settings": {
+        "actions": {
+          "connect": "55555",
+          "disconnect": "55555",
+          "disconnecting": "55555",
+          "reconnect": "55555",
+          "refresh": "55555",
+          "saveCredentials": "55555",
+          "saving": "55555"
+        },
+        "badges": {
+          "connectionExpired": "55555",
+          "credentialsReady": "55555",
+          "credentialsRequired": "55555",
+          "defaultConnected": "55555",
+          "noOrganisation": "55555"
+        },
+        "callback": {
+          "accessDenied": "55555",
+          "configMissing": "55555",
+          "connectionsUnmapped": "55555",
+          "generic": "55555 {{code}} 55555",
+          "invalidState": "55555",
+          "missingParams": "55555",
+          "noConnections": "55555",
+          "oauthFailed": "55555"
+        },
+        "clientIdLabel": "55555",
+        "clientIdPlaceholder": "55555",
+        "clientSecretLabel": "55555",
+        "clientSecretPlaceholder": "55555",
+        "connectSuccess": "55555",
+        "connection": {
+          "connectionId": "55555 {{id}} 55555",
+          "defaultOrganisation": "55555",
+          "description": "55555",
+          "notConnected": "55555",
+          "title": "55555",
+          "unknown": "55555"
+        },
+        "credentialsSaved": "55555",
+        "csvAvailableMiddle": "55555",
+        "csvAvailablePrefix": "55555",
+        "csvAvailableTitle": "55555",
+        "description": "55555",
+        "disconnectSuccess": "55555",
+        "errors": {
+          "disconnect": "55555",
+          "load": "55555",
+          "saveCredentials": "55555"
+        },
+        "howItWorksDescription": "55555",
+        "howItWorksTitle": "55555",
+        "loading": "55555",
+        "mapping": {
+          "alert": "55555",
+          "descriptionPrefix": "55555",
+          "placeholderAlert": "55555",
+          "placeholderDescription": "55555",
+          "title": "55555"
+        },
+        "noClientId": "55555",
+        "noClientSecret": "55555",
+        "redirectUri": "55555",
+        "requiredScopes": "55555",
+        "storedClientId": "55555 {{value}} 55555",
+        "storedClientSecret": "55555 {{value}} 55555",
+        "tenantOauthDescription": "55555",
+        "tenantOauthTitle": "55555",
+        "title": "55555",
+        "xeroCsv": "55555"
+      }
+    },
+    "stripe": {
       "title": "55555",
-      "xeroCsv": "55555"
+      "description": "55555",
+      "connected": {
+        "title": "55555",
+        "publishableKey": "55555 {{key}} 55555"
+      },
+      "empty": {
+        "description": "55555"
+      },
+      "actions": {
+        "testConnection": "55555",
+        "disconnect": "55555",
+        "connect": "55555",
+        "connecting": "55555",
+        "cancel": "55555"
+      },
+      "form": {
+        "secretKeyLabel": "55555",
+        "secretKeyPlaceholder": "55555",
+        "publishableKeyLabel": "55555",
+        "publishableKeyPlaceholder": "55555",
+        "findKeyPrefix": "55555",
+        "dashboardLink": "55555"
+      },
+      "webhook": {
+        "heading": "55555",
+        "configuredAutomatically": "55555",
+        "receiveNotifications": "55555",
+        "failedTitle": "55555",
+        "failedBody": "55555",
+        "configuring": "55555",
+        "retry": "55555"
+      },
+      "disconnectDialog": {
+        "title": "55555",
+        "message": "55555",
+        "confirm": "55555",
+        "cancel": "55555"
+      },
+      "toasts": {
+        "connectedWithWebhook": "55555",
+        "connectedWebhookFailed": "55555",
+        "disconnected": "55555",
+        "connectionSuccess": "55555",
+        "webhookConfigured": "55555"
+      },
+      "errors": {
+        "loadConfig": "55555",
+        "connect": "55555",
+        "disconnect": "55555",
+        "testConnection": "55555",
+        "configureWebhook": "55555",
+        "bothKeysRequired": "55555",
+        "secretKeyFormat": "55555",
+        "publishableKeyFormat": "55555"
+      }
     }
   }
 }

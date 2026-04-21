@@ -48,7 +48,7 @@ interface CSVImportPreviewProps {
 }
 
 export function CSVImportPreview({ validation, importResult }: CSVImportPreviewProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/integrations');
   const formatCurrency = (cents: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',

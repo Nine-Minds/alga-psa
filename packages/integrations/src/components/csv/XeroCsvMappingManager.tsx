@@ -3,10 +3,12 @@
 import React, { useMemo } from 'react';
 import { AccountingMappingManager } from '@alga-psa/integrations/components';
 import type { AccountingMappingContext } from '@alga-psa/integrations/components';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { createXeroCsvMappingModules } from './xeroCsvMappingModules';
 
 export function XeroCsvMappingManager() {
-  const modules = useMemo(() => createXeroCsvMappingModules(), []);
+  const { t } = useTranslation('msp/integrations');
+  const modules = useMemo(() => createXeroCsvMappingModules(t), [t]);
   const context = useMemo<AccountingMappingContext>(() => ({ realmId: null }), []);
 
   const tabStyles = {

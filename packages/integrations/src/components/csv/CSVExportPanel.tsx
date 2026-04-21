@@ -33,7 +33,7 @@ type ExportErrorDetail = {
 };
 
 export function CSVExportPanel({ onExportComplete }: CSVExportPanelProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/integrations');
   const INVOICE_STATUS_OPTIONS = useInvoiceStatusOptions(INVOICE_STATUS_DISPLAY_ORDER);
   const [dateRange, setDateRange] = useState<{ from: string; to: string }>({
     from: '',
@@ -134,7 +134,7 @@ export function CSVExportPanel({ onExportComplete }: CSVExportPanelProps) {
       setSuccess({ filename, invoiceCount });
       onExportComplete?.({ filename, invoiceCount });
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('integrations.csv.export.errors.failed', { defaultValue: 'Export failed' }));
+      setError(t('integrations.csv.export.errors.failed', { defaultValue: 'Export failed' }));
     } finally {
       setIsLoading(false);
     }

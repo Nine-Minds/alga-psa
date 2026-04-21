@@ -47,7 +47,7 @@ export function AccountingMappingDialog({
   externalEntities,
   realmLabel
 }: AccountingMappingDialogProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/integrations');
   const resolvedRealmLabel = realmLabel ?? t('integrations.accounting.dialog.realmIdLabel', { defaultValue: 'Realm ID' });
   const dialogId = module.elements?.dialog ?? `${module.id}-mapping-dialog`;
 
@@ -148,7 +148,7 @@ export function AccountingMappingDialog({
       onClose();
     } catch (submitError) {
       const message =
-        submitError instanceof Error ? submitError.message : t('integrations.accounting.dialog.errors.saveFailed', { defaultValue: 'Failed to save mapping.' });
+        t('integrations.accounting.dialog.errors.saveFailed', { defaultValue: 'Failed to save mapping.' });
       setError(message);
     } finally {
       setIsSaving(false);

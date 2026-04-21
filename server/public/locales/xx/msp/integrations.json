@@ -1,1094 +1,319 @@
 {
-  "accounting": {
-    "dialog": {
-      "cancel": "11111",
-      "enterPlaceholder": "11111 {{field}} 11111",
-      "errors": {
-        "enterExternal": "11111 {{field}} 11111",
-        "invalidJson": "11111",
-        "saveFailed": "11111",
-        "selectAlga": "11111 {{field}} 11111",
-        "selectExternal": "11111 {{field}} 11111"
-      },
-      "manualEntryHelp": "11111",
-      "metadataLabel": "11111",
-      "metadataPlaceholder": "11111",
-      "realmIdLabel": "11111",
-      "saveMapping": "11111",
-      "saving": "11111",
-      "selectPlaceholder": "11111 {{field}} 11111"
-    },
-    "manager": {
-      "noModules": "11111"
-    },
-    "moduleView": {
-      "actionsColumn": "11111",
-      "delete": "11111",
-      "edit": "11111",
-      "errors": {
-        "deleteFailed": "11111",
-        "loadFailed": "11111"
-      },
-      "loading": "11111",
-      "noMappings": "11111",
-      "notAvailable": "11111",
-      "openMenu": "11111"
-    },
-    "setup": {
-      "activeConfiguration": "11111",
-      "badges": {
-        "enterprise": "11111"
-      },
-      "comingSoon": "11111",
-      "configure": "11111",
-      "highlightValues": {
-        "csv": "11111",
-        "instant": "11111",
-        "live": "11111",
-        "manual": "11111",
-        "twoWay": "11111"
-      },
-      "highlights": {
-        "delivery": "11111",
-        "export": "11111",
-        "format": "11111",
-        "sync": "11111"
-      },
-      "options": {
-        "qbo": {
-          "description": "11111"
-        },
-        "qboCsv": {
-          "description": "11111"
-        },
-        "xero": {
-          "description": "11111"
-        },
-        "xeroCsv": {
-          "description": "11111"
-        }
-      },
-      "selected": "11111 {{title}} 11111",
-      "unavailable": {
-        "description": "11111",
-        "title": "11111"
-      }
-    }
-  },
-  "calendar": {
-    "enterprise": {
-      "loading": "11111"
-    }
-  },
-  "csv": {
-    "export": {
-      "actions": {
-        "exportCsv": "11111",
-        "generating": "11111"
-      },
-      "description": "11111",
-      "errors": {
-        "configureMissingMappings": "11111",
-        "failed": "11111",
-        "missingItemMapping": "11111",
-        "missingItemMappingId": "11111 {{serviceId}} 11111",
-        "missingItemMappingNamed": "11111 {{serviceName}} 11111"
-      },
-      "fields": {
-        "dateRange": "11111",
-        "invoiceStatuses": "11111"
-      },
-      "lockReset": {
-        "actions": {
-          "reset": "11111"
-        },
-        "description": "11111",
-        "dialog": {
-          "cancel": "11111",
-          "confirm": "11111",
-          "confirmBatch": "11111 {{batchId}} 11111",
-          "confirmInvoice": "11111 {{invoiceNumber}} 11111",
-          "resetting": "11111",
-          "title": "11111",
-          "warning": "11111"
-        },
+  "integrations": {
+    "accounting": {
+      "dialog": {
+        "cancel": "11111",
+        "enterPlaceholder": "11111 {{field}} 11111",
         "errors": {
-          "unable": "11111"
+          "enterExternal": "11111 {{field}} 11111",
+          "invalidJson": "11111",
+          "saveFailed": "11111",
+          "selectAlga": "11111 {{field}} 11111",
+          "selectExternal": "11111 {{field}} 11111"
         },
-        "fields": {
-          "batchId": "11111",
-          "batchIdPlaceholder": "11111",
-          "invoiceNumber": "11111",
-          "invoiceNumberPlaceholder": "11111"
+        "manualEntryHelp": "11111",
+        "metadataLabel": "11111",
+        "metadataPlaceholder": "11111",
+        "realmIdLabel": "11111",
+        "saveMapping": "11111",
+        "saving": "11111",
+        "selectPlaceholder": "11111 {{field}} 11111"
+      },
+      "manager": {
+        "noModules": "11111"
+      },
+      "moduleView": {
+        "actionsColumn": "11111",
+        "delete": "11111",
+        "edit": "11111",
+        "errors": {
+          "deleteFailed": "11111",
+          "loadFailed": "11111"
         },
-        "modes": {
-          "ariaLabel": "11111",
-          "batch": "11111",
-          "invoice": "11111"
+        "loading": "11111",
+        "noMappings": "11111",
+        "notAvailable": "11111",
+        "openMenu": "11111"
+      },
+      "setup": {
+        "activeConfiguration": "11111",
+        "badges": {
+          "enterprise": "11111"
         },
-        "success": {
-          "batchCleared": "11111",
-          "invoiceCleared": "11111",
-          "noBatchLocks": "11111",
-          "noInvoiceLock": "11111"
+        "comingSoon": "11111",
+        "configure": "11111",
+        "highlightValues": {
+          "csv": "11111",
+          "instant": "11111",
+          "live": "11111",
+          "manual": "11111",
+          "twoWay": "11111"
         },
-        "title": "11111",
-        "warnings": {
-          "duplicates": "11111"
-        }
-      },
-      "success": {
-        "one": "11111 {{count}} 11111 {{filename}} 11111",
-        "other": "11111 {{count}} 11111 {{filename}} 11111"
-      },
-      "title": "11111"
-    },
-    "preview": {
-      "duplicates": {
-        "description": "11111",
-        "title": "11111 {{count}} 11111"
-      },
-      "errors": {
-        "more": "11111 {{count}} 11111",
-        "title": "11111 {{count}} 11111"
-      },
-      "importResults": "11111",
-      "importSummary": {
-        "difference": "11111",
-        "failedUpdates": "11111",
-        "importedTax": "11111",
-        "originalTax": "11111",
-        "successfulUpdates": "11111",
-        "title": "11111"
-      },
-      "rowLabel": "11111 {{row}} 11111",
-      "stats": {
-        "matchedInvoices": "11111",
-        "totalRows": "11111",
-        "uniqueInvoices": "11111",
-        "validRows": "11111"
-      },
-      "status": {
-        "databaseMatch": "11111",
-        "rowData": "11111",
-        "structure": "11111"
-      },
-      "validationPassed": {
-        "one": "11111 {{count}} 11111",
-        "other": "11111 {{count}} 11111"
-      },
-      "validationResults": "11111",
-      "warnings": {
-        "more": "11111 {{count}} 11111",
-        "title": "11111 {{count}} 11111"
-      }
-    },
-    "settings": {
-      "exports": {
-        "description": "11111",
-        "managedTitle": "11111",
-        "openButton": "11111",
-        "path": "11111",
-        "title": "11111"
-      },
-      "qbo": {
-        "bullets": {
-          "exportLabel": "11111",
-          "exportText": "11111",
-          "taxImportLabel": "11111",
-          "taxImportText": "11111"
+        "highlights": {
+          "delivery": "11111",
+          "export": "11111",
+          "format": "11111",
+          "sync": "11111"
         },
-        "description": "11111",
-        "exports": {
-          "managedPrefix": "11111",
-          "managedSuffix": "11111"
+        "options": {
+          "qbo": {
+            "description": "11111"
+          },
+          "qboCsv": {
+            "description": "11111"
+          },
+          "xero": {
+            "description": "11111"
+          },
+          "xeroCsv": {
+            "description": "11111"
+          }
         },
-        "intro": "11111",
-        "mappings": {
+        "selected": "11111 {{title}} 11111",
+        "unavailable": {
           "description": "11111",
           "title": "11111"
-        },
-        "note": "11111",
-        "title": "11111"
+        }
+      },
+      "modules": {
+        "tabs": {
+          "clients": "11111",
+          "itemsServices": "11111",
+          "taxCodes": "11111",
+          "paymentTerms": "11111"
+        }
       }
     },
-    "taxImport": {
-      "actions": {
-        "importTaxData": "11111",
-        "importing": "11111",
-        "validate": "11111",
-        "validating": "11111"
-      },
-      "errors": {
-        "importFailed": "11111",
-        "readFile": "11111",
-        "selectFile": "11111",
-        "selectFileAndRange": "11111",
-        "templateDownloadFailed": "11111",
-        "validationFailed": "11111"
-      },
-      "fields": {
-        "csvFile": "11111",
-        "dateRangeHelp": "11111",
-        "dateRangeRequired": "11111",
-        "dropZone": "11111",
-        "fileSize": "11111 {{size}} 11111"
+    "calendar": {
+      "enterprise": {
+        "loading": "11111"
+      }
+    },
+    "csv": {
+      "export": {
+        "actions": {
+          "exportCsv": "11111",
+          "generating": "11111"
+        },
+        "description": "11111",
+        "errors": {
+          "configureMissingMappings": "11111",
+          "failed": "11111",
+          "missingItemMapping": "11111",
+          "missingItemMappingId": "11111 {{serviceId}} 11111",
+          "missingItemMappingNamed": "11111 {{serviceName}} 11111"
+        },
+        "fields": {
+          "dateRange": "11111",
+          "invoiceStatuses": "11111"
+        },
+        "lockReset": {
+          "actions": {
+            "reset": "11111"
+          },
+          "description": "11111",
+          "dialog": {
+            "cancel": "11111",
+            "confirm": "11111",
+            "confirmBatch": "11111 {{batchId}} 11111",
+            "confirmInvoice": "11111 {{invoiceNumber}} 11111",
+            "resetting": "11111",
+            "title": "11111",
+            "warning": "11111"
+          },
+          "errors": {
+            "unable": "11111"
+          },
+          "fields": {
+            "batchId": "11111",
+            "batchIdPlaceholder": "11111",
+            "invoiceNumber": "11111",
+            "invoiceNumberPlaceholder": "11111"
+          },
+          "modes": {
+            "ariaLabel": "11111",
+            "batch": "11111",
+            "invoice": "11111"
+          },
+          "success": {
+            "batchCleared": "11111",
+            "invoiceCleared": "11111",
+            "noBatchLocks": "11111",
+            "noInvoiceLock": "11111"
+          },
+          "title": "11111",
+          "warnings": {
+            "duplicates": "11111"
+          }
+        },
+        "success": {
+          "one": "11111 {{count}} 11111 {{filename}} 11111",
+          "other": "11111 {{count}} 11111 {{filename}} 11111"
+        },
+        "title": "11111"
       },
       "preview": {
-        "alreadyImported": "11111 {{count}} 11111",
-        "alreadyImportedSkip": "11111 {{count}} 11111",
-        "badges": {
+        "duplicates": {
+          "description": "11111",
+          "title": "11111 {{count}} 11111"
+        },
+        "errors": {
+          "more": "11111 {{count}} 11111",
+          "title": "11111 {{count}} 11111"
+        },
+        "importResults": "11111",
+        "importSummary": {
+          "difference": "11111",
+          "failedUpdates": "11111",
+          "importedTax": "11111",
+          "originalTax": "11111",
+          "successfulUpdates": "11111",
+          "title": "11111"
+        },
+        "rowLabel": "11111 {{row}} 11111",
+        "stats": {
+          "matchedInvoices": "11111",
+          "totalRows": "11111",
+          "uniqueInvoices": "11111",
+          "validRows": "11111"
+        },
+        "status": {
           "databaseMatch": "11111",
           "rowData": "11111",
           "structure": "11111"
         },
-        "columns": {
-          "algaInvoice": "11111",
-          "contact": "11111",
-          "status": "11111",
-          "taxAmount": "11111",
-          "xeroInvoice": "11111"
+        "validationPassed": {
+          "one": "11111 {{count}} 11111",
+          "other": "11111 {{count}} 11111"
         },
-        "errorsTitle": "11111 {{count}} 11111",
-        "matched": "11111",
-        "matchedInvoices": "11111",
-        "notPendingDescription": "11111",
-        "notPendingSkip": "11111 {{count}} 11111",
-        "notPendingTitle": "11111 {{count}} 11111",
-        "showingFirst20": "11111 {{count}} 11111",
-        "taxToImport": "11111",
-        "title": "11111",
-        "totalRows": "11111",
-        "uniqueInvoices": "11111",
-        "unmatched": "11111",
-        "validRows": "11111",
-        "warningsTitle": "11111 {{count}} 11111"
-      },
-      "qbo": {
-        "description": "11111",
-        "help": {
-          "csvRequirement": "11111",
-          "downloadTemplate": "11111",
-          "steps": {
-            "s1": "11111",
-            "s2": "11111",
-            "s3": "11111",
-            "s4": "11111",
-            "s5": "11111"
-          },
-          "title": "11111"
-        },
-        "success": {
-          "one": "11111 {{count}} 11111 {{amount}} 11111",
-          "other": "11111 {{count}} 11111 {{amount}} 11111"
-        },
-        "title": "11111"
-      },
-      "result": {
-        "failed": "11111 {{count}} 11111",
-        "one": "11111 {{count}} 11111 {{amount}} 11111",
-        "other": "11111 {{count}} 11111 {{amount}} 11111",
-        "skipped": "11111 {{count}} 11111"
-      },
-      "unified": {
-        "description": "11111",
-        "qbResult": {
-          "one": "11111 {{count}} 11111 {{amount}} 11111",
-          "other": "11111 {{count}} 11111 {{amount}} 11111"
-        },
-        "source": {
-          "ariaLabel": "11111",
-          "quickbooks": "11111",
-          "xero": "11111"
-        },
-        "title": "11111",
-        "xeroCsvDescription": "11111",
-        "xeroHelp": {
-          "note": "11111",
-          "s1": "11111",
-          "s2": "11111",
-          "s3": "11111",
-          "s4": "11111",
-          "s5": "11111",
-          "s6": "11111"
-        },
-        "xeroResult": {
-          "one": "11111 {{count}} 11111 {{amount}} 11111",
-          "other": "11111 {{count}} 11111 {{amount}} 11111"
+        "validationResults": "11111",
+        "warnings": {
+          "more": "11111 {{count}} 11111",
+          "title": "11111 {{count}} 11111"
         }
-      },
-      "xero": {
-        "description": "11111",
-        "dropZone": "11111",
-        "help": {
-          "csvRequirement": "11111",
-          "steps": {
-            "s1": "11111",
-            "s2": "11111",
-            "s3": "11111",
-            "s4": "11111",
-            "s5": "11111",
-            "s6": "11111"
-          },
-          "title": "11111"
-        },
-        "title": "11111"
-      }
-    }
-  },
-  "google": {
-    "settings": {
-      "actions": {
-        "refresh": "11111",
-        "resetProviders": "11111",
-        "resetting": "11111",
-        "save": "11111",
-        "saving": "11111"
-      },
-      "afterSaveNotice": "11111",
-      "consoleLink": "11111",
-      "description": "11111",
-      "errors": {
-        "loadFailed": "11111",
-        "resetFailed": "11111",
-        "saveFailed": "11111"
-      },
-      "fields": {
-        "projectIdHelp": "11111",
-        "projectIdLabel": "11111",
-        "projectIdPlaceholder": "11111"
-      },
-      "loading": "11111",
-      "oauth": {
-        "calendarClientId": "11111",
-        "calendarClientSecret": "11111",
-        "enterSecret": "11111",
-        "gmailClientId": "11111",
-        "gmailClientSecret": "11111",
-        "sectionTitle": "11111",
-        "shareApp": "11111",
-        "shareAppHelp": "11111",
-        "storedSecret": "11111 {{secret}} 11111"
-      },
-      "redirectUrisLabel": "11111",
-      "scopes": "11111",
-      "scopesCalendar": "11111 {{scopes}} 11111",
-      "scopesGmail": "11111 {{scopes}} 11111",
-      "serviceAccount": {
-        "alreadyStored": "11111",
-        "description": "11111",
-        "title": "11111"
-      },
-      "setupGuide": "11111",
-      "title": "11111",
-      "toasts": {
-        "resetDescription": "11111",
-        "resetFailedTitle": "11111",
-        "resetTitle": "11111",
-        "saveFailedTitle": "11111",
-        "savedDescription": "11111",
-        "savedTitle": "11111",
-        "unknownError": "11111"
-      }
-    }
-  },
-  "microsoft": {
-    "settings": {
-      "actions": {
-        "entraLink": "11111",
-        "newProfile": "11111",
-        "openTeamsSetup": "11111",
-        "refresh": "11111",
-        "resetProviders": "11111",
-        "resetting": "11111"
-      },
-      "archiveDialog": {
-        "archiving": "11111",
-        "cancel": "11111",
-        "confirm": "11111",
-        "message": "11111 {{name}} 11111",
-        "title": "11111"
-      },
-      "binding": {
-        "bound": "11111",
-        "boundProfileLabel": "11111",
-        "createFirst": "11111",
-        "needsAttention": "11111",
-        "saving": "11111",
-        "selectProfile": "11111",
-        "unbound": "11111"
-      },
-      "bindings": {
-        "summaryBound": "11111 {{consumer}} 11111 {{profile}} 11111",
-        "summaryNone": "11111 {{consumer}} 11111",
-        "summaryUnavailable": "11111 {{consumer}} 11111",
-        "warningArchived": "11111 {{consumer}} 11111",
-        "warningNoBinding": "11111 {{consumer}} 11111",
-        "warningNotReady": "11111 {{consumer}} 11111 {{profile}} 11111",
-        "warningProfileMissing": "11111 {{consumer}} 11111"
-      },
-      "bindingsAlertCe": "11111",
-      "bindingsAlertEe": "11111",
-      "consumerBindings": {
-        "descriptionCe": "11111",
-        "descriptionEe": "11111",
-        "title": "11111"
-      },
-      "consumers": {
-        "calendar": {
-          "description": "11111",
-          "label": "11111",
-          "reconnect": "11111"
-        },
-        "email": {
-          "description": "11111",
-          "label": "11111",
-          "reconnect": "11111"
-        },
-        "mspSso": {
-          "description": "11111",
-          "label": "11111"
-        },
-        "teams": {
-          "description": "11111",
-          "label": "11111"
-        }
-      },
-      "descriptionCe": "11111",
-      "descriptionEe": "11111",
-      "dialog": {
-        "cancel": "11111",
-        "clientId": "11111",
-        "clientSecret": "11111",
-        "clientSecretPlaceholder": "11111",
-        "clientSecretPlaceholderEdit": "11111",
-        "createProfile": "11111",
-        "createTitle": "11111",
-        "descriptionCreate": "11111",
-        "descriptionEdit": "11111",
-        "displayName": "11111",
-        "displayNamePlaceholder": "11111",
-        "editTitle": "11111",
-        "saveChanges": "11111",
-        "saving": "11111",
-        "setDefault": "11111",
-        "setDefaultHelp": "11111",
-        "storedSecretHint": "11111 {{secret}} 11111",
-        "tenantId": "11111"
-      },
-      "empty": {
-        "createButton": "11111",
-        "descriptionCe": "11111",
-        "descriptionEe": "11111",
-        "title": "11111"
-      },
-      "errors": {
-        "archive": "11111",
-        "loadBindings": "11111",
-        "loadStatus": "11111",
-        "resetProviders": "11111",
-        "saveProfile": "11111",
-        "setDefault": "11111",
-        "updateBinding": "11111"
-      },
-      "guidance": {
-        "applicationIdUri": "11111",
-        "calendarRedirect": "11111",
-        "calendarTitle": "11111",
-        "clientId": "11111",
-        "currentProfileTitle": "11111",
-        "emailRedirect": "11111",
-        "emailTitle": "11111",
-        "mspSsoTitle": "11111",
-        "notConfigured": "11111",
-        "redirectUri": "11111",
-        "requiresBaseUrl": "11111",
-        "scopes": "11111",
-        "teamsBotRedirect": "11111",
-        "teamsMessageRedirect": "11111",
-        "teamsScopes": "11111",
-        "teamsTabRedirect": "11111",
-        "teamsTitle": "11111",
-        "tenantId": "11111",
-        "unavailable": "11111"
-      },
-      "profileCard": {
-        "activeBindings": "11111",
-        "archive": "11111",
-        "clientId": "11111",
-        "defaultBadge": "11111",
-        "edit": "11111",
-        "guidanceSummary": "11111",
-        "noVisibleBindings": "11111",
-        "readinessTitle": "11111",
-        "readyCe": "11111",
-        "readyEe": "11111",
-        "readyEeTeams": "11111",
-        "setDefault": "11111",
-        "storedSecret": "11111",
-        "teamsAppIdUri": "11111",
-        "tenantIdLabel": "11111",
-        "updating": "11111"
-      },
-      "providerReconnect": {
-        "description": "11111",
-        "title": "11111"
-      },
-      "readiness": {
-        "archived": "11111",
-        "clientIdMissing": "11111",
-        "clientSecretMissing": "11111",
-        "tenantIdMissing": "11111"
-      },
-      "statusBadges": {
-        "archived": "11111",
-        "needsAttention": "11111",
-        "ready": "11111"
-      },
-      "title": "11111",
-      "toasts": {
-        "archiveFailedTitle": "11111",
-        "archivedDescription": "11111 {{name}} 11111",
-        "archivedTitle": "11111",
-        "bindingFailedTitle": "11111 {{consumer}} 11111",
-        "bindingUpdatedDescription": "11111 {{consumer}} 11111 {{profile}} 11111",
-        "bindingUpdatedTitle": "11111 {{consumer}} 11111",
-        "defaultUpdatedDescription": "11111 {{name}} 11111",
-        "defaultUpdatedTitle": "11111",
-        "profileCreated": "11111",
-        "profileCreatedDescription": "11111",
-        "profileUpdated": "11111",
-        "profileUpdatedDescription": "11111",
-        "resetDescription": "11111",
-        "resetFailedTitle": "11111",
-        "resetTitle": "11111",
-        "saveFailedTitle": "11111",
-        "selectedProfile": "11111",
-        "setDefaultFailedTitle": "11111"
-      },
-      "validation": {
-        "clientIdRequired": "11111",
-        "clientSecretRequired": "11111",
-        "displayNameRequired": "11111",
-        "tenantIdRequired": "11111"
-      }
-    }
-  },
-  "qbo": {
-    "callback": {
-      "completed": "11111",
-      "errorDetail": "11111 {{error}} 11111",
-      "errored": "11111",
-      "failed": "11111",
-      "realmId": "11111 {{realmId}} 11111",
-      "returnButton": "11111",
-      "success": "11111",
-      "title": "11111"
-    }
-  },
-  "rmm": {
-    "ninjaOne": {
-      "loading": "11111"
-    },
-    "setup": {
-      "activeConfiguration": "11111",
-      "comingSoon": "11111",
-      "configure": "11111",
-      "selected": "11111 {{title}} 11111",
-      "title": "11111"
-    },
-    "tactical": {
-      "actions": {
-        "disconnect": "11111",
-        "disconnecting": "11111",
-        "ingestSoftware": "11111",
-        "ingesting": "11111",
-        "refresh": "11111",
-        "save": "11111",
-        "saving": "11111",
-        "syncAlerts": "11111",
-        "syncClients": "11111",
-        "syncDevices": "11111",
-        "syncing": "11111",
-        "testConnection": "11111",
-        "testing": "11111"
-      },
-      "auth": {
-        "apiKey": "11111",
-        "enterApiKey": "11111",
-        "enterPassword": "11111",
-        "enterUsername": "11111",
-        "knox": "11111",
-        "knoxOption": "11111",
-        "knoxTokenSaved": "11111 {{value}} 11111",
-        "mode": "11111",
-        "password": "11111",
-        "saved": "11111 {{value}} 11111",
-        "savedEnterToUpdate": "11111",
-        "totp": "11111",
-        "username": "11111"
-      },
-      "autoSync": "11111",
-      "client": {
-        "loading": "11111",
-        "select": "11111"
-      },
-      "counts": {
-        "activeAlerts": "11111",
-        "lastSync": "11111",
-        "mappedOrgs": "11111",
-        "never": "11111",
-        "syncedDevices": "11111"
-      },
-      "description": "11111",
-      "errors": {
-        "backfillAlerts": "11111",
-        "connectionTest": "11111",
-        "disconnect": "11111",
-        "ingestSoftware": "11111",
-        "loadOrgMappings": "11111",
-        "loadSettings": "11111",
-        "saveConfig": "11111",
-        "someAlertsFailed": "11111 {{errors}} 11111",
-        "someDevicesFailed": "11111 {{errors}} 11111",
-        "someOrgsFailed": "11111 {{errors}} 11111",
-        "someSoftwareFailed": "11111 {{errors}} 11111",
-        "syncDevices": "11111",
-        "syncOrgs": "11111",
-        "totpRequired": "11111",
-        "updateMapping": "11111"
-      },
-      "fields": {
-        "instanceUrl": "11111",
-        "instanceUrlHelp": "11111"
-      },
-      "lastError": "11111 {{error}} 11111",
-      "loadingSettings": "11111",
-      "sections": {
-        "alerts": "11111",
-        "alertsDescription": "11111",
-        "devices": "11111",
-        "devicesDescription": "11111",
-        "orgMapping": "11111",
-        "orgMappingDescription": "11111",
-        "orgMappingEmpty": "11111",
-        "organizations": "11111",
-        "organizationsDescription": "11111",
-        "softwareInventory": "11111",
-        "softwareInventoryDescription": "11111",
-        "webhooks": "11111",
-        "webhooksDescription": "11111"
-      },
-      "status": {
-        "authPrefix": "11111",
-        "connected": "11111",
-        "disconnected": "11111",
-        "instanceUrlNotSet": "11111"
-      },
-      "statusLine": {
-        "configured": "11111",
-        "notConfigured": "11111"
-      },
-      "success": {
-        "alertBackfillCompleted": "11111 {{processed}} 11111 {{created}} 11111 {{updated}} 11111 {{failed}} 11111",
-        "connection": "11111",
-        "deviceSyncCompleted": "11111 {{processed}} 11111 {{created}} 11111 {{updated}} 11111 {{deleted}} 11111 {{failed}} 11111",
-        "disconnected": "11111",
-        "orgSyncCompleted": "11111 {{processed}} 11111 {{created}} 11111 {{updated}} 11111 {{failed}} 11111",
-        "saved": "11111",
-        "softwareIngestionCompleted": "11111 {{processed}} 11111 {{created}} 11111 {{updated}} 11111 {{failed}} 11111"
-      },
-      "tacticalIdLabel": "11111 {{id}} 11111",
-      "title": "11111",
-      "toasts": {
-        "alertsSyncedDescription": "11111",
-        "alertsSyncedTitle": "11111",
-        "backfillFailedTitle": "11111",
-        "connectedDescription": "11111",
-        "connectedTitle": "11111",
-        "connectionFailedTitle": "11111",
-        "devicesSyncedDescription": "11111",
-        "devicesSyncedTitle": "11111",
-        "disconnectFailedTitle": "11111",
-        "disconnectedDescription": "11111",
-        "disconnectedTitle": "11111",
-        "ingestionFailedTitle": "11111",
-        "orgsSyncedDescription": "11111",
-        "orgsSyncedTitle": "11111",
-        "saveFailedTitle": "11111",
-        "savedDescription": "11111",
-        "savedTitle": "11111",
-        "softwareIngestedDescription": "11111",
-        "softwareIngestedTitle": "11111",
-        "syncFailedTitle": "11111",
-        "unknownError": "11111",
-        "updateFailedTitle": "11111"
-      },
-      "webhook": {
-        "copiedTitle": "11111",
-        "copy": "11111",
-        "headerName": "11111",
-        "payloadTemplate": "11111",
-        "secret": "11111",
-        "secretCopied": "11111",
-        "unavailable": "11111",
-        "url": "11111",
-        "urlCopied": "11111"
-      }
-    },
-    "tanium": {
-      "loading": "11111"
-    }
-  },
-  "sso": {
-    "msp": {
-      "actions": {
-        "add": "11111",
-        "refresh": "11111",
-        "request": "11111",
-        "resetChallenge": "11111",
-        "revoke": "11111",
-        "saveDomains": "11111",
-        "saving": "11111",
-        "verify": "11111"
-      },
-      "addDomainLabel": "11111",
-      "advisoryNotice": "11111",
-      "claimStatus": {
-        "advisory": "11111",
-        "pending": "11111",
-        "rejected": "11111",
-        "revoked": "11111",
-        "verified": "11111",
-        "verifiedLegacy": "11111"
-      },
-      "descriptionCe": "11111",
-      "descriptionEe": "11111",
-      "dnsHost": "11111",
-      "dnsInstructions": "11111",
-      "dnsValue": "11111",
-      "emptyClaims": "11111",
-      "emptyDomains": "11111",
-      "errors": {
-        "conflicts": "11111 {{conflicts}} 11111",
-        "loadClaims": "11111",
-        "loadDomains": "11111",
-        "refreshChallenge": "11111",
-        "requestClaim": "11111",
-        "revokeClaim": "11111",
-        "saveDomains": "11111",
-        "verifyClaim": "11111"
-      },
-      "fallbackInfo": "11111",
-      "loading": "11111",
-      "removeDomainAria": "11111 {{number}} 11111",
-      "requestClaim": "11111",
-      "requestClaimLabel": "11111",
-      "title": "11111",
-      "toasts": {
-        "claimRequestedDescription": "11111",
-        "claimRequestedTitle": "11111",
-        "claimUnchangedDescription": "11111",
-        "claimUnchangedTitle": "11111",
-        "refreshFailedTitle": "11111",
-        "refreshedDescription": "11111",
-        "refreshedTitle": "11111",
-        "requestClaimFailedTitle": "11111",
-        "revokeFailedTitle": "11111",
-        "revokedDescription": "11111",
-        "revokedTitle": "11111",
-        "saveDomainsFailedTitle": "11111",
-        "savedDescription": "11111",
-        "savedTitle": "11111",
-        "verifiedDescription": "11111",
-        "verifiedTitle": "11111",
-        "verifyFailedTitle": "11111"
-      }
-    }
-  },
-  "teams": {
-    "settings": {
-      "actions": {
-        "activate": "11111",
-        "addNote": {
-          "description": "11111",
-          "label": "11111"
-        },
-        "approvalResponse": {
-          "description": "11111",
-          "label": "11111"
-        },
-        "assignTicket": {
-          "description": "11111",
-          "label": "11111"
-        },
-        "deactivate": "11111",
-        "logTime": {
-          "description": "11111",
-          "label": "11111"
-        },
-        "reload": "11111",
-        "replyToContact": {
-          "description": "11111",
-          "label": "11111"
-        },
-        "saveChanges": "11111",
-        "saveDraft": "11111",
-        "saving": "11111",
-        "teamsActive": "11111"
-      },
-      "capabilities": {
-        "activityNotifications": {
-          "description": "11111",
-          "label": "11111"
-        },
-        "groupChatBot": {
-          "description": "11111",
-          "label": "11111"
-        },
-        "messageExtension": {
-          "description": "11111",
-          "label": "11111"
-        },
-        "personalBot": {
-          "description": "11111",
-          "label": "11111"
-        },
-        "personalTab": {
-          "description": "11111",
-          "label": "11111"
-        }
-      },
-      "checklist": {
-        "installState": {
-          "active": "11111",
-          "error": "11111",
-          "label": "11111",
-          "notConfigured": "11111",
-          "pending": "11111"
-        },
-        "needsAction": "11111",
-        "profileReady": {
-          "completed": "11111",
-          "label": "11111",
-          "pending": "11111"
-        },
-        "profileSelected": {
-          "completed": "11111 {{name}} 11111",
-          "label": "11111",
-          "pending": "11111"
-        },
-        "ready": "11111"
-      },
-      "description": "11111",
-      "errors": {
-        "downloadPackage": "11111",
-        "generatePackage": "11111",
-        "loadGuidance": "11111",
-        "saveSettings": "11111"
-      },
-      "guidance": {
-        "applicationIdUri": "11111",
-        "messageExtension": "11111",
-        "personalBot": "11111",
-        "personalTab": "11111",
-        "redirectUris": "11111",
-        "requiredScopes": "11111",
-        "teamsAppIdUri": "11111",
-        "unavailable": "11111"
-      },
-      "installStatus": {
-        "active": "11111",
-        "error": "11111",
-        "installPending": "11111",
-        "notConfigured": "11111"
-      },
-      "noEligibleProfiles": "11111",
-      "notifications": {
-        "approvalRequest": {
-          "description": "11111",
-          "label": "11111"
-        },
-        "assignment": {
-          "description": "11111",
-          "label": "11111"
-        },
-        "customerReply": {
-          "description": "11111",
-          "label": "11111"
-        },
-        "escalation": {
-          "description": "11111",
-          "label": "11111"
-        },
-        "slaRisk": {
-          "description": "11111",
-          "label": "11111"
-        }
-      },
-      "package": {
-        "appId": "11111",
-        "appIds": "11111",
-        "botId": "11111",
-        "deepLinks": "11111",
-        "description": "11111",
-        "downloadManifest": "11111",
-        "downloadZip": "11111",
-        "downloading": "11111",
-        "fileName": "11111",
-        "generate": "11111",
-        "generating": "11111",
-        "manifestVersion": "11111",
-        "myWork": "11111",
-        "openBaseUrl": "11111",
-        "openDeeplink": "11111",
-        "packageVersion": "11111",
-        "projectTaskTemplate": "11111",
-        "section": "11111",
-        "ticketTemplate": "11111",
-        "title": "11111",
-        "validDomains": "11111",
-        "webResource": "11111"
-      },
-      "profileLabel": "11111",
-      "profileSummary": {
-        "needsRepair": "11111",
-        "none": "11111"
-      },
-      "section": {
-        "allowedActions": "11111",
-        "capabilities": "11111",
-        "notifications": "11111"
-      },
-      "selectProfile": "11111",
-      "statusMessage": {
-        "activated": "11111",
-        "deactivated": "11111",
-        "packageDownloaded": "11111",
-        "packageGenerated": "11111",
-        "saved": "11111"
-      },
-      "title": "11111"
-    }
-  },
-  "xero": {
-    "csv": {
-      "clientSync": {
-        "cancel": "11111",
-        "createNew": "11111",
-        "description": "11111",
-        "errorRow": "11111 {{row}} 11111 {{name}} 11111 {{error}} 11111",
-        "errors": {
-          "export": "11111",
-          "import": "11111",
-          "processCsv": "11111"
-        },
-        "errorsTitle": "11111 {{count}} 11111",
-        "exportButton": "11111",
-        "exportClients": "11111",
-        "exportDescription": "11111",
-        "exportSuccess": "11111 {{count}} 11111 {{filename}} 11111",
-        "importCompleteDescription": "11111 {{count}} 11111",
-        "importCompleteTitle": "11111",
-        "importContacts": "11111",
-        "importContactsButton": "11111 {{count}} 11111",
-        "importDescription": "11111",
-        "importing": "11111",
-        "matchBy": {
-          "algaClientId": "11111",
-          "contactName": "11111",
-          "emailAddress": "11111"
-        },
-        "matchByLabel": "11111",
-        "moreErrors": "11111 {{count}} 11111",
-        "preview": {
-          "columns": {
-            "action": "11111",
-            "contactName": "11111",
-            "email": "11111",
-            "matchedClient": "11111"
-          },
-          "moreWarnings": "11111 {{count}} 11111",
-          "showing20of": "11111 {{count}} 11111",
-          "toCreate": "11111",
-          "toSkip": "11111",
-          "toUpdate": "11111",
-          "warnings": "11111"
-        },
-        "processing": "11111 {{filename}} 11111",
-        "result": {
-          "created": "11111",
-          "mappings": "11111",
-          "skipped": "11111",
-          "updated": "11111"
-        },
-        "selectCsvFile": "11111",
-        "startNewImport": "11111",
-        "title": "11111",
-        "updateExisting": "11111",
-        "workflow": {
-          "s1": "11111",
-          "s2": "11111",
-          "s3": "11111",
-          "s4": "11111"
-        },
-        "workflowTitle": "11111"
       },
       "settings": {
-        "dateFormat": "11111",
-        "dateFormatHelp": "11111",
-        "dateFormatOptions": {
-          "dmy": "11111",
-          "mdy": "11111"
-        },
-        "defaultCurrency": "11111",
-        "defaultCurrencyHelp": "11111",
-        "errors": {
-          "load": "11111",
-          "save": "11111"
-        },
-        "exportSettings": {
+        "exports": {
           "description": "11111",
+          "managedTitle": "11111",
+          "openButton": "11111",
+          "path": "11111",
           "title": "11111"
         },
-        "loading": "11111",
-        "managedPrefix": "11111",
-        "managedSuffix": "11111",
-        "mappings": {
+        "qbo": {
+          "bullets": {
+            "exportLabel": "11111",
+            "exportText": "11111",
+            "taxImportLabel": "11111",
+            "taxImportText": "11111"
+          },
           "description": "11111",
-          "title": "11111"
-        },
-        "overview": {
-          "description": "11111",
-          "exportLabel": "11111",
-          "exportText": "11111",
+          "exports": {
+            "managedPrefix": "11111",
+            "managedSuffix": "11111"
+          },
           "intro": "11111",
+          "mappings": {
+            "description": "11111",
+            "title": "11111"
+          },
           "note": "11111",
-          "taxImportLabel": "11111",
-          "taxImportText": "11111",
+          "title": "11111"
+        }
+      },
+      "taxImport": {
+        "actions": {
+          "importTaxData": "11111",
+          "importing": "11111",
+          "validate": "11111",
+          "validating": "11111"
+        },
+        "errors": {
+          "importFailed": "11111",
+          "readFile": "11111",
+          "selectFile": "11111",
+          "selectFileAndRange": "11111",
+          "templateDownloadFailed": "11111",
+          "validationFailed": "11111"
+        },
+        "fields": {
+          "csvFile": "11111",
+          "dateRangeHelp": "11111",
+          "dateRangeRequired": "11111",
+          "dropZone": "11111",
+          "fileSize": "11111 {{size}} 11111"
+        },
+        "preview": {
+          "alreadyImported": "11111 {{count}} 11111",
+          "alreadyImportedSkip": "11111 {{count}} 11111",
+          "badges": {
+            "databaseMatch": "11111",
+            "rowData": "11111",
+            "structure": "11111"
+          },
+          "columns": {
+            "algaInvoice": "11111",
+            "contact": "11111",
+            "status": "11111",
+            "taxAmount": "11111",
+            "xeroInvoice": "11111"
+          },
+          "errorsTitle": "11111 {{count}} 11111",
+          "matched": "11111",
+          "matchedInvoices": "11111",
+          "notPendingDescription": "11111",
+          "notPendingSkip": "11111 {{count}} 11111",
+          "notPendingTitle": "11111 {{count}} 11111",
+          "showingFirst20": "11111 {{count}} 11111",
+          "taxToImport": "11111",
+          "title": "11111",
+          "totalRows": "11111",
+          "uniqueInvoices": "11111",
+          "unmatched": "11111",
+          "validRows": "11111",
+          "warningsTitle": "11111 {{count}} 11111"
+        },
+        "qbo": {
+          "description": "11111",
+          "help": {
+            "csvRequirement": "11111",
+            "downloadTemplate": "11111",
+            "steps": {
+              "s1": "11111",
+              "s2": "11111",
+              "s3": "11111",
+              "s4": "11111",
+              "s5": "11111"
+            },
+            "title": "11111"
+          },
+          "success": {
+            "one": "11111 {{count}} 11111 {{amount}} 11111",
+            "other": "11111 {{count}} 11111 {{amount}} 11111"
+          },
           "title": "11111"
         },
-        "savedMessage": "11111",
-        "selectCurrency": "11111",
-        "setup": {
-          "acknowledge": "11111",
-          "description": "11111",
-          "externalInvoiceId": "11111",
-          "externalInvoiceIdHelp": "11111",
-          "sourceSystem": "11111",
-          "sourceSystemHelp": "11111",
-          "step1Description": "11111",
-          "step1Title": "11111",
-          "step2Description": "11111",
-          "step2Title": "11111",
-          "step3Description": "11111",
-          "step3Title": "11111",
-          "title": "11111"
+        "result": {
+          "failed": "11111 {{count}} 11111",
+          "one": "11111 {{count}} 11111 {{amount}} 11111",
+          "other": "11111 {{count}} 11111 {{amount}} 11111",
+          "skipped": "11111 {{count}} 11111"
         },
-        "useInvoiceCurrency": "11111",
-        "workflow": {
+        "unified": {
           "description": "11111",
-          "export": {
+          "qbResult": {
+            "one": "11111 {{count}} 11111 {{amount}} 11111",
+            "other": "11111 {{count}} 11111 {{amount}} 11111"
+          },
+          "source": {
+            "ariaLabel": "11111",
+            "quickbooks": "11111",
+            "xero": "11111"
+          },
+          "title": "11111",
+          "xeroCsvDescription": "11111",
+          "xeroHelp": {
+            "note": "11111",
             "s1": "11111",
             "s2": "11111",
             "s3": "11111",
@@ -1096,95 +321,1026 @@
             "s5": "11111",
             "s6": "11111"
           },
-          "exportInvoices": "11111",
-          "import": {
-            "s1": "11111",
-            "s2": "11111",
-            "s3": "11111",
-            "s4": "11111",
-            "s5": "11111"
+          "xeroResult": {
+            "one": "11111 {{count}} 11111 {{amount}} 11111",
+            "other": "11111 {{count}} 11111 {{amount}} 11111"
+          }
+        },
+        "xero": {
+          "description": "11111",
+          "dropZone": "11111",
+          "help": {
+            "csvRequirement": "11111",
+            "steps": {
+              "s1": "11111",
+              "s2": "11111",
+              "s3": "11111",
+              "s4": "11111",
+              "s5": "11111",
+              "s6": "11111"
+            },
+            "title": "11111"
           },
-          "importTax": "11111",
-          "title": "11111",
-          "trackingDescription": "11111",
-          "trackingTitle": "11111"
+          "title": "11111"
         }
       }
     },
-    "live": {
-      "defaultOrganisation": "11111"
-    },
-    "settings": {
-      "actions": {
-        "connect": "11111",
-        "disconnect": "11111",
-        "disconnecting": "11111",
-        "reconnect": "11111",
-        "refresh": "11111",
-        "saveCredentials": "11111",
-        "saving": "11111"
-      },
-      "badges": {
-        "connectionExpired": "11111",
-        "credentialsReady": "11111",
-        "credentialsRequired": "11111",
-        "defaultConnected": "11111",
-        "noOrganisation": "11111"
-      },
-      "callback": {
-        "accessDenied": "11111",
-        "configMissing": "11111",
-        "connectionsUnmapped": "11111",
-        "generic": "11111 {{code}} 11111",
-        "invalidState": "11111",
-        "missingParams": "11111",
-        "noConnections": "11111",
-        "oauthFailed": "11111"
-      },
-      "clientIdLabel": "11111",
-      "clientIdPlaceholder": "11111",
-      "clientSecretLabel": "11111",
-      "clientSecretPlaceholder": "11111",
-      "connectSuccess": "11111",
-      "connection": {
-        "connectionId": "11111 {{id}} 11111",
-        "defaultOrganisation": "11111",
+    "google": {
+      "settings": {
+        "actions": {
+          "refresh": "11111",
+          "resetProviders": "11111",
+          "resetting": "11111",
+          "save": "11111",
+          "saving": "11111"
+        },
+        "afterSaveNotice": "11111",
+        "consoleLink": "11111",
         "description": "11111",
-        "notConnected": "11111",
+        "errors": {
+          "loadFailed": "11111",
+          "resetFailed": "11111",
+          "saveFailed": "11111"
+        },
+        "fields": {
+          "projectIdHelp": "11111",
+          "projectIdLabel": "11111",
+          "projectIdPlaceholder": "11111"
+        },
+        "loading": "11111",
+        "oauth": {
+          "calendarClientId": "11111",
+          "calendarClientSecret": "11111",
+          "enterSecret": "11111",
+          "gmailClientId": "11111",
+          "gmailClientSecret": "11111",
+          "sectionTitle": "11111",
+          "shareApp": "11111",
+          "shareAppHelp": "11111",
+          "storedSecret": "11111 {{secret}} 11111"
+        },
+        "redirectUrisLabel": "11111",
+        "scopes": "11111",
+        "scopesCalendar": "11111 {{scopes}} 11111",
+        "scopesGmail": "11111 {{scopes}} 11111",
+        "serviceAccount": {
+          "alreadyStored": "11111",
+          "description": "11111",
+          "title": "11111"
+        },
+        "setupGuide": "11111",
         "title": "11111",
-        "unknown": "11111"
+        "toasts": {
+          "resetDescription": "11111",
+          "resetFailedTitle": "11111",
+          "resetTitle": "11111",
+          "saveFailedTitle": "11111",
+          "savedDescription": "11111",
+          "savedTitle": "11111",
+          "unknownError": "11111"
+        }
+      }
+    },
+    "microsoft": {
+      "settings": {
+        "actions": {
+          "entraLink": "11111",
+          "newProfile": "11111",
+          "openTeamsSetup": "11111",
+          "refresh": "11111",
+          "resetProviders": "11111",
+          "resetting": "11111"
+        },
+        "archiveDialog": {
+          "archiving": "11111",
+          "cancel": "11111",
+          "confirm": "11111",
+          "message": "11111 {{name}} 11111",
+          "title": "11111"
+        },
+        "binding": {
+          "bound": "11111",
+          "boundProfileLabel": "11111",
+          "createFirst": "11111",
+          "needsAttention": "11111",
+          "saving": "11111",
+          "selectProfile": "11111",
+          "unbound": "11111"
+        },
+        "bindings": {
+          "summaryBound": "11111 {{consumer}} 11111 {{profile}} 11111",
+          "summaryNone": "11111 {{consumer}} 11111",
+          "summaryUnavailable": "11111 {{consumer}} 11111",
+          "warningArchived": "11111 {{consumer}} 11111",
+          "warningNoBinding": "11111 {{consumer}} 11111",
+          "warningNotReady": "11111 {{consumer}} 11111 {{profile}} 11111",
+          "warningProfileMissing": "11111 {{consumer}} 11111"
+        },
+        "bindingsAlertCe": "11111",
+        "bindingsAlertEe": "11111",
+        "consumerBindings": {
+          "descriptionCe": "11111",
+          "descriptionEe": "11111",
+          "title": "11111"
+        },
+        "consumers": {
+          "calendar": {
+            "description": "11111",
+            "label": "11111",
+            "reconnect": "11111"
+          },
+          "email": {
+            "description": "11111",
+            "label": "11111",
+            "reconnect": "11111"
+          },
+          "mspSso": {
+            "description": "11111",
+            "label": "11111"
+          },
+          "teams": {
+            "description": "11111",
+            "label": "11111"
+          }
+        },
+        "descriptionCe": "11111",
+        "descriptionEe": "11111",
+        "dialog": {
+          "cancel": "11111",
+          "clientId": "11111",
+          "clientSecret": "11111",
+          "clientSecretPlaceholder": "11111",
+          "clientSecretPlaceholderEdit": "11111",
+          "createProfile": "11111",
+          "createTitle": "11111",
+          "descriptionCreate": "11111",
+          "descriptionEdit": "11111",
+          "displayName": "11111",
+          "displayNamePlaceholder": "11111",
+          "editTitle": "11111",
+          "saveChanges": "11111",
+          "saving": "11111",
+          "setDefault": "11111",
+          "setDefaultHelp": "11111",
+          "storedSecretHint": "11111 {{secret}} 11111",
+          "tenantId": "11111"
+        },
+        "empty": {
+          "createButton": "11111",
+          "descriptionCe": "11111",
+          "descriptionEe": "11111",
+          "title": "11111"
+        },
+        "errors": {
+          "archive": "11111",
+          "loadBindings": "11111",
+          "loadStatus": "11111",
+          "resetProviders": "11111",
+          "saveProfile": "11111",
+          "setDefault": "11111",
+          "updateBinding": "11111"
+        },
+        "guidance": {
+          "applicationIdUri": "11111",
+          "calendarRedirect": "11111",
+          "calendarTitle": "11111",
+          "clientId": "11111",
+          "currentProfileTitle": "11111",
+          "emailRedirect": "11111",
+          "emailTitle": "11111",
+          "mspSsoTitle": "11111",
+          "notConfigured": "11111",
+          "redirectUri": "11111",
+          "requiresBaseUrl": "11111",
+          "scopes": "11111",
+          "teamsBotRedirect": "11111",
+          "teamsMessageRedirect": "11111",
+          "teamsScopes": "11111",
+          "teamsTabRedirect": "11111",
+          "teamsTitle": "11111",
+          "tenantId": "11111",
+          "unavailable": "11111"
+        },
+        "profileCard": {
+          "activeBindings": "11111",
+          "archive": "11111",
+          "clientId": "11111",
+          "defaultBadge": "11111",
+          "edit": "11111",
+          "guidanceSummary": "11111",
+          "noVisibleBindings": "11111",
+          "readinessTitle": "11111",
+          "readyCe": "11111",
+          "readyEe": "11111",
+          "readyEeTeams": "11111",
+          "setDefault": "11111",
+          "storedSecret": "11111",
+          "teamsAppIdUri": "11111",
+          "tenantIdLabel": "11111",
+          "updating": "11111"
+        },
+        "providerReconnect": {
+          "description": "11111",
+          "title": "11111"
+        },
+        "readiness": {
+          "archived": "11111",
+          "clientIdMissing": "11111",
+          "clientSecretMissing": "11111",
+          "tenantIdMissing": "11111"
+        },
+        "statusBadges": {
+          "archived": "11111",
+          "needsAttention": "11111",
+          "ready": "11111"
+        },
+        "title": "11111",
+        "toasts": {
+          "archiveFailedTitle": "11111",
+          "archivedDescription": "11111 {{name}} 11111",
+          "archivedTitle": "11111",
+          "bindingFailedTitle": "11111 {{consumer}} 11111",
+          "bindingUpdatedDescription": "11111 {{consumer}} 11111 {{profile}} 11111",
+          "bindingUpdatedTitle": "11111 {{consumer}} 11111",
+          "defaultUpdatedDescription": "11111 {{name}} 11111",
+          "defaultUpdatedTitle": "11111",
+          "profileCreated": "11111",
+          "profileCreatedDescription": "11111",
+          "profileUpdated": "11111",
+          "profileUpdatedDescription": "11111",
+          "resetDescription": "11111",
+          "resetFailedTitle": "11111",
+          "resetTitle": "11111",
+          "saveFailedTitle": "11111",
+          "selectedProfile": "11111",
+          "setDefaultFailedTitle": "11111"
+        },
+        "validation": {
+          "clientIdRequired": "11111",
+          "clientSecretRequired": "11111",
+          "displayNameRequired": "11111",
+          "tenantIdRequired": "11111"
+        }
+      }
+    },
+    "qbo": {
+      "callback": {
+        "completed": "11111",
+        "errorDetail": "11111 {{error}} 11111",
+        "errored": "11111",
+        "failed": "11111",
+        "realmId": "11111 {{realmId}} 11111",
+        "returnButton": "11111",
+        "success": "11111",
+        "title": "11111"
+      }
+    },
+    "rmm": {
+      "ninjaOne": {
+        "loading": "11111",
+        "card": {
+          "title": "11111",
+          "description": "11111",
+          "skeletonDescription": "11111"
+        },
+        "status": {
+          "checking": "11111",
+          "notConnected": {
+            "title": "11111",
+            "description": "11111"
+          },
+          "connected": "11111",
+          "connectedWithErrors": "11111",
+          "instanceLabel": "11111",
+          "organizations": "11111 {{count}} 11111",
+          "devices": "11111 {{count}} 11111",
+          "activeAlerts": "11111 {{count}} 11111",
+          "lastSynced": "11111 {{time}} 11111"
+        },
+        "setup": {
+          "title": "11111",
+          "steps": {
+            "login": "11111",
+            "navigate": "11111",
+            "addClient": "11111",
+            "platform": "11111",
+            "name": "11111",
+            "redirectUri": "11111",
+            "scopes": "11111",
+            "grantTypes": "11111",
+            "addAndCopy": "11111"
+          },
+          "docsPrefix": "11111",
+          "docsSection": "11111",
+          "docsSuffix": "11111",
+          "openApiSettings": "11111"
+        },
+        "credentials": {
+          "title": "11111",
+          "saved": "11111",
+          "clientIdLabel": "11111",
+          "clientIdPlaceholder": "11111",
+          "clientSecretLabel": "11111",
+          "clientSecretPlaceholder": "11111",
+          "clientSecretUpdatePlaceholder": "11111",
+          "secretMaskedLabel": "11111",
+          "saving": "11111",
+          "save": "11111"
+        },
+        "region": {
+          "hint": "11111",
+          "label": "11111"
+        },
+        "actions": {
+          "refreshing": "11111",
+          "refreshStatus": "11111",
+          "syncing": "11111",
+          "syncOrganizations": "11111",
+          "syncingDevices": "11111",
+          "syncDevices": "11111",
+          "disconnecting": "11111",
+          "disconnect": "11111",
+          "connect": "11111"
+        },
+        "disconnectModal": {
+          "title": "11111",
+          "description": "11111",
+          "cancel": "11111",
+          "confirm": "11111"
+        },
+        "toasts": {
+          "connectSuccess": "11111",
+          "connectFailed": "11111",
+          "connectFailedWithDetail": "11111 {{detail}} 11111",
+          "disconnectSuccess": "11111",
+          "credentialsSaved": "11111",
+          "orgSyncSuccess": "11111 {{processed}} {{created}} {{updated}} 11111",
+          "deviceSyncSuccess": "11111 {{processed}} {{created}} {{updated}} 11111"
+        },
+        "errors": {
+          "loadStatus": "11111",
+          "saveCredentials": "11111",
+          "connect": "11111",
+          "disconnect": "11111",
+          "disconnectUnexpected": "11111",
+          "orgSyncFailed": "11111",
+          "deviceSyncFailed": "11111"
+        }
       },
-      "credentialsSaved": "11111",
-      "csvAvailableMiddle": "11111",
-      "csvAvailablePrefix": "11111",
-      "csvAvailableTitle": "11111",
-      "description": "11111",
-      "disconnectSuccess": "11111",
-      "errors": {
-        "disconnect": "11111",
-        "load": "11111",
-        "saveCredentials": "11111"
-      },
-      "howItWorksDescription": "11111",
-      "howItWorksTitle": "11111",
-      "loading": "11111",
-      "mapping": {
-        "alert": "11111",
-        "descriptionPrefix": "11111",
-        "placeholderAlert": "11111",
-        "placeholderDescription": "11111",
+      "setup": {
+        "activeConfiguration": "11111",
+        "comingSoon": "11111",
+        "configure": "11111",
+        "selected": "11111 {{title}} 11111",
         "title": "11111"
       },
-      "noClientId": "11111",
-      "noClientSecret": "11111",
-      "redirectUri": "11111",
-      "requiredScopes": "11111",
-      "storedClientId": "11111 {{value}} 11111",
-      "storedClientSecret": "11111 {{value}} 11111",
-      "tenantOauthDescription": "11111",
-      "tenantOauthTitle": "11111",
+      "tactical": {
+        "actions": {
+          "disconnect": "11111",
+          "disconnecting": "11111",
+          "ingestSoftware": "11111",
+          "ingesting": "11111",
+          "refresh": "11111",
+          "save": "11111",
+          "saving": "11111",
+          "syncAlerts": "11111",
+          "syncClients": "11111",
+          "syncDevices": "11111",
+          "syncing": "11111",
+          "testConnection": "11111",
+          "testing": "11111"
+        },
+        "auth": {
+          "apiKey": "11111",
+          "enterApiKey": "11111",
+          "enterPassword": "11111",
+          "enterUsername": "11111",
+          "knox": "11111",
+          "knoxOption": "11111",
+          "knoxTokenSaved": "11111 {{value}} 11111",
+          "mode": "11111",
+          "password": "11111",
+          "saved": "11111 {{value}} 11111",
+          "savedEnterToUpdate": "11111",
+          "totp": "11111",
+          "username": "11111"
+        },
+        "autoSync": "11111",
+        "client": {
+          "loading": "11111",
+          "select": "11111"
+        },
+        "counts": {
+          "activeAlerts": "11111",
+          "lastSync": "11111",
+          "mappedOrgs": "11111",
+          "never": "11111",
+          "syncedDevices": "11111"
+        },
+        "description": "11111",
+        "errors": {
+          "backfillAlerts": "11111",
+          "connectionTest": "11111",
+          "disconnect": "11111",
+          "ingestSoftware": "11111",
+          "loadOrgMappings": "11111",
+          "loadSettings": "11111",
+          "saveConfig": "11111",
+          "someAlertsFailed": "11111 {{errors}} 11111",
+          "someDevicesFailed": "11111 {{errors}} 11111",
+          "someOrgsFailed": "11111 {{errors}} 11111",
+          "someSoftwareFailed": "11111 {{errors}} 11111",
+          "syncDevices": "11111",
+          "syncOrgs": "11111",
+          "totpRequired": "11111",
+          "updateMapping": "11111"
+        },
+        "fields": {
+          "instanceUrl": "11111",
+          "instanceUrlHelp": "11111"
+        },
+        "lastError": "11111 {{error}} 11111",
+        "loadingSettings": "11111",
+        "sections": {
+          "alerts": "11111",
+          "alertsDescription": "11111",
+          "devices": "11111",
+          "devicesDescription": "11111",
+          "orgMapping": "11111",
+          "orgMappingDescription": "11111",
+          "orgMappingEmpty": "11111",
+          "organizations": "11111",
+          "organizationsDescription": "11111",
+          "softwareInventory": "11111",
+          "softwareInventoryDescription": "11111",
+          "webhooks": "11111",
+          "webhooksDescription": "11111"
+        },
+        "status": {
+          "authPrefix": "11111",
+          "connected": "11111",
+          "disconnected": "11111",
+          "instanceUrlNotSet": "11111"
+        },
+        "statusLine": {
+          "configured": "11111",
+          "notConfigured": "11111"
+        },
+        "success": {
+          "alertBackfillCompleted": "11111 {{processed}} 11111 {{created}} 11111 {{updated}} 11111 {{failed}} 11111",
+          "connection": "11111",
+          "deviceSyncCompleted": "11111 {{processed}} 11111 {{created}} 11111 {{updated}} 11111 {{deleted}} 11111 {{failed}} 11111",
+          "disconnected": "11111",
+          "orgSyncCompleted": "11111 {{processed}} 11111 {{created}} 11111 {{updated}} 11111 {{failed}} 11111",
+          "saved": "11111",
+          "softwareIngestionCompleted": "11111 {{processed}} 11111 {{created}} 11111 {{updated}} 11111 {{failed}} 11111"
+        },
+        "tacticalIdLabel": "11111 {{id}} 11111",
+        "title": "11111",
+        "toasts": {
+          "alertsSyncedDescription": "11111",
+          "alertsSyncedTitle": "11111",
+          "backfillFailedTitle": "11111",
+          "connectedDescription": "11111",
+          "connectedTitle": "11111",
+          "connectionFailedTitle": "11111",
+          "devicesSyncedDescription": "11111",
+          "devicesSyncedTitle": "11111",
+          "disconnectFailedTitle": "11111",
+          "disconnectedDescription": "11111",
+          "disconnectedTitle": "11111",
+          "ingestionFailedTitle": "11111",
+          "orgsSyncedDescription": "11111",
+          "orgsSyncedTitle": "11111",
+          "saveFailedTitle": "11111",
+          "savedDescription": "11111",
+          "savedTitle": "11111",
+          "softwareIngestedDescription": "11111",
+          "softwareIngestedTitle": "11111",
+          "syncFailedTitle": "11111",
+          "unknownError": "11111",
+          "updateFailedTitle": "11111"
+        },
+        "webhook": {
+          "copiedTitle": "11111",
+          "copy": "11111",
+          "headerName": "11111",
+          "payloadTemplate": "11111",
+          "secret": "11111",
+          "secretCopied": "11111",
+          "unavailable": "11111",
+          "url": "11111",
+          "urlCopied": "11111"
+        }
+      },
+      "tanium": {
+        "loading": "11111"
+      }
+    },
+    "sso": {
+      "msp": {
+        "actions": {
+          "add": "11111",
+          "refresh": "11111",
+          "request": "11111",
+          "resetChallenge": "11111",
+          "revoke": "11111",
+          "saveDomains": "11111",
+          "saving": "11111",
+          "verify": "11111"
+        },
+        "addDomainLabel": "11111",
+        "advisoryNotice": "11111",
+        "claimStatus": {
+          "advisory": "11111",
+          "pending": "11111",
+          "rejected": "11111",
+          "revoked": "11111",
+          "verified": "11111",
+          "verifiedLegacy": "11111"
+        },
+        "descriptionCe": "11111",
+        "descriptionEe": "11111",
+        "dnsHost": "11111",
+        "dnsInstructions": "11111",
+        "dnsValue": "11111",
+        "emptyClaims": "11111",
+        "emptyDomains": "11111",
+        "errors": {
+          "conflicts": "11111 {{conflicts}} 11111",
+          "loadClaims": "11111",
+          "loadDomains": "11111",
+          "refreshChallenge": "11111",
+          "requestClaim": "11111",
+          "revokeClaim": "11111",
+          "saveDomains": "11111",
+          "verifyClaim": "11111"
+        },
+        "fallbackInfo": "11111",
+        "loading": "11111",
+        "removeDomainAria": "11111 {{number}} 11111",
+        "requestClaim": "11111",
+        "requestClaimLabel": "11111",
+        "title": "11111",
+        "toasts": {
+          "claimRequestedDescription": "11111",
+          "claimRequestedTitle": "11111",
+          "claimUnchangedDescription": "11111",
+          "claimUnchangedTitle": "11111",
+          "refreshFailedTitle": "11111",
+          "refreshedDescription": "11111",
+          "refreshedTitle": "11111",
+          "requestClaimFailedTitle": "11111",
+          "revokeFailedTitle": "11111",
+          "revokedDescription": "11111",
+          "revokedTitle": "11111",
+          "saveDomainsFailedTitle": "11111",
+          "savedDescription": "11111",
+          "savedTitle": "11111",
+          "verifiedDescription": "11111",
+          "verifiedTitle": "11111",
+          "verifyFailedTitle": "11111"
+        }
+      }
+    },
+    "teams": {
+      "settings": {
+        "actions": {
+          "activate": "11111",
+          "addNote": {
+            "description": "11111",
+            "label": "11111"
+          },
+          "approvalResponse": {
+            "description": "11111",
+            "label": "11111"
+          },
+          "assignTicket": {
+            "description": "11111",
+            "label": "11111"
+          },
+          "deactivate": "11111",
+          "logTime": {
+            "description": "11111",
+            "label": "11111"
+          },
+          "reload": "11111",
+          "replyToContact": {
+            "description": "11111",
+            "label": "11111"
+          },
+          "saveChanges": "11111",
+          "saveDraft": "11111",
+          "saving": "11111",
+          "teamsActive": "11111"
+        },
+        "capabilities": {
+          "activityNotifications": {
+            "description": "11111",
+            "label": "11111"
+          },
+          "groupChatBot": {
+            "description": "11111",
+            "label": "11111"
+          },
+          "messageExtension": {
+            "description": "11111",
+            "label": "11111"
+          },
+          "personalBot": {
+            "description": "11111",
+            "label": "11111"
+          },
+          "personalTab": {
+            "description": "11111",
+            "label": "11111"
+          }
+        },
+        "checklist": {
+          "installState": {
+            "active": "11111",
+            "error": "11111",
+            "label": "11111",
+            "notConfigured": "11111",
+            "pending": "11111"
+          },
+          "needsAction": "11111",
+          "profileReady": {
+            "completed": "11111",
+            "label": "11111",
+            "pending": "11111"
+          },
+          "profileSelected": {
+            "completed": "11111 {{name}} 11111",
+            "label": "11111",
+            "pending": "11111"
+          },
+          "ready": "11111"
+        },
+        "description": "11111",
+        "errors": {
+          "downloadPackage": "11111",
+          "generatePackage": "11111",
+          "loadGuidance": "11111",
+          "saveSettings": "11111"
+        },
+        "guidance": {
+          "applicationIdUri": "11111",
+          "messageExtension": "11111",
+          "personalBot": "11111",
+          "personalTab": "11111",
+          "redirectUris": "11111",
+          "requiredScopes": "11111",
+          "teamsAppIdUri": "11111",
+          "unavailable": "11111"
+        },
+        "installStatus": {
+          "active": "11111",
+          "error": "11111",
+          "installPending": "11111",
+          "notConfigured": "11111"
+        },
+        "noEligibleProfiles": "11111",
+        "notifications": {
+          "approvalRequest": {
+            "description": "11111",
+            "label": "11111"
+          },
+          "assignment": {
+            "description": "11111",
+            "label": "11111"
+          },
+          "customerReply": {
+            "description": "11111",
+            "label": "11111"
+          },
+          "escalation": {
+            "description": "11111",
+            "label": "11111"
+          },
+          "slaRisk": {
+            "description": "11111",
+            "label": "11111"
+          }
+        },
+        "package": {
+          "appId": "11111",
+          "appIds": "11111",
+          "botId": "11111",
+          "deepLinks": "11111",
+          "description": "11111",
+          "downloadManifest": "11111",
+          "downloadZip": "11111",
+          "downloading": "11111",
+          "fileName": "11111",
+          "generate": "11111",
+          "generating": "11111",
+          "manifestVersion": "11111",
+          "myWork": "11111",
+          "openBaseUrl": "11111",
+          "openDeeplink": "11111",
+          "packageVersion": "11111",
+          "projectTaskTemplate": "11111",
+          "section": "11111",
+          "ticketTemplate": "11111",
+          "title": "11111",
+          "validDomains": "11111",
+          "webResource": "11111"
+        },
+        "profileLabel": "11111",
+        "profileSummary": {
+          "needsRepair": "11111",
+          "none": "11111"
+        },
+        "section": {
+          "allowedActions": "11111",
+          "capabilities": "11111",
+          "notifications": "11111"
+        },
+        "selectProfile": "11111",
+        "statusMessage": {
+          "activated": "11111",
+          "deactivated": "11111",
+          "packageDownloaded": "11111",
+          "packageGenerated": "11111",
+          "saved": "11111"
+        },
+        "title": "11111"
+      }
+    },
+    "xero": {
+      "csv": {
+        "clientSync": {
+          "cancel": "11111",
+          "createNew": "11111",
+          "description": "11111",
+          "errorRow": "11111 {{row}} 11111 {{name}} 11111 {{error}} 11111",
+          "errors": {
+            "export": "11111",
+            "import": "11111",
+            "processCsv": "11111"
+          },
+          "errorsTitle": "11111 {{count}} 11111",
+          "exportButton": "11111",
+          "exportClients": "11111",
+          "exportDescription": "11111",
+          "exportSuccess": "11111 {{count}} 11111 {{filename}} 11111",
+          "importCompleteDescription": "11111 {{count}} 11111",
+          "importCompleteTitle": "11111",
+          "importContacts": "11111",
+          "importContactsButton": "11111 {{count}} 11111",
+          "importDescription": "11111",
+          "importing": "11111",
+          "matchBy": {
+            "algaClientId": "11111",
+            "contactName": "11111",
+            "emailAddress": "11111"
+          },
+          "matchByLabel": "11111",
+          "moreErrors": "11111 {{count}} 11111",
+          "preview": {
+            "columns": {
+              "action": "11111",
+              "contactName": "11111",
+              "email": "11111",
+              "matchedClient": "11111"
+            },
+            "moreWarnings": "11111 {{count}} 11111",
+            "showing20of": "11111 {{count}} 11111",
+            "toCreate": "11111",
+            "toSkip": "11111",
+            "toUpdate": "11111",
+            "warnings": "11111"
+          },
+          "processing": "11111 {{filename}} 11111",
+          "result": {
+            "created": "11111",
+            "mappings": "11111",
+            "skipped": "11111",
+            "updated": "11111"
+          },
+          "selectCsvFile": "11111",
+          "startNewImport": "11111",
+          "title": "11111",
+          "updateExisting": "11111",
+          "workflow": {
+            "s1": "11111",
+            "s2": "11111",
+            "s3": "11111",
+            "s4": "11111"
+          },
+          "workflowTitle": "11111"
+        },
+        "settings": {
+          "dateFormat": "11111",
+          "dateFormatHelp": "11111",
+          "dateFormatOptions": {
+            "dmy": "11111",
+            "mdy": "11111"
+          },
+          "defaultCurrency": "11111",
+          "defaultCurrencyHelp": "11111",
+          "errors": {
+            "load": "11111",
+            "save": "11111"
+          },
+          "exportSettings": {
+            "description": "11111",
+            "title": "11111"
+          },
+          "loading": "11111",
+          "managedPrefix": "11111",
+          "managedSuffix": "11111",
+          "mappings": {
+            "description": "11111",
+            "title": "11111"
+          },
+          "overview": {
+            "description": "11111",
+            "exportLabel": "11111",
+            "exportText": "11111",
+            "intro": "11111",
+            "note": "11111",
+            "taxImportLabel": "11111",
+            "taxImportText": "11111",
+            "title": "11111"
+          },
+          "savedMessage": "11111",
+          "selectCurrency": "11111",
+          "setup": {
+            "acknowledge": "11111",
+            "description": "11111",
+            "externalInvoiceId": "11111",
+            "externalInvoiceIdHelp": "11111",
+            "sourceSystem": "11111",
+            "sourceSystemHelp": "11111",
+            "step1Description": "11111",
+            "step1Title": "11111",
+            "step2Description": "11111",
+            "step2Title": "11111",
+            "step3Description": "11111",
+            "step3Title": "11111",
+            "title": "11111"
+          },
+          "useInvoiceCurrency": "11111",
+          "workflow": {
+            "description": "11111",
+            "export": {
+              "s1": "11111",
+              "s2": "11111",
+              "s3": "11111",
+              "s4": "11111",
+              "s5": "11111",
+              "s6": "11111"
+            },
+            "exportInvoices": "11111",
+            "import": {
+              "s1": "11111",
+              "s2": "11111",
+              "s3": "11111",
+              "s4": "11111",
+              "s5": "11111"
+            },
+            "importTax": "11111",
+            "title": "11111",
+            "trackingDescription": "11111",
+            "trackingTitle": "11111"
+          }
+        }
+      },
+      "live": {
+        "defaultOrganisation": "11111"
+      },
+      "settings": {
+        "actions": {
+          "connect": "11111",
+          "disconnect": "11111",
+          "disconnecting": "11111",
+          "reconnect": "11111",
+          "refresh": "11111",
+          "saveCredentials": "11111",
+          "saving": "11111"
+        },
+        "badges": {
+          "connectionExpired": "11111",
+          "credentialsReady": "11111",
+          "credentialsRequired": "11111",
+          "defaultConnected": "11111",
+          "noOrganisation": "11111"
+        },
+        "callback": {
+          "accessDenied": "11111",
+          "configMissing": "11111",
+          "connectionsUnmapped": "11111",
+          "generic": "11111 {{code}} 11111",
+          "invalidState": "11111",
+          "missingParams": "11111",
+          "noConnections": "11111",
+          "oauthFailed": "11111"
+        },
+        "clientIdLabel": "11111",
+        "clientIdPlaceholder": "11111",
+        "clientSecretLabel": "11111",
+        "clientSecretPlaceholder": "11111",
+        "connectSuccess": "11111",
+        "connection": {
+          "connectionId": "11111 {{id}} 11111",
+          "defaultOrganisation": "11111",
+          "description": "11111",
+          "notConnected": "11111",
+          "title": "11111",
+          "unknown": "11111"
+        },
+        "credentialsSaved": "11111",
+        "csvAvailableMiddle": "11111",
+        "csvAvailablePrefix": "11111",
+        "csvAvailableTitle": "11111",
+        "description": "11111",
+        "disconnectSuccess": "11111",
+        "errors": {
+          "disconnect": "11111",
+          "load": "11111",
+          "saveCredentials": "11111"
+        },
+        "howItWorksDescription": "11111",
+        "howItWorksTitle": "11111",
+        "loading": "11111",
+        "mapping": {
+          "alert": "11111",
+          "descriptionPrefix": "11111",
+          "placeholderAlert": "11111",
+          "placeholderDescription": "11111",
+          "title": "11111"
+        },
+        "noClientId": "11111",
+        "noClientSecret": "11111",
+        "redirectUri": "11111",
+        "requiredScopes": "11111",
+        "storedClientId": "11111 {{value}} 11111",
+        "storedClientSecret": "11111 {{value}} 11111",
+        "tenantOauthDescription": "11111",
+        "tenantOauthTitle": "11111",
+        "title": "11111",
+        "xeroCsv": "11111"
+      }
+    },
+    "stripe": {
       "title": "11111",
-      "xeroCsv": "11111"
+      "description": "11111",
+      "connected": {
+        "title": "11111",
+        "publishableKey": "11111 {{key}} 11111"
+      },
+      "empty": {
+        "description": "11111"
+      },
+      "actions": {
+        "testConnection": "11111",
+        "disconnect": "11111",
+        "connect": "11111",
+        "connecting": "11111",
+        "cancel": "11111"
+      },
+      "form": {
+        "secretKeyLabel": "11111",
+        "secretKeyPlaceholder": "11111",
+        "publishableKeyLabel": "11111",
+        "publishableKeyPlaceholder": "11111",
+        "findKeyPrefix": "11111",
+        "dashboardLink": "11111"
+      },
+      "webhook": {
+        "heading": "11111",
+        "configuredAutomatically": "11111",
+        "receiveNotifications": "11111",
+        "failedTitle": "11111",
+        "failedBody": "11111",
+        "configuring": "11111",
+        "retry": "11111"
+      },
+      "disconnectDialog": {
+        "title": "11111",
+        "message": "11111",
+        "confirm": "11111",
+        "cancel": "11111"
+      },
+      "toasts": {
+        "connectedWithWebhook": "11111",
+        "connectedWebhookFailed": "11111",
+        "disconnected": "11111",
+        "connectionSuccess": "11111",
+        "webhookConfigured": "11111"
+      },
+      "errors": {
+        "loadConfig": "11111",
+        "connect": "11111",
+        "disconnect": "11111",
+        "testConnection": "11111",
+        "configureWebhook": "11111",
+        "bothKeysRequired": "11111",
+        "secretKeyFormat": "11111",
+        "publishableKeyFormat": "11111"
+      }
     }
   }
 }

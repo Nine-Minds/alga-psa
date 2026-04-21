@@ -303,7 +303,7 @@ function getGuidanceBlocks(
 }
 
 export function MicrosoftIntegrationSettings() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/integrations');
   const { toast } = useToast();
   const teamsUiFlag = useFeatureFlag('teams-integration-ui', { defaultValue: false });
   const [loading, setLoading] = React.useState(true);
@@ -456,7 +456,7 @@ export function MicrosoftIntegrationSettings() {
             });
 
       if (!result.success) {
-        const message = result.error || t('integrations.microsoft.settings.errors.saveProfile', { defaultValue: 'Failed to save Microsoft profile' });
+        const message = t('integrations.microsoft.settings.errors.saveProfile', { defaultValue: 'Failed to save Microsoft profile' });
         setFormError(message);
         toast({
           title: t('integrations.microsoft.settings.toasts.saveFailedTitle', { defaultValue: 'Unable to save Microsoft profile' }),
@@ -492,7 +492,7 @@ export function MicrosoftIntegrationSettings() {
 
       const result = await archiveMicrosoftProfile(archiveTarget.profileId);
       if (!result.success) {
-        const message = result.error || t('integrations.microsoft.settings.errors.archive', { defaultValue: 'Failed to archive Microsoft profile' });
+        const message = t('integrations.microsoft.settings.errors.archive', { defaultValue: 'Failed to archive Microsoft profile' });
         setError(message);
         toast({
           title: t('integrations.microsoft.settings.toasts.archiveFailedTitle', { defaultValue: 'Unable to archive Microsoft profile' }),
@@ -519,7 +519,7 @@ export function MicrosoftIntegrationSettings() {
         setSettingDefaultId(profile.profileId);
         const result = await setDefaultMicrosoftProfile(profile.profileId);
         if (!result.success) {
-          const message = result.error || t('integrations.microsoft.settings.errors.setDefault', { defaultValue: 'Failed to set default Microsoft profile' });
+          const message = t('integrations.microsoft.settings.errors.setDefault', { defaultValue: 'Failed to set default Microsoft profile' });
           setError(message);
           toast({
             title: t('integrations.microsoft.settings.toasts.setDefaultFailedTitle', { defaultValue: 'Unable to set default profile' }),
@@ -546,7 +546,7 @@ export function MicrosoftIntegrationSettings() {
       setResetting(true);
       const result = await resetMicrosoftProvidersToDisconnected();
       if (!result.success) {
-        const message = result.error || t('integrations.microsoft.settings.errors.resetProviders', { defaultValue: 'Failed to reset Microsoft providers' });
+        const message = t('integrations.microsoft.settings.errors.resetProviders', { defaultValue: 'Failed to reset Microsoft providers' });
         setError(message);
         toast({
           title: t('integrations.microsoft.settings.toasts.resetFailedTitle', { defaultValue: 'Reset failed' }),
@@ -585,7 +585,7 @@ export function MicrosoftIntegrationSettings() {
         });
 
         if (!result.success) {
-          const message = result.error || t('integrations.microsoft.settings.errors.updateBinding', { defaultValue: 'Failed to update Microsoft binding' });
+          const message = t('integrations.microsoft.settings.errors.updateBinding', { defaultValue: 'Failed to update Microsoft binding' });
           setError(message);
           toast({
             title: t('integrations.microsoft.settings.toasts.bindingFailedTitle', { defaultValue: 'Unable to update {{consumer}} binding', consumer: consumer.consumerLabel }),

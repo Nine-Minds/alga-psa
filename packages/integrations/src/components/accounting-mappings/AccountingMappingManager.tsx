@@ -28,7 +28,7 @@ export function AccountingMappingManager({
   defaultTabId,
   urlParamKey
 }: AccountingMappingManagerProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/integrations');
   const searchParams = useSearchParams();
   const paramKey = urlParamKey ?? 'tab';
   const tabParam = searchParams?.get(paramKey);

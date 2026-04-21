@@ -7,7 +7,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { isCalendarEnterpriseEdition } from '../../../lib/calendarAvailability';
 
 function CalendarLoadingPlaceholder() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/integrations');
   return (
     <Card>
       <CardContent className="py-8">

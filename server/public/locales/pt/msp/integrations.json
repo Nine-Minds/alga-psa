@@ -1,1190 +1,1346 @@
 {
-  "accounting": {
-    "dialog": {
-      "cancel": "Cancelar",
-      "enterPlaceholder": "Inserir {{field}}...",
-      "errors": {
-        "enterExternal": "Insira {{field}}.",
-        "invalidJson": "Formato JSON inválido para os metadados.",
-        "saveFailed": "Falha ao salvar o mapeamento.",
-        "selectAlga": "Selecione {{field}}.",
-        "selectExternal": "Selecione {{field}}."
-      },
-      "manualEntryHelp": "Insira o identificador exatamente como aparece em seu sistema contábil.",
-      "metadataLabel": "Metadados (JSON)",
-      "metadataPlaceholder": "Metadados opcionais em formato JSON",
-      "realmIdLabel": "ID do Realm",
-      "saveMapping": "Salvar mapeamento",
-      "saving": "Salvando…",
-      "selectPlaceholder": "Selecionar {{field}}..."
-    },
-    "manager": {
-      "noModules": "Nenhum módulo de mapeamento configurado."
-    },
-    "moduleView": {
-      "actionsColumn": "Ações",
-      "delete": "Excluir",
-      "edit": "Editar",
-      "errors": {
-        "deleteFailed": "Falha ao excluir o mapeamento.",
-        "loadFailed": "Falha ao carregar os mapeamentos."
-      },
-      "loading": "Carregando mapeamentos…",
-      "noMappings": "Nenhum mapeamento encontrado.",
-      "notAvailable": "N/D",
-      "openMenu": "Abrir menu"
-    },
-    "setup": {
-      "activeConfiguration": "Configuração ativa",
-      "badges": {
-        "enterprise": "Enterprise"
-      },
-      "comingSoon": "Em breve",
-      "configure": "Configurar integração",
-      "highlightValues": {
-        "csv": "CSV",
-        "instant": "Instantâneo",
-        "live": "Ao vivo",
-        "manual": "Manual",
-        "twoWay": "Bidirecional"
-      },
-      "highlights": {
-        "delivery": "Entrega",
-        "export": "Exportação",
-        "format": "Formato",
-        "sync": "Sincronização"
-      },
-      "options": {
-        "qbo": {
-          "description": "Conecte seu realm para sincronizar faturas e gerenciar mapeamentos."
+  "integrations": {
+    "accounting": {
+      "dialog": {
+        "cancel": "Cancelar",
+        "enterPlaceholder": "Inserir {{field}}...",
+        "errors": {
+          "enterExternal": "Insira {{field}}.",
+          "invalidJson": "Formato JSON inválido para os metadados.",
+          "saveFailed": "Falha ao salvar o mapeamento.",
+          "selectAlga": "Selecione {{field}}.",
+          "selectExternal": "Selecione {{field}}."
         },
-        "qboCsv": {
-          "description": "Exporte faturas para CSV para importação manual no QuickBooks e importe dados fiscais a partir dos relatórios."
+        "manualEntryHelp": "Insira o identificador exatamente como aparece em seu sistema contábil.",
+        "metadataLabel": "Metadados (JSON)",
+        "metadataPlaceholder": "Metadados opcionais em formato JSON",
+        "realmIdLabel": "ID do Realm",
+        "saveMapping": "Salvar mapeamento",
+        "saving": "Salvando…",
+        "selectPlaceholder": "Selecionar {{field}}..."
+      },
+      "manager": {
+        "noModules": "Nenhum módulo de mapeamento configurado."
+      },
+      "moduleView": {
+        "actionsColumn": "Ações",
+        "delete": "Excluir",
+        "edit": "Editar",
+        "errors": {
+          "deleteFailed": "Falha ao excluir o mapeamento.",
+          "loadFailed": "Falha ao carregar os mapeamentos."
         },
-        "xero": {
-          "description": "Conecte sua organização com credenciais OAuth de propriedade do tenant para exportações contábeis ao vivo e mapeamentos."
+        "loading": "Carregando mapeamentos…",
+        "noMappings": "Nenhum mapeamento encontrado.",
+        "notAvailable": "N/D",
+        "openMenu": "Abrir menu"
+      },
+      "setup": {
+        "activeConfiguration": "Configuração ativa",
+        "badges": {
+          "enterprise": "Enterprise"
         },
-        "xeroCsv": {
-          "description": "Exporte faturas para CSV para importação manual no Xero e importe dados fiscais a partir dos relatórios do Xero."
+        "comingSoon": "Em breve",
+        "configure": "Configurar integração",
+        "highlightValues": {
+          "csv": "CSV",
+          "instant": "Instantâneo",
+          "live": "Ao vivo",
+          "manual": "Manual",
+          "twoWay": "Bidirecional"
+        },
+        "highlights": {
+          "delivery": "Entrega",
+          "export": "Exportação",
+          "format": "Formato",
+          "sync": "Sincronização"
+        },
+        "options": {
+          "qbo": {
+            "description": "Conecte seu realm para sincronizar faturas e gerenciar mapeamentos."
+          },
+          "qboCsv": {
+            "description": "Exporte faturas para CSV para importação manual no QuickBooks e importe dados fiscais a partir dos relatórios."
+          },
+          "xero": {
+            "description": "Conecte sua organização com credenciais OAuth de propriedade do tenant para exportações contábeis ao vivo e mapeamentos."
+          },
+          "xeroCsv": {
+            "description": "Exporte faturas para CSV para importação manual no Xero e importe dados fiscais a partir dos relatórios do Xero."
+          }
+        },
+        "selected": "{{title}} selecionado",
+        "unavailable": {
+          "description": "Esta integração ainda não está disponível. Selecione QuickBooks CSV ou Xero CSV para configurar exportações manuais.",
+          "title": "Configuração indisponível"
         }
       },
-      "selected": "{{title}} selecionado",
-      "unavailable": {
-        "description": "Esta integração ainda não está disponível. Selecione QuickBooks CSV ou Xero CSV para configurar exportações manuais.",
-        "title": "Configuração indisponível"
+      "modules": {
+        "tabs": {
+          "clients": "Clientes",
+          "itemsServices": "Itens / Serviços",
+          "taxCodes": "Códigos fiscais",
+          "paymentTerms": "Condições de pagamento"
+        }
       }
-    }
-  },
-  "calendar": {
-    "enterprise": {
-      "loading": "Carregando as configurações do calendário..."
-    }
-  },
-  "csv": {
-    "export": {
-      "actions": {
-        "exportCsv": "Exportar CSV",
-        "generating": "Gerando..."
-      },
-      "description": "Exporte faturas como arquivo CSV para importação manual no QuickBooks.",
-      "errors": {
-        "configureMissingMappings": "Configure os mapeamentos ausentes acima e tente exportar novamente.",
-        "failed": "Falha na exportação",
-        "missingItemMapping": "Mapeamento de item ausente",
-        "missingItemMappingId": "Mapeamento de item ausente ({{serviceId}})",
-        "missingItemMappingNamed": "Mapeamento de item ausente: {{serviceName}}"
-      },
-      "fields": {
-        "dateRange": "Intervalo de datas (opcional)",
-        "invoiceStatuses": "Status de fatura"
-      },
-      "lockReset": {
+    },
+    "calendar": {
+      "enterprise": {
+        "loading": "Carregando as configurações do calendário..."
+      }
+    },
+    "csv": {
+      "export": {
         "actions": {
-          "reset": "Redefinir bloqueio de exportação"
+          "exportCsv": "Exportar CSV",
+          "generating": "Gerando..."
         },
-        "description": "Limpar bloqueios de exportação para permitir reexportar faturas via CSV.",
-        "dialog": {
-          "cancel": "Cancelar",
-          "confirm": "Redefinir bloqueio",
-          "confirmBatch": "Isto permitirá que o Alga PSA exporte novamente as faturas do lote {{batchId}}. Se alguma dessas faturas ainda existir no QuickBooks, importar o CSV pode criar duplicatas.",
-          "confirmInvoice": "Isto permitirá que o Alga PSA exporte novamente a fatura {{invoiceNumber}}. Se esta fatura ainda existir no QuickBooks, importar o CSV pode criar duplicatas.",
-          "resetting": "Redefinindo…",
-          "title": "Redefinir bloqueio de exportação?",
-          "warning": "Prossiga apenas se tiver certeza de que a fatura não foi importada ou se você a excluiu/cancelou no QuickBooks."
-        },
+        "description": "Exporte faturas como arquivo CSV para importação manual no QuickBooks.",
         "errors": {
-          "unable": "Não foi possível redefinir o bloqueio de exportação"
+          "configureMissingMappings": "Configure os mapeamentos ausentes acima e tente exportar novamente.",
+          "failed": "Falha na exportação",
+          "missingItemMapping": "Mapeamento de item ausente",
+          "missingItemMappingId": "Mapeamento de item ausente ({{serviceId}})",
+          "missingItemMappingNamed": "Mapeamento de item ausente: {{serviceName}}"
         },
         "fields": {
-          "batchId": "ID do lote de exportação",
-          "batchIdPlaceholder": "ex. e793a514-34bd-4d7b-b266-9bb15f7087c4",
-          "invoiceNumber": "Número da fatura",
-          "invoiceNumberPlaceholder": "ex. INV-1001"
+          "dateRange": "Intervalo de datas (opcional)",
+          "invoiceStatuses": "Status de fatura"
         },
-        "modes": {
-          "ariaLabel": "Modo de redefinição de bloqueio de exportação",
-          "batch": "Lote",
-          "invoice": "Fatura"
+        "lockReset": {
+          "actions": {
+            "reset": "Redefinir bloqueio de exportação"
+          },
+          "description": "Limpar bloqueios de exportação para permitir reexportar faturas via CSV.",
+          "dialog": {
+            "cancel": "Cancelar",
+            "confirm": "Redefinir bloqueio",
+            "confirmBatch": "Isto permitirá que o Alga PSA exporte novamente as faturas do lote {{batchId}}. Se alguma dessas faturas ainda existir no QuickBooks, importar o CSV pode criar duplicatas.",
+            "confirmInvoice": "Isto permitirá que o Alga PSA exporte novamente a fatura {{invoiceNumber}}. Se esta fatura ainda existir no QuickBooks, importar o CSV pode criar duplicatas.",
+            "resetting": "Redefinindo…",
+            "title": "Redefinir bloqueio de exportação?",
+            "warning": "Prossiga apenas se tiver certeza de que a fatura não foi importada ou se você a excluiu/cancelou no QuickBooks."
+          },
+          "errors": {
+            "unable": "Não foi possível redefinir o bloqueio de exportação"
+          },
+          "fields": {
+            "batchId": "ID do lote de exportação",
+            "batchIdPlaceholder": "ex. e793a514-34bd-4d7b-b266-9bb15f7087c4",
+            "invoiceNumber": "Número da fatura",
+            "invoiceNumberPlaceholder": "ex. INV-1001"
+          },
+          "modes": {
+            "ariaLabel": "Modo de redefinição de bloqueio de exportação",
+            "batch": "Lote",
+            "invoice": "Fatura"
+          },
+          "success": {
+            "batchCleared": "Bloqueios de exportação limpos para este lote. Você pode exportar novamente essas faturas.",
+            "invoiceCleared": "Bloqueio de exportação limpo. Você pode exportar novamente esta fatura.",
+            "noBatchLocks": "Nenhum bloqueio de exportação foi encontrado para esse lote.",
+            "noInvoiceLock": "Nenhum bloqueio de exportação encontrado para essa fatura."
+          },
+          "title": "Reexportar uma fatura",
+          "warnings": {
+            "duplicates": "Isso pode causar duplicatas no QuickBooks se a fatura ainda existir lá."
+          }
         },
         "success": {
-          "batchCleared": "Bloqueios de exportação limpos para este lote. Você pode exportar novamente essas faturas.",
-          "invoiceCleared": "Bloqueio de exportação limpo. Você pode exportar novamente esta fatura.",
-          "noBatchLocks": "Nenhum bloqueio de exportação foi encontrado para esse lote.",
-          "noInvoiceLock": "Nenhum bloqueio de exportação encontrado para essa fatura."
+          "one": "{{count}} fatura exportada para {{filename}}",
+          "other": "{{count}} faturas exportadas para {{filename}}"
         },
-        "title": "Reexportar uma fatura",
-        "warnings": {
-          "duplicates": "Isso pode causar duplicatas no QuickBooks se a fatura ainda existir lá."
-        }
-      },
-      "success": {
-        "one": "{{count}} fatura exportada para {{filename}}",
-        "other": "{{count}} faturas exportadas para {{filename}}"
-      },
-      "title": "Exportação CSV para QuickBooks"
-    },
-    "preview": {
-      "duplicates": {
-        "description": "As faturas a seguir aparecem várias vezes. Seus valores fiscais serão somados:",
-        "title": "Faturas duplicadas ({{count}})"
-      },
-      "errors": {
-        "more": "... e mais {{count}} erros",
-        "title": "Erros ({{count}})"
-      },
-      "importResults": "Resultados da importação",
-      "importSummary": {
-        "difference": "Diferença:",
-        "failedUpdates": "Atualizações com falha:",
-        "importedTax": "Imposto importado:",
-        "originalTax": "Imposto original:",
-        "successfulUpdates": "Atualizações bem-sucedidas:",
-        "title": "Resumo da importação"
-      },
-      "rowLabel": "Linha {{row}}:",
-      "stats": {
-        "matchedInvoices": "Faturas correspondidas",
-        "totalRows": "Total de linhas",
-        "uniqueInvoices": "Faturas únicas",
-        "validRows": "Linhas válidas"
-      },
-      "status": {
-        "databaseMatch": "Correspondência no banco",
-        "rowData": "Dados da linha",
-        "structure": "Estrutura"
-      },
-      "validationPassed": {
-        "one": "Validação aprovada. Pronto para importar dados fiscais para {{count}} fatura.",
-        "other": "Validação aprovada. Pronto para importar dados fiscais para {{count}} faturas."
-      },
-      "validationResults": "Resultados da validação",
-      "warnings": {
-        "more": "... e mais {{count}} avisos",
-        "title": "Avisos ({{count}})"
-      }
-    },
-    "settings": {
-      "exports": {
-        "description": "Crie lotes de exportação, baixe arquivos CSV, importe relatórios fiscais e revise o histórico de exportação.",
-        "managedTitle": "Gerenciado pelo Faturamento",
-        "openButton": "Abrir exportações contábeis",
-        "path": "Faturamento → Exportações contábeis",
-        "title": "Exportações contábeis"
-      },
-      "qbo": {
-        "bullets": {
-          "exportLabel": "Exportação",
-          "exportText": "Gere arquivos CSV compatíveis com o recurso de importação de faturas do QuickBooks",
-          "taxImportLabel": "Importação de impostos",
-          "taxImportText": "Ao usar cálculo fiscal externo, importe valores fiscais dos relatórios fiscais do QuickBooks"
-        },
-        "description": "Exporte faturas para CSV para importação manual no QuickBooks e importe dados fiscais dos relatórios do QuickBooks.",
-        "exports": {
-          "managedPrefix": "Acesse",
-          "managedSuffix": "para selecionar faturas, gerar exportações CSV do QuickBooks, importar relatórios fiscais e gerenciar lotes."
-        },
-        "intro": "Esta integração fornece uma alternativa à conectividade com o QuickBooks baseada em OAuth:",
-        "mappings": {
-          "description": "Mapeie clientes, serviços, códigos fiscais e condições de pagamento do Alga para os identificadores usados em sua empresa QuickBooks. Estes valores são usados ao gerar a exportação CSV.",
-          "title": "Mapeamentos CSV do QuickBooks"
-        },
-        "note": "Nota: Configure os mapeamentos abaixo antes de exportar. As exportações CSV e as importações de impostos são gerenciadas em Faturamento → Exportações contábeis.",
-        "title": "Integração CSV do QuickBooks"
-      }
-    },
-    "taxImport": {
-      "actions": {
-        "importTaxData": "Importar dados fiscais",
-        "importing": "Importando...",
-        "validate": "Validar",
-        "validating": "Validando..."
-      },
-      "errors": {
-        "importFailed": "Falha na importação",
-        "readFile": "Falha ao ler o arquivo",
-        "selectFile": "Selecione um arquivo CSV",
-        "selectFileAndRange": "Selecione um arquivo e um intervalo de datas",
-        "templateDownloadFailed": "Falha ao baixar o modelo",
-        "validationFailed": "Falha na validação"
-      },
-      "fields": {
-        "csvFile": "Arquivo CSV",
-        "dateRangeHelp": "Apenas faturas dentro deste intervalo de datas serão processadas.",
-        "dateRangeRequired": "Intervalo de datas (obrigatório)",
-        "dropZone": "Arraste e solte um arquivo CSV aqui, ou clique para navegar",
-        "fileSize": "({{size}} KB)"
+        "title": "Exportação CSV para QuickBooks"
       },
       "preview": {
-        "alreadyImported": "{{count}} fatura(s) já possuem impostos importados.",
-        "alreadyImportedSkip": "{{count}} fatura(s) já possuem impostos importados e serão ignoradas.",
-        "badges": {
+        "duplicates": {
+          "description": "As faturas a seguir aparecem várias vezes. Seus valores fiscais serão somados:",
+          "title": "Faturas duplicadas ({{count}})"
+        },
+        "errors": {
+          "more": "... e mais {{count}} erros",
+          "title": "Erros ({{count}})"
+        },
+        "importResults": "Resultados da importação",
+        "importSummary": {
+          "difference": "Diferença:",
+          "failedUpdates": "Atualizações com falha:",
+          "importedTax": "Imposto importado:",
+          "originalTax": "Imposto original:",
+          "successfulUpdates": "Atualizações bem-sucedidas:",
+          "title": "Resumo da importação"
+        },
+        "rowLabel": "Linha {{row}}:",
+        "stats": {
+          "matchedInvoices": "Faturas correspondidas",
+          "totalRows": "Total de linhas",
+          "uniqueInvoices": "Faturas únicas",
+          "validRows": "Linhas válidas"
+        },
+        "status": {
           "databaseMatch": "Correspondência no banco",
           "rowData": "Dados da linha",
           "structure": "Estrutura"
         },
-        "columns": {
-          "algaInvoice": "Fatura Alga",
-          "contact": "Contato",
-          "status": "Status",
-          "taxAmount": "Valor fiscal",
-          "xeroInvoice": "Fatura Xero"
+        "validationPassed": {
+          "one": "Validação aprovada. Pronto para importar dados fiscais para {{count}} fatura.",
+          "other": "Validação aprovada. Pronto para importar dados fiscais para {{count}} faturas."
         },
-        "errorsTitle": "Erros ({{count}})",
-        "matched": "Correspondida",
-        "matchedInvoices": "Faturas correspondidas",
-        "notPendingDescription": "Estas faturas foram criadas com cálculo fiscal interno. Para importar impostos do Xero, as faturas devem ser configuradas com a origem fiscal \"Pending External\" ao exportar.",
-        "notPendingSkip": "{{count}} fatura(s) não têm imposto externo pendente e serão ignoradas.",
-        "notPendingTitle": "{{count}} fatura(s) não usam cálculo fiscal externo.",
-        "showingFirst20": "Mostrando as primeiras 20 de {{count}} linhas",
-        "taxToImport": "Imposto a importar",
-        "title": "Resultados da validação",
-        "totalRows": "Total de linhas",
-        "uniqueInvoices": "Faturas únicas",
-        "unmatched": "Não correspondida",
-        "validRows": "Linhas válidas",
-        "warningsTitle": "Avisos ({{count}})"
-      },
-      "qbo": {
-        "description": "Importe valores fiscais de um arquivo CSV de relatório fiscal do QuickBooks.",
-        "help": {
-          "csvRequirement": "O CSV deve incluir as colunas Número da fatura, Data da fatura e Valor fiscal.",
-          "downloadTemplate": "Baixar modelo CSV",
-          "steps": {
-            "s1": "No QuickBooks, acesse Reports > All Reports",
-            "s2": "Selecione Sales Tax Liability ou Transaction Detail by Account",
-            "s3": "Defina o intervalo de datas para corresponder às suas faturas exportadas",
-            "s4": "Clique em Export e escolha Export to Excel ou Export to CSV",
-            "s5": "Salve o arquivo e faça upload aqui"
-          },
-          "title": "Como exportar dados fiscais do QuickBooks"
-        },
-        "success": {
-          "one": "Imposto importado com sucesso para {{count}} fatura. Imposto total importado: ${{amount}}",
-          "other": "Imposto importado com sucesso para {{count}} faturas. Imposto total importado: ${{amount}}"
-        },
-        "title": "Importar impostos do CSV do QuickBooks"
-      },
-      "result": {
-        "failed": "{{count}} com falha.",
-        "one": "Imposto importado para {{count}} fatura. Imposto total importado: {{amount}}.",
-        "other": "Imposto importado para {{count}} faturas. Imposto total importado: {{amount}}.",
-        "skipped": "{{count}} ignoradas."
-      },
-      "unified": {
-        "description": "Importe valores fiscais da exportação CSV do seu sistema contábil.",
-        "qbResult": {
-          "one": "Imposto importado com sucesso para {{count}} fatura. Imposto total importado: {{amount}}",
-          "other": "Imposto importado com sucesso para {{count}} faturas. Imposto total importado: {{amount}}"
-        },
-        "source": {
-          "ariaLabel": "Origem da importação CSV",
-          "quickbooks": "QuickBooks",
-          "xero": "Xero"
-        },
-        "title": "Importar impostos de CSV",
-        "xeroCsvDescription": "O CSV exportado inclui Número da fatura, Nome do contato, Valor da linha, Valor fiscal e categorias de rastreamento.",
-        "xeroHelp": {
-          "note": "Nota: Apenas faturas originalmente exportadas do Alga PSA (com o rastreamento Source System = AlgaPSA) serão correspondidas.",
-          "s1": "No Xero, acesse Sales > Invoices",
-          "s2": "Selecione a aba de fatura da qual deseja exportar (ex. Paid, Awaiting Payment)",
-          "s3": "(Opcional) Clique em Search para filtrar por data de início, data de fim ou tipo de data",
-          "s4": "Clique em Export",
-          "s5": "O Xero baixa um arquivo CSV para seu computador",
-          "s6": "Faça upload desse arquivo CSV aqui"
-        },
-        "xeroResult": {
-          "one": "Imposto importado para {{count}} fatura. Total: {{amount}}.",
-          "other": "Imposto importado para {{count}} faturas. Total: {{amount}}."
+        "validationResults": "Resultados da validação",
+        "warnings": {
+          "more": "... e mais {{count}} avisos",
+          "title": "Avisos ({{count}})"
         }
-      },
-      "xero": {
-        "description": "Importe valores fiscais de um arquivo CSV de Xero Invoice Details Report.",
-        "dropZone": "Arraste e solte um CSV de Xero Invoice Details Report aqui, ou clique para navegar",
-        "help": {
-          "csvRequirement": "O relatório deve incluir colunas para Número da fatura, Nome do contato, Valor da linha e Valor fiscal. As faturas são correspondidas usando o campo Reference ou as categorias de rastreamento definidas durante a exportação.",
-          "steps": {
-            "s1": "No Xero, acesse Reports > All Reports",
-            "s2": "Selecione Sales (Invoices and Revenue)",
-            "s3": "Execute o relatório Invoice Details",
-            "s4": "Defina o intervalo de datas para corresponder às suas faturas exportadas",
-            "s5": "Clique em Export e escolha CSV",
-            "s6": "Faça upload do arquivo exportado aqui"
-          },
-          "title": "Como exportar dados fiscais do Xero"
-        },
-        "title": "Importar impostos do CSV do Xero"
-      }
-    }
-  },
-  "google": {
-    "settings": {
-      "actions": {
-        "refresh": "Atualizar",
-        "resetProviders": "Redefinir provedores do Google",
-        "resetting": "Redefinindo…",
-        "save": "Salvar",
-        "saving": "Salvando…"
-      },
-      "afterSaveNotice": "Após salvar, vá até as integrações de E-mail recebido e Calendário e reautorize os provedores. Provedores Google existentes não são migrados.",
-      "consoleLink": "Google Cloud Console",
-      "description": "Configure credenciais do Google Cloud de propriedade do tenant para Gmail (entrada) e Google Calendar.",
-      "errors": {
-        "loadFailed": "Falha ao carregar as configurações do Google",
-        "resetFailed": "Falha ao redefinir os provedores do Google",
-        "saveFailed": "Falha ao salvar as configurações do Google"
-      },
-      "fields": {
-        "projectIdHelp": "Usado para provisionamento do Pub/Sub do Gmail (conta de serviço de propriedade do tenant).",
-        "projectIdLabel": "ID do projeto Google Cloud",
-        "projectIdPlaceholder": "my-project-id"
-      },
-      "loading": "Carregando…",
-      "oauth": {
-        "calendarClientId": "Calendar OAuth Client ID",
-        "calendarClientSecret": "Calendar OAuth Client Secret",
-        "enterSecret": "Inserir client secret",
-        "gmailClientId": "Gmail OAuth Client ID",
-        "gmailClientSecret": "Gmail OAuth Client Secret",
-        "sectionTitle": "Aplicativo OAuth",
-        "shareApp": "Usar o mesmo aplicativo OAuth para Gmail e Calendar",
-        "shareAppHelp": "Recomendado. Você ainda pode autorizar contas Google separadas por integração.",
-        "storedSecret": "Secret armazenado: {{secret}}"
-      },
-      "redirectUrisLabel": "Redirect URIs (copiar para o client OAuth do Google)",
-      "scopes": "Escopos",
-      "scopesCalendar": "Calendar: {{scopes}}",
-      "scopesGmail": "Gmail: {{scopes}}",
-      "serviceAccount": {
-        "alreadyStored": "Uma chave de conta de serviço já está armazenada (não exibida).",
-        "description": "Cole o JSON da chave da conta de serviço de propriedade do tenant usada para provisionar o Pub/Sub.",
-        "title": "Conta de serviço do Pub/Sub (obrigatória para o Gmail)"
-      },
-      "setupGuide": "Guia de configuração",
-      "title": "Google",
-      "toasts": {
-        "resetDescription": "Todos os provedores do Google estão agora desconectados e requerem nova autorização.",
-        "resetFailedTitle": "Falha ao redefinir",
-        "resetTitle": "Provedores do Google redefinidos",
-        "saveFailedTitle": "Não foi possível salvar as configurações do Google",
-        "savedDescription": "A configuração do Google do tenant foi atualizada com sucesso.",
-        "savedTitle": "Configurações do Google salvas",
-        "unknownError": "Erro desconhecido"
-      }
-    }
-  },
-  "microsoft": {
-    "settings": {
-      "actions": {
-        "entraLink": "Microsoft Entra",
-        "newProfile": "Novo perfil",
-        "openTeamsSetup": "Abrir configuração do Teams",
-        "refresh": "Atualizar",
-        "resetProviders": "Redefinir provedores Microsoft",
-        "resetting": "Redefinindo…"
-      },
-      "archiveDialog": {
-        "archiving": "Arquivando…",
-        "cancel": "Manter perfil",
-        "confirm": "Arquivar perfil",
-        "message": "Arquivar {{name}}? Referências históricas existentes permanecem intactas, mas o perfil não estará mais disponível para novas vinculações.",
-        "title": "Arquivar perfil Microsoft?"
-      },
-      "binding": {
-        "bound": "Vinculado",
-        "boundProfileLabel": "Perfil vinculado",
-        "createFirst": "Crie primeiro um perfil",
-        "needsAttention": "Requer atenção",
-        "saving": "Salvando…",
-        "selectProfile": "Selecionar um perfil",
-        "unbound": "Não vinculado"
-      },
-      "bindings": {
-        "summaryBound": "{{consumer}} está vinculado a {{profile}}.",
-        "summaryNone": "Nenhum perfil Microsoft está atualmente vinculado a {{consumer}}.",
-        "summaryUnavailable": "{{consumer}} está vinculado a um perfil indisponível.",
-        "warningArchived": "{{consumer}} ainda está vinculado a um perfil arquivado. Revincule-o a um perfil ativo.",
-        "warningNoBinding": "Nenhuma vinculação de {{consumer}} está configurada ainda.",
-        "warningNotReady": "{{consumer}} está vinculado a {{profile}}, mas esse perfil ainda precisa de configuração.",
-        "warningProfileMissing": "{{consumer}} está vinculado a um perfil que não está mais disponível. Revincule-o a um perfil ativo."
-      },
-      "bindingsAlertCe": "Vinculações explícitas são a fonte da verdade para a seleção de perfil MSP SSO. Configure os domínios de login separadamente após escolher o perfil vinculado.",
-      "bindingsAlertEe": "Vinculações explícitas são a fonte da verdade para a seleção de perfis MSP SSO, e-mail, calendário e Teams.",
-      "consumerBindings": {
-        "descriptionCe": "Vincule um perfil Microsoft ao MSP SSO para login e uso de domínio de login.",
-        "descriptionEe": "Vincule um perfil Microsoft por consumidor compatível. Reatribuir um consumidor não altera os demais.",
-        "title": "Vinculações explícitas de consumidor"
-      },
-      "consumers": {
-        "calendar": {
-          "description": "Escolha qual perfil Microsoft a sincronização do calendário do Outlook deve usar.",
-          "label": "Calendário",
-          "reconnect": "Conexões existentes do calendário Microsoft podem precisar de nova autorização após a alteração do perfil vinculado."
-        },
-        "email": {
-          "description": "Escolha qual perfil Microsoft o e-mail recebido do Outlook deve usar.",
-          "label": "E-mail",
-          "reconnect": "Conexões existentes de e-mail do Outlook podem precisar de nova autorização após a alteração do perfil vinculado."
-        },
-        "mspSso": {
-          "description": "Escolha qual perfil Microsoft sustenta os domínios de login MSP SSO, o login da Microsoft e a descoberta de tenant.",
-          "label": "MSP SSO"
-        },
-        "teams": {
-          "description": "Escolha qual perfil Microsoft a instalação do Microsoft Teams e os fluxos de autenticação devem usar.",
-          "label": "Teams"
-        }
-      },
-      "descriptionCe": "Gerencie perfis Microsoft de propriedade do tenant para MSP SSO, login da Microsoft e descoberta de domínios de login.",
-      "descriptionEe": "Gerencie perfis Microsoft de propriedade do tenant para MSP SSO, e-mail do Outlook, sincronização de calendário e Microsoft Teams.",
-      "dialog": {
-        "cancel": "Cancelar",
-        "clientId": "Client ID",
-        "clientSecret": "Client secret",
-        "clientSecretPlaceholder": "Inserir client secret",
-        "clientSecretPlaceholderEdit": "Deixe em branco para manter o secret atual",
-        "createProfile": "Criar perfil",
-        "createTitle": "Criar perfil Microsoft",
-        "descriptionCreate": "Crie um perfil Microsoft de propriedade do tenant e, em seguida, vincule-o explicitamente aos consumidores Microsoft que você deseja usar.",
-        "descriptionEdit": "Atualize o perfil Microsoft selecionado. Deixe o secret em branco para manter o valor existente.",
-        "displayName": "Nome de exibição",
-        "displayNamePlaceholder": "Tenant de produção da Acme",
-        "editTitle": "Editar perfil Microsoft",
-        "saveChanges": "Salvar alterações",
-        "saving": "Salvando…",
-        "setDefault": "Definir este perfil como perfil Microsoft padrão",
-        "setDefaultHelp": "Perfis padrão permanecem disponíveis para fluxos de gerenciamento de perfil e metadados seguros para migração, não para roteamento de consumidores.",
-        "storedSecretHint": "Secret armazenado: {{secret}}. Deixe este campo vazio para mantê-lo inalterado.",
-        "tenantId": "Tenant ID"
-      },
-      "empty": {
-        "createButton": "Criar perfil Microsoft",
-        "descriptionCe": "Crie primeiro um perfil nomeado e, em seguida, vincule-o explicitamente aos fluxos de MSP SSO e login por domínio.",
-        "descriptionEe": "Crie primeiro um perfil nomeado e, em seguida, vincule-o explicitamente a MSP SSO, e-mail do Outlook, sincronização de calendário e Teams.",
-        "title": "Ainda não há perfis Microsoft"
-      },
-      "errors": {
-        "archive": "Falha ao arquivar o perfil Microsoft",
-        "loadBindings": "Falha ao carregar as vinculações Microsoft",
-        "loadStatus": "Falha ao carregar as configurações Microsoft",
-        "resetProviders": "Falha ao redefinir os provedores Microsoft",
-        "saveProfile": "Falha ao salvar o perfil Microsoft",
-        "setDefault": "Falha ao definir o perfil Microsoft padrão",
-        "updateBinding": "Falha ao atualizar a vinculação Microsoft"
-      },
-      "guidance": {
-        "applicationIdUri": "Application ID URI",
-        "calendarRedirect": "Redirect URI de sincronização do calendário",
-        "calendarTitle": "Guia do calendário",
-        "clientId": "Client ID",
-        "currentProfileTitle": "Valores do perfil atual",
-        "emailRedirect": "Redirect URI de e-mail recebido",
-        "emailTitle": "Guia de e-mail",
-        "mspSsoTitle": "Guia do MSP SSO",
-        "notConfigured": "Não configurado",
-        "redirectUri": "Redirect URI",
-        "requiresBaseUrl": "Requer URL base e Client ID",
-        "scopes": "Escopos",
-        "teamsBotRedirect": "Redirect URI de bot pessoal",
-        "teamsMessageRedirect": "Redirect URI de message extension",
-        "teamsScopes": "Escopos do Teams",
-        "teamsTabRedirect": "Redirect URI de aba pessoal",
-        "teamsTitle": "Guia do Teams",
-        "tenantId": "Tenant ID",
-        "unavailable": "Indisponível"
-      },
-      "profileCard": {
-        "activeBindings": "Vinculações ativas",
-        "archive": "Arquivar",
-        "clientId": "Client ID",
-        "defaultBadge": "Padrão",
-        "edit": "Editar",
-        "guidanceSummary": "Guia de registro de aplicativo Microsoft",
-        "noVisibleBindings": "Nenhuma vinculação de consumidor visível",
-        "readinessTitle": "Prontidão do perfil",
-        "readyCe": "Este perfil está pronto para a vinculação MSP SSO e os fluxos de login por domínio.",
-        "readyEe": "Este perfil está pronto para as vinculações MSP SSO, e-mail do Outlook e calendário.",
-        "readyEeTeams": "Este perfil está pronto para as vinculações MSP SSO, e-mail do Outlook, sincronização de calendário e Teams.",
-        "setDefault": "Definir como padrão",
-        "storedSecret": "Secret armazenado",
-        "teamsAppIdUri": "Application ID URI do Teams",
-        "tenantIdLabel": "Tenant ID:",
-        "updating": "Atualizando…"
-      },
-      "providerReconnect": {
-        "description": "Use isto se você rotacionar credenciais ou intencionalmente revincular o e-mail do Outlook ou o calendário a um perfil Microsoft diferente.",
-        "title": "Reconexão do provedor"
-      },
-      "readiness": {
-        "archived": "Perfis arquivados não podem ser usados para novas vinculações Microsoft.",
-        "clientIdMissing": "Client ID ausente.",
-        "clientSecretMissing": "O client secret não foi configurado.",
-        "tenantIdMissing": "Tenant ID ausente."
-      },
-      "statusBadges": {
-        "archived": "Arquivado",
-        "needsAttention": "Requer atenção",
-        "ready": "Pronto"
-      },
-      "title": "Microsoft",
-      "toasts": {
-        "archiveFailedTitle": "Não foi possível arquivar o perfil Microsoft",
-        "archivedDescription": "{{name}} foi arquivado com sucesso.",
-        "archivedTitle": "Perfil Microsoft arquivado",
-        "bindingFailedTitle": "Não foi possível atualizar a vinculação de {{consumer}}",
-        "bindingUpdatedDescription": "{{consumer}} agora usa {{profile}}.",
-        "bindingUpdatedTitle": "Vinculação de {{consumer}} atualizada",
-        "defaultUpdatedDescription": "{{name}} agora é o registro padrão do perfil Microsoft.",
-        "defaultUpdatedTitle": "Perfil Microsoft padrão atualizado",
-        "profileCreated": "Perfil Microsoft criado",
-        "profileCreatedDescription": "O perfil Microsoft está pronto para ser vinculado a consumidores Microsoft visíveis.",
-        "profileUpdated": "Perfil Microsoft atualizado",
-        "profileUpdatedDescription": "As alterações do perfil Microsoft foram salvas com sucesso.",
-        "resetDescription": "As conexões existentes de e-mail do Outlook e calendário agora requerem nova autorização.",
-        "resetFailedTitle": "Falha ao redefinir",
-        "resetTitle": "Provedores Microsoft redefinidos",
-        "saveFailedTitle": "Não foi possível salvar o perfil Microsoft",
-        "selectedProfile": "o perfil selecionado",
-        "setDefaultFailedTitle": "Não foi possível definir o perfil padrão"
-      },
-      "validation": {
-        "clientIdRequired": "O Microsoft OAuth Client ID é obrigatório",
-        "clientSecretRequired": "O Microsoft OAuth Client Secret é obrigatório",
-        "displayNameRequired": "O nome de exibição do perfil Microsoft é obrigatório",
-        "tenantIdRequired": "O Microsoft Tenant ID é obrigatório"
-      }
-    }
-  },
-  "qbo": {
-    "callback": {
-      "completed": "Processo de conexão concluído.",
-      "errorDetail": "Erro: {{error}}",
-      "errored": "O processo de conexão resultou em erro.",
-      "failed": "Falha ao conectar ao QuickBooks Online.",
-      "realmId": "ID do Realm: {{realmId}}",
-      "returnButton": "Voltar às configurações do QuickBooks",
-      "success": "Conectado com sucesso ao QuickBooks Online!",
-      "title": "Status da conexão com o QuickBooks"
-    }
-  },
-  "rmm": {
-    "ninjaOne": {
-      "loading": "Carregando as configurações da integração NinjaOne..."
-    },
-    "setup": {
-      "activeConfiguration": "Configuração ativa",
-      "comingSoon": "Integração RMM em breve",
-      "configure": "Configurar integração",
-      "selected": "{{title}} selecionado",
-      "title": "Integrações RMM"
-    },
-    "tactical": {
-      "actions": {
-        "disconnect": "Desconectar",
-        "disconnecting": "Desconectando...",
-        "ingestSoftware": "Ingerir software",
-        "ingesting": "Ingerindo...",
-        "refresh": "Atualizar",
-        "save": "Salvar",
-        "saving": "Salvando...",
-        "syncAlerts": "Sincronizar alertas",
-        "syncClients": "Sincronizar clientes",
-        "syncDevices": "Sincronizar dispositivos",
-        "syncing": "Sincronizando...",
-        "testConnection": "Testar conexão",
-        "testing": "Testando..."
-      },
-      "auth": {
-        "apiKey": "Chave de API",
-        "enterApiKey": "Inserir chave de API",
-        "enterPassword": "Inserir senha",
-        "enterUsername": "Inserir nome de usuário",
-        "knox": "Knox",
-        "knoxOption": "Nome de usuário/senha (token Knox)",
-        "knoxTokenSaved": "Token Knox salvo: {{value}}",
-        "mode": "Autenticação",
-        "password": "Senha",
-        "saved": "Salvo: {{value}}",
-        "savedEnterToUpdate": "Salvo (inserir para atualizar)",
-        "totp": "Código TOTP",
-        "username": "Nome de usuário"
-      },
-      "autoSync": "Sincronização automática",
-      "client": {
-        "loading": "Carregando clientes…",
-        "select": "Selecionar cliente"
-      },
-      "counts": {
-        "activeAlerts": "Alertas ativos",
-        "lastSync": "Última sincronização",
-        "mappedOrgs": "Organizações mapeadas",
-        "never": "Nunca",
-        "syncedDevices": "Dispositivos sincronizados"
-      },
-      "description": "Conecte o Tactical RMM para sincronizar ativos e ingerir alertas.",
-      "errors": {
-        "backfillAlerts": "Falha no backfill de alertas",
-        "connectionTest": "Falha no teste de conexão",
-        "disconnect": "Falha ao desconectar",
-        "ingestSoftware": "Falha na ingestão de software",
-        "loadOrgMappings": "Falha ao carregar os mapeamentos de organização",
-        "loadSettings": "Falha ao carregar as configurações do Tactical RMM",
-        "saveConfig": "Falha ao salvar a configuração do Tactical RMM",
-        "someAlertsFailed": "Alguns alertas não puderam ser atualizados: {{errors}}",
-        "someDevicesFailed": "Alguns dispositivos não puderam ser sincronizados: {{errors}}",
-        "someOrgsFailed": "Algumas organizações não puderam ser sincronizadas: {{errors}}",
-        "someSoftwareFailed": "Algumas linhas de software não puderam ser ingeridas: {{errors}}",
-        "syncDevices": "Falha na sincronização de dispositivos",
-        "syncOrgs": "Falha na sincronização de organizações",
-        "totpRequired": "TOTP é obrigatório. Insira seu código atual e teste novamente.",
-        "updateMapping": "Falha ao atualizar o mapeamento"
-      },
-      "fields": {
-        "instanceUrl": "URL da instância",
-        "instanceUrlHelp": "Use sua URL base do Tactical (sem /api no final)."
-      },
-      "lastError": "Último erro: {{error}}",
-      "loadingSettings": "Carregando configurações do Tactical RMM...",
-      "sections": {
-        "alerts": "Alertas",
-        "alertsDescription": "Opcional: realizar backfill de alertas históricos ou ativos do Tactical para o Alga.",
-        "devices": "Dispositivos",
-        "devicesDescription": "Sincronize agentes do Tactical como ativos do Alga para organizações mapeadas.",
-        "orgMapping": "Mapeamento de organizações",
-        "orgMappingDescription": "Atribua cada cliente do Tactical a um cliente do Alga e controle a sincronização automática por organização.",
-        "orgMappingEmpty": "Nenhuma organização encontrada. Execute primeiro \"Sincronizar clientes\".",
-        "organizations": "Organizações",
-        "organizationsDescription": "Sincronize clientes do Tactical para mapeamentos de organização do Alga e, em seguida, atribua-os a clientes do Alga.",
-        "softwareInventory": "Inventário de software",
-        "softwareInventoryDescription": "Opcional: ingerir inventário de software em cache via Tactical /api/software/ (sem chamadas de atualização por agente).",
-        "webhooks": "Webhooks (alertas)",
-        "webhooksDescription": "Configure um webhook de ação de alerta do Tactical usando o cabeçalho de secret compartilhado abaixo."
-      },
-      "status": {
-        "authPrefix": "Autenticação:",
-        "connected": "Conectado",
-        "disconnected": "Desconectado",
-        "instanceUrlNotSet": "URL da instância não definida"
-      },
-      "statusLine": {
-        "configured": "Status: Configurado",
-        "notConfigured": "Status: Não configurado"
-      },
-      "success": {
-        "alertBackfillCompleted": "Backfill de alertas concluído. Processados: {{processed}}, Criados: {{created}}, Atualizados: {{updated}}, Falharam: {{failed}}",
-        "connection": "Conexão bem-sucedida.",
-        "deviceSyncCompleted": "Sincronização de dispositivos concluída. Processados: {{processed}}, Criados: {{created}}, Atualizados: {{updated}}, Excluídos: {{deleted}}, Falharam: {{failed}}",
-        "disconnected": "Desconectado.",
-        "orgSyncCompleted": "Sincronização de organizações concluída. Processadas: {{processed}}, Criadas: {{created}}, Atualizadas: {{updated}}, Falharam: {{failed}}",
-        "saved": "Configuração do Tactical RMM salva.",
-        "softwareIngestionCompleted": "Ingestão de software concluída. Processadas: {{processed}}, Instaladas/Atualizadas: {{created}}, Ativos atualizados: {{updated}}, Falharam: {{failed}}"
-      },
-      "tacticalIdLabel": "ID do Tactical: {{id}}",
-      "title": "Tactical RMM",
-      "toasts": {
-        "alertsSyncedDescription": "Os alertas do Tactical foram preenchidos.",
-        "alertsSyncedTitle": "Alertas sincronizados",
-        "backfillFailedTitle": "Falha no backfill",
-        "connectedDescription": "Conexão do Tactical RMM verificada.",
-        "connectedTitle": "Conectado",
-        "connectionFailedTitle": "Falha na conexão",
-        "devicesSyncedDescription": "Os agentes do Tactical foram sincronizados como ativos.",
-        "devicesSyncedTitle": "Dispositivos sincronizados",
-        "disconnectFailedTitle": "Falha ao desconectar",
-        "disconnectedDescription": "Credenciais do Tactical RMM limpas.",
-        "disconnectedTitle": "Desconectado",
-        "ingestionFailedTitle": "Falha na ingestão",
-        "orgsSyncedDescription": "Os clientes do Tactical foram sincronizados em mapeamentos de organização.",
-        "orgsSyncedTitle": "Organizações sincronizadas",
-        "saveFailedTitle": "Falha ao salvar",
-        "savedDescription": "Configuração do Tactical RMM atualizada.",
-        "savedTitle": "Salvo",
-        "softwareIngestedDescription": "Inventário de software do Tactical em cache foi ingerido.",
-        "softwareIngestedTitle": "Software ingerido",
-        "syncFailedTitle": "Falha na sincronização",
-        "unknownError": "Erro desconhecido",
-        "updateFailedTitle": "Falha na atualização"
-      },
-      "webhook": {
-        "copiedTitle": "Copiado",
-        "copy": "Copiar",
-        "headerName": "Nome do cabeçalho",
-        "payloadTemplate": "Modelo de payload",
-        "secret": "Secret do cabeçalho",
-        "secretCopied": "Secret do webhook copiado para a área de transferência.",
-        "unavailable": "Informações do webhook indisponíveis. (Requer permissão de leitura das configurações.)",
-        "url": "URL do webhook",
-        "urlCopied": "URL do webhook copiada para a área de transferência."
-      }
-    },
-    "tanium": {
-      "loading": "Carregando configurações da integração Tanium..."
-    }
-  },
-  "sso": {
-    "msp": {
-      "actions": {
-        "add": "Adicionar",
-        "refresh": "Atualizar",
-        "request": "Solicitar",
-        "resetChallenge": "Redefinir desafio",
-        "revoke": "Revogar",
-        "saveDomains": "Salvar domínios",
-        "saving": "Salvando…",
-        "verify": "Verificar"
-      },
-      "addDomainLabel": "Adicionar domínio de login",
-      "advisoryNotice": "Modo consultivo: o registro do domínio ajuda no roteamento da descoberta de MSP SSO, mas não requer verificação de propriedade na Community Edition.",
-      "claimStatus": {
-        "advisory": "Consultivo",
-        "pending": "Pendente",
-        "rejected": "Rejeitado",
-        "revoked": "Revogado",
-        "verified": "Verificado",
-        "verifiedLegacy": "Verificado (Legacy)"
-      },
-      "descriptionCe": "Registre domínios consultivos para a descoberta do SSO de login MSP. A verificação de propriedade não é imposta na Community Edition, e domínios não gerenciados usam como fallback os provedores de nível de aplicativo da Nine Minds.",
-      "descriptionEe": "Gerencie o ciclo de vida das reivindicações de domínio para a descoberta de provedores SSO de login MSP. Domínios não reivindicados ou não elegíveis usam como fallback os provedores de nível de aplicativo da Nine Minds.",
-      "dnsHost": "Host:",
-      "dnsInstructions": "Adicione o registro DNS TXT e, em seguida, clique em Verificar:",
-      "dnsValue": "Valor:",
-      "emptyClaims": "Nenhuma reivindicação de domínio configurada ainda.",
-      "emptyDomains": "Nenhum domínio configurado. Domínios desconhecidos usarão o fallback do provedor de nível de aplicativo.",
-      "errors": {
-        "conflicts": "Conflitos: {{conflicts}}.",
-        "loadClaims": "Não foi possível carregar as reivindicações de domínio MSP SSO.",
-        "loadDomains": "Não foi possível carregar os domínios de login MSP SSO.",
-        "refreshChallenge": "Não foi possível atualizar o desafio.",
-        "requestClaim": "Não foi possível solicitar a reivindicação de domínio.",
-        "revokeClaim": "Não foi possível revogar a reivindicação de domínio.",
-        "saveDomains": "Não foi possível salvar os domínios de login MSP SSO.",
-        "verifyClaim": "Não foi possível verificar a reivindicação de domínio."
-      },
-      "fallbackInfo": "Domínios sem uma reivindicação de tenant elegível usam a configuração do provedor SSO de nível de aplicativo da Nine Minds.",
-      "loading": "Carregando…",
-      "removeDomainAria": "Remover domínio {{number}}",
-      "requestClaim": "Solicitar reivindicação",
-      "requestClaimLabel": "Solicitar reivindicação de domínio",
-      "title": "Domínios de login MSP SSO",
-      "toasts": {
-        "claimRequestedDescription": "Reivindicação de domínio pendente criada e desafio de verificação gerado.",
-        "claimRequestedTitle": "Reivindicação de domínio solicitada",
-        "claimUnchangedDescription": "A reivindicação pendente e o desafio existentes já estão ativos.",
-        "claimUnchangedTitle": "Reivindicação de domínio inalterada",
-        "refreshFailedTitle": "Não foi possível atualizar o desafio",
-        "refreshedDescription": "Um novo desafio de verificação está ativo para esta reivindicação.",
-        "refreshedTitle": "Desafio atualizado",
-        "requestClaimFailedTitle": "Não foi possível solicitar a reivindicação de domínio",
-        "revokeFailedTitle": "Não foi possível revogar a reivindicação",
-        "revokedDescription": "A tomada de posse do tenant para este domínio está desabilitada.",
-        "revokedTitle": "Reivindicação de domínio revogada",
-        "saveDomainsFailedTitle": "Não foi possível salvar os domínios de login MSP SSO",
-        "savedDescription": "As configurações de descoberta SSO baseadas em domínio foram atualizadas.",
-        "savedTitle": "Domínios de login MSP SSO salvos",
-        "verifiedDescription": "A tomada de posse do domínio agora é elegível para o roteamento de provedor no escopo do tenant.",
-        "verifiedTitle": "Reivindicação de domínio verificada",
-        "verifyFailedTitle": "Falha na verificação do domínio"
-      }
-    }
-  },
-  "teams": {
-    "settings": {
-      "actions": {
-        "activate": "Ativar Teams",
-        "addNote": {
-          "description": "Permitir ações rápidas de nota interna.",
-          "label": "Adicionar nota"
-        },
-        "approvalResponse": {
-          "description": "Permitir ações rápidas de aprovação e rejeição.",
-          "label": "Resposta de aprovação"
-        },
-        "assignTicket": {
-          "description": "Permitir ações rápidas de atribuição de ticket.",
-          "label": "Atribuir ticket"
-        },
-        "deactivate": "Desativar",
-        "logTime": {
-          "description": "Permitir ações rápidas de registro de tempo.",
-          "label": "Registrar tempo"
-        },
-        "reload": "Recarregar",
-        "replyToContact": {
-          "description": "Permitir ações rápidas de resposta visíveis para o cliente.",
-          "label": "Responder ao contato"
-        },
-        "saveChanges": "Salvar alterações",
-        "saveDraft": "Salvar rascunho",
-        "saving": "Salvando...",
-        "teamsActive": "Teams ativo"
-      },
-      "capabilities": {
-        "activityNotifications": {
-          "description": "Entregar notificações pessoais no feed de atividades do Teams.",
-          "label": "Notificações de atividade"
-        },
-        "groupChatBot": {
-          "description": "Permitir que o bot responda em chats de grupo do Teams. Respostas do bot (incluindo detalhes de ticket) são visíveis para todos os membros do chat.",
-          "label": "Bot em chat de grupo"
-        },
-        "messageExtension": {
-          "description": "Habilitar consultas e ações PSA orientadas por mensagens.",
-          "label": "Message extension"
-        },
-        "personalBot": {
-          "description": "Habilitar comandos de bot em escopo pessoal para técnicos.",
-          "label": "Bot pessoal"
-        },
-        "personalTab": {
-          "description": "Iniciar o ponto de entrada da aba pessoal PSA.",
-          "label": "Aba pessoal"
-        }
-      },
-      "checklist": {
-        "installState": {
-          "active": "O Teams está ativo para este tenant.",
-          "error": "A configuração do Teams tem um erro que precisa ser corrigido.",
-          "label": "Estado de instalação do Teams",
-          "notConfigured": "Salve um rascunho ou ative o Teams quando a configuração estiver pronta.",
-          "pending": "O rascunho da configuração foi salvo e está pronto para instalação ou consentimento."
-        },
-        "needsAction": "Requer ação",
-        "profileReady": {
-          "completed": "O perfil selecionado possui Client ID, Tenant ID e material de secret armazenado.",
-          "label": "Perfil pronto para instalação do Teams",
-          "pending": "Nenhum perfil Teams selecionado está pronto ainda."
-        },
-        "profileSelected": {
-          "completed": "{{name}} está vinculado para o Teams.",
-          "label": "Perfil Microsoft selecionado",
-          "pending": "Selecione um perfil Microsoft elegível antes de salvar ou ativar o Teams."
-        },
-        "ready": "Pronto"
-      },
-      "description": "Vincule o Teams a um perfil Microsoft, habilite capacidades e gere o pacote do tenant.",
-      "errors": {
-        "downloadPackage": "Falha ao baixar o pacote do aplicativo Teams",
-        "generatePackage": "Falha ao gerar o pacote do aplicativo Teams",
-        "loadGuidance": "Falha ao carregar o guia de configuração do Teams",
-        "saveSettings": "Falha ao salvar as configurações do Teams"
-      },
-      "guidance": {
-        "applicationIdUri": "Application ID URI",
-        "messageExtension": "Message extension",
-        "personalBot": "Bot pessoal",
-        "personalTab": "Aba pessoal",
-        "redirectUris": "Redirect URIs",
-        "requiredScopes": "Escopos obrigatórios",
-        "teamsAppIdUri": "Teams App ID URI",
-        "unavailable": "Indisponível"
-      },
-      "installStatus": {
-        "active": "Ativo",
-        "error": "Erro",
-        "installPending": "Instalação pendente",
-        "notConfigured": "Não configurado"
-      },
-      "noEligibleProfiles": "Nenhum perfil Microsoft está pronto para o Teams. Conclua primeiro a configuração Microsoft.",
-      "notifications": {
-        "approvalRequest": {
-          "description": "Notificar aprovadores sobre decisões pendentes.",
-          "label": "Solicitações de aprovação"
-        },
-        "assignment": {
-          "description": "Notificar técnicos quando trabalho for atribuído.",
-          "label": "Eventos de atribuição"
-        },
-        "customerReply": {
-          "description": "Notificar técnicos quando os clientes responderem.",
-          "label": "Respostas de clientes"
-        },
-        "escalation": {
-          "description": "Notificar responsáveis quando o trabalho for escalonado.",
-          "label": "Escalonamentos"
-        },
-        "slaRisk": {
-          "description": "Notificar técnicos quando os limites de risco de SLA forem atingidos.",
-          "label": "Risco de SLA"
-        }
-      },
-      "package": {
-        "appId": "App ID",
-        "appIds": "App IDs",
-        "botId": "Bot ID",
-        "deepLinks": "Deep links",
-        "description": "Gere o manifesto do aplicativo e os links de instalação para o perfil Microsoft selecionado.",
-        "downloadManifest": "Baixar manifesto JSON",
-        "downloadZip": "Baixar pacote do aplicativo (.zip)",
-        "downloading": "Baixando...",
-        "fileName": "Nome do arquivo",
-        "generate": "Gerar pacote",
-        "generating": "Gerando...",
-        "manifestVersion": "Versão do manifesto",
-        "myWork": "Meu trabalho",
-        "openBaseUrl": "Abrir URL base do PSA",
-        "openDeeplink": "Abrir deep link do Teams",
-        "packageVersion": "Versão do pacote",
-        "projectTaskTemplate": "Modelo de tarefa de projeto",
-        "section": "Pacote",
-        "ticketTemplate": "Modelo de ticket",
-        "title": "Pacote Teams",
-        "validDomains": "Domínios válidos",
-        "webResource": "Recurso de aplicação web"
-      },
-      "profileLabel": "Perfil Microsoft",
-      "profileSummary": {
-        "needsRepair": "Perfil selecionado precisa de reparo",
-        "none": "Nenhum perfil selecionado"
-      },
-      "section": {
-        "allowedActions": "Ações permitidas",
-        "capabilities": "Capacidades",
-        "notifications": "Notificações"
-      },
-      "selectProfile": "Selecionar perfil",
-      "statusMessage": {
-        "activated": "Configuração do Teams ativada.",
-        "deactivated": "Configuração do Teams desativada.",
-        "packageDownloaded": "Pacote do aplicativo Teams baixado.",
-        "packageGenerated": "Pacote do aplicativo Teams gerado.",
-        "saved": "Configuração do Teams salva."
-      },
-      "title": "Microsoft Teams"
-    }
-  },
-  "xero": {
-    "csv": {
-      "clientSync": {
-        "cancel": "Cancelar",
-        "createNew": "Criar novos clientes",
-        "description": "Exporte clientes para CSV Xero Contacts ou importe contatos do Xero.",
-        "errorRow": "Linha {{row}}: {{name}} - {{error}}",
-        "errors": {
-          "export": "Falha ao exportar clientes",
-          "import": "Falha ao importar clientes",
-          "processCsv": "Falha ao processar o arquivo CSV"
-        },
-        "errorsTitle": "Erros ({{count}})",
-        "exportButton": "Exportar clientes para CSV",
-        "exportClients": "Exportar clientes",
-        "exportDescription": "Exporte seus clientes Alga para um arquivo CSV que pode ser importado no Xero como Contacts.",
-        "exportSuccess": "{{count}} clientes exportados para {{filename}}",
-        "importCompleteDescription": "{{count}} contatos processados com sucesso.",
-        "importCompleteTitle": "Importação concluída",
-        "importContacts": "Importar contatos",
-        "importContactsButton": "Importar {{count}} contatos",
-        "importDescription": "Importe contatos de uma exportação CSV Xero Contacts. Clientes existentes podem ser correspondidos e atualizados.",
-        "importing": "Importando contatos...",
-        "matchBy": {
-          "algaClientId": "ID do cliente Alga (da categoria de rastreamento)",
-          "contactName": "Nome do contato",
-          "emailAddress": "Endereço de e-mail"
-        },
-        "matchByLabel": "Corresponder contatos por:",
-        "moreErrors": "...e mais {{count}} erros",
-        "preview": {
-          "columns": {
-            "action": "Ação",
-            "contactName": "Nome do contato",
-            "email": "E-mail",
-            "matchedClient": "Cliente correspondido"
-          },
-          "moreWarnings": "...e mais {{count}}",
-          "showing20of": "Mostrando 20 de {{count}} linhas",
-          "toCreate": "Para criar",
-          "toSkip": "Para ignorar",
-          "toUpdate": "Para atualizar",
-          "warnings": "Avisos"
-        },
-        "processing": "Processando {{filename}}...",
-        "result": {
-          "created": "Criados",
-          "mappings": "Mapeamentos",
-          "skipped": "Ignorados",
-          "updated": "Atualizados"
-        },
-        "selectCsvFile": "Selecionar arquivo CSV",
-        "startNewImport": "Iniciar nova importação",
-        "title": "Sincronização de clientes",
-        "updateExisting": "Atualizar clientes existentes",
-        "workflow": {
-          "s1": "Exportar clientes do Alga para CSV Xero Contacts",
-          "s2": "Importar o CSV no Xero (Contacts → Import)",
-          "s3": "Após alterações no Xero, exportar contatos do Xero",
-          "s4": "Importar o CSV de contatos do Xero de volta para o Alga para sincronizar atualizações"
-        },
-        "workflowTitle": "Fluxo de sincronização de clientes"
       },
       "settings": {
-        "dateFormat": "Formato de data",
-        "dateFormatHelp": "Ajuste isto às configurações regionais do seu Xero.",
-        "dateFormatOptions": {
-          "dmy": "DD/MM/AAAA (Dia/Mês/Ano)",
-          "mdy": "MM/DD/AAAA (Mês/Dia/Ano)"
+        "exports": {
+          "description": "Crie lotes de exportação, baixe arquivos CSV, importe relatórios fiscais e revise o histórico de exportação.",
+          "managedTitle": "Gerenciado pelo Faturamento",
+          "openButton": "Abrir exportações contábeis",
+          "path": "Faturamento → Exportações contábeis",
+          "title": "Exportações contábeis"
         },
-        "defaultCurrency": "Moeda padrão",
-        "defaultCurrencyHelp": "Deixe em branco para usar a moeda da fatura.",
-        "errors": {
-          "load": "Falha ao carregar as configurações",
-          "save": "Falha ao salvar as configurações"
-        },
-        "exportSettings": {
-          "description": "Configure como as faturas são exportadas no formato CSV para o Xero.",
-          "title": "Configurações de exportação CSV"
-        },
-        "loading": "Carregando configurações CSV do Xero...",
-        "managedPrefix": "Acesse",
-        "managedSuffix": "para selecionar faturas, gerar exportações CSV do Xero, importar relatórios fiscais e gerenciar lotes.",
-        "mappings": {
-          "description": "Mapeie clientes, serviços e códigos fiscais do Alga para os identificadores usados em sua organização Xero. Estes valores são usados ao gerar a exportação CSV.",
-          "title": "Mapeamentos CSV do Xero"
-        },
-        "overview": {
-          "description": "Exporte faturas para CSV para importação manual no Xero e importe dados fiscais dos relatórios do Xero.",
-          "exportLabel": "Exportação",
-          "exportText": "Gere arquivos CSV compatíveis com o recurso de importação de faturas do Xero",
-          "intro": "Esta integração fornece uma alternativa à conectividade com o Xero baseada em OAuth:",
+        "qbo": {
+          "bullets": {
+            "exportLabel": "Exportação",
+            "exportText": "Gere arquivos CSV compatíveis com o recurso de importação de faturas do QuickBooks",
+            "taxImportLabel": "Importação de impostos",
+            "taxImportText": "Ao usar cálculo fiscal externo, importe valores fiscais dos relatórios fiscais do QuickBooks"
+          },
+          "description": "Exporte faturas para CSV para importação manual no QuickBooks e importe dados fiscais dos relatórios do QuickBooks.",
+          "exports": {
+            "managedPrefix": "Acesse",
+            "managedSuffix": "para selecionar faturas, gerar exportações CSV do QuickBooks, importar relatórios fiscais e gerenciar lotes."
+          },
+          "intro": "Esta integração fornece uma alternativa à conectividade com o QuickBooks baseada em OAuth:",
+          "mappings": {
+            "description": "Mapeie clientes, serviços, códigos fiscais e condições de pagamento do Alga para os identificadores usados em sua empresa QuickBooks. Estes valores são usados ao gerar a exportação CSV.",
+            "title": "Mapeamentos CSV do QuickBooks"
+          },
           "note": "Nota: Configure os mapeamentos abaixo antes de exportar. As exportações CSV e as importações de impostos são gerenciadas em Faturamento → Exportações contábeis.",
-          "taxImportLabel": "Importação de impostos",
-          "taxImportText": "Ao usar cálculo fiscal externo, importe valores fiscais do Xero Invoice Details Report",
-          "title": "Integração CSV do Xero"
+          "title": "Integração CSV do QuickBooks"
+        }
+      },
+      "taxImport": {
+        "actions": {
+          "importTaxData": "Importar dados fiscais",
+          "importing": "Importando...",
+          "validate": "Validar",
+          "validating": "Validando..."
         },
-        "savedMessage": "Configurações salvas com sucesso",
-        "selectCurrency": "Selecionar moeda",
-        "setup": {
-          "acknowledge": "Concluí a configuração",
-          "description": "Conclua estes passos no Xero antes de usar a importação/exportação CSV.",
-          "externalInvoiceId": "ID externo da fatura",
-          "externalInvoiceIdHelp": "As opções serão criadas automaticamente ao importar",
-          "sourceSystem": "Sistema de origem",
-          "sourceSystemHelp": "Adicione uma opção chamada",
-          "step1Description": "No Xero, acesse Settings → Tracking Categories e crie estas duas categorias:",
-          "step1Title": "Passo 1: Criar categorias de rastreamento",
-          "step2Description": "Certifique-se de que sua organização Xero tenha as alíquotas fiscais necessárias configuradas em Settings → Tax Rates.",
-          "step2Title": "Passo 2: Configurar alíquotas fiscais",
-          "step3Description": "Use a seção de mapeamento abaixo para vincular seus serviços Alga aos códigos de item do Xero e suas regiões fiscais às alíquotas fiscais do Xero.",
-          "step3Title": "Passo 3: Mapear serviços e regiões fiscais",
-          "title": "Configuração do Xero necessária"
+        "errors": {
+          "importFailed": "Falha na importação",
+          "readFile": "Falha ao ler o arquivo",
+          "selectFile": "Selecione um arquivo CSV",
+          "selectFileAndRange": "Selecione um arquivo e um intervalo de datas",
+          "templateDownloadFailed": "Falha ao baixar o modelo",
+          "validationFailed": "Falha na validação"
         },
-        "useInvoiceCurrency": "Usar moeda da fatura",
-        "workflow": {
-          "description": "Como exportar faturas e importar cálculos fiscais.",
-          "export": {
-            "s1": "Acesse Faturamento → Exportações contábeis",
-            "s2": "Selecione faturas e escolha \"Xero CSV\" como adaptador",
-            "s3": "Baixe o arquivo CSV gerado",
-            "s4": "No Xero: Business → Invoices → Import",
-            "s5": "Faça upload do CSV e importe como faturas de rascunho",
-            "s6": "O Xero calculará o imposto com base nas suas configurações fiscais"
+        "fields": {
+          "csvFile": "Arquivo CSV",
+          "dateRangeHelp": "Apenas faturas dentro deste intervalo de datas serão processadas.",
+          "dateRangeRequired": "Intervalo de datas (obrigatório)",
+          "dropZone": "Arraste e solte um arquivo CSV aqui, ou clique para navegar",
+          "fileSize": "({{size}} KB)"
+        },
+        "preview": {
+          "alreadyImported": "{{count}} fatura(s) já possuem impostos importados.",
+          "alreadyImportedSkip": "{{count}} fatura(s) já possuem impostos importados e serão ignoradas.",
+          "badges": {
+            "databaseMatch": "Correspondência no banco",
+            "rowData": "Dados da linha",
+            "structure": "Estrutura"
           },
-          "exportInvoices": "Exportar faturas",
-          "import": {
-            "s1": "No Xero: Reports → All Reports → Invoice Details",
-            "s2": "Defina o intervalo de datas e exporte como CSV",
-            "s3": "No Alga: Faturamento → Exportações contábeis → Importar impostos",
-            "s4": "Faça upload do CSV do relatório Xero",
-            "s5": "Revise as faturas correspondidas e confirme a importação"
+          "columns": {
+            "algaInvoice": "Fatura Alga",
+            "contact": "Contato",
+            "status": "Status",
+            "taxAmount": "Valor fiscal",
+            "xeroInvoice": "Fatura Xero"
           },
-          "importTax": "Importar cálculos fiscais",
-          "title": "Fluxo CSV",
-          "trackingDescription": "A exportação CSV inclui colunas de categorias de rastreamento que vinculam cada fatura Xero à sua origem Alga. Ao importar impostos do Xero, estas categorias de rastreamento são usadas para corresponder faturas automaticamente — sem reconciliação manual.",
-          "trackingTitle": "Categorias de rastreamento para reconciliação"
+          "errorsTitle": "Erros ({{count}})",
+          "matched": "Correspondida",
+          "matchedInvoices": "Faturas correspondidas",
+          "notPendingDescription": "Estas faturas foram criadas com cálculo fiscal interno. Para importar impostos do Xero, as faturas devem ser configuradas com a origem fiscal \"Pending External\" ao exportar.",
+          "notPendingSkip": "{{count}} fatura(s) não têm imposto externo pendente e serão ignoradas.",
+          "notPendingTitle": "{{count}} fatura(s) não usam cálculo fiscal externo.",
+          "showingFirst20": "Mostrando as primeiras 20 de {{count}} linhas",
+          "taxToImport": "Imposto a importar",
+          "title": "Resultados da validação",
+          "totalRows": "Total de linhas",
+          "uniqueInvoices": "Faturas únicas",
+          "unmatched": "Não correspondida",
+          "validRows": "Linhas válidas",
+          "warningsTitle": "Avisos ({{count}})"
+        },
+        "qbo": {
+          "description": "Importe valores fiscais de um arquivo CSV de relatório fiscal do QuickBooks.",
+          "help": {
+            "csvRequirement": "O CSV deve incluir as colunas Número da fatura, Data da fatura e Valor fiscal.",
+            "downloadTemplate": "Baixar modelo CSV",
+            "steps": {
+              "s1": "No QuickBooks, acesse Reports > All Reports",
+              "s2": "Selecione Sales Tax Liability ou Transaction Detail by Account",
+              "s3": "Defina o intervalo de datas para corresponder às suas faturas exportadas",
+              "s4": "Clique em Export e escolha Export to Excel ou Export to CSV",
+              "s5": "Salve o arquivo e faça upload aqui"
+            },
+            "title": "Como exportar dados fiscais do QuickBooks"
+          },
+          "success": {
+            "one": "Imposto importado com sucesso para {{count}} fatura. Imposto total importado: ${{amount}}",
+            "other": "Imposto importado com sucesso para {{count}} faturas. Imposto total importado: ${{amount}}"
+          },
+          "title": "Importar impostos do CSV do QuickBooks"
+        },
+        "result": {
+          "failed": "{{count}} com falha.",
+          "one": "Imposto importado para {{count}} fatura. Imposto total importado: {{amount}}.",
+          "other": "Imposto importado para {{count}} faturas. Imposto total importado: {{amount}}.",
+          "skipped": "{{count}} ignoradas."
+        },
+        "unified": {
+          "description": "Importe valores fiscais da exportação CSV do seu sistema contábil.",
+          "qbResult": {
+            "one": "Imposto importado com sucesso para {{count}} fatura. Imposto total importado: {{amount}}",
+            "other": "Imposto importado com sucesso para {{count}} faturas. Imposto total importado: {{amount}}"
+          },
+          "source": {
+            "ariaLabel": "Origem da importação CSV",
+            "quickbooks": "QuickBooks",
+            "xero": "Xero"
+          },
+          "title": "Importar impostos de CSV",
+          "xeroCsvDescription": "O CSV exportado inclui Número da fatura, Nome do contato, Valor da linha, Valor fiscal e categorias de rastreamento.",
+          "xeroHelp": {
+            "note": "Nota: Apenas faturas originalmente exportadas do Alga PSA (com o rastreamento Source System = AlgaPSA) serão correspondidas.",
+            "s1": "No Xero, acesse Sales > Invoices",
+            "s2": "Selecione a aba de fatura da qual deseja exportar (ex. Paid, Awaiting Payment)",
+            "s3": "(Opcional) Clique em Search para filtrar por data de início, data de fim ou tipo de data",
+            "s4": "Clique em Export",
+            "s5": "O Xero baixa um arquivo CSV para seu computador",
+            "s6": "Faça upload desse arquivo CSV aqui"
+          },
+          "xeroResult": {
+            "one": "Imposto importado para {{count}} fatura. Total: {{amount}}.",
+            "other": "Imposto importado para {{count}} faturas. Total: {{amount}}."
+          }
+        },
+        "xero": {
+          "description": "Importe valores fiscais de um arquivo CSV de Xero Invoice Details Report.",
+          "dropZone": "Arraste e solte um CSV de Xero Invoice Details Report aqui, ou clique para navegar",
+          "help": {
+            "csvRequirement": "O relatório deve incluir colunas para Número da fatura, Nome do contato, Valor da linha e Valor fiscal. As faturas são correspondidas usando o campo Reference ou as categorias de rastreamento definidas durante a exportação.",
+            "steps": {
+              "s1": "No Xero, acesse Reports > All Reports",
+              "s2": "Selecione Sales (Invoices and Revenue)",
+              "s3": "Execute o relatório Invoice Details",
+              "s4": "Defina o intervalo de datas para corresponder às suas faturas exportadas",
+              "s5": "Clique em Export e escolha CSV",
+              "s6": "Faça upload do arquivo exportado aqui"
+            },
+            "title": "Como exportar dados fiscais do Xero"
+          },
+          "title": "Importar impostos do CSV do Xero"
         }
       }
     },
-    "live": {
-      "defaultOrganisation": "Organização Xero padrão"
+    "google": {
+      "settings": {
+        "actions": {
+          "refresh": "Atualizar",
+          "resetProviders": "Redefinir provedores do Google",
+          "resetting": "Redefinindo…",
+          "save": "Salvar",
+          "saving": "Salvando…"
+        },
+        "afterSaveNotice": "Após salvar, vá até as integrações de E-mail recebido e Calendário e reautorize os provedores. Provedores Google existentes não são migrados.",
+        "consoleLink": "Google Cloud Console",
+        "description": "Configure credenciais do Google Cloud de propriedade do tenant para Gmail (entrada) e Google Calendar.",
+        "errors": {
+          "loadFailed": "Falha ao carregar as configurações do Google",
+          "resetFailed": "Falha ao redefinir os provedores do Google",
+          "saveFailed": "Falha ao salvar as configurações do Google"
+        },
+        "fields": {
+          "projectIdHelp": "Usado para provisionamento do Pub/Sub do Gmail (conta de serviço de propriedade do tenant).",
+          "projectIdLabel": "ID do projeto Google Cloud",
+          "projectIdPlaceholder": "my-project-id"
+        },
+        "loading": "Carregando…",
+        "oauth": {
+          "calendarClientId": "Calendar OAuth Client ID",
+          "calendarClientSecret": "Calendar OAuth Client Secret",
+          "enterSecret": "Inserir client secret",
+          "gmailClientId": "Gmail OAuth Client ID",
+          "gmailClientSecret": "Gmail OAuth Client Secret",
+          "sectionTitle": "Aplicativo OAuth",
+          "shareApp": "Usar o mesmo aplicativo OAuth para Gmail e Calendar",
+          "shareAppHelp": "Recomendado. Você ainda pode autorizar contas Google separadas por integração.",
+          "storedSecret": "Secret armazenado: {{secret}}"
+        },
+        "redirectUrisLabel": "Redirect URIs (copiar para o client OAuth do Google)",
+        "scopes": "Escopos",
+        "scopesCalendar": "Calendar: {{scopes}}",
+        "scopesGmail": "Gmail: {{scopes}}",
+        "serviceAccount": {
+          "alreadyStored": "Uma chave de conta de serviço já está armazenada (não exibida).",
+          "description": "Cole o JSON da chave da conta de serviço de propriedade do tenant usada para provisionar o Pub/Sub.",
+          "title": "Conta de serviço do Pub/Sub (obrigatória para o Gmail)"
+        },
+        "setupGuide": "Guia de configuração",
+        "title": "Google",
+        "toasts": {
+          "resetDescription": "Todos os provedores do Google estão agora desconectados e requerem nova autorização.",
+          "resetFailedTitle": "Falha ao redefinir",
+          "resetTitle": "Provedores do Google redefinidos",
+          "saveFailedTitle": "Não foi possível salvar as configurações do Google",
+          "savedDescription": "A configuração do Google do tenant foi atualizada com sucesso.",
+          "savedTitle": "Configurações do Google salvas",
+          "unknownError": "Erro desconhecido"
+        }
+      }
     },
-    "settings": {
-      "actions": {
-        "connect": "Conectar Xero",
-        "disconnect": "Desconectar Xero",
-        "disconnecting": "Desconectando…",
-        "reconnect": "Reconectar Xero",
-        "refresh": "Atualizar",
-        "saveCredentials": "Salvar credenciais Xero",
-        "saving": "Salvando…"
-      },
-      "badges": {
-        "connectionExpired": "Conexão expirada",
-        "credentialsReady": "Credenciais prontas",
-        "credentialsRequired": "Credenciais obrigatórias",
-        "defaultConnected": "Organização padrão conectada",
-        "noOrganisation": "Nenhuma organização conectada"
-      },
+    "microsoft": {
+      "settings": {
+        "actions": {
+          "entraLink": "Microsoft Entra",
+          "newProfile": "Novo perfil",
+          "openTeamsSetup": "Abrir configuração do Teams",
+          "refresh": "Atualizar",
+          "resetProviders": "Redefinir provedores Microsoft",
+          "resetting": "Redefinindo…"
+        },
+        "archiveDialog": {
+          "archiving": "Arquivando…",
+          "cancel": "Manter perfil",
+          "confirm": "Arquivar perfil",
+          "message": "Arquivar {{name}}? Referências históricas existentes permanecem intactas, mas o perfil não estará mais disponível para novas vinculações.",
+          "title": "Arquivar perfil Microsoft?"
+        },
+        "binding": {
+          "bound": "Vinculado",
+          "boundProfileLabel": "Perfil vinculado",
+          "createFirst": "Crie primeiro um perfil",
+          "needsAttention": "Requer atenção",
+          "saving": "Salvando…",
+          "selectProfile": "Selecionar um perfil",
+          "unbound": "Não vinculado"
+        },
+        "bindings": {
+          "summaryBound": "{{consumer}} está vinculado a {{profile}}.",
+          "summaryNone": "Nenhum perfil Microsoft está atualmente vinculado a {{consumer}}.",
+          "summaryUnavailable": "{{consumer}} está vinculado a um perfil indisponível.",
+          "warningArchived": "{{consumer}} ainda está vinculado a um perfil arquivado. Revincule-o a um perfil ativo.",
+          "warningNoBinding": "Nenhuma vinculação de {{consumer}} está configurada ainda.",
+          "warningNotReady": "{{consumer}} está vinculado a {{profile}}, mas esse perfil ainda precisa de configuração.",
+          "warningProfileMissing": "{{consumer}} está vinculado a um perfil que não está mais disponível. Revincule-o a um perfil ativo."
+        },
+        "bindingsAlertCe": "Vinculações explícitas são a fonte da verdade para a seleção de perfil MSP SSO. Configure os domínios de login separadamente após escolher o perfil vinculado.",
+        "bindingsAlertEe": "Vinculações explícitas são a fonte da verdade para a seleção de perfis MSP SSO, e-mail, calendário e Teams.",
+        "consumerBindings": {
+          "descriptionCe": "Vincule um perfil Microsoft ao MSP SSO para login e uso de domínio de login.",
+          "descriptionEe": "Vincule um perfil Microsoft por consumidor compatível. Reatribuir um consumidor não altera os demais.",
+          "title": "Vinculações explícitas de consumidor"
+        },
+        "consumers": {
+          "calendar": {
+            "description": "Escolha qual perfil Microsoft a sincronização do calendário do Outlook deve usar.",
+            "label": "Calendário",
+            "reconnect": "Conexões existentes do calendário Microsoft podem precisar de nova autorização após a alteração do perfil vinculado."
+          },
+          "email": {
+            "description": "Escolha qual perfil Microsoft o e-mail recebido do Outlook deve usar.",
+            "label": "E-mail",
+            "reconnect": "Conexões existentes de e-mail do Outlook podem precisar de nova autorização após a alteração do perfil vinculado."
+          },
+          "mspSso": {
+            "description": "Escolha qual perfil Microsoft sustenta os domínios de login MSP SSO, o login da Microsoft e a descoberta de tenant.",
+            "label": "MSP SSO"
+          },
+          "teams": {
+            "description": "Escolha qual perfil Microsoft a instalação do Microsoft Teams e os fluxos de autenticação devem usar.",
+            "label": "Teams"
+          }
+        },
+        "descriptionCe": "Gerencie perfis Microsoft de propriedade do tenant para MSP SSO, login da Microsoft e descoberta de domínios de login.",
+        "descriptionEe": "Gerencie perfis Microsoft de propriedade do tenant para MSP SSO, e-mail do Outlook, sincronização de calendário e Microsoft Teams.",
+        "dialog": {
+          "cancel": "Cancelar",
+          "clientId": "Client ID",
+          "clientSecret": "Client secret",
+          "clientSecretPlaceholder": "Inserir client secret",
+          "clientSecretPlaceholderEdit": "Deixe em branco para manter o secret atual",
+          "createProfile": "Criar perfil",
+          "createTitle": "Criar perfil Microsoft",
+          "descriptionCreate": "Crie um perfil Microsoft de propriedade do tenant e, em seguida, vincule-o explicitamente aos consumidores Microsoft que você deseja usar.",
+          "descriptionEdit": "Atualize o perfil Microsoft selecionado. Deixe o secret em branco para manter o valor existente.",
+          "displayName": "Nome de exibição",
+          "displayNamePlaceholder": "Tenant de produção da Acme",
+          "editTitle": "Editar perfil Microsoft",
+          "saveChanges": "Salvar alterações",
+          "saving": "Salvando…",
+          "setDefault": "Definir este perfil como perfil Microsoft padrão",
+          "setDefaultHelp": "Perfis padrão permanecem disponíveis para fluxos de gerenciamento de perfil e metadados seguros para migração, não para roteamento de consumidores.",
+          "storedSecretHint": "Secret armazenado: {{secret}}. Deixe este campo vazio para mantê-lo inalterado.",
+          "tenantId": "Tenant ID"
+        },
+        "empty": {
+          "createButton": "Criar perfil Microsoft",
+          "descriptionCe": "Crie primeiro um perfil nomeado e, em seguida, vincule-o explicitamente aos fluxos de MSP SSO e login por domínio.",
+          "descriptionEe": "Crie primeiro um perfil nomeado e, em seguida, vincule-o explicitamente a MSP SSO, e-mail do Outlook, sincronização de calendário e Teams.",
+          "title": "Ainda não há perfis Microsoft"
+        },
+        "errors": {
+          "archive": "Falha ao arquivar o perfil Microsoft",
+          "loadBindings": "Falha ao carregar as vinculações Microsoft",
+          "loadStatus": "Falha ao carregar as configurações Microsoft",
+          "resetProviders": "Falha ao redefinir os provedores Microsoft",
+          "saveProfile": "Falha ao salvar o perfil Microsoft",
+          "setDefault": "Falha ao definir o perfil Microsoft padrão",
+          "updateBinding": "Falha ao atualizar a vinculação Microsoft"
+        },
+        "guidance": {
+          "applicationIdUri": "Application ID URI",
+          "calendarRedirect": "Redirect URI de sincronização do calendário",
+          "calendarTitle": "Guia do calendário",
+          "clientId": "Client ID",
+          "currentProfileTitle": "Valores do perfil atual",
+          "emailRedirect": "Redirect URI de e-mail recebido",
+          "emailTitle": "Guia de e-mail",
+          "mspSsoTitle": "Guia do MSP SSO",
+          "notConfigured": "Não configurado",
+          "redirectUri": "Redirect URI",
+          "requiresBaseUrl": "Requer URL base e Client ID",
+          "scopes": "Escopos",
+          "teamsBotRedirect": "Redirect URI de bot pessoal",
+          "teamsMessageRedirect": "Redirect URI de message extension",
+          "teamsScopes": "Escopos do Teams",
+          "teamsTabRedirect": "Redirect URI de aba pessoal",
+          "teamsTitle": "Guia do Teams",
+          "tenantId": "Tenant ID",
+          "unavailable": "Indisponível"
+        },
+        "profileCard": {
+          "activeBindings": "Vinculações ativas",
+          "archive": "Arquivar",
+          "clientId": "Client ID",
+          "defaultBadge": "Padrão",
+          "edit": "Editar",
+          "guidanceSummary": "Guia de registro de aplicativo Microsoft",
+          "noVisibleBindings": "Nenhuma vinculação de consumidor visível",
+          "readinessTitle": "Prontidão do perfil",
+          "readyCe": "Este perfil está pronto para a vinculação MSP SSO e os fluxos de login por domínio.",
+          "readyEe": "Este perfil está pronto para as vinculações MSP SSO, e-mail do Outlook e calendário.",
+          "readyEeTeams": "Este perfil está pronto para as vinculações MSP SSO, e-mail do Outlook, sincronização de calendário e Teams.",
+          "setDefault": "Definir como padrão",
+          "storedSecret": "Secret armazenado",
+          "teamsAppIdUri": "Application ID URI do Teams",
+          "tenantIdLabel": "Tenant ID:",
+          "updating": "Atualizando…"
+        },
+        "providerReconnect": {
+          "description": "Use isto se você rotacionar credenciais ou intencionalmente revincular o e-mail do Outlook ou o calendário a um perfil Microsoft diferente.",
+          "title": "Reconexão do provedor"
+        },
+        "readiness": {
+          "archived": "Perfis arquivados não podem ser usados para novas vinculações Microsoft.",
+          "clientIdMissing": "Client ID ausente.",
+          "clientSecretMissing": "O client secret não foi configurado.",
+          "tenantIdMissing": "Tenant ID ausente."
+        },
+        "statusBadges": {
+          "archived": "Arquivado",
+          "needsAttention": "Requer atenção",
+          "ready": "Pronto"
+        },
+        "title": "Microsoft",
+        "toasts": {
+          "archiveFailedTitle": "Não foi possível arquivar o perfil Microsoft",
+          "archivedDescription": "{{name}} foi arquivado com sucesso.",
+          "archivedTitle": "Perfil Microsoft arquivado",
+          "bindingFailedTitle": "Não foi possível atualizar a vinculação de {{consumer}}",
+          "bindingUpdatedDescription": "{{consumer}} agora usa {{profile}}.",
+          "bindingUpdatedTitle": "Vinculação de {{consumer}} atualizada",
+          "defaultUpdatedDescription": "{{name}} agora é o registro padrão do perfil Microsoft.",
+          "defaultUpdatedTitle": "Perfil Microsoft padrão atualizado",
+          "profileCreated": "Perfil Microsoft criado",
+          "profileCreatedDescription": "O perfil Microsoft está pronto para ser vinculado a consumidores Microsoft visíveis.",
+          "profileUpdated": "Perfil Microsoft atualizado",
+          "profileUpdatedDescription": "As alterações do perfil Microsoft foram salvas com sucesso.",
+          "resetDescription": "As conexões existentes de e-mail do Outlook e calendário agora requerem nova autorização.",
+          "resetFailedTitle": "Falha ao redefinir",
+          "resetTitle": "Provedores Microsoft redefinidos",
+          "saveFailedTitle": "Não foi possível salvar o perfil Microsoft",
+          "selectedProfile": "o perfil selecionado",
+          "setDefaultFailedTitle": "Não foi possível definir o perfil padrão"
+        },
+        "validation": {
+          "clientIdRequired": "O Microsoft OAuth Client ID é obrigatório",
+          "clientSecretRequired": "O Microsoft OAuth Client Secret é obrigatório",
+          "displayNameRequired": "O nome de exibição do perfil Microsoft é obrigatório",
+          "tenantIdRequired": "O Microsoft Tenant ID é obrigatório"
+        }
+      }
+    },
+    "qbo": {
       "callback": {
-        "accessDenied": "O acesso ao Xero foi negado antes da conclusão da conexão.",
-        "configMissing": "Não foi possível iniciar o Xero OAuth porque o client ID e o client secret do tenant não estavam totalmente configurados.",
-        "connectionsUnmapped": "O Xero retornou organizações, mas nenhuma incluiu os identificadores necessários para salvar uma conexão.",
-        "generic": "O Xero retornou um erro OAuth: {{code}}",
-        "invalidState": "O estado OAuth do Xero era inválido ou expirou. Inicie o fluxo de conexão novamente.",
-        "missingParams": "Parâmetros obrigatórios estavam ausentes no callback do Xero. Inicie o fluxo de conexão novamente.",
-        "noConnections": "O Xero não retornou nenhuma organização para este login. Verifique seu aplicativo Xero e o acesso à organização e tente novamente.",
-        "oauthFailed": "O callback OAuth do Xero falhou. Tente se conectar novamente. Se o problema persistir, revise seu redirect URI e escopos."
+        "completed": "Processo de conexão concluído.",
+        "errorDetail": "Erro: {{error}}",
+        "errored": "O processo de conexão resultou em erro.",
+        "failed": "Falha ao conectar ao QuickBooks Online.",
+        "realmId": "ID do Realm: {{realmId}}",
+        "returnButton": "Voltar às configurações do QuickBooks",
+        "success": "Conectado com sucesso ao QuickBooks Online!",
+        "title": "Status da conexão com o QuickBooks"
+      }
+    },
+    "rmm": {
+      "ninjaOne": {
+        "loading": "A carregar definições de integração NinjaOne...",
+        "card": {
+          "title": "NinjaOne RMM Integration",
+          "description": "Connect your NinjaOne account to synchronize devices, receive alerts, and enable remote access capabilities.",
+          "skeletonDescription": "Loading NinjaOne integration..."
+        },
+        "status": {
+          "checking": "Checking NinjaOne connection...",
+          "notConnected": {
+            "title": "Not connected to NinjaOne",
+            "description": "Connect your NinjaOne account to sync devices, receive alerts, and enable remote access."
+          },
+          "connected": "Connected to NinjaOne",
+          "connectedWithErrors": "NinjaOne connected with sync errors",
+          "instanceLabel": "Instance:",
+          "organizations": "{{count}} organizations",
+          "devices": "{{count}} devices",
+          "activeAlerts": "{{count}} active alerts",
+          "lastSynced": "Last synced: {{time}}"
+        },
+        "setup": {
+          "title": "Setup Instructions",
+          "steps": {
+            "login": "Log into your NinjaOne dashboard",
+            "navigate": "Navigate to Administration → Apps → API",
+            "addClient": "Click \"+ Add client app\" to create a new API application",
+            "platform": "Set Application Platform to \"Web (PHP, Java, .Net Core, etc.)\"",
+            "name": "Enter a Name (e.g., \"Alga PSA\")",
+            "redirectUri": "Add the redirect URI:",
+            "scopes": "Under \"Scopes\", check \"Monitoring\" and \"Management\"",
+            "grantTypes": "Under \"Allowed grant types\", check \"Authorization code\", \"Client credentials\", and \"Refresh token\"",
+            "addAndCopy": "Click \"Add\" and copy the Client ID and Client Secret below"
+          },
+          "docsPrefix": "For detailed setup instructions, see",
+          "docsSection": "Section 10.15",
+          "docsSuffix": "in the documentation.",
+          "openApiSettings": "Open NinjaOne API Settings"
+        },
+        "credentials": {
+          "title": "API Credentials",
+          "saved": "Credentials saved",
+          "clientIdLabel": "Client ID",
+          "clientIdPlaceholder": "Enter your NinjaOne Client ID",
+          "clientSecretLabel": "Client Secret",
+          "clientSecretPlaceholder": "Enter your NinjaOne Client Secret",
+          "clientSecretUpdatePlaceholder": "Enter new secret to update",
+          "secretMaskedLabel": "Secret",
+          "saving": "Saving...",
+          "save": "Save Credentials"
+        },
+        "region": {
+          "hint": "Select your NinjaOne region, then click ‘Connect to NinjaOne’ to authorize access.",
+          "label": "Region:"
+        },
+        "actions": {
+          "refreshing": "Refreshing...",
+          "refreshStatus": "Refresh Status",
+          "syncing": "Syncing...",
+          "syncOrganizations": "Sync Organizations",
+          "syncingDevices": "Syncing Devices...",
+          "syncDevices": "Sync Devices",
+          "disconnecting": "Disconnecting...",
+          "disconnect": "Disconnect",
+          "connect": "Connect to NinjaOne"
+        },
+        "disconnectModal": {
+          "title": "Disconnect NinjaOne",
+          "description": "Are you sure you want to disconnect NinjaOne? This will stop device synchronization and alert notifications, and remove your stored API credentials. Organization mappings will be preserved.",
+          "cancel": "Cancel",
+          "confirm": "Disconnect"
+        },
+        "toasts": {
+          "connectSuccess": "Successfully connected to NinjaOne.",
+          "connectFailed": "NinjaOne connection failed.",
+          "connectFailedWithDetail": "NinjaOne connection failed: {{detail}}",
+          "disconnectSuccess": "NinjaOne connection successfully disconnected.",
+          "credentialsSaved": "NinjaOne API credentials saved successfully.",
+          "orgSyncSuccess": "Organization sync completed. Processed: {{processed}}, Created: {{created}}, Updated: {{updated}}",
+          "deviceSyncSuccess": "Device sync completed. Processed: {{processed}}, Created: {{created}}, Updated: {{updated}}"
+        },
+        "errors": {
+          "loadStatus": "Failed to load NinjaOne connection status.",
+          "saveCredentials": "Failed to save credentials.",
+          "connect": "Failed to initiate NinjaOne connection.",
+          "disconnect": "Failed to disconnect NinjaOne.",
+          "disconnectUnexpected": "An unexpected error occurred while disconnecting.",
+          "orgSyncFailed": "Organization sync failed.",
+          "deviceSyncFailed": "Device sync failed."
+        }
       },
-      "clientIdLabel": "Xero Client ID",
-      "clientIdPlaceholder": "Cole seu Xero Client ID de propriedade do tenant",
-      "clientSecretLabel": "Xero Client Secret",
-      "clientSecretPlaceholder": "Cole seu Xero Client Secret de propriedade do tenant",
-      "connectSuccess": "Xero conectado com sucesso. A primeira organização conectada agora é o contexto padrão do Xero ao vivo.",
-      "connection": {
-        "connectionId": "ID da conexão: {{id}}",
-        "defaultOrganisation": "Organização padrão",
-        "description": "Inicie o OAuth somente após configurar o aplicativo Xero de propriedade do tenant. Desconectar remove os tokens de acesso Xero armazenados, mas mantém as credenciais do aplicativo de propriedade do tenant.",
-        "notConnected": "Nenhuma organização Xero ao vivo está conectada ainda. Salve as credenciais e clique em Conectar Xero.",
-        "title": "Conexão Xero ao vivo",
-        "unknown": "desconhecido"
+      "setup": {
+        "activeConfiguration": "Configuração ativa",
+        "comingSoon": "Integração RMM em breve",
+        "configure": "Configurar integração",
+        "selected": "{{title}} selecionado",
+        "title": "Integrações RMM"
       },
-      "credentialsSaved": "Credenciais Xero salvas. Agora você pode iniciar o fluxo OAuth do Xero ao vivo.",
-      "csvAvailableMiddle": "nesta mesma seção Contabilidade e gerencie exportações em",
-      "csvAvailablePrefix": "Se você prefere um fluxo manual, continue usando",
-      "csvAvailableTitle": "Xero CSV permanece disponível",
-      "description": "Configure credenciais OAuth Xero de propriedade do tenant, conecte sua organização padrão e mantenha o Xero ao vivo ao lado do fluxo manual Xero CSV.",
-      "disconnectSuccess": "A conexão Xero armazenada foi removida. As credenciais do aplicativo Xero de propriedade do tenant foram preservadas.",
+      "tactical": {
+        "actions": {
+          "disconnect": "Desconectar",
+          "disconnecting": "Desconectando...",
+          "ingestSoftware": "Ingerir software",
+          "ingesting": "Ingerindo...",
+          "refresh": "Atualizar",
+          "save": "Salvar",
+          "saving": "Salvando...",
+          "syncAlerts": "Sincronizar alertas",
+          "syncClients": "Sincronizar clientes",
+          "syncDevices": "Sincronizar dispositivos",
+          "syncing": "Sincronizando...",
+          "testConnection": "Testar conexão",
+          "testing": "Testando..."
+        },
+        "auth": {
+          "apiKey": "Chave de API",
+          "enterApiKey": "Inserir chave de API",
+          "enterPassword": "Inserir senha",
+          "enterUsername": "Inserir nome de usuário",
+          "knox": "Knox",
+          "knoxOption": "Nome de usuário/senha (token Knox)",
+          "knoxTokenSaved": "Token Knox salvo: {{value}}",
+          "mode": "Autenticação",
+          "password": "Senha",
+          "saved": "Salvo: {{value}}",
+          "savedEnterToUpdate": "Salvo (inserir para atualizar)",
+          "totp": "Código TOTP",
+          "username": "Nome de usuário"
+        },
+        "autoSync": "Sincronização automática",
+        "client": {
+          "loading": "Carregando clientes…",
+          "select": "Selecionar cliente"
+        },
+        "counts": {
+          "activeAlerts": "Alertas ativos",
+          "lastSync": "Última sincronização",
+          "mappedOrgs": "Organizações mapeadas",
+          "never": "Nunca",
+          "syncedDevices": "Dispositivos sincronizados"
+        },
+        "description": "Conecte o Tactical RMM para sincronizar ativos e ingerir alertas.",
+        "errors": {
+          "backfillAlerts": "Falha no backfill de alertas",
+          "connectionTest": "Falha no teste de conexão",
+          "disconnect": "Falha ao desconectar",
+          "ingestSoftware": "Falha na ingestão de software",
+          "loadOrgMappings": "Falha ao carregar os mapeamentos de organização",
+          "loadSettings": "Falha ao carregar as configurações do Tactical RMM",
+          "saveConfig": "Falha ao salvar a configuração do Tactical RMM",
+          "someAlertsFailed": "Alguns alertas não puderam ser atualizados: {{errors}}",
+          "someDevicesFailed": "Alguns dispositivos não puderam ser sincronizados: {{errors}}",
+          "someOrgsFailed": "Algumas organizações não puderam ser sincronizadas: {{errors}}",
+          "someSoftwareFailed": "Algumas linhas de software não puderam ser ingeridas: {{errors}}",
+          "syncDevices": "Falha na sincronização de dispositivos",
+          "syncOrgs": "Falha na sincronização de organizações",
+          "totpRequired": "TOTP é obrigatório. Insira seu código atual e teste novamente.",
+          "updateMapping": "Falha ao atualizar o mapeamento"
+        },
+        "fields": {
+          "instanceUrl": "URL da instância",
+          "instanceUrlHelp": "Use sua URL base do Tactical (sem /api no final)."
+        },
+        "lastError": "Último erro: {{error}}",
+        "loadingSettings": "Carregando configurações do Tactical RMM...",
+        "sections": {
+          "alerts": "Alertas",
+          "alertsDescription": "Opcional: realizar backfill de alertas históricos ou ativos do Tactical para o Alga.",
+          "devices": "Dispositivos",
+          "devicesDescription": "Sincronize agentes do Tactical como ativos do Alga para organizações mapeadas.",
+          "orgMapping": "Mapeamento de organizações",
+          "orgMappingDescription": "Atribua cada cliente do Tactical a um cliente do Alga e controle a sincronização automática por organização.",
+          "orgMappingEmpty": "Nenhuma organização encontrada. Execute primeiro \"Sincronizar clientes\".",
+          "organizations": "Organizações",
+          "organizationsDescription": "Sincronize clientes do Tactical para mapeamentos de organização do Alga e, em seguida, atribua-os a clientes do Alga.",
+          "softwareInventory": "Inventário de software",
+          "softwareInventoryDescription": "Opcional: ingerir inventário de software em cache via Tactical /api/software/ (sem chamadas de atualização por agente).",
+          "webhooks": "Webhooks (alertas)",
+          "webhooksDescription": "Configure um webhook de ação de alerta do Tactical usando o cabeçalho de secret compartilhado abaixo."
+        },
+        "status": {
+          "authPrefix": "Autenticação:",
+          "connected": "Conectado",
+          "disconnected": "Desconectado",
+          "instanceUrlNotSet": "URL da instância não definida"
+        },
+        "statusLine": {
+          "configured": "Status: Configurado",
+          "notConfigured": "Status: Não configurado"
+        },
+        "success": {
+          "alertBackfillCompleted": "Backfill de alertas concluído. Processados: {{processed}}, Criados: {{created}}, Atualizados: {{updated}}, Falharam: {{failed}}",
+          "connection": "Conexão bem-sucedida.",
+          "deviceSyncCompleted": "Sincronização de dispositivos concluída. Processados: {{processed}}, Criados: {{created}}, Atualizados: {{updated}}, Excluídos: {{deleted}}, Falharam: {{failed}}",
+          "disconnected": "Desconectado.",
+          "orgSyncCompleted": "Sincronização de organizações concluída. Processadas: {{processed}}, Criadas: {{created}}, Atualizadas: {{updated}}, Falharam: {{failed}}",
+          "saved": "Configuração do Tactical RMM salva.",
+          "softwareIngestionCompleted": "Ingestão de software concluída. Processadas: {{processed}}, Instaladas/Atualizadas: {{created}}, Ativos atualizados: {{updated}}, Falharam: {{failed}}"
+        },
+        "tacticalIdLabel": "ID do Tactical: {{id}}",
+        "title": "Tactical RMM",
+        "toasts": {
+          "alertsSyncedDescription": "Os alertas do Tactical foram preenchidos.",
+          "alertsSyncedTitle": "Alertas sincronizados",
+          "backfillFailedTitle": "Falha no backfill",
+          "connectedDescription": "Conexão do Tactical RMM verificada.",
+          "connectedTitle": "Conectado",
+          "connectionFailedTitle": "Falha na conexão",
+          "devicesSyncedDescription": "Os agentes do Tactical foram sincronizados como ativos.",
+          "devicesSyncedTitle": "Dispositivos sincronizados",
+          "disconnectFailedTitle": "Falha ao desconectar",
+          "disconnectedDescription": "Credenciais do Tactical RMM limpas.",
+          "disconnectedTitle": "Desconectado",
+          "ingestionFailedTitle": "Falha na ingestão",
+          "orgsSyncedDescription": "Os clientes do Tactical foram sincronizados em mapeamentos de organização.",
+          "orgsSyncedTitle": "Organizações sincronizadas",
+          "saveFailedTitle": "Falha ao salvar",
+          "savedDescription": "Configuração do Tactical RMM atualizada.",
+          "savedTitle": "Salvo",
+          "softwareIngestedDescription": "Inventário de software do Tactical em cache foi ingerido.",
+          "softwareIngestedTitle": "Software ingerido",
+          "syncFailedTitle": "Falha na sincronização",
+          "unknownError": "Erro desconhecido",
+          "updateFailedTitle": "Falha na atualização"
+        },
+        "webhook": {
+          "copiedTitle": "Copiado",
+          "copy": "Copiar",
+          "headerName": "Nome do cabeçalho",
+          "payloadTemplate": "Modelo de payload",
+          "secret": "Secret do cabeçalho",
+          "secretCopied": "Secret do webhook copiado para a área de transferência.",
+          "unavailable": "Informações do webhook indisponíveis. (Requer permissão de leitura das configurações.)",
+          "url": "URL do webhook",
+          "urlCopied": "URL do webhook copiada para a área de transferência."
+        }
+      },
+      "tanium": {
+        "loading": "Carregando configurações da integração Tanium..."
+      }
+    },
+    "sso": {
+      "msp": {
+        "actions": {
+          "add": "Adicionar",
+          "refresh": "Atualizar",
+          "request": "Solicitar",
+          "resetChallenge": "Redefinir desafio",
+          "revoke": "Revogar",
+          "saveDomains": "Salvar domínios",
+          "saving": "Salvando…",
+          "verify": "Verificar"
+        },
+        "addDomainLabel": "Adicionar domínio de login",
+        "advisoryNotice": "Modo consultivo: o registro do domínio ajuda no roteamento da descoberta de MSP SSO, mas não requer verificação de propriedade na Community Edition.",
+        "claimStatus": {
+          "advisory": "Consultivo",
+          "pending": "Pendente",
+          "rejected": "Rejeitado",
+          "revoked": "Revogado",
+          "verified": "Verificado",
+          "verifiedLegacy": "Verificado (Legacy)"
+        },
+        "descriptionCe": "Registre domínios consultivos para a descoberta do SSO de login MSP. A verificação de propriedade não é imposta na Community Edition, e domínios não gerenciados usam como fallback os provedores de nível de aplicativo da Nine Minds.",
+        "descriptionEe": "Gerencie o ciclo de vida das reivindicações de domínio para a descoberta de provedores SSO de login MSP. Domínios não reivindicados ou não elegíveis usam como fallback os provedores de nível de aplicativo da Nine Minds.",
+        "dnsHost": "Host:",
+        "dnsInstructions": "Adicione o registro DNS TXT e, em seguida, clique em Verificar:",
+        "dnsValue": "Valor:",
+        "emptyClaims": "Nenhuma reivindicação de domínio configurada ainda.",
+        "emptyDomains": "Nenhum domínio configurado. Domínios desconhecidos usarão o fallback do provedor de nível de aplicativo.",
+        "errors": {
+          "conflicts": "Conflitos: {{conflicts}}.",
+          "loadClaims": "Não foi possível carregar as reivindicações de domínio MSP SSO.",
+          "loadDomains": "Não foi possível carregar os domínios de login MSP SSO.",
+          "refreshChallenge": "Não foi possível atualizar o desafio.",
+          "requestClaim": "Não foi possível solicitar a reivindicação de domínio.",
+          "revokeClaim": "Não foi possível revogar a reivindicação de domínio.",
+          "saveDomains": "Não foi possível salvar os domínios de login MSP SSO.",
+          "verifyClaim": "Não foi possível verificar a reivindicação de domínio."
+        },
+        "fallbackInfo": "Domínios sem uma reivindicação de tenant elegível usam a configuração do provedor SSO de nível de aplicativo da Nine Minds.",
+        "loading": "Carregando…",
+        "removeDomainAria": "Remover domínio {{number}}",
+        "requestClaim": "Solicitar reivindicação",
+        "requestClaimLabel": "Solicitar reivindicação de domínio",
+        "title": "Domínios de login MSP SSO",
+        "toasts": {
+          "claimRequestedDescription": "Reivindicação de domínio pendente criada e desafio de verificação gerado.",
+          "claimRequestedTitle": "Reivindicação de domínio solicitada",
+          "claimUnchangedDescription": "A reivindicação pendente e o desafio existentes já estão ativos.",
+          "claimUnchangedTitle": "Reivindicação de domínio inalterada",
+          "refreshFailedTitle": "Não foi possível atualizar o desafio",
+          "refreshedDescription": "Um novo desafio de verificação está ativo para esta reivindicação.",
+          "refreshedTitle": "Desafio atualizado",
+          "requestClaimFailedTitle": "Não foi possível solicitar a reivindicação de domínio",
+          "revokeFailedTitle": "Não foi possível revogar a reivindicação",
+          "revokedDescription": "A tomada de posse do tenant para este domínio está desabilitada.",
+          "revokedTitle": "Reivindicação de domínio revogada",
+          "saveDomainsFailedTitle": "Não foi possível salvar os domínios de login MSP SSO",
+          "savedDescription": "As configurações de descoberta SSO baseadas em domínio foram atualizadas.",
+          "savedTitle": "Domínios de login MSP SSO salvos",
+          "verifiedDescription": "A tomada de posse do domínio agora é elegível para o roteamento de provedor no escopo do tenant.",
+          "verifiedTitle": "Reivindicação de domínio verificada",
+          "verifyFailedTitle": "Falha na verificação do domínio"
+        }
+      }
+    },
+    "teams": {
+      "settings": {
+        "actions": {
+          "activate": "Ativar Teams",
+          "addNote": {
+            "description": "Permitir ações rápidas de nota interna.",
+            "label": "Adicionar nota"
+          },
+          "approvalResponse": {
+            "description": "Permitir ações rápidas de aprovação e rejeição.",
+            "label": "Resposta de aprovação"
+          },
+          "assignTicket": {
+            "description": "Permitir ações rápidas de atribuição de ticket.",
+            "label": "Atribuir ticket"
+          },
+          "deactivate": "Desativar",
+          "logTime": {
+            "description": "Permitir ações rápidas de registro de tempo.",
+            "label": "Registrar tempo"
+          },
+          "reload": "Recarregar",
+          "replyToContact": {
+            "description": "Permitir ações rápidas de resposta visíveis para o cliente.",
+            "label": "Responder ao contato"
+          },
+          "saveChanges": "Salvar alterações",
+          "saveDraft": "Salvar rascunho",
+          "saving": "Salvando...",
+          "teamsActive": "Teams ativo"
+        },
+        "capabilities": {
+          "activityNotifications": {
+            "description": "Entregar notificações pessoais no feed de atividades do Teams.",
+            "label": "Notificações de atividade"
+          },
+          "groupChatBot": {
+            "description": "Permitir que o bot responda em chats de grupo do Teams. Respostas do bot (incluindo detalhes de ticket) são visíveis para todos os membros do chat.",
+            "label": "Bot em chat de grupo"
+          },
+          "messageExtension": {
+            "description": "Habilitar consultas e ações PSA orientadas por mensagens.",
+            "label": "Message extension"
+          },
+          "personalBot": {
+            "description": "Habilitar comandos de bot em escopo pessoal para técnicos.",
+            "label": "Bot pessoal"
+          },
+          "personalTab": {
+            "description": "Iniciar o ponto de entrada da aba pessoal PSA.",
+            "label": "Aba pessoal"
+          }
+        },
+        "checklist": {
+          "installState": {
+            "active": "O Teams está ativo para este tenant.",
+            "error": "A configuração do Teams tem um erro que precisa ser corrigido.",
+            "label": "Estado de instalação do Teams",
+            "notConfigured": "Salve um rascunho ou ative o Teams quando a configuração estiver pronta.",
+            "pending": "O rascunho da configuração foi salvo e está pronto para instalação ou consentimento."
+          },
+          "needsAction": "Requer ação",
+          "profileReady": {
+            "completed": "O perfil selecionado possui Client ID, Tenant ID e material de secret armazenado.",
+            "label": "Perfil pronto para instalação do Teams",
+            "pending": "Nenhum perfil Teams selecionado está pronto ainda."
+          },
+          "profileSelected": {
+            "completed": "{{name}} está vinculado para o Teams.",
+            "label": "Perfil Microsoft selecionado",
+            "pending": "Selecione um perfil Microsoft elegível antes de salvar ou ativar o Teams."
+          },
+          "ready": "Pronto"
+        },
+        "description": "Vincule o Teams a um perfil Microsoft, habilite capacidades e gere o pacote do tenant.",
+        "errors": {
+          "downloadPackage": "Falha ao baixar o pacote do aplicativo Teams",
+          "generatePackage": "Falha ao gerar o pacote do aplicativo Teams",
+          "loadGuidance": "Falha ao carregar o guia de configuração do Teams",
+          "saveSettings": "Falha ao salvar as configurações do Teams"
+        },
+        "guidance": {
+          "applicationIdUri": "Application ID URI",
+          "messageExtension": "Message extension",
+          "personalBot": "Bot pessoal",
+          "personalTab": "Aba pessoal",
+          "redirectUris": "Redirect URIs",
+          "requiredScopes": "Escopos obrigatórios",
+          "teamsAppIdUri": "Teams App ID URI",
+          "unavailable": "Indisponível"
+        },
+        "installStatus": {
+          "active": "Ativo",
+          "error": "Erro",
+          "installPending": "Instalação pendente",
+          "notConfigured": "Não configurado"
+        },
+        "noEligibleProfiles": "Nenhum perfil Microsoft está pronto para o Teams. Conclua primeiro a configuração Microsoft.",
+        "notifications": {
+          "approvalRequest": {
+            "description": "Notificar aprovadores sobre decisões pendentes.",
+            "label": "Solicitações de aprovação"
+          },
+          "assignment": {
+            "description": "Notificar técnicos quando trabalho for atribuído.",
+            "label": "Eventos de atribuição"
+          },
+          "customerReply": {
+            "description": "Notificar técnicos quando os clientes responderem.",
+            "label": "Respostas de clientes"
+          },
+          "escalation": {
+            "description": "Notificar responsáveis quando o trabalho for escalonado.",
+            "label": "Escalonamentos"
+          },
+          "slaRisk": {
+            "description": "Notificar técnicos quando os limites de risco de SLA forem atingidos.",
+            "label": "Risco de SLA"
+          }
+        },
+        "package": {
+          "appId": "App ID",
+          "appIds": "App IDs",
+          "botId": "Bot ID",
+          "deepLinks": "Deep links",
+          "description": "Gere o manifesto do aplicativo e os links de instalação para o perfil Microsoft selecionado.",
+          "downloadManifest": "Baixar manifesto JSON",
+          "downloadZip": "Baixar pacote do aplicativo (.zip)",
+          "downloading": "Baixando...",
+          "fileName": "Nome do arquivo",
+          "generate": "Gerar pacote",
+          "generating": "Gerando...",
+          "manifestVersion": "Versão do manifesto",
+          "myWork": "Meu trabalho",
+          "openBaseUrl": "Abrir URL base do PSA",
+          "openDeeplink": "Abrir deep link do Teams",
+          "packageVersion": "Versão do pacote",
+          "projectTaskTemplate": "Modelo de tarefa de projeto",
+          "section": "Pacote",
+          "ticketTemplate": "Modelo de ticket",
+          "title": "Pacote Teams",
+          "validDomains": "Domínios válidos",
+          "webResource": "Recurso de aplicação web"
+        },
+        "profileLabel": "Perfil Microsoft",
+        "profileSummary": {
+          "needsRepair": "Perfil selecionado precisa de reparo",
+          "none": "Nenhum perfil selecionado"
+        },
+        "section": {
+          "allowedActions": "Ações permitidas",
+          "capabilities": "Capacidades",
+          "notifications": "Notificações"
+        },
+        "selectProfile": "Selecionar perfil",
+        "statusMessage": {
+          "activated": "Configuração do Teams ativada.",
+          "deactivated": "Configuração do Teams desativada.",
+          "packageDownloaded": "Pacote do aplicativo Teams baixado.",
+          "packageGenerated": "Pacote do aplicativo Teams gerado.",
+          "saved": "Configuração do Teams salva."
+        },
+        "title": "Microsoft Teams"
+      }
+    },
+    "xero": {
+      "csv": {
+        "clientSync": {
+          "cancel": "Cancelar",
+          "createNew": "Criar novos clientes",
+          "description": "Exporte clientes para CSV Xero Contacts ou importe contatos do Xero.",
+          "errorRow": "Linha {{row}}: {{name}} - {{error}}",
+          "errors": {
+            "export": "Falha ao exportar clientes",
+            "import": "Falha ao importar clientes",
+            "processCsv": "Falha ao processar o arquivo CSV"
+          },
+          "errorsTitle": "Erros ({{count}})",
+          "exportButton": "Exportar clientes para CSV",
+          "exportClients": "Exportar clientes",
+          "exportDescription": "Exporte seus clientes Alga para um arquivo CSV que pode ser importado no Xero como Contacts.",
+          "exportSuccess": "{{count}} clientes exportados para {{filename}}",
+          "importCompleteDescription": "{{count}} contatos processados com sucesso.",
+          "importCompleteTitle": "Importação concluída",
+          "importContacts": "Importar contatos",
+          "importContactsButton": "Importar {{count}} contatos",
+          "importDescription": "Importe contatos de uma exportação CSV Xero Contacts. Clientes existentes podem ser correspondidos e atualizados.",
+          "importing": "Importando contatos...",
+          "matchBy": {
+            "algaClientId": "ID do cliente Alga (da categoria de rastreamento)",
+            "contactName": "Nome do contato",
+            "emailAddress": "Endereço de e-mail"
+          },
+          "matchByLabel": "Corresponder contatos por:",
+          "moreErrors": "...e mais {{count}} erros",
+          "preview": {
+            "columns": {
+              "action": "Ação",
+              "contactName": "Nome do contato",
+              "email": "E-mail",
+              "matchedClient": "Cliente correspondido"
+            },
+            "moreWarnings": "...e mais {{count}}",
+            "showing20of": "Mostrando 20 de {{count}} linhas",
+            "toCreate": "Para criar",
+            "toSkip": "Para ignorar",
+            "toUpdate": "Para atualizar",
+            "warnings": "Avisos"
+          },
+          "processing": "Processando {{filename}}...",
+          "result": {
+            "created": "Criados",
+            "mappings": "Mapeamentos",
+            "skipped": "Ignorados",
+            "updated": "Atualizados"
+          },
+          "selectCsvFile": "Selecionar arquivo CSV",
+          "startNewImport": "Iniciar nova importação",
+          "title": "Sincronização de clientes",
+          "updateExisting": "Atualizar clientes existentes",
+          "workflow": {
+            "s1": "Exportar clientes do Alga para CSV Xero Contacts",
+            "s2": "Importar o CSV no Xero (Contacts → Import)",
+            "s3": "Após alterações no Xero, exportar contatos do Xero",
+            "s4": "Importar o CSV de contatos do Xero de volta para o Alga para sincronizar atualizações"
+          },
+          "workflowTitle": "Fluxo de sincronização de clientes"
+        },
+        "settings": {
+          "dateFormat": "Formato de data",
+          "dateFormatHelp": "Ajuste isto às configurações regionais do seu Xero.",
+          "dateFormatOptions": {
+            "dmy": "DD/MM/AAAA (Dia/Mês/Ano)",
+            "mdy": "MM/DD/AAAA (Mês/Dia/Ano)"
+          },
+          "defaultCurrency": "Moeda padrão",
+          "defaultCurrencyHelp": "Deixe em branco para usar a moeda da fatura.",
+          "errors": {
+            "load": "Falha ao carregar as configurações",
+            "save": "Falha ao salvar as configurações"
+          },
+          "exportSettings": {
+            "description": "Configure como as faturas são exportadas no formato CSV para o Xero.",
+            "title": "Configurações de exportação CSV"
+          },
+          "loading": "Carregando configurações CSV do Xero...",
+          "managedPrefix": "Acesse",
+          "managedSuffix": "para selecionar faturas, gerar exportações CSV do Xero, importar relatórios fiscais e gerenciar lotes.",
+          "mappings": {
+            "description": "Mapeie clientes, serviços e códigos fiscais do Alga para os identificadores usados em sua organização Xero. Estes valores são usados ao gerar a exportação CSV.",
+            "title": "Mapeamentos CSV do Xero"
+          },
+          "overview": {
+            "description": "Exporte faturas para CSV para importação manual no Xero e importe dados fiscais dos relatórios do Xero.",
+            "exportLabel": "Exportação",
+            "exportText": "Gere arquivos CSV compatíveis com o recurso de importação de faturas do Xero",
+            "intro": "Esta integração fornece uma alternativa à conectividade com o Xero baseada em OAuth:",
+            "note": "Nota: Configure os mapeamentos abaixo antes de exportar. As exportações CSV e as importações de impostos são gerenciadas em Faturamento → Exportações contábeis.",
+            "taxImportLabel": "Importação de impostos",
+            "taxImportText": "Ao usar cálculo fiscal externo, importe valores fiscais do Xero Invoice Details Report",
+            "title": "Integração CSV do Xero"
+          },
+          "savedMessage": "Configurações salvas com sucesso",
+          "selectCurrency": "Selecionar moeda",
+          "setup": {
+            "acknowledge": "Concluí a configuração",
+            "description": "Conclua estes passos no Xero antes de usar a importação/exportação CSV.",
+            "externalInvoiceId": "ID externo da fatura",
+            "externalInvoiceIdHelp": "As opções serão criadas automaticamente ao importar",
+            "sourceSystem": "Sistema de origem",
+            "sourceSystemHelp": "Adicione uma opção chamada",
+            "step1Description": "No Xero, acesse Settings → Tracking Categories e crie estas duas categorias:",
+            "step1Title": "Passo 1: Criar categorias de rastreamento",
+            "step2Description": "Certifique-se de que sua organização Xero tenha as alíquotas fiscais necessárias configuradas em Settings → Tax Rates.",
+            "step2Title": "Passo 2: Configurar alíquotas fiscais",
+            "step3Description": "Use a seção de mapeamento abaixo para vincular seus serviços Alga aos códigos de item do Xero e suas regiões fiscais às alíquotas fiscais do Xero.",
+            "step3Title": "Passo 3: Mapear serviços e regiões fiscais",
+            "title": "Configuração do Xero necessária"
+          },
+          "useInvoiceCurrency": "Usar moeda da fatura",
+          "workflow": {
+            "description": "Como exportar faturas e importar cálculos fiscais.",
+            "export": {
+              "s1": "Acesse Faturamento → Exportações contábeis",
+              "s2": "Selecione faturas e escolha \"Xero CSV\" como adaptador",
+              "s3": "Baixe o arquivo CSV gerado",
+              "s4": "No Xero: Business → Invoices → Import",
+              "s5": "Faça upload do CSV e importe como faturas de rascunho",
+              "s6": "O Xero calculará o imposto com base nas suas configurações fiscais"
+            },
+            "exportInvoices": "Exportar faturas",
+            "import": {
+              "s1": "No Xero: Reports → All Reports → Invoice Details",
+              "s2": "Defina o intervalo de datas e exporte como CSV",
+              "s3": "No Alga: Faturamento → Exportações contábeis → Importar impostos",
+              "s4": "Faça upload do CSV do relatório Xero",
+              "s5": "Revise as faturas correspondidas e confirme a importação"
+            },
+            "importTax": "Importar cálculos fiscais",
+            "title": "Fluxo CSV",
+            "trackingDescription": "A exportação CSV inclui colunas de categorias de rastreamento que vinculam cada fatura Xero à sua origem Alga. Ao importar impostos do Xero, estas categorias de rastreamento são usadas para corresponder faturas automaticamente — sem reconciliação manual.",
+            "trackingTitle": "Categorias de rastreamento para reconciliação"
+          }
+        }
+      },
+      "live": {
+        "defaultOrganisation": "Organização Xero padrão"
+      },
+      "settings": {
+        "actions": {
+          "connect": "Conectar Xero",
+          "disconnect": "Desconectar Xero",
+          "disconnecting": "Desconectando…",
+          "reconnect": "Reconectar Xero",
+          "refresh": "Atualizar",
+          "saveCredentials": "Salvar credenciais Xero",
+          "saving": "Salvando…"
+        },
+        "badges": {
+          "connectionExpired": "Conexão expirada",
+          "credentialsReady": "Credenciais prontas",
+          "credentialsRequired": "Credenciais obrigatórias",
+          "defaultConnected": "Organização padrão conectada",
+          "noOrganisation": "Nenhuma organização conectada"
+        },
+        "callback": {
+          "accessDenied": "O acesso ao Xero foi negado antes da conclusão da conexão.",
+          "configMissing": "Não foi possível iniciar o Xero OAuth porque o client ID e o client secret do tenant não estavam totalmente configurados.",
+          "connectionsUnmapped": "O Xero retornou organizações, mas nenhuma incluiu os identificadores necessários para salvar uma conexão.",
+          "generic": "O Xero retornou um erro OAuth: {{code}}",
+          "invalidState": "O estado OAuth do Xero era inválido ou expirou. Inicie o fluxo de conexão novamente.",
+          "missingParams": "Parâmetros obrigatórios estavam ausentes no callback do Xero. Inicie o fluxo de conexão novamente.",
+          "noConnections": "O Xero não retornou nenhuma organização para este login. Verifique seu aplicativo Xero e o acesso à organização e tente novamente.",
+          "oauthFailed": "O callback OAuth do Xero falhou. Tente se conectar novamente. Se o problema persistir, revise seu redirect URI e escopos."
+        },
+        "clientIdLabel": "Xero Client ID",
+        "clientIdPlaceholder": "Cole seu Xero Client ID de propriedade do tenant",
+        "clientSecretLabel": "Xero Client Secret",
+        "clientSecretPlaceholder": "Cole seu Xero Client Secret de propriedade do tenant",
+        "connectSuccess": "Xero conectado com sucesso. A primeira organização conectada agora é o contexto padrão do Xero ao vivo.",
+        "connection": {
+          "connectionId": "ID da conexão: {{id}}",
+          "defaultOrganisation": "Organização padrão",
+          "description": "Inicie o OAuth somente após configurar o aplicativo Xero de propriedade do tenant. Desconectar remove os tokens de acesso Xero armazenados, mas mantém as credenciais do aplicativo de propriedade do tenant.",
+          "notConnected": "Nenhuma organização Xero ao vivo está conectada ainda. Salve as credenciais e clique em Conectar Xero.",
+          "title": "Conexão Xero ao vivo",
+          "unknown": "desconhecido"
+        },
+        "credentialsSaved": "Credenciais Xero salvas. Agora você pode iniciar o fluxo OAuth do Xero ao vivo.",
+        "csvAvailableMiddle": "nesta mesma seção Contabilidade e gerencie exportações em",
+        "csvAvailablePrefix": "Se você prefere um fluxo manual, continue usando",
+        "csvAvailableTitle": "Xero CSV permanece disponível",
+        "description": "Configure credenciais OAuth Xero de propriedade do tenant, conecte sua organização padrão e mantenha o Xero ao vivo ao lado do fluxo manual Xero CSV.",
+        "disconnectSuccess": "A conexão Xero armazenada foi removida. As credenciais do aplicativo Xero de propriedade do tenant foram preservadas.",
+        "errors": {
+          "disconnect": "Falha ao desconectar o Xero.",
+          "load": "Falha ao carregar as configurações do Xero.",
+          "saveCredentials": "Falha ao salvar as credenciais do Xero."
+        },
+        "howItWorksDescription": "Salve aqui um Xero Client ID e Client Secret de propriedade do tenant, conclua o fluxo OAuth do Xero, e o Alga PSA usará a primeira organização Xero conectada como contexto padrão ao vivo.",
+        "howItWorksTitle": "Como o Xero ao vivo funciona nesta versão",
+        "loading": "Carregando configurações do Xero…",
+        "mapping": {
+          "alert": "Itens, contas de receita, alíquotas fiscais e categorias de rastreamento do Xero são carregados da organização conectada padrão para que exportações ao vivo possam continuar usando a primeira conexão Xero armazenada na v1.",
+          "descriptionPrefix": "Configure os mapeamentos Xero ao vivo para a organização conectada padrão. Estes mapeamentos estão limitados a",
+          "placeholderAlert": "O gerenciador de mapeamentos fica disponível após a primeira organização Xero ser conectada e definida como contexto padrão do Xero ao vivo.",
+          "placeholderDescription": "Conecte uma organização Xero ao vivo antes de configurar os mapeamentos de itens e impostos Xero ao vivo.",
+          "title": "Mapeamento e configuração do Xero ao vivo"
+        },
+        "noClientId": "Nenhum client ID está armazenado para este tenant ainda.",
+        "noClientSecret": "Nenhum client secret está armazenado para este tenant ainda.",
+        "redirectUri": "Redirect URI",
+        "requiredScopes": "Escopos obrigatórios",
+        "storedClientId": "Client ID armazenado: {{value}}",
+        "storedClientSecret": "Client secret armazenado: {{value}}",
+        "tenantOauthDescription": "Cole as credenciais do aplicativo Xero registradas para este tenant. Valores de secret nunca são retornados ao navegador após serem salvos.",
+        "tenantOauthTitle": "Aplicativo OAuth de propriedade do tenant",
+        "title": "Xero",
+        "xeroCsv": "Xero CSV"
+      }
+    },
+    "stripe": {
+      "title": "Stripe Payments",
+      "description": "Accept credit card payments for your invoices",
+      "connected": {
+        "title": "Stripe Connected",
+        "publishableKey": "Publishable key: {{key}}..."
+      },
+      "empty": {
+        "description": "Connect your Stripe account to accept online payments for invoices"
+      },
+      "actions": {
+        "testConnection": "Test Connection",
+        "disconnect": "Disconnect",
+        "connect": "Connect Stripe",
+        "connecting": "Connecting...",
+        "cancel": "Cancel"
+      },
+      "form": {
+        "secretKeyLabel": "Secret Key",
+        "secretKeyPlaceholder": "sk_live_... or sk_test_...",
+        "publishableKeyLabel": "Publishable Key",
+        "publishableKeyPlaceholder": "pk_live_... or pk_test_...",
+        "findKeyPrefix": "Find this in your",
+        "dashboardLink": "Stripe Dashboard → API Keys"
+      },
+      "webhook": {
+        "heading": "Webhook Configuration",
+        "configuredAutomatically": "Webhooks configured automatically",
+        "receiveNotifications": "Alga PSA will receive payment notifications for:",
+        "failedTitle": "Webhook configuration failed",
+        "failedBody": "Automatic webhook configuration failed. Click retry to attempt configuration again.",
+        "configuring": "Configuring...",
+        "retry": "Retry Configuration"
+      },
+      "disconnectDialog": {
+        "title": "Disconnect Stripe",
+        "message": "Are you sure you want to disconnect Stripe? Payment links will no longer work.",
+        "confirm": "Disconnect",
+        "cancel": "Cancel"
+      },
+      "toasts": {
+        "connectedWithWebhook": "Stripe connected and webhooks configured automatically!",
+        "connectedWebhookFailed": "Stripe connected! Note: Webhook auto-configuration failed - you may need to configure webhooks manually in Stripe Dashboard.",
+        "disconnected": "Stripe disconnected",
+        "connectionSuccess": "Connection successful!",
+        "webhookConfigured": "Webhook configured successfully!"
+      },
       "errors": {
-        "disconnect": "Falha ao desconectar o Xero.",
-        "load": "Falha ao carregar as configurações do Xero.",
-        "saveCredentials": "Falha ao salvar as credenciais do Xero."
-      },
-      "howItWorksDescription": "Salve aqui um Xero Client ID e Client Secret de propriedade do tenant, conclua o fluxo OAuth do Xero, e o Alga PSA usará a primeira organização Xero conectada como contexto padrão ao vivo.",
-      "howItWorksTitle": "Como o Xero ao vivo funciona nesta versão",
-      "loading": "Carregando configurações do Xero…",
-      "mapping": {
-        "alert": "Itens, contas de receita, alíquotas fiscais e categorias de rastreamento do Xero são carregados da organização conectada padrão para que exportações ao vivo possam continuar usando a primeira conexão Xero armazenada na v1.",
-        "descriptionPrefix": "Configure os mapeamentos Xero ao vivo para a organização conectada padrão. Estes mapeamentos estão limitados a",
-        "placeholderAlert": "O gerenciador de mapeamentos fica disponível após a primeira organização Xero ser conectada e definida como contexto padrão do Xero ao vivo.",
-        "placeholderDescription": "Conecte uma organização Xero ao vivo antes de configurar os mapeamentos de itens e impostos Xero ao vivo.",
-        "title": "Mapeamento e configuração do Xero ao vivo"
-      },
-      "noClientId": "Nenhum client ID está armazenado para este tenant ainda.",
-      "noClientSecret": "Nenhum client secret está armazenado para este tenant ainda.",
-      "redirectUri": "Redirect URI",
-      "requiredScopes": "Escopos obrigatórios",
-      "storedClientId": "Client ID armazenado: {{value}}",
-      "storedClientSecret": "Client secret armazenado: {{value}}",
-      "tenantOauthDescription": "Cole as credenciais do aplicativo Xero registradas para este tenant. Valores de secret nunca são retornados ao navegador após serem salvos.",
-      "tenantOauthTitle": "Aplicativo OAuth de propriedade do tenant",
-      "title": "Xero",
-      "xeroCsv": "Xero CSV"
+        "loadConfig": "Failed to load Stripe configuration",
+        "connect": "Failed to connect Stripe",
+        "disconnect": "Failed to disconnect Stripe",
+        "testConnection": "Connection test failed",
+        "configureWebhook": "Failed to configure webhook",
+        "bothKeysRequired": "Please enter both secret key and publishable key",
+        "secretKeyFormat": "Secret key should start with sk_",
+        "publishableKeyFormat": "Publishable key should start with pk_"
+      }
     }
   }
 }

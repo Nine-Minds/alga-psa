@@ -70,7 +70,7 @@ function IntegrationBanner({ option }: { option: AccountingIntegrationOption }) 
 }
 
 export default function AccountingIntegrationsSetup() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/integrations');
   const searchParams = useSearchParams();
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 

@@ -72,7 +72,7 @@ function IntegrationBanner({ option }: { option: RmmIntegrationOption }) {
 }
 
 function NinjaOneLoading() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/integrations');
   return (
     <Card>
       <CardContent className="py-8">
@@ -86,7 +86,7 @@ function NinjaOneLoading() {
 }
 
 function TaniumLoading() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/integrations');
   return (
     <Card>
       <CardContent className="py-8">
@@ -123,7 +123,7 @@ const providerSettingsComponents: Partial<Record<RmmProvider, React.ComponentTyp
 };
 
 export default function RmmIntegrationsSetup() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/integrations');
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
   const tacticalFlag = useFeatureFlag('tactical-rmm-integration', { defaultValue: false });
   const taniumFlag = useFeatureFlag('tanium-rmm-integration', { defaultValue: false });

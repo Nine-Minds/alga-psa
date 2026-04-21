@@ -37,7 +37,7 @@ const DEFAULT_OPTIONS: ImportOptions = {
  * and importing Xero Contacts CSV back into Alga.
  */
 export function XeroCsvClientSyncPanel() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/integrations');
   const [isExporting, startExport] = useTransition();
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportSuccess, setExportSuccess] = useState<string | null>(null);
@@ -74,7 +74,7 @@ export function XeroCsvClientSyncPanel() {
         setExportSuccess(t('integrations.xero.csv.clientSync.exportSuccess', { defaultValue: 'Exported {{count}} clients to {{filename}}', count: result.clientCount, filename: result.filename }));
         setTimeout(() => setExportSuccess(null), 5000);
       } catch (err) {
-        const message = err instanceof Error ? err.message : t('integrations.xero.csv.clientSync.errors.export', { defaultValue: 'Failed to export clients' });
+        const message = t('integrations.xero.csv.clientSync.errors.export', { defaultValue: 'Failed to export clients' });
         setExportError(message);
       }
     });
@@ -97,7 +97,7 @@ export function XeroCsvClientSyncPanel() {
       setPreviewResult(preview);
       setImportStep('preview');
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('integrations.xero.csv.clientSync.errors.processCsv', { defaultValue: 'Failed to process CSV file' });
+      const message = t('integrations.xero.csv.clientSync.errors.processCsv', { defaultValue: 'Failed to process CSV file' });
       setImportError(message);
       setImportStep('idle');
     }
@@ -119,7 +119,7 @@ export function XeroCsvClientSyncPanel() {
       setImportResult(result);
       setImportStep('complete');
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('integrations.xero.csv.clientSync.errors.import', { defaultValue: 'Failed to import clients' });
+      const message = t('integrations.xero.csv.clientSync.errors.import', { defaultValue: 'Failed to import clients' });
       setImportError(message);
       setImportStep('preview');
     }

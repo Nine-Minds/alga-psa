@@ -60,7 +60,7 @@ function claimStatusVariant(status: ClaimStatus): 'info' | 'warning' | 'success'
 }
 
 export function MspSsoLoginDomainsSettings() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/integrations');
   const { toast } = useToast();
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
@@ -77,7 +77,7 @@ export function MspSsoLoginDomainsSettings() {
     if (isEnterprise) {
       const result = await listMspSsoDomainClaims();
       if (!result.success) {
-        setError(result.error || t('integrations.sso.msp.errors.loadClaims', { defaultValue: 'Unable to load MSP SSO domain claims.' }));
+        setError(t('integrations.sso.msp.errors.loadClaims', { defaultValue: 'Unable to load MSP SSO domain claims.' }));
         setLoading(false);
         return;
       }
@@ -96,7 +96,7 @@ export function MspSsoLoginDomainsSettings() {
 
     const result = await listMspSsoLoginDomains();
     if (!result.success) {
-      setError(result.error || t('integrations.sso.msp.errors.loadDomains', { defaultValue: 'Unable to load MSP SSO login domains.' }));
+      setError(t('integrations.sso.msp.errors.loadDomains', { defaultValue: 'Unable to load MSP SSO login domains.' }));
       setLoading(false);
       return;
     }
@@ -134,7 +134,7 @@ export function MspSsoLoginDomainsSettings() {
         const conflictHint = result.conflicts?.length
           ? ` ${t('integrations.sso.msp.errors.conflicts', { defaultValue: 'Conflicts: {{conflicts}}.', conflicts: result.conflicts.join(', ') })}`
           : '';
-        const message = `${result.error || t('integrations.sso.msp.errors.saveDomains', { defaultValue: 'Unable to save MSP SSO login domains.' })}${conflictHint}`;
+        const message = `${t('integrations.sso.msp.errors.saveDomains', { defaultValue: 'Unable to save MSP SSO login domains.' })}${conflictHint}`;
         setError(message);
         toast({
           title: t('integrations.sso.msp.toasts.saveDomainsFailedTitle', { defaultValue: 'Unable to save MSP SSO login domains' }),
@@ -163,7 +163,7 @@ export function MspSsoLoginDomainsSettings() {
       setError(null);
       const result = await requestMspSsoDomainClaim({ domain: candidate });
       if (!result.success) {
-        const message = result.error || t('integrations.sso.msp.errors.requestClaim', { defaultValue: 'Unable to request domain claim.' });
+        const message = t('integrations.sso.msp.errors.requestClaim', { defaultValue: 'Unable to request domain claim.' });
         setError(message);
         toast({
           title: t('integrations.sso.msp.toasts.requestClaimFailedTitle', { defaultValue: 'Unable to request domain claim' }),
@@ -194,7 +194,7 @@ export function MspSsoLoginDomainsSettings() {
       setError(null);
       const result = await verifyMspSsoDomainClaimOwnership({ claimId });
       if (!result.success) {
-        const message = result.error || t('integrations.sso.msp.errors.verifyClaim', { defaultValue: 'Unable to verify domain claim.' });
+        const message = t('integrations.sso.msp.errors.verifyClaim', { defaultValue: 'Unable to verify domain claim.' });
         setError(message);
         toast({
           title: t('integrations.sso.msp.toasts.verifyFailedTitle', { defaultValue: 'Domain verification failed' }),
@@ -220,7 +220,7 @@ export function MspSsoLoginDomainsSettings() {
       setError(null);
       const result = await refreshMspSsoDomainClaimChallenge({ claimId });
       if (!result.success) {
-        const message = result.error || t('integrations.sso.msp.errors.refreshChallenge', { defaultValue: 'Unable to refresh challenge.' });
+        const message = t('integrations.sso.msp.errors.refreshChallenge', { defaultValue: 'Unable to refresh challenge.' });
         setError(message);
         toast({
           title: t('integrations.sso.msp.toasts.refreshFailedTitle', { defaultValue: 'Unable to refresh challenge' }),
@@ -246,7 +246,7 @@ export function MspSsoLoginDomainsSettings() {
       setError(null);
       const result = await revokeMspSsoDomainClaim({ claimId });
       if (!result.success) {
-        const message = result.error || t('integrations.sso.msp.errors.revokeClaim', { defaultValue: 'Unable to revoke domain claim.' });
+        const message = t('integrations.sso.msp.errors.revokeClaim', { defaultValue: 'Unable to revoke domain claim.' });
         setError(message);
         toast({
           title: t('integrations.sso.msp.toasts.revokeFailedTitle', { defaultValue: 'Unable to revoke claim' }),

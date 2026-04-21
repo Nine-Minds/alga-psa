@@ -8,6 +8,7 @@
  */
 
 import React, { useCallback, useEffect, useState, useTransition } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -44,6 +45,7 @@ import { RmmConnectionStatus } from '../../../interfaces/rmm.interfaces';
 import { NinjaOneRegion, NINJAONE_REGIONS } from '../../../interfaces/ninjaone.interfaces';
 
 const NinjaOneIntegrationSettings: React.FC = () => {
+  const { t } = useTranslation('msp/integrations');
   const [status, setStatus] = useState<RmmConnectionStatus | null>(null);
   const [selectedRegion, setSelectedRegion] = useState<NinjaOneRegion>('US');
   const [error, setError] = useState<string | null>(null);
@@ -77,14 +79,14 @@ const NinjaOneIntegrationSettings: React.FC = () => {
         setStatus(result);
         setError(null);
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to load NinjaOne connection status.';
+        console.error('Failed to load NinjaOne connection status:', err);
         setStatus(null);
-        setError(message);
+        setError(t('integrations.rmm.ninjaOne.errors.loadStatus', { defaultValue: 'Failed to load NinjaOne connection status.' }));
       } finally {
         setIsLoading(false);
       }
     });
-  }, []);
+  }, [t]);
 
   // Load credentials status
   const loadCredentialsStatus = useCallback(async () => {
@@ -111,15 +113,16 @@ const NinjaOneIntegrationSettings: React.FC = () => {
       try {
         const result = await saveNinjaOneCredentials(clientId.trim(), clientSecret.trim());
         if (result.success) {
-          setSuccessMessage('NinjaOne API credentials saved successfully.');
+          setSuccessMessage(t('integrations.rmm.ninjaOne.toasts.credentialsSaved', { defaultValue: 'NinjaOne API credentials saved successfully.' }));
           setClientSecret(''); // Clear the secret from the form after saving
           await loadCredentialsStatus(); // Refresh to show masked status
         } else {
-          setError(result.error ?? 'Failed to save credentials.');
+          console.error('NinjaOne save credentials failed:', result.error);
+          setError(t('integrations.rmm.ninjaOne.errors.saveCredentials', { defaultValue: 'Failed to save credentials.' }));
         }
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to save credentials.';
-        setError(message);
+        console.error('NinjaOne save credentials error:', err);
+        setError(t('integrations.rmm.ninjaOne.errors.saveCredentials', { defaultValue: 'Failed to save credentials.' }));
       }
     });
   };
@@ -133,11 +136,15 @@ const NinjaOneIntegrationSettings: React.FC = () => {
       const ninjaMessage = params.get('message');
 
       if (ninjaStatus === 'success') {
-        setSuccessMessage('Successfully connected to NinjaOne.');
+        setSuccessMessage(t('integrations.rmm.ninjaOne.toasts.connectSuccess', { defaultValue: 'Successfully connected to NinjaOne.' }));
         setError(null);
       } else if (ninjaStatus === 'failure' || ninjaError) {
         const detail = ninjaMessage ?? ninjaError ?? '';
-        setError(detail ? `NinjaOne connection failed: ${detail}` : 'NinjaOne connection failed.');
+        setError(
+          detail
+            ? t('integrations.rmm.ninjaOne.toasts.connectFailedWithDetail', { defaultValue: 'NinjaOne connection failed: {{detail}}', detail })
+            : t('integrations.rmm.ninjaOne.toasts.connectFailed', { defaultValue: 'NinjaOne connection failed.' })
+        );
         setSuccessMessage(null);
       }
 
@@ -172,8 +179,8 @@ const NinjaOneIntegrationSettings: React.FC = () => {
         window.location.href = connectUrl;
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to initiate NinjaOne connection.';
-      setError(message);
+      console.error('NinjaOne connect error:', err);
+      setError(t('integrations.rmm.ninjaOne.errors.connect', { defaultValue: 'Failed to initiate NinjaOne connection.' }));
     }
   };
 
@@ -185,13 +192,14 @@ const NinjaOneIntegrationSettings: React.FC = () => {
       try {
         const result = await disconnectNinjaOneIntegration();
         if (result.success) {
-          setSuccessMessage('NinjaOne connection successfully disconnected.');
+          setSuccessMessage(t('integrations.rmm.ninjaOne.toasts.disconnectSuccess', { defaultValue: 'NinjaOne connection successfully disconnected.' }));
         } else {
-          setError(result.error ?? 'Failed to disconnect NinjaOne.');
+          console.error('NinjaOne disconnect failed:', result.error);
+          setError(t('integrations.rmm.ninjaOne.errors.disconnect', { defaultValue: 'Failed to disconnect NinjaOne.' }));
         }
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'An unexpected error occurred while disconnecting.';
-        setError(message);
+        console.error('NinjaOne disconnect error:', err);
+        setError(t('integrations.rmm.ninjaOne.errors.disconnectUnexpected', { defaultValue: 'An unexpected error occurred while disconnecting.' }));
       } finally {
         refreshStatus();
         loadCredentialsStatus(); // Reload credential status since disconnect clears them
@@ -206,20 +214,21 @@ const NinjaOneIntegrationSettings: React.FC = () => {
       try {
         const result = await syncNinjaOneOrganizations();
         if (result.success) {
-          setSuccessMessage(
-            `Organization sync completed. Processed: ${result.items_processed}, ` +
-            `Created: ${result.items_created}, Updated: ${result.items_updated}`
-          );
+          setSuccessMessage(t('integrations.rmm.ninjaOne.toasts.orgSyncSuccess', {
+            defaultValue: 'Organization sync completed. Processed: {{processed}}, Created: {{created}}, Updated: {{updated}}',
+            processed: result.items_processed,
+            created: result.items_created,
+            updated: result.items_updated,
+          }));
           // Ensure mapping list reflects newly-synced orgs.
           setOrgMappingsRefreshKey((prev) => prev + 1);
         } else {
-          setError(
-            result.errors?.join('; ') ?? 'Organization sync failed.'
-          );
+          console.error('NinjaOne org sync failed:', result.errors);
+          setError(t('integrations.rmm.ninjaOne.errors.orgSyncFailed', { defaultValue: 'Organization sync failed.' }));
         }
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Organization sync failed.';
-        setError(message);
+        console.error('NinjaOne org sync error:', err);
+        setError(t('integrations.rmm.ninjaOne.errors.orgSyncFailed', { defaultValue: 'Organization sync failed.' }));
       } finally {
         refreshStatus();
       }
@@ -233,20 +242,21 @@ const NinjaOneIntegrationSettings: React.FC = () => {
       try {
         const result = await triggerNinjaOneFullSync();
         if (result.success) {
-          setSuccessMessage(
-            `Device sync completed. Processed: ${result.items_processed}, ` +
-            `Created: ${result.items_created}, Updated: ${result.items_updated}`
-          );
+          setSuccessMessage(t('integrations.rmm.ninjaOne.toasts.deviceSyncSuccess', {
+            defaultValue: 'Device sync completed. Processed: {{processed}}, Created: {{created}}, Updated: {{updated}}',
+            processed: result.items_processed,
+            created: result.items_created,
+            updated: result.items_updated,
+          }));
           // Refresh fleet compliance to reflect newly-synced devices.
           setFleetComplianceRefreshKey((prev) => prev + 1);
         } else {
-          setError(
-            result.errors?.join('; ') ?? 'Device sync failed.'
-          );
+          console.error('NinjaOne device sync failed:', result.errors);
+          setError(t('integrations.rmm.ninjaOne.errors.deviceSyncFailed', { defaultValue: 'Device sync failed.' }));
         }
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Device sync failed.';
-        setError(message);
+        console.error('NinjaOne device sync error:', err);
+        setError(t('integrations.rmm.ninjaOne.errors.deviceSyncFailed', { defaultValue: 'Device sync failed.' }));
       } finally {
         refreshStatus();
       }
@@ -258,7 +268,7 @@ const NinjaOneIntegrationSettings: React.FC = () => {
 
   const renderStatusPanel = () => {
     if (isLoading || isRefreshing) {
-      return <LoadingIndicator spinnerProps={{ size: 'sm' }} text="Checking NinjaOne connection..." />;
+      return <LoadingIndicator spinnerProps={{ size: 'sm' }} text={t('integrations.rmm.ninjaOne.status.checking', { defaultValue: 'Checking NinjaOne connection...' })} />;
     }
 
     if (!isConnected) {
@@ -266,9 +276,11 @@ const NinjaOneIntegrationSettings: React.FC = () => {
         <div className="flex gap-3">
           <AlertCircle className="mt-1 h-5 w-5 text-muted-foreground" />
           <div>
-            <p className="text-sm font-medium text-foreground">Not connected to NinjaOne</p>
+            <p className="text-sm font-medium text-foreground">
+              {t('integrations.rmm.ninjaOne.status.notConnected.title', { defaultValue: 'Not connected to NinjaOne' })}
+            </p>
             <p className="text-sm text-muted-foreground">
-              Connect your NinjaOne account to sync devices, receive alerts, and enable remote access.
+              {t('integrations.rmm.ninjaOne.status.notConnected.description', { defaultValue: 'Connect your NinjaOne account to sync devices, receive alerts, and enable remote access.' })}
             </p>
           </div>
         </div>
@@ -286,36 +298,39 @@ const NinjaOneIntegrationSettings: React.FC = () => {
         )}
         <div className="space-y-1">
           <p className="text-sm font-medium text-foreground">
-            {hasError ? 'NinjaOne connected with sync errors' : 'Connected to NinjaOne'}
+            {hasError
+              ? t('integrations.rmm.ninjaOne.status.connectedWithErrors', { defaultValue: 'NinjaOne connected with sync errors' })
+              : t('integrations.rmm.ninjaOne.status.connected', { defaultValue: 'Connected to NinjaOne' })}
           </p>
           {status?.instance_url && (
             <p className="text-sm text-muted-foreground">
-              Instance: <span className="font-semibold">{status.instance_url}</span>
+              {t('integrations.rmm.ninjaOne.status.instanceLabel', { defaultValue: 'Instance:' })}{' '}
+              <span className="font-semibold">{status.instance_url}</span>
             </p>
           )}
           <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
             {status?.organization_count !== undefined && (
               <span className="flex items-center gap-1">
                 <Building2 className="h-4 w-4" />
-                {status.organization_count} organizations
+                {t('integrations.rmm.ninjaOne.status.organizations', { defaultValue: '{{count}} organizations', count: status.organization_count })}
               </span>
             )}
             {status?.device_count !== undefined && (
               <span className="flex items-center gap-1">
                 <Monitor className="h-4 w-4" />
-                {status.device_count} devices
+                {t('integrations.rmm.ninjaOne.status.devices', { defaultValue: '{{count}} devices', count: status.device_count })}
               </span>
             )}
             {status?.active_alert_count !== undefined && status.active_alert_count > 0 && (
               <span className="flex items-center gap-1 text-amber-600">
                 <AlertTriangle className="h-4 w-4" />
-                {status.active_alert_count} active alerts
+                {t('integrations.rmm.ninjaOne.status.activeAlerts', { defaultValue: '{{count}} active alerts', count: status.active_alert_count })}
               </span>
             )}
           </div>
           {status?.last_sync_at && (
             <p className="text-xs text-muted-foreground">
-              Last synced: {new Date(status.last_sync_at).toLocaleString()}
+              {t('integrations.rmm.ninjaOne.status.lastSynced', { defaultValue: 'Last synced: {{time}}', time: new Date(status.last_sync_at).toLocaleString() })}
             </p>
           )}
           {hasError && status?.sync_error && (
@@ -330,8 +345,8 @@ const NinjaOneIntegrationSettings: React.FC = () => {
     <>
       {(isLoading || isLoadingCredentials) && (
         <SettingsTabSkeleton
-          title="NinjaOne RMM Integration"
-          description="Loading NinjaOne integration..."
+          title={t('integrations.rmm.ninjaOne.card.title', { defaultValue: 'NinjaOne RMM Integration' })}
+          description={t('integrations.rmm.ninjaOne.card.skeletonDescription', { defaultValue: 'Loading NinjaOne integration...' })}
           showForm
           showDropdowns
           showTable={false}
@@ -340,9 +355,9 @@ const NinjaOneIntegrationSettings: React.FC = () => {
       {!(isLoading || isLoadingCredentials) && (
       <Card id="ninjaone-integration-settings-card">
         <CardHeader>
-          <CardTitle>NinjaOne RMM Integration</CardTitle>
+          <CardTitle>{t('integrations.rmm.ninjaOne.card.title', { defaultValue: 'NinjaOne RMM Integration' })}</CardTitle>
           <CardDescription>
-            Connect your NinjaOne account to synchronize devices, receive alerts, and enable remote access capabilities.
+            {t('integrations.rmm.ninjaOne.card.description', { defaultValue: 'Connect your NinjaOne account to synchronize devices, receive alerts, and enable remote access capabilities.' })}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -369,36 +384,38 @@ const NinjaOneIntegrationSettings: React.FC = () => {
                 <div className="flex items-start gap-2">
                   <Info className="mt-0.5 h-5 w-5 text-primary-600 flex-shrink-0" />
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-primary-800">Setup Instructions</p>
+                    <p className="text-sm font-medium text-primary-800">
+                      {t('integrations.rmm.ninjaOne.setup.title', { defaultValue: 'Setup Instructions' })}
+                    </p>
                     <ol className="list-decimal list-inside space-y-1 text-sm text-primary-800">
-                      <li>Log into your NinjaOne dashboard</li>
-                      <li>Navigate to Administration → Apps → API</li>
-                      <li>Click &quot;+ Add client app&quot; to create a new API application</li>
-                      <li>Set Application Platform to &quot;Web (PHP, Java, .Net Core, etc.)&quot;</li>
-                      <li>Enter a Name (e.g., &quot;Alga PSA&quot;)</li>
+                      <li>{t('integrations.rmm.ninjaOne.setup.steps.login', { defaultValue: 'Log into your NinjaOne dashboard' })}</li>
+                      <li>{t('integrations.rmm.ninjaOne.setup.steps.navigate', { defaultValue: 'Navigate to Administration → Apps → API' })}</li>
+                      <li>{t('integrations.rmm.ninjaOne.setup.steps.addClient', { defaultValue: 'Click "+ Add client app" to create a new API application' })}</li>
+                      <li>{t('integrations.rmm.ninjaOne.setup.steps.platform', { defaultValue: 'Set Application Platform to "Web (PHP, Java, .Net Core, etc.)"' })}</li>
+                      <li>{t('integrations.rmm.ninjaOne.setup.steps.name', { defaultValue: 'Enter a Name (e.g., "Alga PSA")' })}</li>
                       <li>
-                        Add the redirect URI:{' '}
+                        {t('integrations.rmm.ninjaOne.setup.steps.redirectUri', { defaultValue: 'Add the redirect URI:' })}{' '}
                         <code className="bg-primary-100 px-1 py-0.5 rounded text-xs break-all">
                           {typeof window !== 'undefined'
                             ? `${window.location.origin}/api/integrations/ninjaone/callback`
                             : '/api/integrations/ninjaone/callback'}
                         </code>
                       </li>
-                      <li>Under &quot;Scopes&quot;, check &quot;Monitoring&quot; and &quot;Management&quot;</li>
-                      <li>Under &quot;Allowed grant types&quot;, check &quot;Authorization code&quot;, &quot;Client credentials&quot;, and &quot;Refresh token&quot;</li>
-                      <li>Click &quot;Add&quot; and copy the Client ID and Client Secret below</li>
+                      <li>{t('integrations.rmm.ninjaOne.setup.steps.scopes', { defaultValue: 'Under "Scopes", check "Monitoring" and "Management"' })}</li>
+                      <li>{t('integrations.rmm.ninjaOne.setup.steps.grantTypes', { defaultValue: 'Under "Allowed grant types", check "Authorization code", "Client credentials", and "Refresh token"' })}</li>
+                      <li>{t('integrations.rmm.ninjaOne.setup.steps.addAndCopy', { defaultValue: 'Click "Add" and copy the Client ID and Client Secret below' })}</li>
                     </ol>
                     <p className="text-xs text-primary-700 mt-2">
-                      For detailed setup instructions, see{' '}
+                      {t('integrations.rmm.ninjaOne.setup.docsPrefix', { defaultValue: 'For detailed setup instructions, see' })}{' '}
                       <a
                         href="https://nineminds.com/documentation?doc=1015-setting-up-ninjaone-integration-in-alga-psa"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="underline hover:text-primary-800"
                       >
-                        Section 10.15
+                        {t('integrations.rmm.ninjaOne.setup.docsSection', { defaultValue: 'Section 10.15' })}
                       </a>{' '}
-                      in the documentation.
+                      {t('integrations.rmm.ninjaOne.setup.docsSuffix', { defaultValue: 'in the documentation.' })}
                     </p>
                     <Button
                       id="ninjaone-open-api-settings"
@@ -408,7 +425,7 @@ const NinjaOneIntegrationSettings: React.FC = () => {
                       onClick={() => window.open('https://www.ninjaone.com/login/', '_blank')}
                     >
                       <ExternalLink className="mr-1 h-3 w-3" />
-                      Open NinjaOne API Settings
+                      {t('integrations.rmm.ninjaOne.setup.openApiSettings', { defaultValue: 'Open NinjaOne API Settings' })}
                     </Button>
                   </div>
                 </div>
@@ -416,18 +433,20 @@ const NinjaOneIntegrationSettings: React.FC = () => {
 
               {/* Credentials Input */}
               <div className="space-y-3">
-                <p className="text-sm font-medium text-foreground">API Credentials</p>
+                <p className="text-sm font-medium text-foreground">
+                  {t('integrations.rmm.ninjaOne.credentials.title', { defaultValue: 'API Credentials' })}
+                </p>
                 {credentialsStatus.hasCredentials && (
                   <Alert variant="success" showIcon={false}>
                     <AlertDescription>
                       <div className="flex items-center gap-2">
                         <CheckCircle className="h-4 w-4" />
-                        <span>Credentials saved</span>
+                        <span>{t('integrations.rmm.ninjaOne.credentials.saved', { defaultValue: 'Credentials saved' })}</span>
                       </div>
                       <p className="mt-1 text-xs">
-                        Client ID: {credentialsStatus.clientId}
+                        {t('integrations.rmm.ninjaOne.credentials.clientIdLabel', { defaultValue: 'Client ID' })}: {credentialsStatus.clientId}
                         {credentialsStatus.clientSecretMasked && (
-                          <> • Secret: ****{credentialsStatus.clientSecretMasked}</>
+                          <> • {t('integrations.rmm.ninjaOne.credentials.secretMaskedLabel', { defaultValue: 'Secret' })}: ****{credentialsStatus.clientSecretMasked}</>
                         )}
                       </p>
                     </AlertDescription>
@@ -436,12 +455,12 @@ const NinjaOneIntegrationSettings: React.FC = () => {
                 <div className="grid gap-3">
                   <div>
                     <label className="text-sm text-muted-foreground" htmlFor="ninjaone-client-id">
-                      Client ID
+                      {t('integrations.rmm.ninjaOne.credentials.clientIdLabel', { defaultValue: 'Client ID' })}
                     </label>
                     <Input
                       id="ninjaone-client-id"
                       type="text"
-                      placeholder="Enter your NinjaOne Client ID"
+                      placeholder={t('integrations.rmm.ninjaOne.credentials.clientIdPlaceholder', { defaultValue: 'Enter your NinjaOne Client ID' })}
                       value={clientId}
                       onChange={(e) => setClientId(e.target.value)}
                       className="mt-1"
@@ -449,13 +468,15 @@ const NinjaOneIntegrationSettings: React.FC = () => {
                   </div>
                   <div>
                     <label className="text-sm text-muted-foreground" htmlFor="ninjaone-client-secret">
-                      Client Secret
+                      {t('integrations.rmm.ninjaOne.credentials.clientSecretLabel', { defaultValue: 'Client Secret' })}
                     </label>
                     <div className="relative mt-1">
                       <Input
                         id="ninjaone-client-secret"
                         type={showSecret ? 'text' : 'password'}
-                        placeholder={credentialsStatus.hasCredentials ? 'Enter new secret to update' : 'Enter your NinjaOne Client Secret'}
+                        placeholder={credentialsStatus.hasCredentials
+                          ? t('integrations.rmm.ninjaOne.credentials.clientSecretUpdatePlaceholder', { defaultValue: 'Enter new secret to update' })
+                          : t('integrations.rmm.ninjaOne.credentials.clientSecretPlaceholder', { defaultValue: 'Enter your NinjaOne Client Secret' })}
                         value={clientSecret}
                         onChange={(e) => setClientSecret(e.target.value)}
                         className="pr-10"
@@ -482,12 +503,12 @@ const NinjaOneIntegrationSettings: React.FC = () => {
                     {isSavingCredentials ? (
                       <>
                         <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
+                        {t('integrations.rmm.ninjaOne.credentials.saving', { defaultValue: 'Saving...' })}
                       </>
                     ) : (
                       <>
                         <Save className="mr-2 h-4 w-4" />
-                        Save Credentials
+                        {t('integrations.rmm.ninjaOne.credentials.save', { defaultValue: 'Save Credentials' })}
                       </>
                     )}
                   </Button>
@@ -497,11 +518,11 @@ const NinjaOneIntegrationSettings: React.FC = () => {
               {/* Region Selection */}
               <div className="space-y-2 pt-2 border-t">
                 <p className="text-sm text-muted-foreground">
-                  Select your NinjaOne region, then click &lsquo;Connect to NinjaOne&rsquo; to authorize access.
+                  {t('integrations.rmm.ninjaOne.region.hint', { defaultValue: 'Select your NinjaOne region, then click ‘Connect to NinjaOne’ to authorize access.' })}
                 </p>
                 <div className="flex items-center gap-2">
                   <label className="text-sm font-medium" htmlFor="ninjaone-region-select">
-                    Region:
+                    {t('integrations.rmm.ninjaOne.region.label', { defaultValue: 'Region:' })}
                   </label>
                   <select
                     id="ninjaone-region-select"
@@ -530,7 +551,9 @@ const NinjaOneIntegrationSettings: React.FC = () => {
                   onClick={refreshStatus}
                   disabled={isRefreshing}
                 >
-                  {isRefreshing ? 'Refreshing...' : 'Refresh Status'}
+                  {isRefreshing
+                    ? t('integrations.rmm.ninjaOne.actions.refreshing', { defaultValue: 'Refreshing...' })
+                    : t('integrations.rmm.ninjaOne.actions.refreshStatus', { defaultValue: 'Refresh Status' })}
                 </Button>
                 <Button
                   id="ninjaone-sync-orgs"
@@ -541,12 +564,12 @@ const NinjaOneIntegrationSettings: React.FC = () => {
                   {isSyncing ? (
                     <>
                       <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                      Syncing...
+                      {t('integrations.rmm.ninjaOne.actions.syncing', { defaultValue: 'Syncing...' })}
                     </>
                   ) : (
                     <>
                       <RefreshCw className="mr-2 h-4 w-4" />
-                      Sync Organizations
+                      {t('integrations.rmm.ninjaOne.actions.syncOrganizations', { defaultValue: 'Sync Organizations' })}
                     </>
                   )}
                 </Button>
@@ -559,12 +582,12 @@ const NinjaOneIntegrationSettings: React.FC = () => {
                   {isSyncingDevices ? (
                     <>
                       <Monitor className="mr-2 h-4 w-4 animate-spin" />
-                      Syncing Devices...
+                      {t('integrations.rmm.ninjaOne.actions.syncingDevices', { defaultValue: 'Syncing Devices...' })}
                     </>
                   ) : (
                     <>
                       <Monitor className="mr-2 h-4 w-4" />
-                      Sync Devices
+                      {t('integrations.rmm.ninjaOne.actions.syncDevices', { defaultValue: 'Sync Devices' })}
                     </>
                   )}
                 </Button>
@@ -575,10 +598,10 @@ const NinjaOneIntegrationSettings: React.FC = () => {
                   disabled={isDisconnecting}
                 >
                   {isDisconnecting ? (
-                    <LoadingIndicator spinnerProps={{ size: 'sm' }} text="Disconnecting..." />
+                    <LoadingIndicator spinnerProps={{ size: 'sm' }} text={t('integrations.rmm.ninjaOne.actions.disconnecting', { defaultValue: 'Disconnecting...' })} />
                   ) : (
                     <>
-                      <Unlink className="mr-2 h-4 w-4" /> Disconnect
+                      <Unlink className="mr-2 h-4 w-4" /> {t('integrations.rmm.ninjaOne.actions.disconnect', { defaultValue: 'Disconnect' })}
                     </>
                   )}
                 </Button>
@@ -590,7 +613,7 @@ const NinjaOneIntegrationSettings: React.FC = () => {
                 disabled={!credentialsStatus.hasCredentials || isLoadingCredentials}
               >
                 <Link className="mr-2 h-4 w-4" />
-                Connect to NinjaOne
+                {t('integrations.rmm.ninjaOne.actions.connect', { defaultValue: 'Connect to NinjaOne' })}
               </Button>
             )}
           </div>
@@ -602,17 +625,18 @@ const NinjaOneIntegrationSettings: React.FC = () => {
       {showDisconnectConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-md rounded-lg bg-white p-6 shadow-xl border border-border">
-            <h3 className="text-lg font-semibold text-foreground">Disconnect NinjaOne</h3>
+            <h3 className="text-lg font-semibold text-foreground">
+              {t('integrations.rmm.ninjaOne.disconnectModal.title', { defaultValue: 'Disconnect NinjaOne' })}
+            </h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              Are you sure you want to disconnect NinjaOne? This will stop device synchronization and alert notifications,
-              and remove your stored API credentials. Organization mappings will be preserved.
+              {t('integrations.rmm.ninjaOne.disconnectModal.description', { defaultValue: 'Are you sure you want to disconnect NinjaOne? This will stop device synchronization and alert notifications, and remove your stored API credentials. Organization mappings will be preserved.' })}
             </p>
             <div className="mt-4 flex justify-end gap-2">
               <Button id="ninjaone-disconnect-cancel-btn" variant="outline" onClick={() => setShowDisconnectConfirm(false)}>
-                Cancel
+                {t('integrations.rmm.ninjaOne.disconnectModal.cancel', { defaultValue: 'Cancel' })}
               </Button>
               <Button id="ninjaone-disconnect-confirm-btn" variant="destructive" onClick={handleDisconnect}>
-                Disconnect
+                {t('integrations.rmm.ninjaOne.disconnectModal.confirm', { defaultValue: 'Disconnect' })}
               </Button>
             </div>
           </div>

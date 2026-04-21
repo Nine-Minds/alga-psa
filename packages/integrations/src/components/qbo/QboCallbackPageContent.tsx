@@ -14,7 +14,7 @@ interface QboCallbackPageContentProps {
 }
 
 export function QboCallbackPageContent({ isSuccess, errorMessage, realmId }: QboCallbackPageContentProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/integrations');
 
   return (
     <div className="flex justify-center items-center min-h-[calc(100vh-200px)]">

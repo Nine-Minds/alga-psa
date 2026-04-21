@@ -18,7 +18,7 @@ interface XeroCsvTaxImportPanelProps {
 }
 
 export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPanelProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/integrations');
   const [file, setFile] = useState<File | null>(null);
   const [csvContent, setCsvContent] = useState<string | null>(null);
   const [isValidating, setIsValidating] = useState(false);
@@ -77,7 +77,7 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
       const result = await previewXeroCsvTaxImport(csvContent);
       setPreviewResult(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('integrations.csv.taxImport.errors.validationFailed', { defaultValue: 'Validation failed' }));
+      setError(t('integrations.csv.taxImport.errors.validationFailed', { defaultValue: 'Validation failed' }));
     } finally {
       setIsValidating(false);
     }
@@ -103,7 +103,7 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
         });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('integrations.csv.taxImport.errors.importFailed', { defaultValue: 'Import failed' }));
+      setError(t('integrations.csv.taxImport.errors.importFailed', { defaultValue: 'Import failed' }));
     } finally {
       setIsImporting(false);
     }

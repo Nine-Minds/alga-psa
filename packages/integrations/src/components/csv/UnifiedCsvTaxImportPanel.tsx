@@ -54,7 +54,7 @@ interface QuickBooksImportResult {
 }
 
 export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImportPanelProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/integrations');
   const [source, setSource] = useState<ImportSource>('xero');
   const [file, setFile] = useState<File | null>(null);
   const [csvContent, setCsvContent] = useState<string | null>(null);
@@ -142,7 +142,7 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
       const result = await previewXeroCsvTaxImport(csvContent);
       setXeroPreviewResult(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('integrations.csv.taxImport.errors.validationFailed', { defaultValue: 'Validation failed' }));
+      setError(t('integrations.csv.taxImport.errors.validationFailed', { defaultValue: 'Validation failed' }));
     } finally {
       setIsValidating(false);
     }
@@ -166,7 +166,7 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
         });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('integrations.csv.taxImport.errors.importFailed', { defaultValue: 'Import failed' }));
+      setError(t('integrations.csv.taxImport.errors.importFailed', { defaultValue: 'Import failed' }));
     } finally {
       setIsImporting(false);
     }
@@ -193,11 +193,11 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
       });
       const result = await response.json();
       if (!response.ok) {
-        throw new Error(result.message || t('integrations.csv.taxImport.errors.validationFailed', { defaultValue: 'Validation failed' }));
+        throw new Error(t('integrations.csv.taxImport.errors.validationFailed', { defaultValue: 'Validation failed' }));
       }
       setQbValidationResult(result.validation);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('integrations.csv.taxImport.errors.validationFailed', { defaultValue: 'Validation failed' }));
+      setError(t('integrations.csv.taxImport.errors.validationFailed', { defaultValue: 'Validation failed' }));
     } finally {
       setIsValidating(false);
     }
@@ -224,7 +224,7 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
       });
       const result: QuickBooksImportResult = await response.json();
       if (!response.ok) {
-        throw new Error(result.error || t('integrations.csv.taxImport.errors.importFailed', { defaultValue: 'Import failed' }));
+        throw new Error(t('integrations.csv.taxImport.errors.importFailed', { defaultValue: 'Import failed' }));
       }
       setQbImportResult(result);
       if (result.success && result.importId) {
@@ -234,7 +234,7 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
         });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('integrations.csv.taxImport.errors.importFailed', { defaultValue: 'Import failed' }));
+      setError(t('integrations.csv.taxImport.errors.importFailed', { defaultValue: 'Import failed' }));
     } finally {
       setIsImporting(false);
     }

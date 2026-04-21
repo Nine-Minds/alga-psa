@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export function CSVExportLockResetPanel() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/integrations');
   const [mode, setMode] = useState<'invoice' | 'batch'>('invoice');
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [batchId, setBatchId] = useState('');

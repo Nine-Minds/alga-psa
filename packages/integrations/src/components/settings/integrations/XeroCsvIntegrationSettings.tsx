@@ -28,7 +28,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
  * - External tax calculation with report-based feedback is needed
  */
 const XeroCsvIntegrationSettings: React.FC = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/integrations');
   const CURRENCY_SELECT_OPTIONS = React.useMemo(() => [
     { value: '', label: t('integrations.xero.csv.settings.useInvoiceCurrency', { defaultValue: 'Use invoice currency' }) },
     ...CURRENCY_OPTIONS
@@ -50,7 +50,7 @@ const XeroCsvIntegrationSettings: React.FC = () => {
       setSettings(result);
       setError(null);
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('integrations.xero.csv.settings.errors.load', { defaultValue: 'Failed to load settings' });
+      const message = t('integrations.xero.csv.settings.errors.load', { defaultValue: 'Failed to load settings' });
       setError(message);
     } finally {
       setIsLoading(false);
@@ -66,7 +66,7 @@ const XeroCsvIntegrationSettings: React.FC = () => {
         setError(null);
         setTimeout(() => setSuccessMessage(null), 3000);
       } catch (err) {
-        const message = err instanceof Error ? err.message : t('integrations.xero.csv.settings.errors.save', { defaultValue: 'Failed to save settings' });
+        const message = t('integrations.xero.csv.settings.errors.save', { defaultValue: 'Failed to save settings' });
         setError(message);
         setSuccessMessage(null);
       }

@@ -1,1190 +1,1346 @@
 {
-  "accounting": {
-    "dialog": {
-      "cancel": "Annuleren",
-      "enterPlaceholder": "{{field}} invoeren...",
-      "errors": {
-        "enterExternal": "Voer {{field}} in.",
-        "invalidJson": "Ongeldig JSON-formaat voor metadata.",
-        "saveFailed": "Toewijzing opslaan mislukt.",
-        "selectAlga": "Selecteer {{field}}.",
-        "selectExternal": "Selecteer {{field}}."
-      },
-      "manualEntryHelp": "Voer de identifier exact in zoals deze verschijnt in uw boekhoudsysteem.",
-      "metadataLabel": "Metadata (JSON)",
-      "metadataPlaceholder": "Optionele metadata als JSON",
-      "realmIdLabel": "Realm-ID",
-      "saveMapping": "Toewijzing opslaan",
-      "saving": "Opslaan…",
-      "selectPlaceholder": "{{field}} selecteren..."
-    },
-    "manager": {
-      "noModules": "Geen toewijzingsmodules geconfigureerd."
-    },
-    "moduleView": {
-      "actionsColumn": "Acties",
-      "delete": "Verwijderen",
-      "edit": "Bewerken",
-      "errors": {
-        "deleteFailed": "Toewijzing verwijderen mislukt.",
-        "loadFailed": "Toewijzingen laden mislukt."
-      },
-      "loading": "Toewijzingen laden…",
-      "noMappings": "Geen toewijzingen gevonden.",
-      "notAvailable": "N.v.t.",
-      "openMenu": "Menu openen"
-    },
-    "setup": {
-      "activeConfiguration": "Actieve configuratie",
-      "badges": {
-        "enterprise": "Enterprise"
-      },
-      "comingSoon": "Binnenkort beschikbaar",
-      "configure": "Integratie configureren",
-      "highlightValues": {
-        "csv": "CSV",
-        "instant": "Direct",
-        "live": "Live",
-        "manual": "Handmatig",
-        "twoWay": "Tweerichtings"
-      },
-      "highlights": {
-        "delivery": "Levering",
-        "export": "Export",
-        "format": "Formaat",
-        "sync": "Synchronisatie"
-      },
-      "options": {
-        "qbo": {
-          "description": "Verbind uw realm om facturen te synchroniseren en toewijzingen te beheren."
+  "integrations": {
+    "accounting": {
+      "dialog": {
+        "cancel": "Annuleren",
+        "enterPlaceholder": "{{field}} invoeren...",
+        "errors": {
+          "enterExternal": "Voer {{field}} in.",
+          "invalidJson": "Ongeldig JSON-formaat voor metadata.",
+          "saveFailed": "Toewijzing opslaan mislukt.",
+          "selectAlga": "Selecteer {{field}}.",
+          "selectExternal": "Selecteer {{field}}."
         },
-        "qboCsv": {
-          "description": "Exporteer facturen naar CSV voor handmatige import in QuickBooks en importeer belastinggegevens uit rapporten."
+        "manualEntryHelp": "Voer de identifier exact in zoals deze verschijnt in uw boekhoudsysteem.",
+        "metadataLabel": "Metadata (JSON)",
+        "metadataPlaceholder": "Optionele metadata als JSON",
+        "realmIdLabel": "Realm-ID",
+        "saveMapping": "Toewijzing opslaan",
+        "saving": "Opslaan…",
+        "selectPlaceholder": "{{field}} selecteren..."
+      },
+      "manager": {
+        "noModules": "Geen toewijzingsmodules geconfigureerd."
+      },
+      "moduleView": {
+        "actionsColumn": "Acties",
+        "delete": "Verwijderen",
+        "edit": "Bewerken",
+        "errors": {
+          "deleteFailed": "Toewijzing verwijderen mislukt.",
+          "loadFailed": "Toewijzingen laden mislukt."
         },
-        "xero": {
-          "description": "Verbind uw organisatie met tenant-eigen OAuth-inloggegevens voor live boekhoudexports en toewijzingen."
+        "loading": "Toewijzingen laden…",
+        "noMappings": "Geen toewijzingen gevonden.",
+        "notAvailable": "N.v.t.",
+        "openMenu": "Menu openen"
+      },
+      "setup": {
+        "activeConfiguration": "Actieve configuratie",
+        "badges": {
+          "enterprise": "Enterprise"
         },
-        "xeroCsv": {
-          "description": "Exporteer facturen naar CSV voor handmatige import in Xero en importeer belastinggegevens uit Xero-rapporten."
+        "comingSoon": "Binnenkort beschikbaar",
+        "configure": "Integratie configureren",
+        "highlightValues": {
+          "csv": "CSV",
+          "instant": "Direct",
+          "live": "Live",
+          "manual": "Handmatig",
+          "twoWay": "Tweerichtings"
+        },
+        "highlights": {
+          "delivery": "Levering",
+          "export": "Export",
+          "format": "Formaat",
+          "sync": "Synchronisatie"
+        },
+        "options": {
+          "qbo": {
+            "description": "Verbind uw realm om facturen te synchroniseren en toewijzingen te beheren."
+          },
+          "qboCsv": {
+            "description": "Exporteer facturen naar CSV voor handmatige import in QuickBooks en importeer belastinggegevens uit rapporten."
+          },
+          "xero": {
+            "description": "Verbind uw organisatie met tenant-eigen OAuth-inloggegevens voor live boekhoudexports en toewijzingen."
+          },
+          "xeroCsv": {
+            "description": "Exporteer facturen naar CSV voor handmatige import in Xero en importeer belastinggegevens uit Xero-rapporten."
+          }
+        },
+        "selected": "{{title}} geselecteerd",
+        "unavailable": {
+          "description": "Deze integratie is nog niet beschikbaar. Selecteer QuickBooks CSV of Xero CSV om handmatige exports te configureren.",
+          "title": "Configuratie niet beschikbaar"
         }
       },
-      "selected": "{{title}} geselecteerd",
-      "unavailable": {
-        "description": "Deze integratie is nog niet beschikbaar. Selecteer QuickBooks CSV of Xero CSV om handmatige exports te configureren.",
-        "title": "Configuratie niet beschikbaar"
+      "modules": {
+        "tabs": {
+          "clients": "Klanten",
+          "itemsServices": "Items / Diensten",
+          "taxCodes": "Belastingcodes",
+          "paymentTerms": "Betalingsvoorwaarden"
+        }
       }
-    }
-  },
-  "calendar": {
-    "enterprise": {
-      "loading": "Agenda-instellingen worden geladen..."
-    }
-  },
-  "csv": {
-    "export": {
-      "actions": {
-        "exportCsv": "CSV exporteren",
-        "generating": "Genereren..."
-      },
-      "description": "Facturen exporteren als CSV-bestand voor handmatige import in QuickBooks.",
-      "errors": {
-        "configureMissingMappings": "Configureer de ontbrekende toewijzingen hierboven en probeer de export opnieuw.",
-        "failed": "Export mislukt",
-        "missingItemMapping": "Item-toewijzing ontbreekt",
-        "missingItemMappingId": "Item-toewijzing ontbreekt ({{serviceId}})",
-        "missingItemMappingNamed": "Item-toewijzing ontbreekt: {{serviceName}}"
-      },
-      "fields": {
-        "dateRange": "Datumbereik (optioneel)",
-        "invoiceStatuses": "Factuurstatussen"
-      },
-      "lockReset": {
+    },
+    "calendar": {
+      "enterprise": {
+        "loading": "Agenda-instellingen worden geladen..."
+      }
+    },
+    "csv": {
+      "export": {
         "actions": {
-          "reset": "Exportvergrendeling resetten"
+          "exportCsv": "CSV exporteren",
+          "generating": "Genereren..."
         },
-        "description": "Exportvergrendelingen wissen om het opnieuw exporteren van facturen via CSV mogelijk te maken.",
-        "dialog": {
-          "cancel": "Annuleren",
-          "confirm": "Vergrendeling resetten",
-          "confirmBatch": "Hierdoor kan Alga PSA facturen uit batch {{batchId}} opnieuw exporteren. Als sommige van deze facturen nog bestaan in QuickBooks, kan het importeren van de CSV duplicaten creëren.",
-          "confirmInvoice": "Hierdoor kan Alga PSA factuur {{invoiceNumber}} opnieuw exporteren. Als deze factuur nog bestaat in QuickBooks, kan het importeren van de CSV duplicaten creëren.",
-          "resetting": "Resetten…",
-          "title": "Exportvergrendeling resetten?",
-          "warning": "Ga alleen door als u zeker weet dat de factuur niet is geïmporteerd, of als u deze hebt verwijderd/geannuleerd in QuickBooks."
-        },
+        "description": "Facturen exporteren als CSV-bestand voor handmatige import in QuickBooks.",
         "errors": {
-          "unable": "Exportvergrendeling kan niet worden gereset"
+          "configureMissingMappings": "Configureer de ontbrekende toewijzingen hierboven en probeer de export opnieuw.",
+          "failed": "Export mislukt",
+          "missingItemMapping": "Item-toewijzing ontbreekt",
+          "missingItemMappingId": "Item-toewijzing ontbreekt ({{serviceId}})",
+          "missingItemMappingNamed": "Item-toewijzing ontbreekt: {{serviceName}}"
         },
         "fields": {
-          "batchId": "Export-batch-ID",
-          "batchIdPlaceholder": "bijv. e793a514-34bd-4d7b-b266-9bb15f7087c4",
-          "invoiceNumber": "Factuurnummer",
-          "invoiceNumberPlaceholder": "bijv. INV-1001"
+          "dateRange": "Datumbereik (optioneel)",
+          "invoiceStatuses": "Factuurstatussen"
         },
-        "modes": {
-          "ariaLabel": "Modus voor resetten van exportvergrendeling",
-          "batch": "Batch",
-          "invoice": "Factuur"
+        "lockReset": {
+          "actions": {
+            "reset": "Exportvergrendeling resetten"
+          },
+          "description": "Exportvergrendelingen wissen om het opnieuw exporteren van facturen via CSV mogelijk te maken.",
+          "dialog": {
+            "cancel": "Annuleren",
+            "confirm": "Vergrendeling resetten",
+            "confirmBatch": "Hierdoor kan Alga PSA facturen uit batch {{batchId}} opnieuw exporteren. Als sommige van deze facturen nog bestaan in QuickBooks, kan het importeren van de CSV duplicaten creëren.",
+            "confirmInvoice": "Hierdoor kan Alga PSA factuur {{invoiceNumber}} opnieuw exporteren. Als deze factuur nog bestaat in QuickBooks, kan het importeren van de CSV duplicaten creëren.",
+            "resetting": "Resetten…",
+            "title": "Exportvergrendeling resetten?",
+            "warning": "Ga alleen door als u zeker weet dat de factuur niet is geïmporteerd, of als u deze hebt verwijderd/geannuleerd in QuickBooks."
+          },
+          "errors": {
+            "unable": "Exportvergrendeling kan niet worden gereset"
+          },
+          "fields": {
+            "batchId": "Export-batch-ID",
+            "batchIdPlaceholder": "bijv. e793a514-34bd-4d7b-b266-9bb15f7087c4",
+            "invoiceNumber": "Factuurnummer",
+            "invoiceNumberPlaceholder": "bijv. INV-1001"
+          },
+          "modes": {
+            "ariaLabel": "Modus voor resetten van exportvergrendeling",
+            "batch": "Batch",
+            "invoice": "Factuur"
+          },
+          "success": {
+            "batchCleared": "Exportvergrendelingen voor deze batch gewist. U kunt die facturen opnieuw exporteren.",
+            "invoiceCleared": "Exportvergrendeling gewist. U kunt deze factuur opnieuw exporteren.",
+            "noBatchLocks": "Geen exportvergrendelingen gevonden voor die batch.",
+            "noInvoiceLock": "Geen exportvergrendeling gevonden voor die factuur."
+          },
+          "title": "Een factuur opnieuw exporteren",
+          "warnings": {
+            "duplicates": "Dit kan duplicaten veroorzaken in QuickBooks als de factuur daar nog bestaat."
+          }
         },
         "success": {
-          "batchCleared": "Exportvergrendelingen voor deze batch gewist. U kunt die facturen opnieuw exporteren.",
-          "invoiceCleared": "Exportvergrendeling gewist. U kunt deze factuur opnieuw exporteren.",
-          "noBatchLocks": "Geen exportvergrendelingen gevonden voor die batch.",
-          "noInvoiceLock": "Geen exportvergrendeling gevonden voor die factuur."
+          "one": "{{count}} factuur geëxporteerd naar {{filename}}",
+          "other": "{{count}} facturen geëxporteerd naar {{filename}}"
         },
-        "title": "Een factuur opnieuw exporteren",
-        "warnings": {
-          "duplicates": "Dit kan duplicaten veroorzaken in QuickBooks als de factuur daar nog bestaat."
-        }
-      },
-      "success": {
-        "one": "{{count}} factuur geëxporteerd naar {{filename}}",
-        "other": "{{count}} facturen geëxporteerd naar {{filename}}"
-      },
-      "title": "CSV-export voor QuickBooks"
-    },
-    "preview": {
-      "duplicates": {
-        "description": "De volgende facturen komen meerdere keren voor. Hun belastingbedragen worden opgeteld:",
-        "title": "Dubbele facturen ({{count}})"
-      },
-      "errors": {
-        "more": "... en {{count}} fouten meer",
-        "title": "Fouten ({{count}})"
-      },
-      "importResults": "Importresultaten",
-      "importSummary": {
-        "difference": "Verschil:",
-        "failedUpdates": "Mislukte updates:",
-        "importedTax": "Geïmporteerde belasting:",
-        "originalTax": "Oorspronkelijke belasting:",
-        "successfulUpdates": "Succesvolle updates:",
-        "title": "Importoverzicht"
-      },
-      "rowLabel": "Rij {{row}}:",
-      "stats": {
-        "matchedInvoices": "Gekoppelde facturen",
-        "totalRows": "Totaal aantal rijen",
-        "uniqueInvoices": "Unieke facturen",
-        "validRows": "Geldige rijen"
-      },
-      "status": {
-        "databaseMatch": "Database-overeenkomst",
-        "rowData": "Rijgegevens",
-        "structure": "Structuur"
-      },
-      "validationPassed": {
-        "one": "Validatie geslaagd. Klaar om belastinggegevens te importeren voor {{count}} factuur.",
-        "other": "Validatie geslaagd. Klaar om belastinggegevens te importeren voor {{count}} facturen."
-      },
-      "validationResults": "Validatieresultaten",
-      "warnings": {
-        "more": "... en {{count}} waarschuwingen meer",
-        "title": "Waarschuwingen ({{count}})"
-      }
-    },
-    "settings": {
-      "exports": {
-        "description": "Maak export-batches aan, download CSV-bestanden, importeer belastingrapporten en bekijk de exportgeschiedenis.",
-        "managedTitle": "Beheerd vanuit Facturatie",
-        "openButton": "Boekhoudexports openen",
-        "path": "Facturatie → Boekhoudexports",
-        "title": "Boekhoudexports"
-      },
-      "qbo": {
-        "bullets": {
-          "exportLabel": "Export",
-          "exportText": "Genereer CSV-bestanden die compatibel zijn met de factuurimportfunctie van QuickBooks",
-          "taxImportLabel": "Belastingimport",
-          "taxImportText": "Bij gebruik van externe belastingberekening belastingbedragen importeren uit QuickBooks-belastingrapporten"
-        },
-        "description": "Exporteer facturen naar CSV voor handmatige import in QuickBooks en importeer belastinggegevens uit QuickBooks-rapporten.",
-        "exports": {
-          "managedPrefix": "Ga naar",
-          "managedSuffix": "om facturen te selecteren, QuickBooks CSV-exports te genereren, belastingrapporten te importeren en batches te beheren."
-        },
-        "intro": "Deze integratie biedt een alternatief voor op OAuth gebaseerde QuickBooks-connectiviteit:",
-        "mappings": {
-          "description": "Wijs Alga-klanten, services, belastingcodes en betalingsvoorwaarden toe aan de identifiers die in uw QuickBooks-bedrijf worden gebruikt. Deze waarden worden gebruikt bij het genereren van de CSV-export.",
-          "title": "QuickBooks CSV-toewijzingen"
-        },
-        "note": "Let op: configureer de toewijzingen hieronder voor het exporteren. CSV-exports en belastingimports worden beheerd vanuit Facturatie → Boekhoudexports.",
-        "title": "QuickBooks CSV-integratie"
-      }
-    },
-    "taxImport": {
-      "actions": {
-        "importTaxData": "Belastinggegevens importeren",
-        "importing": "Importeren...",
-        "validate": "Valideren",
-        "validating": "Valideren..."
-      },
-      "errors": {
-        "importFailed": "Import mislukt",
-        "readFile": "Bestand lezen mislukt",
-        "selectFile": "Selecteer een CSV-bestand",
-        "selectFileAndRange": "Selecteer een bestand en een datumbereik",
-        "templateDownloadFailed": "Sjabloon downloaden mislukt",
-        "validationFailed": "Validatie mislukt"
-      },
-      "fields": {
-        "csvFile": "CSV-bestand",
-        "dateRangeHelp": "Alleen facturen binnen dit datumbereik worden verwerkt.",
-        "dateRangeRequired": "Datumbereik (vereist)",
-        "dropZone": "Sleep een CSV-bestand hierheen, of klik om te bladeren",
-        "fileSize": "({{size}} KB)"
+        "title": "CSV-export voor QuickBooks"
       },
       "preview": {
-        "alreadyImported": "{{count}} factu(u)r(en) hebben al geïmporteerde belasting.",
-        "alreadyImportedSkip": "{{count}} factu(u)r(en) hebben al geïmporteerde belasting en worden overgeslagen.",
-        "badges": {
+        "duplicates": {
+          "description": "De volgende facturen komen meerdere keren voor. Hun belastingbedragen worden opgeteld:",
+          "title": "Dubbele facturen ({{count}})"
+        },
+        "errors": {
+          "more": "... en {{count}} fouten meer",
+          "title": "Fouten ({{count}})"
+        },
+        "importResults": "Importresultaten",
+        "importSummary": {
+          "difference": "Verschil:",
+          "failedUpdates": "Mislukte updates:",
+          "importedTax": "Geïmporteerde belasting:",
+          "originalTax": "Oorspronkelijke belasting:",
+          "successfulUpdates": "Succesvolle updates:",
+          "title": "Importoverzicht"
+        },
+        "rowLabel": "Rij {{row}}:",
+        "stats": {
+          "matchedInvoices": "Gekoppelde facturen",
+          "totalRows": "Totaal aantal rijen",
+          "uniqueInvoices": "Unieke facturen",
+          "validRows": "Geldige rijen"
+        },
+        "status": {
           "databaseMatch": "Database-overeenkomst",
           "rowData": "Rijgegevens",
           "structure": "Structuur"
         },
-        "columns": {
-          "algaInvoice": "Alga-factuur",
-          "contact": "Contact",
-          "status": "Status",
-          "taxAmount": "Belastingbedrag",
-          "xeroInvoice": "Xero-factuur"
+        "validationPassed": {
+          "one": "Validatie geslaagd. Klaar om belastinggegevens te importeren voor {{count}} factuur.",
+          "other": "Validatie geslaagd. Klaar om belastinggegevens te importeren voor {{count}} facturen."
         },
-        "errorsTitle": "Fouten ({{count}})",
-        "matched": "Gekoppeld",
-        "matchedInvoices": "Gekoppelde facturen",
-        "notPendingDescription": "Deze facturen zijn aangemaakt met interne belastingberekening. Om belastingen uit Xero te importeren, moeten facturen bij de export worden ingesteld met de belastingbron \"Pending External\".",
-        "notPendingSkip": "{{count}} factu(u)r(en) hebben geen externe belasting in behandeling en worden overgeslagen.",
-        "notPendingTitle": "{{count}} factu(u)r(en) gebruiken geen externe belastingberekening.",
-        "showingFirst20": "Eerste 20 van {{count}} rijen worden weergegeven",
-        "taxToImport": "Te importeren belasting",
-        "title": "Validatieresultaten",
-        "totalRows": "Totaal aantal rijen",
-        "uniqueInvoices": "Unieke facturen",
-        "unmatched": "Niet gekoppeld",
-        "validRows": "Geldige rijen",
-        "warningsTitle": "Waarschuwingen ({{count}})"
-      },
-      "qbo": {
-        "description": "Belastingbedragen importeren uit een CSV-bestand van een QuickBooks-belastingrapport.",
-        "help": {
-          "csvRequirement": "De CSV moet kolommen Factuurnummer, Factuurdatum en Belastingbedrag bevatten.",
-          "downloadTemplate": "CSV-sjabloon downloaden",
-          "steps": {
-            "s1": "Ga in QuickBooks naar Reports > All Reports",
-            "s2": "Selecteer Sales Tax Liability of Transaction Detail by Account",
-            "s3": "Stel het datumbereik in zodat het overeenkomt met uw geëxporteerde facturen",
-            "s4": "Klik op Export en kies Export to Excel of Export to CSV",
-            "s5": "Sla het bestand op en upload het hier"
-          },
-          "title": "Hoe belastinggegevens te exporteren uit QuickBooks"
-        },
-        "success": {
-          "one": "Belasting succesvol geïmporteerd voor {{count}} factuur. Totale geïmporteerde belasting: ${{amount}}",
-          "other": "Belasting succesvol geïmporteerd voor {{count}} facturen. Totale geïmporteerde belasting: ${{amount}}"
-        },
-        "title": "Belastingen importeren uit QuickBooks-CSV"
-      },
-      "result": {
-        "failed": "{{count}} mislukt.",
-        "one": "Belasting geïmporteerd voor {{count}} factuur. Totale geïmporteerde belasting: {{amount}}.",
-        "other": "Belasting geïmporteerd voor {{count}} facturen. Totale geïmporteerde belasting: {{amount}}.",
-        "skipped": "{{count}} overgeslagen."
-      },
-      "unified": {
-        "description": "Belastingbedragen importeren uit de CSV-export van uw boekhoudsysteem.",
-        "qbResult": {
-          "one": "Belasting succesvol geïmporteerd voor {{count}} factuur. Totale geïmporteerde belasting: {{amount}}",
-          "other": "Belasting succesvol geïmporteerd voor {{count}} facturen. Totale geïmporteerde belasting: {{amount}}"
-        },
-        "source": {
-          "ariaLabel": "CSV-importbron",
-          "quickbooks": "QuickBooks",
-          "xero": "Xero"
-        },
-        "title": "Belastingen importeren uit CSV",
-        "xeroCsvDescription": "De geëxporteerde CSV bevat Factuurnummer, Contactnaam, Regelbedrag, Belastingbedrag en tracking-categorieën.",
-        "xeroHelp": {
-          "note": "Let op: alleen facturen die oorspronkelijk uit Alga PSA zijn geëxporteerd (met tracking Source System = AlgaPSA) worden gekoppeld.",
-          "s1": "Ga in Xero naar Sales > Invoices",
-          "s2": "Selecteer het factuurtabblad waaruit u wilt exporteren (bijv. Paid, Awaiting Payment)",
-          "s3": "(Optioneel) Klik op Search om te filteren op startdatum, einddatum of datumtype",
-          "s4": "Klik op Export",
-          "s5": "Xero downloadt een CSV-bestand naar uw computer",
-          "s6": "Upload dat CSV-bestand hier"
-        },
-        "xeroResult": {
-          "one": "Belasting geïmporteerd voor {{count}} factuur. Totaal: {{amount}}.",
-          "other": "Belasting geïmporteerd voor {{count}} facturen. Totaal: {{amount}}."
+        "validationResults": "Validatieresultaten",
+        "warnings": {
+          "more": "... en {{count}} waarschuwingen meer",
+          "title": "Waarschuwingen ({{count}})"
         }
-      },
-      "xero": {
-        "description": "Belastingbedragen importeren uit een CSV-bestand van een Xero Invoice Details Report.",
-        "dropZone": "Sleep een CSV van Xero Invoice Details Report hierheen, of klik om te bladeren",
-        "help": {
-          "csvRequirement": "Het rapport moet kolommen bevatten voor Factuurnummer, Contactnaam, Regelbedrag en Belastingbedrag. Facturen worden gekoppeld met behulp van het Reference-veld of de tracking-categorieën die tijdens het exporteren zijn ingesteld.",
-          "steps": {
-            "s1": "Ga in Xero naar Reports > All Reports",
-            "s2": "Selecteer Sales (Invoices and Revenue)",
-            "s3": "Voer het Invoice Details-rapport uit",
-            "s4": "Stel het datumbereik in zodat het overeenkomt met uw geëxporteerde facturen",
-            "s5": "Klik op Export en kies CSV",
-            "s6": "Upload het geëxporteerde bestand hier"
-          },
-          "title": "Hoe belastinggegevens te exporteren uit Xero"
-        },
-        "title": "Belastingen importeren uit Xero-CSV"
-      }
-    }
-  },
-  "google": {
-    "settings": {
-      "actions": {
-        "refresh": "Vernieuwen",
-        "resetProviders": "Google-providers resetten",
-        "resetting": "Resetten…",
-        "save": "Opslaan",
-        "saving": "Opslaan…"
-      },
-      "afterSaveNotice": "Ga na het opslaan naar de integraties voor inkomende e-mail en agenda en autoriseer de providers opnieuw. Bestaande Google-providers worden niet gemigreerd.",
-      "consoleLink": "Google Cloud Console",
-      "description": "Configureer tenant-eigen Google Cloud-inloggegevens voor Gmail (inkomende e-mail) en Google Calendar.",
-      "errors": {
-        "loadFailed": "Google-instellingen laden mislukt",
-        "resetFailed": "Google-providers resetten mislukt",
-        "saveFailed": "Google-instellingen opslaan mislukt"
-      },
-      "fields": {
-        "projectIdHelp": "Wordt gebruikt voor Pub/Sub-provisioning van Gmail (tenant-eigen service account).",
-        "projectIdLabel": "Google Cloud project-ID",
-        "projectIdPlaceholder": "my-project-id"
-      },
-      "loading": "Laden…",
-      "oauth": {
-        "calendarClientId": "Calendar OAuth Client ID",
-        "calendarClientSecret": "Calendar OAuth Client Secret",
-        "enterSecret": "Client secret invoeren",
-        "gmailClientId": "Gmail OAuth Client ID",
-        "gmailClientSecret": "Gmail OAuth Client Secret",
-        "sectionTitle": "OAuth-app",
-        "shareApp": "Dezelfde OAuth-app gebruiken voor Gmail en Calendar",
-        "shareAppHelp": "Aanbevolen. U kunt nog steeds afzonderlijke Google-accounts per integratie autoriseren.",
-        "storedSecret": "Opgeslagen secret: {{secret}}"
-      },
-      "redirectUrisLabel": "Redirect-URI's (kopiëren naar de Google OAuth-client)",
-      "scopes": "Scopes",
-      "scopesCalendar": "Calendar: {{scopes}}",
-      "scopesGmail": "Gmail: {{scopes}}",
-      "serviceAccount": {
-        "alreadyStored": "Er is al een service-accountsleutel opgeslagen (niet weergegeven).",
-        "description": "Plak de JSON-sleutel van het tenant-eigen service account dat wordt gebruikt om Pub/Sub te provisioneren.",
-        "title": "Pub/Sub-service-account (vereist voor Gmail)"
-      },
-      "setupGuide": "Installatiehandleiding",
-      "title": "Google",
-      "toasts": {
-        "resetDescription": "Alle Google-providers zijn nu ontkoppeld en vereisen opnieuw autorisatie.",
-        "resetFailedTitle": "Reset mislukt",
-        "resetTitle": "Google-providers gereset",
-        "saveFailedTitle": "Kan Google-instellingen niet opslaan",
-        "savedDescription": "De Google-configuratie van de tenant is succesvol bijgewerkt.",
-        "savedTitle": "Google-instellingen opgeslagen",
-        "unknownError": "Onbekende fout"
-      }
-    }
-  },
-  "microsoft": {
-    "settings": {
-      "actions": {
-        "entraLink": "Microsoft Entra",
-        "newProfile": "Nieuw profiel",
-        "openTeamsSetup": "Teams-installatie openen",
-        "refresh": "Vernieuwen",
-        "resetProviders": "Microsoft-providers resetten",
-        "resetting": "Resetten…"
-      },
-      "archiveDialog": {
-        "archiving": "Archiveren…",
-        "cancel": "Profiel behouden",
-        "confirm": "Profiel archiveren",
-        "message": "{{name}} archiveren? Bestaande historische verwijzingen blijven intact, maar het profiel is niet meer beschikbaar voor nieuwe bindingen.",
-        "title": "Microsoft-profiel archiveren?"
-      },
-      "binding": {
-        "bound": "Gekoppeld",
-        "boundProfileLabel": "Gekoppeld profiel",
-        "createFirst": "Maak eerst een profiel aan",
-        "needsAttention": "Vereist aandacht",
-        "saving": "Opslaan…",
-        "selectProfile": "Selecteer een profiel",
-        "unbound": "Niet gekoppeld"
-      },
-      "bindings": {
-        "summaryBound": "{{consumer}} is gekoppeld aan {{profile}}.",
-        "summaryNone": "Momenteel is er geen Microsoft-profiel gekoppeld aan {{consumer}}.",
-        "summaryUnavailable": "{{consumer}} is gekoppeld aan een niet-beschikbaar profiel.",
-        "warningArchived": "{{consumer}} is nog steeds gekoppeld aan een gearchiveerd profiel. Koppel opnieuw aan een actief profiel.",
-        "warningNoBinding": "Er is nog geen {{consumer}}-binding geconfigureerd.",
-        "warningNotReady": "{{consumer}} is gekoppeld aan {{profile}}, maar dat profiel moet nog worden geconfigureerd.",
-        "warningProfileMissing": "{{consumer}} is gekoppeld aan een profiel dat niet meer beschikbaar is. Koppel opnieuw aan een actief profiel."
-      },
-      "bindingsAlertCe": "Expliciete bindingen zijn de bron van waarheid voor de selectie van het MSP SSO-profiel. Configureer aanmeldingsdomeinen apart na het kiezen van het gekoppelde profiel.",
-      "bindingsAlertEe": "Expliciete bindingen zijn de bron van waarheid voor de selectie van MSP SSO-, e-mail-, agenda- en Teams-profielen.",
-      "consumerBindings": {
-        "descriptionCe": "Koppel één Microsoft-profiel aan MSP SSO voor aanmelding en gebruik van aanmeldingsdomein.",
-        "descriptionEe": "Koppel één Microsoft-profiel per ondersteunde consumer. Het opnieuw toewijzen van één consumer wijzigt de andere niet.",
-        "title": "Expliciete consumer-bindingen"
-      },
-      "consumers": {
-        "calendar": {
-          "description": "Kies welk Microsoft-profiel Outlook-agendasynchronisatie moet gebruiken.",
-          "label": "Agenda",
-          "reconnect": "Bestaande Microsoft-agendaverbindingen kunnen opnieuw autorisatie vereisen na het wijzigen van het gekoppelde profiel."
-        },
-        "email": {
-          "description": "Kies welk Microsoft-profiel Outlook (inkomende e-mail) moet gebruiken.",
-          "label": "E-mail",
-          "reconnect": "Bestaande Outlook-e-mailverbindingen kunnen opnieuw autorisatie vereisen na het wijzigen van het gekoppelde profiel."
-        },
-        "mspSso": {
-          "description": "Kies welk Microsoft-profiel MSP SSO-aanmeldingsdomeinen, Microsoft-aanmelding en tenant-detectie ondersteunt.",
-          "label": "MSP SSO"
-        },
-        "teams": {
-          "description": "Kies welk Microsoft-profiel Microsoft Teams-installatie en auth-flows moeten gebruiken.",
-          "label": "Teams"
-        }
-      },
-      "descriptionCe": "Beheer tenant-eigen Microsoft-profielen voor MSP SSO, Microsoft-aanmelding en detectie van aanmeldingsdomeinen.",
-      "descriptionEe": "Beheer tenant-eigen Microsoft-profielen voor MSP SSO, Outlook-e-mail, agendasynchronisatie en Microsoft Teams.",
-      "dialog": {
-        "cancel": "Annuleren",
-        "clientId": "Client ID",
-        "clientSecret": "Client secret",
-        "clientSecretPlaceholder": "Client secret invoeren",
-        "clientSecretPlaceholderEdit": "Laat leeg om het huidige secret te behouden",
-        "createProfile": "Profiel aanmaken",
-        "createTitle": "Microsoft-profiel aanmaken",
-        "descriptionCreate": "Maak een tenant-eigen Microsoft-profiel aan en koppel het vervolgens expliciet aan de Microsoft-consumers die u wilt gebruiken.",
-        "descriptionEdit": "Werk het geselecteerde Microsoft-profiel bij. Laat het secret leeg om de bestaande waarde te behouden.",
-        "displayName": "Weergavenaam",
-        "displayNamePlaceholder": "Acme productie-tenant",
-        "editTitle": "Microsoft-profiel bewerken",
-        "saveChanges": "Wijzigingen opslaan",
-        "saving": "Opslaan…",
-        "setDefault": "Dit profiel instellen als standaard Microsoft-profiel",
-        "setDefaultHelp": "Standaardprofielen blijven beschikbaar voor profielbeheer-workflows en migratieveilige metadata, niet voor consumer-routing.",
-        "storedSecretHint": "Opgeslagen secret: {{secret}}. Laat dit veld leeg om het ongewijzigd te houden.",
-        "tenantId": "Tenant ID"
-      },
-      "empty": {
-        "createButton": "Microsoft-profiel aanmaken",
-        "descriptionCe": "Maak eerst een benoemd profiel aan en koppel het vervolgens expliciet aan MSP SSO- en aanmeldingsdomein-flows.",
-        "descriptionEe": "Maak eerst een benoemd profiel aan en koppel het vervolgens expliciet aan MSP SSO, Outlook-e-mail, agendasynchronisatie en Teams.",
-        "title": "Nog geen Microsoft-profielen"
-      },
-      "errors": {
-        "archive": "Microsoft-profiel archiveren mislukt",
-        "loadBindings": "Microsoft-bindingen laden mislukt",
-        "loadStatus": "Microsoft-instellingen laden mislukt",
-        "resetProviders": "Microsoft-providers resetten mislukt",
-        "saveProfile": "Microsoft-profiel opslaan mislukt",
-        "setDefault": "Standaard Microsoft-profiel instellen mislukt",
-        "updateBinding": "Microsoft-binding bijwerken mislukt"
-      },
-      "guidance": {
-        "applicationIdUri": "Application ID URI",
-        "calendarRedirect": "Redirect-URI agendasynchronisatie",
-        "calendarTitle": "Agendahandleiding",
-        "clientId": "Client ID",
-        "currentProfileTitle": "Huidige profielwaarden",
-        "emailRedirect": "Redirect-URI inkomende e-mail",
-        "emailTitle": "E-mailhandleiding",
-        "mspSsoTitle": "MSP SSO-handleiding",
-        "notConfigured": "Niet geconfigureerd",
-        "redirectUri": "Redirect URI",
-        "requiresBaseUrl": "Vereist basis-URL en Client ID",
-        "scopes": "Scopes",
-        "teamsBotRedirect": "Redirect-URI persoonlijke bot",
-        "teamsMessageRedirect": "Redirect-URI message extension",
-        "teamsScopes": "Teams-scopes",
-        "teamsTabRedirect": "Redirect-URI persoonlijk tabblad",
-        "teamsTitle": "Teams-handleiding",
-        "tenantId": "Tenant ID",
-        "unavailable": "Niet beschikbaar"
-      },
-      "profileCard": {
-        "activeBindings": "Actieve bindingen",
-        "archive": "Archiveren",
-        "clientId": "Client ID",
-        "defaultBadge": "Standaard",
-        "edit": "Bewerken",
-        "guidanceSummary": "Handleiding voor Microsoft-appregistratie",
-        "noVisibleBindings": "Geen zichtbare consumer-bindingen",
-        "readinessTitle": "Profielgereedheid",
-        "readyCe": "Dit profiel is gereed voor MSP SSO-binding en aanmeldingsdomein-flows.",
-        "readyEe": "Dit profiel is gereed voor MSP SSO-, Outlook-e-mail- en agendabindingen.",
-        "readyEeTeams": "Dit profiel is gereed voor MSP SSO-, Outlook-e-mail-, agendasynchronisatie- en Teams-bindingen.",
-        "setDefault": "Instellen als standaard",
-        "storedSecret": "Opgeslagen secret",
-        "teamsAppIdUri": "Teams Application ID URI",
-        "tenantIdLabel": "Tenant ID:",
-        "updating": "Bijwerken…"
-      },
-      "providerReconnect": {
-        "description": "Gebruik dit als u inloggegevens roteert of opzettelijk Outlook-e-mail of de agenda aan een ander Microsoft-profiel koppelt.",
-        "title": "Opnieuw verbinden van provider"
-      },
-      "readiness": {
-        "archived": "Gearchiveerde profielen kunnen niet worden gebruikt voor nieuwe Microsoft-bindingen.",
-        "clientIdMissing": "Client ID ontbreekt.",
-        "clientSecretMissing": "Client secret is niet geconfigureerd.",
-        "tenantIdMissing": "Tenant ID ontbreekt."
-      },
-      "statusBadges": {
-        "archived": "Gearchiveerd",
-        "needsAttention": "Vereist aandacht",
-        "ready": "Gereed"
-      },
-      "title": "Microsoft",
-      "toasts": {
-        "archiveFailedTitle": "Kan Microsoft-profiel niet archiveren",
-        "archivedDescription": "{{name}} is succesvol gearchiveerd.",
-        "archivedTitle": "Microsoft-profiel gearchiveerd",
-        "bindingFailedTitle": "Kan {{consumer}}-binding niet bijwerken",
-        "bindingUpdatedDescription": "{{consumer}} gebruikt nu {{profile}}.",
-        "bindingUpdatedTitle": "{{consumer}}-binding bijgewerkt",
-        "defaultUpdatedDescription": "{{name}} is nu het standaard Microsoft-profiel.",
-        "defaultUpdatedTitle": "Standaard Microsoft-profiel bijgewerkt",
-        "profileCreated": "Microsoft-profiel aangemaakt",
-        "profileCreatedDescription": "Het Microsoft-profiel is klaar om gekoppeld te worden aan zichtbare Microsoft-consumers.",
-        "profileUpdated": "Microsoft-profiel bijgewerkt",
-        "profileUpdatedDescription": "De wijzigingen van het Microsoft-profiel zijn succesvol opgeslagen.",
-        "resetDescription": "Bestaande Outlook-e-mail- en agendaverbindingen vereisen nu opnieuw autorisatie.",
-        "resetFailedTitle": "Reset mislukt",
-        "resetTitle": "Microsoft-providers gereset",
-        "saveFailedTitle": "Kan Microsoft-profiel niet opslaan",
-        "selectedProfile": "het geselecteerde profiel",
-        "setDefaultFailedTitle": "Kan standaardprofiel niet instellen"
-      },
-      "validation": {
-        "clientIdRequired": "Microsoft OAuth Client ID is verplicht",
-        "clientSecretRequired": "Microsoft OAuth Client Secret is verplicht",
-        "displayNameRequired": "Weergavenaam van Microsoft-profiel is verplicht",
-        "tenantIdRequired": "Microsoft Tenant ID is verplicht"
-      }
-    }
-  },
-  "qbo": {
-    "callback": {
-      "completed": "Verbindingsproces voltooid.",
-      "errorDetail": "Fout: {{error}}",
-      "errored": "Het verbindingsproces heeft een fout opgeleverd.",
-      "failed": "Verbinding met QuickBooks Online mislukt.",
-      "realmId": "Realm-ID: {{realmId}}",
-      "returnButton": "Terug naar QuickBooks-instellingen",
-      "success": "Succesvol verbonden met QuickBooks Online!",
-      "title": "Status QuickBooks-verbinding"
-    }
-  },
-  "rmm": {
-    "ninjaOne": {
-      "loading": "NinjaOne-integratie-instellingen worden geladen..."
-    },
-    "setup": {
-      "activeConfiguration": "Actieve configuratie",
-      "comingSoon": "RMM-integratie binnenkort beschikbaar",
-      "configure": "Integratie configureren",
-      "selected": "{{title}} geselecteerd",
-      "title": "RMM-integraties"
-    },
-    "tactical": {
-      "actions": {
-        "disconnect": "Verbinding verbreken",
-        "disconnecting": "Verbinding verbreken...",
-        "ingestSoftware": "Software opnemen",
-        "ingesting": "Opnemen...",
-        "refresh": "Vernieuwen",
-        "save": "Opslaan",
-        "saving": "Opslaan...",
-        "syncAlerts": "Waarschuwingen synchroniseren",
-        "syncClients": "Klanten synchroniseren",
-        "syncDevices": "Apparaten synchroniseren",
-        "syncing": "Synchroniseren...",
-        "testConnection": "Verbinding testen",
-        "testing": "Testen..."
-      },
-      "auth": {
-        "apiKey": "API-sleutel",
-        "enterApiKey": "API-sleutel invoeren",
-        "enterPassword": "Wachtwoord invoeren",
-        "enterUsername": "Gebruikersnaam invoeren",
-        "knox": "Knox",
-        "knoxOption": "Gebruikersnaam/wachtwoord (Knox-token)",
-        "knoxTokenSaved": "Knox-token opgeslagen: {{value}}",
-        "mode": "Authenticatie",
-        "password": "Wachtwoord",
-        "saved": "Opgeslagen: {{value}}",
-        "savedEnterToUpdate": "Opgeslagen (invoeren om bij te werken)",
-        "totp": "TOTP-code",
-        "username": "Gebruikersnaam"
-      },
-      "autoSync": "Automatische synchronisatie",
-      "client": {
-        "loading": "Klanten laden…",
-        "select": "Klant selecteren"
-      },
-      "counts": {
-        "activeAlerts": "Actieve waarschuwingen",
-        "lastSync": "Laatste synchronisatie",
-        "mappedOrgs": "Toegewezen organisaties",
-        "never": "Nooit",
-        "syncedDevices": "Gesynchroniseerde apparaten"
-      },
-      "description": "Verbind Tactical RMM om assets te synchroniseren en waarschuwingen op te nemen.",
-      "errors": {
-        "backfillAlerts": "Backfill van waarschuwingen mislukt",
-        "connectionTest": "Verbindingstest mislukt",
-        "disconnect": "Verbinding verbreken mislukt",
-        "ingestSoftware": "Software opnemen mislukt",
-        "loadOrgMappings": "Organisatie-toewijzingen laden mislukt",
-        "loadSettings": "Tactical RMM-instellingen laden mislukt",
-        "saveConfig": "Tactical RMM-configuratie opslaan mislukt",
-        "someAlertsFailed": "Sommige waarschuwingen konden niet worden bijgewerkt: {{errors}}",
-        "someDevicesFailed": "Sommige apparaten konden niet worden gesynchroniseerd: {{errors}}",
-        "someOrgsFailed": "Sommige organisaties konden niet worden gesynchroniseerd: {{errors}}",
-        "someSoftwareFailed": "Sommige softwarerijen konden niet worden opgenomen: {{errors}}",
-        "syncDevices": "Apparaatsynchronisatie mislukt",
-        "syncOrgs": "Organisatiesynchronisatie mislukt",
-        "totpRequired": "TOTP is vereist. Voer uw huidige code in en test opnieuw.",
-        "updateMapping": "Toewijzing bijwerken mislukt"
-      },
-      "fields": {
-        "instanceUrl": "Instance-URL",
-        "instanceUrlHelp": "Gebruik uw Tactical-basis-URL (zonder /api aan het einde)."
-      },
-      "lastError": "Laatste fout: {{error}}",
-      "loadingSettings": "Tactical RMM-instellingen worden geladen...",
-      "sections": {
-        "alerts": "Waarschuwingen",
-        "alertsDescription": "Optioneel: historische of actieve waarschuwingen uit Tactical opnemen in Alga.",
-        "devices": "Apparaten",
-        "devicesDescription": "Synchroniseer Tactical-agents naar Alga-assets voor toegewezen organisaties.",
-        "orgMapping": "Organisatie-toewijzing",
-        "orgMappingDescription": "Wijs elke Tactical-klant toe aan een Alga-klant en regel automatische synchronisatie per organisatie.",
-        "orgMappingEmpty": "Geen organisaties gevonden. Voer eerst \"Klanten synchroniseren\" uit.",
-        "organizations": "Organisaties",
-        "organizationsDescription": "Synchroniseer Tactical-klanten in Alga-organisatie-toewijzingen en wijs ze vervolgens toe aan Alga-klanten.",
-        "softwareInventory": "Software-inventaris",
-        "softwareInventoryDescription": "Optioneel: opname van gecachte software-inventaris via Tactical /api/software/ (geen verversingsaanroepen per agent).",
-        "webhooks": "Webhooks (waarschuwingen)",
-        "webhooksDescription": "Configureer een Tactical-webhook voor waarschuwingsacties met de gedeelde secret-header hieronder."
-      },
-      "status": {
-        "authPrefix": "Auth:",
-        "connected": "Verbonden",
-        "disconnected": "Niet verbonden",
-        "instanceUrlNotSet": "Instance-URL niet ingesteld"
-      },
-      "statusLine": {
-        "configured": "Status: Geconfigureerd",
-        "notConfigured": "Status: Niet geconfigureerd"
-      },
-      "success": {
-        "alertBackfillCompleted": "Backfill van waarschuwingen voltooid. Verwerkt: {{processed}}, Aangemaakt: {{created}}, Bijgewerkt: {{updated}}, Mislukt: {{failed}}",
-        "connection": "Verbinding geslaagd.",
-        "deviceSyncCompleted": "Apparaatsynchronisatie voltooid. Verwerkt: {{processed}}, Aangemaakt: {{created}}, Bijgewerkt: {{updated}}, Verwijderd: {{deleted}}, Mislukt: {{failed}}",
-        "disconnected": "Verbinding verbroken.",
-        "orgSyncCompleted": "Organisatiesynchronisatie voltooid. Verwerkt: {{processed}}, Aangemaakt: {{created}}, Bijgewerkt: {{updated}}, Mislukt: {{failed}}",
-        "saved": "Tactical RMM-configuratie opgeslagen.",
-        "softwareIngestionCompleted": "Software-opname voltooid. Verwerkt: {{processed}}, Geïnstalleerd/bijgewerkt: {{created}}, Assets bijgewerkt: {{updated}}, Mislukt: {{failed}}"
-      },
-      "tacticalIdLabel": "Tactical-ID: {{id}}",
-      "title": "Tactical RMM",
-      "toasts": {
-        "alertsSyncedDescription": "Tactical-waarschuwingen zijn opgenomen.",
-        "alertsSyncedTitle": "Waarschuwingen gesynchroniseerd",
-        "backfillFailedTitle": "Backfill mislukt",
-        "connectedDescription": "Tactical RMM-verbinding geverifieerd.",
-        "connectedTitle": "Verbonden",
-        "connectionFailedTitle": "Verbinding mislukt",
-        "devicesSyncedDescription": "Tactical-agents zijn gesynchroniseerd in assets.",
-        "devicesSyncedTitle": "Apparaten gesynchroniseerd",
-        "disconnectFailedTitle": "Verbinding verbreken mislukt",
-        "disconnectedDescription": "Tactical RMM-inloggegevens gewist.",
-        "disconnectedTitle": "Niet verbonden",
-        "ingestionFailedTitle": "Opname mislukt",
-        "orgsSyncedDescription": "Tactical-klanten zijn gesynchroniseerd in organisatie-toewijzingen.",
-        "orgsSyncedTitle": "Organisaties gesynchroniseerd",
-        "saveFailedTitle": "Opslaan mislukt",
-        "savedDescription": "Tactical RMM-configuratie bijgewerkt.",
-        "savedTitle": "Opgeslagen",
-        "softwareIngestedDescription": "Gecachte Tactical-software-inventaris is opgenomen.",
-        "softwareIngestedTitle": "Software opgenomen",
-        "syncFailedTitle": "Synchronisatie mislukt",
-        "unknownError": "Onbekende fout",
-        "updateFailedTitle": "Bijwerken mislukt"
-      },
-      "webhook": {
-        "copiedTitle": "Gekopieerd",
-        "copy": "Kopiëren",
-        "headerName": "Header-naam",
-        "payloadTemplate": "Payload-sjabloon",
-        "secret": "Header-secret",
-        "secretCopied": "Webhook-secret naar klembord gekopieerd.",
-        "unavailable": "Webhook-informatie niet beschikbaar. (Vereist leesrechten voor instellingen.)",
-        "url": "Webhook-URL",
-        "urlCopied": "Webhook-URL naar klembord gekopieerd."
-      }
-    },
-    "tanium": {
-      "loading": "Tanium-integratie-instellingen worden geladen..."
-    }
-  },
-  "sso": {
-    "msp": {
-      "actions": {
-        "add": "Toevoegen",
-        "refresh": "Vernieuwen",
-        "request": "Aanvragen",
-        "resetChallenge": "Challenge resetten",
-        "revoke": "Intrekken",
-        "saveDomains": "Domeinen opslaan",
-        "saving": "Opslaan…",
-        "verify": "Verifiëren"
-      },
-      "addDomainLabel": "Aanmeldingsdomein toevoegen",
-      "advisoryNotice": "Adviesmodus: domeinregistratie helpt bij het routeren van MSP SSO-detectie maar vereist geen eigendomsverificatie in Community Edition.",
-      "claimStatus": {
-        "advisory": "Advies",
-        "pending": "In behandeling",
-        "rejected": "Afgewezen",
-        "revoked": "Ingetrokken",
-        "verified": "Geverifieerd",
-        "verifiedLegacy": "Geverifieerd (Legacy)"
-      },
-      "descriptionCe": "Registreer adviesdomeinen voor de detectie van MSP-aanmeldings-SSO. Eigendomsverificatie wordt niet afgedwongen in Community Edition, en onbeheerde domeinen vallen terug op providers op applicatieniveau van Nine Minds.",
-      "descriptionEe": "Beheer de levenscyclus van domeinclaims voor de detectie van MSP-aanmeldings-SSO-providers. Niet-geclaimde of niet-geschikte domeinen vallen terug op providers op applicatieniveau van Nine Minds.",
-      "dnsHost": "Host:",
-      "dnsInstructions": "Voeg het DNS TXT-record toe en klik vervolgens op Verifiëren:",
-      "dnsValue": "Waarde:",
-      "emptyClaims": "Er zijn nog geen domeinclaims geconfigureerd.",
-      "emptyDomains": "Geen domeinen geconfigureerd. Onbekende domeinen gebruiken de fallback van de provider op applicatieniveau.",
-      "errors": {
-        "conflicts": "Conflicten: {{conflicts}}.",
-        "loadClaims": "MSP SSO-domeinclaims kunnen niet worden geladen.",
-        "loadDomains": "MSP SSO-aanmeldingsdomeinen kunnen niet worden geladen.",
-        "refreshChallenge": "Challenge kan niet worden vernieuwd.",
-        "requestClaim": "Domeinclaim kan niet worden aangevraagd.",
-        "revokeClaim": "Domeinclaim kan niet worden ingetrokken.",
-        "saveDomains": "MSP SSO-aanmeldingsdomeinen kunnen niet worden opgeslagen.",
-        "verifyClaim": "Domeinclaim kan niet worden geverifieerd."
-      },
-      "fallbackInfo": "Domeinen zonder geschikte tenantclaim gebruiken de SSO-providerconfiguratie op applicatieniveau van Nine Minds.",
-      "loading": "Laden…",
-      "removeDomainAria": "Domein {{number}} verwijderen",
-      "requestClaim": "Claim aanvragen",
-      "requestClaimLabel": "Domeinclaim aanvragen",
-      "title": "MSP SSO-aanmeldingsdomeinen",
-      "toasts": {
-        "claimRequestedDescription": "In behandeling zijnde domeinclaim aangemaakt en verificatiechallenge gegenereerd.",
-        "claimRequestedTitle": "Domeinclaim aangevraagd",
-        "claimUnchangedDescription": "De bestaande in behandeling zijnde claim en challenge zijn al actief.",
-        "claimUnchangedTitle": "Domeinclaim ongewijzigd",
-        "refreshFailedTitle": "Challenge kan niet worden vernieuwd",
-        "refreshedDescription": "Er is een nieuwe verificatiechallenge actief voor deze claim.",
-        "refreshedTitle": "Challenge vernieuwd",
-        "requestClaimFailedTitle": "Domeinclaim kan niet worden aangevraagd",
-        "revokeFailedTitle": "Claim kan niet worden ingetrokken",
-        "revokedDescription": "Tenant-overname voor dit domein is uitgeschakeld.",
-        "revokedTitle": "Domeinclaim ingetrokken",
-        "saveDomainsFailedTitle": "MSP SSO-aanmeldingsdomeinen kunnen niet worden opgeslagen",
-        "savedDescription": "Instellingen voor domeingebaseerde SSO-detectie zijn bijgewerkt.",
-        "savedTitle": "MSP SSO-aanmeldingsdomeinen opgeslagen",
-        "verifiedDescription": "Domeinovername komt nu in aanmerking voor tenantgebonden provider-routing.",
-        "verifiedTitle": "Domeinclaim geverifieerd",
-        "verifyFailedTitle": "Domeinverificatie mislukt"
-      }
-    }
-  },
-  "teams": {
-    "settings": {
-      "actions": {
-        "activate": "Teams activeren",
-        "addNote": {
-          "description": "Snelle acties voor interne notities toestaan.",
-          "label": "Notitie toevoegen"
-        },
-        "approvalResponse": {
-          "description": "Snelle acties voor goedkeuren en afwijzen toestaan.",
-          "label": "Goedkeuringsrespons"
-        },
-        "assignTicket": {
-          "description": "Snelle acties voor tickettoewijzing toestaan.",
-          "label": "Ticket toewijzen"
-        },
-        "deactivate": "Deactiveren",
-        "logTime": {
-          "description": "Snelle acties voor tijdregistratie toestaan.",
-          "label": "Tijd registreren"
-        },
-        "reload": "Opnieuw laden",
-        "replyToContact": {
-          "description": "Voor de klant zichtbare snelle antwoordacties toestaan.",
-          "label": "Antwoord naar contact"
-        },
-        "saveChanges": "Wijzigingen opslaan",
-        "saveDraft": "Concept opslaan",
-        "saving": "Opslaan...",
-        "teamsActive": "Teams actief"
-      },
-      "capabilities": {
-        "activityNotifications": {
-          "description": "Lever persoonlijke meldingen aan de Teams-activiteitenfeed.",
-          "label": "Activiteitenmeldingen"
-        },
-        "groupChatBot": {
-          "description": "Sta de bot toe om te reageren in Teams-groepschats. Bot-antwoorden (inclusief ticketgegevens) zijn zichtbaar voor elk lid van de chat.",
-          "label": "Groepschat-bot"
-        },
-        "messageExtension": {
-          "description": "Schakel opzoek- en berichtgestuurde PSA-acties in.",
-          "label": "Message extension"
-        },
-        "personalBot": {
-          "description": "Schakel bot-opdrachten in persoonlijk bereik in voor technici.",
-          "label": "Persoonlijke bot"
-        },
-        "personalTab": {
-          "description": "Start het PSA-toegangspunt als persoonlijk tabblad.",
-          "label": "Persoonlijk tabblad"
-        }
-      },
-      "checklist": {
-        "installState": {
-          "active": "Teams is actief voor deze tenant.",
-          "error": "De Teams-installatie bevat een fout die moet worden verholpen.",
-          "label": "Installatiestatus Teams",
-          "notConfigured": "Sla een concept op of activeer Teams wanneer de installatie klaar is.",
-          "pending": "Concept-installatie is opgeslagen en klaar voor installatie of toestemming."
-        },
-        "needsAction": "Actie vereist",
-        "profileReady": {
-          "completed": "Het geselecteerde profiel heeft Client ID, Tenant ID en opgeslagen secret-materiaal.",
-          "label": "Profiel gereed voor Teams-installatie",
-          "pending": "Er is nog geen geselecteerd Teams-profiel gereed."
-        },
-        "profileSelected": {
-          "completed": "{{name}} is gekoppeld voor Teams.",
-          "label": "Microsoft-profiel geselecteerd",
-          "pending": "Selecteer één geschikt Microsoft-profiel voordat u Teams opslaat of activeert."
-        },
-        "ready": "Gereed"
-      },
-      "description": "Koppel Teams aan een Microsoft-profiel, schakel mogelijkheden in en genereer het tenantpakket.",
-      "errors": {
-        "downloadPackage": "Teams-apppakket downloaden mislukt",
-        "generatePackage": "Teams-apppakket genereren mislukt",
-        "loadGuidance": "Teams-installatiehandleiding laden mislukt",
-        "saveSettings": "Teams-instellingen opslaan mislukt"
-      },
-      "guidance": {
-        "applicationIdUri": "Application ID URI",
-        "messageExtension": "Message extension",
-        "personalBot": "Persoonlijke bot",
-        "personalTab": "Persoonlijk tabblad",
-        "redirectUris": "Redirect-URI's",
-        "requiredScopes": "Vereiste scopes",
-        "teamsAppIdUri": "Teams App ID URI",
-        "unavailable": "Niet beschikbaar"
-      },
-      "installStatus": {
-        "active": "Actief",
-        "error": "Fout",
-        "installPending": "Installatie in behandeling",
-        "notConfigured": "Niet geconfigureerd"
-      },
-      "noEligibleProfiles": "Er zijn geen Microsoft-profielen gereed voor Teams. Voltooi eerst de Microsoft-installatie.",
-      "notifications": {
-        "approvalRequest": {
-          "description": "Breng goedkeurders op de hoogte van openstaande beslissingen.",
-          "label": "Goedkeuringsverzoeken"
-        },
-        "assignment": {
-          "description": "Breng technici op de hoogte wanneer werk wordt toegewezen.",
-          "label": "Toewijzingsgebeurtenissen"
-        },
-        "customerReply": {
-          "description": "Breng technici op de hoogte wanneer klanten reageren.",
-          "label": "Klantreacties"
-        },
-        "escalation": {
-          "description": "Breng eigenaars op de hoogte wanneer werk escaleert.",
-          "label": "Escalaties"
-        },
-        "slaRisk": {
-          "description": "Breng technici op de hoogte wanneer SLA-risicodrempels worden bereikt.",
-          "label": "SLA-risico"
-        }
-      },
-      "package": {
-        "appId": "App ID",
-        "appIds": "App-ID's",
-        "botId": "Bot-ID",
-        "deepLinks": "Deep links",
-        "description": "Genereer het app-manifest en de installatielinks voor het geselecteerde Microsoft-profiel.",
-        "downloadManifest": "Manifest-JSON downloaden",
-        "downloadZip": "App-pakket downloaden (.zip)",
-        "downloading": "Downloaden...",
-        "fileName": "Bestandsnaam",
-        "generate": "Pakket genereren",
-        "generating": "Genereren...",
-        "manifestVersion": "Manifest-versie",
-        "myWork": "Mijn werk",
-        "openBaseUrl": "PSA-basis-URL openen",
-        "openDeeplink": "Teams deep link openen",
-        "packageVersion": "Pakketversie",
-        "projectTaskTemplate": "Projecttaaksjabloon",
-        "section": "Pakket",
-        "ticketTemplate": "Ticketsjabloon",
-        "title": "Teams-pakket",
-        "validDomains": "Geldige domeinen",
-        "webResource": "Webapplicatiebron"
-      },
-      "profileLabel": "Microsoft-profiel",
-      "profileSummary": {
-        "needsRepair": "Geselecteerd profiel heeft reparatie nodig",
-        "none": "Geen profiel geselecteerd"
-      },
-      "section": {
-        "allowedActions": "Toegestane acties",
-        "capabilities": "Mogelijkheden",
-        "notifications": "Meldingen"
-      },
-      "selectProfile": "Profiel selecteren",
-      "statusMessage": {
-        "activated": "Teams-installatie geactiveerd.",
-        "deactivated": "Teams-installatie gedeactiveerd.",
-        "packageDownloaded": "Teams-apppakket gedownload.",
-        "packageGenerated": "Teams-apppakket gegenereerd.",
-        "saved": "Teams-installatie opgeslagen."
-      },
-      "title": "Microsoft Teams"
-    }
-  },
-  "xero": {
-    "csv": {
-      "clientSync": {
-        "cancel": "Annuleren",
-        "createNew": "Nieuwe klanten aanmaken",
-        "description": "Exporteer klanten naar Xero Contacts CSV of importeer contacten uit Xero.",
-        "errorRow": "Rij {{row}}: {{name}} - {{error}}",
-        "errors": {
-          "export": "Klanten exporteren mislukt",
-          "import": "Klanten importeren mislukt",
-          "processCsv": "CSV-bestand verwerken mislukt"
-        },
-        "errorsTitle": "Fouten ({{count}})",
-        "exportButton": "Klanten naar CSV exporteren",
-        "exportClients": "Klanten exporteren",
-        "exportDescription": "Exporteer uw Alga-klanten naar een CSV-bestand dat in Xero geïmporteerd kan worden als Contacts.",
-        "exportSuccess": "{{count}} klanten geëxporteerd naar {{filename}}",
-        "importCompleteDescription": "{{count}} contacten succesvol verwerkt.",
-        "importCompleteTitle": "Import voltooid",
-        "importContacts": "Contacten importeren",
-        "importContactsButton": "{{count}} contacten importeren",
-        "importDescription": "Contacten importeren uit een Xero Contacts CSV-export. Bestaande klanten kunnen worden gekoppeld en bijgewerkt.",
-        "importing": "Contacten importeren...",
-        "matchBy": {
-          "algaClientId": "Alga-klant-ID (uit tracking-categorie)",
-          "contactName": "Contactnaam",
-          "emailAddress": "E-mailadres"
-        },
-        "matchByLabel": "Contacten koppelen op:",
-        "moreErrors": "...en {{count}} fouten meer",
-        "preview": {
-          "columns": {
-            "action": "Actie",
-            "contactName": "Contactnaam",
-            "email": "E-mail",
-            "matchedClient": "Gekoppelde klant"
-          },
-          "moreWarnings": "...en {{count}} meer",
-          "showing20of": "20 van {{count}} rijen worden weergegeven",
-          "toCreate": "Aan te maken",
-          "toSkip": "Over te slaan",
-          "toUpdate": "Bij te werken",
-          "warnings": "Waarschuwingen"
-        },
-        "processing": "{{filename}} verwerken...",
-        "result": {
-          "created": "Aangemaakt",
-          "mappings": "Toewijzingen",
-          "skipped": "Overgeslagen",
-          "updated": "Bijgewerkt"
-        },
-        "selectCsvFile": "CSV-bestand selecteren",
-        "startNewImport": "Nieuwe import starten",
-        "title": "Klantsynchronisatie",
-        "updateExisting": "Bestaande klanten bijwerken",
-        "workflow": {
-          "s1": "Klanten exporteren uit Alga naar Xero Contacts CSV",
-          "s2": "CSV importeren in Xero (Contacts → Import)",
-          "s3": "Na wijzigingen in Xero, contacten exporteren uit Xero",
-          "s4": "De Xero-contacten-CSV terugimporteren in Alga om updates te synchroniseren"
-        },
-        "workflowTitle": "Klantsynchronisatie-workflow"
       },
       "settings": {
-        "dateFormat": "Datumnotatie",
-        "dateFormatHelp": "Zorg dat dit overeenkomt met uw Xero-regio-instellingen.",
-        "dateFormatOptions": {
-          "dmy": "DD/MM/JJJJ (Dag/Maand/Jaar)",
-          "mdy": "MM/DD/JJJJ (Maand/Dag/Jaar)"
+        "exports": {
+          "description": "Maak export-batches aan, download CSV-bestanden, importeer belastingrapporten en bekijk de exportgeschiedenis.",
+          "managedTitle": "Beheerd vanuit Facturatie",
+          "openButton": "Boekhoudexports openen",
+          "path": "Facturatie → Boekhoudexports",
+          "title": "Boekhoudexports"
         },
-        "defaultCurrency": "Standaardvaluta",
-        "defaultCurrencyHelp": "Laat leeg om de factuurvaluta te gebruiken.",
-        "errors": {
-          "load": "Instellingen laden mislukt",
-          "save": "Instellingen opslaan mislukt"
-        },
-        "exportSettings": {
-          "description": "Configureer hoe facturen worden geëxporteerd naar CSV-formaat voor Xero.",
-          "title": "CSV-exportinstellingen"
-        },
-        "loading": "Xero CSV-instellingen worden geladen...",
-        "managedPrefix": "Ga naar",
-        "managedSuffix": "om facturen te selecteren, Xero CSV-exports te genereren, belastingrapporten te importeren en batches te beheren.",
-        "mappings": {
-          "description": "Wijs Alga-klanten, services en belastingcodes toe aan de identifiers die in uw Xero-organisatie worden gebruikt. Deze waarden worden gebruikt bij het genereren van de CSV-export.",
-          "title": "Xero CSV-toewijzingen"
-        },
-        "overview": {
-          "description": "Exporteer facturen naar CSV voor handmatige import in Xero en importeer belastinggegevens uit Xero-rapporten.",
-          "exportLabel": "Export",
-          "exportText": "Genereer CSV-bestanden die compatibel zijn met de factuurimportfunctie van Xero",
-          "intro": "Deze integratie biedt een alternatief voor op OAuth gebaseerde Xero-connectiviteit:",
+        "qbo": {
+          "bullets": {
+            "exportLabel": "Export",
+            "exportText": "Genereer CSV-bestanden die compatibel zijn met de factuurimportfunctie van QuickBooks",
+            "taxImportLabel": "Belastingimport",
+            "taxImportText": "Bij gebruik van externe belastingberekening belastingbedragen importeren uit QuickBooks-belastingrapporten"
+          },
+          "description": "Exporteer facturen naar CSV voor handmatige import in QuickBooks en importeer belastinggegevens uit QuickBooks-rapporten.",
+          "exports": {
+            "managedPrefix": "Ga naar",
+            "managedSuffix": "om facturen te selecteren, QuickBooks CSV-exports te genereren, belastingrapporten te importeren en batches te beheren."
+          },
+          "intro": "Deze integratie biedt een alternatief voor op OAuth gebaseerde QuickBooks-connectiviteit:",
+          "mappings": {
+            "description": "Wijs Alga-klanten, services, belastingcodes en betalingsvoorwaarden toe aan de identifiers die in uw QuickBooks-bedrijf worden gebruikt. Deze waarden worden gebruikt bij het genereren van de CSV-export.",
+            "title": "QuickBooks CSV-toewijzingen"
+          },
           "note": "Let op: configureer de toewijzingen hieronder voor het exporteren. CSV-exports en belastingimports worden beheerd vanuit Facturatie → Boekhoudexports.",
-          "taxImportLabel": "Belastingimport",
-          "taxImportText": "Bij gebruik van externe belastingberekening belastingbedragen importeren uit het Xero Invoice Details Report",
-          "title": "Xero CSV-integratie"
+          "title": "QuickBooks CSV-integratie"
+        }
+      },
+      "taxImport": {
+        "actions": {
+          "importTaxData": "Belastinggegevens importeren",
+          "importing": "Importeren...",
+          "validate": "Valideren",
+          "validating": "Valideren..."
         },
-        "savedMessage": "Instellingen succesvol opgeslagen",
-        "selectCurrency": "Valuta selecteren",
-        "setup": {
-          "acknowledge": "Ik heb de installatie voltooid",
-          "description": "Voltooi deze stappen in Xero voordat u CSV-import/export gebruikt.",
-          "externalInvoiceId": "Externe Factuur-ID",
-          "externalInvoiceIdHelp": "Opties worden automatisch aangemaakt bij het importeren",
-          "sourceSystem": "Source System",
-          "sourceSystemHelp": "Voeg een optie toe met de naam",
-          "step1Description": "Ga in Xero naar Settings → Tracking Categories en maak deze twee categorieën aan:",
-          "step1Title": "Stap 1: Tracking-categorieën aanmaken",
-          "step2Description": "Zorg dat uw Xero-organisatie de benodigde belastingtarieven heeft geconfigureerd onder Settings → Tax Rates.",
-          "step2Title": "Stap 2: Belastingtarieven configureren",
-          "step3Description": "Gebruik de toewijzingssectie hieronder om uw Alga-services te koppelen aan Xero-itemcodes en uw belastingregio's aan Xero-belastingtarieven.",
-          "step3Title": "Stap 3: Services en belastingregio's toewijzen",
-          "title": "Xero-installatie vereist"
+        "errors": {
+          "importFailed": "Import mislukt",
+          "readFile": "Bestand lezen mislukt",
+          "selectFile": "Selecteer een CSV-bestand",
+          "selectFileAndRange": "Selecteer een bestand en een datumbereik",
+          "templateDownloadFailed": "Sjabloon downloaden mislukt",
+          "validationFailed": "Validatie mislukt"
         },
-        "useInvoiceCurrency": "Factuurvaluta gebruiken",
-        "workflow": {
-          "description": "Hoe facturen te exporteren en belastingberekeningen te importeren.",
-          "export": {
-            "s1": "Ga naar Facturatie → Boekhoudexports",
-            "s2": "Selecteer facturen en kies \"Xero CSV\" als adapter",
-            "s3": "Download het gegenereerde CSV-bestand",
-            "s4": "In Xero: Business → Invoices → Import",
-            "s5": "Upload de CSV en importeer als concept-facturen",
-            "s6": "Xero berekent de belasting op basis van uw belastinginstellingen"
+        "fields": {
+          "csvFile": "CSV-bestand",
+          "dateRangeHelp": "Alleen facturen binnen dit datumbereik worden verwerkt.",
+          "dateRangeRequired": "Datumbereik (vereist)",
+          "dropZone": "Sleep een CSV-bestand hierheen, of klik om te bladeren",
+          "fileSize": "({{size}} KB)"
+        },
+        "preview": {
+          "alreadyImported": "{{count}} factu(u)r(en) hebben al geïmporteerde belasting.",
+          "alreadyImportedSkip": "{{count}} factu(u)r(en) hebben al geïmporteerde belasting en worden overgeslagen.",
+          "badges": {
+            "databaseMatch": "Database-overeenkomst",
+            "rowData": "Rijgegevens",
+            "structure": "Structuur"
           },
-          "exportInvoices": "Facturen exporteren",
-          "import": {
-            "s1": "In Xero: Reports → All Reports → Invoice Details",
-            "s2": "Stel het datumbereik in en exporteer als CSV",
-            "s3": "In Alga: Facturatie → Boekhoudexports → Belasting importeren",
-            "s4": "Upload de CSV van het Xero-rapport",
-            "s5": "Controleer de gekoppelde facturen en bevestig de import"
+          "columns": {
+            "algaInvoice": "Alga-factuur",
+            "contact": "Contact",
+            "status": "Status",
+            "taxAmount": "Belastingbedrag",
+            "xeroInvoice": "Xero-factuur"
           },
-          "importTax": "Belastingberekeningen importeren",
-          "title": "CSV-workflow",
-          "trackingDescription": "De CSV-export bevat tracking-categoriekolommen die elke Xero-factuur koppelen aan zijn Alga-bron. Wanneer u belasting importeert uit Xero, worden deze tracking-categorieën gebruikt om facturen automatisch te koppelen - geen handmatige afstemming nodig.",
-          "trackingTitle": "Tracking-categorieën voor afstemming"
+          "errorsTitle": "Fouten ({{count}})",
+          "matched": "Gekoppeld",
+          "matchedInvoices": "Gekoppelde facturen",
+          "notPendingDescription": "Deze facturen zijn aangemaakt met interne belastingberekening. Om belastingen uit Xero te importeren, moeten facturen bij de export worden ingesteld met de belastingbron \"Pending External\".",
+          "notPendingSkip": "{{count}} factu(u)r(en) hebben geen externe belasting in behandeling en worden overgeslagen.",
+          "notPendingTitle": "{{count}} factu(u)r(en) gebruiken geen externe belastingberekening.",
+          "showingFirst20": "Eerste 20 van {{count}} rijen worden weergegeven",
+          "taxToImport": "Te importeren belasting",
+          "title": "Validatieresultaten",
+          "totalRows": "Totaal aantal rijen",
+          "uniqueInvoices": "Unieke facturen",
+          "unmatched": "Niet gekoppeld",
+          "validRows": "Geldige rijen",
+          "warningsTitle": "Waarschuwingen ({{count}})"
+        },
+        "qbo": {
+          "description": "Belastingbedragen importeren uit een CSV-bestand van een QuickBooks-belastingrapport.",
+          "help": {
+            "csvRequirement": "De CSV moet kolommen Factuurnummer, Factuurdatum en Belastingbedrag bevatten.",
+            "downloadTemplate": "CSV-sjabloon downloaden",
+            "steps": {
+              "s1": "Ga in QuickBooks naar Reports > All Reports",
+              "s2": "Selecteer Sales Tax Liability of Transaction Detail by Account",
+              "s3": "Stel het datumbereik in zodat het overeenkomt met uw geëxporteerde facturen",
+              "s4": "Klik op Export en kies Export to Excel of Export to CSV",
+              "s5": "Sla het bestand op en upload het hier"
+            },
+            "title": "Hoe belastinggegevens te exporteren uit QuickBooks"
+          },
+          "success": {
+            "one": "Belasting succesvol geïmporteerd voor {{count}} factuur. Totale geïmporteerde belasting: ${{amount}}",
+            "other": "Belasting succesvol geïmporteerd voor {{count}} facturen. Totale geïmporteerde belasting: ${{amount}}"
+          },
+          "title": "Belastingen importeren uit QuickBooks-CSV"
+        },
+        "result": {
+          "failed": "{{count}} mislukt.",
+          "one": "Belasting geïmporteerd voor {{count}} factuur. Totale geïmporteerde belasting: {{amount}}.",
+          "other": "Belasting geïmporteerd voor {{count}} facturen. Totale geïmporteerde belasting: {{amount}}.",
+          "skipped": "{{count}} overgeslagen."
+        },
+        "unified": {
+          "description": "Belastingbedragen importeren uit de CSV-export van uw boekhoudsysteem.",
+          "qbResult": {
+            "one": "Belasting succesvol geïmporteerd voor {{count}} factuur. Totale geïmporteerde belasting: {{amount}}",
+            "other": "Belasting succesvol geïmporteerd voor {{count}} facturen. Totale geïmporteerde belasting: {{amount}}"
+          },
+          "source": {
+            "ariaLabel": "CSV-importbron",
+            "quickbooks": "QuickBooks",
+            "xero": "Xero"
+          },
+          "title": "Belastingen importeren uit CSV",
+          "xeroCsvDescription": "De geëxporteerde CSV bevat Factuurnummer, Contactnaam, Regelbedrag, Belastingbedrag en tracking-categorieën.",
+          "xeroHelp": {
+            "note": "Let op: alleen facturen die oorspronkelijk uit Alga PSA zijn geëxporteerd (met tracking Source System = AlgaPSA) worden gekoppeld.",
+            "s1": "Ga in Xero naar Sales > Invoices",
+            "s2": "Selecteer het factuurtabblad waaruit u wilt exporteren (bijv. Paid, Awaiting Payment)",
+            "s3": "(Optioneel) Klik op Search om te filteren op startdatum, einddatum of datumtype",
+            "s4": "Klik op Export",
+            "s5": "Xero downloadt een CSV-bestand naar uw computer",
+            "s6": "Upload dat CSV-bestand hier"
+          },
+          "xeroResult": {
+            "one": "Belasting geïmporteerd voor {{count}} factuur. Totaal: {{amount}}.",
+            "other": "Belasting geïmporteerd voor {{count}} facturen. Totaal: {{amount}}."
+          }
+        },
+        "xero": {
+          "description": "Belastingbedragen importeren uit een CSV-bestand van een Xero Invoice Details Report.",
+          "dropZone": "Sleep een CSV van Xero Invoice Details Report hierheen, of klik om te bladeren",
+          "help": {
+            "csvRequirement": "Het rapport moet kolommen bevatten voor Factuurnummer, Contactnaam, Regelbedrag en Belastingbedrag. Facturen worden gekoppeld met behulp van het Reference-veld of de tracking-categorieën die tijdens het exporteren zijn ingesteld.",
+            "steps": {
+              "s1": "Ga in Xero naar Reports > All Reports",
+              "s2": "Selecteer Sales (Invoices and Revenue)",
+              "s3": "Voer het Invoice Details-rapport uit",
+              "s4": "Stel het datumbereik in zodat het overeenkomt met uw geëxporteerde facturen",
+              "s5": "Klik op Export en kies CSV",
+              "s6": "Upload het geëxporteerde bestand hier"
+            },
+            "title": "Hoe belastinggegevens te exporteren uit Xero"
+          },
+          "title": "Belastingen importeren uit Xero-CSV"
         }
       }
     },
-    "live": {
-      "defaultOrganisation": "Standaard Xero-organisatie"
+    "google": {
+      "settings": {
+        "actions": {
+          "refresh": "Vernieuwen",
+          "resetProviders": "Google-providers resetten",
+          "resetting": "Resetten…",
+          "save": "Opslaan",
+          "saving": "Opslaan…"
+        },
+        "afterSaveNotice": "Ga na het opslaan naar de integraties voor inkomende e-mail en agenda en autoriseer de providers opnieuw. Bestaande Google-providers worden niet gemigreerd.",
+        "consoleLink": "Google Cloud Console",
+        "description": "Configureer tenant-eigen Google Cloud-inloggegevens voor Gmail (inkomende e-mail) en Google Calendar.",
+        "errors": {
+          "loadFailed": "Google-instellingen laden mislukt",
+          "resetFailed": "Google-providers resetten mislukt",
+          "saveFailed": "Google-instellingen opslaan mislukt"
+        },
+        "fields": {
+          "projectIdHelp": "Wordt gebruikt voor Pub/Sub-provisioning van Gmail (tenant-eigen service account).",
+          "projectIdLabel": "Google Cloud project-ID",
+          "projectIdPlaceholder": "my-project-id"
+        },
+        "loading": "Laden…",
+        "oauth": {
+          "calendarClientId": "Calendar OAuth Client ID",
+          "calendarClientSecret": "Calendar OAuth Client Secret",
+          "enterSecret": "Client secret invoeren",
+          "gmailClientId": "Gmail OAuth Client ID",
+          "gmailClientSecret": "Gmail OAuth Client Secret",
+          "sectionTitle": "OAuth-app",
+          "shareApp": "Dezelfde OAuth-app gebruiken voor Gmail en Calendar",
+          "shareAppHelp": "Aanbevolen. U kunt nog steeds afzonderlijke Google-accounts per integratie autoriseren.",
+          "storedSecret": "Opgeslagen secret: {{secret}}"
+        },
+        "redirectUrisLabel": "Redirect-URI's (kopiëren naar de Google OAuth-client)",
+        "scopes": "Scopes",
+        "scopesCalendar": "Calendar: {{scopes}}",
+        "scopesGmail": "Gmail: {{scopes}}",
+        "serviceAccount": {
+          "alreadyStored": "Er is al een service-accountsleutel opgeslagen (niet weergegeven).",
+          "description": "Plak de JSON-sleutel van het tenant-eigen service account dat wordt gebruikt om Pub/Sub te provisioneren.",
+          "title": "Pub/Sub-service-account (vereist voor Gmail)"
+        },
+        "setupGuide": "Installatiehandleiding",
+        "title": "Google",
+        "toasts": {
+          "resetDescription": "Alle Google-providers zijn nu ontkoppeld en vereisen opnieuw autorisatie.",
+          "resetFailedTitle": "Reset mislukt",
+          "resetTitle": "Google-providers gereset",
+          "saveFailedTitle": "Kan Google-instellingen niet opslaan",
+          "savedDescription": "De Google-configuratie van de tenant is succesvol bijgewerkt.",
+          "savedTitle": "Google-instellingen opgeslagen",
+          "unknownError": "Onbekende fout"
+        }
+      }
     },
-    "settings": {
-      "actions": {
-        "connect": "Xero verbinden",
-        "disconnect": "Xero ontkoppelen",
-        "disconnecting": "Ontkoppelen…",
-        "reconnect": "Xero opnieuw verbinden",
-        "refresh": "Vernieuwen",
-        "saveCredentials": "Xero-inloggegevens opslaan",
-        "saving": "Opslaan…"
-      },
-      "badges": {
-        "connectionExpired": "Verbinding verlopen",
-        "credentialsReady": "Inloggegevens gereed",
-        "credentialsRequired": "Inloggegevens vereist",
-        "defaultConnected": "Standaardorganisatie verbonden",
-        "noOrganisation": "Geen organisatie verbonden"
-      },
+    "microsoft": {
+      "settings": {
+        "actions": {
+          "entraLink": "Microsoft Entra",
+          "newProfile": "Nieuw profiel",
+          "openTeamsSetup": "Teams-installatie openen",
+          "refresh": "Vernieuwen",
+          "resetProviders": "Microsoft-providers resetten",
+          "resetting": "Resetten…"
+        },
+        "archiveDialog": {
+          "archiving": "Archiveren…",
+          "cancel": "Profiel behouden",
+          "confirm": "Profiel archiveren",
+          "message": "{{name}} archiveren? Bestaande historische verwijzingen blijven intact, maar het profiel is niet meer beschikbaar voor nieuwe bindingen.",
+          "title": "Microsoft-profiel archiveren?"
+        },
+        "binding": {
+          "bound": "Gekoppeld",
+          "boundProfileLabel": "Gekoppeld profiel",
+          "createFirst": "Maak eerst een profiel aan",
+          "needsAttention": "Vereist aandacht",
+          "saving": "Opslaan…",
+          "selectProfile": "Selecteer een profiel",
+          "unbound": "Niet gekoppeld"
+        },
+        "bindings": {
+          "summaryBound": "{{consumer}} is gekoppeld aan {{profile}}.",
+          "summaryNone": "Momenteel is er geen Microsoft-profiel gekoppeld aan {{consumer}}.",
+          "summaryUnavailable": "{{consumer}} is gekoppeld aan een niet-beschikbaar profiel.",
+          "warningArchived": "{{consumer}} is nog steeds gekoppeld aan een gearchiveerd profiel. Koppel opnieuw aan een actief profiel.",
+          "warningNoBinding": "Er is nog geen {{consumer}}-binding geconfigureerd.",
+          "warningNotReady": "{{consumer}} is gekoppeld aan {{profile}}, maar dat profiel moet nog worden geconfigureerd.",
+          "warningProfileMissing": "{{consumer}} is gekoppeld aan een profiel dat niet meer beschikbaar is. Koppel opnieuw aan een actief profiel."
+        },
+        "bindingsAlertCe": "Expliciete bindingen zijn de bron van waarheid voor de selectie van het MSP SSO-profiel. Configureer aanmeldingsdomeinen apart na het kiezen van het gekoppelde profiel.",
+        "bindingsAlertEe": "Expliciete bindingen zijn de bron van waarheid voor de selectie van MSP SSO-, e-mail-, agenda- en Teams-profielen.",
+        "consumerBindings": {
+          "descriptionCe": "Koppel één Microsoft-profiel aan MSP SSO voor aanmelding en gebruik van aanmeldingsdomein.",
+          "descriptionEe": "Koppel één Microsoft-profiel per ondersteunde consumer. Het opnieuw toewijzen van één consumer wijzigt de andere niet.",
+          "title": "Expliciete consumer-bindingen"
+        },
+        "consumers": {
+          "calendar": {
+            "description": "Kies welk Microsoft-profiel Outlook-agendasynchronisatie moet gebruiken.",
+            "label": "Agenda",
+            "reconnect": "Bestaande Microsoft-agendaverbindingen kunnen opnieuw autorisatie vereisen na het wijzigen van het gekoppelde profiel."
+          },
+          "email": {
+            "description": "Kies welk Microsoft-profiel Outlook (inkomende e-mail) moet gebruiken.",
+            "label": "E-mail",
+            "reconnect": "Bestaande Outlook-e-mailverbindingen kunnen opnieuw autorisatie vereisen na het wijzigen van het gekoppelde profiel."
+          },
+          "mspSso": {
+            "description": "Kies welk Microsoft-profiel MSP SSO-aanmeldingsdomeinen, Microsoft-aanmelding en tenant-detectie ondersteunt.",
+            "label": "MSP SSO"
+          },
+          "teams": {
+            "description": "Kies welk Microsoft-profiel Microsoft Teams-installatie en auth-flows moeten gebruiken.",
+            "label": "Teams"
+          }
+        },
+        "descriptionCe": "Beheer tenant-eigen Microsoft-profielen voor MSP SSO, Microsoft-aanmelding en detectie van aanmeldingsdomeinen.",
+        "descriptionEe": "Beheer tenant-eigen Microsoft-profielen voor MSP SSO, Outlook-e-mail, agendasynchronisatie en Microsoft Teams.",
+        "dialog": {
+          "cancel": "Annuleren",
+          "clientId": "Client ID",
+          "clientSecret": "Client secret",
+          "clientSecretPlaceholder": "Client secret invoeren",
+          "clientSecretPlaceholderEdit": "Laat leeg om het huidige secret te behouden",
+          "createProfile": "Profiel aanmaken",
+          "createTitle": "Microsoft-profiel aanmaken",
+          "descriptionCreate": "Maak een tenant-eigen Microsoft-profiel aan en koppel het vervolgens expliciet aan de Microsoft-consumers die u wilt gebruiken.",
+          "descriptionEdit": "Werk het geselecteerde Microsoft-profiel bij. Laat het secret leeg om de bestaande waarde te behouden.",
+          "displayName": "Weergavenaam",
+          "displayNamePlaceholder": "Acme productie-tenant",
+          "editTitle": "Microsoft-profiel bewerken",
+          "saveChanges": "Wijzigingen opslaan",
+          "saving": "Opslaan…",
+          "setDefault": "Dit profiel instellen als standaard Microsoft-profiel",
+          "setDefaultHelp": "Standaardprofielen blijven beschikbaar voor profielbeheer-workflows en migratieveilige metadata, niet voor consumer-routing.",
+          "storedSecretHint": "Opgeslagen secret: {{secret}}. Laat dit veld leeg om het ongewijzigd te houden.",
+          "tenantId": "Tenant ID"
+        },
+        "empty": {
+          "createButton": "Microsoft-profiel aanmaken",
+          "descriptionCe": "Maak eerst een benoemd profiel aan en koppel het vervolgens expliciet aan MSP SSO- en aanmeldingsdomein-flows.",
+          "descriptionEe": "Maak eerst een benoemd profiel aan en koppel het vervolgens expliciet aan MSP SSO, Outlook-e-mail, agendasynchronisatie en Teams.",
+          "title": "Nog geen Microsoft-profielen"
+        },
+        "errors": {
+          "archive": "Microsoft-profiel archiveren mislukt",
+          "loadBindings": "Microsoft-bindingen laden mislukt",
+          "loadStatus": "Microsoft-instellingen laden mislukt",
+          "resetProviders": "Microsoft-providers resetten mislukt",
+          "saveProfile": "Microsoft-profiel opslaan mislukt",
+          "setDefault": "Standaard Microsoft-profiel instellen mislukt",
+          "updateBinding": "Microsoft-binding bijwerken mislukt"
+        },
+        "guidance": {
+          "applicationIdUri": "Application ID URI",
+          "calendarRedirect": "Redirect-URI agendasynchronisatie",
+          "calendarTitle": "Agendahandleiding",
+          "clientId": "Client ID",
+          "currentProfileTitle": "Huidige profielwaarden",
+          "emailRedirect": "Redirect-URI inkomende e-mail",
+          "emailTitle": "E-mailhandleiding",
+          "mspSsoTitle": "MSP SSO-handleiding",
+          "notConfigured": "Niet geconfigureerd",
+          "redirectUri": "Redirect URI",
+          "requiresBaseUrl": "Vereist basis-URL en Client ID",
+          "scopes": "Scopes",
+          "teamsBotRedirect": "Redirect-URI persoonlijke bot",
+          "teamsMessageRedirect": "Redirect-URI message extension",
+          "teamsScopes": "Teams-scopes",
+          "teamsTabRedirect": "Redirect-URI persoonlijk tabblad",
+          "teamsTitle": "Teams-handleiding",
+          "tenantId": "Tenant ID",
+          "unavailable": "Niet beschikbaar"
+        },
+        "profileCard": {
+          "activeBindings": "Actieve bindingen",
+          "archive": "Archiveren",
+          "clientId": "Client ID",
+          "defaultBadge": "Standaard",
+          "edit": "Bewerken",
+          "guidanceSummary": "Handleiding voor Microsoft-appregistratie",
+          "noVisibleBindings": "Geen zichtbare consumer-bindingen",
+          "readinessTitle": "Profielgereedheid",
+          "readyCe": "Dit profiel is gereed voor MSP SSO-binding en aanmeldingsdomein-flows.",
+          "readyEe": "Dit profiel is gereed voor MSP SSO-, Outlook-e-mail- en agendabindingen.",
+          "readyEeTeams": "Dit profiel is gereed voor MSP SSO-, Outlook-e-mail-, agendasynchronisatie- en Teams-bindingen.",
+          "setDefault": "Instellen als standaard",
+          "storedSecret": "Opgeslagen secret",
+          "teamsAppIdUri": "Teams Application ID URI",
+          "tenantIdLabel": "Tenant ID:",
+          "updating": "Bijwerken…"
+        },
+        "providerReconnect": {
+          "description": "Gebruik dit als u inloggegevens roteert of opzettelijk Outlook-e-mail of de agenda aan een ander Microsoft-profiel koppelt.",
+          "title": "Opnieuw verbinden van provider"
+        },
+        "readiness": {
+          "archived": "Gearchiveerde profielen kunnen niet worden gebruikt voor nieuwe Microsoft-bindingen.",
+          "clientIdMissing": "Client ID ontbreekt.",
+          "clientSecretMissing": "Client secret is niet geconfigureerd.",
+          "tenantIdMissing": "Tenant ID ontbreekt."
+        },
+        "statusBadges": {
+          "archived": "Gearchiveerd",
+          "needsAttention": "Vereist aandacht",
+          "ready": "Gereed"
+        },
+        "title": "Microsoft",
+        "toasts": {
+          "archiveFailedTitle": "Kan Microsoft-profiel niet archiveren",
+          "archivedDescription": "{{name}} is succesvol gearchiveerd.",
+          "archivedTitle": "Microsoft-profiel gearchiveerd",
+          "bindingFailedTitle": "Kan {{consumer}}-binding niet bijwerken",
+          "bindingUpdatedDescription": "{{consumer}} gebruikt nu {{profile}}.",
+          "bindingUpdatedTitle": "{{consumer}}-binding bijgewerkt",
+          "defaultUpdatedDescription": "{{name}} is nu het standaard Microsoft-profiel.",
+          "defaultUpdatedTitle": "Standaard Microsoft-profiel bijgewerkt",
+          "profileCreated": "Microsoft-profiel aangemaakt",
+          "profileCreatedDescription": "Het Microsoft-profiel is klaar om gekoppeld te worden aan zichtbare Microsoft-consumers.",
+          "profileUpdated": "Microsoft-profiel bijgewerkt",
+          "profileUpdatedDescription": "De wijzigingen van het Microsoft-profiel zijn succesvol opgeslagen.",
+          "resetDescription": "Bestaande Outlook-e-mail- en agendaverbindingen vereisen nu opnieuw autorisatie.",
+          "resetFailedTitle": "Reset mislukt",
+          "resetTitle": "Microsoft-providers gereset",
+          "saveFailedTitle": "Kan Microsoft-profiel niet opslaan",
+          "selectedProfile": "het geselecteerde profiel",
+          "setDefaultFailedTitle": "Kan standaardprofiel niet instellen"
+        },
+        "validation": {
+          "clientIdRequired": "Microsoft OAuth Client ID is verplicht",
+          "clientSecretRequired": "Microsoft OAuth Client Secret is verplicht",
+          "displayNameRequired": "Weergavenaam van Microsoft-profiel is verplicht",
+          "tenantIdRequired": "Microsoft Tenant ID is verplicht"
+        }
+      }
+    },
+    "qbo": {
       "callback": {
-        "accessDenied": "Xero-toegang werd geweigerd voordat de verbinding was voltooid.",
-        "configMissing": "Xero OAuth kon niet worden gestart omdat het client ID en client secret van de tenant niet volledig waren geconfigureerd.",
-        "connectionsUnmapped": "Xero heeft organisaties geretourneerd, maar geen enkele bevatte de identifiers die nodig zijn om een verbinding op te slaan.",
-        "generic": "Xero heeft een OAuth-fout geretourneerd: {{code}}",
-        "invalidState": "De Xero OAuth-status was ongeldig of verlopen. Start de verbindingsflow opnieuw.",
-        "missingParams": "In de Xero-callback ontbraken vereiste parameters. Start de verbindingsflow opnieuw.",
-        "noConnections": "Xero heeft geen organisaties geretourneerd voor deze aanmelding. Controleer uw Xero-app en organisatietoegang en probeer het opnieuw.",
-        "oauthFailed": "De Xero OAuth-callback is mislukt. Probeer opnieuw verbinding te maken. Als het probleem aanhoudt, controleer uw redirect-URI en scopes."
+        "completed": "Verbindingsproces voltooid.",
+        "errorDetail": "Fout: {{error}}",
+        "errored": "Het verbindingsproces heeft een fout opgeleverd.",
+        "failed": "Verbinding met QuickBooks Online mislukt.",
+        "realmId": "Realm-ID: {{realmId}}",
+        "returnButton": "Terug naar QuickBooks-instellingen",
+        "success": "Succesvol verbonden met QuickBooks Online!",
+        "title": "Status QuickBooks-verbinding"
+      }
+    },
+    "rmm": {
+      "ninjaOne": {
+        "loading": "NinjaOne-integratie-instellingen laden...",
+        "card": {
+          "title": "NinjaOne RMM Integration",
+          "description": "Connect your NinjaOne account to synchronize devices, receive alerts, and enable remote access capabilities.",
+          "skeletonDescription": "Loading NinjaOne integration..."
+        },
+        "status": {
+          "checking": "Checking NinjaOne connection...",
+          "notConnected": {
+            "title": "Not connected to NinjaOne",
+            "description": "Connect your NinjaOne account to sync devices, receive alerts, and enable remote access."
+          },
+          "connected": "Connected to NinjaOne",
+          "connectedWithErrors": "NinjaOne connected with sync errors",
+          "instanceLabel": "Instance:",
+          "organizations": "{{count}} organizations",
+          "devices": "{{count}} devices",
+          "activeAlerts": "{{count}} active alerts",
+          "lastSynced": "Last synced: {{time}}"
+        },
+        "setup": {
+          "title": "Setup Instructions",
+          "steps": {
+            "login": "Log into your NinjaOne dashboard",
+            "navigate": "Navigate to Administration → Apps → API",
+            "addClient": "Click \"+ Add client app\" to create a new API application",
+            "platform": "Set Application Platform to \"Web (PHP, Java, .Net Core, etc.)\"",
+            "name": "Enter a Name (e.g., \"Alga PSA\")",
+            "redirectUri": "Add the redirect URI:",
+            "scopes": "Under \"Scopes\", check \"Monitoring\" and \"Management\"",
+            "grantTypes": "Under \"Allowed grant types\", check \"Authorization code\", \"Client credentials\", and \"Refresh token\"",
+            "addAndCopy": "Click \"Add\" and copy the Client ID and Client Secret below"
+          },
+          "docsPrefix": "For detailed setup instructions, see",
+          "docsSection": "Section 10.15",
+          "docsSuffix": "in the documentation.",
+          "openApiSettings": "Open NinjaOne API Settings"
+        },
+        "credentials": {
+          "title": "API Credentials",
+          "saved": "Credentials saved",
+          "clientIdLabel": "Client ID",
+          "clientIdPlaceholder": "Enter your NinjaOne Client ID",
+          "clientSecretLabel": "Client Secret",
+          "clientSecretPlaceholder": "Enter your NinjaOne Client Secret",
+          "clientSecretUpdatePlaceholder": "Enter new secret to update",
+          "secretMaskedLabel": "Secret",
+          "saving": "Saving...",
+          "save": "Save Credentials"
+        },
+        "region": {
+          "hint": "Select your NinjaOne region, then click ‘Connect to NinjaOne’ to authorize access.",
+          "label": "Region:"
+        },
+        "actions": {
+          "refreshing": "Refreshing...",
+          "refreshStatus": "Refresh Status",
+          "syncing": "Syncing...",
+          "syncOrganizations": "Sync Organizations",
+          "syncingDevices": "Syncing Devices...",
+          "syncDevices": "Sync Devices",
+          "disconnecting": "Disconnecting...",
+          "disconnect": "Disconnect",
+          "connect": "Connect to NinjaOne"
+        },
+        "disconnectModal": {
+          "title": "Disconnect NinjaOne",
+          "description": "Are you sure you want to disconnect NinjaOne? This will stop device synchronization and alert notifications, and remove your stored API credentials. Organization mappings will be preserved.",
+          "cancel": "Cancel",
+          "confirm": "Disconnect"
+        },
+        "toasts": {
+          "connectSuccess": "Successfully connected to NinjaOne.",
+          "connectFailed": "NinjaOne connection failed.",
+          "connectFailedWithDetail": "NinjaOne connection failed: {{detail}}",
+          "disconnectSuccess": "NinjaOne connection successfully disconnected.",
+          "credentialsSaved": "NinjaOne API credentials saved successfully.",
+          "orgSyncSuccess": "Organization sync completed. Processed: {{processed}}, Created: {{created}}, Updated: {{updated}}",
+          "deviceSyncSuccess": "Device sync completed. Processed: {{processed}}, Created: {{created}}, Updated: {{updated}}"
+        },
+        "errors": {
+          "loadStatus": "Failed to load NinjaOne connection status.",
+          "saveCredentials": "Failed to save credentials.",
+          "connect": "Failed to initiate NinjaOne connection.",
+          "disconnect": "Failed to disconnect NinjaOne.",
+          "disconnectUnexpected": "An unexpected error occurred while disconnecting.",
+          "orgSyncFailed": "Organization sync failed.",
+          "deviceSyncFailed": "Device sync failed."
+        }
       },
-      "clientIdLabel": "Xero Client ID",
-      "clientIdPlaceholder": "Plak uw tenant-eigen Xero Client ID",
-      "clientSecretLabel": "Xero Client Secret",
-      "clientSecretPlaceholder": "Plak uw tenant-eigen Xero Client Secret",
-      "connectSuccess": "Xero succesvol verbonden. De eerste verbonden organisatie is nu de standaard live Xero-context.",
-      "connection": {
-        "connectionId": "Verbindings-ID: {{id}}",
-        "defaultOrganisation": "Standaardorganisatie",
-        "description": "Start OAuth pas nadat de tenant-eigen Xero-app is geconfigureerd. Ontkoppelen verwijdert opgeslagen Xero-toegangstokens maar behoudt de tenant-eigen app-inloggegevens.",
-        "notConnected": "Er is nog geen live Xero-organisatie verbonden. Sla de inloggegevens op en klik vervolgens op Xero verbinden.",
-        "title": "Live Xero-verbinding",
-        "unknown": "onbekend"
+      "setup": {
+        "activeConfiguration": "Actieve configuratie",
+        "comingSoon": "RMM-integratie binnenkort beschikbaar",
+        "configure": "Integratie configureren",
+        "selected": "{{title}} geselecteerd",
+        "title": "RMM-integraties"
       },
-      "credentialsSaved": "Xero-inloggegevens opgeslagen. U kunt nu de live Xero OAuth-flow starten.",
-      "csvAvailableMiddle": "in deze zelfde sectie Boekhouding en beheer exports vanuit",
-      "csvAvailablePrefix": "Als u de voorkeur geeft aan een handmatige workflow, blijf dan gebruiken",
-      "csvAvailableTitle": "Xero CSV blijft beschikbaar",
-      "description": "Configureer tenant-eigen Xero OAuth-inloggegevens, verbind uw standaardorganisatie en behoud live Xero naast de handmatige Xero CSV-workflow.",
-      "disconnectSuccess": "De opgeslagen Xero-verbinding is verwijderd. Tenant-eigen Xero-app-inloggegevens zijn behouden.",
+      "tactical": {
+        "actions": {
+          "disconnect": "Verbinding verbreken",
+          "disconnecting": "Verbinding verbreken...",
+          "ingestSoftware": "Software opnemen",
+          "ingesting": "Opnemen...",
+          "refresh": "Vernieuwen",
+          "save": "Opslaan",
+          "saving": "Opslaan...",
+          "syncAlerts": "Waarschuwingen synchroniseren",
+          "syncClients": "Klanten synchroniseren",
+          "syncDevices": "Apparaten synchroniseren",
+          "syncing": "Synchroniseren...",
+          "testConnection": "Verbinding testen",
+          "testing": "Testen..."
+        },
+        "auth": {
+          "apiKey": "API-sleutel",
+          "enterApiKey": "API-sleutel invoeren",
+          "enterPassword": "Wachtwoord invoeren",
+          "enterUsername": "Gebruikersnaam invoeren",
+          "knox": "Knox",
+          "knoxOption": "Gebruikersnaam/wachtwoord (Knox-token)",
+          "knoxTokenSaved": "Knox-token opgeslagen: {{value}}",
+          "mode": "Authenticatie",
+          "password": "Wachtwoord",
+          "saved": "Opgeslagen: {{value}}",
+          "savedEnterToUpdate": "Opgeslagen (invoeren om bij te werken)",
+          "totp": "TOTP-code",
+          "username": "Gebruikersnaam"
+        },
+        "autoSync": "Automatische synchronisatie",
+        "client": {
+          "loading": "Klanten laden…",
+          "select": "Klant selecteren"
+        },
+        "counts": {
+          "activeAlerts": "Actieve waarschuwingen",
+          "lastSync": "Laatste synchronisatie",
+          "mappedOrgs": "Toegewezen organisaties",
+          "never": "Nooit",
+          "syncedDevices": "Gesynchroniseerde apparaten"
+        },
+        "description": "Verbind Tactical RMM om assets te synchroniseren en waarschuwingen op te nemen.",
+        "errors": {
+          "backfillAlerts": "Backfill van waarschuwingen mislukt",
+          "connectionTest": "Verbindingstest mislukt",
+          "disconnect": "Verbinding verbreken mislukt",
+          "ingestSoftware": "Software opnemen mislukt",
+          "loadOrgMappings": "Organisatie-toewijzingen laden mislukt",
+          "loadSettings": "Tactical RMM-instellingen laden mislukt",
+          "saveConfig": "Tactical RMM-configuratie opslaan mislukt",
+          "someAlertsFailed": "Sommige waarschuwingen konden niet worden bijgewerkt: {{errors}}",
+          "someDevicesFailed": "Sommige apparaten konden niet worden gesynchroniseerd: {{errors}}",
+          "someOrgsFailed": "Sommige organisaties konden niet worden gesynchroniseerd: {{errors}}",
+          "someSoftwareFailed": "Sommige softwarerijen konden niet worden opgenomen: {{errors}}",
+          "syncDevices": "Apparaatsynchronisatie mislukt",
+          "syncOrgs": "Organisatiesynchronisatie mislukt",
+          "totpRequired": "TOTP is vereist. Voer uw huidige code in en test opnieuw.",
+          "updateMapping": "Toewijzing bijwerken mislukt"
+        },
+        "fields": {
+          "instanceUrl": "Instance-URL",
+          "instanceUrlHelp": "Gebruik uw Tactical-basis-URL (zonder /api aan het einde)."
+        },
+        "lastError": "Laatste fout: {{error}}",
+        "loadingSettings": "Tactical RMM-instellingen worden geladen...",
+        "sections": {
+          "alerts": "Waarschuwingen",
+          "alertsDescription": "Optioneel: historische of actieve waarschuwingen uit Tactical opnemen in Alga.",
+          "devices": "Apparaten",
+          "devicesDescription": "Synchroniseer Tactical-agents naar Alga-assets voor toegewezen organisaties.",
+          "orgMapping": "Organisatie-toewijzing",
+          "orgMappingDescription": "Wijs elke Tactical-klant toe aan een Alga-klant en regel automatische synchronisatie per organisatie.",
+          "orgMappingEmpty": "Geen organisaties gevonden. Voer eerst \"Klanten synchroniseren\" uit.",
+          "organizations": "Organisaties",
+          "organizationsDescription": "Synchroniseer Tactical-klanten in Alga-organisatie-toewijzingen en wijs ze vervolgens toe aan Alga-klanten.",
+          "softwareInventory": "Software-inventaris",
+          "softwareInventoryDescription": "Optioneel: opname van gecachte software-inventaris via Tactical /api/software/ (geen verversingsaanroepen per agent).",
+          "webhooks": "Webhooks (waarschuwingen)",
+          "webhooksDescription": "Configureer een Tactical-webhook voor waarschuwingsacties met de gedeelde secret-header hieronder."
+        },
+        "status": {
+          "authPrefix": "Auth:",
+          "connected": "Verbonden",
+          "disconnected": "Niet verbonden",
+          "instanceUrlNotSet": "Instance-URL niet ingesteld"
+        },
+        "statusLine": {
+          "configured": "Status: Geconfigureerd",
+          "notConfigured": "Status: Niet geconfigureerd"
+        },
+        "success": {
+          "alertBackfillCompleted": "Backfill van waarschuwingen voltooid. Verwerkt: {{processed}}, Aangemaakt: {{created}}, Bijgewerkt: {{updated}}, Mislukt: {{failed}}",
+          "connection": "Verbinding geslaagd.",
+          "deviceSyncCompleted": "Apparaatsynchronisatie voltooid. Verwerkt: {{processed}}, Aangemaakt: {{created}}, Bijgewerkt: {{updated}}, Verwijderd: {{deleted}}, Mislukt: {{failed}}",
+          "disconnected": "Verbinding verbroken.",
+          "orgSyncCompleted": "Organisatiesynchronisatie voltooid. Verwerkt: {{processed}}, Aangemaakt: {{created}}, Bijgewerkt: {{updated}}, Mislukt: {{failed}}",
+          "saved": "Tactical RMM-configuratie opgeslagen.",
+          "softwareIngestionCompleted": "Software-opname voltooid. Verwerkt: {{processed}}, Geïnstalleerd/bijgewerkt: {{created}}, Assets bijgewerkt: {{updated}}, Mislukt: {{failed}}"
+        },
+        "tacticalIdLabel": "Tactical-ID: {{id}}",
+        "title": "Tactical RMM",
+        "toasts": {
+          "alertsSyncedDescription": "Tactical-waarschuwingen zijn opgenomen.",
+          "alertsSyncedTitle": "Waarschuwingen gesynchroniseerd",
+          "backfillFailedTitle": "Backfill mislukt",
+          "connectedDescription": "Tactical RMM-verbinding geverifieerd.",
+          "connectedTitle": "Verbonden",
+          "connectionFailedTitle": "Verbinding mislukt",
+          "devicesSyncedDescription": "Tactical-agents zijn gesynchroniseerd in assets.",
+          "devicesSyncedTitle": "Apparaten gesynchroniseerd",
+          "disconnectFailedTitle": "Verbinding verbreken mislukt",
+          "disconnectedDescription": "Tactical RMM-inloggegevens gewist.",
+          "disconnectedTitle": "Niet verbonden",
+          "ingestionFailedTitle": "Opname mislukt",
+          "orgsSyncedDescription": "Tactical-klanten zijn gesynchroniseerd in organisatie-toewijzingen.",
+          "orgsSyncedTitle": "Organisaties gesynchroniseerd",
+          "saveFailedTitle": "Opslaan mislukt",
+          "savedDescription": "Tactical RMM-configuratie bijgewerkt.",
+          "savedTitle": "Opgeslagen",
+          "softwareIngestedDescription": "Gecachte Tactical-software-inventaris is opgenomen.",
+          "softwareIngestedTitle": "Software opgenomen",
+          "syncFailedTitle": "Synchronisatie mislukt",
+          "unknownError": "Onbekende fout",
+          "updateFailedTitle": "Bijwerken mislukt"
+        },
+        "webhook": {
+          "copiedTitle": "Gekopieerd",
+          "copy": "Kopiëren",
+          "headerName": "Header-naam",
+          "payloadTemplate": "Payload-sjabloon",
+          "secret": "Header-secret",
+          "secretCopied": "Webhook-secret naar klembord gekopieerd.",
+          "unavailable": "Webhook-informatie niet beschikbaar. (Vereist leesrechten voor instellingen.)",
+          "url": "Webhook-URL",
+          "urlCopied": "Webhook-URL naar klembord gekopieerd."
+        }
+      },
+      "tanium": {
+        "loading": "Tanium-integratie-instellingen worden geladen..."
+      }
+    },
+    "sso": {
+      "msp": {
+        "actions": {
+          "add": "Toevoegen",
+          "refresh": "Vernieuwen",
+          "request": "Aanvragen",
+          "resetChallenge": "Challenge resetten",
+          "revoke": "Intrekken",
+          "saveDomains": "Domeinen opslaan",
+          "saving": "Opslaan…",
+          "verify": "Verifiëren"
+        },
+        "addDomainLabel": "Aanmeldingsdomein toevoegen",
+        "advisoryNotice": "Adviesmodus: domeinregistratie helpt bij het routeren van MSP SSO-detectie maar vereist geen eigendomsverificatie in Community Edition.",
+        "claimStatus": {
+          "advisory": "Advies",
+          "pending": "In behandeling",
+          "rejected": "Afgewezen",
+          "revoked": "Ingetrokken",
+          "verified": "Geverifieerd",
+          "verifiedLegacy": "Geverifieerd (Legacy)"
+        },
+        "descriptionCe": "Registreer adviesdomeinen voor de detectie van MSP-aanmeldings-SSO. Eigendomsverificatie wordt niet afgedwongen in Community Edition, en onbeheerde domeinen vallen terug op providers op applicatieniveau van Nine Minds.",
+        "descriptionEe": "Beheer de levenscyclus van domeinclaims voor de detectie van MSP-aanmeldings-SSO-providers. Niet-geclaimde of niet-geschikte domeinen vallen terug op providers op applicatieniveau van Nine Minds.",
+        "dnsHost": "Host:",
+        "dnsInstructions": "Voeg het DNS TXT-record toe en klik vervolgens op Verifiëren:",
+        "dnsValue": "Waarde:",
+        "emptyClaims": "Er zijn nog geen domeinclaims geconfigureerd.",
+        "emptyDomains": "Geen domeinen geconfigureerd. Onbekende domeinen gebruiken de fallback van de provider op applicatieniveau.",
+        "errors": {
+          "conflicts": "Conflicten: {{conflicts}}.",
+          "loadClaims": "MSP SSO-domeinclaims kunnen niet worden geladen.",
+          "loadDomains": "MSP SSO-aanmeldingsdomeinen kunnen niet worden geladen.",
+          "refreshChallenge": "Challenge kan niet worden vernieuwd.",
+          "requestClaim": "Domeinclaim kan niet worden aangevraagd.",
+          "revokeClaim": "Domeinclaim kan niet worden ingetrokken.",
+          "saveDomains": "MSP SSO-aanmeldingsdomeinen kunnen niet worden opgeslagen.",
+          "verifyClaim": "Domeinclaim kan niet worden geverifieerd."
+        },
+        "fallbackInfo": "Domeinen zonder geschikte tenantclaim gebruiken de SSO-providerconfiguratie op applicatieniveau van Nine Minds.",
+        "loading": "Laden…",
+        "removeDomainAria": "Domein {{number}} verwijderen",
+        "requestClaim": "Claim aanvragen",
+        "requestClaimLabel": "Domeinclaim aanvragen",
+        "title": "MSP SSO-aanmeldingsdomeinen",
+        "toasts": {
+          "claimRequestedDescription": "In behandeling zijnde domeinclaim aangemaakt en verificatiechallenge gegenereerd.",
+          "claimRequestedTitle": "Domeinclaim aangevraagd",
+          "claimUnchangedDescription": "De bestaande in behandeling zijnde claim en challenge zijn al actief.",
+          "claimUnchangedTitle": "Domeinclaim ongewijzigd",
+          "refreshFailedTitle": "Challenge kan niet worden vernieuwd",
+          "refreshedDescription": "Er is een nieuwe verificatiechallenge actief voor deze claim.",
+          "refreshedTitle": "Challenge vernieuwd",
+          "requestClaimFailedTitle": "Domeinclaim kan niet worden aangevraagd",
+          "revokeFailedTitle": "Claim kan niet worden ingetrokken",
+          "revokedDescription": "Tenant-overname voor dit domein is uitgeschakeld.",
+          "revokedTitle": "Domeinclaim ingetrokken",
+          "saveDomainsFailedTitle": "MSP SSO-aanmeldingsdomeinen kunnen niet worden opgeslagen",
+          "savedDescription": "Instellingen voor domeingebaseerde SSO-detectie zijn bijgewerkt.",
+          "savedTitle": "MSP SSO-aanmeldingsdomeinen opgeslagen",
+          "verifiedDescription": "Domeinovername komt nu in aanmerking voor tenantgebonden provider-routing.",
+          "verifiedTitle": "Domeinclaim geverifieerd",
+          "verifyFailedTitle": "Domeinverificatie mislukt"
+        }
+      }
+    },
+    "teams": {
+      "settings": {
+        "actions": {
+          "activate": "Teams activeren",
+          "addNote": {
+            "description": "Snelle acties voor interne notities toestaan.",
+            "label": "Notitie toevoegen"
+          },
+          "approvalResponse": {
+            "description": "Snelle acties voor goedkeuren en afwijzen toestaan.",
+            "label": "Goedkeuringsrespons"
+          },
+          "assignTicket": {
+            "description": "Snelle acties voor tickettoewijzing toestaan.",
+            "label": "Ticket toewijzen"
+          },
+          "deactivate": "Deactiveren",
+          "logTime": {
+            "description": "Snelle acties voor tijdregistratie toestaan.",
+            "label": "Tijd registreren"
+          },
+          "reload": "Opnieuw laden",
+          "replyToContact": {
+            "description": "Voor de klant zichtbare snelle antwoordacties toestaan.",
+            "label": "Antwoord naar contact"
+          },
+          "saveChanges": "Wijzigingen opslaan",
+          "saveDraft": "Concept opslaan",
+          "saving": "Opslaan...",
+          "teamsActive": "Teams actief"
+        },
+        "capabilities": {
+          "activityNotifications": {
+            "description": "Lever persoonlijke meldingen aan de Teams-activiteitenfeed.",
+            "label": "Activiteitenmeldingen"
+          },
+          "groupChatBot": {
+            "description": "Sta de bot toe om te reageren in Teams-groepschats. Bot-antwoorden (inclusief ticketgegevens) zijn zichtbaar voor elk lid van de chat.",
+            "label": "Groepschat-bot"
+          },
+          "messageExtension": {
+            "description": "Schakel opzoek- en berichtgestuurde PSA-acties in.",
+            "label": "Message extension"
+          },
+          "personalBot": {
+            "description": "Schakel bot-opdrachten in persoonlijk bereik in voor technici.",
+            "label": "Persoonlijke bot"
+          },
+          "personalTab": {
+            "description": "Start het PSA-toegangspunt als persoonlijk tabblad.",
+            "label": "Persoonlijk tabblad"
+          }
+        },
+        "checklist": {
+          "installState": {
+            "active": "Teams is actief voor deze tenant.",
+            "error": "De Teams-installatie bevat een fout die moet worden verholpen.",
+            "label": "Installatiestatus Teams",
+            "notConfigured": "Sla een concept op of activeer Teams wanneer de installatie klaar is.",
+            "pending": "Concept-installatie is opgeslagen en klaar voor installatie of toestemming."
+          },
+          "needsAction": "Actie vereist",
+          "profileReady": {
+            "completed": "Het geselecteerde profiel heeft Client ID, Tenant ID en opgeslagen secret-materiaal.",
+            "label": "Profiel gereed voor Teams-installatie",
+            "pending": "Er is nog geen geselecteerd Teams-profiel gereed."
+          },
+          "profileSelected": {
+            "completed": "{{name}} is gekoppeld voor Teams.",
+            "label": "Microsoft-profiel geselecteerd",
+            "pending": "Selecteer één geschikt Microsoft-profiel voordat u Teams opslaat of activeert."
+          },
+          "ready": "Gereed"
+        },
+        "description": "Koppel Teams aan een Microsoft-profiel, schakel mogelijkheden in en genereer het tenantpakket.",
+        "errors": {
+          "downloadPackage": "Teams-apppakket downloaden mislukt",
+          "generatePackage": "Teams-apppakket genereren mislukt",
+          "loadGuidance": "Teams-installatiehandleiding laden mislukt",
+          "saveSettings": "Teams-instellingen opslaan mislukt"
+        },
+        "guidance": {
+          "applicationIdUri": "Application ID URI",
+          "messageExtension": "Message extension",
+          "personalBot": "Persoonlijke bot",
+          "personalTab": "Persoonlijk tabblad",
+          "redirectUris": "Redirect-URI's",
+          "requiredScopes": "Vereiste scopes",
+          "teamsAppIdUri": "Teams App ID URI",
+          "unavailable": "Niet beschikbaar"
+        },
+        "installStatus": {
+          "active": "Actief",
+          "error": "Fout",
+          "installPending": "Installatie in behandeling",
+          "notConfigured": "Niet geconfigureerd"
+        },
+        "noEligibleProfiles": "Er zijn geen Microsoft-profielen gereed voor Teams. Voltooi eerst de Microsoft-installatie.",
+        "notifications": {
+          "approvalRequest": {
+            "description": "Breng goedkeurders op de hoogte van openstaande beslissingen.",
+            "label": "Goedkeuringsverzoeken"
+          },
+          "assignment": {
+            "description": "Breng technici op de hoogte wanneer werk wordt toegewezen.",
+            "label": "Toewijzingsgebeurtenissen"
+          },
+          "customerReply": {
+            "description": "Breng technici op de hoogte wanneer klanten reageren.",
+            "label": "Klantreacties"
+          },
+          "escalation": {
+            "description": "Breng eigenaars op de hoogte wanneer werk escaleert.",
+            "label": "Escalaties"
+          },
+          "slaRisk": {
+            "description": "Breng technici op de hoogte wanneer SLA-risicodrempels worden bereikt.",
+            "label": "SLA-risico"
+          }
+        },
+        "package": {
+          "appId": "App ID",
+          "appIds": "App-ID's",
+          "botId": "Bot-ID",
+          "deepLinks": "Deep links",
+          "description": "Genereer het app-manifest en de installatielinks voor het geselecteerde Microsoft-profiel.",
+          "downloadManifest": "Manifest-JSON downloaden",
+          "downloadZip": "App-pakket downloaden (.zip)",
+          "downloading": "Downloaden...",
+          "fileName": "Bestandsnaam",
+          "generate": "Pakket genereren",
+          "generating": "Genereren...",
+          "manifestVersion": "Manifest-versie",
+          "myWork": "Mijn werk",
+          "openBaseUrl": "PSA-basis-URL openen",
+          "openDeeplink": "Teams deep link openen",
+          "packageVersion": "Pakketversie",
+          "projectTaskTemplate": "Projecttaaksjabloon",
+          "section": "Pakket",
+          "ticketTemplate": "Ticketsjabloon",
+          "title": "Teams-pakket",
+          "validDomains": "Geldige domeinen",
+          "webResource": "Webapplicatiebron"
+        },
+        "profileLabel": "Microsoft-profiel",
+        "profileSummary": {
+          "needsRepair": "Geselecteerd profiel heeft reparatie nodig",
+          "none": "Geen profiel geselecteerd"
+        },
+        "section": {
+          "allowedActions": "Toegestane acties",
+          "capabilities": "Mogelijkheden",
+          "notifications": "Meldingen"
+        },
+        "selectProfile": "Profiel selecteren",
+        "statusMessage": {
+          "activated": "Teams-installatie geactiveerd.",
+          "deactivated": "Teams-installatie gedeactiveerd.",
+          "packageDownloaded": "Teams-apppakket gedownload.",
+          "packageGenerated": "Teams-apppakket gegenereerd.",
+          "saved": "Teams-installatie opgeslagen."
+        },
+        "title": "Microsoft Teams"
+      }
+    },
+    "xero": {
+      "csv": {
+        "clientSync": {
+          "cancel": "Annuleren",
+          "createNew": "Nieuwe klanten aanmaken",
+          "description": "Exporteer klanten naar Xero Contacts CSV of importeer contacten uit Xero.",
+          "errorRow": "Rij {{row}}: {{name}} - {{error}}",
+          "errors": {
+            "export": "Klanten exporteren mislukt",
+            "import": "Klanten importeren mislukt",
+            "processCsv": "CSV-bestand verwerken mislukt"
+          },
+          "errorsTitle": "Fouten ({{count}})",
+          "exportButton": "Klanten naar CSV exporteren",
+          "exportClients": "Klanten exporteren",
+          "exportDescription": "Exporteer uw Alga-klanten naar een CSV-bestand dat in Xero geïmporteerd kan worden als Contacts.",
+          "exportSuccess": "{{count}} klanten geëxporteerd naar {{filename}}",
+          "importCompleteDescription": "{{count}} contacten succesvol verwerkt.",
+          "importCompleteTitle": "Import voltooid",
+          "importContacts": "Contacten importeren",
+          "importContactsButton": "{{count}} contacten importeren",
+          "importDescription": "Contacten importeren uit een Xero Contacts CSV-export. Bestaande klanten kunnen worden gekoppeld en bijgewerkt.",
+          "importing": "Contacten importeren...",
+          "matchBy": {
+            "algaClientId": "Alga-klant-ID (uit tracking-categorie)",
+            "contactName": "Contactnaam",
+            "emailAddress": "E-mailadres"
+          },
+          "matchByLabel": "Contacten koppelen op:",
+          "moreErrors": "...en {{count}} fouten meer",
+          "preview": {
+            "columns": {
+              "action": "Actie",
+              "contactName": "Contactnaam",
+              "email": "E-mail",
+              "matchedClient": "Gekoppelde klant"
+            },
+            "moreWarnings": "...en {{count}} meer",
+            "showing20of": "20 van {{count}} rijen worden weergegeven",
+            "toCreate": "Aan te maken",
+            "toSkip": "Over te slaan",
+            "toUpdate": "Bij te werken",
+            "warnings": "Waarschuwingen"
+          },
+          "processing": "{{filename}} verwerken...",
+          "result": {
+            "created": "Aangemaakt",
+            "mappings": "Toewijzingen",
+            "skipped": "Overgeslagen",
+            "updated": "Bijgewerkt"
+          },
+          "selectCsvFile": "CSV-bestand selecteren",
+          "startNewImport": "Nieuwe import starten",
+          "title": "Klantsynchronisatie",
+          "updateExisting": "Bestaande klanten bijwerken",
+          "workflow": {
+            "s1": "Klanten exporteren uit Alga naar Xero Contacts CSV",
+            "s2": "CSV importeren in Xero (Contacts → Import)",
+            "s3": "Na wijzigingen in Xero, contacten exporteren uit Xero",
+            "s4": "De Xero-contacten-CSV terugimporteren in Alga om updates te synchroniseren"
+          },
+          "workflowTitle": "Klantsynchronisatie-workflow"
+        },
+        "settings": {
+          "dateFormat": "Datumnotatie",
+          "dateFormatHelp": "Zorg dat dit overeenkomt met uw Xero-regio-instellingen.",
+          "dateFormatOptions": {
+            "dmy": "DD/MM/JJJJ (Dag/Maand/Jaar)",
+            "mdy": "MM/DD/JJJJ (Maand/Dag/Jaar)"
+          },
+          "defaultCurrency": "Standaardvaluta",
+          "defaultCurrencyHelp": "Laat leeg om de factuurvaluta te gebruiken.",
+          "errors": {
+            "load": "Instellingen laden mislukt",
+            "save": "Instellingen opslaan mislukt"
+          },
+          "exportSettings": {
+            "description": "Configureer hoe facturen worden geëxporteerd naar CSV-formaat voor Xero.",
+            "title": "CSV-exportinstellingen"
+          },
+          "loading": "Xero CSV-instellingen worden geladen...",
+          "managedPrefix": "Ga naar",
+          "managedSuffix": "om facturen te selecteren, Xero CSV-exports te genereren, belastingrapporten te importeren en batches te beheren.",
+          "mappings": {
+            "description": "Wijs Alga-klanten, services en belastingcodes toe aan de identifiers die in uw Xero-organisatie worden gebruikt. Deze waarden worden gebruikt bij het genereren van de CSV-export.",
+            "title": "Xero CSV-toewijzingen"
+          },
+          "overview": {
+            "description": "Exporteer facturen naar CSV voor handmatige import in Xero en importeer belastinggegevens uit Xero-rapporten.",
+            "exportLabel": "Export",
+            "exportText": "Genereer CSV-bestanden die compatibel zijn met de factuurimportfunctie van Xero",
+            "intro": "Deze integratie biedt een alternatief voor op OAuth gebaseerde Xero-connectiviteit:",
+            "note": "Let op: configureer de toewijzingen hieronder voor het exporteren. CSV-exports en belastingimports worden beheerd vanuit Facturatie → Boekhoudexports.",
+            "taxImportLabel": "Belastingimport",
+            "taxImportText": "Bij gebruik van externe belastingberekening belastingbedragen importeren uit het Xero Invoice Details Report",
+            "title": "Xero CSV-integratie"
+          },
+          "savedMessage": "Instellingen succesvol opgeslagen",
+          "selectCurrency": "Valuta selecteren",
+          "setup": {
+            "acknowledge": "Ik heb de installatie voltooid",
+            "description": "Voltooi deze stappen in Xero voordat u CSV-import/export gebruikt.",
+            "externalInvoiceId": "Externe Factuur-ID",
+            "externalInvoiceIdHelp": "Opties worden automatisch aangemaakt bij het importeren",
+            "sourceSystem": "Source System",
+            "sourceSystemHelp": "Voeg een optie toe met de naam",
+            "step1Description": "Ga in Xero naar Settings → Tracking Categories en maak deze twee categorieën aan:",
+            "step1Title": "Stap 1: Tracking-categorieën aanmaken",
+            "step2Description": "Zorg dat uw Xero-organisatie de benodigde belastingtarieven heeft geconfigureerd onder Settings → Tax Rates.",
+            "step2Title": "Stap 2: Belastingtarieven configureren",
+            "step3Description": "Gebruik de toewijzingssectie hieronder om uw Alga-services te koppelen aan Xero-itemcodes en uw belastingregio's aan Xero-belastingtarieven.",
+            "step3Title": "Stap 3: Services en belastingregio's toewijzen",
+            "title": "Xero-installatie vereist"
+          },
+          "useInvoiceCurrency": "Factuurvaluta gebruiken",
+          "workflow": {
+            "description": "Hoe facturen te exporteren en belastingberekeningen te importeren.",
+            "export": {
+              "s1": "Ga naar Facturatie → Boekhoudexports",
+              "s2": "Selecteer facturen en kies \"Xero CSV\" als adapter",
+              "s3": "Download het gegenereerde CSV-bestand",
+              "s4": "In Xero: Business → Invoices → Import",
+              "s5": "Upload de CSV en importeer als concept-facturen",
+              "s6": "Xero berekent de belasting op basis van uw belastinginstellingen"
+            },
+            "exportInvoices": "Facturen exporteren",
+            "import": {
+              "s1": "In Xero: Reports → All Reports → Invoice Details",
+              "s2": "Stel het datumbereik in en exporteer als CSV",
+              "s3": "In Alga: Facturatie → Boekhoudexports → Belasting importeren",
+              "s4": "Upload de CSV van het Xero-rapport",
+              "s5": "Controleer de gekoppelde facturen en bevestig de import"
+            },
+            "importTax": "Belastingberekeningen importeren",
+            "title": "CSV-workflow",
+            "trackingDescription": "De CSV-export bevat tracking-categoriekolommen die elke Xero-factuur koppelen aan zijn Alga-bron. Wanneer u belasting importeert uit Xero, worden deze tracking-categorieën gebruikt om facturen automatisch te koppelen - geen handmatige afstemming nodig.",
+            "trackingTitle": "Tracking-categorieën voor afstemming"
+          }
+        }
+      },
+      "live": {
+        "defaultOrganisation": "Standaard Xero-organisatie"
+      },
+      "settings": {
+        "actions": {
+          "connect": "Xero verbinden",
+          "disconnect": "Xero ontkoppelen",
+          "disconnecting": "Ontkoppelen…",
+          "reconnect": "Xero opnieuw verbinden",
+          "refresh": "Vernieuwen",
+          "saveCredentials": "Xero-inloggegevens opslaan",
+          "saving": "Opslaan…"
+        },
+        "badges": {
+          "connectionExpired": "Verbinding verlopen",
+          "credentialsReady": "Inloggegevens gereed",
+          "credentialsRequired": "Inloggegevens vereist",
+          "defaultConnected": "Standaardorganisatie verbonden",
+          "noOrganisation": "Geen organisatie verbonden"
+        },
+        "callback": {
+          "accessDenied": "Xero-toegang werd geweigerd voordat de verbinding was voltooid.",
+          "configMissing": "Xero OAuth kon niet worden gestart omdat het client ID en client secret van de tenant niet volledig waren geconfigureerd.",
+          "connectionsUnmapped": "Xero heeft organisaties geretourneerd, maar geen enkele bevatte de identifiers die nodig zijn om een verbinding op te slaan.",
+          "generic": "Xero heeft een OAuth-fout geretourneerd: {{code}}",
+          "invalidState": "De Xero OAuth-status was ongeldig of verlopen. Start de verbindingsflow opnieuw.",
+          "missingParams": "In de Xero-callback ontbraken vereiste parameters. Start de verbindingsflow opnieuw.",
+          "noConnections": "Xero heeft geen organisaties geretourneerd voor deze aanmelding. Controleer uw Xero-app en organisatietoegang en probeer het opnieuw.",
+          "oauthFailed": "De Xero OAuth-callback is mislukt. Probeer opnieuw verbinding te maken. Als het probleem aanhoudt, controleer uw redirect-URI en scopes."
+        },
+        "clientIdLabel": "Xero Client ID",
+        "clientIdPlaceholder": "Plak uw tenant-eigen Xero Client ID",
+        "clientSecretLabel": "Xero Client Secret",
+        "clientSecretPlaceholder": "Plak uw tenant-eigen Xero Client Secret",
+        "connectSuccess": "Xero succesvol verbonden. De eerste verbonden organisatie is nu de standaard live Xero-context.",
+        "connection": {
+          "connectionId": "Verbindings-ID: {{id}}",
+          "defaultOrganisation": "Standaardorganisatie",
+          "description": "Start OAuth pas nadat de tenant-eigen Xero-app is geconfigureerd. Ontkoppelen verwijdert opgeslagen Xero-toegangstokens maar behoudt de tenant-eigen app-inloggegevens.",
+          "notConnected": "Er is nog geen live Xero-organisatie verbonden. Sla de inloggegevens op en klik vervolgens op Xero verbinden.",
+          "title": "Live Xero-verbinding",
+          "unknown": "onbekend"
+        },
+        "credentialsSaved": "Xero-inloggegevens opgeslagen. U kunt nu de live Xero OAuth-flow starten.",
+        "csvAvailableMiddle": "in deze zelfde sectie Boekhouding en beheer exports vanuit",
+        "csvAvailablePrefix": "Als u de voorkeur geeft aan een handmatige workflow, blijf dan gebruiken",
+        "csvAvailableTitle": "Xero CSV blijft beschikbaar",
+        "description": "Configureer tenant-eigen Xero OAuth-inloggegevens, verbind uw standaardorganisatie en behoud live Xero naast de handmatige Xero CSV-workflow.",
+        "disconnectSuccess": "De opgeslagen Xero-verbinding is verwijderd. Tenant-eigen Xero-app-inloggegevens zijn behouden.",
+        "errors": {
+          "disconnect": "Xero ontkoppelen mislukt.",
+          "load": "Xero-instellingen laden mislukt.",
+          "saveCredentials": "Xero-inloggegevens opslaan mislukt."
+        },
+        "howItWorksDescription": "Sla hier een tenant-eigen Xero Client ID en Client Secret op, voltooi de Xero OAuth-flow, en Alga PSA gebruikt de eerste verbonden Xero-organisatie als standaard live context.",
+        "howItWorksTitle": "Hoe live Xero werkt in deze release",
+        "loading": "Xero-instellingen worden geladen…",
+        "mapping": {
+          "alert": "Xero-items, omzetrekeningen, belastingtarieven en tracking-categorieën worden geladen uit de standaard verbonden organisatie, zodat live exports in v1 de eerste opgeslagen Xero-verbinding kunnen blijven gebruiken.",
+          "descriptionPrefix": "Configureer live Xero-toewijzingen voor de standaard verbonden organisatie. Deze toewijzingen zijn beperkt tot",
+          "placeholderAlert": "De toewijzingsbeheerder wordt beschikbaar nadat de eerste Xero-organisatie is verbonden en ingesteld als standaard live Xero-context.",
+          "placeholderDescription": "Verbind een live Xero-organisatie voordat u live Xero-item- en belastingtoewijzingen configureert.",
+          "title": "Live Xero-toewijzing en -configuratie"
+        },
+        "noClientId": "Er is nog geen client ID opgeslagen voor deze tenant.",
+        "noClientSecret": "Er is nog geen client secret opgeslagen voor deze tenant.",
+        "redirectUri": "Redirect URI",
+        "requiredScopes": "Vereiste scopes",
+        "storedClientId": "Opgeslagen client ID: {{value}}",
+        "storedClientSecret": "Opgeslagen client secret: {{value}}",
+        "tenantOauthDescription": "Plak de Xero-app-inloggegevens die voor deze tenant zijn geregistreerd. Secret-waarden worden na opslaan nooit meer aan de browser geretourneerd.",
+        "tenantOauthTitle": "Tenant-eigen OAuth-app",
+        "title": "Xero",
+        "xeroCsv": "Xero CSV"
+      }
+    },
+    "stripe": {
+      "title": "Stripe Payments",
+      "description": "Accept credit card payments for your invoices",
+      "connected": {
+        "title": "Stripe Connected",
+        "publishableKey": "Publishable key: {{key}}..."
+      },
+      "empty": {
+        "description": "Connect your Stripe account to accept online payments for invoices"
+      },
+      "actions": {
+        "testConnection": "Test Connection",
+        "disconnect": "Disconnect",
+        "connect": "Connect Stripe",
+        "connecting": "Connecting...",
+        "cancel": "Cancel"
+      },
+      "form": {
+        "secretKeyLabel": "Secret Key",
+        "secretKeyPlaceholder": "sk_live_... or sk_test_...",
+        "publishableKeyLabel": "Publishable Key",
+        "publishableKeyPlaceholder": "pk_live_... or pk_test_...",
+        "findKeyPrefix": "Find this in your",
+        "dashboardLink": "Stripe Dashboard → API Keys"
+      },
+      "webhook": {
+        "heading": "Webhook Configuration",
+        "configuredAutomatically": "Webhooks configured automatically",
+        "receiveNotifications": "Alga PSA will receive payment notifications for:",
+        "failedTitle": "Webhook configuration failed",
+        "failedBody": "Automatic webhook configuration failed. Click retry to attempt configuration again.",
+        "configuring": "Configuring...",
+        "retry": "Retry Configuration"
+      },
+      "disconnectDialog": {
+        "title": "Disconnect Stripe",
+        "message": "Are you sure you want to disconnect Stripe? Payment links will no longer work.",
+        "confirm": "Disconnect",
+        "cancel": "Cancel"
+      },
+      "toasts": {
+        "connectedWithWebhook": "Stripe connected and webhooks configured automatically!",
+        "connectedWebhookFailed": "Stripe connected! Note: Webhook auto-configuration failed - you may need to configure webhooks manually in Stripe Dashboard.",
+        "disconnected": "Stripe disconnected",
+        "connectionSuccess": "Connection successful!",
+        "webhookConfigured": "Webhook configured successfully!"
+      },
       "errors": {
-        "disconnect": "Xero ontkoppelen mislukt.",
-        "load": "Xero-instellingen laden mislukt.",
-        "saveCredentials": "Xero-inloggegevens opslaan mislukt."
-      },
-      "howItWorksDescription": "Sla hier een tenant-eigen Xero Client ID en Client Secret op, voltooi de Xero OAuth-flow, en Alga PSA gebruikt de eerste verbonden Xero-organisatie als standaard live context.",
-      "howItWorksTitle": "Hoe live Xero werkt in deze release",
-      "loading": "Xero-instellingen worden geladen…",
-      "mapping": {
-        "alert": "Xero-items, omzetrekeningen, belastingtarieven en tracking-categorieën worden geladen uit de standaard verbonden organisatie, zodat live exports in v1 de eerste opgeslagen Xero-verbinding kunnen blijven gebruiken.",
-        "descriptionPrefix": "Configureer live Xero-toewijzingen voor de standaard verbonden organisatie. Deze toewijzingen zijn beperkt tot",
-        "placeholderAlert": "De toewijzingsbeheerder wordt beschikbaar nadat de eerste Xero-organisatie is verbonden en ingesteld als standaard live Xero-context.",
-        "placeholderDescription": "Verbind een live Xero-organisatie voordat u live Xero-item- en belastingtoewijzingen configureert.",
-        "title": "Live Xero-toewijzing en -configuratie"
-      },
-      "noClientId": "Er is nog geen client ID opgeslagen voor deze tenant.",
-      "noClientSecret": "Er is nog geen client secret opgeslagen voor deze tenant.",
-      "redirectUri": "Redirect URI",
-      "requiredScopes": "Vereiste scopes",
-      "storedClientId": "Opgeslagen client ID: {{value}}",
-      "storedClientSecret": "Opgeslagen client secret: {{value}}",
-      "tenantOauthDescription": "Plak de Xero-app-inloggegevens die voor deze tenant zijn geregistreerd. Secret-waarden worden na opslaan nooit meer aan de browser geretourneerd.",
-      "tenantOauthTitle": "Tenant-eigen OAuth-app",
-      "title": "Xero",
-      "xeroCsv": "Xero CSV"
+        "loadConfig": "Failed to load Stripe configuration",
+        "connect": "Failed to connect Stripe",
+        "disconnect": "Failed to disconnect Stripe",
+        "testConnection": "Connection test failed",
+        "configureWebhook": "Failed to configure webhook",
+        "bothKeysRequired": "Please enter both secret key and publishable key",
+        "secretKeyFormat": "Secret key should start with sk_",
+        "publishableKeyFormat": "Publishable key should start with pk_"
+      }
     }
   }
 }
