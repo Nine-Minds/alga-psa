@@ -108,6 +108,7 @@ const UserAndTeamPicker = ({
   };
 
   const currentUser = users.find(user => user.user_id === value && applyUserTypeFilter(user));
+  const currentTeam = teams.find(team => team.team_id === value);
 
   const filteredUsers = users
     .filter(user => applyUserTypeFilter(user) && !user.is_inactive)
@@ -131,23 +132,36 @@ const UserAndTeamPicker = ({
     })
     .sort((a, b) => (a.team_name || '').localeCompare(b.team_name || ''));
 
-  const selectedUserName = currentUser
+  const selectedLabel = currentUser
     ? `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() || 'Unnamed User'
-    : placeholder;
+    : currentTeam
+      ? currentTeam.team_name || 'Unnamed Team'
+      : placeholder;
+  const hasSelection = Boolean(currentUser || currentTeam);
 
   useEffect(() => {
-    if (!isOpen || !getTeamAvatarUrlsBatch || teamEntries.length === 0) {
+    if (!getTeamAvatarUrlsBatch || teamEntries.length === 0) {
       return;
     }
 
-    const tenant = teamEntries[0]?.tenant;
+    const tenant = currentTeam?.tenant || teamEntries[0]?.tenant;
     if (!tenant) {
       return;
     }
 
-    const teamIdsToFetch = teamEntries
-      .map((team) => team.team_id)
-      .filter((teamId) => !fetchedTeamIdsRef.current.has(teamId));
+    const teamIds = new Set<string>();
+
+    if (currentTeam?.team_id) {
+      teamIds.add(currentTeam.team_id);
+    }
+
+    if (isOpen) {
+      teamEntries.forEach((team) => teamIds.add(team.team_id));
+    }
+
+    const teamIdsToFetch = Array.from(teamIds).filter(
+      (teamId) => !fetchedTeamIdsRef.current.has(teamId) && teamAvatarUrls[teamId] === undefined
+    );
 
     if (teamIdsToFetch.length === 0) {
       return;
@@ -167,8 +181,8 @@ const UserAndTeamPicker = ({
       }
     };
 
-    fetchTeamAvatars();
-  }, [isOpen, teamEntries, getTeamAvatarUrlsBatch]);
+    void fetchTeamAvatars();
+  }, [currentTeam, isOpen, teamEntries, getTeamAvatarUrlsBatch, teamAvatarUrls]);
 
   useRegisterUIComponent<ContainerComponent>({
     type: 'container',
@@ -179,7 +193,7 @@ const UserAndTeamPicker = ({
   const { automationIdProps: pickerProps, updateMetadata } = useAutomationIdAndRegister<ButtonComponent>({
     type: 'button',
     id: `${pickerId}-trigger`,
-    label: `${label} - ${selectedUserName}`,
+    label: `${label} - ${selectedLabel}`,
     disabled
   }, [CommonActions.click()]);
 
@@ -506,8 +520,16 @@ const UserAndTeamPicker = ({
               size={size === 'xs' ? 'xs' : size === 'sm' ? 'sm' : 'md'}
             />
           )}
+          {currentTeam && (
+            <TeamAvatar
+              teamId={currentTeam.team_id}
+              teamName={currentTeam.team_name || 'Unnamed Team'}
+              avatarUrl={teamAvatarUrls[currentTeam.team_id] ?? null}
+              size={size === 'xs' ? 'xs' : 'sm'}
+            />
+          )}
           {size !== 'xs' && (
-            <span className={!currentUser ? 'text-gray-400' : ''}>{selectedUserName}</span>
+            <span className={!hasSelection ? 'text-gray-400' : ''}>{selectedLabel}</span>
           )}
         </div>
         <ChevronDown className={size === 'xs' ? 'w-3 h-3 text-gray-500' : 'w-4 h-4 text-gray-500'} />

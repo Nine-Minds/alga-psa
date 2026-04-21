@@ -204,6 +204,39 @@ vi.mock('@alga-psa/ui/components/UserAndTeamPicker', () => ({
   ),
 }));
 
+vi.mock('@alga-psa/ui/components/MultiUserAndTeamPicker', () => ({
+  __esModule: true,
+  default: ({
+    id,
+    users,
+    values,
+    onValuesChange,
+  }: {
+    id?: string;
+    users: Array<{ user_id: string; first_name?: string; last_name?: string; username?: string }>;
+    values: string[];
+    onValuesChange: (values: string[]) => void;
+  }) => (
+    <div id={id ? `${id}-container` : undefined}>
+      <select
+        data-testid={id}
+        multiple
+        value={values}
+        onChange={(event) => {
+          const nextValues = Array.from(event.currentTarget.selectedOptions).map((option) => option.value);
+          onValuesChange(nextValues);
+        }}
+      >
+        {users.map((user) => (
+          <option key={user.user_id} value={user.user_id}>
+            {`${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || user.username || user.user_id}
+          </option>
+        ))}
+      </select>
+    </div>
+  ),
+}));
+
 vi.mock('../../../../../packages/tickets/src/components/CategoryPicker', () => ({
   __esModule: true,
   default: ({
@@ -357,6 +390,15 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
       is_inactive: false,
       tenant: 'tenant-1',
     },
+    {
+      user_id: 'user-2',
+      username: 'sam',
+      first_name: 'Sam',
+      last_name: 'Support',
+      user_type: 'internal',
+      is_inactive: false,
+      tenant: 'tenant-1',
+    },
   ]),
   getUserAvatarUrlsBatchAction: vi.fn().mockResolvedValue({}),
 }));
@@ -398,7 +440,7 @@ const getSelectValues = (testId: string): string[] =>
   Array.from((screen.getByTestId(testId) as HTMLSelectElement).options).map((option) => option.value);
 
 describe('InputMappingEditor picker-backed fields', () => {
-  it('T166/T181/T182/T183/T184/T185/T186/T187/T188/T189/T190/T308: renders ticket-core picker-backed fields with picker UI in fixed mode so builders can author ticket actions without raw ids', async () => {
+  it('T166/T181/T182/T183/T184/T185/T186/T187/T188/T189/T190/T308: renders ticket-core picker-backed fields with canonical nested assignment pickers in fixed mode', async () => {
     await act(async () => {
       render(
         <InputMappingEditor
@@ -408,13 +450,15 @@ describe('InputMappingEditor picker-backed fields', () => {
             contact_id: 'contact-1',
             status_id: 'status-1',
             priority_id: 'priority-1',
-            assigned_to: 'user-1',
             category_id: 'category-1',
             subcategory_id: 'subcategory-1',
             location_id: 'location-1',
-            assignee: {
-              type: 'team',
-              id: 'team-1',
+            assignment: {
+              primary: {
+                type: 'team',
+                id: 'team-1',
+              },
+              additional_user_ids: ['user-1', 'user-2'],
             },
           }}
           onChange={vi.fn()}
@@ -453,11 +497,6 @@ describe('InputMappingEditor picker-backed fields', () => {
               picker: { kind: 'ticket-priority', allowsDynamicReference: true },
             },
             {
-              name: 'assigned_to',
-              type: 'string',
-              picker: { kind: 'user', allowsDynamicReference: true },
-            },
-            {
               name: 'category_id',
               type: 'string',
               picker: {
@@ -485,21 +524,39 @@ describe('InputMappingEditor picker-backed fields', () => {
               },
             },
             {
-              name: 'assignee',
+              name: 'assignment',
               type: 'object',
               children: [
                 {
-                  name: 'type',
-                  type: 'string',
-                  enum: ['user', 'team'],
+                  name: 'primary',
+                  type: 'object',
+                  nullable: true,
+                  children: [
+                    {
+                      name: 'type',
+                      type: 'string',
+                      enum: ['user', 'team', 'queue'],
+                    },
+                    {
+                      name: 'id',
+                      type: 'string',
+                      picker: {
+                        kind: 'user-or-team',
+                        dependencies: ['assignment.primary.type'],
+                        allowsDynamicReference: true,
+                      },
+                    },
+                  ],
                 },
                 {
-                  name: 'id',
-                  type: 'string',
+                  name: 'additional_user_ids',
+                  type: 'array',
                   picker: {
-                    kind: 'user-or-team',
-                    dependencies: ['assignee.type'],
+                    kind: 'user',
                     allowsDynamicReference: true,
+                  },
+                  constraints: {
+                    itemType: 'string',
                   },
                 },
               ],
@@ -528,9 +585,6 @@ describe('InputMappingEditor picker-backed fields', () => {
       document.getElementById('mapping-step-ticket-pickers-priority_id-literal-picker-container')
     ).toBeInTheDocument();
     expect(
-      document.getElementById('mapping-step-ticket-pickers-assigned_to-literal-picker-container')
-    ).toBeInTheDocument();
-    expect(
       document.getElementById('mapping-step-ticket-pickers-category_id-literal-picker-container')
     ).toBeInTheDocument();
     expect(
@@ -540,7 +594,10 @@ describe('InputMappingEditor picker-backed fields', () => {
       document.getElementById('mapping-step-ticket-pickers-location_id-literal-picker-container')
     ).toBeInTheDocument();
     expect(
-      document.getElementById('mapping-step-ticket-pickers-assignee.id-literal-picker-container')
+      document.getElementById('mapping-step-ticket-pickers-primary.id-literal-picker-container')
+    ).toBeInTheDocument();
+    expect(
+      document.getElementById('mapping-step-ticket-pickers-assignment.additional_user_ids-literal-picker-container')
     ).toBeInTheDocument();
 
     expect(
@@ -558,6 +615,15 @@ describe('InputMappingEditor picker-backed fields', () => {
     expect(
       screen.getByTestId('mapping-step-ticket-pickers-status_id-literal-picker')
     ).toHaveValue('status-1');
+    expect(
+      screen.getByTestId('mapping-step-ticket-pickers-primary.id-literal-picker')
+    ).toHaveValue('team-1');
+    expect(
+      Array.from(
+        (screen.getByTestId('mapping-step-ticket-pickers-assignment.additional_user_ids-literal-picker') as HTMLSelectElement)
+          .selectedOptions
+      ).map((option) => option.value)
+    ).toEqual(['user-1', 'user-2']);
   });
 
   it('T167/T168/T191/T192/T193/T194/T195/T196/T197/T198/T199/T309: picker-backed fields can switch to reference and back to fixed without losing picker UI', async () => {

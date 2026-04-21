@@ -58,6 +58,23 @@ const asRecord = (value: unknown): Record<string, unknown> | undefined =>
     ? (value as Record<string, unknown>)
     : undefined;
 
+const mergeSchemaMetadata = (wrapper: JsonSchema, resolved: JsonSchema): JsonSchema => ({
+  ...wrapper,
+  ...resolved,
+  title: resolved.title ?? wrapper.title,
+  description: resolved.description ?? wrapper.description,
+  examples: resolved.examples ?? wrapper.examples,
+  default: resolved.default ?? wrapper.default,
+  'x-workflow-picker-kind': resolved['x-workflow-picker-kind'] ?? wrapper['x-workflow-picker-kind'],
+  'x-workflow-picker-dependencies':
+    resolved['x-workflow-picker-dependencies'] ?? wrapper['x-workflow-picker-dependencies'],
+  'x-workflow-picker-fixed-value-hint':
+    resolved['x-workflow-picker-fixed-value-hint'] ?? wrapper['x-workflow-picker-fixed-value-hint'],
+  'x-workflow-picker-allow-dynamic-reference':
+    resolved['x-workflow-picker-allow-dynamic-reference'] ?? wrapper['x-workflow-picker-allow-dynamic-reference'],
+  'x-workflow-editor': resolved['x-workflow-editor'] ?? wrapper['x-workflow-editor'],
+});
+
 const resolveSchema = (schema: JsonSchema, root?: JsonSchema): JsonSchema => {
   if (schema.$ref && root?.definitions) {
     const refKey = schema.$ref.replace('#/definitions/', '');
@@ -73,8 +90,9 @@ const resolveSchema = (schema: JsonSchema, root?: JsonSchema): JsonSchema => {
     );
     if (nonNullVariant) {
       const resolved = resolveSchema(nonNullVariant, root);
+      const merged = mergeSchemaMetadata(schema, resolved);
       return {
-        ...resolved,
+        ...merged,
         type: Array.isArray(resolved.type)
           ? resolved.type
           : resolved.type

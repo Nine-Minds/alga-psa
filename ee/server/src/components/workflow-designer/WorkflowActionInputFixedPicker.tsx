@@ -8,6 +8,7 @@ import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
+import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import { getAllContacts, getContactsByClient } from '@alga-psa/clients/actions';
 import { getAvailableStatuses, getTicketFieldOptions } from '@alga-psa/integrations/actions';
@@ -201,6 +202,21 @@ const buildDisabledExplanation = (
   return unresolved ? hints[unresolved.path] : undefined;
 };
 
+const getAssignmentTypeDependencyValue = (
+  dependencyValues: Map<string, string>
+): 'user' | 'team' | 'queue' | undefined => {
+  const candidatePaths = ['assignee.type', 'assignment.primary.type', 'patch.assignment.primary.type'];
+
+  for (const candidatePath of candidatePaths) {
+    const value = dependencyValues.get(candidatePath);
+    if (value === 'user' || value === 'team' || value === 'queue') {
+      return value;
+    }
+  }
+
+  return undefined;
+};
+
 const getWorkflowPickerPlaceholder = (
   field: WorkflowActionInputPickerField,
   isLoading: boolean,
@@ -367,10 +383,14 @@ const filterWorkflowPickerOptions = (
       );
     }
     case 'user-or-team': {
-      const assigneeType = dependencyValues.get('assignee.type');
-      return assigneeType === 'user' || assigneeType === 'team'
-        ? options.filter((option) => option.assigneeType === assigneeType)
-        : options;
+      const assigneeType = getAssignmentTypeDependencyValue(dependencyValues);
+      if (assigneeType === 'user') {
+        return options.filter((option) => option.assigneeType === 'user');
+      }
+      if (assigneeType === 'team' || assigneeType === 'queue') {
+        return options.filter((option) => option.assigneeType === 'team');
+      }
+      return options;
     }
     default:
       return options;
@@ -651,7 +671,16 @@ const renderDedicatedPicker = ({
           buttonWidth="full"
         />
       );
-    case 'user-or-team':
+    case 'user-or-team': {
+      const dependencyValues = new Map(
+        dependencyResolutions
+          .filter((dependency) => dependency.status === 'fixed' && dependency.value)
+          .map((dependency) => [dependency.path, dependency.value as string])
+      );
+      const assigneeType = getAssignmentTypeDependencyValue(dependencyValues);
+      const filteredUsers = assigneeType === 'team' || assigneeType === 'queue' ? [] : data.users;
+      const filteredTeams = assigneeType === 'user' ? [] : data.teams;
+
       return (
         <UserAndTeamPicker
           id={`${idPrefix}-literal-picker`}
@@ -659,8 +688,8 @@ const renderDedicatedPicker = ({
           value={value ?? ''}
           onValueChange={(nextValue) => onChange(nextValue || null)}
           onTeamSelect={(teamId) => onChange(teamId)}
-          users={data.users}
-          teams={data.teams}
+          users={filteredUsers}
+          teams={filteredTeams}
           userTypeFilter="internal"
           getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
           getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
@@ -668,6 +697,7 @@ const renderDedicatedPicker = ({
           buttonWidth="full"
         />
       );
+    }
     case 'ticket':
       return (
         <WorkflowTicketPicker
@@ -687,6 +717,108 @@ const getResolvedDependencyValue = (
   dependencies: DependencyResolution[],
   path: string
 ): string | undefined => dependencies.find((dependency) => dependency.path === path && dependency.status === 'fixed')?.value;
+
+export const WorkflowActionInputFixedMultiPicker: React.FC<{
+  field: WorkflowActionInputPickerField;
+  values: string[];
+  onChange: (values: string[]) => void;
+  idPrefix: string;
+  rootInputMapping: InputMapping;
+  disabled?: boolean;
+}> = ({
+  field,
+  values,
+  onChange,
+  idPrefix,
+  rootInputMapping,
+  disabled,
+}) => {
+  const [data, setData] = useState<WorkflowPickerData>(EMPTY_PICKER_DATA);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const pickerKind = field.editor?.picker?.resource ?? field.picker?.kind;
+  const dependencyResolutions = useMemo(
+    () =>
+      (field.editor?.dependencies ?? field.picker?.dependencies ?? []).map((dependency) =>
+        resolveDependency(rootInputMapping, dependency)
+      ),
+    [field.editor?.dependencies, field.picker?.dependencies, rootInputMapping]
+  );
+  const disabledExplanation = useMemo(
+    () => (pickerKind ? buildDisabledExplanation(pickerKind, dependencyResolutions) : undefined),
+    [dependencyResolutions, pickerKind]
+  );
+  const dependencySignature = useMemo(
+    () => JSON.stringify(dependencyResolutions),
+    [dependencyResolutions]
+  );
+
+  useEffect(() => {
+    if (pickerKind !== 'user') {
+      setData(EMPTY_PICKER_DATA);
+      setLoadError(null);
+      return;
+    }
+
+    if (disabledExplanation) {
+      setData(EMPTY_PICKER_DATA);
+      setLoadError(null);
+      return;
+    }
+
+    let active = true;
+    setIsLoading(true);
+    setLoadError(null);
+
+    loadWorkflowPickerData(pickerKind, dependencyResolutions)
+      .then((nextData) => {
+        if (!active) return;
+        setData(nextData);
+      })
+      .catch((error) => {
+        if (!active) return;
+        console.error('Failed to load workflow multi-picker options:', error);
+        setData(EMPTY_PICKER_DATA);
+        setLoadError(error instanceof Error ? error.message : 'Failed to load options');
+      })
+      .finally(() => {
+        if (active) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [dependencyResolutions, dependencySignature, disabledExplanation, pickerKind]);
+
+  if (pickerKind !== 'user') {
+    return null;
+  }
+
+  return (
+    <div className="space-y-2">
+      <MultiUserAndTeamPicker
+        id={`${idPrefix}-literal-picker`}
+        label={field.name.replace(/_/g, ' ')}
+        values={values}
+        onValuesChange={onChange}
+        users={data.users}
+        getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+        loading={isLoading}
+        error={loadError}
+        disabled={disabled || Boolean(disabledExplanation) || Boolean(loadError)}
+        placeholder={field.editor?.fixedValueHint?.trim() ?? field.picker?.fixedValueHint?.trim() ?? 'Select Users'}
+      />
+      {(disabledExplanation || loadError) && (
+        <p className="text-[11px] text-gray-500">
+          {disabledExplanation ?? loadError}
+        </p>
+      )}
+    </div>
+  );
+};
 
 export const WorkflowActionInputFixedPicker: React.FC<{
   field: WorkflowActionInputPickerField;

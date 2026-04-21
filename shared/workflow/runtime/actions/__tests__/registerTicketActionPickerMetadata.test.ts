@@ -4,6 +4,21 @@ import { zodToWorkflowJsonSchema } from '../../jsonSchemaMetadata';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { registerTicketActions } from '../businessOperations/tickets';
 
+const getNestedObjectProperties = (
+  schema: Record<string, unknown> | undefined
+): Record<string, Record<string, unknown>> => {
+  const anyOf = Array.isArray((schema as { anyOf?: unknown[] } | undefined)?.anyOf)
+    ? ((schema as { anyOf?: Array<Record<string, unknown>> }).anyOf ?? [])
+    : [];
+  const objectVariant = anyOf.find((variant) => typeof variant === 'object' && variant !== null && 'properties' in variant);
+
+  return (
+    ((objectVariant as { properties?: Record<string, Record<string, unknown>> } | undefined)?.properties) ??
+    ((schema as { properties?: Record<string, Record<string, unknown>> } | undefined)?.properties) ??
+    {}
+  );
+};
+
 describe('ticket workflow picker metadata', () => {
   beforeAll(() => {
     if (!getActionRegistryV2().get('tickets.create', 1)) {
@@ -34,11 +49,16 @@ describe('ticket workflow picker metadata', () => {
         string,
         Record<string, unknown>
       >) ?? {};
-    const createAssigneeProperties =
-      (createProperties.assignee?.properties as Record<string, Record<string, unknown>>) ?? {};
-    const assignAssigneeProperties =
-      (((assignSchema.properties as Record<string, Record<string, unknown>>).assignee?.properties ??
+    const createAssignmentProperties =
+      (createProperties.assignment?.properties as Record<string, Record<string, unknown>>) ?? {};
+    const createPrimaryProperties = getNestedObjectProperties(createAssignmentProperties.primary);
+    const updateAssignmentProperties =
+      (updatePatchProperties.assignment?.properties as Record<string, Record<string, unknown>>) ?? {};
+    const updatePrimaryProperties = getNestedObjectProperties(updateAssignmentProperties.primary);
+    const assignAssignmentProperties =
+      (((assignSchema.properties as Record<string, Record<string, unknown>>).assignment?.properties ??
         {}) as Record<string, Record<string, unknown>>);
+    const assignPrimaryProperties = getNestedObjectProperties(assignAssignmentProperties.primary);
 
     expect(createProperties.client_id?.['x-workflow-picker-kind']).toBe('client');
     expect(createProperties.client_id?.['x-workflow-picker-allow-dynamic-reference']).toBe(true);
@@ -52,8 +72,11 @@ describe('ticket workflow picker metadata', () => {
     expect(createProperties.status_id?.['x-workflow-picker-dependencies']).toEqual(['board_id']);
     expect(createProperties.priority_id?.['x-workflow-picker-kind']).toBe('ticket-priority');
     expect(createProperties.priority_id?.['x-workflow-picker-dependencies']).toBeUndefined();
-    expect(createProperties.assigned_to?.['x-workflow-picker-kind']).toBe('user');
-    expect(createProperties.assigned_to?.['x-workflow-picker-dependencies']).toBeUndefined();
+    expect(createProperties.assigned_to).toBeUndefined();
+    expect(createProperties.assignee).toBeUndefined();
+    expect(createAssignmentProperties.additional_user_ids?.['x-workflow-picker-kind']).toBe('user');
+    expect(createPrimaryProperties.id?.['x-workflow-picker-kind']).toBe('user-or-team');
+    expect(createPrimaryProperties.id?.['x-workflow-picker-dependencies']).toEqual(['assignment.primary.type']);
     expect(createProperties.category_id?.['x-workflow-picker-kind']).toBe('ticket-category');
     expect(createProperties.category_id?.['x-workflow-picker-dependencies']).toEqual(['board_id']);
     expect(createProperties.subcategory_id?.['x-workflow-picker-kind']).toBe('ticket-subcategory');
@@ -64,16 +87,18 @@ describe('ticket workflow picker metadata', () => {
     expect(createProperties.location_id?.['x-workflow-picker-kind']).toBe('client-location');
     expect(createProperties.location_id?.['x-workflow-picker-dependencies']).toEqual(['client_id']);
 
-    expect(createAssigneeProperties.id?.['x-workflow-picker-kind']).toBe('user-or-team');
-    expect(createAssigneeProperties.id?.['x-workflow-picker-dependencies']).toEqual(['assignee.type']);
-    expect(assignAssigneeProperties.id?.['x-workflow-picker-kind']).toBe('user-or-team');
+    expect(assignPrimaryProperties.id?.['x-workflow-picker-kind']).toBe('user-or-team');
+    expect(assignPrimaryProperties.id?.['x-workflow-picker-dependencies']).toEqual(['assignment.primary.type']);
+    expect(assignAssignmentProperties.additional_user_ids?.['x-workflow-picker-kind']).toBe('user');
 
     expect(updatePatchProperties.status_id?.['x-workflow-picker-kind']).toBe('ticket-status');
     expect(updatePatchProperties.status_id?.['x-workflow-picker-dependencies']).toEqual(['ticket_id']);
     expect(updatePatchProperties.priority_id?.['x-workflow-picker-kind']).toBe('ticket-priority');
     expect(updatePatchProperties.priority_id?.['x-workflow-picker-dependencies']).toBeUndefined();
-    expect(updatePatchProperties.assigned_to?.['x-workflow-picker-kind']).toBe('user');
-    expect(updatePatchProperties.assigned_to?.['x-workflow-picker-dependencies']).toBeUndefined();
+    expect(updatePatchProperties.assigned_to).toBeUndefined();
+    expect(updateAssignmentProperties.additional_user_ids?.['x-workflow-picker-kind']).toBe('user');
+    expect(updatePrimaryProperties.id?.['x-workflow-picker-kind']).toBe('user-or-team');
+    expect(updatePrimaryProperties.id?.['x-workflow-picker-dependencies']).toEqual(['patch.assignment.primary.type']);
     expect(updatePatchProperties.category_id?.['x-workflow-picker-kind']).toBe('ticket-category');
     expect(updatePatchProperties.category_id?.['x-workflow-picker-dependencies']).toBeUndefined();
     expect(updatePatchProperties.subcategory_id?.['x-workflow-picker-kind']).toBe(

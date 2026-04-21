@@ -165,6 +165,7 @@ export interface UpdateTicketInput {
   updated_by?: string;
   closed_by?: string;
   assigned_to?: string | null;
+  assigned_team_id?: string | null;
   updated_at?: string;
   closed_at?: string;
   due_date?: string | null;

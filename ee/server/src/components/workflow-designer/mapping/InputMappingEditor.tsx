@@ -31,7 +31,10 @@ import {
 } from './typeCompatibility';
 import { WorkflowActionInputFieldInfo } from '../WorkflowActionInputFieldInfo';
 import { getWorkflowActionInputTypeHint, WorkflowActionInputTypeHint } from '../WorkflowActionInputTypeHint';
-import { WorkflowActionInputFixedPicker } from '../WorkflowActionInputFixedPicker';
+import {
+  WorkflowActionInputFixedMultiPicker,
+  WorkflowActionInputFixedPicker,
+} from '../WorkflowActionInputFixedPicker';
 import {
   WorkflowActionInputSourceMode,
   createWorkflowActionInputValueForMode,
@@ -959,6 +962,12 @@ const LiteralValueEditor: React.FC<{
   const fieldEditor = getWorkflowFieldEditor(field);
   const inlineEditorMode = fieldEditor?.inline?.mode;
   const hasPickerEditor = fieldEditor?.kind === 'picker' && inlineEditorMode === 'picker-summary';
+  const pickerResource = fieldEditor?.picker?.resource;
+  const hasMultiUserPickerEditor =
+    hasPickerEditor &&
+    fieldType === 'array' &&
+    pickerResource === 'user' &&
+    fieldConstraints?.itemType === 'string';
   const hasStructuredObjectEditor = fieldType === 'object' && (fieldChildren?.length ?? 0) > 0;
   const hasStructuredArrayObjectEditor = fieldType === 'array' && (fieldChildren?.length ?? 0) > 0;
   const hasStructuredPrimitiveArrayEditor =
@@ -1045,7 +1054,22 @@ const LiteralValueEditor: React.FC<{
     );
   };
 
-  // Handle enum fields
+  // Handle picker-backed fields
+  if (hasMultiUserPickerEditor) {
+    return (
+      <WorkflowActionInputFixedMultiPicker
+        field={field}
+        values={Array.isArray(value)
+          ? value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+          : []}
+        onChange={(nextValues) => onChange(nextValues)}
+        idPrefix={idPrefix}
+        rootInputMapping={rootInputMapping}
+        disabled={disabled}
+      />
+    );
+  }
+
   if (hasPickerEditor) {
     return wrapNullableEditor(
       <FixedValueEditorShell

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { getWorkflowEmailProvider } from '../../registries/workflowEmailRegistry';
@@ -45,6 +46,311 @@ const withWorkflowPicker = <T extends z.ZodTypeAny>(
     'x-workflow-picker-allow-dynamic-reference': true,
   });
 
+const workflowTicketAssignmentPrimaryTypeSchema = z.enum(['user', 'team', 'queue']);
+
+type WorkflowTicketAssignmentInput = {
+  primary?: {
+    type: z.infer<typeof workflowTicketAssignmentPrimaryTypeSchema>;
+    id: string;
+  } | null;
+  additional_user_ids?: string[];
+};
+
+type WorkflowTicketResolvedAdditionalUser = {
+  userId: string;
+  role: 'support' | 'team_member';
+};
+
+type WorkflowTicketResolvedAssignment = {
+  primary: WorkflowTicketAssignmentInput['primary'];
+  assignedTo: string | null;
+  assignedTeamId: string | null;
+  additionalUsers: WorkflowTicketResolvedAdditionalUser[];
+};
+
+const buildWorkflowTicketAssignmentPrimarySchema = (typeDependencyPath: string) =>
+  z.object({
+    type: workflowTicketAssignmentPrimaryTypeSchema.describe('Primary assignment type'),
+    id: withWorkflowPicker(
+      uuidSchema,
+      'Primary assignment target id',
+      'user-or-team',
+      [typeDependencyPath]
+    )
+  }).describe('Primary assignment target');
+
+const buildWorkflowTicketAssignmentSchema = ({
+  dependencyPrefix,
+  requirePrimary = false,
+}: {
+  dependencyPrefix: string;
+  requirePrimary?: boolean;
+}) => {
+  const primarySchema = buildWorkflowTicketAssignmentPrimarySchema(`${dependencyPrefix}.primary.type`);
+
+  return z.object({
+    primary: requirePrimary ? primarySchema : primarySchema.nullable().default(null),
+    additional_user_ids: withWorkflowPicker(
+      z.array(uuidSchema).default([]),
+      'Additional assigned MSP user ids',
+      'user'
+    )
+  }).superRefine((assignment, refinementCtx) => {
+    if (!assignment.primary && assignment.additional_user_ids.length > 0) {
+      refinementCtx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['additional_user_ids'],
+        message: 'additional_user_ids requires a primary assignment'
+      });
+    }
+  });
+};
+
+const uniqueStrings = (values: string[]): string[] => Array.from(new Set(values));
+
+const getCurrentTicketAdditionalUserIds = async (
+  tx: { tenantId: string; trx: any },
+  ticketId: string
+): Promise<string[]> => {
+  const rows = await tx.trx('ticket_resources')
+    .where({ tenant: tx.tenantId, ticket_id: ticketId })
+    .whereNotNull('additional_user_id')
+    .select('additional_user_id');
+
+  return uniqueStrings(
+    rows
+      .map((row: { additional_user_id: string | null }) => row.additional_user_id)
+      .filter((userId: string | null): userId is string => typeof userId === 'string' && userId.length > 0)
+  );
+};
+
+const resolveWorkflowTicketAssignment = async (
+  tx: { tenantId: string; trx: any },
+  ctx: any,
+  assignment: WorkflowTicketAssignmentInput | null | undefined,
+  options: {
+    requirePrimary?: boolean;
+  } = {}
+): Promise<WorkflowTicketResolvedAssignment> => {
+  const primary = assignment?.primary ?? null;
+  const explicitAdditionalUserIds = uniqueStrings(assignment?.additional_user_ids ?? []);
+
+  if (!primary) {
+    if (options.requirePrimary) {
+      throwActionError(ctx, {
+        category: 'ValidationError',
+        code: 'VALIDATION_ERROR',
+        message: 'assignment.primary is required'
+      });
+    }
+
+    return {
+      primary: null,
+      assignedTo: null,
+      assignedTeamId: null,
+      additionalUsers: []
+    };
+  }
+
+  let assignedTo: string | null = null;
+  let assignedTeamId: string | null = null;
+  const implicitAdditionalUsers: WorkflowTicketResolvedAdditionalUser[] = [];
+
+  if (primary.type === 'user') {
+    const user = await tx.trx('users')
+      .where({
+        tenant: tx.tenantId,
+        user_id: primary.id,
+        user_type: 'internal',
+        is_inactive: false,
+      })
+      .first();
+
+    if (!user) {
+      throwActionError(ctx, {
+        category: 'ValidationError',
+        code: 'VALIDATION_ERROR',
+        message: 'Primary assigned user not found or inactive',
+        details: { user_id: primary.id }
+      });
+    }
+
+    assignedTo = primary.id;
+  } else if (primary.type === 'team') {
+    const team = await tx.trx('teams')
+      .where({ tenant: tx.tenantId, team_id: primary.id })
+      .first();
+
+    if (!team) {
+      throwActionError(ctx, {
+        category: 'ActionError',
+        code: 'NOT_FOUND',
+        message: 'Team not found',
+        details: { team_id: primary.id }
+      });
+    }
+
+    if (!team.manager_id) {
+      throwActionError(ctx, {
+        category: 'ValidationError',
+        code: 'VALIDATION_ERROR',
+        message: 'Team lead not found',
+        details: { team_id: primary.id }
+      });
+    }
+
+    const manager = await tx.trx('users')
+      .where({
+        tenant: tx.tenantId,
+        user_id: team.manager_id,
+        user_type: 'internal',
+        is_inactive: false,
+      })
+      .first();
+
+    if (!manager) {
+      throwActionError(ctx, {
+        category: 'ValidationError',
+        code: 'VALIDATION_ERROR',
+        message: 'Team lead is inactive or not found',
+        details: { team_id: primary.id, manager_id: team.manager_id }
+      });
+    }
+
+    assignedTo = team.manager_id;
+    assignedTeamId = team.team_id;
+
+    const teamMembers = await tx.trx('team_members')
+      .join('users', function (this: Knex.JoinClause) {
+        this.on('team_members.user_id', 'users.user_id')
+          .andOn('team_members.tenant', 'users.tenant');
+      })
+      .where({
+        'team_members.tenant': tx.tenantId,
+        'team_members.team_id': primary.id,
+      })
+      .andWhere('users.user_type', 'internal')
+      .andWhere('users.is_inactive', false)
+      .select('team_members.user_id');
+
+    implicitAdditionalUsers.push(
+      ...teamMembers
+        .map((member: { user_id: string }) => member.user_id)
+        .filter((userId: string) => userId && userId !== assignedTo)
+        .map((userId: string) => ({ userId, role: 'team_member' as const }))
+    );
+  } else {
+    const member = await tx.trx('team_members')
+      .where({ tenant: tx.tenantId, team_id: primary.id })
+      .orderBy('created_at', 'asc')
+      .first();
+
+    if (!member?.user_id) {
+      throwActionError(ctx, {
+        category: 'ActionError',
+        code: 'NOT_FOUND',
+        message: 'Queue has no members',
+        details: { queue_id: primary.id }
+      });
+    }
+
+    const resolvedUser = await tx.trx('users')
+      .where({
+        tenant: tx.tenantId,
+        user_id: member.user_id,
+        user_type: 'internal',
+        is_inactive: false,
+      })
+      .first();
+
+    if (!resolvedUser) {
+      throwActionError(ctx, {
+        category: 'ValidationError',
+        code: 'VALIDATION_ERROR',
+        message: 'Queue resolved to an inactive or missing user',
+        details: { queue_id: primary.id, user_id: member.user_id }
+      });
+    }
+
+    assignedTo = member.user_id;
+  }
+
+  const validExplicitUsers = explicitAdditionalUserIds.length > 0
+    ? await tx.trx('users')
+        .where({ tenant: tx.tenantId, user_type: 'internal', is_inactive: false })
+        .whereIn('user_id', explicitAdditionalUserIds)
+        .select('user_id')
+    : [];
+
+  const validExplicitUserIds = new Set(
+    validExplicitUsers.map((user: { user_id: string }) => user.user_id)
+  );
+  const missingExplicitUserIds = explicitAdditionalUserIds.filter(
+    (userId) => !validExplicitUserIds.has(userId)
+  );
+
+  if (missingExplicitUserIds.length > 0) {
+    throwActionError(ctx, {
+      category: 'ValidationError',
+      code: 'VALIDATION_ERROR',
+      message: 'One or more additional assigned users are invalid or inactive',
+      details: { invalid_user_ids: missingExplicitUserIds }
+    });
+  }
+
+  const additionalUsersById = new Map<string, WorkflowTicketResolvedAdditionalUser>();
+
+  for (const additionalUser of implicitAdditionalUsers) {
+    additionalUsersById.set(additionalUser.userId, additionalUser);
+  }
+
+  for (const userId of explicitAdditionalUserIds) {
+    if (!additionalUsersById.has(userId)) {
+      additionalUsersById.set(userId, {
+        userId,
+        role: 'support'
+      });
+    }
+  }
+
+  if (assignedTo) {
+    additionalUsersById.delete(assignedTo);
+  }
+
+  return {
+    primary,
+    assignedTo,
+    assignedTeamId,
+    additionalUsers: Array.from(additionalUsersById.values())
+  };
+};
+
+const reconcileWorkflowTicketAdditionalUsers = async (
+  tx: { tenantId: string; trx: any },
+  ticketId: string,
+  assignedTo: string | null,
+  additionalUsers: WorkflowTicketResolvedAdditionalUser[]
+): Promise<void> => {
+  await tx.trx('ticket_resources')
+    .where({ tenant: tx.tenantId, ticket_id: ticketId })
+    .delete();
+
+  if (!assignedTo || additionalUsers.length === 0) {
+    return;
+  }
+
+  await tx.trx('ticket_resources').insert(
+    additionalUsers.map((additionalUser) => ({
+      tenant: tx.tenantId,
+      ticket_id: ticketId,
+      assigned_to: assignedTo,
+      additional_user_id: additionalUser.userId,
+      role: additionalUser.role,
+      assigned_at: new Date()
+    }))
+  );
+};
+
 export function registerTicketActions(): void {
   const registry = getActionRegistryV2();
 
@@ -78,20 +384,9 @@ export function registerTicketActions(): void {
         ['board_id']
       ),
       priority_id: withWorkflowPicker(uuidSchema, 'Priority id', 'ticket-priority'),
-      assigned_to: withWorkflowPicker(
-        uuidSchema.nullable().optional(),
-        'Assigned user id',
-        'user'
-      ),
-      assignee: z.object({
-        type: z.enum(['user', 'team']).describe('Assignee type'),
-        id: withWorkflowPicker(
-          uuidSchema,
-          'User id or team id',
-          'user-or-team',
-          ['assignee.type']
-        )
-      }).optional().describe('Optional assignee (user or team)'),
+      assignment: buildWorkflowTicketAssignmentSchema({
+        dependencyPrefix: 'assignment'
+      }).optional().describe('Ticket assignment configuration'),
       category_id: withWorkflowPicker(
         uuidSchema.nullable().optional(),
         'Category id',
@@ -171,35 +466,14 @@ export function registerTicketActions(): void {
         }
       }
 
+      const resolvedAssignment = await resolveWorkflowTicketAssignment(
+        tx,
+        ctx,
+        input.assignment,
+      );
+
       let created: any;
       try {
-        let assignedTo = input.assigned_to ?? null;
-        let assignedTeamId: string | null = null;
-
-        if (input.assignee) {
-          if (input.assignee.type === 'user') {
-            assignedTo = input.assignee.id;
-          } else {
-            assignedTeamId = input.assignee.id;
-            const team = await tx.trx('teams')
-              .where({ tenant: tx.tenantId, team_id: input.assignee.id })
-              .first();
-            if (!team) {
-              throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Team not found' });
-            }
-            if (!team.manager_id) {
-              throwActionError(ctx, { category: 'ActionError', code: 'VALIDATION_ERROR', message: 'Team lead not found' });
-            }
-            const manager = await tx.trx('users')
-              .where({ user_id: team.manager_id, tenant: tx.tenantId })
-              .first();
-            if (manager?.is_inactive) {
-              throwActionError(ctx, { category: 'ActionError', code: 'VALIDATION_ERROR', message: 'Team lead is inactive' });
-            }
-            assignedTo = team.manager_id ?? null;
-          }
-        }
-
         created = await TicketModel.createTicket(
           {
             title: input.title,
@@ -210,8 +484,8 @@ export function registerTicketActions(): void {
             location_id: input.location_id ?? undefined,
             status_id: input.status_id,
             priority_id: input.priority_id,
-            assigned_to: assignedTo ?? undefined,
-            assigned_team_id: assignedTeamId ?? undefined,
+            assigned_to: resolvedAssignment.assignedTo ?? undefined,
+            assigned_team_id: resolvedAssignment.assignedTeamId ?? undefined,
             category_id: input.category_id ?? undefined,
             subcategory_id: input.subcategory_id ?? undefined,
             entered_by: tx.actorUserId,
@@ -228,43 +502,12 @@ export function registerTicketActions(): void {
         rethrowAsStandardError(ctx, error);
       }
 
-      if (input.assignee?.type === 'team') {
-        const teamMembers = await tx.trx('team_members')
-          .join('users', function() {
-            this.on('team_members.user_id', 'users.user_id')
-              .andOn('team_members.tenant', 'users.tenant');
-          })
-          .where({ 'team_members.tenant': tx.tenantId, 'team_members.team_id': input.assignee.id })
-          .andWhere('users.is_inactive', false)
-          .select('team_members.user_id');
-
-        const memberIds = teamMembers
-          .map((member: { user_id: string }) => member.user_id)
-          .filter((userId: string) => userId && userId !== created.assigned_to);
-
-        if (memberIds.length > 0) {
-          const existingResources = await tx.trx('ticket_resources')
-            .where({ tenant: tx.tenantId, ticket_id: created.ticket_id })
-            .whereIn('additional_user_id', memberIds)
-            .select('additional_user_id');
-
-          const existingIds = new Set(existingResources.map((row: { additional_user_id: string }) => row.additional_user_id));
-          const toInsert = memberIds.filter((userId) => !existingIds.has(userId));
-
-          if (toInsert.length > 0) {
-            await tx.trx('ticket_resources').insert(
-              toInsert.map((userId) => ({
-                tenant: tx.tenantId,
-                ticket_id: created.ticket_id,
-                assigned_to: created.assigned_to,
-                additional_user_id: userId,
-                role: 'team_member',
-                assigned_at: new Date()
-              }))
-            );
-          }
-        }
-      }
+      await reconcileWorkflowTicketAdditionalUsers(
+        tx,
+        created.ticket_id,
+        resolvedAssignment.assignedTo,
+        resolvedAssignment.additionalUsers
+      );
 
       if (input.initial_comment?.body) {
         try {
@@ -415,11 +658,9 @@ export function registerTicketActions(): void {
           'New priority id',
           'ticket-priority'
         ),
-        assigned_to: withWorkflowPicker(
-          uuidSchema.nullable().optional(),
-          'New assigned user id',
-          'user'
-        ),
+        assignment: buildWorkflowTicketAssignmentSchema({
+          dependencyPrefix: 'patch.assignment'
+        }).optional().describe('Atomic assignment replacement'),
         title: z.string().min(1).optional().describe('New title'),
         category_id: withWorkflowPicker(
           uuidSchema.nullable().optional(),
@@ -507,6 +748,9 @@ export function registerTicketActions(): void {
       let currentAttributes: Record<string, any> = {};
       const parsedAttrs = parseJsonMaybe(current.attributes);
       currentAttributes = parsedAttrs && typeof parsedAttrs === 'object' && !Array.isArray(parsedAttrs) ? parsedAttrs : {};
+      const currentAdditionalUserIds = input.patch.assignment !== undefined
+        ? await getCurrentTicketAdditionalUserIds(tx, input.ticket_id)
+        : [];
 
       const mergedAttributes = {
         ...currentAttributes,
@@ -521,6 +765,17 @@ export function registerTicketActions(): void {
         status_id: (current.status_id as string | null) ?? null,
         priority_id: (current.priority_id as string | null) ?? null,
         assigned_to: (current.assigned_to as string | null) ?? null,
+        assignment: input.patch.assignment !== undefined
+          ? {
+              primary: current.assigned_to
+                ? {
+                    type: current.assigned_team_id ? 'team' : 'user',
+                    id: (current.assigned_team_id as string | null) ?? (current.assigned_to as string)
+                  }
+                : null,
+              additional_user_ids: currentAdditionalUserIds
+            }
+          : undefined,
         category_id: (current.category_id as string | null) ?? null,
         subcategory_id: (current.subcategory_id as string | null) ?? null,
         location_id: (current.location_id as string | null) ?? null,
@@ -528,21 +783,36 @@ export function registerTicketActions(): void {
         tags: (currentAttributes.tags as string[] | undefined) ?? null
       };
 
+      const resolvedAssignment = input.patch.assignment !== undefined
+        ? await resolveWorkflowTicketAssignment(tx, ctx, input.patch.assignment)
+        : null;
+
       let updated: any;
       try {
+        if (resolvedAssignment) {
+          await tx.trx('ticket_resources')
+            .where({ tenant: tx.tenantId, ticket_id: input.ticket_id })
+            .delete();
+        }
+
         updated = await TicketModel.updateTicket(
           input.ticket_id,
           {
             ...(input.patch.title ? { title: input.patch.title } : {}),
             ...(input.patch.status_id ? { status_id: input.patch.status_id } : {}),
             ...(input.patch.priority_id ? { priority_id: input.patch.priority_id } : {}),
-            ...(input.patch.assigned_to !== undefined ? { assigned_to: input.patch.assigned_to } : {}),
+            ...(resolvedAssignment
+              ? {
+                  assigned_to: resolvedAssignment.assignedTo,
+                  assigned_team_id: resolvedAssignment.assignedTeamId,
+                }
+              : {}),
             ...(input.patch.category_id !== undefined ? { category_id: input.patch.category_id } : {}),
             ...(input.patch.subcategory_id !== undefined ? { subcategory_id: input.patch.subcategory_id } : {}),
             ...(input.patch.location_id !== undefined ? { location_id: input.patch.location_id } : {}),
             attributes: mergedAttributes,
             updated_by: tx.actorUserId
-          },
+          } as any,
           tx.tenantId,
           tx.trx,
           {},
@@ -550,6 +820,15 @@ export function registerTicketActions(): void {
           undefined,
           tx.actorUserId
         );
+
+        if (resolvedAssignment) {
+          await reconcileWorkflowTicketAdditionalUsers(
+            tx,
+            input.ticket_id,
+            resolvedAssignment.assignedTo,
+            resolvedAssignment.additionalUsers
+          );
+        }
       } catch (error) {
         rethrowAsStandardError(ctx, error);
       }
@@ -563,6 +842,12 @@ export function registerTicketActions(): void {
         status_id: (updated.status_id as string | null) ?? null,
         priority_id: (updated.priority_id as string | null) ?? null,
         assigned_to: (updated.assigned_to as string | null) ?? null,
+        assignment: resolvedAssignment
+          ? {
+              primary: resolvedAssignment.primary,
+              additional_user_ids: resolvedAssignment.additionalUsers.map((additionalUser) => additionalUser.userId)
+            }
+          : undefined,
         category_id: (updated.category_id as string | null) ?? null,
         subcategory_id: (updated.subcategory_id as string | null) ?? null,
         location_id: (updated.location_id as string | null) ?? null,
@@ -594,21 +879,16 @@ export function registerTicketActions(): void {
     version: 1,
     inputSchema: z.object({
       ticket_id: uuidSchema.describe('Ticket id'),
-      assignee: z.object({
-        type: z.enum(['user', 'team', 'queue']).describe('Assignee type'),
-        id: withWorkflowPicker(
-          uuidSchema,
-          'Assignee id (user_id, team_id, or queue id)',
-          'user-or-team',
-          ['assignee.type']
-        )
-      }),
+      assignment: buildWorkflowTicketAssignmentSchema({
+        dependencyPrefix: 'assignment',
+        requirePrimary: true,
+      }).describe('Ticket assignment configuration'),
       reason: z.string().optional().describe('Optional assignment reason'),
       comment: z.object({
         body: z.string().min(1).describe('Optional assignment comment body'),
         visibility: z.enum(['public', 'internal']).default('internal').describe('Comment visibility')
       }).optional().describe('Optional assignment comment'),
-      no_op_if_already_assigned: z.boolean().default(true).describe('No-op if ticket is already assigned to the resolved user')
+      no_op_if_already_assigned: z.boolean().default(true).describe('No-op if the resolved assignment already matches the ticket')
     }),
     outputSchema: z.object({
       ticket_id: uuidSchema,
@@ -622,123 +902,79 @@ export function registerTicketActions(): void {
     ui: {
       label: 'Assign Ticket',
       category: 'Business Operations',
-      description: 'Assign a ticket to a user (or resolve from team/queue)'
+      description: 'Assign a ticket using the canonical workflow assignment model'
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
-
-      const resolveAssigneeUserId = async (): Promise<string> => {
-        if (input.assignee.type === 'user') return input.assignee.id;
-
-        if (input.assignee.type === 'team') {
-          const team = await tx.trx('teams').where({ tenant: tx.tenantId, team_id: input.assignee.id }).first();
-          if (!team) {
-            throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Team not found', details: { team_id: input.assignee.id } });
-          }
-          if (!team.manager_id) {
-            throwActionError(ctx, { category: 'ActionError', code: 'VALIDATION_ERROR', message: 'Team lead not found', details: { team_id: input.assignee.id } });
-          }
-          const manager = await tx.trx('users').where({ user_id: team.manager_id, tenant: tx.tenantId }).first();
-          if (manager?.is_inactive) {
-            throwActionError(ctx, { category: 'ActionError', code: 'VALIDATION_ERROR', message: 'Team lead is inactive', details: { team_id: input.assignee.id } });
-          }
-          return team.manager_id as string;
-        }
-
-        // queue: best-effort, treat as a team-like group backed by team_members (id == team_id)
-        const member = await tx.trx('team_members')
-          .where({ tenant: tx.tenantId, team_id: input.assignee.id })
-          .orderBy('created_at', 'asc')
-          .first();
-        if (!member) {
-          throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Queue has no members', details: { queue_id: input.assignee.id } });
-        }
-        return member.user_id as string;
-      };
-
-      const assigneeUserId = await resolveAssigneeUserId();
-
-      // Ensure user exists
-      const user = await tx.trx('users').where({ tenant: tx.tenantId, user_id: assigneeUserId }).first();
-      if (!user) {
-        throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'User not found', details: { user_id: assigneeUserId } });
-      }
 
       const ticket = await tx.trx('tickets').where({ tenant: tx.tenantId, ticket_id: input.ticket_id }).first();
       if (!ticket) {
         throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Ticket not found', details: { ticket_id: input.ticket_id } });
       }
 
-      if (input.no_op_if_already_assigned && ticket.assigned_to === assigneeUserId) {
+      const resolvedAssignment = await resolveWorkflowTicketAssignment(tx, ctx, input.assignment, {
+        requirePrimary: true,
+      });
+      const currentAdditionalUserIds = await getCurrentTicketAdditionalUserIds(tx, input.ticket_id);
+      const nextAdditionalUserIds = resolvedAssignment.additionalUsers.map((additionalUser) => additionalUser.userId).sort();
+      const currentAdditionalUserIdsSorted = [...currentAdditionalUserIds].sort();
+      const matchesCurrentAssignment =
+        (ticket.assigned_to as string | null) === resolvedAssignment.assignedTo &&
+        ((ticket.assigned_team_id as string | null) ?? null) === resolvedAssignment.assignedTeamId &&
+        currentAdditionalUserIdsSorted.length === nextAdditionalUserIds.length &&
+        currentAdditionalUserIdsSorted.every((userId, index) => userId === nextAdditionalUserIds[index]);
+
+      if (input.no_op_if_already_assigned && matchesCurrentAssignment) {
         await writeRunAudit(ctx, tx, {
           operation: 'workflow_action:tickets.assign',
-          changedData: { ticket_id: input.ticket_id, noop: true, assigned_to: assigneeUserId, assignee: input.assignee, reason: input.reason ?? null },
-          details: { action_id: 'tickets.assign', action_version: 1, ticket_id: input.ticket_id, assigned_to: assigneeUserId, noop: true }
+          changedData: {
+            ticket_id: input.ticket_id,
+            noop: true,
+            assignment: input.assignment,
+            assigned_to: resolvedAssignment.assignedTo,
+            reason: input.reason ?? null,
+          },
+          details: { action_id: 'tickets.assign', action_version: 1, ticket_id: input.ticket_id, assigned_to: resolvedAssignment.assignedTo, noop: true }
         });
 
         return {
           ticket_id: input.ticket_id,
-          assigned_type: input.assignee.type,
-          assigned_id: input.assignee.id,
+          assigned_type: input.assignment.primary!.type,
+          assigned_id: input.assignment.primary!.id,
           assigned_to: (ticket.assigned_to as string | null) ?? null,
           updated_at: new Date(ticket.updated_at ?? new Date().toISOString()).toISOString()
         };
       }
 
-      const updateData: Record<string, any> = { assigned_to: assigneeUserId, updated_by: tx.actorUserId };
-      if (input.assignee.type === 'team') {
-        updateData.assigned_team_id = input.assignee.id;
-      }
-
       let updated: any;
       try {
-        updated = await TicketModel.updateTicketWithAssignmentChange(
+        await tx.trx('ticket_resources')
+          .where({ tenant: tx.tenantId, ticket_id: input.ticket_id })
+          .delete();
+
+        updated = await TicketModel.updateTicket(
           input.ticket_id,
-          updateData,
+          {
+            assigned_to: resolvedAssignment.assignedTo,
+            assigned_team_id: resolvedAssignment.assignedTeamId,
+            updated_by: tx.actorUserId,
+          } as any,
           tx.tenantId,
-          tx.trx
+          tx.trx,
+          {},
+          undefined,
+          undefined,
+          tx.actorUserId
+        );
+
+        await reconcileWorkflowTicketAdditionalUsers(
+          tx,
+          input.ticket_id,
+          resolvedAssignment.assignedTo,
+          resolvedAssignment.additionalUsers
         );
       } catch (error) {
         rethrowAsStandardError(ctx, error);
-      }
-
-      // Expand team members into ticket_resources when assigning a team
-      if (input.assignee.type === 'team') {
-        const teamMembers = await tx.trx('team_members')
-          .join('users', function() {
-            this.on('team_members.user_id', 'users.user_id')
-              .andOn('team_members.tenant', 'users.tenant');
-          })
-          .where({ 'team_members.tenant': tx.tenantId, 'team_members.team_id': input.assignee.id })
-          .andWhere('users.is_inactive', false)
-          .select('team_members.user_id');
-
-        const memberIds = teamMembers
-          .map((member: { user_id: string }) => member.user_id)
-          .filter((userId: string) => userId && userId !== assigneeUserId);
-
-        if (memberIds.length > 0) {
-          const existingResources = await tx.trx('ticket_resources')
-            .where({ tenant: tx.tenantId, ticket_id: input.ticket_id })
-            .whereIn('additional_user_id', memberIds)
-            .select('additional_user_id');
-
-          const existingIds = new Set(existingResources.map((row: { additional_user_id: string }) => row.additional_user_id));
-          const toInsert = memberIds.filter((userId) => !existingIds.has(userId));
-
-          if (toInsert.length > 0) {
-            await tx.trx('ticket_resources').insert(
-              toInsert.map((userId) => ({
-                tenant: tx.tenantId,
-                ticket_id: input.ticket_id,
-                assigned_to: assigneeUserId,
-                additional_user_id: userId,
-                role: 'team_member',
-                assigned_at: new Date()
-              }))
-            );
-          }
-        }
       }
 
       let commentId: string | null = null;
@@ -768,14 +1004,21 @@ export function registerTicketActions(): void {
 
       await writeRunAudit(ctx, tx, {
         operation: 'workflow_action:tickets.assign',
-        changedData: { ticket_id: input.ticket_id, assigned_to: assigneeUserId, assignee: input.assignee, reason: input.reason ?? null, comment_id: commentId },
-        details: { action_id: 'tickets.assign', action_version: 1, ticket_id: input.ticket_id, assigned_to: assigneeUserId, comment_id: commentId }
+        changedData: {
+          ticket_id: input.ticket_id,
+          assignment: input.assignment,
+          assigned_to: resolvedAssignment.assignedTo,
+          additional_user_ids: resolvedAssignment.additionalUsers.map((additionalUser) => additionalUser.userId),
+          reason: input.reason ?? null,
+          comment_id: commentId,
+        },
+        details: { action_id: 'tickets.assign', action_version: 1, ticket_id: input.ticket_id, assigned_to: resolvedAssignment.assignedTo, comment_id: commentId }
       });
 
       return {
         ticket_id: input.ticket_id,
-        assigned_type: input.assignee.type,
-        assigned_id: input.assignee.id,
+        assigned_type: input.assignment.primary!.type,
+        assigned_id: input.assignment.primary!.id,
         assigned_to: (updated.assigned_to as string | null) ?? null,
         updated_at: new Date(updated.updated_at ?? new Date().toISOString()).toISOString()
       };

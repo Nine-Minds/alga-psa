@@ -378,6 +378,20 @@ const isExprSchema = (schema: JsonSchema | undefined, root?: JsonSchema): boolea
   return Boolean(resolved.properties.$expr);
 };
 
+const mergeSchemaMetadata = (wrapper: JsonSchema, resolved: JsonSchema): JsonSchema => ({
+  ...wrapper,
+  ...resolved,
+  title: resolved.title ?? wrapper.title,
+  description: resolved.description ?? wrapper.description,
+  examples: resolved.examples ?? wrapper.examples,
+  default: resolved.default ?? wrapper.default,
+  'x-workflow-picker-kind': (resolved as any)['x-workflow-picker-kind'] ?? (wrapper as any)['x-workflow-picker-kind'],
+  'x-workflow-picker-dependencies': (resolved as any)['x-workflow-picker-dependencies'] ?? (wrapper as any)['x-workflow-picker-dependencies'],
+  'x-workflow-picker-fixed-value-hint': (resolved as any)['x-workflow-picker-fixed-value-hint'] ?? (wrapper as any)['x-workflow-picker-fixed-value-hint'],
+  'x-workflow-picker-allow-dynamic-reference': (resolved as any)['x-workflow-picker-allow-dynamic-reference'] ?? (wrapper as any)['x-workflow-picker-allow-dynamic-reference'],
+  'x-workflow-editor': (resolved as any)['x-workflow-editor'] ?? (wrapper as any)['x-workflow-editor'],
+});
+
 const resolveSchema = (schema: JsonSchema, root?: JsonSchema): JsonSchema => {
   // Handle $ref
   if (schema.$ref && root?.definitions) {
@@ -394,8 +408,9 @@ const resolveSchema = (schema: JsonSchema, root?: JsonSchema): JsonSchema => {
     if (nonNullVariant) {
       // Merge nullable info back into resolved schema
       const resolved = resolveSchema(nonNullVariant, root);
+      const merged = mergeSchemaMetadata(schema, resolved);
       return {
-        ...resolved,
+        ...merged,
         // Mark as nullable if there was a null variant
         type: Array.isArray(resolved.type) ? resolved.type : resolved.type ? [resolved.type, 'null'] : ['null']
       };

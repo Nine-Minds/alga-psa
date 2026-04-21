@@ -242,14 +242,15 @@ describe('Teams V2 Plan Coverage', () => {
     });
   });
 
-  describe('Workflow: tickets.create assignee type', () => {
-    it('T074/T075: tickets.create supports team assignee and user assignee', () => {
+  describe('Workflow: canonical ticket assignment model', () => {
+    it('T074/T075: ticket workflow actions use the canonical assignment object and reconcile ticket resources', () => {
       const workflow = readFile('shared/workflow/runtime/actions/businessOperations/tickets.ts');
       expectAll(workflow, [
-        "assignee: z.object({",
-        "type: z.enum(['user', 'team'])",
-        'assigned_team_id',
-        'ticket_resources'
+        'buildWorkflowTicketAssignmentSchema',
+        'additional_user_ids',
+        "type: workflowTicketAssignmentPrimaryTypeSchema.describe('Primary assignment type')",
+        'resolveWorkflowTicketAssignment',
+        'reconcileWorkflowTicketAdditionalUsers'
       ]);
     });
   });
