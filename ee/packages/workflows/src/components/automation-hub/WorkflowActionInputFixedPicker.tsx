@@ -519,7 +519,7 @@ const WorkflowTicketPicker: React.FC<{
             if (!active) return;
             console.error('Failed to load selected workflow ticket picker value:', error);
             setOptions(value ? ([{ value, label: value }] satisfies WorkflowPickerOption[]) : []);
-            setLoadError(error instanceof Error ? error.message : t('automation.actionInput.errors.loadTicket', { defaultValue: 'Failed to load ticket' }));
+            setLoadError(t('automation.actionInput.errors.loadTicket', { defaultValue: 'Failed to load ticket' }));
           } finally {
             if (active) {
               setIsLoading(false);
@@ -553,7 +553,7 @@ const WorkflowTicketPicker: React.FC<{
         if (!active) return;
         console.error('Failed to search tickets for workflow picker:', error);
         setOptions(appendCurrentValueOption([], value));
-        setLoadError(error instanceof Error ? error.message : t('automation.actionInput.errors.searchTickets', { defaultValue: 'Failed to search tickets' }));
+        setLoadError(t('automation.actionInput.errors.searchTickets', { defaultValue: 'Failed to search tickets' }));
       } finally {
         if (active) {
           setIsLoading(false);
@@ -807,7 +807,7 @@ export const WorkflowActionInputFixedPicker: React.FC<{
         if (!active) return;
         console.error('Failed to load workflow picker options:', error);
         setData(EMPTY_PICKER_DATA);
-        setLoadError(error instanceof Error ? error.message : t('automation.actionInput.errors.loadOptions', { defaultValue: 'Failed to load options' }));
+        setLoadError(t('automation.actionInput.errors.loadOptions', { defaultValue: 'Failed to load options' }));
       })
       .finally(() => {
         if (active) {

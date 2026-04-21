@@ -2265,5 +2265,14 @@
         "subcategoryCategory": "Scelga prima una categoria fissa per caricare le opzioni di sottocategoria."
       }
     }
+  },
+  "automationGate": {
+    "loading": "Caricamento dell'automazione dei flussi di lavoro...",
+    "featureName": "Automazione dei flussi di lavoro",
+    "notEnabled": "Questa funzione è sperimentale e non è abilitata per il tuo tenant.",
+    "experimental": "Sperimentale",
+    "enableHint": "Abilita l'automazione dei flussi di lavoro nelle impostazioni per accedervi.",
+    "goToExperimental": "Vai alle funzionalità sperimentali",
+    "openSettings": "Apri impostazioni"
   }
 }

@@ -2265,5 +2265,14 @@
         "subcategoryCategory": "Proszę najpierw wybrać stałą kategorię, aby załadować opcje podkategorii."
       }
     }
+  },
+  "automationGate": {
+    "loading": "Ładowanie automatyzacji przepływów pracy...",
+    "featureName": "Automatyzacja przepływów pracy",
+    "notEnabled": "Ta funkcja jest eksperymentalna i nie jest włączona dla Twojego najemcy.",
+    "experimental": "Eksperymentalna",
+    "enableHint": "Włącz automatyzację przepływów pracy w ustawieniach, aby uzyskać dostęp.",
+    "goToExperimental": "Przejdź do funkcji eksperymentalnych",
+    "openSettings": "Otwórz ustawienia"
   }
 }

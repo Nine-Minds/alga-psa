@@ -2265,5 +2265,14 @@
         "subcategoryCategory": "11111"
       }
     }
+  },
+  "automationGate": {
+    "loading": "11111",
+    "featureName": "11111",
+    "notEnabled": "11111",
+    "experimental": "11111",
+    "enableHint": "11111",
+    "goToExperimental": "11111",
+    "openSettings": "11111"
   }
 }

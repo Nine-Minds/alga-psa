@@ -102,7 +102,8 @@
       "openMenu": "Menu openen",
       "goToPage": "Naar pagina",
       "dismissError": "Taak kon niet worden afgewezen: {{message}}"
-    }
+    },
+    "retryLater": "Probeer het later opnieuw."
   },
   "groupedView": {
     "addGroup": "Groep toevoegen",

@@ -2265,5 +2265,14 @@
         "subcategoryCategory": "Choisissez d'abord une catégorie fixe pour charger les options de sous-catégorie."
       }
     }
+  },
+  "automationGate": {
+    "loading": "Chargement de l'automatisation des workflows...",
+    "featureName": "Automatisation des workflows",
+    "notEnabled": "Cette fonctionnalité est expérimentale et n'est pas activée pour votre locataire.",
+    "experimental": "Expérimental",
+    "enableHint": "Activez l'automatisation des workflows dans les paramètres pour y accéder.",
+    "goToExperimental": "Accéder aux fonctionnalités expérimentales",
+    "openSettings": "Ouvrir les paramètres"
   }
 }

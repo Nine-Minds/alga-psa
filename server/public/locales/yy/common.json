@@ -941,5 +941,19 @@
       "handoffFinalizeFailed": "55555",
       "handoffNetworkIssue": "55555"
     }
+  },
+  "form": {
+    "selectPlaceholder": "55555",
+    "clearSelection": "55555",
+    "fromDate": "55555",
+    "toDate": "55555",
+    "noResults": "55555",
+    "searchPlaceholder": "55555"
+  },
+  "tagFilter": {
+    "placeholder": "55555",
+    "filter": "55555",
+    "selectedCount": "55555 {{count}} 55555",
+    "clearAll": "55555"
   }
 }

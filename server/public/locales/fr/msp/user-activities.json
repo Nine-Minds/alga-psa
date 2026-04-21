@@ -102,7 +102,8 @@
       "openMenu": "Ouvrir le menu",
       "goToPage": "Aller à la page",
       "dismissError": "Échec du rejet de la tâche : {{message}}"
-    }
+    },
+    "retryLater": "Veuillez réessayer plus tard."
   },
   "groupedView": {
     "addGroup": "Ajouter un groupe",

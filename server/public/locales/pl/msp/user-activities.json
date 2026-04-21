@@ -102,7 +102,8 @@
       "openMenu": "Otwórz menu",
       "goToPage": "Przejdź do strony",
       "dismissError": "Nie udało się odrzucić zadania: {{message}}"
-    }
+    },
+    "retryLater": "Spróbuj ponownie później."
   },
   "groupedView": {
     "addGroup": "Dodaj grupę",

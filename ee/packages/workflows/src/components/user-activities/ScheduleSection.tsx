@@ -160,7 +160,7 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: Schedu
           onClick={handleRefresh}
           disabled={loading}
         >
-          Refresh
+          {t('sections.schedule.actions.refresh', { defaultValue: 'Refresh' })}
         </Button>
         {isFiltersActive() ? (
           <Button
@@ -191,7 +191,7 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: Schedu
           size="sm"
           onClick={onViewAll}
         >
-          View All
+          {t('sections.schedule.actions.viewAll', { defaultValue: 'View All' })}
         </Button>
       </div>
     </div>
@@ -264,7 +264,7 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: Schedu
               className="gap-1"
             >
               <XCircle className="h-4 w-4" />
-              Reset
+              {t('sections.schedule.actions.reset', { defaultValue: 'Reset' })}
             </Button>
           ) : (
             <Button
@@ -275,7 +275,7 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: Schedu
               className="gap-1"
             >
               <FilterIcon className="h-4 w-4" />
-              Filter
+              {t('sections.schedule.actions.filter', { defaultValue: 'Filter' })}
             </Button>
           )}
           <Button

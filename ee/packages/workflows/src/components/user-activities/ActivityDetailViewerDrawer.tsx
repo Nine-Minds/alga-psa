@@ -392,7 +392,7 @@ export function ActivityDetailViewerDrawer({
                   <AlertDescription>
                     <p className="font-medium">{t('drawer.errorLoadingTimeEntry', { defaultValue: 'Error loading time entry' })}</p>
                     <p className="mt-1">
-                      {error instanceof Error ? error.message : String(error)}
+                      {t('drawer.retryLater', { defaultValue: 'Please try again later.' })}
                     </p>
                   </AlertDescription>
                 </Alert>
@@ -726,7 +726,7 @@ export function ActivityDetailViewerDrawer({
             <AlertDescription>
               <p className="font-medium">{t('drawer.errorLoadingTitle', { defaultValue: 'Error loading activity details' })}</p>
               <p className="mt-1">
-                {error instanceof Error ? error.message : String(error)}
+                {t('drawer.retryLater', { defaultValue: 'Please try again later.' })}
               </p>
             </AlertDescription>
           </Alert>

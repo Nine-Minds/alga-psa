@@ -304,7 +304,7 @@ export default function WorkflowList({
       } catch (err) {
         console.error('Failed to fetch workflows:', err);
         if (!didUnmount.current) {
-          setError(err instanceof Error ? err.message : t('automation.workflowList.states.errorFallback', { defaultValue: 'Failed to fetch workflows' }));
+          setError(t('automation.workflowList.states.errorFallback', { defaultValue: 'Failed to fetch workflows' }));
           setWorkflows([]);
           setTotalItems(0);
         }

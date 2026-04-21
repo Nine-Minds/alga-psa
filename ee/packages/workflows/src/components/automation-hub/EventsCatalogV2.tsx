@@ -1921,8 +1921,8 @@ const SimulateDialog: React.FC<{
       }
       toast.success(t('automation.eventsCatalog.simulateDialog.toasts.success', { defaultValue: 'Event simulated' }));
     } catch (e) {
-      const msg = e instanceof Error ? e.message : t('automation.eventsCatalog.simulateDialog.errors.submitFallback', { defaultValue: 'Failed to simulate' });
-      setSubmitError(msg);
+      console.error('Failed to simulate event:', e);
+      setSubmitError(t('automation.eventsCatalog.simulateDialog.errors.submitFallback', { defaultValue: 'Failed to simulate' }));
       handleError(e, t('automation.eventsCatalog.simulateDialog.errors.submitToast', { defaultValue: 'Failed to simulate' }));
     } finally {
       setSubmitting(false);

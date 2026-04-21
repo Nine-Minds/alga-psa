@@ -360,9 +360,9 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
             size="sm"
             onClick={handleRefresh}
             disabled={loading}
-            aria-label="Refresh Notifications"
+            aria-label={t('sections.notifications.ariaLabels.refresh', { defaultValue: 'Refresh Notifications' })}
           >
-            Refresh
+            {t('sections.notifications.actions.refresh', { defaultValue: 'Refresh' })}
           </Button>
           {isFiltersActive() ? (
             <Button
@@ -374,7 +374,7 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
               className="gap-1"
             >
               <XCircle className="h-4 w-4" />
-              Reset
+              {t('sections.notifications.actions.reset', { defaultValue: 'Reset' })}
             </Button>
           ) : (
             <Button
@@ -383,9 +383,9 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
               size="sm"
               onClick={() => setIsFilterDialogOpen(true)}
               disabled={loading}
-              aria-label="Filter Notifications"
+              aria-label={t('sections.notifications.ariaLabels.filter', { defaultValue: 'Filter Notifications' })}
             >
-              <Filter size={16} className="mr-1" /> Filter
+              <Filter size={16} className="mr-1" /> {t('sections.notifications.actions.filter', { defaultValue: 'Filter' })}
             </Button>
           )}
           <Button
@@ -394,7 +394,7 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
             size="sm"
             onClick={onViewAll}
           >
-            View All
+            {t('sections.notifications.actions.viewAll', { defaultValue: 'View All' })}
           </Button>
         </div>
       </CardHeader>

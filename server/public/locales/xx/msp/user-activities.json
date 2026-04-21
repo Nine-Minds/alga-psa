@@ -102,7 +102,8 @@
       "openMenu": "11111",
       "goToPage": "11111",
       "dismissError": "11111 {{message}} 11111"
-    }
+    },
+    "retryLater": "11111"
   },
   "groupedView": {
     "addGroup": "11111",

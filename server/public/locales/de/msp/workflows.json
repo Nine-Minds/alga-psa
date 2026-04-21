@@ -2265,5 +2265,14 @@
         "subcategoryCategory": "Wählen Sie zuerst eine feste Kategorie, um Unterkategorieoptionen zu laden."
       }
     }
+  },
+  "automationGate": {
+    "loading": "Workflow-Automatisierung wird geladen...",
+    "featureName": "Workflow-Automatisierung",
+    "notEnabled": "Diese Funktion ist experimentell und für Ihren Mandanten nicht aktiviert.",
+    "experimental": "Experimentell",
+    "enableHint": "Aktivieren Sie die Workflow-Automatisierung in den Einstellungen, um darauf zuzugreifen.",
+    "goToExperimental": "Zu experimentellen Funktionen",
+    "openSettings": "Einstellungen öffnen"
   }
 }
