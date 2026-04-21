@@ -9,7 +9,7 @@
  */
 
 import { Context } from '@temporalio/activity';
-import { getAdminConnection } from '@alga-psa/db/admin.js';
+import { getAdminConnection, refreshAdminConnection } from '@alga-psa/db/admin.js';
 import { TagModel } from '@alga-psa/shared/models/tagModel.js';
 import { Knex } from 'knex';
 import type {
@@ -24,6 +24,24 @@ import type {
   DeleteTenantDataResult,
   SendCancellationEmailResult,
 } from '../types/tenant-deletion-types.js';
+
+/**
+ * PgBouncer transaction-pooling in front of a Citus/Patroni HA setup occasionally
+ * hands out a backend connection that has become read-only (e.g., after a failover
+ * the backend is now attached to a standby). The process-cached admin pool's
+ * own probe can pass on those connections, so queries fail later with
+ * "read-only transaction" or "writing to worker nodes is not currently allowed".
+ *
+ * Callers use `isReadOnlyError` to detect the pattern, then call
+ * `refreshAdminConnection()` to force-recreate the pool and retry once.
+ */
+const READ_ONLY_ERROR_RE =
+  /read-only transaction|writing to worker nodes|cannot execute [A-Z]+ in a read-only/i;
+
+function isReadOnlyError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err ?? '');
+  return READ_ONLY_ERROR_RE.test(msg);
+}
 
 /**
  * Comprehensive list of tables to delete from, in dependency order.
@@ -1156,7 +1174,26 @@ export async function deleteTenantData(
   log.info('Starting comprehensive tenant data deletion', { tenantId, deletionId });
 
   try {
-    const adminKnex = await getAdminConnection();
+    let adminKnex = await getAdminConnection();
+
+    // Retry helper for transient read-only backends. See isReadOnlyError above
+    // for context. If the retry also fails, the error propagates.
+    const withReadOnlyRetry = async <T>(
+      op: (k: Knex) => Promise<T>,
+      label: string
+    ): Promise<T> => {
+      try {
+        return await op(adminKnex);
+      } catch (err) {
+        if (!isReadOnlyError(err)) throw err;
+        log.warn(
+          `[${label}] admin pool returned a read-only connection; refreshing pool and retrying once`,
+          { error: err instanceof Error ? err.message : String(err) }
+        );
+        adminKnex = await refreshAdminConnection();
+        return await op(adminKnex);
+      }
+    };
 
     // ============================================================
     // CRITICAL SAFEGUARD 1: Validate tenant is not master tenant
@@ -1199,7 +1236,10 @@ export async function deleteTenantData(
     const errors: string[] = [];
 
     // Step 1: Break circular dependencies first
-    await breakCircularDependencies(adminKnex, tenantId, log);
+    await withReadOnlyRetry(
+      (k) => breakCircularDependencies(k, tenantId, log),
+      'breakCircularDependencies'
+    );
 
     // Step 2: Delete from each table in order
     for (const tableName of TENANT_TABLES_DELETION_ORDER) {
@@ -1233,9 +1273,10 @@ export async function deleteTenantData(
             }
 
             // Delete records with explicit tenant filter
-            const deleted = await adminKnex(tableName)
-              .where({ [tenantColumn]: tenantId })
-              .delete();
+            const deleted = await withReadOnlyRetry(
+              (k) => k(tableName).where({ [tenantColumn]: tenantId }).delete(),
+              `delete:${tableName}`
+            );
 
             totalDeleted += deleted;
             tablesAffected++;
@@ -1256,10 +1297,14 @@ export async function deleteTenantData(
 
     // Step 3: Delete pending_tenant_deletions records for this tenant (except current)
     try {
-      const deletedPending = await adminKnex('pending_tenant_deletions')
-        .where({ tenant: tenantId })
-        .whereNot({ deletion_id: deletionId })
-        .delete();
+      const deletedPending = await withReadOnlyRetry(
+        (k) =>
+          k('pending_tenant_deletions')
+            .where({ tenant: tenantId })
+            .whereNot({ deletion_id: deletionId })
+            .delete(),
+        'delete:pending_tenant_deletions'
+      );
 
       if (deletedPending > 0) {
         log.info(`Deleted ${deletedPending} old pending deletion records`);
@@ -1278,9 +1323,10 @@ export async function deleteTenantData(
         throw new Error('BLOCKED: Final safety check failed - cannot delete management tenant');
       }
 
-      await adminKnex('tenants')
-        .where({ tenant: tenantId })
-        .delete();
+      await withReadOnlyRetry(
+        (k) => k('tenants').where({ tenant: tenantId }).delete(),
+        'delete:tenants'
+      );
 
       totalDeleted++;
       tablesAffected++;
