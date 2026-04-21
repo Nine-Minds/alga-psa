@@ -1278,6 +1278,8 @@
   },
   "clientPortal": {
     "clientsWillSee": "Kunden werden sehen:",
+    "showBudgetHours": "Budget-Stunden anzeigen",
+    "showBudgetHoursDescription": "Kunden sehen die Karte „Budget-Stunden“ auf Projektebene mit geleisteten vs. budgetierten Stunden und % des verbrauchten Budgets.",
     "showPhases": "Phasen anzeigen",
     "showPhasesDescription": "Kunden sehen Phasenkarten mit Namen, Beschreibungen und Datumsbereichen. Sie können Phasen auswählen, um zugehörige Aufgaben anzuzeigen.",
     "showCompletion": "Fertigstellung % anzeigen",
@@ -1289,6 +1291,7 @@
     "required": "(erforderlich)",
     "summary": {
       "projectInfo": "Projektname, Beschreibung, Daten und Gesamtfortschritt",
+      "budgetHours": "Budget-Stunden: geleistete vs. budgetierte Gesamtwerte und % verbraucht",
       "phaseInfo": "Phasennamen, Beschreibungen und Datumsbereiche",
       "phaseCompletion": "Fertigstellungsprozentsatz für jede Phase",
       "taskDetails": "Aufgabendetails: {{fields}}",

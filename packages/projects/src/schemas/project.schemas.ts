@@ -6,6 +6,7 @@ export const clientPortalConfigSchema = z.object({
   show_phases: z.boolean().default(false),
   show_phase_completion: z.boolean().default(false),
   show_tasks: z.boolean().default(false),
+  show_budget_hours: z.boolean().default(false),
   visible_task_fields: z.array(z.string()).default(['task_name', 'due_date', 'status'])
 });
 

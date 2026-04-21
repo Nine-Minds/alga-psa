@@ -1278,6 +1278,8 @@
   },
   "clientPortal": {
     "clientsWillSee": "I clienti vedranno:",
+    "showBudgetHours": "Mostra ore di budget",
+    "showBudgetHoursDescription": "I clienti vedranno la scheda Ore di budget a livello di progetto con ore utilizzate vs. di budget e % di budget utilizzato.",
     "showPhases": "Mostra fasi",
     "showPhasesDescription": "I clienti vedranno schede di fase con nomi, descrizioni e intervalli di date. Possono selezionare le fasi per visualizzare le attività associate.",
     "showCompletion": "Mostra % completamento",
@@ -1289,6 +1291,7 @@
     "required": "(obbligatorio)",
     "summary": {
       "projectInfo": "Nome del progetto, descrizione, date e avanzamento complessivo",
+      "budgetHours": "Ore di budget: totali utilizzati vs. di budget e % utilizzato",
       "phaseInfo": "Nomi delle fasi, descrizioni e intervalli di date",
       "phaseCompletion": "Percentuale di completamento per ogni fase",
       "taskDetails": "Dettagli attività: {{fields}}",

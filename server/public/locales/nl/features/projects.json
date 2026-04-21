@@ -1278,6 +1278,8 @@
   },
   "clientPortal": {
     "clientsWillSee": "Klanten zullen zien:",
+    "showBudgetHours": "Budget-uren tonen",
+    "showBudgetHoursDescription": "Klanten zien de Budget-uren-kaart op projectniveau met bestede vs. gebudgetteerde uren en % van het budget gebruikt.",
     "showPhases": "Fasen tonen",
     "showPhasesDescription": "Klanten zien fasekaarten met namen, beschrijvingen en datumbereiken. Ze kunnen fasen selecteren om bijbehorende taken te bekijken.",
     "showCompletion": "Voltooiing % tonen",
@@ -1289,6 +1291,7 @@
     "required": "(verplicht)",
     "summary": {
       "projectInfo": "Projectnaam, beschrijving, data en totale voortgang",
+      "budgetHours": "Budget-uren: bestede vs. gebudgetteerde totalen en % gebruikt",
       "phaseInfo": "Fasenamen, beschrijvingen en datumbereiken",
       "phaseCompletion": "Voltooiingspercentage voor elke fase",
       "taskDetails": "Taakdetails: {{fields}}",

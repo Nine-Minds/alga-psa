@@ -1278,6 +1278,8 @@
   },
   "clientPortal": {
     "clientsWillSee": "Klienci zobaczą:",
+    "showBudgetHours": "Pokaż godziny budżetowe",
+    "showBudgetHoursDescription": "Klienci zobaczą kartę Godziny budżetowe na poziomie projektu z godzinami wykorzystanymi vs. budżetowymi i % wykorzystanego budżetu.",
     "showPhases": "Pokaż fazy",
     "showPhasesDescription": "Klienci zobaczą karty faz z nazwami, opisami i zakresami dat. Mogą wybierać fazy, aby zobaczyć powiązane zadania.",
     "showCompletion": "Pokaż % ukończenia",
@@ -1289,6 +1291,7 @@
     "required": "(wymagane)",
     "summary": {
       "projectInfo": "Nazwa projektu, opis, daty i ogólny postęp",
+      "budgetHours": "Godziny budżetowe: wykorzystane vs. budżetowe wartości i % wykorzystanego budżetu",
       "phaseInfo": "Nazwy faz, opisy i zakresy dat",
       "phaseCompletion": "Procent ukończenia dla każdej fazy",
       "taskDetails": "Szczegóły zadań: {{fields}}",

@@ -1278,6 +1278,8 @@
   },
   "clientPortal": {
     "clientsWillSee": "Los clientes verán:",
+    "showBudgetHours": "Mostrar horas presupuestadas",
+    "showBudgetHoursDescription": "Los clientes verán la tarjeta de Horas presupuestadas del proyecto con horas utilizadas vs. presupuestadas y % del presupuesto consumido.",
     "showPhases": "Mostrar fases",
     "showPhasesDescription": "Los clientes verán tarjetas de fase con nombres, descripciones y rangos de fechas. Pueden seleccionar fases para ver las tareas asociadas.",
     "showCompletion": "Mostrar % de completado",
@@ -1289,6 +1291,7 @@
     "required": "(obligatorio)",
     "summary": {
       "projectInfo": "Nombre del proyecto, descripción, fechas y progreso general",
+      "budgetHours": "Horas presupuestadas: totales utilizados vs. presupuestados y % consumido",
       "phaseInfo": "Nombres de fase, descripciones y rangos de fechas",
       "phaseCompletion": "Porcentaje de completado para cada fase",
       "taskDetails": "Detalles de tareas: {{fields}}",
