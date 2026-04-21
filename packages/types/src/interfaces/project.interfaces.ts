@@ -9,6 +9,7 @@ export interface IClientPortalConfig {
   show_phases?: boolean;                // Show phase breakdown
   show_phase_completion?: boolean;      // Show task completion % per phase
   show_tasks?: boolean;                 // Show individual tasks
+  show_budget_hours?: boolean;          // Show project-level budget/spent hours card
   visible_task_fields?: string[];       // Which task fields/features to show
 }
 
@@ -16,6 +17,7 @@ export const DEFAULT_CLIENT_PORTAL_CONFIG: IClientPortalConfig = {
   show_phases: false,
   show_phase_completion: false,
   show_tasks: false,
+  show_budget_hours: false,
   visible_task_fields: ['task_name', 'due_date', 'status']
 };
 

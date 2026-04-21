@@ -1278,6 +1278,8 @@
   },
   "clientPortal": {
     "clientsWillSee": "Les clients verront :",
+    "showBudgetHours": "Afficher les heures budgétées",
+    "showBudgetHoursDescription": "Les clients verront la carte Heures budgétées au niveau du projet avec les heures consommées vs. budgétées et le % du budget utilisé.",
     "showPhases": "Afficher les phases",
     "showPhasesDescription": "Les clients verront des fiches de phase avec noms, descriptions et plages de dates. Ils peuvent sélectionner les phases pour voir les tâches associées.",
     "showCompletion": "Afficher le % de complétion",
@@ -1289,6 +1291,7 @@
     "required": "(requis)",
     "summary": {
       "projectInfo": "Nom du projet, description, dates et progression globale",
+      "budgetHours": "Heures budgétées : totaux consommés vs. budgétés et % utilisé",
       "phaseInfo": "Noms des phases, descriptions et plages de dates",
       "phaseCompletion": "Pourcentage de complétion pour chaque phase",
       "taskDetails": "Détails des tâches : {{fields}}",
