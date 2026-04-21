@@ -21,6 +21,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { CalendarProviderConfig } from '@alga-psa/types';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { getGoogleCalendarSetupStatus } from '../../lib/actions/integrations/calendarSetupActions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const googleCalendarProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),
@@ -49,12 +50,13 @@ export function GoogleCalendarProviderForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [calendarProviderId, setCalendarProviderId] = useState<string | undefined>(provider?.id);
   const [googleConfigReady, setGoogleConfigReady] = useState<boolean>(false);
+  const { t } = useTranslation('msp/calendar');
 
   const form = useForm<GoogleCalendarProviderFormData>({
     resolver: zodResolver(googleCalendarProviderSchema),
     defaultValues: {
-      providerName: provider?.name || 'Google Calendar',
-      calendarId: provider?.calendar_id || 'primary',
+      providerName: provider?.name || t('calendar.providers.google.defaults.providerName', { defaultValue: 'Google Calendar' }),
+      calendarId: provider?.calendar_id || t('calendar.providers.google.defaults.calendarId', { defaultValue: 'primary' }),
       syncDirection: provider?.sync_direction || 'bidirectional',
       isActive: provider?.active ?? true,
     },
@@ -89,7 +91,7 @@ export function GoogleCalendarProviderForm({
           }
         } else {
           setOAuthStatus('error');
-          setOAuthError(event.data.errorDescription || 'OAuth authorization failed');
+          setOAuthError(event.data.errorDescription || t('calendar.providers.common.oauth.callbackFailed', { defaultValue: 'OAuth authorization failed' }));
         }
       }
     };
@@ -122,7 +124,7 @@ export function GoogleCalendarProviderForm({
       setOAuthError(null);
 
       if (!googleConfigReady) {
-        throw new Error('Google integration is not configured for this tenant. Configure Google first, then retry.');
+        throw new Error(t('calendar.providers.google.errors.notConfigured', { defaultValue: 'Google integration is not configured for this tenant. Configure Google first, then retry.' }));
       }
 
       // Create or get provider ID
@@ -140,7 +142,7 @@ export function GoogleCalendarProviderForm({
         });
 
         if (!result.success || !result.provider) {
-          throw new Error(result.error || 'Failed to create calendar provider');
+          throw new Error(result.error || t('calendar.providers.common.errors.createFailed', { defaultValue: 'Failed to create calendar provider' }));
         }
 
         providerId = result.provider.id;
@@ -154,7 +156,7 @@ export function GoogleCalendarProviderForm({
       });
 
       if (!oauthResult.success) {
-        throw new Error((oauthResult as { success: false; error: string }).error || 'Failed to initiate OAuth');
+        throw new Error((oauthResult as { success: false; error: string }).error || t('calendar.providers.common.oauth.initiateFailed', { defaultValue: 'Failed to initiate OAuth' }));
       }
 
       // Open OAuth popup
@@ -165,7 +167,7 @@ export function GoogleCalendarProviderForm({
       );
 
       if (!popup) {
-        throw new Error('Popup blocked. Please allow popups for this site.');
+        throw new Error(t('calendar.providers.common.oauth.popupBlocked', { defaultValue: 'Popup blocked. Please allow popups for this site.' }));
       }
 
       // Check if popup was closed (user cancelled)
@@ -180,7 +182,7 @@ export function GoogleCalendarProviderForm({
 
     } catch (error: any) {
       setOAuthStatus('error');
-      setOAuthError(error.message || 'Failed to initiate OAuth');
+      setOAuthError(error.message || t('calendar.providers.common.oauth.initiateFailed', { defaultValue: 'Failed to initiate OAuth' }));
     }
   };
 
@@ -204,7 +206,7 @@ export function GoogleCalendarProviderForm({
         });
 
         if (!result.success) {
-          throw new Error(result.error || 'Failed to create calendar provider');
+          throw new Error(result.error || t('calendar.providers.common.errors.createFailed', { defaultValue: 'Failed to create calendar provider' }));
         }
 
         setCalendarProviderId(result.provider?.id);
@@ -214,7 +216,7 @@ export function GoogleCalendarProviderForm({
         onSuccess();
       }
     } catch (error: any) {
-      form.setError('root', { message: error.message || 'Failed to save provider' });
+      form.setError('root', { message: error.message || t('calendar.providers.common.errors.saveFailed', { defaultValue: 'Failed to save provider' }) });
     } finally {
       setIsSubmitting(false);
     }
@@ -228,10 +230,10 @@ export function GoogleCalendarProviderForm({
   };
 
   const getOAuthBadgeLabel = () => {
-    if (oauthStatus === 'success') return 'Authorized';
-    if (oauthStatus === 'authorizing') return 'Authorizing';
-    if (oauthStatus === 'error') return 'Authorization Error';
-    return 'Not Authorized';
+    if (oauthStatus === 'success') return t('calendar.providers.common.oauth.badge.authorized', { defaultValue: 'Authorized' });
+    if (oauthStatus === 'authorizing') return t('calendar.providers.common.oauth.badge.authorizing', { defaultValue: 'Authorizing' });
+    if (oauthStatus === 'error') return t('calendar.providers.common.oauth.badge.error', { defaultValue: 'Authorization Error' });
+    return t('calendar.providers.common.oauth.badge.notAuthorized', { defaultValue: 'Not Authorized' });
   };
 
   return (
@@ -239,19 +241,19 @@ export function GoogleCalendarProviderForm({
       {/* Basic Configuration */}
       <Card>
         <CardHeader>
-          <CardTitle>Google Calendar Configuration</CardTitle>
+          <CardTitle>{t('calendar.providers.google.config.title', { defaultValue: 'Google Calendar Configuration' })}</CardTitle>
           <CardDescription>
-            Connect your Google Calendar to sync schedule entries
+            {t('calendar.providers.google.config.description', { defaultValue: 'Connect your Google Calendar to sync schedule entries' })}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="google-provider-name-input">Provider Name *</Label>
+              <Label htmlFor="google-provider-name-input">{t('calendar.providers.google.fields.providerName', { defaultValue: 'Provider Name *' })}</Label>
               <Input
                 id="google-provider-name-input"
                 {...form.register('providerName')}
-                placeholder="e.g., My Google Calendar"
+                placeholder={t('calendar.providers.google.fields.providerNamePlaceholder', { defaultValue: 'e.g., My Google Calendar' })}
                 className={hasAttemptedSubmit && form.formState.errors.providerName ? 'border-red-500' : ''}
               />
               {form.formState.errors.providerName && (
@@ -260,30 +262,30 @@ export function GoogleCalendarProviderForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="google-calendar-id-input">Calendar ID *</Label>
+              <Label htmlFor="google-calendar-id-input">{t('calendar.providers.google.fields.calendarId', { defaultValue: 'Calendar ID *' })}</Label>
               <Input
                 id="google-calendar-id-input"
                 {...form.register('calendarId')}
-                placeholder="primary"
+                placeholder={t('calendar.providers.google.fields.calendarIdPlaceholder', { defaultValue: 'primary' })}
                 className={hasAttemptedSubmit && form.formState.errors.calendarId ? 'border-red-500' : ''}
               />
               {form.formState.errors.calendarId && (
                 <p className="text-sm text-red-500">{form.formState.errors.calendarId.message}</p>
               )}
-              <p className="text-xs text-muted-foreground">Usually "primary" for your main calendar</p>
+              <p className="text-xs text-muted-foreground">{t('calendar.providers.google.fields.calendarIdHint', { defaultValue: 'Usually "primary" for your main calendar' })}</p>
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="google-sync-direction-select">Sync Direction *</Label>
+            <Label htmlFor="google-sync-direction-select">{t('calendar.providers.google.fields.syncDirection', { defaultValue: 'Sync Direction *' })}</Label>
             <CustomSelect
               id="google-sync-direction-select"
               value={form.watch('syncDirection')}
               onValueChange={(value) => form.setValue('syncDirection', value as any)}
               options={[
-                { value: 'bidirectional', label: 'Bidirectional (recommended)' },
-                { value: 'to_external', label: 'Alga → Google Calendar only' },
-                { value: 'from_external', label: 'Google Calendar → Alga only' },
+                { value: 'bidirectional', label: t('calendar.providers.common.syncDirections.bidirectional', { defaultValue: 'Bidirectional (recommended)' }) },
+                { value: 'to_external', label: t('calendar.providers.google.syncDirections.toExternal', { defaultValue: 'Alga → Google Calendar only' }) },
+                { value: 'from_external', label: t('calendar.providers.google.syncDirections.fromExternal', { defaultValue: 'Google Calendar → Alga only' }) },
               ]}
             />
             {form.formState.errors.syncDirection && (
@@ -297,7 +299,7 @@ export function GoogleCalendarProviderForm({
               checked={form.watch('isActive')}
               onCheckedChange={(checked: boolean) => form.setValue('isActive', checked)}
             />
-            <Label htmlFor="google-provider-active-switch">Enable this provider</Label>
+            <Label htmlFor="google-provider-active-switch">{t('calendar.providers.google.fields.enableProvider', { defaultValue: 'Enable this provider' })}</Label>
           </div>
         </CardContent>
       </Card>
@@ -305,9 +307,9 @@ export function GoogleCalendarProviderForm({
       {/* OAuth Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Google OAuth Authorization</CardTitle>
+          <CardTitle>{t('calendar.providers.google.oauth.title', { defaultValue: 'Google OAuth Authorization' })}</CardTitle>
           <CardDescription>
-            Authorize access to your Google Calendar
+            {t('calendar.providers.google.oauth.description', { defaultValue: 'Authorize access to your Google Calendar' })}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -316,10 +318,15 @@ export function GoogleCalendarProviderForm({
               <Alert variant="destructive">
                 <AlertDescription>
                   <div className="space-y-2">
-                    <div className="font-medium">Google is not configured for this tenant.</div>
-                    <div className="text-sm">
-                      Configure tenant-owned Google OAuth first in <strong>Settings → Integrations → Providers</strong>.
-                    </div>
+                    <div className="font-medium">{t('calendar.providers.google.configAlert.title', { defaultValue: 'Google is not configured for this tenant.' })}</div>
+                    <div
+                      className="text-sm"
+                      dangerouslySetInnerHTML={{
+                        __html: t('calendar.providers.google.configAlert.body', {
+                          defaultValue: 'Configure tenant-owned Google OAuth first in <strong>Settings → Integrations → Providers</strong>.',
+                        }),
+                      }}
+                    />
                     <div>
                       <Button
                         id="google-calendar-open-google-settings"
@@ -329,7 +336,7 @@ export function GoogleCalendarProviderForm({
                           window.location.href = '/msp/settings?tab=integrations&category=providers';
                         }}
                       >
-                        Open Google Settings
+                        {t('calendar.providers.google.configAlert.openSettings', { defaultValue: 'Open Google Settings' })}
                       </Button>
                     </div>
                   </div>
@@ -342,7 +349,7 @@ export function GoogleCalendarProviderForm({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
-                    <h4 className="font-medium">Connection Status</h4>
+                    <h4 className="font-medium">{t('calendar.providers.common.oauth.status', { defaultValue: 'Connection Status' })}</h4>
                     <Badge
                       id="google-oauth-status-badge"
                       variant={getOAuthBadgeVariant()}
@@ -365,19 +372,19 @@ export function GoogleCalendarProviderForm({
                   {oauthStatus === 'authorizing' && (
                     <>
                       <Clock className="h-4 w-4 mr-2 animate-spin" />
-                      Connecting...
+                      {t('calendar.providers.common.oauth.connecting', { defaultValue: 'Connecting...' })}
                     </>
                   )}
                   {oauthStatus === 'success' && (
                     <>
                       <CheckCircle className="h-4 w-4 mr-2" />
-                      Connected
+                      {t('calendar.providers.common.oauth.connected', { defaultValue: 'Connected' })}
                     </>
                   )}
                   {(oauthStatus === 'idle' || oauthStatus === 'error') && (
                     <>
                       <ExternalLink className="h-4 w-4 mr-2" />
-                      Connect
+                      {t('calendar.providers.common.oauth.connect', { defaultValue: 'Connect' })}
                     </>
                   )}
                 </Button>
@@ -404,7 +411,7 @@ export function GoogleCalendarProviderForm({
       <div className="flex justify-end space-x-2">
         {onCancel && (
           <Button id="google-provider-cancel-button" type="button" variant="outline" onClick={onCancel}>
-            Cancel
+            {t('calendar.providers.common.actions.cancel', { defaultValue: 'Cancel' })}
           </Button>
         )}
         <Button
@@ -412,7 +419,11 @@ export function GoogleCalendarProviderForm({
           type="submit"
           disabled={isSubmitting || oauthStatus === 'authorizing'}
         >
-          {isSubmitting ? 'Saving...' : isEditing ? 'Update Provider' : 'Create Provider'}
+          {isSubmitting
+            ? t('calendar.providers.common.actions.saving', { defaultValue: 'Saving...' })
+            : isEditing
+              ? t('calendar.providers.common.actions.updateProvider', { defaultValue: 'Update Provider' })
+              : t('calendar.providers.common.actions.createProvider', { defaultValue: 'Create Provider' })}
         </Button>
       </div>
     </form>
