@@ -263,15 +263,23 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Must be deleted AFTER tickets
   'client_locations',
 
-  // === LEVEL 6: Lookup tables referenced by tickets ===
-  // These can only be deleted AFTER tickets
+  // === LEVEL 6: Categories ===
+  // References boards via categories.board_id → boards.board_id,
+  // so delete categories BEFORE boards. Tickets reference categories,
+  // so this must also come AFTER tickets.
   'categories',
+
+  // === LEVEL 7: Boards ===
+  // References priorities (boards.default_priority_id → priorities.priority_id)
+  // and statuses (boards.inbound_reply_reopen_status_id → statuses.status_id)
+  // with no ON DELETE rule (Citus does not support ON DELETE SET NULL here),
+  // so boards must be deleted BEFORE priorities and statuses.
+  'boards',
+
+  // === LEVEL 8: Lookup tables previously referenced by boards and tickets ===
+  // Must be deleted AFTER boards (see FK notes above) and AFTER tickets.
   'standard_statuses', 'statuses',
   'priorities', 'severities', 'urgencies', 'impacts',
-
-  // === LEVEL 7: Boards (referenced by categories) ===
-  // Boards must be deleted AFTER categories
-  'boards',
 
   // === LEVEL 8: Breaking circular dependencies ===
   // There's a complex circular dependency:
@@ -1291,9 +1299,18 @@ export async function deleteTenantData(
       errorCount: errors.length,
     });
 
-    // If we had errors but still deleted most things, consider it a partial success
-    if (errors.length > 0 && errors.length < 10) {
-      log.warn('Some tables had deletion errors', { errors });
+    // Any per-table failure leaves the tenant in a half-deleted state (orphan rows
+    // blocking re-signup, FK violations on re-runs), so surface it as a failure
+    // instead of silently reporting success.
+    if (errors.length > 0) {
+      log.error('Tenant data deletion had table-level errors', { errors });
+      return {
+        success: false,
+        error: `Deletion failed for ${errors.length} table(s): ${errors.slice(0, 5).join('; ')}${errors.length > 5 ? '; ...' : ''}`,
+        deletedRecords: totalDeleted,
+        tablesAffected,
+        tableErrors: errors,
+      };
     }
 
     return {
