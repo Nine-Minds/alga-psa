@@ -941,5 +941,19 @@
       "handoffFinalizeFailed": "Wir konnten Ihre Anmeldung nicht abschließen. Bitte erneut versuchen.",
       "handoffNetworkIssue": "Netzwerkproblem beim Abschließen Ihrer Anmeldung. Bitte erneut versuchen."
     }
+  },
+  "form": {
+    "selectPlaceholder": "Auswählen...",
+    "clearSelection": "Auswahl löschen",
+    "fromDate": "Von",
+    "toDate": "Bis",
+    "noResults": "Keine Ergebnisse gefunden",
+    "searchPlaceholder": "Suchen..."
+  },
+  "tagFilter": {
+    "placeholder": "Nach Tags filtern...",
+    "filter": "Filter",
+    "selectedCount": "{{count}} ausgewählt",
+    "clearAll": "Alle löschen"
   }
 }

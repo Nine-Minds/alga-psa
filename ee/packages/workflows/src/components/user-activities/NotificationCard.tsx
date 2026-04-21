@@ -11,6 +11,7 @@ import { ActivityActionMenu } from "./ActivityActionMenu";
 import { Bell, Info, CheckCircle, AlertCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { markAsReadAction } from '@alga-psa/notifications/actions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface NotificationCardProps {
   activity: Activity;
@@ -51,6 +52,7 @@ const getBorderColor = (type: string) => {
 };
 
 export function NotificationCard({ activity, onViewDetails, onActionComplete }: NotificationCardProps) {
+  const { t } = useTranslation('msp/user-activities');
   const { openActivityDrawer } = useActivityDrawer();
   const notification = activity as NotificationActivity;
 
@@ -85,7 +87,7 @@ export function NotificationCard({ activity, onViewDetails, onActionComplete }: 
           {getNotificationIcon(notification.status)}
           <h3 className="font-medium text-gray-900 truncate">{notification.title}</h3>
           {!notification.isRead && (
-            <div className="w-2 h-2 rounded-full bg-primary-500 flex-shrink-0" title="Unread" />
+            <div className="w-2 h-2 rounded-full bg-primary-500 flex-shrink-0" title={t('table.values.unread', { defaultValue: 'Unread' })} />
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -100,7 +102,7 @@ export function NotificationCard({ activity, onViewDetails, onActionComplete }: 
       </div>
 
       <div className="mb-3 text-sm text-gray-500 line-clamp-2">
-        {notification.message || notification.description || 'No message'}
+        {notification.message || notification.description || t('card.noMessage', { defaultValue: 'No message' })}
       </div>
 
       <div className="flex items-center justify-between text-xs">

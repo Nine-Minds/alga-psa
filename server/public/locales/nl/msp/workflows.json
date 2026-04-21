@@ -1880,5 +1880,399 @@
       "fixed": "Specifieke datum en tijd",
       "expression": "Geavanceerde expressie"
     }
+  },
+  "automation": {
+    "createWorkflow": {
+      "dialogTitle": "Nieuwe workflow maken",
+      "fields": {
+        "name": "Workflow-naam",
+        "namePlaceholder": "bijv. Welkomst-e-mail verzenden",
+        "triggerType": "Triggertype"
+      },
+      "validation": {
+        "nameRequired": "Workflow-naam is verplicht",
+        "nameTooShort": "De naam moet minstens 3 tekens lang zijn"
+      },
+      "actions": {
+        "cancel": "Annuleren",
+        "create": "Workflow maken"
+      },
+      "triggers": {
+        "event": {
+          "title": "Op basis van een gebeurtenis",
+          "description": "Wordt automatisch geactiveerd wanneer specifieke gebeurtenissen plaatsvinden (bijv. ticket aangemaakt, factuur betaald)."
+        },
+        "scheduled": {
+          "title": "Gepland",
+          "description": "Wordt uitgevoerd volgens een terugkerend schema met cron-expressies (bijv. dagelijks, wekelijks)."
+        },
+        "manual": {
+          "title": "Handmatig",
+          "description": "Wordt op verzoek gestart door gebruikers of via API-aanroepen. Geen automatische triggers."
+        }
+      }
+    },
+    "workflowList": {
+      "header": "Workflows",
+      "stats": {
+        "total": "{{count}} totaal",
+        "active": "{{count}} actief",
+        "draft": "{{count}} concept",
+        "paused": "{{count}} gepauzeerd"
+      },
+      "actions": {
+        "eventCatalog": "Gebeurteniscatalogus",
+        "newWorkflow": "Nieuwe workflow",
+        "createFirst": "Maak uw eerste workflow",
+        "retry": "Opnieuw proberen",
+        "resetFilters": "Resetten"
+      },
+      "searchPlaceholder": "Workflows zoeken...",
+      "statusFilter": {
+        "all": "Alle statussen",
+        "active": "Actief",
+        "draft": "Concept",
+        "paused": "Gepauzeerd",
+        "archived": "Gearchiveerd"
+      },
+      "triggerFilter": {
+        "all": "Alle triggers",
+        "event": "Op basis van een gebeurtenis",
+        "schedule": "Eenmalige planning",
+        "recurring": "Terugkerende planning",
+        "manual": "Handmatig"
+      },
+      "triggerLabels": {
+        "manual": "Handmatig",
+        "schedule": "Eenmalige planning",
+        "recurring": "Terugkerende planning",
+        "event": "Gebeurtenis"
+      },
+      "bulk": {
+        "selectedSingular": "{{count}} workflow geselecteerd",
+        "selectedPlural": "{{count}} workflows geselecteerd",
+        "pause": "Pauzeren",
+        "resume": "Hervatten",
+        "delete": "Verwijderen",
+        "clearSelection": "Selectie wissen",
+        "deleteDialogTitle": "Geselecteerde workflows verwijderen",
+        "deleteConfirmSingular": "{{count}} workflow verwijderen",
+        "deleteConfirmPlural": "{{count}} workflows verwijderen",
+        "deleteClose": "Sluiten",
+        "deleteCancel": "Annuleren",
+        "selectedSummarySingular": "U hebt <1>{{count}}</1> workflow geselecteerd.",
+        "selectedSummaryPlural": "U hebt <1>{{count}}</1> workflows geselecteerd.",
+        "willBeDeleted": "<1>{{count}}</1> wordt verwijderd.",
+        "willBeSkipped": "<1>{{count}}</1> wordt overgeslagen.",
+        "skippedHeading": "Overgeslagen workflows",
+        "systemWorkflowReason": "Systeemworkflow"
+      },
+      "columns": {
+        "name": "Naam",
+        "status": "Status",
+        "version": "Versie",
+        "trigger": "Trigger",
+        "lastModified": "Laatst gewijzigd",
+        "actions": "Acties"
+      },
+      "statusLabels": {
+        "active": "Actief",
+        "draft": "Concept",
+        "archived": "Gearchiveerd",
+        "paused": "Gepauzeerd"
+      },
+      "tableValues": {
+        "system": "Systeem",
+        "draftVersion": "Concept: v{{version}}"
+      },
+      "rowMenu": {
+        "ariaLabel": "Workflow-acties",
+        "resume": "Hervatten",
+        "pause": "Pauzeren",
+        "duplicate": "Dupliceren",
+        "viewRuns": "Uitvoeringen bekijken",
+        "delete": "Verwijderen"
+      },
+      "states": {
+        "errorTitle": "Workflows konden niet worden geladen",
+        "errorFallback": "Workflows konden niet worden opgehaald",
+        "validationFailed": "Validatie van verwijdering mislukt. Probeer het opnieuw.",
+        "emptyTitle": "Nog geen workflows",
+        "emptyDescription": "Maak uw eerste workflow om taken te automatiseren, op gebeurtenissen te reageren en uw processen te stroomlijnen.",
+        "noResultsTitle": "Geen workflows gevonden",
+        "noResultsDescription": "Pas uw zoekopdracht of filters aan om te vinden waar u naar zoekt."
+      },
+      "deleteDialog": {
+        "fallbackEntityName": "deze workflow"
+      }
+    },
+    "eventsCatalog": {
+      "header": {
+        "title": "Workflow-gebeurteniscatalogus",
+        "subtitle": "Verken, beheer en ontwerp workflows voor systeemgebeurtenissen en triggers.",
+        "defineCustomEvent": "Aangepaste gebeurtenis definiëren",
+        "managePermissionTitle": "Vereist de machtiging workflow:manage"
+      },
+      "filters": {
+        "searchPlaceholder": "Gebeurtenissen zoeken (bijv. ticket.create, email.receive)...",
+        "allCategories": "Alle categorieën",
+        "status": "Status",
+        "statusOptions": {
+          "all": "Alle statussen",
+          "active": "Actief",
+          "beta": "Bèta",
+          "draft": "Concept",
+          "deprecated": "Verouderd"
+        },
+        "source": "Bron",
+        "sourceOptions": {
+          "all": "Alle bronnen",
+          "system": "Systeem",
+          "tenant": "Tenant"
+        },
+        "sort": "Sortering",
+        "sortOptions": {
+          "categoryName": "Categorie · Naam",
+          "mostActive": "Meest actief (7 d)"
+        },
+        "apply": "Toepassen",
+        "clear": "Wissen",
+        "viewGrid": "Rasterweergave",
+        "viewList": "Lijstweergave"
+      },
+      "card": {
+        "workflowsCount": "{{count}} workflows",
+        "actions": {
+          "simulate": "Simuleren",
+          "metrics": "Statistieken",
+          "attachTitle": "Koppelen (nieuwe workflow)"
+        },
+        "metrics": {
+          "executions": "Uitvoeringen",
+          "successRate": "Slaagpercentage",
+          "avgLatency": "Gem. latentie"
+        }
+      },
+      "states": {
+        "noEventsTitle": "Geen gebeurtenissen gevonden",
+        "noEventsDescription": "Pas uw filters aan.",
+        "noEventsInRange": "Geen gebeurtenissen in dit bereik.",
+        "noDataAvailable": "Geen gegevens beschikbaar.",
+        "loading": "Laden…"
+      },
+      "pagination": {
+        "showing": "Toont {{start}} tot {{end}} van {{total}} resultaten",
+        "prev": "Vorige",
+        "next": "Volgende",
+        "page": "Pagina {{page}} / {{total}}"
+      },
+      "badges": {
+        "system": "Systeem",
+        "tenant": "Tenant",
+        "noSchema": "Geen schema",
+        "unknownSchema": "Onbekend schema",
+        "schema": "Schema"
+      },
+      "details": {
+        "title": "Gebeurtenisdetails",
+        "close": "Sluiten",
+        "simulate": "Simuleren",
+        "metrics": "Statistieken",
+        "attach": "Koppelen",
+        "schema": {
+          "heading": "Schema",
+          "viewFull": "Volledig schema bekijken",
+          "managedNotice": "Het schema wordt beheerd door het schemaregister.",
+          "missingNotice": "Geen schemaRef ingesteld; de gebeurtenis is mogelijk niet bruikbaar als workflow-trigger.",
+          "topLevelFields": "Velden op het hoogste niveau",
+          "required": "verplicht",
+          "moreFieldsHint": "De eerste 12 velden worden weergegeven. Gebruik \"Volledig schema bekijken\" voor meer."
+        },
+        "attached": {
+          "heading": "Gekoppelde workflows",
+          "loading": "Laden…",
+          "empty": "Geen workflows gekoppeld.",
+          "publishedBadge": "Gepubliceerd",
+          "systemBadge": "Systeem",
+          "pausedBadge": "Gepauzeerd",
+          "hiddenBadge": "Verborgen",
+          "open": "Openen",
+          "detach": "Loskoppelen",
+          "publishTooltip": "Vereist de machtiging workflow:publish",
+          "adminTooltip": "Vereist workflow:admin voor systeemworkflows"
+        }
+      },
+      "schemaModal": {
+        "title": "Schema",
+        "close": "Sluiten",
+        "headerTitle": "Payload-schema",
+        "loading": "Laden…",
+        "unavailable": "Schema niet beschikbaar.",
+        "copy": "Kopiëren",
+        "copySuccess": "Gekopieerd",
+        "copyFailed": "Kopiëren mislukt"
+      },
+      "metricsDialog": {
+        "title": "Statistieken",
+        "close": "Sluiten",
+        "headerTitle": "Statistieken · {{eventType}}",
+        "from": "Vanaf",
+        "to": "Tot",
+        "refresh": "Vernieuwen",
+        "openWorkflowEditor": "Workflow-editor openen",
+        "loading": "Laden…",
+        "totals": {
+          "totalEvents": "Totaal aantal gebeurtenissen",
+          "matched": "Overeenkomsten",
+          "unmatched": "Geen overeenkomst",
+          "errors": "Fouten",
+          "runsStarted": "Gestarte uitvoeringen",
+          "runSuccessRate": "Slaagpercentage uitvoeringen",
+          "avgRunDuration": "Gem. duur uitvoering"
+        },
+        "executionsOverTime": "Uitvoeringen in de tijd",
+        "recentEvents": "Recente gebeurtenissen",
+        "viewInEvents": "Bekijken in gebeurtenissen",
+        "openRun": "Uitvoering",
+        "loadFailed": "Statistieken konden niet worden geladen",
+        "rangeShowing": "Toont {{start}}–{{end}} van {{total}}",
+        "prev": "Vorige",
+        "next": "Volgende"
+      },
+      "simulateDialog": {
+        "title": "Gebeurtenis simuleren",
+        "headerTitle": "Simuleren · {{eventType}}",
+        "submit": "Simuleren",
+        "submitting": "Verzenden…",
+        "close": "Sluiten",
+        "fields": {
+          "correlationKey": "Correlatiesleutel (optioneel)",
+          "correlationKeyPlaceholder": "Wordt gebruikt om wachtende gebeurtenissen op te lossen",
+          "schemaRef": "Schema-referentie voor gebeurtenis-payload (geavanceerd)",
+          "schemaRefPlaceholderEmpty": "Geen schemaRef voor deze gebeurtenis",
+          "payloadJson": "Payload (JSON)",
+          "payload": "Payload"
+        },
+        "modes": {
+          "form": "Formulier",
+          "json": "JSON",
+          "noSchema": "Geen schema beschikbaar; formuliermodus uitgeschakeld."
+        },
+        "errors": {
+          "schemaValidationTitle": "Schemavalidatiefouten",
+          "moreErrors": "+{{count}} meer",
+          "fixBeforeSubmit": "Los schemavalidatiefouten op voordat u verzendt.",
+          "simulationTitle": "Simulatiefout",
+          "submitFallback": "Simuleren mislukt",
+          "submitToast": "Simuleren mislukt",
+          "invalidJson": "Ongeldige JSON.",
+          "valueMustBeAllowed": "De waarde moet een van de toegestane opties zijn.",
+          "expectedObject": "Object verwacht.",
+          "expectedArray": "Array verwacht.",
+          "expectedString": "Tekenreeks verwacht.",
+          "expectedNumber": "Getal verwacht.",
+          "expectedBoolean": "Booleaanse waarde verwacht.",
+          "requiredField": "Verplicht veld ontbreekt."
+        },
+        "result": {
+          "title": "Resultaat",
+          "status": "Status",
+          "eventId": "Gebeurtenis-ID",
+          "startedRuns": "Gestarte uitvoeringen",
+          "open": "Openen",
+          "resumedRun": "Hervatte uitvoering",
+          "openResumedRun": "Hervatte uitvoering openen"
+        },
+        "toasts": {
+          "success": "Gebeurtenis gesimuleerd"
+        },
+        "form": {
+          "remove": "Verwijderen",
+          "addItem": "Item toevoegen",
+          "rootLabel": "Payload",
+          "payloadJsonLabel": "Payload (JSON)",
+          "true": "Waar",
+          "false": "Onwaar"
+        }
+      },
+      "defineEventDialog": {
+        "title": "Aangepaste gebeurtenis definiëren",
+        "headerTitle": "Aangepaste gebeurtenis definiëren",
+        "cancel": "Annuleren",
+        "submit": "Gebeurtenis maken",
+        "submitting": "Maken…",
+        "fields": {
+          "eventType": "Gebeurtenistype",
+          "eventTypePlaceholder": "bijv. ticket.created",
+          "name": "Naam",
+          "namePlaceholder": "Gebruiksvriendelijke naam",
+          "category": "Categorie",
+          "categoryPlaceholder": "bijv. Tickets",
+          "description": "Beschrijving",
+          "descriptionPlaceholder": "Optionele beschrijving",
+          "useSchemaRef": "Schema-referentie gebruiken",
+          "useInline": "Inline schema (geavanceerd)",
+          "selectSchemaRef": "Schema-referentie voor payload selecteren",
+          "selectPlaceholder": "Selecteren…",
+          "payloadSchemaJson": "Payload-schema (JSON)"
+        },
+        "footer": "Aangepaste gebeurtenissen zijn beperkt tot de tenant en kunnen worden gebruikt als workflow-trigger.",
+        "validation": {
+          "typeAndNameRequired": "Het gebeurtenistype en de naam zijn verplicht.",
+          "schemaRefRequired": "Selecteer een schema-referentie voor payload (of gebruik een inline schema).",
+          "invalidJson": "Het payload-schema moet geldige JSON zijn."
+        },
+        "toasts": {
+          "createSuccess": "Aangepaste gebeurtenis gemaakt",
+          "createFailed": "Gebeurtenis kon niet worden gemaakt"
+        }
+      },
+      "toasts": {
+        "loadEventsFailed": "Gebeurtenissen konden niet worden geladen",
+        "workflowCreated": "Workflow gemaakt",
+        "createWorkflowFailed": "Workflow kon niet worden gemaakt",
+        "detachConfirm": "Deze workflow loskoppelen van de gebeurtenis? Hiermee wordt een nieuwe versie gepubliceerd zonder de trigger.",
+        "detachValidationFailed": "Loskoppelen mislukt (validatiefouten)",
+        "detached": "Losgekoppeld",
+        "detachFailed": "Loskoppelen mislukt"
+      }
+    },
+    "actionInput": {
+      "fallbacks": {
+        "loadingOptions": "Opties worden geladen...",
+        "selectName": "{{name}} selecteren",
+        "ticketSearchPlaceholder": "Tickets zoeken op nummer of titel",
+        "ticketSelect": "Ticket selecteren",
+        "ticketTypeAbove": "Typ hierboven om tickets te zoeken",
+        "selectBoard": "Board selecteren",
+        "selectClient": "Klant selecteren",
+        "selectContact": "Contactpersoon selecteren",
+        "selectUser": "Gebruiker selecteren",
+        "selectUserOrTeam": "Gebruiker of team selecteren"
+      },
+      "errors": {
+        "loadTicket": "Ticket kon niet worden geladen",
+        "searchTickets": "Tickets konden niet worden gezocht",
+        "loadOptions": "Opties konden niet worden geladen"
+      },
+      "dependencyHints": {
+        "contactClient": "Kies eerst een vaste klant om contactopties te laden.",
+        "locationClient": "Kies eerst een vaste klant om locatieopties te laden.",
+        "categoryBoard": "Kies eerst een vast board om categorieopties te laden.",
+        "statusBoard": "Kies eerst een vast board om statusopties te laden.",
+        "statusTicket": "Kies eerst een vast ticket om statusopties te laden.",
+        "subcategoryBoard": "Kies eerst een vast board om subcategorieopties te laden.",
+        "subcategoryCategory": "Kies eerst een vaste categorie om subcategorieopties te laden."
+      }
+    }
+  },
+  "automationGate": {
+    "loading": "Workflowautomatisering wordt geladen...",
+    "featureName": "Workflowautomatisering",
+    "notEnabled": "Deze functie is experimenteel en niet ingeschakeld voor uw tenant.",
+    "experimental": "Experimenteel",
+    "enableHint": "Schakel Workflowautomatisering in bij Instellingen om er toegang toe te krijgen.",
+    "goToExperimental": "Ga naar experimentele functies",
+    "openSettings": "Instellingen openen"
   }
 }

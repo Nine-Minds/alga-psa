@@ -16,6 +16,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   BarChart3,
   Briefcase,
@@ -547,18 +548,20 @@ const fromDateTimeLocalInputValue = (value: string): string => {
   return Number.isNaN(date.getTime()) ? value : date.toISOString();
 };
 
-const validateAgainstSchema = (schema: JsonSchema, value: unknown, root: JsonSchema, path = ''): ValidationIssue[] => {
+type ValidationT = (key: string, options?: Record<string, unknown>) => string;
+
+const validateAgainstSchema = (schema: JsonSchema, value: unknown, root: JsonSchema, t: ValidationT, path = ''): ValidationIssue[] => {
   const resolved = resolveSchemaRef(schema, root);
   const type = normalizeSchemaType(resolved);
   const errors: ValidationIssue[] = [];
 
   if (resolved.enum && value != null && !resolved.enum.includes(value as any)) {
-    errors.push({ path, message: 'Value must be one of the allowed options.' });
+    errors.push({ path, message: t('automation.eventsCatalog.simulateDialog.errors.valueMustBeAllowed', { defaultValue: 'Value must be one of the allowed options.' }) });
   }
 
   if (type === 'object') {
     if (value == null || typeof value !== 'object' || Array.isArray(value)) {
-      errors.push({ path, message: 'Expected object.' });
+      errors.push({ path, message: t('automation.eventsCatalog.simulateDialog.errors.expectedObject', { defaultValue: 'Expected object.' }) });
       return errors;
     }
     const objectValue = value as Record<string, unknown>;
@@ -567,31 +570,31 @@ const validateAgainstSchema = (schema: JsonSchema, value: unknown, root: JsonSch
     for (const key of required) {
       const current = objectValue[key];
       if (current === undefined || current === null || current === '') {
-        errors.push({ path: path ? `${path}.${key}` : key, message: 'Required field missing.' });
+        errors.push({ path: path ? `${path}.${key}` : key, message: t('automation.eventsCatalog.simulateDialog.errors.requiredField', { defaultValue: 'Required field missing.' }) });
       }
     }
     for (const [key, child] of Object.entries(knownProperties)) {
       if (objectValue[key] === undefined) continue;
-      errors.push(...validateAgainstSchema(child, objectValue[key], root, path ? `${path}.${key}` : key));
+      errors.push(...validateAgainstSchema(child, objectValue[key], root, t, path ? `${path}.${key}` : key));
     }
     return errors;
   }
 
   if (type === 'array') {
     if (!Array.isArray(value)) {
-      errors.push({ path, message: 'Expected array.' });
+      errors.push({ path, message: t('automation.eventsCatalog.simulateDialog.errors.expectedArray', { defaultValue: 'Expected array.' }) });
       return errors;
     }
     const items = resolved.items ?? {};
     value.forEach((entry, idx) => {
-      errors.push(...validateAgainstSchema(items, entry, root, `${path}[${idx}]`));
+      errors.push(...validateAgainstSchema(items, entry, root, t, `${path}[${idx}]`));
     });
     return errors;
   }
 
-  if (type === 'string' && value != null && typeof value !== 'string') errors.push({ path, message: 'Expected string.' });
-  if ((type === 'number' || type === 'integer') && value != null && typeof value !== 'number') errors.push({ path, message: 'Expected number.' });
-  if (type === 'boolean' && value != null && typeof value !== 'boolean') errors.push({ path, message: 'Expected boolean.' });
+  if (type === 'string' && value != null && typeof value !== 'string') errors.push({ path, message: t('automation.eventsCatalog.simulateDialog.errors.expectedString', { defaultValue: 'Expected string.' }) });
+  if ((type === 'number' || type === 'integer') && value != null && typeof value !== 'number') errors.push({ path, message: t('automation.eventsCatalog.simulateDialog.errors.expectedNumber', { defaultValue: 'Expected number.' }) });
+  if (type === 'boolean' && value != null && typeof value !== 'boolean') errors.push({ path, message: t('automation.eventsCatalog.simulateDialog.errors.expectedBoolean', { defaultValue: 'Expected boolean.' }) });
 
   return errors;
 };
@@ -603,6 +606,7 @@ const SchemaForm: React.FC<{
   errors: ValidationIssue[];
   pickerActions: WorkflowPickerActions;
 }> = ({ schema, value, onChange, errors, pickerActions }) => {
+  const { t } = useTranslation('msp/workflows');
   const renderField = (
     fieldSchema: JsonSchema,
     rootSchema: JsonSchema,
@@ -617,7 +621,7 @@ const SchemaForm: React.FC<{
     const resolved = resolveSchemaRef(fieldSchema, rootSchema);
     const type = normalizeSchemaType(resolved);
     const fieldKey = path[path.length - 1];
-    const label = resolved.title ?? (typeof fieldKey === 'string' ? fieldKey : 'Payload');
+    const label = resolved.title ?? (typeof fieldKey === 'string' ? fieldKey : t('automation.eventsCatalog.simulateDialog.form.rootLabel', { defaultValue: 'Payload' }));
     const isRequired = typeof fieldKey === 'string' && requiredSet.has(fieldKey);
     const fieldPath = pathToKey(path);
     const fieldErrors = errors.filter((err) => err.path === fieldPath);
@@ -668,7 +672,7 @@ const SchemaForm: React.FC<{
                   onChange(setDeepValue(value, path, next) as Record<string, unknown>);
                 }}
               >
-                Remove
+                {t('automation.eventsCatalog.simulateDialog.form.remove', { defaultValue: 'Remove' })}
               </Button>
             </div>
           ))}
@@ -681,7 +685,7 @@ const SchemaForm: React.FC<{
               onChange(setDeepValue(value, path, next) as Record<string, unknown>);
             }}
           >
-            Add item
+            {t('automation.eventsCatalog.simulateDialog.form.addItem', { defaultValue: 'Add item' })}
           </Button>
         </div>
       );
@@ -734,7 +738,7 @@ const SchemaForm: React.FC<{
               checked={Boolean(currentValue)}
               onCheckedChange={(checked) => onChange(setDeepValue(value, path, checked) as Record<string, unknown>)}
             />
-            <span className="text-xs text-gray-500">{Boolean(currentValue) ? 'True' : 'False'}</span>
+            <span className="text-xs text-gray-500">{Boolean(currentValue) ? t('automation.eventsCatalog.simulateDialog.form.true', { defaultValue: 'True' }) : t('automation.eventsCatalog.simulateDialog.form.false', { defaultValue: 'False' })}</span>
           </div>
           {resolved.description && <div className="text-[11px] text-gray-500">{resolved.description}</div>}
         </div>
@@ -782,7 +786,7 @@ const SchemaForm: React.FC<{
     return (
       <TextArea
         id="simulate-form-json-fallback"
-        label="Payload (JSON)"
+        label={t('automation.eventsCatalog.simulateDialog.form.payloadJsonLabel', { defaultValue: 'Payload (JSON)' })}
         value={JSON.stringify(value ?? {}, null, 2)}
         onChange={(e) => {
           try {
@@ -811,30 +815,41 @@ const SchemaForm: React.FC<{
 };
 
 const EventStatusBadge: React.FC<{ status: string }> = ({ status }) => {
+  const { t } = useTranslation('msp/workflows');
   const s = status.toLowerCase();
   const variant =
     s === 'active' ? 'success'
       : s === 'beta' ? 'warning'
         : s === 'draft' ? 'default-muted'
           : 'error';
-  const label = s.charAt(0).toUpperCase() + s.slice(1);
+  const label = s === 'active' ? t('automation.eventsCatalog.filters.statusOptions.active', { defaultValue: 'Active' })
+    : s === 'beta' ? t('automation.eventsCatalog.filters.statusOptions.beta', { defaultValue: 'Beta' })
+      : s === 'draft' ? t('automation.eventsCatalog.filters.statusOptions.draft', { defaultValue: 'Draft' })
+        : s === 'deprecated' ? t('automation.eventsCatalog.filters.statusOptions.deprecated', { defaultValue: 'Deprecated' })
+          : (s.charAt(0).toUpperCase() + s.slice(1));
   return <Badge variant={variant as any} size="sm">{label}</Badge>;
 };
 
-const SourceBadge: React.FC<{ source: 'system' | 'tenant' }> = ({ source }) => (
-  <Badge variant={source === 'system' ? 'info' : 'success'} size="sm">
-    {source === 'system' ? 'System' : 'Tenant'}
-  </Badge>
-);
+const SourceBadge: React.FC<{ source: 'system' | 'tenant' }> = ({ source }) => {
+  const { t } = useTranslation('msp/workflows');
+  return (
+    <Badge variant={source === 'system' ? 'info' : 'success'} size="sm">
+      {source === 'system'
+        ? t('automation.eventsCatalog.badges.system', { defaultValue: 'System' })
+        : t('automation.eventsCatalog.badges.tenant', { defaultValue: 'Tenant' })}
+    </Badge>
+  );
+};
 
 const SchemaBadge: React.FC<{ status: WorkflowEventCatalogEntryV2['payload_schema_ref_status'] }> = ({ status }) => {
+  const { t } = useTranslation('msp/workflows');
   if (status === 'missing') {
-    return <Badge variant="default-muted" size="sm">No schema</Badge>;
+    return <Badge variant="default-muted" size="sm">{t('automation.eventsCatalog.badges.noSchema', { defaultValue: 'No schema' })}</Badge>;
   }
   if (status === 'unknown') {
-    return <Badge variant="error" size="sm">Unknown schema</Badge>;
+    return <Badge variant="error" size="sm">{t('automation.eventsCatalog.badges.unknownSchema', { defaultValue: 'Unknown schema' })}</Badge>;
   }
-  return <Badge variant="info" size="sm">Schema</Badge>;
+  return <Badge variant="info" size="sm">{t('automation.eventsCatalog.badges.schema', { defaultValue: 'Schema' })}</Badge>;
 };
 
 const MiniMetric: React.FC<{ label: string; value: string }> = ({ label, value }) => (
@@ -852,6 +867,7 @@ const EventCard: React.FC<{
   onAttach: () => void;
   canManage: boolean;
 }> = ({ entry, onSelect, onSimulate, onMetrics, onAttach, canManage }) => {
+  const { t } = useTranslation('msp/workflows');
   const { Icon, cls } = getEventIcon(entry);
   return (
     <Card className="p-4 hover:shadow-sm transition-shadow cursor-pointer" onClick={onSelect}>
@@ -880,7 +896,7 @@ const EventCard: React.FC<{
       <div className="mt-3 flex items-center gap-2 flex-wrap">
         <SchemaBadge status={entry.payload_schema_ref_status} />
         <Badge className="text-[10px] bg-gray-100 text-gray-700 border-gray-200">
-          {entry.attached_workflows_count} workflows
+          {t('automation.eventsCatalog.card.workflowsCount', { defaultValue: '{{count}} workflows', count: entry.attached_workflows_count })}
         </Badge>
         {entry.category && (
           <Badge className="text-[10px] bg-white text-gray-700 border-gray-200">
@@ -890,21 +906,21 @@ const EventCard: React.FC<{
       </div>
 
       <div className="mt-4 grid grid-cols-3 gap-2">
-        <MiniMetric label="Executions" value={entry.metrics_7d.executions == null ? '—' : formatNumber(entry.metrics_7d.executions)} />
-        <MiniMetric label="Success rate" value={formatPercent(entry.metrics_7d.successRate)} />
-        <MiniMetric label="Avg latency" value={formatDurationMs(entry.metrics_7d.avgLatencyMs)} />
+        <MiniMetric label={t('automation.eventsCatalog.card.metrics.executions', { defaultValue: 'Executions' })} value={entry.metrics_7d.executions == null ? '—' : formatNumber(entry.metrics_7d.executions)} />
+        <MiniMetric label={t('automation.eventsCatalog.card.metrics.successRate', { defaultValue: 'Success rate' })} value={formatPercent(entry.metrics_7d.successRate)} />
+        <MiniMetric label={t('automation.eventsCatalog.card.metrics.avgLatency', { defaultValue: 'Avg latency' })} value={formatDurationMs(entry.metrics_7d.avgLatencyMs)} />
       </div>
 
       <div className="mt-4 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
         <Button id={`workflow-event-card-${entry.event_id}-simulate`} variant="outline" size="sm" onClick={onSimulate} disabled={!canManage}>
           <Bell className="h-4 w-4 mr-2" />
-          Simulate
+          {t('automation.eventsCatalog.card.actions.simulate', { defaultValue: 'Simulate' })}
         </Button>
         <Button id={`workflow-event-card-${entry.event_id}-metrics`} variant="outline" size="sm" onClick={onMetrics}>
           <BarChart3 className="h-4 w-4 mr-2" />
-          Metrics
+          {t('automation.eventsCatalog.card.actions.metrics', { defaultValue: 'Metrics' })}
         </Button>
-        <Button id={`workflow-event-card-${entry.event_id}-attach`} size="sm" className="ml-auto" onClick={onAttach} disabled={!canManage} title="Attach (new workflow)">
+        <Button id={`workflow-event-card-${entry.event_id}-attach`} size="sm" className="ml-auto" onClick={onAttach} disabled={!canManage} title={t('automation.eventsCatalog.card.actions.attachTitle', { defaultValue: 'Attach (new workflow)' })}>
           <Plus className="h-4 w-4" />
         </Button>
       </div>
@@ -933,6 +949,7 @@ const SimpleSeriesChart: React.FC<{ series: Array<{ day: string; count: number }
 };
 
 export default function EventsCatalogV2({ pickerActions }: { pickerActions: WorkflowPickerActions }) {
+  const { t } = useTranslation('msp/workflows');
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -1007,7 +1024,7 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
       setEvents((res as any).events ?? []);
       setTotal((res as any).total ?? 0);
     } catch (e) {
-      handleError(e, 'Failed to load events');
+      handleError(e, t('automation.eventsCatalog.toasts.loadEventsFailed', { defaultValue: 'Failed to load events' }));
     } finally {
       setIsLoading(false);
     }
@@ -1105,32 +1122,32 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
         sourcePayloadSchemaRef: entry.payload_schema_ref ?? undefined
       });
       const workflowId = (created as any)?.workflowId;
-      toast.success('Workflow created');
+      toast.success(t('automation.eventsCatalog.toasts.workflowCreated', { defaultValue: 'Workflow created' }));
       if (workflowId) {
         router.push(`/msp/workflow-editor/${encodeURIComponent(workflowId)}`);
       }
     } catch (e) {
-      handleError(e, 'Failed to create workflow');
+      handleError(e, t('automation.eventsCatalog.toasts.createWorkflowFailed', { defaultValue: 'Failed to create workflow' }));
     } finally {
       setAttachState({ creating: false });
     }
   };
 
   const handleDetachWorkflow = async (workflowId: string, eventType: string) => {
-    if (!confirm('Detach this workflow from the event? This publishes a new version with the trigger removed.')) return;
+    if (!confirm(t('automation.eventsCatalog.toasts.detachConfirm', { defaultValue: 'Detach this workflow from the event? This publishes a new version with the trigger removed.' }))) return;
     try {
       const res = await detachWorkflowTriggerFromEventAction({ workflowId, eventType });
       if ((res as any)?.ok === false) {
-        toast.error('Detach failed (validation errors)');
+        toast.error(t('automation.eventsCatalog.toasts.detachValidationFailed', { defaultValue: 'Detach failed (validation errors)' }));
         return;
       }
-      toast.success('Detached');
+      toast.success(t('automation.eventsCatalog.toasts.detached', { defaultValue: 'Detached' }));
       await refresh({ preservePage: true });
       if (selectedEvent) {
         await handleSelectEvent(selectedEvent);
       }
     } catch (e) {
-      handleError(e, 'Failed to detach');
+      handleError(e, t('automation.eventsCatalog.toasts.detachFailed', { defaultValue: 'Failed to detach' }));
     }
   };
 
@@ -1153,8 +1170,8 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="text-2xl font-semibold text-gray-900">Workflow Event Catalog</div>
-          <div className="text-sm text-gray-500">Explore, manage, and design workflows for system events and triggers.</div>
+          <div className="text-2xl font-semibold text-gray-900">{t('automation.eventsCatalog.header.title', { defaultValue: 'Workflow Event Catalog' })}</div>
+          <div className="text-sm text-gray-500">{t('automation.eventsCatalog.header.subtitle', { defaultValue: 'Explore, manage, and design workflows for system events and triggers.' })}</div>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -1162,10 +1179,10 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
             onClick={() => setDefineState({ open: true })}
             variant="default"
             disabled={!permissions.canManage}
-            title={!permissions.canManage ? 'Requires workflow:manage permission' : undefined}
+            title={!permissions.canManage ? t('automation.eventsCatalog.header.managePermissionTitle', { defaultValue: 'Requires workflow:manage permission' }) : undefined}
           >
             <Plus className="h-4 w-4 mr-2" />
-            Define Custom Event
+            {t('automation.eventsCatalog.header.defineCustomEvent', { defaultValue: 'Define Custom Event' })}
           </Button>
         </div>
       </div>
@@ -1175,7 +1192,7 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
           <div className="flex-1 min-w-[240px]">
             <Input
               id="workflow-event-catalog-search"
-              placeholder="Search events (e.g., ticket.create, email.receive)..."
+              placeholder={t('automation.eventsCatalog.filters.searchPlaceholder', { defaultValue: 'Search events (e.g., ticket.create, email.receive)...' })}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => {
@@ -1188,10 +1205,10 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
             id="workflow-event-catalog-category"
             value={category}
             onChange={(v) => setCategory(v)}
-            placeholder="All Categories"
+            placeholder={t('automation.eventsCatalog.filters.allCategories', { defaultValue: 'All Categories' })}
             dropdownMode="overlay"
             options={[
-              { value: '', label: 'All Categories' },
+              { value: '', label: t('automation.eventsCatalog.filters.allCategories', { defaultValue: 'All Categories' }) },
               ...categories.map((c) => ({ value: c, label: c }))
             ]}
           />
@@ -1200,14 +1217,14 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
             id="workflow-event-catalog-status"
             value={status}
             onChange={(v) => setStatus(v as any)}
-            placeholder="Status"
+            placeholder={t('automation.eventsCatalog.filters.status', { defaultValue: 'Status' })}
             dropdownMode="overlay"
             options={[
-              { value: 'all', label: 'All statuses' },
-              { value: 'active', label: 'Active' },
-              { value: 'beta', label: 'Beta' },
-              { value: 'draft', label: 'Draft' },
-              { value: 'deprecated', label: 'Deprecated' }
+              { value: 'all', label: t('automation.eventsCatalog.filters.statusOptions.all', { defaultValue: 'All statuses' }) },
+              { value: 'active', label: t('automation.eventsCatalog.filters.statusOptions.active', { defaultValue: 'Active' }) },
+              { value: 'beta', label: t('automation.eventsCatalog.filters.statusOptions.beta', { defaultValue: 'Beta' }) },
+              { value: 'draft', label: t('automation.eventsCatalog.filters.statusOptions.draft', { defaultValue: 'Draft' }) },
+              { value: 'deprecated', label: t('automation.eventsCatalog.filters.statusOptions.deprecated', { defaultValue: 'Deprecated' }) }
             ]}
           />
 
@@ -1215,12 +1232,12 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
             id="workflow-event-catalog-source"
             value={source}
             onChange={(v) => setSource(v as any)}
-            placeholder="Source"
+            placeholder={t('automation.eventsCatalog.filters.source', { defaultValue: 'Source' })}
             dropdownMode="overlay"
             options={[
-              { value: 'all', label: 'All sources' },
-              { value: 'system', label: 'System' },
-              { value: 'tenant', label: 'Tenant' }
+              { value: 'all', label: t('automation.eventsCatalog.filters.sourceOptions.all', { defaultValue: 'All sources' }) },
+              { value: 'system', label: t('automation.eventsCatalog.filters.sourceOptions.system', { defaultValue: 'System' }) },
+              { value: 'tenant', label: t('automation.eventsCatalog.filters.sourceOptions.tenant', { defaultValue: 'Tenant' }) }
             ]}
           />
 
@@ -1228,28 +1245,28 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
             id="workflow-event-catalog-sort"
             value={sort}
             onChange={(v) => setSort(v as SortMode)}
-            placeholder="Sort"
+            placeholder={t('automation.eventsCatalog.filters.sort', { defaultValue: 'Sort' })}
             dropdownMode="overlay"
             options={[
-              { value: 'category_name', label: 'Category · Name' },
-              { value: 'most_active', label: 'Most active (7d)' }
+              { value: 'category_name', label: t('automation.eventsCatalog.filters.sortOptions.categoryName', { defaultValue: 'Category · Name' }) },
+              { value: 'most_active', label: t('automation.eventsCatalog.filters.sortOptions.mostActive', { defaultValue: 'Most active (7d)' }) }
             ]}
           />
 
           <div className="flex items-center gap-2 ml-auto">
             <Button id="workflow-event-catalog-apply" variant="outline" size="sm" onClick={onApplySearch}>
               <RefreshCw className="h-4 w-4 mr-2" />
-              Apply
+              {t('automation.eventsCatalog.filters.apply', { defaultValue: 'Apply' })}
             </Button>
             <Button id="workflow-event-catalog-clear" variant="ghost" size="sm" onClick={clearFilters}>
-              Clear
+              {t('automation.eventsCatalog.filters.clear', { defaultValue: 'Clear' })}
             </Button>
             <Button
               id="workflow-event-catalog-view-grid"
               variant={viewMode === 'grid' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setViewMode('grid')}
-              title="Grid view"
+              title={t('automation.eventsCatalog.filters.viewGrid', { defaultValue: 'Grid view' })}
             >
               <Grid3X3 className="h-4 w-4" />
             </Button>
@@ -1258,7 +1275,7 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
               variant={viewMode === 'list' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setViewMode('list')}
-              title="List view"
+              title={t('automation.eventsCatalog.filters.viewList', { defaultValue: 'List view' })}
             >
               <List className="h-4 w-4" />
             </Button>
@@ -1277,8 +1294,8 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
       {!isLoading && events.length === 0 && (
         <Card className="p-8 flex flex-col items-center justify-center text-center">
           <Settings2 className="h-10 w-10 text-gray-400 mb-3" />
-          <div className="text-base font-semibold text-gray-900">No events found</div>
-          <div className="text-sm text-gray-500 mt-1">Try adjusting your filters.</div>
+          <div className="text-base font-semibold text-gray-900">{t('automation.eventsCatalog.states.noEventsTitle', { defaultValue: 'No events found' })}</div>
+          <div className="text-sm text-gray-500 mt-1">{t('automation.eventsCatalog.states.noEventsDescription', { defaultValue: 'Try adjusting your filters.' })}</div>
         </Card>
       )}
 
@@ -1300,7 +1317,12 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
 
       <div className="flex items-center justify-between text-sm text-gray-500">
         <div>
-          Showing {formatNumber(total === 0 ? 0 : pageStart)} to {formatNumber(pageEnd)} of {formatNumber(total)} results
+          {t('automation.eventsCatalog.pagination.showing', {
+            defaultValue: 'Showing {{start}} to {{end}} of {{total}} results',
+            start: formatNumber(total === 0 ? 0 : pageStart),
+            end: formatNumber(pageEnd),
+            total: formatNumber(total),
+          })}
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -1314,10 +1336,10 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
               refresh({ preservePage: true });
             }}
           >
-            Prev
+            {t('automation.eventsCatalog.pagination.prev', { defaultValue: 'Prev' })}
           </Button>
           <div className="text-xs text-gray-600">
-            Page {page} / {totalPages}
+            {t('automation.eventsCatalog.pagination.page', { defaultValue: 'Page {{page}} / {{total}}', page, total: totalPages })}
           </div>
           <Button
             id="workflow-event-catalog-page-next"
@@ -1330,7 +1352,7 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
               refresh({ preservePage: true });
             }}
           >
-            Next
+            {t('automation.eventsCatalog.pagination.next', { defaultValue: 'Next' })}
           </Button>
         </div>
       </div>
@@ -1339,11 +1361,11 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
       <Dialog
         isOpen={!!selectedEvent}
         onClose={() => setSelectedEvent(null)}
-        title="Event details"
+        title={t('automation.eventsCatalog.details.title', { defaultValue: 'Event details' })}
         className="max-w-4xl"
         footer={
           <div className="flex justify-end space-x-2">
-            <Button id="workflow-event-details-close" variant="ghost" onClick={() => setSelectedEvent(null)}>Close</Button>
+            <Button id="workflow-event-details-close" variant="ghost" onClick={() => setSelectedEvent(null)}>{t('automation.eventsCatalog.details.close', { defaultValue: 'Close' })}</Button>
           </div>
         }
       >
@@ -1372,35 +1394,37 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
                     onClick={() => setSimulateState({ open: true, eventType: selectedEvent.event_type, payloadSchemaRef: selectedEvent.payload_schema_ref ?? null })}
                     disabled={!permissions.canManage}
                   >
-                    Simulate
+                    {t('automation.eventsCatalog.details.simulate', { defaultValue: 'Simulate' })}
                   </Button>
                   <Button id="workflow-event-details-metrics" variant="outline" size="sm" onClick={() => setMetricsState({ open: true, eventType: selectedEvent.event_type })}>
-                    Metrics
+                    {t('automation.eventsCatalog.details.metrics', { defaultValue: 'Metrics' })}
                   </Button>
                   <Button id="workflow-event-details-attach" size="sm" onClick={() => handleAttachNewWorkflow(selectedEvent)} disabled={attachState.creating || !permissions.canManage}>
-                    Attach
+                    {t('automation.eventsCatalog.details.attach', { defaultValue: 'Attach' })}
                   </Button>
                 </div>
               </div>
 
               <Card className="p-3">
                 <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold text-gray-800">Schema</div>
+                  <div className="text-sm font-semibold text-gray-800">{t('automation.eventsCatalog.details.schema.heading', { defaultValue: 'Schema' })}</div>
                   <div className="flex items-center gap-2">
                     {selectedEvent.payload_schema_ref && (
                       <div className="text-xs font-mono text-gray-500">{selectedEvent.payload_schema_ref}</div>
                     )}
                     <Button id="workflow-event-details-view-full-schema" variant="ghost" size="sm" onClick={openFullSchema}>
-                      View full schema
+                      {t('automation.eventsCatalog.details.schema.viewFull', { defaultValue: 'View full schema' })}
                     </Button>
                   </div>
                 </div>
                 <div className="mt-2 text-xs text-gray-600">
-                  {selectedEvent.payload_schema_ref ? 'Schema is managed by the schema registry.' : 'No schemaRef set; event may not be usable as a workflow trigger.'}
+                  {selectedEvent.payload_schema_ref
+                    ? t('automation.eventsCatalog.details.schema.managedNotice', { defaultValue: 'Schema is managed by the schema registry.' })
+                    : t('automation.eventsCatalog.details.schema.missingNotice', { defaultValue: 'No schemaRef set; event may not be usable as a workflow trigger.' })}
                 </div>
                 {selectedSchemaPreview?.properties && (
                   <div className="mt-3">
-                    <div className="text-xs font-semibold text-gray-700 mb-2">Top-level fields</div>
+                    <div className="text-xs font-semibold text-gray-700 mb-2">{t('automation.eventsCatalog.details.schema.topLevelFields', { defaultValue: 'Top-level fields' })}</div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       {Object.entries(selectedSchemaPreview.properties as Record<string, any>).slice(0, 12).map(([key, prop]) => {
                         const required = Array.isArray(selectedSchemaPreview.required) && selectedSchemaPreview.required.includes(key);
@@ -1409,7 +1433,7 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
                           <div key={key} className="rounded border border-gray-200 bg-white px-2 py-2">
                             <div className="flex items-center gap-2">
                               <div className="text-xs font-mono text-gray-900 truncate">{key}</div>
-                              {required && <Badge variant="error" size="sm">required</Badge>}
+                              {required && <Badge variant="error" size="sm">{t('automation.eventsCatalog.details.schema.required', { defaultValue: 'required' })}</Badge>}
                               {type && <Badge className="text-[10px] bg-gray-100 text-gray-700 border-gray-200">{String(type)}</Badge>}
                             </div>
                             {prop?.description && (
@@ -1421,7 +1445,7 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
                     </div>
                     {Object.keys(selectedSchemaPreview.properties as Record<string, any>).length > 12 && (
                       <div className="mt-2 text-[11px] text-gray-500">
-                        Showing first 12 fields. Use “View full schema” for more.
+                        {t('automation.eventsCatalog.details.schema.moreFieldsHint', { defaultValue: 'Showing first 12 fields. Use "View full schema" for more.' })}
                       </div>
                     )}
                   </div>
@@ -1430,14 +1454,14 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
 
               <Card className="p-3">
                 <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold text-gray-800">Attached workflows</div>
+                  <div className="text-sm font-semibold text-gray-800">{t('automation.eventsCatalog.details.attached.heading', { defaultValue: 'Attached workflows' })}</div>
                   <Badge className="text-[10px] bg-gray-100 text-gray-700 border-gray-200">
                     {selectedEvent.attached_workflows_count}
                   </Badge>
                 </div>
-                {attachedLoading && <div className="mt-2 text-sm text-gray-500">Loading…</div>}
+                {attachedLoading && <div className="mt-2 text-sm text-gray-500">{t('automation.eventsCatalog.details.attached.loading', { defaultValue: 'Loading…' })}</div>}
                 {!attachedLoading && attachedWorkflows && attachedWorkflows.length === 0 && (
-                  <div className="mt-2 text-sm text-gray-500">No workflows attached.</div>
+                  <div className="mt-2 text-sm text-gray-500">{t('automation.eventsCatalog.details.attached.empty', { defaultValue: 'No workflows attached.' })}</div>
                 )}
                 {!attachedLoading && attachedWorkflows && attachedWorkflows.length > 0 && (
                   <div className="mt-2 space-y-2">
@@ -1446,10 +1470,10 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <div className="text-sm font-medium text-gray-900 truncate">{wf.name}</div>
-                            <Badge variant="success" size="sm">Published</Badge>
-                            {wf.is_system && <Badge variant="info" size="sm">System</Badge>}
-                            {wf.is_paused && <Badge variant="warning" size="sm">Paused</Badge>}
-                            {!wf.is_visible && <Badge className="text-[10px] bg-gray-100 text-gray-600 border-gray-200">Hidden</Badge>}
+                            <Badge variant="success" size="sm">{t('automation.eventsCatalog.details.attached.publishedBadge', { defaultValue: 'Published' })}</Badge>
+                            {wf.is_system && <Badge variant="info" size="sm">{t('automation.eventsCatalog.details.attached.systemBadge', { defaultValue: 'System' })}</Badge>}
+                            {wf.is_paused && <Badge variant="warning" size="sm">{t('automation.eventsCatalog.details.attached.pausedBadge', { defaultValue: 'Paused' })}</Badge>}
+                            {!wf.is_visible && <Badge className="text-[10px] bg-gray-100 text-gray-600 border-gray-200">{t('automation.eventsCatalog.details.attached.hiddenBadge', { defaultValue: 'Hidden' })}</Badge>}
                           </div>
                           <div className="text-xs text-gray-500 font-mono truncate">{wf.workflow_id} · v{wf.published_version ?? '—'}</div>
                         </div>
@@ -1457,7 +1481,7 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
                           <Button id={`workflow-event-details-open-workflow-${wf.workflow_id}`} asChild variant="outline" size="sm">
                             <Link href={`/msp/workflow-editor/${encodeURIComponent(wf.workflow_id)}`}>
                               <ExternalLink className="h-4 w-4 mr-2" />
-                              Open
+                              {t('automation.eventsCatalog.details.attached.open', { defaultValue: 'Open' })}
                             </Link>
                           </Button>
                           <Button
@@ -1466,9 +1490,13 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
                             size="sm"
                             onClick={() => handleDetachWorkflow(wf.workflow_id, selectedEvent.event_type)}
                             disabled={!permissions.canPublish || (wf.is_system && !permissions.canAdmin)}
-                            title={!permissions.canPublish ? 'Requires workflow:publish permission' : (wf.is_system && !permissions.canAdmin ? 'Requires workflow:admin for system workflows' : undefined)}
+                            title={!permissions.canPublish
+                              ? t('automation.eventsCatalog.details.attached.publishTooltip', { defaultValue: 'Requires workflow:publish permission' })
+                              : (wf.is_system && !permissions.canAdmin
+                                ? t('automation.eventsCatalog.details.attached.adminTooltip', { defaultValue: 'Requires workflow:admin for system workflows' })
+                                : undefined)}
                           >
-                            Detach
+                            {t('automation.eventsCatalog.details.attached.detach', { defaultValue: 'Detach' })}
                           </Button>
                         </div>
                       </div>
@@ -1486,20 +1514,20 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
       <Dialog
         isOpen={schemaModalOpen}
         onClose={() => setSchemaModalOpen(false)}
-        title="Schema"
+        title={t('automation.eventsCatalog.schemaModal.title', { defaultValue: 'Schema' })}
         className="max-w-4xl"
         footer={
           <div className="flex justify-end space-x-2">
-            <Button id="workflow-event-schema-close" variant="ghost" onClick={() => setSchemaModalOpen(false)}>Close</Button>
+            <Button id="workflow-event-schema-close" variant="ghost" onClick={() => setSchemaModalOpen(false)}>{t('automation.eventsCatalog.schemaModal.close', { defaultValue: 'Close' })}</Button>
           </div>
         }
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Payload schema</DialogTitle>
+            <DialogTitle>{t('automation.eventsCatalog.schemaModal.headerTitle', { defaultValue: 'Payload schema' })}</DialogTitle>
           </DialogHeader>
-          {schemaLoading && <div className="text-sm text-gray-500">Loading…</div>}
-          {!schemaLoading && !fullSchema && <div className="text-sm text-destructive">Schema not available.</div>}
+          {schemaLoading && <div className="text-sm text-gray-500">{t('automation.eventsCatalog.schemaModal.loading', { defaultValue: 'Loading…' })}</div>}
+          {!schemaLoading && !fullSchema && <div className="text-sm text-destructive">{t('automation.eventsCatalog.schemaModal.unavailable', { defaultValue: 'Schema not available.' })}</div>}
           {!schemaLoading && fullSchema && (
             <div className="max-h-[70vh] overflow-auto">
               <div className="flex justify-end mb-2">
@@ -1510,14 +1538,14 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
                   onClick={() => {
                     try {
                       void navigator.clipboard.writeText(JSON.stringify(fullSchema, null, 2));
-                      toast.success('Copied');
+                      toast.success(t('automation.eventsCatalog.schemaModal.copySuccess', { defaultValue: 'Copied' }));
                     } catch (error) {
-                      handleError(error, 'Copy failed');
+                      handleError(error, t('automation.eventsCatalog.schemaModal.copyFailed', { defaultValue: 'Copy failed' }));
                     }
                   }}
                 >
                   <Copy className="h-4 w-4 mr-2" />
-                  Copy
+                  {t('automation.eventsCatalog.schemaModal.copy', { defaultValue: 'Copy' })}
                 </Button>
               </div>
               <pre
@@ -1559,6 +1587,7 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
 }
 
 const MetricsDialog: React.FC<{ open: boolean; eventType: string | null; onClose: () => void }> = ({ open, eventType, onClose }) => {
+  const { t } = useTranslation('msp/workflows');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [loading, setLoading] = useState(false);
@@ -1585,7 +1614,7 @@ const MetricsDialog: React.FC<{ open: boolean; eventType: string | null; onClose
       const res = await getEventMetricsAction({ eventType, from: fromIso, to: toIso, recentLimit, recentOffset: ro });
       setData(res as any);
     } catch (e) {
-      handleError(e, 'Failed to load metrics');
+      handleError(e, t('automation.eventsCatalog.metricsDialog.loadFailed', { defaultValue: 'Failed to load metrics' }));
       setData(null);
     } finally {
       setLoading(false);
@@ -1602,70 +1631,70 @@ const MetricsDialog: React.FC<{ open: boolean; eventType: string | null; onClose
     <Dialog
       isOpen={open}
       onClose={onClose}
-      title="Metrics"
+      title={t('automation.eventsCatalog.metricsDialog.title', { defaultValue: 'Metrics' })}
       className="max-w-4xl"
       footer={
         <div className="flex justify-end space-x-2">
-          <Button id="workflow-event-metrics-close" variant="ghost" onClick={onClose}>Close</Button>
+          <Button id="workflow-event-metrics-close" variant="ghost" onClick={onClose}>{t('automation.eventsCatalog.metricsDialog.close', { defaultValue: 'Close' })}</Button>
         </div>
       }
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Metrics · {eventType ?? ''}</DialogTitle>
+          <DialogTitle>{t('automation.eventsCatalog.metricsDialog.headerTitle', { defaultValue: 'Metrics · {{eventType}}', eventType: eventType ?? '' })}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="flex flex-wrap items-end gap-3">
             <div className="flex flex-col gap-1">
-              <div className="text-xs text-gray-500">From</div>
+              <div className="text-xs text-gray-500">{t('automation.eventsCatalog.metricsDialog.from', { defaultValue: 'From' })}</div>
               <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
             </div>
             <div className="flex flex-col gap-1">
-              <div className="text-xs text-gray-500">To</div>
+              <div className="text-xs text-gray-500">{t('automation.eventsCatalog.metricsDialog.to', { defaultValue: 'To' })}</div>
               <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
             </div>
             <Button id="workflow-event-metrics-refresh" variant="outline" onClick={() => void load()} disabled={loading}>
               <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
+              {t('automation.eventsCatalog.metricsDialog.refresh', { defaultValue: 'Refresh' })}
             </Button>
             {eventType && (
               <Button id="workflow-event-metrics-open-designer" asChild variant="ghost" className="ml-auto">
                 <Link href="/msp/workflow-editor">
-                  Open workflow editor
+                  {t('automation.eventsCatalog.metricsDialog.openWorkflowEditor', { defaultValue: 'Open workflow editor' })}
                 </Link>
               </Button>
             )}
           </div>
 
-          {loading && <div className="text-sm text-gray-500">Loading…</div>}
+          {loading && <div className="text-sm text-gray-500">{t('automation.eventsCatalog.metricsDialog.loading', { defaultValue: 'Loading…' })}</div>}
 
           {!loading && data && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                <MiniMetric label="Total events" value={formatNumber(data.summary?.total ?? null)} />
-                <MiniMetric label="Matched" value={formatNumber(data.summary?.matched ?? null)} />
-                <MiniMetric label="Unmatched" value={formatNumber(data.summary?.unmatched ?? null)} />
-                <MiniMetric label="Errors" value={formatNumber(data.summary?.error ?? null)} />
+                <MiniMetric label={t('automation.eventsCatalog.metricsDialog.totals.totalEvents', { defaultValue: 'Total events' })} value={formatNumber(data.summary?.total ?? null)} />
+                <MiniMetric label={t('automation.eventsCatalog.metricsDialog.totals.matched', { defaultValue: 'Matched' })} value={formatNumber(data.summary?.matched ?? null)} />
+                <MiniMetric label={t('automation.eventsCatalog.metricsDialog.totals.unmatched', { defaultValue: 'Unmatched' })} value={formatNumber(data.summary?.unmatched ?? null)} />
+                <MiniMetric label={t('automation.eventsCatalog.metricsDialog.totals.errors', { defaultValue: 'Errors' })} value={formatNumber(data.summary?.error ?? null)} />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                <MiniMetric label="Runs started" value={formatNumber(data.runStats?.total ?? null)} />
-                <MiniMetric label="Run success rate" value={formatPercent(data.runStats?.successRate ?? null)} />
-                <MiniMetric label="Avg run duration" value={formatDurationMs(data.runStats?.avgDurationMs ?? null)} />
+                <MiniMetric label={t('automation.eventsCatalog.metricsDialog.totals.runsStarted', { defaultValue: 'Runs started' })} value={formatNumber(data.runStats?.total ?? null)} />
+                <MiniMetric label={t('automation.eventsCatalog.metricsDialog.totals.runSuccessRate', { defaultValue: 'Run success rate' })} value={formatPercent(data.runStats?.successRate ?? null)} />
+                <MiniMetric label={t('automation.eventsCatalog.metricsDialog.totals.avgRunDuration', { defaultValue: 'Avg run duration' })} value={formatDurationMs(data.runStats?.avgDurationMs ?? null)} />
               </div>
 
               <Card className="p-3">
-                <div className="text-sm font-semibold text-gray-800 mb-2">Executions over time</div>
+                <div className="text-sm font-semibold text-gray-800 mb-2">{t('automation.eventsCatalog.metricsDialog.executionsOverTime', { defaultValue: 'Executions over time' })}</div>
                 <SimpleSeriesChart series={data.series ?? []} />
               </Card>
 
               <Card className="p-3">
                 <div className="flex items-center justify-between mb-2">
-                  <div className="text-sm font-semibold text-gray-800">Recent events</div>
+                  <div className="text-sm font-semibold text-gray-800">{t('automation.eventsCatalog.metricsDialog.recentEvents', { defaultValue: 'Recent events' })}</div>
                   {eventType && (
                     <Button id="workflow-event-metrics-view-events" asChild variant="ghost" size="sm">
                       <Link href={`/msp/workflow-control?section=events&eventType=${encodeURIComponent(eventType)}`}>
-                        View in events
+                        {t('automation.eventsCatalog.metricsDialog.viewInEvents', { defaultValue: 'View in events' })}
                       </Link>
                     </Button>
                   )}
@@ -1686,7 +1715,7 @@ const MetricsDialog: React.FC<{ open: boolean; eventType: string | null; onClose
                         {row.matched_run_id && (
                           <Button id={`workflow-event-metrics-open-run-${row.matched_run_id}`} asChild variant="outline" size="sm">
                             <Link href={`/msp/workflows/runs/${encodeURIComponent(row.matched_run_id)}`}>
-                              Run
+                              {t('automation.eventsCatalog.metricsDialog.openRun', { defaultValue: 'Run' })}
                             </Link>
                           </Button>
                         )}
@@ -1699,13 +1728,18 @@ const MetricsDialog: React.FC<{ open: boolean; eventType: string | null; onClose
                     </div>
                   ))}
                   {Array.isArray(data.recent) && data.recent.length === 0 && (
-                    <div className="text-sm text-gray-500">No events in this range.</div>
+                    <div className="text-sm text-gray-500">{t('automation.eventsCatalog.states.noEventsInRange', { defaultValue: 'No events in this range.' })}</div>
                   )}
                 </div>
                 {typeof data.recentTotal === 'number' && data.recentTotal > recentLimit && (
                   <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
                     <div>
-                      Showing {Math.min(data.recentTotal, recentOffset + 1)}–{Math.min(data.recentTotal, recentOffset + (data.recent?.length ?? 0))} of {data.recentTotal}
+                      {t('automation.eventsCatalog.metricsDialog.rangeShowing', {
+                        defaultValue: 'Showing {{start}}–{{end}} of {{total}}',
+                        start: Math.min(data.recentTotal, recentOffset + 1),
+                        end: Math.min(data.recentTotal, recentOffset + (data.recent?.length ?? 0)),
+                        total: data.recentTotal,
+                      })}
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
@@ -1719,7 +1753,7 @@ const MetricsDialog: React.FC<{ open: boolean; eventType: string | null; onClose
                           void load({ recentOffset: next });
                         }}
                       >
-                        Prev
+                        {t('automation.eventsCatalog.metricsDialog.prev', { defaultValue: 'Prev' })}
                       </Button>
                       <Button
                         id="workflow-event-metrics-recent-next"
@@ -1732,7 +1766,7 @@ const MetricsDialog: React.FC<{ open: boolean; eventType: string | null; onClose
                           void load({ recentOffset: next });
                         }}
                       >
-                        Next
+                        {t('automation.eventsCatalog.metricsDialog.next', { defaultValue: 'Next' })}
                       </Button>
                     </div>
                   </div>
@@ -1742,7 +1776,7 @@ const MetricsDialog: React.FC<{ open: boolean; eventType: string | null; onClose
           )}
 
           {!loading && !data && (
-            <div className="text-sm text-gray-500">No data available.</div>
+            <div className="text-sm text-gray-500">{t('automation.eventsCatalog.states.noDataAvailable', { defaultValue: 'No data available.' })}</div>
           )}
         </div>
       </DialogContent>
@@ -1757,6 +1791,7 @@ const SimulateDialog: React.FC<{
   onClose: () => void;
   pickerActions: WorkflowPickerActions;
 }> = ({ open, eventType, payloadSchemaRef, onClose, pickerActions }) => {
+  const { t } = useTranslation('msp/workflows');
   const [mode, setMode] = useState<'form' | 'json'>('form');
   const [schema, setSchema] = useState<any | null>(null);
   const [schemaRefOverride, setSchemaRefOverride] = useState<string>('');
@@ -1838,7 +1873,7 @@ const SimulateDialog: React.FC<{
       })()
       : formValue;
     if (value == null) {
-      setErrors([{ path: '', message: 'Invalid JSON.' }]);
+      setErrors([{ path: '', message: t('automation.eventsCatalog.simulateDialog.errors.invalidJson', { defaultValue: 'Invalid JSON.' }) }]);
       return;
     }
     const effectiveValue = applyImplicitSimulationFields(
@@ -1846,10 +1881,10 @@ const SimulateDialog: React.FC<{
       { tenantId: currentTenantId }
     );
     setErrors(
-      validateAgainstSchema(schema, effectiveValue, schema)
+      validateAgainstSchema(schema, effectiveValue, schema, t)
         .filter((error) => !IMPLICIT_SIMULATION_FIELD_KEYS.has(error.path))
     );
-  }, [currentTenantId, formValue, mode, open, payloadText, schema]);
+  }, [currentTenantId, formValue, mode, open, payloadText, schema, t]);
 
   const updateCorrelationKey = (value: string) => {
     setCorrelationKey(value);
@@ -1870,7 +1905,7 @@ const SimulateDialog: React.FC<{
         { tenantId: currentTenantId }
       );
       if (schema && errors.length > 0) {
-        toast.error('Fix schema validation errors before submitting.');
+        toast.error(t('automation.eventsCatalog.simulateDialog.errors.fixBeforeSubmit', { defaultValue: 'Fix schema validation errors before submitting.' }));
         setSubmitting(false);
         return;
       }
@@ -1884,11 +1919,11 @@ const SimulateDialog: React.FC<{
       if ((res as any)?.status === 'error' && (res as any)?.error_message) {
         setSubmitError(String((res as any).error_message));
       }
-      toast.success('Event simulated');
+      toast.success(t('automation.eventsCatalog.simulateDialog.toasts.success', { defaultValue: 'Event simulated' }));
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Failed to simulate';
-      setSubmitError(msg);
-      handleError(e, 'Failed to simulate');
+      console.error('Failed to simulate event:', e);
+      setSubmitError(t('automation.eventsCatalog.simulateDialog.errors.submitFallback', { defaultValue: 'Failed to simulate' }));
+      handleError(e, t('automation.eventsCatalog.simulateDialog.errors.submitToast', { defaultValue: 'Failed to simulate' }));
     } finally {
       setSubmitting(false);
     }
@@ -1898,35 +1933,37 @@ const SimulateDialog: React.FC<{
     <Dialog
       isOpen={open}
       onClose={onClose}
-      title="Simulate event"
+      title={t('automation.eventsCatalog.simulateDialog.title', { defaultValue: 'Simulate event' })}
       className="max-w-4xl"
       footer={
         <div className="flex justify-end space-x-2">
-          <Button id="workflow-event-simulate-close" variant="ghost" onClick={onClose}>Close</Button>
+          <Button id="workflow-event-simulate-close" variant="ghost" onClick={onClose}>{t('automation.eventsCatalog.simulateDialog.close', { defaultValue: 'Close' })}</Button>
           <Button id="workflow-event-simulate-submit" onClick={submit} disabled={submitting || !eventType}>
-            {submitting ? 'Submitting…' : 'Simulate'}
+            {submitting
+              ? t('automation.eventsCatalog.simulateDialog.submitting', { defaultValue: 'Submitting…' })
+              : t('automation.eventsCatalog.simulateDialog.submit', { defaultValue: 'Simulate' })}
           </Button>
         </div>
       }
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Simulate · {eventType ?? ''}</DialogTitle>
+          <DialogTitle>{t('automation.eventsCatalog.simulateDialog.headerTitle', { defaultValue: 'Simulate · {{eventType}}', eventType: eventType ?? '' })}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <Input
               id="simulate-correlation-key"
-              label="Correlation key (optional)"
-              placeholder="Used to resolve event waits"
+              label={t('automation.eventsCatalog.simulateDialog.fields.correlationKey', { defaultValue: 'Correlation key (optional)' })}
+              placeholder={t('automation.eventsCatalog.simulateDialog.fields.correlationKeyPlaceholder', { defaultValue: 'Used to resolve event waits' })}
               value={correlationKey}
               onChange={(e) => updateCorrelationKey(e.target.value)}
             />
             <Input
               id="simulate-schema-ref"
-              label="Event payload schema ref (advanced)"
-              placeholder={payloadSchemaRef ?? 'No schemaRef for this event'}
+              label={t('automation.eventsCatalog.simulateDialog.fields.schemaRef', { defaultValue: 'Event payload schema ref (advanced)' })}
+              placeholder={payloadSchemaRef ?? t('automation.eventsCatalog.simulateDialog.fields.schemaRefPlaceholderEmpty', { defaultValue: 'No schemaRef for this event' })}
               value={schemaRefOverride}
               onChange={(e) => setSchemaRefOverride(e.target.value)}
             />
@@ -1934,20 +1971,20 @@ const SimulateDialog: React.FC<{
 
           <div className="flex items-center gap-2">
             <Button id="workflow-event-simulate-mode-form" variant={mode === 'form' ? 'default' : 'outline'} size="sm" onClick={() => setMode('form')} disabled={!schema}>
-              Form
+              {t('automation.eventsCatalog.simulateDialog.modes.form', { defaultValue: 'Form' })}
             </Button>
             <Button id="workflow-event-simulate-mode-json" variant={mode === 'json' ? 'default' : 'outline'} size="sm" onClick={() => setMode('json')}>
-              JSON
+              {t('automation.eventsCatalog.simulateDialog.modes.json', { defaultValue: 'JSON' })}
             </Button>
             {!schema && (
-              <div className="text-xs text-warning">No schema available; form mode disabled.</div>
+              <div className="text-xs text-warning">{t('automation.eventsCatalog.simulateDialog.modes.noSchema', { defaultValue: 'No schema available; form mode disabled.' })}</div>
             )}
           </div>
 
           {mode === 'json' && (
             <TextArea
               id="simulate-json"
-              label="Payload (JSON)"
+              label={t('automation.eventsCatalog.simulateDialog.fields.payloadJson', { defaultValue: 'Payload (JSON)' })}
               value={payloadText}
               onChange={(e) => setPayloadText(e.target.value)}
               className="font-mono text-xs min-h-[220px]"
@@ -1956,7 +1993,7 @@ const SimulateDialog: React.FC<{
 
           {mode === 'form' && (
             <div>
-              <div className="text-xs font-medium text-gray-700 mb-2">Payload</div>
+              <div className="text-xs font-medium text-gray-700 mb-2">{t('automation.eventsCatalog.simulateDialog.fields.payload', { defaultValue: 'Payload' })}</div>
               <SchemaForm schema={schema} value={formValue ?? {}} onChange={setFormValue} errors={errors} pickerActions={pickerActions} />
             </div>
           )}
@@ -1964,13 +2001,13 @@ const SimulateDialog: React.FC<{
           {errors.length > 0 && (
             <Alert variant="destructive">
               <AlertDescription>
-                <div className="text-sm font-semibold mb-1">Schema validation errors</div>
+                <div className="text-sm font-semibold mb-1">{t('automation.eventsCatalog.simulateDialog.errors.schemaValidationTitle', { defaultValue: 'Schema validation errors' })}</div>
                 <ul className="list-disc pl-4 space-y-1 text-xs">
                   {errors.slice(0, 8).map((err, idx) => (
                     <li key={`${err.path}-${idx}`}>{err.path ? `${err.path}: ` : ''}{err.message}</li>
                   ))}
                 </ul>
-                {errors.length > 8 && <div className="text-[11px] mt-1">+{errors.length - 8} more</div>}
+                {errors.length > 8 && <div className="text-[11px] mt-1">{t('automation.eventsCatalog.simulateDialog.errors.moreErrors', { defaultValue: '+{{count}} more', count: errors.length - 8 })}</div>}
               </AlertDescription>
             </Alert>
           )}
@@ -1978,7 +2015,7 @@ const SimulateDialog: React.FC<{
           {submitError && (
             <Alert variant="destructive">
               <AlertDescription>
-                <div className="text-sm font-semibold mb-1">Simulation error</div>
+                <div className="text-sm font-semibold mb-1">{t('automation.eventsCatalog.simulateDialog.errors.simulationTitle', { defaultValue: 'Simulation error' })}</div>
                 <div className="text-xs">{submitError}</div>
               </AlertDescription>
             </Alert>
@@ -1986,25 +2023,25 @@ const SimulateDialog: React.FC<{
 
           {result && (
             <Card className="p-3">
-              <div className="text-sm font-semibold text-gray-800 mb-2">Result</div>
+              <div className="text-sm font-semibold text-gray-800 mb-2">{t('automation.eventsCatalog.simulateDialog.result.title', { defaultValue: 'Result' })}</div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                 <div>
-                  <div className="text-xs text-gray-500">Status</div>
+                  <div className="text-xs text-gray-500">{t('automation.eventsCatalog.simulateDialog.result.status', { defaultValue: 'Status' })}</div>
                   <div className="font-mono">{String((result as any)?.status ?? '—')}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-gray-500">Event ID</div>
+                  <div className="text-xs text-gray-500">{t('automation.eventsCatalog.simulateDialog.result.eventId', { defaultValue: 'Event ID' })}</div>
                   <div className="font-mono">{String((result as any)?.eventId ?? '—')}</div>
                 </div>
               </div>
               {Array.isArray((result as any)?.startedRuns) && (result as any).startedRuns.length > 0 && (
                 <div className="mt-2 space-y-1">
-                  <div className="text-xs text-gray-500">Started runs</div>
+                  <div className="text-xs text-gray-500">{t('automation.eventsCatalog.simulateDialog.result.startedRuns', { defaultValue: 'Started runs' })}</div>
                   {(result as any).startedRuns.slice(0, 5).map((id: string) => (
                     <div key={id} className="flex items-center justify-between gap-2 rounded border border-gray-200 bg-white px-2 py-1">
                       <div className="font-mono text-xs truncate">{id}</div>
                       <Button id={`workflow-event-simulate-open-run-${id}`} asChild variant="outline" size="sm">
-                        <Link href={`/msp/workflows/runs/${encodeURIComponent(id)}`}>Open</Link>
+                        <Link href={`/msp/workflows/runs/${encodeURIComponent(id)}`}>{t('automation.eventsCatalog.simulateDialog.result.open', { defaultValue: 'Open' })}</Link>
                       </Button>
                     </div>
                   ))}
@@ -2012,9 +2049,9 @@ const SimulateDialog: React.FC<{
               )}
               {String((result as any)?.runId ?? '').length > 0 && (
                 <div className="mt-2">
-                  <div className="text-xs text-gray-500">Resumed run</div>
+                  <div className="text-xs text-gray-500">{t('automation.eventsCatalog.simulateDialog.result.resumedRun', { defaultValue: 'Resumed run' })}</div>
                   <Button id="workflow-event-simulate-open-resumed-run" asChild variant="outline" size="sm">
-                    <Link href={`/msp/workflows/runs/${encodeURIComponent((result as any).runId)}`}>Open resumed run</Link>
+                    <Link href={`/msp/workflows/runs/${encodeURIComponent((result as any).runId)}`}>{t('automation.eventsCatalog.simulateDialog.result.openResumedRun', { defaultValue: 'Open resumed run' })}</Link>
                   </Button>
                 </div>
               )}
@@ -2028,6 +2065,7 @@ const SimulateDialog: React.FC<{
 };
 
 const DefineCustomEventDialog: React.FC<{ open: boolean; schemaRefs: string[]; onClose: (didCreate: boolean) => void }> = ({ open, schemaRefs, onClose }) => {
+  const { t } = useTranslation('msp/workflows');
   const [eventType, setEventType] = useState('');
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
@@ -2049,11 +2087,11 @@ const DefineCustomEventDialog: React.FC<{ open: boolean; schemaRefs: string[]; o
 
   const submit = async () => {
     if (!eventType.trim() || !name.trim()) {
-      toast.error('Event type and name are required.');
+      toast.error(t('automation.eventsCatalog.defineEventDialog.validation.typeAndNameRequired', { defaultValue: 'Event type and name are required.' }));
       return;
     }
     if (mode === 'schemaRef' && !schemaRef.trim()) {
-      toast.error('Select a payload schema ref (or use inline schema).');
+      toast.error(t('automation.eventsCatalog.defineEventDialog.validation.schemaRefRequired', { defaultValue: 'Select a payload schema ref (or use inline schema).' }));
       return;
     }
     setSubmitting(true);
@@ -2063,7 +2101,7 @@ const DefineCustomEventDialog: React.FC<{ open: boolean; schemaRefs: string[]; o
         try {
           payloadSchemaJson = JSON.parse(schemaJson || '{}');
         } catch (error) {
-          handleError(error, 'Payload schema must be valid JSON.');
+          handleError(error, t('automation.eventsCatalog.defineEventDialog.validation.invalidJson', { defaultValue: 'Payload schema must be valid JSON.' }));
           setSubmitting(false);
           return;
         }
@@ -2076,11 +2114,11 @@ const DefineCustomEventDialog: React.FC<{ open: boolean; schemaRefs: string[]; o
         payloadSchemaRef: mode === 'schemaRef' ? (schemaRef.trim() || undefined) : undefined,
         payloadSchemaJson
       });
-      toast.success('Custom event created');
+      toast.success(t('automation.eventsCatalog.defineEventDialog.toasts.createSuccess', { defaultValue: 'Custom event created' }));
       onClose(true);
       return res;
     } catch (e) {
-      handleError(e, 'Failed to create event');
+      handleError(e, t('automation.eventsCatalog.defineEventDialog.toasts.createFailed', { defaultValue: 'Failed to create event' }));
     } finally {
       setSubmitting(false);
     }
@@ -2090,37 +2128,39 @@ const DefineCustomEventDialog: React.FC<{ open: boolean; schemaRefs: string[]; o
     <Dialog
       isOpen={open}
       onClose={() => onClose(false)}
-      title="Define custom event"
+      title={t('automation.eventsCatalog.defineEventDialog.title', { defaultValue: 'Define custom event' })}
       className="max-w-3xl"
       footer={
         <div className="flex justify-end space-x-2">
-          <Button id="workflow-event-custom-event-cancel" variant="ghost" onClick={() => onClose(false)}>Cancel</Button>
+          <Button id="workflow-event-custom-event-cancel" variant="ghost" onClick={() => onClose(false)}>{t('automation.eventsCatalog.defineEventDialog.cancel', { defaultValue: 'Cancel' })}</Button>
           <Button id="workflow-event-custom-event-submit" onClick={submit} disabled={submitting}>
-            {submitting ? 'Creating…' : 'Create event'}
+            {submitting
+              ? t('automation.eventsCatalog.defineEventDialog.submitting', { defaultValue: 'Creating…' })
+              : t('automation.eventsCatalog.defineEventDialog.submit', { defaultValue: 'Create event' })}
           </Button>
         </div>
       }
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Define Custom Event</DialogTitle>
+          <DialogTitle>{t('automation.eventsCatalog.defineEventDialog.headerTitle', { defaultValue: 'Define Custom Event' })}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <Input label="Event type" value={eventType} onChange={(e) => setEventType(e.target.value)} placeholder="e.g. ticket.created" />
-            <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Human-friendly name" />
+            <Input label={t('automation.eventsCatalog.defineEventDialog.fields.eventType', { defaultValue: 'Event type' })} value={eventType} onChange={(e) => setEventType(e.target.value)} placeholder={t('automation.eventsCatalog.defineEventDialog.fields.eventTypePlaceholder', { defaultValue: 'e.g. ticket.created' })} />
+            <Input label={t('automation.eventsCatalog.defineEventDialog.fields.name', { defaultValue: 'Name' })} value={name} onChange={(e) => setName(e.target.value)} placeholder={t('automation.eventsCatalog.defineEventDialog.fields.namePlaceholder', { defaultValue: 'Human-friendly name' })} />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <Input label="Category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. Tickets" />
-            <Input label="Description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Optional description" />
+            <Input label={t('automation.eventsCatalog.defineEventDialog.fields.category', { defaultValue: 'Category' })} value={category} onChange={(e) => setCategory(e.target.value)} placeholder={t('automation.eventsCatalog.defineEventDialog.fields.categoryPlaceholder', { defaultValue: 'e.g. Tickets' })} />
+            <Input label={t('automation.eventsCatalog.defineEventDialog.fields.description', { defaultValue: 'Description' })} value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t('automation.eventsCatalog.defineEventDialog.fields.descriptionPlaceholder', { defaultValue: 'Optional description' })} />
           </div>
 
           <div className="flex items-center gap-2">
             <Button id="workflow-event-custom-event-mode-schema-ref" variant={mode === 'schemaRef' ? 'default' : 'outline'} size="sm" onClick={() => setMode('schemaRef')}>
-              Use schema ref
+              {t('automation.eventsCatalog.defineEventDialog.fields.useSchemaRef', { defaultValue: 'Use schema ref' })}
             </Button>
             <Button id="workflow-event-custom-event-mode-inline" variant={mode === 'inline' ? 'default' : 'outline'} size="sm" onClick={() => setMode('inline')}>
-              Inline schema (advanced)
+              {t('automation.eventsCatalog.defineEventDialog.fields.useInline', { defaultValue: 'Inline schema (advanced)' })}
             </Button>
           </div>
 
@@ -2129,10 +2169,10 @@ const DefineCustomEventDialog: React.FC<{ open: boolean; schemaRefs: string[]; o
               id="workflow-event-catalog-custom-schema-ref"
               value={schemaRef}
               onChange={(v) => setSchemaRef(v)}
-              placeholder="Select payload schema ref"
+              placeholder={t('automation.eventsCatalog.defineEventDialog.fields.selectSchemaRef', { defaultValue: 'Select payload schema ref' })}
               dropdownMode="overlay"
               options={[
-                { value: '', label: 'Select…' },
+                { value: '', label: t('automation.eventsCatalog.defineEventDialog.fields.selectPlaceholder', { defaultValue: 'Select…' }) },
                 ...schemaRefs.map((ref) => ({ value: ref, label: ref }))
               ]}
             />
@@ -2140,7 +2180,7 @@ const DefineCustomEventDialog: React.FC<{ open: boolean; schemaRefs: string[]; o
 
           {mode === 'inline' && (
             <TextArea
-              label="Payload schema (JSON)"
+              label={t('automation.eventsCatalog.defineEventDialog.fields.payloadSchemaJson', { defaultValue: 'Payload schema (JSON)' })}
               value={schemaJson}
               onChange={(e) => setSchemaJson(e.target.value)}
               className="font-mono text-xs min-h-[220px]"
@@ -2148,7 +2188,7 @@ const DefineCustomEventDialog: React.FC<{ open: boolean; schemaRefs: string[]; o
           )}
 
           <div className="text-xs text-gray-500">
-            Custom events are tenant-scoped and can be used as workflow triggers.
+            {t('automation.eventsCatalog.defineEventDialog.footer', { defaultValue: 'Custom events are tenant-scoped and can be used as workflow triggers.' })}
           </div>
         </div>
 

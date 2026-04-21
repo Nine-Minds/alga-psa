@@ -666,27 +666,78 @@
       "missingRequired": "Missing required: {{fields}}"
     },
     "fieldMetadata": {
-      "actionId": { "label": "Action", "description": "The action to invoke" },
-      "version": { "label": "Version", "description": "Action version number" },
-      "inputMapping": { "label": "Input Mapping", "description": "Map data to action inputs" },
-      "saveAs": { "label": "Save Result As", "description": "Variable name or assignment path (e.g., result, vars.result, payload.result)" },
+      "actionId": {
+        "label": "Action",
+        "description": "The action to invoke"
+      },
+      "version": {
+        "label": "Version",
+        "description": "Action version number"
+      },
+      "inputMapping": {
+        "label": "Input Mapping",
+        "description": "Map data to action inputs"
+      },
+      "saveAs": {
+        "label": "Save Result As",
+        "description": "Variable name or assignment path (e.g., result, vars.result, payload.result)"
+      },
       "idempotencyKey": {
         "label": "Idempotency Key",
         "description": "Expression that produces a unique key to prevent duplicate executions. If the same key is seen twice, the cached result is returned."
       },
-      "onError": { "label": "Error Handling", "description": "How to handle errors" },
-      "eventName": { "label": "Event Name", "description": "Name of the event to wait for" },
-      "correlationKey": { "label": "Correlation Key", "description": "Expression to match incoming events" },
-      "filters": { "label": "Payload Filters", "description": "Optional event payload filters (AND semantics)" },
-      "timeoutMs": { "label": "Timeout (ms)", "description": "Maximum time to wait in milliseconds" },
-      "mode": { "label": "Wait Mode", "description": "Duration or until time" },
-      "durationMs": { "label": "Duration", "description": "Relative duration stored in milliseconds" },
-      "until": { "label": "Until", "description": "Expression resolving to an absolute date/time" },
-      "state": { "label": "State Name", "description": "The state to transition to" },
-      "assign": { "label": "Assignments", "description": "Variables to assign" },
-      "taskType": { "label": "Task Type", "description": "Type of human task" },
-      "title": { "label": "Title", "description": "Task title shown to assignee" },
-      "contextData": { "label": "Context Data", "description": "Additional data to include with the task" }
+      "onError": {
+        "label": "Error Handling",
+        "description": "How to handle errors"
+      },
+      "eventName": {
+        "label": "Event Name",
+        "description": "Name of the event to wait for"
+      },
+      "correlationKey": {
+        "label": "Correlation Key",
+        "description": "Expression to match incoming events"
+      },
+      "filters": {
+        "label": "Payload Filters",
+        "description": "Optional event payload filters (AND semantics)"
+      },
+      "timeoutMs": {
+        "label": "Timeout (ms)",
+        "description": "Maximum time to wait in milliseconds"
+      },
+      "mode": {
+        "label": "Wait Mode",
+        "description": "Duration or until time"
+      },
+      "durationMs": {
+        "label": "Duration",
+        "description": "Relative duration stored in milliseconds"
+      },
+      "until": {
+        "label": "Until",
+        "description": "Expression resolving to an absolute date/time"
+      },
+      "state": {
+        "label": "State Name",
+        "description": "The state to transition to"
+      },
+      "assign": {
+        "label": "Assignments",
+        "description": "Variables to assign"
+      },
+      "taskType": {
+        "label": "Task Type",
+        "description": "Type of human task"
+      },
+      "title": {
+        "label": "Title",
+        "description": "Task title shown to assignee"
+      },
+      "contextData": {
+        "label": "Context Data",
+        "description": "Additional data to include with the task"
+      }
     },
     "actions": {
       "ai.infer": {
@@ -796,16 +847,46 @@
         }
       },
       "groups": {
-        "ticket": { "label": "Ticket", "description": "Ticket actions" },
-        "contact": { "label": "Contact", "description": "Contact actions" },
-        "client": { "label": "Client", "description": "Client actions" },
-        "communication": { "label": "Communication", "description": "Communication actions" },
-        "scheduling": { "label": "Scheduling", "description": "Scheduling actions" },
-        "project": { "label": "Project", "description": "Project actions" },
-        "time": { "label": "Time", "description": "Time actions" },
-        "crm": { "label": "CRM", "description": "CRM actions" },
-        "transform": { "label": "Transform", "description": "Transform actions" },
-        "ai": { "label": "AI", "description": "AI actions" }
+        "ticket": {
+          "label": "Ticket",
+          "description": "Ticket actions"
+        },
+        "contact": {
+          "label": "Contact",
+          "description": "Contact actions"
+        },
+        "client": {
+          "label": "Client",
+          "description": "Client actions"
+        },
+        "communication": {
+          "label": "Communication",
+          "description": "Communication actions"
+        },
+        "scheduling": {
+          "label": "Scheduling",
+          "description": "Scheduling actions"
+        },
+        "project": {
+          "label": "Project",
+          "description": "Project actions"
+        },
+        "time": {
+          "label": "Time",
+          "description": "Time actions"
+        },
+        "crm": {
+          "label": "CRM",
+          "description": "CRM actions"
+        },
+        "transform": {
+          "label": "Transform",
+          "description": "Transform actions"
+        },
+        "ai": {
+          "label": "AI",
+          "description": "AI actions"
+        }
       }
     },
     "stepCard": {
@@ -1799,5 +1880,399 @@
       "fixed": "Specific date & time",
       "expression": "Advanced expression"
     }
+  },
+  "automation": {
+    "createWorkflow": {
+      "dialogTitle": "Criar novo fluxo de trabalho",
+      "fields": {
+        "name": "Nome do fluxo de trabalho",
+        "namePlaceholder": "ex.: Enviar e-mail de boas-vindas",
+        "triggerType": "Tipo de gatilho"
+      },
+      "validation": {
+        "nameRequired": "O nome do fluxo de trabalho é obrigatório",
+        "nameTooShort": "O nome deve ter pelo menos 3 caracteres"
+      },
+      "actions": {
+        "cancel": "Cancelar",
+        "create": "Criar fluxo de trabalho"
+      },
+      "triggers": {
+        "event": {
+          "title": "Baseado em evento",
+          "description": "Acionado automaticamente quando ocorrem eventos específicos (ex.: ticket criado, fatura paga)."
+        },
+        "scheduled": {
+          "title": "Agendado",
+          "description": "Executado em uma programação recorrente usando expressões cron (ex.: diária, semanal)."
+        },
+        "manual": {
+          "title": "Manual",
+          "description": "Iniciado sob demanda pelos usuários ou via chamadas de API. Sem gatilhos automáticos."
+        }
+      }
+    },
+    "workflowList": {
+      "header": "Fluxos de trabalho",
+      "stats": {
+        "total": "{{count}} no total",
+        "active": "{{count}} ativos",
+        "draft": "{{count}} em rascunho",
+        "paused": "{{count}} pausados"
+      },
+      "actions": {
+        "eventCatalog": "Catálogo de eventos",
+        "newWorkflow": "Novo fluxo de trabalho",
+        "createFirst": "Crie seu primeiro fluxo de trabalho",
+        "retry": "Tentar novamente",
+        "resetFilters": "Redefinir"
+      },
+      "searchPlaceholder": "Pesquisar fluxos de trabalho...",
+      "statusFilter": {
+        "all": "Todos os status",
+        "active": "Ativo",
+        "draft": "Rascunho",
+        "paused": "Pausado",
+        "archived": "Arquivado"
+      },
+      "triggerFilter": {
+        "all": "Todos os gatilhos",
+        "event": "Baseado em evento",
+        "schedule": "Agendamento único",
+        "recurring": "Agendamento recorrente",
+        "manual": "Manual"
+      },
+      "triggerLabels": {
+        "manual": "Manual",
+        "schedule": "Agendamento único",
+        "recurring": "Agendamento recorrente",
+        "event": "Evento"
+      },
+      "bulk": {
+        "selectedSingular": "{{count}} fluxo de trabalho selecionado",
+        "selectedPlural": "{{count}} fluxos de trabalho selecionados",
+        "pause": "Pausar",
+        "resume": "Retomar",
+        "delete": "Excluir",
+        "clearSelection": "Limpar seleção",
+        "deleteDialogTitle": "Excluir fluxos de trabalho selecionados",
+        "deleteConfirmSingular": "Excluir {{count}} fluxo de trabalho",
+        "deleteConfirmPlural": "Excluir {{count}} fluxos de trabalho",
+        "deleteClose": "Fechar",
+        "deleteCancel": "Cancelar",
+        "selectedSummarySingular": "Você selecionou <1>{{count}}</1> fluxo de trabalho.",
+        "selectedSummaryPlural": "Você selecionou <1>{{count}}</1> fluxos de trabalho.",
+        "willBeDeleted": "<1>{{count}}</1> será excluído.",
+        "willBeSkipped": "<1>{{count}}</1> será ignorado.",
+        "skippedHeading": "Fluxos de trabalho ignorados",
+        "systemWorkflowReason": "Fluxo de trabalho do sistema"
+      },
+      "columns": {
+        "name": "Nome",
+        "status": "Status",
+        "version": "Versão",
+        "trigger": "Gatilho",
+        "lastModified": "Última modificação",
+        "actions": "Ações"
+      },
+      "statusLabels": {
+        "active": "Ativo",
+        "draft": "Rascunho",
+        "archived": "Arquivado",
+        "paused": "Pausado"
+      },
+      "tableValues": {
+        "system": "Sistema",
+        "draftVersion": "Rascunho: v{{version}}"
+      },
+      "rowMenu": {
+        "ariaLabel": "Ações do fluxo de trabalho",
+        "resume": "Retomar",
+        "pause": "Pausar",
+        "duplicate": "Duplicar",
+        "viewRuns": "Ver execuções",
+        "delete": "Excluir"
+      },
+      "states": {
+        "errorTitle": "Falha ao carregar os fluxos de trabalho",
+        "errorFallback": "Falha ao buscar os fluxos de trabalho",
+        "validationFailed": "Falha ao validar a exclusão. Tente novamente.",
+        "emptyTitle": "Ainda não há fluxos de trabalho",
+        "emptyDescription": "Crie seu primeiro fluxo de trabalho para automatizar tarefas, responder a eventos e otimizar seus processos.",
+        "noResultsTitle": "Nenhum fluxo de trabalho encontrado",
+        "noResultsDescription": "Tente ajustar a busca ou os filtros para encontrar o que procura."
+      },
+      "deleteDialog": {
+        "fallbackEntityName": "este fluxo de trabalho"
+      }
+    },
+    "eventsCatalog": {
+      "header": {
+        "title": "Catálogo de eventos do fluxo de trabalho",
+        "subtitle": "Explore, gerencie e projete fluxos de trabalho para eventos e gatilhos do sistema.",
+        "defineCustomEvent": "Definir evento personalizado",
+        "managePermissionTitle": "Requer a permissão workflow:manage"
+      },
+      "filters": {
+        "searchPlaceholder": "Pesquisar eventos (ex.: ticket.create, email.receive)...",
+        "allCategories": "Todas as categorias",
+        "status": "Status",
+        "statusOptions": {
+          "all": "Todos os status",
+          "active": "Ativo",
+          "beta": "Beta",
+          "draft": "Rascunho",
+          "deprecated": "Obsoleto"
+        },
+        "source": "Origem",
+        "sourceOptions": {
+          "all": "Todas as origens",
+          "system": "Sistema",
+          "tenant": "Tenant"
+        },
+        "sort": "Ordenar",
+        "sortOptions": {
+          "categoryName": "Categoria · Nome",
+          "mostActive": "Mais ativos (7 d)"
+        },
+        "apply": "Aplicar",
+        "clear": "Limpar",
+        "viewGrid": "Visualização em grade",
+        "viewList": "Visualização em lista"
+      },
+      "card": {
+        "workflowsCount": "{{count}} fluxos de trabalho",
+        "actions": {
+          "simulate": "Simular",
+          "metrics": "Métricas",
+          "attachTitle": "Anexar (novo fluxo de trabalho)"
+        },
+        "metrics": {
+          "executions": "Execuções",
+          "successRate": "Taxa de sucesso",
+          "avgLatency": "Latência média"
+        }
+      },
+      "states": {
+        "noEventsTitle": "Nenhum evento encontrado",
+        "noEventsDescription": "Tente ajustar seus filtros.",
+        "noEventsInRange": "Nenhum evento neste intervalo.",
+        "noDataAvailable": "Nenhum dado disponível.",
+        "loading": "Carregando…"
+      },
+      "pagination": {
+        "showing": "Mostrando {{start}} a {{end}} de {{total}} resultados",
+        "prev": "Anterior",
+        "next": "Próximo",
+        "page": "Página {{page}} / {{total}}"
+      },
+      "badges": {
+        "system": "Sistema",
+        "tenant": "Tenant",
+        "noSchema": "Sem esquema",
+        "unknownSchema": "Esquema desconhecido",
+        "schema": "Esquema"
+      },
+      "details": {
+        "title": "Detalhes do evento",
+        "close": "Fechar",
+        "simulate": "Simular",
+        "metrics": "Métricas",
+        "attach": "Anexar",
+        "schema": {
+          "heading": "Esquema",
+          "viewFull": "Ver esquema completo",
+          "managedNotice": "O esquema é gerenciado pelo registro de esquemas.",
+          "missingNotice": "Nenhum schemaRef definido; o evento pode não ser utilizável como gatilho de fluxo de trabalho.",
+          "topLevelFields": "Campos de nível superior",
+          "required": "obrigatório",
+          "moreFieldsHint": "Mostrando os primeiros 12 campos. Use \"Ver esquema completo\" para ver mais."
+        },
+        "attached": {
+          "heading": "Fluxos de trabalho anexados",
+          "loading": "Carregando…",
+          "empty": "Nenhum fluxo de trabalho anexado.",
+          "publishedBadge": "Publicado",
+          "systemBadge": "Sistema",
+          "pausedBadge": "Pausado",
+          "hiddenBadge": "Oculto",
+          "open": "Abrir",
+          "detach": "Desanexar",
+          "publishTooltip": "Requer a permissão workflow:publish",
+          "adminTooltip": "Requer workflow:admin para fluxos de trabalho do sistema"
+        }
+      },
+      "schemaModal": {
+        "title": "Esquema",
+        "close": "Fechar",
+        "headerTitle": "Esquema de payload",
+        "loading": "Carregando…",
+        "unavailable": "Esquema não disponível.",
+        "copy": "Copiar",
+        "copySuccess": "Copiado",
+        "copyFailed": "Falha ao copiar"
+      },
+      "metricsDialog": {
+        "title": "Métricas",
+        "close": "Fechar",
+        "headerTitle": "Métricas · {{eventType}}",
+        "from": "De",
+        "to": "Até",
+        "refresh": "Atualizar",
+        "openWorkflowEditor": "Abrir editor de fluxo de trabalho",
+        "loading": "Carregando…",
+        "totals": {
+          "totalEvents": "Total de eventos",
+          "matched": "Correspondentes",
+          "unmatched": "Sem correspondência",
+          "errors": "Erros",
+          "runsStarted": "Execuções iniciadas",
+          "runSuccessRate": "Taxa de sucesso das execuções",
+          "avgRunDuration": "Duração média da execução"
+        },
+        "executionsOverTime": "Execuções ao longo do tempo",
+        "recentEvents": "Eventos recentes",
+        "viewInEvents": "Ver em eventos",
+        "openRun": "Execução",
+        "loadFailed": "Falha ao carregar as métricas",
+        "rangeShowing": "Mostrando {{start}}–{{end}} de {{total}}",
+        "prev": "Anterior",
+        "next": "Próximo"
+      },
+      "simulateDialog": {
+        "title": "Simular evento",
+        "headerTitle": "Simular · {{eventType}}",
+        "submit": "Simular",
+        "submitting": "Enviando…",
+        "close": "Fechar",
+        "fields": {
+          "correlationKey": "Chave de correlação (opcional)",
+          "correlationKeyPlaceholder": "Usada para resolver esperas de eventos",
+          "schemaRef": "Referência do esquema de payload do evento (avançado)",
+          "schemaRefPlaceholderEmpty": "Nenhum schemaRef para este evento",
+          "payloadJson": "Payload (JSON)",
+          "payload": "Payload"
+        },
+        "modes": {
+          "form": "Formulário",
+          "json": "JSON",
+          "noSchema": "Nenhum esquema disponível; modo formulário desativado."
+        },
+        "errors": {
+          "schemaValidationTitle": "Erros de validação do esquema",
+          "moreErrors": "+{{count}} mais",
+          "fixBeforeSubmit": "Corrija os erros de validação do esquema antes de enviar.",
+          "simulationTitle": "Erro de simulação",
+          "submitFallback": "Falha ao simular",
+          "submitToast": "Falha ao simular",
+          "invalidJson": "JSON inválido.",
+          "valueMustBeAllowed": "O valor deve ser uma das opções permitidas.",
+          "expectedObject": "Esperava um objeto.",
+          "expectedArray": "Esperava uma matriz.",
+          "expectedString": "Esperava uma cadeia de caracteres.",
+          "expectedNumber": "Esperava um número.",
+          "expectedBoolean": "Esperava um valor booleano.",
+          "requiredField": "Campo obrigatório ausente."
+        },
+        "result": {
+          "title": "Resultado",
+          "status": "Status",
+          "eventId": "ID do evento",
+          "startedRuns": "Execuções iniciadas",
+          "open": "Abrir",
+          "resumedRun": "Execução retomada",
+          "openResumedRun": "Abrir execução retomada"
+        },
+        "toasts": {
+          "success": "Evento simulado"
+        },
+        "form": {
+          "remove": "Remover",
+          "addItem": "Adicionar item",
+          "rootLabel": "Payload",
+          "payloadJsonLabel": "Payload (JSON)",
+          "true": "Verdadeiro",
+          "false": "Falso"
+        }
+      },
+      "defineEventDialog": {
+        "title": "Definir evento personalizado",
+        "headerTitle": "Definir evento personalizado",
+        "cancel": "Cancelar",
+        "submit": "Criar evento",
+        "submitting": "Criando…",
+        "fields": {
+          "eventType": "Tipo de evento",
+          "eventTypePlaceholder": "ex.: ticket.created",
+          "name": "Nome",
+          "namePlaceholder": "Nome amigável",
+          "category": "Categoria",
+          "categoryPlaceholder": "ex.: Tickets",
+          "description": "Descrição",
+          "descriptionPlaceholder": "Descrição opcional",
+          "useSchemaRef": "Usar referência de esquema",
+          "useInline": "Esquema inline (avançado)",
+          "selectSchemaRef": "Selecionar referência do esquema de payload",
+          "selectPlaceholder": "Selecionar…",
+          "payloadSchemaJson": "Esquema de payload (JSON)"
+        },
+        "footer": "Os eventos personalizados são limitados ao tenant e podem ser usados como gatilhos de fluxo de trabalho.",
+        "validation": {
+          "typeAndNameRequired": "O tipo de evento e o nome são obrigatórios.",
+          "schemaRefRequired": "Selecione uma referência de esquema de payload (ou use um esquema inline).",
+          "invalidJson": "O esquema de payload deve ser um JSON válido."
+        },
+        "toasts": {
+          "createSuccess": "Evento personalizado criado",
+          "createFailed": "Falha ao criar o evento"
+        }
+      },
+      "toasts": {
+        "loadEventsFailed": "Falha ao carregar os eventos",
+        "workflowCreated": "Fluxo de trabalho criado",
+        "createWorkflowFailed": "Falha ao criar o fluxo de trabalho",
+        "detachConfirm": "Desanexar este fluxo de trabalho do evento? Isso publica uma nova versão sem o gatilho.",
+        "detachValidationFailed": "Falha ao desanexar (erros de validação)",
+        "detached": "Desanexado",
+        "detachFailed": "Falha ao desanexar"
+      }
+    },
+    "actionInput": {
+      "fallbacks": {
+        "loadingOptions": "Carregando opções...",
+        "selectName": "Selecionar {{name}}",
+        "ticketSearchPlaceholder": "Pesquisar tickets por número ou título",
+        "ticketSelect": "Selecionar ticket",
+        "ticketTypeAbove": "Digite acima para pesquisar tickets",
+        "selectBoard": "Selecionar quadro",
+        "selectClient": "Selecionar cliente",
+        "selectContact": "Selecionar contato",
+        "selectUser": "Selecionar usuário",
+        "selectUserOrTeam": "Selecionar usuário ou equipe"
+      },
+      "errors": {
+        "loadTicket": "Falha ao carregar o ticket",
+        "searchTickets": "Falha ao pesquisar tickets",
+        "loadOptions": "Falha ao carregar as opções"
+      },
+      "dependencyHints": {
+        "contactClient": "Escolha primeiro um cliente fixo para carregar as opções de contato.",
+        "locationClient": "Escolha primeiro um cliente fixo para carregar as opções de local.",
+        "categoryBoard": "Escolha primeiro um quadro fixo para carregar as opções de categoria.",
+        "statusBoard": "Escolha primeiro um quadro fixo para carregar as opções de status.",
+        "statusTicket": "Escolha primeiro um ticket fixo para carregar as opções de status.",
+        "subcategoryBoard": "Escolha primeiro um quadro fixo para carregar as opções de subcategoria.",
+        "subcategoryCategory": "Escolha primeiro uma categoria fixa para carregar as opções de subcategoria."
+      }
+    }
+  },
+  "automationGate": {
+    "loading": "A carregar automação de fluxos de trabalho...",
+    "featureName": "Automação de fluxos de trabalho",
+    "notEnabled": "Esta funcionalidade é experimental e não está ativada para o seu inquilino.",
+    "experimental": "Experimental",
+    "enableHint": "Ative a Automação de fluxos de trabalho em Definições para aceder.",
+    "goToExperimental": "Ir para funcionalidades experimentais",
+    "openSettings": "Abrir definições"
   }
 }

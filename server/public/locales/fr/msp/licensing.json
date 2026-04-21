@@ -165,5 +165,12 @@
       "month": "mois",
       "year": "an"
     }
+  },
+  "workflowDesigner": {
+    "enterpriseHeading": "Fonctionnalité Enterprise",
+    "unavailable": "Le concepteur de workflows nécessite l'édition Enterprise. Veuillez passer à une version supérieure pour accéder à cette fonctionnalité."
+  },
+  "runStudio": {
+    "unavailable": "Workflow Run Studio n'est pas disponible dans cette édition. (runId : {{runId}})"
   }
 }

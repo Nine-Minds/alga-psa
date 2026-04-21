@@ -23,6 +23,7 @@ import { ISO8601String } from '@alga-psa/types';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from "@alga-psa/ui/components/ContactPicker";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface TicketSectionFiltersDialogProps {
   isOpen: boolean;
@@ -45,6 +46,7 @@ export function TicketSectionFiltersDialog({
   statuses = [],
   priorities = [],
 }: TicketSectionFiltersDialogProps) {
+  const { t } = useTranslation('msp/user-activities');
   // Local state excluding status, which is handled separately
   const [localFilters, setLocalFilters] = useState<Omit<Partial<ActivityFilters>, 'status'>>(() => {
     const { status, ...rest } = initialFilters;
@@ -128,10 +130,10 @@ export function TicketSectionFiltersDialog({
 
   const footer = (
     <div className="flex justify-between w-full">
-      <Button id="ticket-filter-clear" variant="outline" onClick={handleClear}>Reset</Button>
+      <Button id="ticket-filter-clear" variant="outline" onClick={handleClear}>{t('sections.tickets.filterDialog.actions.reset', { defaultValue: 'Reset' })}</Button>
       <div>
-        <Button id="ticket-filter-cancel" variant="ghost" className="mr-2" onClick={() => onOpenChange(false)}>Cancel</Button>
-        <Button id="ticket-filter-apply" onClick={handleApply}>Apply Filters</Button>
+        <Button id="ticket-filter-cancel" variant="ghost" className="mr-2" onClick={() => onOpenChange(false)}>{t('sections.tickets.filterDialog.actions.cancel', { defaultValue: 'Cancel' })}</Button>
+        <Button id="ticket-filter-apply" onClick={handleApply}>{t('sections.tickets.filterDialog.actions.apply', { defaultValue: 'Apply Filters' })}</Button>
       </div>
     </div>
   );
@@ -140,21 +142,21 @@ export function TicketSectionFiltersDialog({
     <Dialog isOpen={isOpen} onClose={() => onOpenChange(false)} footer={footer}>
       <DialogContent className="sm:max-w-[700]">
         <DialogHeader>
-          <DialogTitle>Filter Tickets</DialogTitle>
+          <DialogTitle>{t('sections.tickets.filterDialog.title', { defaultValue: 'Filter Tickets' })}</DialogTitle>
            <DialogDescription>
-             Select criteria to filter ticket activities.
+             {t('sections.tickets.filterDialog.description', { defaultValue: 'Select criteria to filter ticket activities.' })}
            </DialogDescription>
         </DialogHeader>
         <div className="py-2 space-y-4">
 
           {/* Search Filter */}
           <div className="space-y-1">
-            <Label htmlFor="ticket-search" className="text-base font-semibold">Search</Label>
+            <Label htmlFor="ticket-search" className="text-base font-semibold">{t('sections.tickets.filterDialog.fields.search', { defaultValue: 'Search' })}</Label>
             <Input
               id="ticket-search"
               value={localFilters.search || ''}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleSingleFilterChange('search', e.target.value)}
-              placeholder="Search title, description, ticket #"
+              placeholder={t('sections.tickets.filterDialog.fields.searchPlaceholder', { defaultValue: 'Search title, description, ticket #' })}
             />
           </div>
 
@@ -162,7 +164,7 @@ export function TicketSectionFiltersDialog({
           {/* Client, Contact, and Status Filters */}
           <div className="grid grid-cols-2 gap-x-6 gap-y-0">
             <div className="space-y-1">
-              <Label htmlFor="ticket-client-picker" className="text-base font-semibold">Client</Label>
+              <Label htmlFor="ticket-client-picker" className="text-base font-semibold">{t('sections.tickets.filterDialog.fields.client', { defaultValue: 'Client' })}</Label>
               <ClientPicker
                 id="ticket-client-picker"
                 clients={clients}
@@ -176,7 +178,7 @@ export function TicketSectionFiltersDialog({
               />
             </div>
              <div className="space-y-1">
-              <Label htmlFor="ticket-contact-picker" className="text-base font-semibold">Contact</Label>
+              <Label htmlFor="ticket-contact-picker" className="text-base font-semibold">{t('sections.tickets.filterDialog.fields.contact', { defaultValue: 'Contact' })}</Label>
               <ContactPicker
                 id="ticket-contact-picker"
                 contacts={contacts}
@@ -188,30 +190,30 @@ export function TicketSectionFiltersDialog({
             </div>
             {/* Status Filter */}
             <div className="space-y-1">
-              <Label htmlFor="ticket-status-select" className="text-base font-semibold">Status</Label>
+              <Label htmlFor="ticket-status-select" className="text-base font-semibold">{t('sections.tickets.filterDialog.fields.status', { defaultValue: 'Status' })}</Label>
               <CustomSelect
                 id="ticket-status-select"
                 value={selectedStatus}
                 onValueChange={(value) => setSelectedStatus(value)}
                 options={[
-                  { value: 'all', label: 'All Statuses' },
+                  { value: 'all', label: t('sections.tickets.filterDialog.fields.allStatuses', { defaultValue: 'All Statuses' }) },
                   ...statuses
                       .filter(s => !s.is_closed)
                       .map(status => ({ value: status.status_id, label: status.name }))
                 ]}
-                placeholder="Select Status..."
+                placeholder={t('sections.tickets.filterDialog.fields.statusPlaceholder', { defaultValue: 'Select Status...' })}
               />
             </div>
             {/* Priority Filter */}
             {priorities.length > 0 && (
               <div className="space-y-1">
-                <Label htmlFor="ticket-priority-select" className="text-base font-semibold">Priority</Label>
+                <Label htmlFor="ticket-priority-select" className="text-base font-semibold">{t('sections.tickets.filterDialog.fields.priority', { defaultValue: 'Priority' })}</Label>
                 <CustomSelect
                   id="ticket-priority-select"
                   value={selectedPriorityId}
                   onValueChange={(value) => setSelectedPriorityId(value)}
                   options={[
-                    { value: 'all', label: 'All Priorities' },
+                    { value: 'all', label: t('sections.tickets.filterDialog.fields.allPriorities', { defaultValue: 'All Priorities' }) },
                     ...priorities.map(p => ({
                       value: p.priority_id,
                       label: (
@@ -226,7 +228,7 @@ export function TicketSectionFiltersDialog({
                       textValue: p.priority_name,
                     }))
                   ]}
-                  placeholder="Select Priority..."
+                  placeholder={t('sections.tickets.filterDialog.fields.priorityPlaceholder', { defaultValue: 'Select Priority...' })}
                 />
               </div>
             )}
@@ -234,7 +236,7 @@ export function TicketSectionFiltersDialog({
 
           {/* Due Date Range */}
           <div className="space-y-1">
-             <Label htmlFor="ticket-due-date-range" className="text-base font-semibold">Due Date Range</Label>
+             <Label htmlFor="ticket-due-date-range" className="text-base font-semibold">{t('sections.tickets.filterDialog.fields.dueDateRange', { defaultValue: 'Due Date Range' })}</Label>
              <StringDateRangePicker
                 id="ticket-due-date-range"
                 value={{
@@ -249,7 +251,7 @@ export function TicketSectionFiltersDialog({
           <div className="pt-2">
              <Checkbox
                 id="show-closed-tickets"
-                label="Show Closed Tickets"
+                label={t('sections.tickets.filterDialog.fields.showClosedTickets', { defaultValue: 'Show Closed Tickets' })}
                 checked={localFilters.isClosed}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLocalFilters(prev => ({ ...prev, isClosed: e.target.checked }))}
               />

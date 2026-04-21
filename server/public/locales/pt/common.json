@@ -941,5 +941,19 @@
       "handoffFinalizeFailed": "Não foi possível finalizar seu login. Tente fazer login novamente.",
       "handoffNetworkIssue": "Problema de rede detectado ao finalizar seu login. Tente novamente."
     }
+  },
+  "form": {
+    "selectPlaceholder": "Selecionar...",
+    "clearSelection": "Limpar seleção",
+    "fromDate": "De",
+    "toDate": "Até",
+    "noResults": "Nenhum resultado encontrado",
+    "searchPlaceholder": "Pesquisar..."
+  },
+  "tagFilter": {
+    "placeholder": "Filtrar por etiquetas...",
+    "filter": "Filtrar",
+    "selectedCount": "{{count}} selecionado(s)",
+    "clearAll": "Limpar tudo"
   }
 }

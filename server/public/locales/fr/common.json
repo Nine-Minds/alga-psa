@@ -941,5 +941,19 @@
       "handoffFinalizeFailed": "Nous n'avons pas pu finaliser votre connexion. Veuillez réessayer.",
       "handoffNetworkIssue": "Problème réseau détecté lors de la finalisation de votre connexion. Veuillez réessayer."
     }
+  },
+  "form": {
+    "selectPlaceholder": "Sélectionner...",
+    "clearSelection": "Effacer la sélection",
+    "fromDate": "Du",
+    "toDate": "Au",
+    "noResults": "Aucun résultat trouvé",
+    "searchPlaceholder": "Rechercher..."
+  },
+  "tagFilter": {
+    "placeholder": "Filtrer par étiquettes...",
+    "filter": "Filtrer",
+    "selectedCount": "{{count}} sélectionné(s)",
+    "clearAll": "Tout effacer"
   }
 }

@@ -23,6 +23,7 @@ import {
   unhideTask
 } from "@alga-psa/workflows/actions/workflow-actions/taskInboxActions";
 import { markAsReadAction } from "@alga-psa/notifications/actions";
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ActivityActionMenuProps {
   activity: Activity;
@@ -31,6 +32,7 @@ interface ActivityActionMenuProps {
 }
 
 export function ActivityActionMenu({ activity, onActionComplete, onViewDetails }: ActivityActionMenuProps) {
+  const { t } = useTranslation('msp/user-activities');
   const { openActivityDrawer } = useActivityDrawer();
   const router = useRouter();
   
@@ -149,7 +151,7 @@ export function ActivityActionMenu({ activity, onActionComplete, onViewDetails }
         await dismissTask(activity.id);
       } catch (error: any) {
         console.error(`Error dismissing task:`, error);
-        alert(`Failed to dismiss task: ${error.message}`);
+        alert(t('drawer.menu.dismissError', { defaultValue: 'Failed to dismiss task: {{message}}', message: error.message }));
       }
     } else {
       console.warn('Dismiss action is only supported for workflow tasks');
@@ -210,7 +212,7 @@ export function ActivityActionMenu({ activity, onActionComplete, onViewDetails }
           size="sm"
           className="h-8 w-8 p-0"
         >
-          <span className="sr-only">Open menu</span>
+          <span className="sr-only">{t('drawer.menu.openMenu', { defaultValue: 'Open menu' })}</span>
           <MoreVertical className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
@@ -224,7 +226,7 @@ export function ActivityActionMenu({ activity, onActionComplete, onViewDetails }
               onClick={() => handleActionClick(action.id)}
               disabled={action.disabled}
             >
-              {action.id === 'edit' ? 'Go to page' : action.label}
+              {action.id === 'edit' ? t('drawer.menu.goToPage', { defaultValue: 'Go to page' }) : action.label}
               {action.disabledReason && action.disabled && (
                 <span className="text-xs text-gray-400 ml-2">{action.disabledReason}</span>
               )}
