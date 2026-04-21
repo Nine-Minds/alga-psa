@@ -200,25 +200,14 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         ...(params.recipientClientId && { clientId: params.recipientClientId })
       };
 
-      // Only do full locale resolution for client portal users
-      // MSP portal doesn't have i18n yet, so internal users always get English
-      if (recipientInfo.userType === 'client' || recipientInfo.clientId) {
-        recipientLocale = await resolveEmailLocale(params.tenantId, recipientInfo);
-        logger.debug('[SendEventEmail] Resolved client user locale:', {
-          locale: recipientLocale,
-          email: params.to,
-          userId: recipientInfo.userId,
-          clientId: recipientInfo.clientId
-        });
-      } else {
-        // Internal users always get English (MSP portal doesn't have i18n yet)
-        recipientLocale = 'en';
-        logger.debug('[SendEventEmail] Using English for internal/unknown user (MSP portal not i18n yet):', {
-          locale: recipientLocale,
-          email: params.to,
-          userType: recipientInfo.userType
-        });
-      }
+      recipientLocale = await resolveEmailLocale(params.tenantId, recipientInfo);
+      logger.debug('[SendEventEmail] Resolved recipient locale:', {
+        locale: recipientLocale,
+        email: params.to,
+        userId: recipientInfo.userId,
+        userType: recipientInfo.userType,
+        clientId: recipientInfo.clientId
+      });
     }
 
     // Get the template content using tenant-aware connection
@@ -379,7 +368,11 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
 
     // Use Handlebars to compile and render the template with context
     const htmlTemplate = Handlebars.compile(templateContent);
-    const subjectTemplate = Handlebars.compile(emailSubject);
+    // Subject and plain-text fall-back are NOT HTML — compile with noEscape so
+    // interpolated values like a ticket/task title containing `"` render
+    // literally instead of as `&quot;`. Handlebars' default HTML-escape is
+    // correct for the HTML body only.
+    const subjectTemplate = Handlebars.compile(emailSubject, { noEscape: true });
 
     let html = htmlTemplate(params.context);
     let subject = subjectTemplate(params.context).replace(/[\r\n]+/g, ' ').trim();
@@ -392,7 +385,20 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       contextKeys: Object.keys(params.context)
     });
 
-    let text = html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+    // Plain-text fall-back: strip tags AND decode common HTML entities so
+    // literal characters like `"` and `&` don't leak through as `&quot;` /
+    // `&amp;` in clients that show the text/plain alternative.
+    let text = html
+      .replace(/<[^>]*>/g, '')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&#x27;/g, "'")
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/\s+/g, ' ')
+      .trim();
 
     let replyPayload: ReplyMarkerPayload | null = null;
     if (params.replyContext?.ticketId || params.replyContext?.projectId) {

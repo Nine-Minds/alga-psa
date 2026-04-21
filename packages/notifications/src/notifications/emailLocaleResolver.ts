@@ -7,12 +7,37 @@
 import { getConnection } from '@alga-psa/db';
 import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
 import logger from '@alga-psa/core/logger';
+import { featureFlags } from '@alga-psa/core/server';
 
 export interface EmailRecipient {
   email: string;
   userId?: string;
   userType?: 'client' | 'internal';
   clientId?: string;
+}
+
+/**
+ * Returns true when MSP i18n is enabled for this tenant/user. When disabled,
+ * internal (MSP) users must receive English emails regardless of preferences,
+ * matching the UI rollout gated by I18nWrapper.
+ */
+async function isMspI18nEnabled(
+  tenantId: string,
+  userId?: string
+): Promise<boolean> {
+  try {
+    return await featureFlags.isEnabled('msp-i18n-enabled', {
+      tenantId,
+      userId,
+    });
+  } catch (error) {
+    logger.warn('[EmailLocaleResolver] msp-i18n-enabled evaluation failed; defaulting to disabled', {
+      error: error instanceof Error ? error.message : String(error),
+      tenantId,
+      userId,
+    });
+    return false;
+  }
 }
 
 async function getUserClientId(userId: string, tenantId: string): Promise<string | null> {
@@ -52,18 +77,31 @@ export async function resolveEmailLocale(
     let userType = recipient.userType;
     let clientId = recipient.clientId;
 
-    if (recipient.userId) {
-      if (!userType) {
-        const user = await knex('users')
-          .where({
-            user_id: recipient.userId,
-            tenant: tenantId
-          })
-          .first();
+    // Resolve userType early so we can feature-flag gate internal users
+    if (recipient.userId && !userType) {
+      const user = await knex('users')
+        .where({
+          user_id: recipient.userId,
+          tenant: tenantId
+        })
+        .first();
 
-        userType = user?.user_type || 'internal';
+      userType = user?.user_type || 'internal';
+    }
+
+    // Internal (MSP) users: skip hierarchy when msp-i18n-enabled is off
+    if (userType === 'internal') {
+      const enabled = await isMspI18nEnabled(tenantId, recipient.userId);
+      if (!enabled) {
+        logger.debug('[EmailLocaleResolver] msp-i18n-enabled is off; forcing English for internal user', {
+          tenantId,
+          userId: recipient.userId
+        });
+        return LOCALE_CONFIG.defaultLocale as SupportedLocale;
       }
+    }
 
+    if (recipient.userId) {
       const userPref = await knex('user_preferences')
         .where({
           user_id: recipient.userId,
@@ -114,6 +152,16 @@ export async function resolveEmailLocale(
         logger.debug('[EmailLocaleResolver] Using tenant client portal default:', { locale: clientPortalLocale });
         return clientPortalLocale;
       }
+    } else if (userType === 'internal') {
+      const tenantSettings = await knex('tenant_settings')
+        .where({ tenant: tenantId })
+        .first();
+
+      const mspPortalLocale = tenantSettings?.settings?.mspPortal?.defaultLocale;
+      if (mspPortalLocale && isSupportedLocale(mspPortalLocale)) {
+        logger.debug('[EmailLocaleResolver] Using tenant MSP portal default:', { locale: mspPortalLocale });
+        return mspPortalLocale;
+      }
     }
 
     const defaultLocale = await getTenantDefaultLocale(tenantId, userType || 'client');
@@ -140,6 +188,11 @@ export async function getTenantDefaultLocale(
       const clientPortalLocale = tenantSettings?.settings?.clientPortal?.defaultLocale;
       if (clientPortalLocale && isSupportedLocale(clientPortalLocale)) {
         return clientPortalLocale;
+      }
+    } else if (userType === 'internal') {
+      const mspPortalLocale = tenantSettings?.settings?.mspPortal?.defaultLocale;
+      if (mspPortalLocale && isSupportedLocale(mspPortalLocale)) {
+        return mspPortalLocale;
       }
     }
 

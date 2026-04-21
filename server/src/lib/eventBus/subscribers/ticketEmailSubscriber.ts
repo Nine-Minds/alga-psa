@@ -726,10 +726,33 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     if (!rawDescription && 'description' in ticket) {
       rawDescription = safeString((ticket as Record<string, unknown>).description);
     }
-    const descriptionFormatting = rawDescription ? formatBlockNoteContent(rawDescription) : formatBlockNoteContent('');
-    const descriptionText = descriptionFormatting.text || rawDescription;
+    // Email-ingested tickets store the inbound body as the first comment, not
+    // on the ticket row. Fall back to the initial-description comment (or the
+    // oldest comment) so the "New Ticket" email carries the user's original
+    // message instead of "No description provided".
+    if (!rawDescription) {
+      const descriptionComment = await db('comments')
+        .select('note')
+        .where({ ticket_id: ticket.ticket_id, tenant: tenantId })
+        .orderBy([
+          { column: 'is_initial_description', order: 'desc' },
+          { column: 'created_at', order: 'asc' }
+        ])
+        .first();
+      if (descriptionComment?.note) {
+        rawDescription = safeString(descriptionComment.note);
+      }
+    }
+    // formatBlockNoteContent returns { html:'', text:'' } when the input is
+    // empty or is a BlockNote blob that has no extractable text — do NOT fall
+    // back to rawDescription here because it may be raw JSON which we'd
+    // otherwise leak into the email body.
+    const descriptionFormatting = formatBlockNoteContent(rawDescription);
+    const descriptionText = descriptionFormatting.text.trim();
     const description = descriptionText || 'No description provided.';
-    const descriptionHtml = rawDescription ? descriptionFormatting.html : `<p>${description}</p>`;
+    const descriptionHtml = descriptionText
+      ? descriptionFormatting.html
+      : `<p>${description}</p>`;
 
     const requesterDetailsForText = requesterDetails;
     const assignedDetailsForText = assignedDetails;
@@ -1073,8 +1096,11 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     if (!rawDescription && 'description' in ticket) {
       rawDescription = safeString((ticket as Record<string, unknown>).description);
     }
-    const descriptionFormatting = rawDescription ? formatBlockNoteContent(rawDescription) : formatBlockNoteContent('');
-    const descriptionText = descriptionFormatting.text || rawDescription;
+    // formatBlockNoteContent returns { html:'', text:'' } for empty or
+    // non-extractable BlockNote input — do NOT fall back to rawDescription
+    // here because it may be raw JSON we'd otherwise leak into the email.
+    const descriptionFormatting = formatBlockNoteContent(rawDescription);
+    const descriptionText = descriptionFormatting.text.trim();
     const description = descriptionText || 'No description provided.';
 
     // Format changes with database lookups
@@ -1562,8 +1588,11 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
     if (!rawDescription && 'description' in ticket) {
       rawDescription = safeString((ticket as Record<string, unknown>).description);
     }
-    const descriptionFormatting = rawDescription ? formatBlockNoteContent(rawDescription) : formatBlockNoteContent('');
-    const descriptionText = descriptionFormatting.text || rawDescription;
+    // formatBlockNoteContent returns { html:'', text:'' } for empty or
+    // non-extractable BlockNote input — do NOT fall back to rawDescription
+    // here because it may be raw JSON we'd otherwise leak into the email.
+    const descriptionFormatting = formatBlockNoteContent(rawDescription);
+    const descriptionText = descriptionFormatting.text.trim();
     const description = descriptionText || 'No description provided.';
 
     // Resolve timezone for email formatting (tenant-level, no single userId for accumulated changes)
@@ -1833,8 +1862,11 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
     if (!rawDescription && 'description' in ticket) {
       rawDescription = safeString((ticket as Record<string, unknown>).description);
     }
-    const descriptionFormatting = rawDescription ? formatBlockNoteContent(rawDescription) : formatBlockNoteContent('');
-    const descriptionText = descriptionFormatting.text || rawDescription;
+    // formatBlockNoteContent returns { html:'', text:'' } for empty or
+    // non-extractable BlockNote input — do NOT fall back to rawDescription
+    // here because it may be raw JSON we'd otherwise leak into the email.
+    const descriptionFormatting = formatBlockNoteContent(rawDescription);
+    const descriptionText = descriptionFormatting.text.trim();
     const description = descriptionText || 'No description provided.';
 
     const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
@@ -1935,13 +1967,63 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       teamName = team?.team_name;
     }
 
-    if (isValidEmail(primaryEmail)) {
-      if (teamName) {
-        // Team assignment: use team-specific template for client
-        const teamContext = {
+    if (isValidEmail(primaryEmail) && teamName) {
+      // Team assignment: notify the client with the client-facing
+      // ticket-team-assigned template.
+      const teamContext = {
+        ticket: {
+          ...baseTicketContext,
+          teamName,
+          url: portalUrl
+        }
+      };
+      await sendIfUnique({
+        tenantId,
+        ...emailEntityContext,
+        contactId: primaryContactId,
+        to: primaryEmail,
+        subject: `Team Assigned to Your Ticket: ${ticket.title}`,
+        template: 'ticket-team-assigned',
+        context: teamContext,
+        replyContext
+      }, 'Ticket Team Assigned');
+    } else if (isValidEmail(primaryEmail) && ticket.assigned_to) {
+      // Individual agent assignment. Only notify the client when:
+      //   (a) this is a FIRST individual assignment (the previous assignee was
+      //       null or a team) — reassignments between agents are MSP-internal
+      //       routing and don't produce a client-facing email; and
+      //   (b) the assignment is not happening at ticket-creation time — in
+      //       that case the ticket-created email the client already receives
+      //       carries enough context, and firing a second email moments later
+      //       is redundant.
+      const previousAssigneeId = (payload as any).previousAssigneeId as string | undefined;
+      const previousAssigneeType = (payload as any).previousAssigneeType as 'user' | 'team' | undefined;
+      const isFirstIndividualAssignment = !previousAssigneeId || previousAssigneeType === 'team';
+
+      const enteredAtMs = ticket.entered_at ? new Date(ticket.entered_at).getTime() : 0;
+      const CREATION_WINDOW_MS = 30_000;
+      const isCreationTimeAssignment = enteredAtMs > 0 && (Date.now() - enteredAtMs) <= CREATION_WINDOW_MS;
+
+      if (isFirstIndividualAssignment && !isCreationTimeAssignment) {
+        // The client can already see the agent's name on the ticket itself,
+        // so the client-facing template includes the agent in the same row
+        // format as the MSP ticket-assigned template for visual consistency.
+        const clientContext = {
           ticket: {
-            ...baseTicketContext,
-            teamName,
+            id: baseTicketContext.id,
+            title: baseTicketContext.title,
+            clientName: baseTicketContext.clientName,
+            priority: baseTicketContext.priority,
+            priorityColor: baseTicketContext.priorityColor,
+            status: baseTicketContext.status,
+            assignedToName: baseTicketContext.assignedToName,
+            assignedToEmail: baseTicketContext.assignedToEmail,
+            assignedDetails: baseTicketContext.assignedDetails,
+            board: baseTicketContext.board,
+            category: baseTicketContext.category,
+            categoryDetails: baseTicketContext.categoryDetails,
+            requesterName: baseTicketContext.requesterName,
+            metaLine: baseTicketContext.metaLine,
             url: portalUrl
           }
         };
@@ -1950,22 +2032,11 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
           ...emailEntityContext,
           contactId: primaryContactId,
           to: primaryEmail,
-          subject: `Team Assigned to Your Ticket: ${ticket.title}`,
-          template: 'ticket-team-assigned',
-          context: teamContext,
+          subject: `Your Ticket Is Being Worked On: ${ticket.title}`,
+          template: 'ticket-agent-assigned-client',
+          context: clientContext,
           replyContext
-        }, 'Ticket Team Assigned');
-      } else {
-        await sendIfUnique({
-          tenantId,
-          ...emailEntityContext,
-          contactId: primaryContactId,
-          to: primaryEmail,
-          subject: `Ticket Assigned: ${ticket.title}`,
-          template: 'ticket-assigned',
-          context: buildContext(portalUrl),
-          replyContext
-        }, 'Ticket Assigned');
+        }, 'Ticket Agent Assigned Client');
       }
     }
 
@@ -1996,23 +2067,37 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       }
     }
 
-    await sendOneEmailPerWatcher(
-      activeWatcherEmails,
-      async (watcherEmail) => {
-        await sendIfUnique({
-          tenantId,
-          ...emailEntityContext,
-          to: watcherEmail,
-          subject: `Ticket Assigned: ${ticket.title}`,
-          template: 'ticket-assigned',
-          context: buildContext(portalUrl),
-          replyContext
-        }, 'Ticket Assigned');
-      },
-      {
-        excludeEmails: sentEmails,
-      }
-    );
+    // Watcher emails may include external contacts. Only notify watchers on
+    // team assignment (using the neutral, client-safe template). For individual
+    // agent assignment, watchers will still be informed via subsequent
+    // ticket-updated / comment-added events, so we skip the assignment-time
+    // email rather than sending the assignee-perspective ticket-assigned copy.
+    if (teamName) {
+      const watcherTeamContext = {
+        ticket: {
+          ...baseTicketContext,
+          teamName,
+          url: portalUrl
+        }
+      };
+      await sendOneEmailPerWatcher(
+        activeWatcherEmails,
+        async (watcherEmail) => {
+          await sendIfUnique({
+            tenantId,
+            ...emailEntityContext,
+            to: watcherEmail,
+            subject: `Team Assigned to Ticket: ${ticket.title}`,
+            template: 'ticket-team-assigned',
+            context: watcherTeamContext,
+            replyContext
+          }, 'Ticket Team Assigned');
+        },
+        {
+          excludeEmails: sentEmails,
+        }
+      );
+    }
 
   } catch (error) {
     logger.error('Error handling ticket assigned event:', {
@@ -2243,8 +2328,11 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     if (!rawDescription && 'description' in ticket) {
       rawDescription = safeString((ticket as Record<string, unknown>).description);
     }
-    const descriptionFormatting = rawDescription ? formatBlockNoteContent(rawDescription) : formatBlockNoteContent('');
-    const descriptionText = descriptionFormatting.text || rawDescription;
+    // formatBlockNoteContent returns { html:'', text:'' } for empty or
+    // non-extractable BlockNote input — do NOT fall back to rawDescription
+    // here because it may be raw JSON we'd otherwise leak into the email.
+    const descriptionFormatting = formatBlockNoteContent(rawDescription);
+    const descriptionText = descriptionFormatting.text.trim();
     const description = descriptionText || 'No description provided.';
 
     // Get all additional resources
@@ -2768,8 +2856,11 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     if (!rawDescription && 'description' in ticket) {
       rawDescription = safeString((ticket as Record<string, unknown>).description);
     }
-    const descriptionFormatting = rawDescription ? formatBlockNoteContent(rawDescription) : formatBlockNoteContent('');
-    const descriptionText = descriptionFormatting.text || rawDescription;
+    // formatBlockNoteContent returns { html:'', text:'' } for empty or
+    // non-extractable BlockNote input — do NOT fall back to rawDescription
+    // here because it may be raw JSON we'd otherwise leak into the email.
+    const descriptionFormatting = formatBlockNoteContent(rawDescription);
+    const descriptionText = descriptionFormatting.text.trim();
     const description = descriptionText || 'No description provided.';
 
     const changes = await formatChanges(db, payload.changes || {}, tenantId, emailTimeZone);
