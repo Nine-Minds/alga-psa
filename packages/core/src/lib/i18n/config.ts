@@ -111,14 +111,24 @@ export const I18N_CONFIG = {
 export const PSEUDO_LOCALES: ReadonlyArray<SupportedLocale> = ['xx', 'yy'];
 
 /**
- * Filter pseudo-locales from a locale list based on a toggle.
+ * Locales whose translation packs are still in progress and should not yet be
+ * offered in user-facing pickers. Translations remain on disk so existing
+ * users who already selected them keep working, and so we can continue
+ * iterating on them, but they won't appear as new selections.
+ */
+export const INCOMPLETE_LOCALES: ReadonlyArray<SupportedLocale> = ['pt'];
+
+/**
+ * Filter pseudo-locales (and always-hidden incomplete locales) from a list.
  */
 export function filterPseudoLocales(
   locales: readonly SupportedLocale[],
   includePseudo: boolean,
 ): SupportedLocale[] {
-  if (includePseudo) return [...locales];
-  return locales.filter((l) => !(PSEUDO_LOCALES as readonly string[]).includes(l));
+  const base = includePseudo
+    ? [...locales]
+    : locales.filter((l) => !(PSEUDO_LOCALES as readonly string[]).includes(l));
+  return base.filter((l) => !(INCOMPLETE_LOCALES as readonly string[]).includes(l));
 }
 
 /**

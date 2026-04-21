@@ -134,7 +134,7 @@
     "currentLanguage": "Current Language",
     "preference": {
       "label": "Language Preference",
-      "helper": "Select your preferred language for the interface and email notifications",
+      "helper": "Select your preferred language for the interface and email notifications. Overrides the organization and client portal defaults for you.",
       "placeholder": "Select a language",
       "cleared": "Language preference cleared. Using default language...",
       "updating": "Updating language preference...",
@@ -144,6 +144,43 @@
         "client": "client default",
         "tenant": "tenant default",
         "system": "system default"
+      }
+    },
+    "hierarchyTable": {
+      "title": "Language Preference Hierarchy",
+      "description": "When resolving which language to use for the interface and email notifications, Alga checks these in order and stops at the first match.",
+      "columns": {
+        "priority": "Priority",
+        "source": "Language Source",
+        "appliesTo": "Applies To",
+        "whereSet": "Where It's Set"
+      },
+      "rows": {
+        "userPreference": {
+          "source": "Individual user preference",
+          "appliesTo": "All users",
+          "whereSet": "User profile"
+        },
+        "clientUserLanguage": {
+          "source": "Client-specific user language",
+          "appliesTo": "Client portal users (per specific client)",
+          "whereSet": "Client Details"
+        },
+        "clientPortalDefault": {
+          "source": "Client Portal default",
+          "appliesTo": "All client portal users",
+          "whereSet": "MSP Settings → Client Portal"
+        },
+        "organizationDefault": {
+          "source": "Organization default",
+          "appliesTo": "All users (MSP staff and client portal)",
+          "whereSet": "MSP Settings → Language"
+        },
+        "systemDefault": {
+          "source": "System default (English)",
+          "appliesTo": "Fallback",
+          "whereSet": "System-defined"
+        }
       }
     }
   },

@@ -318,6 +318,11 @@
         "label": "Adresse e-mail",
         "placeholder": "john@acmeit.com",
         "help": "Cela sera utilisé pour vous connecter à votre compte."
+      },
+      "language": {
+        "label": "Langue",
+        "placeholder": "Sélectionnez une langue",
+        "help": "Devient la valeur par défaut de l'organisation pour tout le monde — personnel MSP et utilisateurs du portail client. Les utilisateurs individuels et les clients peuvent la remplacer plus tard."
       }
     },
     "password": {

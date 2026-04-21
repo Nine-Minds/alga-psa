@@ -303,12 +303,13 @@ describe('MSP i18n Phase 1', () => {
     expect(languagePreference).toContain('setLocale(newLocale)');
   });
 
-  it('T042-T047: MSP language settings UI and persistence wiring are present', () => {
+  it('T042-T047: Organization language settings UI is wired to tenant-wide actions', () => {
     const mspSettings = readRepoFile('server/src/components/settings/general/MspLanguageSettings.tsx');
     expect(mspSettings).toContain('CustomSelect');
     expect(mspSettings).toContain("t('mspLanguage.fields.availableLanguages')");
-    expect(mspSettings).toContain('updateTenantMspLocaleSettingsAction');
-    expect(mspSettings).toContain('getTenantMspLocaleSettingsAction');
+    // Writes the whole-PSA default via the tenant-wide action.
+    expect(mspSettings).toContain('updateTenantDefaultLocaleAction');
+    expect(mspSettings).toContain('getTenantLocaleSettingsAction');
 
     const settingsPage = readRepoFile('server/src/components/settings/SettingsPage.tsx');
     expect(settingsPage).toContain('MspLanguageSettings');
@@ -318,16 +319,21 @@ describe('MSP i18n Phase 1', () => {
     expect(sidebar).toContain("item.translationKey !== 'settings.tabs.language'");
   });
 
-  it('T048-T049: MSP locale tenant actions read and write mspPortal settings', () => {
+  it('T048-T049: legacy MSP-portal-specific locale actions remain for back-compat reads', () => {
+    // The unified settings UI now writes to settings.defaultLocale via
+    // tenantLocaleActions, but the mspPortal-specific actions are kept so any
+    // existing callers / migrations can still read legacy data.
     const actions = readRepoFile('packages/tenancy/src/actions/tenant-actions/tenantMspLocaleActions.ts');
     expect(actions).toContain('getTenantMspLocaleSettingsAction');
     expect(actions).toContain('updateTenantMspLocaleSettingsAction');
     expect(actions).toContain('mspPortal');
   });
 
-  it('T050-T052: hierarchical locale resolution prefers MSP org defaults for internal users', () => {
+  it('T050-T052: hierarchical locale resolution uses the tenant-wide default with legacy portal fallback', () => {
     const src = readRepoFile('packages/tenancy/src/actions/locale-actions/getHierarchicalLocale.ts');
-    expect(src).toContain('mspPortal');
+    expect(src).toContain('Organization default');
+    expect(src).toContain('settings?.defaultLocale');
+    expect(src).toContain('Legacy fallback');
     expect(src).toContain('System default');
   });
 

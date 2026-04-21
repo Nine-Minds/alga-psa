@@ -129,6 +129,43 @@
         "tenant": "tenantstandaard",
         "system": "systeemstandaard"
       }
+    },
+    "hierarchyTable": {
+      "title": "Taalvoorkeurshiërarchie",
+      "description": "Bij het bepalen welke taal gebruikt moet worden voor de interface en e-mailmeldingen, controleert Alga deze in volgorde en stopt bij de eerste overeenkomst.",
+      "columns": {
+        "priority": "Prioriteit",
+        "source": "Taalbron",
+        "appliesTo": "Van toepassing op",
+        "whereSet": "Waar ingesteld"
+      },
+      "rows": {
+        "userPreference": {
+          "source": "Individuele gebruikersvoorkeur",
+          "appliesTo": "Alle gebruikers",
+          "whereSet": "Gebruikersprofiel"
+        },
+        "clientUserLanguage": {
+          "source": "Klantspecifieke taal",
+          "appliesTo": "Klantportaalgebruikers (per specifieke klant)",
+          "whereSet": "Klantgegevens"
+        },
+        "clientPortalDefault": {
+          "source": "Standaard klantportaal",
+          "appliesTo": "Alle klantportaalgebruikers",
+          "whereSet": "MSP-instellingen → Klantportaal"
+        },
+        "organizationDefault": {
+          "source": "Organisatiestandaard",
+          "appliesTo": "Alle gebruikers (MSP-personeel en klantportaal)",
+          "whereSet": "MSP-instellingen → Taal"
+        },
+        "systemDefault": {
+          "source": "Systeemstandaard (Engels)",
+          "appliesTo": "Fallback",
+          "whereSet": "Systeemgedefinieerd"
+        }
+      }
     }
   },
   "yes": "Ja",

@@ -678,7 +678,7 @@
   "clientLanguagePreference": {
     "title": "Impostazioni della lingua del client",
     "label": "Lingua predefinita per i contatti",
-    "description": "Imposta la lingua predefinita per tutti i contatti in {{clientName}}. I singoli utenti possono ignorarlo nelle loro impostazioni personali.",
+    "description": "Si applica a ogni utente del portale di {{clientName}} salvo che abbia impostato la propria preferenza nel proprio profilo.",
     "selectPlaceholder": "Seleziona una lingua",
     "updating": "Aggiornamento della preferenza della lingua...",
     "loadError": "Impossibile caricare la preferenza della lingua del client:",

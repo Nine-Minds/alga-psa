@@ -89,35 +89,35 @@ export async function resolveEmailLocale(
       }
     }
 
-    if (userType === 'client' || clientId) {
-      if (clientId) {
-        const client = await knex('clients')
-          .where({
-            client_id: clientId,
-            tenant: tenantId
-          })
-          .first();
+    // Client-specific default (client-portal users / portal invitations only)
+    if ((userType === 'client' || clientId) && clientId) {
+      const client = await knex('clients')
+        .where({ client_id: clientId, tenant: tenantId })
+        .first();
 
-        const clientLocale = client?.properties?.defaultLocale;
-        if (clientLocale && isSupportedLocale(clientLocale)) {
-          logger.debug('[EmailLocaleResolver] Using client preference:', { locale: clientLocale, clientId });
-          return clientLocale;
-        }
+      const clientLocale = client?.properties?.defaultLocale;
+      if (clientLocale && isSupportedLocale(clientLocale)) {
+        logger.debug('[EmailLocaleResolver] Using client preference:', { locale: clientLocale, clientId });
+        return clientLocale;
       }
+    }
 
+    // Client-portal default (client-portal users only)
+    if (userType === 'client' || clientId) {
       const tenantSettings = await knex('tenant_settings')
         .where({ tenant: tenantId })
         .first();
 
       const clientPortalLocale = tenantSettings?.settings?.clientPortal?.defaultLocale;
       if (clientPortalLocale && isSupportedLocale(clientPortalLocale)) {
-        logger.debug('[EmailLocaleResolver] Using tenant client portal default:', { locale: clientPortalLocale });
+        logger.debug('[EmailLocaleResolver] Using client-portal default:', { locale: clientPortalLocale });
         return clientPortalLocale;
       }
     }
 
+    // Organization default (applies to everyone)
     const defaultLocale = await getTenantDefaultLocale(tenantId, userType || 'client');
-    logger.debug('[EmailLocaleResolver] Using tenant/system default:', { locale: defaultLocale, userType: userType || 'client' });
+    logger.debug('[EmailLocaleResolver] Using org/system default:', { locale: defaultLocale, userType: userType || 'client' });
     return defaultLocale;
 
   } catch (error) {
@@ -136,16 +136,17 @@ export async function getTenantDefaultLocale(
       .where({ tenant: tenantId })
       .first();
 
-    if (userType === 'client') {
-      const clientPortalLocale = tenantSettings?.settings?.clientPortal?.defaultLocale;
-      if (clientPortalLocale && isSupportedLocale(clientPortalLocale)) {
-        return clientPortalLocale;
-      }
-    }
-
     const tenantDefaultLocale = tenantSettings?.settings?.defaultLocale;
     if (tenantDefaultLocale && isSupportedLocale(tenantDefaultLocale)) {
       return tenantDefaultLocale;
+    }
+
+    // Legacy MSP-only default (retired split UI)
+    if (userType === 'internal') {
+      const legacyMspLocale = tenantSettings?.settings?.mspPortal?.defaultLocale;
+      if (legacyMspLocale && isSupportedLocale(legacyMspLocale)) {
+        return legacyMspLocale;
+      }
     }
   } catch (error) {
     logger.error('[EmailLocaleResolver] Error getting tenant default locale:', { error, tenantId });

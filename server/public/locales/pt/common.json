@@ -145,6 +145,43 @@
         "tenant": "tenant default",
         "system": "system default"
       }
+    },
+    "hierarchyTable": {
+      "title": "Hierarquia de preferência de idioma",
+      "description": "Ao determinar qual idioma usar para a interface e notificações por email, o Alga verifica estes itens em ordem e para na primeira correspondência.",
+      "columns": {
+        "priority": "Prioridade",
+        "source": "Origem do idioma",
+        "appliesTo": "Aplica-se a",
+        "whereSet": "Onde configurar"
+      },
+      "rows": {
+        "userPreference": {
+          "source": "Preferência individual do usuário",
+          "appliesTo": "Todos os usuários",
+          "whereSet": "Perfil do usuário"
+        },
+        "clientUserLanguage": {
+          "source": "Idioma específico do cliente",
+          "appliesTo": "Usuários do portal do cliente (por cliente específico)",
+          "whereSet": "Detalhes do cliente"
+        },
+        "clientPortalDefault": {
+          "source": "Padrão do portal do cliente",
+          "appliesTo": "Todos os usuários do portal do cliente",
+          "whereSet": "Configurações MSP → Portal do cliente"
+        },
+        "organizationDefault": {
+          "source": "Padrão da organização",
+          "appliesTo": "Todos os usuários (equipe MSP e portal do cliente)",
+          "whereSet": "Configurações MSP → Idioma"
+        },
+        "systemDefault": {
+          "source": "Padrão do sistema (inglês)",
+          "appliesTo": "Alternativa",
+          "whereSet": "Definido pelo sistema"
+        }
+      }
     }
   },
   "yes": "Yes",

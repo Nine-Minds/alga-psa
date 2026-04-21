@@ -318,6 +318,11 @@
         "label": "11111",
         "placeholder": "11111",
         "help": "11111"
+      },
+      "language": {
+        "label": "11111",
+        "placeholder": "11111",
+        "help": "11111"
       }
     },
     "password": {
