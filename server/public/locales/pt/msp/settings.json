@@ -685,27 +685,6 @@
     }
   },
   "clientPortal": {
-    "language": {
-      "title": "Language Settings",
-      "description": "Configure the default language settings for your client portal. These settings apply to all users and clients unless overridden.",
-      "fields": {
-        "defaultLanguage": "Default Language",
-        "availableLanguages": "Available Languages"
-      },
-      "help": {
-        "defaultLanguage": "This will be the default language for all client portal users and email notifications unless overridden by client setting or individual user preferences",
-        "availableLanguages": "Select which languages are available for users to choose from"
-      },
-      "hierarchy": {
-        "title": "Language Preference Hierarchy",
-        "description": "This hierarchy applies to both the client portal interface and email notifications sent to client portal users:",
-        "userPreference": "Individual user preference (highest priority)",
-        "clientDefault": "Client default language",
-        "orgDefault": "Organization default (configured here)",
-        "systemDefault": "System default (English)",
-        "note": "Note: Internal MSP users always receive emails in English"
-      }
-    },
     "branding": {
       "title": "Branding & Appearance",
       "description": "Customize the look and feel of your client portal with your company branding.",
@@ -791,21 +770,15 @@
     }
   },
   "mspLanguage": {
-    "title": "Language",
-    "description": "Configure the default language settings for the MSP portal. These settings apply to all MSP users unless overridden by individual preferences.",
+    "title": "Idioma da organização",
+    "description": "Defina o idioma padrão para toda a organização — equipe MSP, usuários do portal do cliente e notificações por email. Cada usuário ou cliente pode substituí-lo individualmente.",
     "fields": {
-      "defaultLanguage": "Default Language",
-      "availableLanguages": "Available Languages"
+      "defaultLanguage": "Idioma padrão",
+      "availableLanguages": "Idiomas disponíveis"
     },
     "help": {
-      "defaultLanguage": "This will be the default language for all MSP portal users unless overridden by their personal preference.",
-      "availableLanguages": "Select which languages are available for MSP users to choose from"
-    },
-    "hierarchy": {
-      "title": "Language Preference Hierarchy",
-      "userPreference": "Individual user preference (highest priority)",
-      "orgDefault": "Organization default (configured here)",
-      "systemDefault": "System default (English)"
+      "defaultLanguage": "Aplicado em todo lugar, a menos que substituído pela preferência pessoal de um usuário ou pelo idioma configurado para um cliente específico.",
+      "availableLanguages": "Selecione entre quais idiomas os usuários podem escolher."
     }
   },
   "notifications": {
@@ -1367,5 +1340,19 @@
       "holidayAdded": "Feriado adicionado com sucesso",
       "holidayDeleted": "Feriado excluído com sucesso"
     }
+  },
+  "clientPortalLanguage": {
+    "title": "Idioma do portal do cliente",
+    "description": "Substitua o idioma padrão apenas para usuários do portal do cliente. A equipe MSP mantém o padrão da organização.",
+    "fields": {
+      "defaultLanguage": "Idioma padrão"
+    },
+    "help": {
+      "defaultLanguage": "Quando definido, os usuários do portal do cliente veem este idioma, a menos que a preferência individual ou o idioma configurado para o cliente o substitua."
+    },
+    "placeholder": "Selecione um idioma",
+    "inheritOption": "Usar o padrão da organização ({{language}})",
+    "unsetHint": "Para remover a substituição do portal do cliente, altere o padrão da organização em Configurações → Idioma.",
+    "updated": "Idioma padrão do portal do cliente atualizado para {{language}}"
   }
 }

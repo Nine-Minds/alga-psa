@@ -75,29 +75,12 @@ export const getInheritedLocaleAction = withOptionalAuth(async (user: IUserWithR
     }
   }
 
-  // 2. Check tenant preference
   const tenantSettings = await knex('tenant_settings')
     .where({ tenant })
     .first();
 
-  if (user.user_type === 'internal') {
-    const mspPortalLocale = tenantSettings?.settings?.mspPortal?.defaultLocale;
-    if (mspPortalLocale && isSupportedLocale(mspPortalLocale)) {
-      return {
-        locale: mspPortalLocale,
-        source: 'tenant'
-      };
-    }
-
-    const tenantDefaultLocale = tenantSettings?.settings?.defaultLocale;
-    if (tenantDefaultLocale && isSupportedLocale(tenantDefaultLocale)) {
-      return {
-        locale: tenantDefaultLocale,
-        source: 'tenant'
-      };
-    }
-  } else {
-    // Check client portal default first (for client users)
+  // 2. Client-portal default — applies to client-portal users only
+  if (user.user_type === 'client') {
     const clientPortalLocale = tenantSettings?.settings?.clientPortal?.defaultLocale;
     if (clientPortalLocale && isSupportedLocale(clientPortalLocale)) {
       return {
@@ -105,18 +88,29 @@ export const getInheritedLocaleAction = withOptionalAuth(async (user: IUserWithR
         source: 'tenant'
       };
     }
+  }
 
-    // Check tenant-wide default
-    const tenantDefaultLocale = tenantSettings?.settings?.defaultLocale;
-    if (tenantDefaultLocale && isSupportedLocale(tenantDefaultLocale)) {
+  // 3. Organization default (applies to everyone)
+  const tenantDefaultLocale = tenantSettings?.settings?.defaultLocale;
+  if (tenantDefaultLocale && isSupportedLocale(tenantDefaultLocale)) {
+    return {
+      locale: tenantDefaultLocale,
+      source: 'tenant'
+    };
+  }
+
+  // Legacy MSP-only default written by the retired split UI
+  if (user.user_type === 'internal') {
+    const legacyMspLocale = tenantSettings?.settings?.mspPortal?.defaultLocale;
+    if (legacyMspLocale && isSupportedLocale(legacyMspLocale)) {
       return {
-        locale: tenantDefaultLocale,
+        locale: legacyMspLocale,
         source: 'tenant'
       };
     }
   }
 
-  // 3. System default
+  // 4. System default
   return {
     locale: LOCALE_CONFIG.defaultLocale as SupportedLocale,
     source: 'system'

@@ -129,6 +129,43 @@
         "tenant": "Mandantenstandard",
         "system": "Systemstandard"
       }
+    },
+    "hierarchyTable": {
+      "title": "Sprachpräferenz-Hierarchie",
+      "description": "Bei der Bestimmung der Sprache für die Oberfläche und E-Mail-Benachrichtigungen prüft Alga diese in der Reihenfolge und stoppt beim ersten Treffer.",
+      "columns": {
+        "priority": "Priorität",
+        "source": "Sprachquelle",
+        "appliesTo": "Gilt für",
+        "whereSet": "Wo festgelegt"
+      },
+      "rows": {
+        "userPreference": {
+          "source": "Individuelle Benutzerpräferenz",
+          "appliesTo": "Alle Benutzer",
+          "whereSet": "Benutzerprofil"
+        },
+        "clientUserLanguage": {
+          "source": "Kundenspezifische Sprache",
+          "appliesTo": "Client-Portal-Benutzer (pro Kunde)",
+          "whereSet": "Kundendetails"
+        },
+        "clientPortalDefault": {
+          "source": "Client-Portal-Standard",
+          "appliesTo": "Alle Client-Portal-Benutzer",
+          "whereSet": "MSP-Einstellungen → Client-Portal"
+        },
+        "organizationDefault": {
+          "source": "Organisations-Standard",
+          "appliesTo": "Alle Benutzer (MSP-Mitarbeiter und Client-Portal)",
+          "whereSet": "MSP-Einstellungen → Sprache"
+        },
+        "systemDefault": {
+          "source": "Systemstandard (Englisch)",
+          "appliesTo": "Fallback",
+          "whereSet": "Systemdefiniert"
+        }
+      }
     }
   },
   "yes": "Ja",

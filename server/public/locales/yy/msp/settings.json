@@ -685,27 +685,6 @@
     }
   },
   "clientPortal": {
-    "language": {
-      "title": "55555",
-      "description": "55555",
-      "fields": {
-        "defaultLanguage": "55555",
-        "availableLanguages": "55555"
-      },
-      "help": {
-        "defaultLanguage": "55555",
-        "availableLanguages": "55555"
-      },
-      "hierarchy": {
-        "title": "55555",
-        "description": "55555",
-        "userPreference": "55555",
-        "clientDefault": "55555",
-        "orgDefault": "55555",
-        "systemDefault": "55555",
-        "note": "55555"
-      }
-    },
     "branding": {
       "title": "55555",
       "description": "55555",
@@ -800,12 +779,6 @@
     "help": {
       "defaultLanguage": "55555",
       "availableLanguages": "55555"
-    },
-    "hierarchy": {
-      "title": "55555",
-      "userPreference": "55555",
-      "orgDefault": "55555",
-      "systemDefault": "55555"
     }
   },
   "notifications": {
@@ -1367,5 +1340,19 @@
       "holidayAdded": "55555",
       "holidayDeleted": "55555"
     }
+  },
+  "clientPortalLanguage": {
+    "title": "55555",
+    "description": "55555",
+    "fields": {
+      "defaultLanguage": "55555"
+    },
+    "help": {
+      "defaultLanguage": "55555"
+    },
+    "placeholder": "55555",
+    "inheritOption": "55555 {{language}} 55555",
+    "unsetHint": "55555",
+    "updated": "55555 {{language}} 55555"
   }
 }

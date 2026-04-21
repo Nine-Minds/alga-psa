@@ -145,6 +145,43 @@
         "tenant": "11111",
         "system": "11111"
       }
+    },
+    "hierarchyTable": {
+      "title": "11111",
+      "description": "11111",
+      "columns": {
+        "priority": "11111",
+        "source": "11111",
+        "appliesTo": "11111",
+        "whereSet": "11111"
+      },
+      "rows": {
+        "userPreference": {
+          "source": "11111",
+          "appliesTo": "11111",
+          "whereSet": "11111"
+        },
+        "clientUserLanguage": {
+          "source": "11111",
+          "appliesTo": "11111",
+          "whereSet": "11111"
+        },
+        "clientPortalDefault": {
+          "source": "11111",
+          "appliesTo": "11111",
+          "whereSet": "11111"
+        },
+        "organizationDefault": {
+          "source": "11111",
+          "appliesTo": "11111",
+          "whereSet": "11111"
+        },
+        "systemDefault": {
+          "source": "11111",
+          "appliesTo": "11111",
+          "whereSet": "11111"
+        }
+      }
     }
   },
   "yes": "11111",

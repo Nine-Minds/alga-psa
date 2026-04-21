@@ -685,27 +685,6 @@
     }
   },
   "clientPortal": {
-    "language": {
-      "title": "Ustawienia języka",
-      "description": "Konfiguracja domyślnych ustawień językowych portalu klienta. Te ustawienia dotyczą wszystkich użytkowników i klientów, chyba że zostaną nadpisane.",
-      "fields": {
-        "defaultLanguage": "Język domyślny",
-        "availableLanguages": "Dostępne języki"
-      },
-      "help": {
-        "defaultLanguage": "To będzie domyślny język dla wszystkich użytkowników portalu klienta i powiadomień e-mail, chyba że zostanie nadpisany przez ustawienia klienta lub indywidualne preferencje użytkownika",
-        "availableLanguages": "Wybierz, które języki są dostępne do wyboru przez użytkowników"
-      },
-      "hierarchy": {
-        "title": "Hierarchia preferencji językowych",
-        "description": "Ta hierarchia dotyczy zarówno interfejsu portalu klienta, jak i powiadomień e-mail wysyłanych do użytkowników portalu klienta:",
-        "userPreference": "Indywidualne preferencje użytkownika (najwyższy priorytet)",
-        "clientDefault": "Domyślny język klienta",
-        "orgDefault": "Domyślny język organizacji (konfigurowany tutaj)",
-        "systemDefault": "Domyślny język systemu (angielski)",
-        "note": "Uwaga: Wewnętrzni użytkownicy MSP zawsze otrzymują wiadomości e-mail w języku angielskim"
-      }
-    },
     "branding": {
       "title": "Branding i wygląd",
       "description": "Dostosuj wygląd portalu klienta za pomocą identyfikacji wizualnej Państwa firmy.",
@@ -791,21 +770,15 @@
     }
   },
   "mspLanguage": {
-    "title": "Język",
-    "description": "Konfiguracja domyślnych ustawień językowych portalu MSP. Te ustawienia dotyczą wszystkich użytkowników MSP, chyba że zostaną nadpisane przez indywidualne preferencje.",
+    "title": "Język organizacji",
+    "description": "Ustaw domyślny język dla całej organizacji — personelu MSP, użytkowników portalu klienta i powiadomień e-mail. Poszczególni użytkownicy i klienci mogą nadpisać go dla siebie.",
     "fields": {
       "defaultLanguage": "Język domyślny",
       "availableLanguages": "Dostępne języki"
     },
     "help": {
-      "defaultLanguage": "To będzie domyślny język dla wszystkich użytkowników portalu MSP, chyba że zostanie nadpisany przez ich osobiste preferencje.",
-      "availableLanguages": "Wybierz, które języki są dostępne do wyboru przez użytkowników MSP"
-    },
-    "hierarchy": {
-      "title": "Hierarchia preferencji językowych",
-      "userPreference": "Indywidualne preferencje użytkownika (najwyższy priorytet)",
-      "orgDefault": "Domyślny język organizacji (konfigurowany tutaj)",
-      "systemDefault": "Domyślny język systemu (angielski)"
+      "defaultLanguage": "Stosowany wszędzie, chyba że nadpisany przez osobistą preferencję użytkownika lub język skonfigurowany dla konkretnego klienta.",
+      "availableLanguages": "Wybierz, spośród których języków mogą wybierać użytkownicy."
     }
   },
   "notifications": {
@@ -1367,5 +1340,19 @@
       "holidayAdded": "Święto dodane pomyślnie",
       "holidayDeleted": "Święto usunięte pomyślnie"
     }
+  },
+  "clientPortalLanguage": {
+    "title": "Język portalu klienta",
+    "description": "Nadpisz domyślny język tylko dla użytkowników portalu klienta. Personel MSP zachowuje domyślny język organizacji.",
+    "fields": {
+      "defaultLanguage": "Język domyślny"
+    },
+    "help": {
+      "defaultLanguage": "Gdy ustawiony, użytkownicy portalu klienta widzą ten język, chyba że nadpisze go ich indywidualna preferencja lub język skonfigurowany dla ich klienta."
+    },
+    "placeholder": "Wybierz język",
+    "inheritOption": "Użyj domyślnego języka organizacji ({{language}})",
+    "unsetHint": "Aby usunąć nadpisanie portalu klienta, zmień domyślny język organizacji w Ustawienia → Język.",
+    "updated": "Domyślny język portalu klienta zaktualizowany na {{language}}"
   }
 }

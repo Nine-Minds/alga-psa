@@ -318,6 +318,11 @@
         "label": "E-mailadres",
         "placeholder": "jan@acmeit.com",
         "help": "Dit wordt gebruikt om in te loggen op je account."
+      },
+      "language": {
+        "label": "Taal",
+        "placeholder": "Selecteer een taal",
+        "help": "Wordt de organisatiestandaard voor iedereen — MSP-personeel en klantportaalgebruikers. Individuele gebruikers en klanten kunnen dit later overschrijven."
       }
     },
     "password": {

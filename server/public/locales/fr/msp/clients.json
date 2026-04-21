@@ -678,7 +678,7 @@
   "clientLanguagePreference": {
     "title": "Paramètres de langue du client",
     "label": "Langue par défaut pour les contacts",
-    "description": "Définissez la langue par défaut pour tous les contacts dans {{clientName}}. Les utilisateurs individuels peuvent remplacer cela dans leurs paramètres personnels.",
+    "description": "S'applique à chaque utilisateur du portail de {{clientName}}, sauf s'ils ont défini leur propre préférence dans leur profil.",
     "selectPlaceholder": "Sélectionnez une langue",
     "updating": "Mise à jour des préférences linguistiques...",
     "loadError": "Échec du chargement des préférences linguistiques du client :",

@@ -678,7 +678,7 @@
   "clientLanguagePreference": {
     "title": "Client Language Settings",
     "label": "Default Language for Contacts",
-    "description": "Set the default language for all contacts in {{clientName}}. Individual users can override this in their personal settings.",
+    "description": "Applies to every portal user from {{clientName}} unless they have set their own preference in their profile.",
     "selectPlaceholder": "Select a language",
     "updating": "Updating language preference...",
     "loadError": "Failed to load client language preference:",
