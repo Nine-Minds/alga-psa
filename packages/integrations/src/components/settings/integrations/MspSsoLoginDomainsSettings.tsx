@@ -47,8 +47,10 @@ function claimStatusLabel(status: ClaimStatus, t: TranslateFn): string {
       return t('integrations.sso.msp.claimStatus.rejected', { defaultValue: 'Rejected' });
     case 'revoked':
       return t('integrations.sso.msp.claimStatus.revoked', { defaultValue: 'Revoked' });
-    default:
-      return status.charAt(0).toUpperCase() + status.slice(1);
+    default: {
+      const fallback = status as string;
+      return fallback.charAt(0).toUpperCase() + fallback.slice(1);
+    }
   }
 }
 
