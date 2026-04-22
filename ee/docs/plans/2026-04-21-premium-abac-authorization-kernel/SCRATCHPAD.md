@@ -299,3 +299,11 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-04-21) Validation runbook for `T011` checkpoint:
   - `cd server && npx vitest run --coverage.enabled=false src/test/unit/authorization/bundleSimulatorAction.test.ts src/test/unit/authorization/kernel.ceFallback.test.ts src/test/unit/authorization/cePolicyManagement.placeholder.test.ts`
   - `cd .. && npx tsc --pretty false --noEmit -p server/tsconfig.json`
+- (2026-04-21) Completed `T013` with ticket authorization narrowing regression coverage in `packages/tickets/src/actions/ticketActions.authorizationNarrowing.test.ts`:
+  - validates migrated `getTicketsForList` + `getTicketById` preserve baseline client board-narrowing behavior via selected board visibility.
+  - validates selected-client + selected-board bundle restrictions are enforced on list/detail paths in the migrated ticket authorization flow.
+- (2026-04-21) Validation runbook for `T013` checkpoint:
+  - `cd packages/tickets && npx vitest run src/actions/ticketActions.authorizationNarrowing.test.ts --coverage.enabled=false`
+- (2026-04-21) Completed `T014` by extending `packages/tickets/src/actions/ticketActions.authorizationNarrowing.test.ts` with API/UI parity coverage:
+  - compares migrated UI list scope (`getTicketsForList`) with API helper scope (`authorizeApiResourceRead`) under the same tenant/user/bundle-rule context.
+  - asserts the same effective allowed ticket IDs for both paths in the selected v1 ticket parity scenario.

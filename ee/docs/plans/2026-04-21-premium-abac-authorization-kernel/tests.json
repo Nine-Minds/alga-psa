@@ -123,7 +123,7 @@
   {
     "id": "T013",
     "description": "Regression/integration: migrated ticket list and direct-ticket authorization preserve baseline board/client narrowing semantics while honoring configured selected-client and selected-board bundle restrictions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F037",
       "F038",
@@ -134,7 +134,7 @@
   {
     "id": "T014",
     "description": "Parity: the selected migrated ticket API path and the selected migrated ticket UI/server-action path resolve the same effective scope for the same user and tenant context.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F037",
       "F053",
