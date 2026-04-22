@@ -15,6 +15,7 @@ describe('authorization bundle lifecycle hardening contracts', () => {
     expect(serviceSource).toContain("export async function upsertBundleRule(");
     expect(serviceSource).toContain("forUpdate()");
     expect(serviceSource).toContain("Only draft revisions can be published. Refresh bundle state and try again.");
+    expect(serviceSource).toContain('Cannot publish an empty draft revision. Add at least one narrowing rule before publishing.');
     expect(serviceSource).toContain("Draft revision changed before publish could complete. Refresh bundle state and try again.");
     expect(serviceSource).toContain("const bundle = await trx('authorization_bundles')");
     expect(serviceSource).toContain("const draftRevision = await trx('authorization_bundle_revisions')");

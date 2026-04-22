@@ -81,6 +81,19 @@ function isDraftRevisionUniquenessViolation(error: unknown): boolean {
   );
 }
 
+function isRevisionNumberUniquenessViolation(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const candidate = error as { code?: string; message?: string };
+  return (
+    candidate.code === '23505' &&
+    typeof candidate.message === 'string' &&
+    candidate.message.includes('authorization_bundle_revisions_tenant_bundle_id_revision_number_unique')
+  );
+}
+
 export async function ensureDraftBundleRevision(
   knex: Knex | Knex.Transaction,
   input: {
@@ -89,58 +102,20 @@ export async function ensureDraftBundleRevision(
     actorUserId?: string | null;
   }
 ): Promise<{ revisionId: string; created: boolean }> {
-  const existingDraft = await knex('authorization_bundle_revisions')
-    .where({
-      tenant: input.tenant,
-      bundle_id: input.bundleId,
-      lifecycle_state: 'draft',
-    })
-    .orderBy('revision_number', 'desc')
-    .first<{ revision_id: string }>('revision_id');
-
-  if (existingDraft) {
-    return { revisionId: existingDraft.revision_id, created: false };
-  }
-
-  const bundle = await knex('authorization_bundles')
-    .where({
-      tenant: input.tenant,
-      bundle_id: input.bundleId,
-    })
-    .first<{ published_revision_id: string | null }>('published_revision_id');
-
-  if (!bundle) {
-    throw new Error('Bundle not found in tenant scope.');
-  }
-
-  const maxRevisionRow = await knex('authorization_bundle_revisions')
-    .where({
-      tenant: input.tenant,
-      bundle_id: input.bundleId,
-    })
-    .max<{ max_revision_number: string | null }>('revision_number as max_revision_number')
-    .first();
-
-  const nextRevisionNumber = Number(maxRevisionRow?.max_revision_number || 0) + 1;
-
-  let draftRevision: { revision_id: string };
-  try {
-    [draftRevision] = await knex('authorization_bundle_revisions')
-      .insert({
+  return knex.transaction(async (trx) => {
+    const bundle = await trx('authorization_bundles')
+      .where({
         tenant: input.tenant,
         bundle_id: input.bundleId,
-        revision_number: nextRevisionNumber,
-        lifecycle_state: 'draft',
-        created_by: input.actorUserId ?? null,
-        updated_by: input.actorUserId ?? null,
       })
-      .returning<{ revision_id: string }[]>('revision_id');
-  } catch (error) {
-    if (!isDraftRevisionUniquenessViolation(error)) {
-      throw error;
+      .forUpdate()
+      .first<{ published_revision_id: string | null }>('published_revision_id');
+
+    if (!bundle) {
+      throw new Error('Bundle not found in tenant scope.');
     }
 
-    const concurrentDraft = await knex('authorization_bundle_revisions')
+    const existingDraft = await trx('authorization_bundle_revisions')
       .where({
         tenant: input.tenant,
         bundle_id: input.bundleId,
@@ -149,53 +124,94 @@ export async function ensureDraftBundleRevision(
       .orderBy('revision_number', 'desc')
       .first<{ revision_id: string }>('revision_id');
 
-    if (!concurrentDraft) {
-      throw error;
+    if (existingDraft) {
+      return { revisionId: existingDraft.revision_id, created: false };
     }
 
-    return { revisionId: concurrentDraft.revision_id, created: false };
-  }
-
-  if (!bundle.published_revision_id) {
-    return { revisionId: draftRevision.revision_id, created: true };
-  }
-
-  const publishedRules = await knex('authorization_bundle_rules')
-    .where({
-      tenant: input.tenant,
-      revision_id: bundle.published_revision_id,
-    })
-    .orderBy('position', 'asc')
-    .select<
-      Array<{
-        resource_type: string;
-        action: string;
-        template_key: string;
-        constraint_key: string | null;
-        config: Record<string, unknown>;
-        position: number;
-      }>
-    >('resource_type', 'action', 'template_key', 'constraint_key', 'config', 'position');
-
-  if (publishedRules.length > 0) {
-    await knex('authorization_bundle_rules').insert(
-      publishedRules.map((rule) => ({
+    const maxRevisionRow = await trx('authorization_bundle_revisions')
+      .where({
         tenant: input.tenant,
         bundle_id: input.bundleId,
-        revision_id: draftRevision.revision_id,
-        resource_type: rule.resource_type,
-        action: rule.action,
-        template_key: rule.template_key,
-        effect: 'narrow',
-        constraint_key: rule.constraint_key ?? null,
-        config: rule.config ?? {},
-        position: rule.position ?? 0,
-        created_by: input.actorUserId ?? null,
-      }))
-    );
-  }
+      })
+      .max<{ max_revision_number: string | null }>('revision_number as max_revision_number')
+      .first();
 
-  return { revisionId: draftRevision.revision_id, created: true };
+    const nextRevisionNumber = Number(maxRevisionRow?.max_revision_number || 0) + 1;
+
+    let draftRevision: { revision_id: string };
+    try {
+      [draftRevision] = await trx('authorization_bundle_revisions')
+        .insert({
+          tenant: input.tenant,
+          bundle_id: input.bundleId,
+          revision_number: nextRevisionNumber,
+          lifecycle_state: 'draft',
+          created_by: input.actorUserId ?? null,
+          updated_by: input.actorUserId ?? null,
+        })
+        .returning<{ revision_id: string }[]>('revision_id');
+    } catch (error) {
+      if (!isDraftRevisionUniquenessViolation(error) && !isRevisionNumberUniquenessViolation(error)) {
+        throw error;
+      }
+
+      const concurrentDraft = await trx('authorization_bundle_revisions')
+        .where({
+          tenant: input.tenant,
+          bundle_id: input.bundleId,
+          lifecycle_state: 'draft',
+        })
+        .orderBy('revision_number', 'desc')
+        .first<{ revision_id: string }>('revision_id');
+
+      if (!concurrentDraft) {
+        throw error;
+      }
+
+      return { revisionId: concurrentDraft.revision_id, created: false };
+    }
+
+    if (!bundle.published_revision_id) {
+      return { revisionId: draftRevision.revision_id, created: true };
+    }
+
+    const publishedRules = await trx('authorization_bundle_rules')
+      .where({
+        tenant: input.tenant,
+        revision_id: bundle.published_revision_id,
+      })
+      .orderBy('position', 'asc')
+      .select<
+        Array<{
+          resource_type: string;
+          action: string;
+          template_key: string;
+          constraint_key: string | null;
+          config: Record<string, unknown>;
+          position: number;
+        }>
+      >('resource_type', 'action', 'template_key', 'constraint_key', 'config', 'position');
+
+    if (publishedRules.length > 0) {
+      await trx('authorization_bundle_rules').insert(
+        publishedRules.map((rule) => ({
+          tenant: input.tenant,
+          bundle_id: input.bundleId,
+          revision_id: draftRevision.revision_id,
+          resource_type: rule.resource_type,
+          action: rule.action,
+          template_key: rule.template_key,
+          effect: 'narrow',
+          constraint_key: rule.constraint_key ?? null,
+          config: rule.config ?? {},
+          position: rule.position ?? 0,
+          created_by: input.actorUserId ?? null,
+        }))
+      );
+    }
+
+    return { revisionId: draftRevision.revision_id, created: true };
+  });
 }
 
 export async function listBundleRulesForRevision(
@@ -407,20 +423,16 @@ export async function cloneAuthorizationBundle(
       throw new Error('Source bundle was not found in tenant scope.');
     }
 
-    const sourceRevision = sourceBundle.published_revision_id
-      ? await trx('authorization_bundle_revisions')
-          .where({
-            tenant: input.tenant,
-            revision_id: sourceBundle.published_revision_id,
-          })
-          .first<{ revision_id: string }>('revision_id')
-      : await trx('authorization_bundle_revisions')
-          .where({
-            tenant: input.tenant,
-            bundle_id: sourceBundle.bundle_id,
-          })
-          .orderBy('revision_number', 'desc')
-          .first<{ revision_id: string }>('revision_id');
+    if (!sourceBundle.published_revision_id) {
+      throw new Error('Cannot clone a bundle with no published revision. Publish the bundle first.');
+    }
+
+    const sourceRevision = await trx('authorization_bundle_revisions')
+      .where({
+        tenant: input.tenant,
+        revision_id: sourceBundle.published_revision_id,
+      })
+      .first<{ revision_id: string }>('revision_id');
 
     const created = await createAuthorizationBundle(trx, {
       tenant: input.tenant,
@@ -531,28 +543,46 @@ export async function createBundleAssignment(
   ensureUuidLike(input.bundleId, 'bundleId');
   ensureUuidLike(input.targetId, 'targetId');
 
-  await assertTargetExists(knex, {
-    tenant: input.tenant,
-    targetType: input.targetType,
-    targetId: input.targetId,
-  });
-
-  await knex('authorization_bundle_assignments')
-    .insert({
+  await knex.transaction(async (trx) => {
+    await assertTargetExists(trx, {
       tenant: input.tenant,
-      bundle_id: input.bundleId,
-      target_type: input.targetType,
-      target_id: input.targetId,
-      status: 'active',
-      created_by: input.actorUserId ?? null,
-      updated_by: input.actorUserId ?? null,
-    })
-    .onConflict(['tenant', 'bundle_id', 'target_type', 'target_id'])
-    .merge({
-      status: 'active',
-      updated_by: input.actorUserId ?? null,
-      updated_at: knex.fn.now(),
+      targetType: input.targetType,
+      targetId: input.targetId,
     });
+
+    const bundle = await trx('authorization_bundles')
+      .where({
+        tenant: input.tenant,
+        bundle_id: input.bundleId,
+      })
+      .forUpdate()
+      .first<{ bundle_id: string; status: 'active' | 'archived' }>('bundle_id', 'status');
+
+    if (!bundle) {
+      throw new Error('Bundle not found in tenant scope.');
+    }
+
+    if (bundle.status !== 'active') {
+      throw new Error('Cannot create an active assignment for an archived bundle.');
+    }
+
+    await trx('authorization_bundle_assignments')
+      .insert({
+        tenant: input.tenant,
+        bundle_id: input.bundleId,
+        target_type: input.targetType,
+        target_id: input.targetId,
+        status: 'active',
+        created_by: input.actorUserId ?? null,
+        updated_by: input.actorUserId ?? null,
+      })
+      .onConflict(['tenant', 'bundle_id', 'target_type', 'target_id'])
+      .merge({
+        status: 'active',
+        updated_by: input.actorUserId ?? null,
+        updated_at: trx.fn.now(),
+      });
+  });
 }
 
 export async function setBundleAssignmentStatus(
@@ -564,16 +594,38 @@ export async function setBundleAssignmentStatus(
     actorUserId?: string | null;
   }
 ): Promise<void> {
-  await knex('authorization_bundle_assignments')
-    .where({
-      tenant: input.tenant,
-      assignment_id: input.assignmentId,
-    })
-    .update({
-      status: input.status,
-      updated_by: input.actorUserId ?? null,
-      updated_at: knex.fn.now(),
-    });
+  await knex.transaction(async (trx) => {
+    const assignment = await trx('authorization_bundle_assignments as a')
+      .join('authorization_bundles as b', function joinBundle() {
+        this.on('b.tenant', '=', 'a.tenant').andOn('b.bundle_id', '=', 'a.bundle_id');
+      })
+      .where('a.tenant', input.tenant)
+      .andWhere('a.assignment_id', input.assignmentId)
+      .forUpdate()
+      .first<{
+        assignment_id: string;
+        bundle_status: 'active' | 'archived';
+      }>('a.assignment_id', 'b.status as bundle_status');
+
+    if (!assignment) {
+      throw new Error('Bundle assignment not found in tenant scope.');
+    }
+
+    if (input.status === 'active' && assignment.bundle_status !== 'active') {
+      throw new Error('Cannot activate an assignment for an archived bundle.');
+    }
+
+    await trx('authorization_bundle_assignments')
+      .where({
+        tenant: input.tenant,
+        assignment_id: input.assignmentId,
+      })
+      .update({
+        status: input.status,
+        updated_by: input.actorUserId ?? null,
+        updated_at: trx.fn.now(),
+      });
+  });
 }
 
 export async function archiveBundle(
@@ -584,16 +636,42 @@ export async function archiveBundle(
     actorUserId?: string | null;
   }
 ): Promise<void> {
-  await knex('authorization_bundles')
-    .where({
-      tenant: input.tenant,
-      bundle_id: input.bundleId,
-    })
-    .update({
-      status: 'archived',
-      updated_by: input.actorUserId ?? null,
-      updated_at: knex.fn.now(),
-    });
+  await knex.transaction(async (trx) => {
+    const bundle = await trx('authorization_bundles')
+      .where({
+        tenant: input.tenant,
+        bundle_id: input.bundleId,
+      })
+      .forUpdate()
+      .first<{ bundle_id: string }>('bundle_id');
+
+    if (!bundle) {
+      throw new Error('Bundle not found in tenant scope.');
+    }
+
+    await trx('authorization_bundles')
+      .where({
+        tenant: input.tenant,
+        bundle_id: input.bundleId,
+      })
+      .update({
+        status: 'archived',
+        updated_by: input.actorUserId ?? null,
+        updated_at: trx.fn.now(),
+      });
+
+    await trx('authorization_bundle_assignments')
+      .where({
+        tenant: input.tenant,
+        bundle_id: input.bundleId,
+        status: 'active',
+      })
+      .update({
+        status: 'disabled',
+        updated_by: input.actorUserId ?? null,
+        updated_at: trx.fn.now(),
+      });
+  });
 }
 
 export async function publishBundleRevision(
@@ -628,6 +706,21 @@ export async function publishBundleRevision(
 
     if (revision.lifecycle_state !== 'draft') {
       throw new Error('Only draft revisions can be published. Refresh bundle state and try again.');
+    }
+
+    const draftRuleCountRow = await trx('authorization_bundle_rules')
+      .where({
+        tenant: input.tenant,
+        bundle_id: input.bundleId,
+        revision_id: input.revisionId,
+      })
+      .count<{ count: string }>('rule_id as count')
+      .first();
+
+    if (Number(draftRuleCountRow?.count || 0) === 0) {
+      throw new Error(
+        'Cannot publish an empty draft revision. Add at least one narrowing rule before publishing.'
+      );
     }
 
     if (bundle.published_revision_id) {

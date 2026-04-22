@@ -1,0 +1,428 @@
+[
+  {
+    "id": "F001",
+    "description": "Document this plan as the exhaustive follow-up to both the original premium-ABAC plan and the earlier 2026-04-22 surgical remediation plan, with explicit historical traceability.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Make `ensureDraftBundleRevision(...)` transaction-safe so concurrent draft creation cannot fail on revision-number races.",
+    "implemented": true,
+    "prdRefs": [
+      "Problem",
+      "Requirements",
+      "Bundle lifecycle / control-plane completion"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Make draft revision creation and published-rule copy atomic so a newly created draft cannot be left partially initialized.",
+    "implemented": true,
+    "prdRefs": [
+      "Problem",
+      "Requirements",
+      "Bundle lifecycle / control-plane completion"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Tighten EE bundle write flows so `ensureDraft` and subsequent rule mutation or publish steps behave safely under stale-state races.",
+    "implemented": true,
+    "prdRefs": [
+      "Problem",
+      "Requirements",
+      "Bundle lifecycle / control-plane completion"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Prevent publishing empty or otherwise invalid draft revisions when that would silently remove narrowing.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Bundle lifecycle / control-plane completion",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Add explicit preflight failure for duplicate draft/published revision rows before lifecycle uniqueness indexes are created.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Bundle lifecycle / control-plane completion",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Provide or document a concrete repair path for revision/bundle drift or duplicate lifecycle rows that block migrations.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Bundle lifecycle / control-plane completion",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Prevent new assignments from being created against archived bundles and make assignment-status updates fail loudly on missing or invalid targets.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Bundle lifecycle / control-plane completion"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Decide and implement archive/unarchive assignment behavior so bundle archival cannot leave misleading active assignment state behind.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Bundle lifecycle / control-plane completion",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Decide and implement clone semantics for unpublished or draft-only bundles.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Bundle lifecycle / control-plane completion",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Introduce a shared quote-read authorizer for billing server actions so quote server-action parity matches the hardened API controller model.",
+    "implemented": false,
+    "prdRefs": [
+      "Problem",
+      "Requirements",
+      "Billing quote parity"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Apply quote record-level auth to remaining quote read helpers, including versions, conversion preview, preview/render, PDF, and lookup-by-converted-record surfaces.",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements",
+      "Billing quote parity",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Apply quote record-level auth to remaining quote mutations, including update/delete, submit/request-changes, send/resend/remind, revision creation, and conversion flows.",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements",
+      "Billing quote parity",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Require quote item operations to validate both parent-quote authorization and item-to-quote ownership/integrity.",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements",
+      "Billing quote parity",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Fix `listQuotes` totals and page metadata so they reflect authorized results rather than page-local post-filter counts.",
+    "implemented": false,
+    "prdRefs": [
+      "Problem",
+      "Requirements",
+      "Billing quote parity"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Replace remaining RBAC-only document URL helpers with kernel-backed document lookup and authorization.",
+    "implemented": false,
+    "prdRefs": [
+      "Problem",
+      "Requirements",
+      "Documents exhaustive remediation"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Apply record-level auth to remaining document mutations, including update/delete, bulk folder moves, visibility changes, association changes, and folder operations.",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements",
+      "Documents exhaustive remediation",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Apply record-level auth to document content and block-content read/write/delete helpers.",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements",
+      "Documents exhaustive remediation",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Eliminate no-auth or RBAC-only document count leaks, including entity document counts, folder stats, and folder-tree count enrichment.",
+    "implemented": false,
+    "prdRefs": [
+      "Problem",
+      "Requirements",
+      "Documents exhaustive remediation"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Replace or bypass `documentPermissionUtils` where it acts as a weaker, divergent authorization model.",
+    "implemented": false,
+    "prdRefs": [
+      "Problem",
+      "Goals",
+      "Documents exhaustive remediation"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Make folder trees, folder counts, and document summary metrics use authorized-document semantics only.",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements",
+      "Documents exhaustive remediation"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Introduce a shared asset-read authorizer and use it consistently across asset server actions.",
+    "implemented": false,
+    "prdRefs": [
+      "Problem",
+      "Requirements",
+      "Asset exhaustive remediation"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Fix `listAssets` totals and page metadata so they match authorized rows.",
+    "implemented": false,
+    "prdRefs": [
+      "Problem",
+      "Requirements",
+      "Asset exhaustive remediation"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Apply asset-level auth to all remaining asset reads, including relationships, maintenance schedules, maintenance reports, history, linked tickets, client maintenance summaries, entity-linked asset lists, and summary metrics.",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements",
+      "Asset exhaustive remediation",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Apply asset-level auth to all remaining asset mutations, including update/delete, relationship create/delete, association create/delete, and maintenance create/update/delete/history operations.",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements",
+      "Asset exhaustive remediation",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Decide and implement linked child-resource semantics for asset detail bundles, including whether linked tickets/documents require intersection with their own resource-family auth.",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements",
+      "Asset exhaustive remediation",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Finish `projectActions.ts` parity for any remaining phase/detail/status/count/tree surfaces that still rely only on RBAC.",
+    "implemented": false,
+    "prdRefs": [
+      "Problem",
+      "Requirements",
+      "Project / phase / task / status exhaustive remediation"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Introduce reusable parent-project gating for task, checklist, dependency, resource-assignment, and ticket-link actions.",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements",
+      "Project / phase / task / status exhaustive remediation"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Apply parent-project gating to all remaining `projectTaskActions.ts` read and mutation paths.",
+    "implemented": false,
+    "prdRefs": [
+      "Problem",
+      "Requirements",
+      "Project / phase / task / status exhaustive remediation"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Apply parent-project gating to all `projectTaskStatusActions.ts` and phase/custom-status flows, and add missing auth to currently zero-check surfaces.",
+    "implemented": false,
+    "prdRefs": [
+      "Problem",
+      "Requirements",
+      "Project / phase / task / status exhaustive remediation"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Fix project count and summarization helpers so they do not leak task/status cardinality for narrowed-away projects.",
+    "implemented": false,
+    "prdRefs": [
+      "Problem",
+      "Requirements",
+      "Project / phase / task / status exhaustive remediation"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Require cross-project operations such as move, duplicate, and link flows to authorize both source and target projects correctly.",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements",
+      "Project / phase / task / status exhaustive remediation",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Decide and implement structural-child semantics for project subresources so phases/tasks/checklists/status mappings inherit project auth while linked ticket data still respects ticket-resource auth where exposed.",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements",
+      "Project / phase / task / status exhaustive remediation",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Re-audit time/delegation flows beyond the prior `time_entry` resource-key fix and capture any remaining RBAC-only or aggregate leaks.",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements",
+      "Remaining migrated resource-family re-audit"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Re-audit non-API entry points that reach hardened resources, including file routes, previews, shared lookup helpers, and composition-layer actions.",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements",
+      "Remaining migrated resource-family re-audit"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Re-audit CE/EE helper seams so both sides use the same runtime semantics and do not regress into duplicated auth logic.",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements",
+      "Remaining migrated resource-family re-audit",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Produce an exhaustive surface inventory mapping file/function -> chosen auth semantics -> status -> validating tests.",
+    "implemented": false,
+    "prdRefs": [
+      "Summary",
+      "Requirements",
+      "Validation / close-out artifacts"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Update the authorization baseline and cross-links so the final current-behavior ledger reflects the exhaustive sweep outcome.",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements",
+      "Validation / close-out artifacts",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Add bundle lifecycle concurrency and integrity regression coverage for draft creation, publish validation, migration preflights, and assignment governance.",
+    "implemented": false,
+    "prdRefs": [
+      "Goals",
+      "Requirements",
+      "Validation / close-out artifacts"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Add quote server-action parity regression coverage for list totals, quote mutations, quote item integrity, and converted-record helper lookups.",
+    "implemented": false,
+    "prdRefs": [
+      "Goals",
+      "Requirements",
+      "Validation / close-out artifacts"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Add document regression coverage for URL helpers, content/block-content actions, folder/count leaks, bulk mutations, and folder-tree semantics.",
+    "implemented": false,
+    "prdRefs": [
+      "Goals",
+      "Requirements",
+      "Validation / close-out artifacts"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "Add asset regression coverage for list totals, summary/maintenance/history/relationship reads, mutations, and linked child-resource semantics.",
+    "implemented": false,
+    "prdRefs": [
+      "Goals",
+      "Requirements",
+      "Validation / close-out artifacts"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Add project regression coverage for phase/task/status parity, cross-project operations, and aggregate/count leak fixes.",
+    "implemented": false,
+    "prdRefs": [
+      "Goals",
+      "Requirements",
+      "Validation / close-out artifacts"
+    ]
+  }
+]

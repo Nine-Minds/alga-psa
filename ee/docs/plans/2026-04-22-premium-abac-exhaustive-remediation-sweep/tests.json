@@ -1,0 +1,242 @@
+[
+  {
+    "id": "T001",
+    "description": "DB-backed integration: concurrent draft creation for the same bundle cannot fail on revision-number collisions or leave multiple drafts behind.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F003",
+      "F039"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Lifecycle integration: draft initialization is atomic, so a failure during rule copy cannot leave a partially-created draft revision visible to users.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F039"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Guard/integration: stale draft edit flows fail cleanly when publish wins the race between `ensureDraft` and rule mutation.",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F039"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Lifecycle integration: publishing an empty or invalid draft is rejected with an actionable error and does not widen access.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F039"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Migration/unit: lifecycle uniqueness migration fails loudly when duplicate draft/published rows already exist instead of silently skipping constraint creation.",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F007",
+      "F039"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Guard/integration: assignments cannot be created or silently mutated against archived or missing bundles/assignments.",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F009",
+      "F039"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Quote parity integration: quote server-action mutations require access to the parent quote, and unauthorized users cannot update/delete/send/request changes/convert narrowed-away quotes.",
+    "implemented": false,
+    "featureIds": [
+      "F011",
+      "F012",
+      "F013",
+      "F040"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Quote integrity integration: quote item add/update/remove/reorder rejects foreign quote-item IDs and unauthorized parent quotes.",
+    "implemented": false,
+    "featureIds": [
+      "F014",
+      "F040"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Quote pagination integration: `listQuotes` returns honest authorized totals/pages and does not strand accessible records behind filtered pages.",
+    "implemented": false,
+    "featureIds": [
+      "F015",
+      "F040"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Quote helper parity integration: conversion preview, PDF/preview helpers, and converted-contract/invoice lookup helpers all enforce quote-level narrowing.",
+    "implemented": false,
+    "featureIds": [
+      "F012",
+      "F040"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Document read parity integration: download/preview/thumbnail/image URL helpers deny narrowed-away documents and only return URLs for authorized documents.",
+    "implemented": false,
+    "featureIds": [
+      "F016",
+      "F041"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Document mutation integration: update/delete/move/visibility/association/folder mutations reject unauthorized document sets rather than relying only on RBAC.",
+    "implemented": false,
+    "featureIds": [
+      "F017",
+      "F041"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Document content integration: document content and block-content read/write/delete helpers enforce document-level authorization.",
+    "implemented": false,
+    "featureIds": [
+      "F018",
+      "F041"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Document aggregate integration: entity document counts, folder stats, and folder-tree counts only reflect authorized documents and do not leak no-auth totals.",
+    "implemented": false,
+    "featureIds": [
+      "F019",
+      "F020",
+      "F021",
+      "F041"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Asset pagination integration: `listAssets` returns honest authorized totals/pages after narrowing.",
+    "implemented": false,
+    "featureIds": [
+      "F022",
+      "F023",
+      "F042"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Asset read integration: relationships, maintenance schedules/report, history, linked tickets, client maintenance summaries, and summary metrics deny unauthorized assets.",
+    "implemented": false,
+    "featureIds": [
+      "F022",
+      "F024",
+      "F042"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Asset mutation integration: update/delete, relationship/association changes, and maintenance mutations reject unauthorized assets.",
+    "implemented": false,
+    "featureIds": [
+      "F025",
+      "F042"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Asset linked-child integration: asset detail bundles enforce the chosen semantics for linked tickets/documents and do not weaken child-resource auth accidentally.",
+    "implemented": false,
+    "featureIds": [
+      "F026",
+      "F042"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Project server-action integration: remaining `projectActions.ts` phase/detail/status/tree/count surfaces deny narrowed-away parent projects.",
+    "implemented": false,
+    "featureIds": [
+      "F027",
+      "F043"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Project task integration: task, checklist, dependency, resource-assignment, and ticket-link actions all enforce parent-project authorization.",
+    "implemented": false,
+    "featureIds": [
+      "F028",
+      "F029",
+      "F043"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Project status integration: phase/custom-status actions add missing auth, reject zero-check leaks, and honor parent-project narrowing.",
+    "implemented": false,
+    "featureIds": [
+      "F030",
+      "F043"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Project aggregate integration: phase task counts, status-mapping task counts, and similar project aggregates no longer leak cardinality for unauthorized projects.",
+    "implemented": false,
+    "featureIds": [
+      "F031",
+      "F043"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Cross-project integration: move/duplicate/link flows authorize both source and target projects and reject cross-project bypasses.",
+    "implemented": false,
+    "featureIds": [
+      "F032",
+      "F033",
+      "F043"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Time/delegation regression: the remaining time-entry approval/delegation surfaces still honor narrowing after the full sweep and no count/helper bypasses remain.",
+    "implemented": false,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Close-out contract: the remediation inventory artifact maps every reviewed surface to a disposition and at least one validating test or explicit rationale.",
+    "implemented": false,
+    "featureIds": [
+      "F037",
+      "F038",
+      "F039",
+      "F040",
+      "F041",
+      "F042",
+      "F043"
+    ]
+  }
+]

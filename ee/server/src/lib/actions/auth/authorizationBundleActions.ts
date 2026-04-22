@@ -384,32 +384,34 @@ export const upsertAuthorizationBundleDraftRuleAction = withAuth(
     await assertSecuritySettingsPermission(user, 'write');
 
     const { knex } = await createTenantKnex();
-    const draft = await ensureDraftBundleRevision(knex, {
-      tenant,
-      bundleId: input.bundleId,
-      actorUserId: user.user_id,
-    });
+    await knex.transaction(async (trx) => {
+      const draft = await ensureDraftBundleRevision(trx, {
+        tenant,
+        bundleId: input.bundleId,
+        actorUserId: user.user_id,
+      });
 
-    const existingRules = await listBundleRulesForRevision(knex, {
-      tenant,
-      revisionId: draft.revisionId,
-    });
-    const existingRule = input.ruleId
-      ? existingRules.find((rule) => rule.ruleId === input.ruleId)
-      : undefined;
+      const existingRules = await listBundleRulesForRevision(trx, {
+        tenant,
+        revisionId: draft.revisionId,
+      });
+      const existingRule = input.ruleId
+        ? existingRules.find((rule) => rule.ruleId === input.ruleId)
+        : undefined;
 
-    await upsertBundleRule(knex, {
-      tenant,
-      bundleId: input.bundleId,
-      revisionId: draft.revisionId,
-      ruleId: input.ruleId,
-      resourceType: input.resourceType,
-      action: input.action,
-      templateKey: input.templateKey,
-      constraintKey: input.constraintKey ?? null,
-      config: input.config ?? {},
-      position: input.ruleId ? existingRule?.position : existingRules.length,
-      actorUserId: user.user_id,
+      await upsertBundleRule(trx, {
+        tenant,
+        bundleId: input.bundleId,
+        revisionId: draft.revisionId,
+        ruleId: input.ruleId,
+        resourceType: input.resourceType,
+        action: input.action,
+        templateKey: input.templateKey,
+        constraintKey: input.constraintKey ?? null,
+        config: input.config ?? {},
+        position: input.ruleId ? existingRule?.position : existingRules.length,
+        actorUserId: user.user_id,
+      });
     });
   }
 );
@@ -420,17 +422,19 @@ export const deleteAuthorizationBundleDraftRuleAction = withAuth(
     await assertSecuritySettingsPermission(user, 'write');
 
     const { knex } = await createTenantKnex();
-    const draft = await ensureDraftBundleRevision(knex, {
-      tenant,
-      bundleId: input.bundleId,
-      actorUserId: user.user_id,
-    });
+    await knex.transaction(async (trx) => {
+      const draft = await ensureDraftBundleRevision(trx, {
+        tenant,
+        bundleId: input.bundleId,
+        actorUserId: user.user_id,
+      });
 
-    await deleteBundleRule(knex, {
-      tenant,
-      bundleId: input.bundleId,
-      revisionId: draft.revisionId,
-      ruleId: input.ruleId,
+      await deleteBundleRule(trx, {
+        tenant,
+        bundleId: input.bundleId,
+        revisionId: draft.revisionId,
+        ruleId: input.ruleId,
+      });
     });
   }
 );
@@ -1014,17 +1018,19 @@ export const publishAuthorizationBundleDraftAction = withAuth(
     await assertSecuritySettingsPermission(user, 'write');
 
     const { knex } = await createTenantKnex();
-    const draft = await ensureDraftBundleRevision(knex, {
-      tenant,
-      bundleId,
-      actorUserId: user.user_id,
-    });
+    await knex.transaction(async (trx) => {
+      const draft = await ensureDraftBundleRevision(trx, {
+        tenant,
+        bundleId,
+        actorUserId: user.user_id,
+      });
 
-    await publishBundleRevision(knex, {
-      tenant,
-      bundleId,
-      revisionId: draft.revisionId,
-      actorUserId: user.user_id,
+      await publishBundleRevision(trx, {
+        tenant,
+        bundleId,
+        revisionId: draft.revisionId,
+        actorUserId: user.user_id,
+      });
     });
   }
 );

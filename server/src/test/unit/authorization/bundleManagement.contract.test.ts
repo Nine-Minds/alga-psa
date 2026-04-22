@@ -13,11 +13,12 @@ describe('EE bundle management contracts', () => {
 
   it('T024: library/editor/assignment flows remain draft-first and publish via explicit revision switch', () => {
     expect(actionSource).toContain('export const getAuthorizationBundleDraftEditorAction = withAuth(');
-    expect(actionSource).toContain('const draft = await ensureDraftBundleRevision(knex, {');
+    expect(actionSource).toContain('await ensureDraftBundleRevision(knex, {');
+    expect(actionSource).toContain('const draft = await ensureDraftBundleRevision(trx, {');
     expect(actionSource).toContain('export const upsertAuthorizationBundleDraftRuleAction = withAuth(');
     expect(actionSource).toContain('export const deleteAuthorizationBundleDraftRuleAction = withAuth(');
     expect(actionSource).toContain('export const publishAuthorizationBundleDraftAction = withAuth(');
-    expect(actionSource).toContain('await publishBundleRevision(knex, {');
+    expect(actionSource).toContain('await publishBundleRevision(trx, {');
     expect(actionSource).toContain('export const createAuthorizationBundleAssignmentAction = withAuth(');
     expect(actionSource).toContain('export const setAuthorizationBundleAssignmentStatusAction = withAuth(');
     expect(uiSource).toContain('Revision summary: {editorData.revisionChangeSummary}');
