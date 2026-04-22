@@ -22,6 +22,7 @@ export type RootStackParamList = {
   };
   CreateTicket: undefined;
   AccountDeletion: undefined;
+  MutedUsers: undefined;
 };
 
 export type TicketsStackParamList = {

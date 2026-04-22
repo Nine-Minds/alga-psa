@@ -165,6 +165,29 @@ export function SettingsScreen() {
         <View style={{ height: theme.spacing.sm }} />
 
         <Pressable
+          onPress={() => navigation.navigate("MutedUsers")}
+          disabled={!session}
+          accessibilityRole="button"
+          accessibilityLabel={t("mutedUsers.title", "Muted users")}
+          style={({ pressed }) => ({
+            paddingVertical: theme.spacing.sm,
+            paddingHorizontal: theme.spacing.md,
+            backgroundColor: theme.colors.card,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            borderRadius: theme.borderRadius.md,
+            alignItems: "center",
+            opacity: pressed ? 0.9 : !session ? 0.5 : 1,
+          })}
+        >
+          <Text style={{ ...theme.typography.body, color: theme.colors.text, fontWeight: "600" }}>
+            {t("mutedUsers.title", "Muted users")}
+          </Text>
+        </Pressable>
+
+        <View style={{ height: theme.spacing.sm }} />
+
+        <Pressable
           onPress={() => navigation.navigate("AccountDeletion")}
           disabled={!session}
           accessibilityRole="button"
