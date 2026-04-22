@@ -46,6 +46,19 @@ It intentionally preserves the earlier 2026-04-22 remediation plan as a historic
 - (2026-04-22) Quote item helpers (`add/update/remove/reorder`) still need parent-quote authorization and item-to-quote integrity validation.
 - (2026-04-22) Converted-contract / converted-invoice lookup helpers can return quotes without reapplying quote narrowing.
 - (2026-04-22) PDF/preview/reminder/send/conversion/version flows need the same read-before-mutate parity now present in `ApiQuoteController.ts`.
+- (2026-04-22) Implemented shared quote-read authorization helper set in `packages/billing/src/actions/quoteActions.ts`:
+  - `createQuoteAuthorizationKernel(...)`
+  - `authorizeQuoteReadDecision(...)`
+  - `getAuthorizedQuoteForRead(...)`
+  - `assertQuoteReadAllowedForMutation(...)`
+- (2026-04-22) Implemented record-level quote auth for read helpers:
+  - versions, conversion preview, converted-contract/invoice lookups, pdf file-id lookup, PDF download, preview render.
+- (2026-04-22) Implemented record-level quote auth for mutations:
+  - update/delete, submit-for-approval, request-changes, send/resend/remind, create-revision, conversion flows, regenerate-pdf.
+- (2026-04-22) Implemented quote-item integrity guards:
+  - item update cannot move across quotes.
+  - add/update/remove/reorder now require parent quote authorization.
+- (2026-04-22) Implemented authorization-aware quote pagination totals by using `buildAuthorizationAwarePage(...)` and authorized `total/totalPages` semantics.
 
 ### Documents
 - (2026-04-22) `packages/documents/src/actions/documentActions.ts` now has partial auth-aware pagination, but many other surfaces remain RBAC-only or unauthenticated.
@@ -101,6 +114,8 @@ It intentionally preserves the earlier 2026-04-22 remediation plan as a historic
   - `cd server && pnpm vitest src/test/unit/authorization/bundleLifecycleHardening.contract.test.ts src/test/unit/authorization/bundleManagement.contract.test.ts src/test/unit/migrations/authorizationBundleRevisionLifecycleUniquenessMigration.test.ts`
 - (2026-04-22) Run lifecycle integration tests (requires local Postgres):
   - `cd server && pnpm vitest src/test/integration/authorization/bundleLifecycleIntegrity.integration.test.ts`
+- (2026-04-22) Run quote parity contract test:
+  - `cd server && pnpm vitest ../packages/billing/src/actions/quoteAuthorizationParity.contract.test.ts`
 
 ## Links / References
 
@@ -157,3 +172,6 @@ It intentionally preserves the earlier 2026-04-22 remediation plan as a historic
 - (2026-04-22) Validation status:
   - unit/contract tests pass for touched lifecycle contracts/migration.
   - integration suite is authored but currently cannot execute in this shell because Postgres is unavailable (`ECONNREFUSED 127.0.0.1:5432`).
+- (2026-04-22) Completed quote hardening feature wave `F011-F015` in:
+  - `packages/billing/src/actions/quoteActions.ts`
+  - `packages/billing/src/actions/quoteAuthorizationParity.contract.test.ts`

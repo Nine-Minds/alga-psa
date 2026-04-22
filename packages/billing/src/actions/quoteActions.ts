@@ -27,6 +27,7 @@ import {
   type AuthorizationSubject,
 } from 'server/src/lib/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from 'server/src/lib/authorization/bundles/service';
+import { buildAuthorizationAwarePage } from 'server/src/lib/api/controllers/authorizationAwarePagination';
 
 type CreateQuoteInput = Omit<
   IQuote,
@@ -183,6 +184,109 @@ function toQuoteAuthorizationRecord(quote: Partial<IQuote>): AuthorizationRecord
     ownerUserId: quote.created_by ?? null,
     clientId: quote.client_id ?? null,
   };
+}
+
+function createQuoteAuthorizationKernel(knex: Knex | Knex.Transaction, includeApproveGuard = false) {
+  return createAuthorizationKernel({
+    builtinProvider: new BuiltinAuthorizationKernelProvider({
+      mutationGuards: includeApproveGuard
+        ? [
+            (input) => {
+              if (input.mutation?.kind === 'approve' && input.record?.ownerUserId === input.subject.userId) {
+                return {
+                  allowed: false,
+                  reasons: [
+                    {
+                      stage: 'mutation' as const,
+                      sourceType: 'builtin' as const,
+                      code: 'billing_not_self_approver_denied',
+                      message: 'Approvers cannot approve their own quotes.',
+                    },
+                  ],
+                };
+              }
+
+              return {
+                allowed: true,
+                reasons: [],
+              };
+            },
+          ]
+        : [],
+    }),
+    bundleProvider: new BundleAuthorizationKernelProvider({
+      resolveRules: async (input) => {
+        try {
+          return await resolveBundleNarrowingRulesForEvaluation(knex, input);
+        } catch {
+          return [];
+        }
+      },
+    }),
+    rbacEvaluator: async () => true,
+  });
+}
+
+async function authorizeQuoteReadDecision(
+  knex: Knex | Knex.Transaction,
+  tenant: string,
+  user: BillingAuthUser,
+  quote: Partial<IQuote>
+) {
+  const subject = await resolveAuthorizationSubjectForUser(knex, tenant, user);
+  const authorizationKernel = createQuoteAuthorizationKernel(knex);
+  const decision = await authorizationKernel.authorizeResource({
+    subject,
+    resource: {
+      type: 'billing',
+      action: 'read',
+      id: quote.quote_id ?? null,
+    },
+    record: toQuoteAuthorizationRecord(quote),
+    requestCache: new RequestLocalAuthorizationCache(),
+    knex,
+  });
+
+  return { decision, subject, authorizationKernel };
+}
+
+async function getAuthorizedQuoteForRead(
+  knex: Knex | Knex.Transaction,
+  tenant: string,
+  user: BillingAuthUser,
+  quoteId: string
+): Promise<IQuote | null> {
+  const quote = await Quote.getById(knex, tenant, quoteId);
+  if (!quote) {
+    return null;
+  }
+
+  const { decision } = await authorizeQuoteReadDecision(knex, tenant, user, quote);
+  if (!decision.allowed) {
+    return null;
+  }
+
+  return applyQuoteRedactions(quote, decision.redactedFields);
+}
+
+async function assertQuoteReadAllowedForMutation(
+  knex: Knex | Knex.Transaction,
+  tenant: string,
+  user: BillingAuthUser,
+  quoteId: string,
+  deniedMessage: string
+): Promise<IQuote> {
+  const quote = await Quote.getById(knex, tenant, quoteId);
+  if (!quote) {
+    throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
+  }
+
+  const { decision } = await authorizeQuoteReadDecision(knex, tenant, user, quote);
+  if (!decision.allowed) {
+    throw new Error(deniedMessage);
+  }
+
+  return quote;
 }
 
 function applyQuoteRedactions<T extends object>(value: T, redactedFields: string[]): T {
@@ -372,6 +476,13 @@ export const updateQuote = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
+  await assertQuoteReadAllowedForMutation(
+    knex,
+    tenant,
+    user as BillingAuthUser,
+    quoteId,
+    'Permission denied: Cannot update quote'
+  );
   const parsedInput = normalizeQuoteDates(updateQuoteSchema.parse({
     ...input,
     updated_by: input.updated_by ?? getActorUserId(user),
@@ -392,37 +503,8 @@ export const getQuote = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  const quote = await Quote.getById(knex, tenant, quoteId);
+  const quote = await getAuthorizedQuoteForRead(knex, tenant, user as BillingAuthUser, quoteId);
   if (!quote) return null;
-
-  const subject = await resolveAuthorizationSubjectForUser(knex, tenant, user as BillingAuthUser);
-  const authorizationKernel = createAuthorizationKernel({
-    builtinProvider: new BuiltinAuthorizationKernelProvider(),
-    bundleProvider: new BundleAuthorizationKernelProvider({
-      resolveRules: async (input) => {
-        try {
-          return await resolveBundleNarrowingRulesForEvaluation(knex, input);
-        } catch {
-          return [];
-        }
-      },
-    }),
-    rbacEvaluator: async () => true,
-  });
-  const decision = await authorizationKernel.authorizeResource({
-    subject,
-    resource: {
-      type: 'billing',
-      action: 'read',
-      id: quote.quote_id,
-    },
-    record: toQuoteAuthorizationRecord(quote),
-    requestCache: new RequestLocalAuthorizationCache(),
-    knex,
-  });
-  if (!decision.allowed) {
-    return null;
-  }
 
   // Resolve accepted_by UUID to a display name
   if (quote.accepted_by) {
@@ -447,7 +529,7 @@ export const getQuote = withAuth(async (
     }
   }
 
-  return applyQuoteRedactions(quote, decision.redactedFields);
+  return quote;
 });
 
 export const listQuotes = withAuth(async (
@@ -461,26 +543,26 @@ export const listQuotes = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  const result = await Quote.listByTenant(knex, tenant, options);
-  const subject = await resolveAuthorizationSubjectForUser(knex, tenant, user as BillingAuthUser);
-  const authorizationKernel = createAuthorizationKernel({
-    builtinProvider: new BuiltinAuthorizationKernelProvider(),
-    bundleProvider: new BundleAuthorizationKernelProvider({
-      resolveRules: async (input) => {
-        try {
-          return await resolveBundleNarrowingRulesForEvaluation(knex, input);
-        } catch {
-          return [];
-        }
-      },
-    }),
-    rbacEvaluator: async () => true,
-  });
-  const requestCache = new RequestLocalAuthorizationCache();
+  const page = Number.isFinite(options.page) && (options.page ?? 0) > 0 ? Number(options.page) : 1;
+  const pageSize =
+    Number.isFinite(options.pageSize) && (options.pageSize ?? 0) > 0
+      ? Math.min(Number(options.pageSize), 200)
+      : 25;
 
-  const decisions = await Promise.all(
-    result.data.map((quote) =>
-      authorizationKernel.authorizeResource({
+  const subject = await resolveAuthorizationSubjectForUser(knex, tenant, user as BillingAuthUser);
+  const authorizationKernel = createQuoteAuthorizationKernel(knex);
+  const requestCache = new RequestLocalAuthorizationCache();
+  const authorizedPage = await buildAuthorizationAwarePage<IQuoteListItem>({
+    page,
+    limit: pageSize,
+    fetchPage: (sourcePage, sourceLimit) =>
+      Quote.listByTenant(knex, tenant, {
+        ...options,
+        page: sourcePage,
+        pageSize: sourceLimit,
+      }),
+    authorizeRecord: async (quote) => {
+      const decision = await authorizationKernel.authorizeResource({
         subject,
         resource: {
           type: 'billing',
@@ -490,18 +572,34 @@ export const listQuotes = withAuth(async (
         record: toQuoteAuthorizationRecord(quote as unknown as Partial<IQuote>),
         requestCache,
         knex,
-      })
-    )
+      });
+      return decision.allowed;
+    },
+    scanLimit: Math.max(pageSize, 100),
+  });
+  const redactedData = await Promise.all(
+    authorizedPage.data.map(async (quote) => {
+      const decision = await authorizationKernel.authorizeResource({
+        subject,
+        resource: {
+          type: 'billing',
+          action: 'read',
+          id: quote.quote_id,
+        },
+        record: toQuoteAuthorizationRecord(quote as unknown as Partial<IQuote>),
+        requestCache,
+        knex,
+      });
+      return applyQuoteRedactions(quote, decision.redactedFields ?? []);
+    })
   );
-  const filteredData = result.data
-    .map((quote, index) => ({ quote, decision: decisions[index] }))
-    .filter((row) => row.decision?.allowed)
-    .map((row) => applyQuoteRedactions(row.quote, row.decision?.redactedFields ?? []));
 
   return {
-    ...result,
-    data: filteredData,
-    total: filteredData.length,
+    data: redactedData,
+    total: authorizedPage.total,
+    page,
+    pageSize,
+    totalPages: Math.ceil(authorizedPage.total / pageSize) || 1,
   };
 });
 
@@ -516,6 +614,13 @@ export const deleteQuote = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
+  await assertQuoteReadAllowedForMutation(
+    knex,
+    tenant,
+    user as BillingAuthUser,
+    quoteId,
+    'Permission denied: Cannot delete quote'
+  );
   return await Quote.delete(knex, tenant, quoteId);
 });
 
@@ -534,6 +639,13 @@ export const addQuoteItem = withAuth(async (
     ...input,
     created_by: input.created_by ?? getActorUserId(user),
   });
+  await assertQuoteReadAllowedForMutation(
+    knex,
+    tenant,
+    user as BillingAuthUser,
+    parsedInput.quote_id,
+    'Permission denied: Cannot update quote'
+  );
 
   return await QuoteItem.create(knex, tenant, parsedInput as any);
 });
@@ -554,6 +666,22 @@ export const updateQuoteItem = withAuth(async (
     ...input,
     updated_by: input.updated_by ?? getActorUserId(user),
   });
+  const quoteItem = await knex('quote_items')
+    .where({ tenant, quote_item_id: quoteItemId })
+    .first<{ quote_id: string; quote_item_id: string }>('quote_id', 'quote_item_id');
+  if (!quoteItem) {
+    throw new Error(`Quote item ${quoteItemId} not found in tenant ${tenant}`);
+  }
+  if (typeof parsedInput.quote_id === 'string' && parsedInput.quote_id !== quoteItem.quote_id) {
+    throw new Error('Quote item updates cannot move items across quotes.');
+  }
+  await assertQuoteReadAllowedForMutation(
+    knex,
+    tenant,
+    user as BillingAuthUser,
+    quoteItem.quote_id,
+    'Permission denied: Cannot update quote'
+  );
 
   return await QuoteItem.update(knex, tenant, quoteItemId, parsedInput);
 });
@@ -569,6 +697,19 @@ export const removeQuoteItem = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
+  const quoteItem = await knex('quote_items')
+    .where({ tenant, quote_item_id: quoteItemId })
+    .first<{ quote_id: string; quote_item_id: string }>('quote_id', 'quote_item_id');
+  if (!quoteItem) {
+    throw new Error(`Quote item ${quoteItemId} not found in tenant ${tenant}`);
+  }
+  await assertQuoteReadAllowedForMutation(
+    knex,
+    tenant,
+    user as BillingAuthUser,
+    quoteItem.quote_id,
+    'Permission denied: Cannot update quote'
+  );
   return await QuoteItem.delete(knex, tenant, quoteItemId);
 });
 
@@ -584,6 +725,13 @@ export const reorderQuoteItems = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
+  await assertQuoteReadAllowedForMutation(
+    knex,
+    tenant,
+    user as BillingAuthUser,
+    quoteId,
+    'Permission denied: Cannot update quote'
+  );
   return await QuoteItem.reorder(knex, tenant, quoteId, orderedQuoteItemIds);
 });
 
@@ -601,7 +749,13 @@ export const createQuoteFromTemplate = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return await knex.transaction(async (trx) => {
-    const template = await Quote.getById(trx, tenant, templateQuoteId);
+    const template = await assertQuoteReadAllowedForMutation(
+      trx,
+      tenant,
+      user as BillingAuthUser,
+      templateQuoteId,
+      'Permission denied: Cannot read quote template'
+    );
     if (!template) {
       throw new Error(`Quote template ${templateQuoteId} not found in tenant ${tenant}`);
     }
@@ -682,10 +836,13 @@ export const duplicateQuote = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return await knex.transaction(async (trx) => {
-    const sourceQuote = await Quote.getById(trx, tenant, quoteId);
-    if (!sourceQuote) {
-      throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
-    }
+    const sourceQuote = await assertQuoteReadAllowedForMutation(
+      trx,
+      tenant,
+      user as BillingAuthUser,
+      quoteId,
+      'Permission denied: Cannot duplicate quote'
+    );
 
     if (sourceQuote.is_template) {
       throw new Error('Use createQuoteFromTemplate for business templates');
@@ -771,10 +928,13 @@ export const saveQuoteAsTemplate = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return await knex.transaction(async (trx) => {
-    const sourceQuote = await Quote.getById(trx, tenant, quoteId);
-    if (!sourceQuote) {
-      throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
-    }
+    const sourceQuote = await assertQuoteReadAllowedForMutation(
+      trx,
+      tenant,
+      user as BillingAuthUser,
+      quoteId,
+      'Permission denied: Cannot read quote'
+    );
 
     if (sourceQuote.is_template) {
       throw new Error('Quote is already a template');
@@ -858,6 +1018,13 @@ export const createQuoteRevision = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
+  await assertQuoteReadAllowedForMutation(
+    knex,
+    tenant,
+    user as BillingAuthUser,
+    quoteId,
+    'Permission denied: Cannot update quote'
+  );
   return await knex.transaction((trx) => Quote.createRevision(trx, tenant, quoteId, getActorUserId(user)));
 });
 
@@ -872,11 +1039,13 @@ export const submitQuoteForApproval = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  const quote = await Quote.getById(knex, tenant, quoteId);
-
-  if (!quote) {
-    throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
-  }
+  const quote = await assertQuoteReadAllowedForMutation(
+    knex,
+    tenant,
+    user as BillingAuthUser,
+    quoteId,
+    'Permission denied: Cannot update quote'
+  );
 
   if (quote.is_template) {
     throw new Error('Quote templates cannot be submitted for approval');
@@ -903,6 +1072,10 @@ export const listQuoteVersions = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
+  const readableQuote = await getAuthorizedQuoteForRead(knex, tenant, user as BillingAuthUser, quoteId);
+  if (!readableQuote) {
+    return permissionError('Permission denied: Cannot read quote');
+  }
   return await Quote.listVersions(knex, tenant, quoteId);
 });
 
@@ -945,53 +1118,20 @@ export const approveQuote = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  const quote = await Quote.getById(knex, tenant, quoteId);
-
-  if (!quote) {
-    throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
-  }
+  const quote = await assertQuoteReadAllowedForMutation(
+    knex,
+    tenant,
+    user as BillingAuthUser,
+    quoteId,
+    'Permission denied: Cannot approve quote'
+  );
 
   if (quote.status !== 'pending_approval') {
     throw new Error('Only quotes pending approval can be approved');
   }
 
   const subject = await resolveAuthorizationSubjectForUser(knex, tenant, user as BillingAuthUser);
-  const authorizationKernel = createAuthorizationKernel({
-    builtinProvider: new BuiltinAuthorizationKernelProvider({
-      mutationGuards: [
-        (input) => {
-          if (input.mutation?.kind === 'approve' && input.record?.ownerUserId === input.subject.userId) {
-            return {
-              allowed: false,
-              reasons: [
-                {
-                  stage: 'mutation' as const,
-                  sourceType: 'builtin' as const,
-                  code: 'billing_not_self_approver_denied',
-                  message: 'Approvers cannot approve their own quotes.',
-                },
-              ],
-            };
-          }
-
-          return {
-            allowed: true,
-            reasons: [],
-          };
-        },
-      ],
-    }),
-    bundleProvider: new BundleAuthorizationKernelProvider({
-      resolveRules: async (input) => {
-        try {
-          return await resolveBundleNarrowingRulesForEvaluation(knex, input);
-        } catch {
-          return [];
-        }
-      },
-    }),
-    rbacEvaluator: async () => true,
-  });
+  const authorizationKernel = createQuoteAuthorizationKernel(knex, true);
   const mutationDecision = await authorizationKernel.authorizeMutation({
     subject,
     resource: {
@@ -1044,11 +1184,13 @@ export const requestQuoteApprovalChanges = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  const quote = await Quote.getById(knex, tenant, quoteId);
-
-  if (!quote) {
-    throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
-  }
+  const quote = await assertQuoteReadAllowedForMutation(
+    knex,
+    tenant,
+    user as BillingAuthUser,
+    quoteId,
+    'Permission denied: Cannot update quote'
+  );
 
   if (quote.status !== 'pending_approval') {
     throw new Error('Only quotes pending approval can be sent back for changes');
@@ -1082,11 +1224,13 @@ export const sendQuote = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  const quote = await Quote.getById(knex, tenant, quoteId);
-
-  if (!quote) {
-    throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
-  }
+  const quote = await assertQuoteReadAllowedForMutation(
+    knex,
+    tenant,
+    user as BillingAuthUser,
+    quoteId,
+    'Permission denied: Cannot update quote'
+  );
 
   if (quote.is_template) {
     throw new Error('Quote templates cannot be sent to clients');
@@ -1191,11 +1335,13 @@ export const resendQuote = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  const quote = await Quote.getById(knex, tenant, quoteId);
-
-  if (!quote) {
-    throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
-  }
+  const quote = await assertQuoteReadAllowedForMutation(
+    knex,
+    tenant,
+    user as BillingAuthUser,
+    quoteId,
+    'Permission denied: Cannot update quote'
+  );
 
   if (quote.is_template) {
     throw new Error('Quote templates cannot be resent to clients');
@@ -1274,11 +1420,13 @@ export const sendQuoteReminder = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  const quote = await Quote.getById(knex, tenant, quoteId);
-
-  if (!quote) {
-    throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
-  }
+  const quote = await assertQuoteReadAllowedForMutation(
+    knex,
+    tenant,
+    user as BillingAuthUser,
+    quoteId,
+    'Permission denied: Cannot update quote'
+  );
 
   if (quote.is_template) {
     throw new Error('Quote templates cannot receive reminders');
@@ -1361,6 +1509,13 @@ export const convertQuoteToContract = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
+  await assertQuoteReadAllowedForMutation(
+    knex,
+    tenant,
+    user as BillingAuthUser,
+    quoteId,
+    'Permission denied: Cannot convert quote'
+  );
 
   return await knex.transaction(async (trx) => {
     return convertQuoteToDraftContract(trx, tenant, quoteId, getActorUserId(user));
@@ -1383,6 +1538,13 @@ export const convertQuoteToInvoice = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
+  await assertQuoteReadAllowedForMutation(
+    knex,
+    tenant,
+    user as BillingAuthUser,
+    quoteId,
+    'Permission denied: Cannot convert quote'
+  );
 
   return await knex.transaction(async (trx) => {
     return convertQuoteToDraftInvoice(trx, tenant, quoteId, getActorUserId(user));
@@ -1405,6 +1567,13 @@ export const convertQuoteToBoth = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
+  await assertQuoteReadAllowedForMutation(
+    knex,
+    tenant,
+    user as BillingAuthUser,
+    quoteId,
+    'Permission denied: Cannot convert quote'
+  );
 
   return await knex.transaction(async (trx) => {
     const result = await convertQuoteToDraftContractAndInvoice(trx, tenant, quoteId, getActorUserId(user));
@@ -1427,10 +1596,9 @@ export const getQuoteConversionPreview = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  const quote = await Quote.getById(knex, tenant, quoteId);
-
+  const quote = await getAuthorizedQuoteForRead(knex, tenant, user as BillingAuthUser, quoteId);
   if (!quote) {
-    throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
+    throw new Error('Permission denied: Cannot read quote');
   }
 
   return buildQuoteConversionPreview(quote);
@@ -1447,7 +1615,15 @@ export const getQuoteByConvertedContractId = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  return Quote.getByConvertedContractId(knex, tenant, contractId);
+  const quote = await Quote.getByConvertedContractId(knex, tenant, contractId);
+  if (!quote) {
+    return null;
+  }
+  const { decision } = await authorizeQuoteReadDecision(knex, tenant, user as BillingAuthUser, quote);
+  if (!decision.allowed) {
+    return null;
+  }
+  return applyQuoteRedactions(quote, decision.redactedFields);
 });
 
 export const getQuoteByConvertedInvoiceId = withAuth(async (
@@ -1461,7 +1637,15 @@ export const getQuoteByConvertedInvoiceId = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  return Quote.getByConvertedInvoiceId(knex, tenant, invoiceId);
+  const quote = await Quote.getByConvertedInvoiceId(knex, tenant, invoiceId);
+  if (!quote) {
+    return null;
+  }
+  const { decision } = await authorizeQuoteReadDecision(knex, tenant, user as BillingAuthUser, quote);
+  if (!decision.allowed) {
+    return null;
+  }
+  return applyQuoteRedactions(quote, decision.redactedFields);
 });
 
 /**
@@ -1479,6 +1663,10 @@ export const getQuotePdfFileId = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
+  const quote = await getAuthorizedQuoteForRead(knex, tenant, user as BillingAuthUser, quoteId);
+  if (!quote) {
+    return null;
+  }
 
   const doc = await knex('document_associations as da')
     .join('documents as d', function () {
@@ -1512,11 +1700,13 @@ export const regenerateQuotePdf = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  const quote = await Quote.getById(knex, tenant, quoteId);
-
-  if (!quote) {
-    throw new Error(`Quote ${quoteId} not found`);
-  }
+  const quote = await assertQuoteReadAllowedForMutation(
+    knex,
+    tenant,
+    user as BillingAuthUser,
+    quoteId,
+    'Permission denied: Cannot update quote'
+  );
 
   const actorUserId = getActorUserId(user) ?? quote.created_by ?? 'system';
   const fileId = await storeQuotePdf(knex, tenant, quote, actorUserId);
@@ -1534,10 +1724,9 @@ export const downloadQuotePdf = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  const quote = await Quote.getById(knex, tenant, quoteId);
-
+  const quote = await getAuthorizedQuoteForRead(knex, tenant, user as BillingAuthUser, quoteId);
   if (!quote) {
-    throw new Error(`Quote ${quoteId} not found`);
+    throw new Error('Permission denied: Cannot read quote');
   }
 
   const pdfService = createPDFGenerationService(tenant);
@@ -1560,9 +1749,14 @@ export const renderQuotePreview = withAuth(async (
     return denied;
   }
 
+  const { knex } = await createTenantKnex();
+  const quote = await getAuthorizedQuoteForRead(knex, tenant, user as BillingAuthUser, quoteId);
+  if (!quote) {
+    throw new Error('Permission denied: Cannot read quote');
+  }
+
   let templateAst: TemplateAst | undefined;
   if (templateId) {
-    const { knex } = await createTenantKnex();
     const allTemplates = (await import('../models/quoteDocumentTemplate')).default;
     const templates = await allTemplates.getTemplates(knex, tenant);
     const match = templates.find((t) => t.template_id === templateId);
@@ -1572,6 +1766,6 @@ export const renderQuotePreview = withAuth(async (
   }
 
   const service = createPDFGenerationService(tenant);
-  const preview = await service.renderQuotePreview({ quoteId, templateAst });
+  const preview = await service.renderQuotePreview({ quoteId: quote.quote_id, templateAst });
   return { html: preview.html, css: preview.css };
 });

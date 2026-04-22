@@ -101,7 +101,7 @@
   {
     "id": "F011",
     "description": "Introduce a shared quote-read authorizer for billing server actions so quote server-action parity matches the hardened API controller model.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Problem",
       "Requirements",
@@ -111,7 +111,7 @@
   {
     "id": "F012",
     "description": "Apply quote record-level auth to remaining quote read helpers, including versions, conversion preview, preview/render, PDF, and lookup-by-converted-record surfaces.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Billing quote parity",
@@ -121,7 +121,7 @@
   {
     "id": "F013",
     "description": "Apply quote record-level auth to remaining quote mutations, including update/delete, submit/request-changes, send/resend/remind, revision creation, and conversion flows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Billing quote parity",
@@ -131,7 +131,7 @@
   {
     "id": "F014",
     "description": "Require quote item operations to validate both parent-quote authorization and item-to-quote ownership/integrity.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Billing quote parity",
@@ -141,7 +141,7 @@
   {
     "id": "F015",
     "description": "Fix `listQuotes` totals and page metadata so they reflect authorized results rather than page-local post-filter counts.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Problem",
       "Requirements",
