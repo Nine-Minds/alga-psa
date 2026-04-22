@@ -10,6 +10,7 @@ import { Search, Plus, Check } from 'lucide-react';
 import { IService } from '@alga-psa/types';
 import { getServices } from '@alga-psa/billing/actions';
 import { addServiceToContractLine } from '@alga-psa/billing/actions/contractLineServiceActions';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ServiceSelectionDialogProps {
   isOpen: boolean;
@@ -26,6 +27,8 @@ export function ServiceSelectionDialog({
   onServiceAdded,
   existingServiceIds = []
 }: ServiceSelectionDialogProps) {
+  const { t } = useTranslation('msp/service-catalog');
+  const { formatCurrency } = useFormatters();
   const [services, setServices] = useState<IService[]>([]);
   const [filteredServices, setFilteredServices] = useState<IService[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -60,27 +63,14 @@ export function ServiceSelectionDialog({
         setFilteredServices(availableServices);
       } catch (err) {
         console.error('Error fetching services:', err);
-        setError('Failed to load services');
+        setError(t('serviceSelection.errors.load', { defaultValue: 'Failed to load services' }));
       } finally {
         setLoading(false);
       }
     };
 
     fetchServices();
-  }, [isOpen, existingServiceIds]);
-
-  // Get unique categories from services
-  const categories = React.useMemo(() => {
-    const uniqueCategories = new Set<string>();
-    
-    services.forEach(service => {
-      if (service.category_id) {
-        uniqueCategories.add(service.category_id);
-      }
-    });
-    
-    return Array.from(uniqueCategories);
-  }, [services]);
+  }, [isOpen, existingServiceIds, t]);
 
   // Filter services based on search query and selected category
   useEffect(() => {
@@ -142,7 +132,7 @@ export function ServiceSelectionDialog({
       onClose();
     } catch (err) {
       console.error('Error adding services to plan:', err);
-      setError('Failed to add services to plan');
+      setError(t('serviceSelection.errors.add', { defaultValue: 'Failed to add services to plan' }));
     } finally {
       setAdding(false);
     }
@@ -162,13 +152,21 @@ export function ServiceSelectionDialog({
       isOpen={isOpen}
       onClose={onClose}
       id="service-selection-dialog"
-      title="Add Services & Products to Plan"
+      title={t('serviceSelection.title', { defaultValue: 'Add Services & Products to Plan' })}
       footer={(
         <div className="flex justify-between w-full">
           <div>
             {selectedServices.length > 0 && (
               <span className="text-sm text-muted-foreground">
-                {selectedServices.length} service{selectedServices.length !== 1 ? 's' : ''} selected
+                {selectedServices.length === 1
+                  ? t('serviceSelection.selection.countOne', {
+                      count: selectedServices.length,
+                      defaultValue: '{{count}} service selected',
+                    })
+                  : t('serviceSelection.selection.countOther', {
+                      count: selectedServices.length,
+                      defaultValue: '{{count}} services selected',
+                    })}
               </span>
             )}
           </div>
@@ -178,14 +176,18 @@ export function ServiceSelectionDialog({
               variant="outline"
               onClick={onClose}
             >
-              Cancel
+              {t('serviceSelection.actions.cancel', { defaultValue: 'Cancel' })}
             </Button>
             <Button
               id="add-selected-services-button"
               onClick={handleAddServices}
               disabled={selectedServices.length === 0 || adding}
             >
-              {adding ? 'Adding...' : 'Add Selected Services'}
+              {adding
+                ? t('serviceSelection.actions.adding', { defaultValue: 'Adding...' })
+                : t('serviceSelection.actions.addSelected', {
+                    defaultValue: 'Add Selected Services',
+                  })}
             </Button>
           </div>
         </div>
@@ -200,7 +202,9 @@ export function ServiceSelectionDialog({
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 id="service-search-input"
-                placeholder="Search services/products..."
+                placeholder={t('serviceSelection.searchPlaceholder', {
+                  defaultValue: 'Search services/products...',
+                })}
                 className="pl-10"
                 value={searchQuery}
                 onChange={handleSearchChange}
@@ -226,7 +230,9 @@ export function ServiceSelectionDialog({
           <div className="overflow-auto flex-1 border rounded-md">
             {loading ? (
               <div className="flex justify-center items-center h-40">
-                <p className="text-muted-foreground">Loading services...</p>
+                <p className="text-muted-foreground">
+                  {t('serviceSelection.states.loading', { defaultValue: 'Loading services...' })}
+                </p>
               </div>
             ) : error ? (
               <div className="flex justify-center items-center h-40">
@@ -234,17 +240,27 @@ export function ServiceSelectionDialog({
               </div>
             ) : filteredServices.length === 0 ? (
               <div className="flex justify-center items-center h-40">
-                <p className="text-muted-foreground">No services found</p>
+                <p className="text-muted-foreground">
+                  {t('serviceSelection.states.empty', { defaultValue: 'No services found' })}
+                </p>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[40px]"></TableHead>
-                    <TableHead>Item Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Unit</TableHead>
-                    <TableHead>Rate</TableHead>
+                    <TableHead>
+                      {t('serviceSelection.table.itemName', { defaultValue: 'Item Name' })}
+                    </TableHead>
+                    <TableHead>
+                      {t('serviceSelection.table.type', { defaultValue: 'Type' })}
+                    </TableHead>
+                    <TableHead>
+                      {t('serviceSelection.table.unit', { defaultValue: 'Unit' })}
+                    </TableHead>
+                    <TableHead>
+                      {t('serviceSelection.table.rate', { defaultValue: 'Rate' })}
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -266,13 +282,22 @@ export function ServiceSelectionDialog({
                         <div className="flex items-center gap-2">
                           <span>{service.service_name}</span>
                           <Badge variant={service.item_kind === 'product' ? 'default' : 'outline'}>
-                            {service.item_kind === 'product' ? 'Product' : 'Service'}
+                            {service.item_kind === 'product'
+                              ? t('serviceSelection.table.product', { defaultValue: 'Product' })
+                              : t('serviceSelection.table.service', { defaultValue: 'Service' })}
                           </Badge>
                         </div>
                       </TableCell>
-                      <TableCell>{service.service_type_name || 'Unknown'}</TableCell>
+                      <TableCell>
+                        {service.service_type_name || t('serviceSelection.table.unknown', { defaultValue: 'Unknown' })}
+                      </TableCell>
                       <TableCell>{service.unit_of_measure}</TableCell>
-                      <TableCell>${service.default_rate}</TableCell>
+                      <TableCell>
+                        {formatCurrency(
+                          service.default_rate,
+                          service.prices?.[0]?.currency_code || 'USD',
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -282,7 +307,9 @@ export function ServiceSelectionDialog({
           
           {/* Quick add section */}
           <div className="flex flex-wrap gap-2 p-3 bg-muted rounded-md">
-            <span className="text-sm font-medium text-[rgb(var(--color-text-700))] mr-2">Quick Add:</span>
+            <span className="text-sm font-medium text-[rgb(var(--color-text-700))] mr-2">
+              {t('serviceSelection.quickAdd.label', { defaultValue: 'Quick Add:' })}
+            </span>
             {serviceTypes.map(type => (
               <Button
                 key={`quick-add-${type}`}
@@ -310,7 +337,10 @@ export function ServiceSelectionDialog({
                 }}
               >
                 <Plus className="h-3 w-3" />
-                All {type}
+                {t('serviceSelection.quickAdd.allType', {
+                  type,
+                  defaultValue: 'All {{type}}',
+                })}
               </Button>
             ))}
           </div>

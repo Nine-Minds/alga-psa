@@ -1,0 +1,418 @@
+{
+  "common": {
+    "actions": {
+      "view": "View",
+      "back": "Back",
+      "save": "Save Entry",
+      "saveGeneric": "Save",
+      "saving": "Saving...",
+      "cancel": "Cancel",
+      "reset": "Reset",
+      "delete": "Delete",
+      "change": "Change",
+      "select": "Select",
+      "getStarted": "Get Started",
+      "addItem": "Add Item",
+      "addEntry": "Entry",
+      "addComment": "Add Comment",
+      "adding": "Adding...",
+      "approve": "Approve",
+      "reject": "Reject",
+      "requestChanges": "Request Changes",
+      "reverseApproval": "Reverse Approval",
+      "reopen": "Reopen",
+      "reopenForEdits": "Reopen for edits",
+      "submitTimeSheet": "Submit Time Sheet",
+      "showDetails": "Show Details",
+      "hideDetails": "Hide Details",
+      "copyToAnotherDay": "Copy to another day",
+      "viewDetails": "View details",
+      "manageTimePeriods": "Manage Time Periods",
+      "selectWorkItem": "Select Work Item",
+      "clearFilter": "Clear filter"
+    },
+    "states": {
+      "inProgress": "In Progress",
+      "submitted": "Submitted",
+      "approved": "Approved",
+      "changesRequested": "Changes Requested",
+      "unknown": "Unknown",
+      "current": "Current",
+      "active": "Active",
+      "addressed": "Addressed",
+      "changeRequested": "Change requested",
+      "loading": "Loading..."
+    },
+    "fallbacks": {
+      "na": "N/A",
+      "none": "No entries",
+      "notFound": "Not found",
+      "untitled": "Untitled",
+      "unassigned": "Unassigned",
+      "noDueDate": "No due date",
+      "noServiceSelected": "No service selected",
+      "noNotes": "No notes",
+      "noUserFound": "No user found"
+    },
+    "units": {
+      "hoursShort": "h",
+      "minutesShort": "m",
+      "hoursAbbrev": "hrs",
+      "dayOne": "day",
+      "dayOther": "days",
+      "percentBillable": "{{value}}% billable"
+    },
+    "types": {
+      "all": "All Types",
+      "ticket": "Ticket",
+      "tickets": "Tickets",
+      "projectTask": "Project Task",
+      "projectTasks": "Project Tasks",
+      "interaction": "Interaction",
+      "interactions": "Interactions",
+      "adHocEntry": "Ad-hoc Entry",
+      "adHocEntries": "Ad-hoc Entries",
+      "billable": "Billable"
+    }
+  },
+  "timeTracking": {
+    "subjectUserLabel": "User"
+  },
+  "timeEntryProvider": {
+    "errors": {
+      "initialize": "Failed to initialize time entries"
+    }
+  },
+  "timePeriodList": {
+    "title": "Select a Time Period",
+    "columns": {
+      "period": "Period",
+      "status": "Status",
+      "hoursEntered": "Hours Entered",
+      "daysLogged": "Days Logged",
+      "lastEntry": "Last Entry",
+      "actions": "Actions"
+    },
+    "lastEntry": {
+      "none": "No entries"
+    }
+  },
+  "timeEntryForm": {
+    "labels": {
+      "service": "Service",
+      "date": "Date",
+      "startTime": "Start Time",
+      "endTime": "End Time",
+      "duration": "Duration",
+      "billable": "Billable",
+      "notes": "Notes",
+      "deleteTimeEntry": "Delete Time Entry",
+      "unsavedChanges": "Unsaved changes"
+    },
+    "placeholders": {
+      "selectService": "Select a service",
+      "selectDate": "Select date",
+      "addNotes": "Add notes"
+    },
+    "validation": {
+      "startBeforeEnd": "Start time must be earlier than end time",
+      "endAfterStart": "End time must be later than start time",
+      "durationMinimum": "Duration must be at least 1 minute",
+      "minimumDuration": "Minimum duration is 1 minute",
+      "serviceRequired": "Service is required for time entries",
+      "timePeriodRange": "Date must be within the current period ({{periodRange}})",
+      "endAfterStartPicker": "End time must be after start time"
+    }
+  },
+  "workItemPicker": {
+    "actions": {
+      "createAdHocEntry": "Create Ad-hoc Entry"
+    },
+    "placeholders": {
+      "search": "Search work items...",
+      "adHocTitle": "Enter title for ad-hoc entry",
+      "startTime": "Start time",
+      "endTime": "End time"
+    },
+    "filters": {
+      "includeInactive": "Include inactive",
+      "filters": "Filters",
+      "assignedTo": "Assigned to",
+      "assignedToMe": "Assigned to me",
+      "startDate": "Start date",
+      "endDate": "End date"
+    },
+    "empty": {
+      "searching": "Searching...",
+      "noWorkItems": "No work items found"
+    }
+  },
+  "workItemList": {
+    "meta": {
+      "assignedTo": "Assigned to: {{value}}",
+      "dueDate": "Due Date: {{value}}",
+      "contact": "Contact: {{value}}",
+      "scheduledEnd": "Scheduled end: {{value}}"
+    },
+    "assignment": {
+      "oneUser": "1 user assigned",
+      "multipleUsers": "{{count}} users assigned",
+      "additionalUsers": "{{name}}, +{{count}} user",
+      "additionalUsersOther": "{{name}}, +{{count}} users"
+    },
+    "bundledTicket": "Bundled ticket — log time on the master ticket{{suffix}}.",
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "pageInfo": "Page {{current}} of {{total}} ({{records}} total records)"
+    },
+    "interactionType": "{{type}} • {{client}}",
+    "currentSelection": "Current work item"
+  },
+  "timeSheetHeader": {
+    "title": "Time Sheet",
+    "titleFor": "Time Sheet for {{name}}",
+    "editedBy": "Edited by {{name}}",
+    "aria": {
+      "previousWeek": "Previous week",
+      "nextWeek": "Next week"
+    },
+    "pagination": {
+      "pageInfo": "Page {{current}} of {{total}}"
+    },
+    "labels": {
+      "status": "Status:",
+      "showIntervals": "Show intervals",
+      "grid": "Grid",
+      "list": "List"
+    }
+  },
+  "approval": {
+    "titleFor": "Time Sheet Approval for {{name}}",
+    "sections": {
+      "summary": "Summary",
+      "breakdownByWorkItemType": "Breakdown by Work Item Type",
+      "dailyBreakdown": "Daily Breakdown",
+      "detailedEntries": "Detailed Time Entries",
+      "comments": "Comments",
+      "timeEntryDetails": "Time Entry Details"
+    },
+    "labels": {
+      "period": "Period",
+      "submitted": "Submitted",
+      "total": "Total",
+      "billable": "Billable",
+      "nonBillable": "Non-Billable",
+      "workItem": "Work Item",
+      "service": "Service",
+      "duration": "Duration",
+      "notes": "Notes",
+      "entryChangeSuggestion": "Entry Change Suggestion",
+      "approver": "Approver",
+      "employee": "Employee"
+    },
+    "table": {
+      "date": "Date",
+      "workItem": "Work Item",
+      "start": "Start",
+      "end": "End",
+      "billable": "Billable",
+      "status": "Status"
+    },
+    "comments": {
+      "changesRequestedHint": "(Changes have been requested - please review comments)",
+      "responsePlaceholder": "Add your response to the requested changes...",
+      "placeholder": "Add a comment...",
+      "respondToChanges": "Respond to Changes"
+    },
+    "changeSuggestionPlaceholder": "Tell the employee exactly what to fix on this entry"
+  },
+  "approvalActions": {
+    "dialogs": {
+      "rejectTitle": "Reject Time Sheet",
+      "requestChangesTitle": "Request Changes"
+    },
+    "labels": {
+      "rejectionReason": "Rejection Reason"
+    },
+    "placeholders": {
+      "rejectionReason": "Enter reason for rejection"
+    },
+    "confirm": {
+      "reject": "Confirm Reject",
+      "changes": "Confirm Changes"
+    }
+  },
+  "comments": {
+    "placeholder": "Add a comment...",
+    "responsePlaceholder": "Respond to the requested changes...",
+    "respondToChanges": "Respond to Changes"
+  },
+  "feedback": {
+    "approverFeedback": "Approver feedback",
+    "viewHistory": "View feedback history",
+    "approverOn": "{{name}} on {{value}}"
+  },
+  "managerDashboard": {
+    "access": {
+      "title": "Team lead access required",
+      "description": "To approve time sheets for your team members, you need to be a team lead.",
+      "goToTeamSettings": "Go to Team Settings"
+    },
+    "title": "Time Sheet Approvals",
+    "actions": {
+      "hideApproved": "Hide Approved",
+      "showApproved": "Show Approved",
+      "bulkApproveSelected": "Bulk Approve Selected",
+      "reverse": "Reverse"
+    },
+    "columns": {
+      "select": "Select",
+      "employee": "Employee",
+      "period": "Period",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "reverseApproval": {
+      "reason": "Approval reversed by manager",
+      "error": "Failed to reverse approval: {{error}}"
+    }
+  },
+  "workItemDrawer": {
+    "errors": {
+      "genericTitle": "Error loading content",
+      "genericDescription": "Please try again",
+      "failedInteraction": "Failed to load interaction details",
+      "interactionNotFound": "Interaction not found",
+      "noUserSession": "No user session found",
+      "failedTicket": "Failed to load ticket",
+      "failedTask": "Failed to load task",
+      "failedTaskPhase": "Failed to load task phase",
+      "failedTaskProjectMetadata": "Failed to load task project metadata",
+      "failedAdHoc": "Failed to load ad-hoc entry data",
+      "unsupportedType": "Unsupported work item type"
+    }
+  },
+  "timeSheetClient": {
+    "errors": {
+      "delegationDisabled": "Delegated time entry is disabled",
+      "failedReopen": "Failed to reopen time sheet"
+    },
+    "reopen": {
+      "success": "Time sheet reopened for edits",
+      "reason": "Reopened for edits",
+      "title": "Reopen for edits?",
+      "message": "This will move the time sheet back to Changes Requested so time entries can be edited."
+    }
+  },
+  "timeSheetList": {
+    "delete": {
+      "title": "Delete Work Item",
+      "message": "This will permanently delete all time entries for this work item. This action cannot be undone."
+    },
+    "summary": {
+      "entryOne": "entry",
+      "entryOther": "entries",
+      "total": "Total: {{value}}",
+      "billable": "Billable: {{value}}"
+    },
+    "empty": {
+      "title": "No time entries yet",
+      "description": "Add a work item and start tracking your time.",
+      "noEntries": "No entries"
+    },
+    "columns": {
+      "workItem": "Work Item",
+      "timeEntry": "Time Entry",
+      "duration": "Duration",
+      "billableDuration": "Billable Duration",
+      "actions": "Actions"
+    },
+    "dayGroup": {
+      "entryOne": "{{count}} entry",
+      "entryOther": "{{count}} entries"
+    },
+    "focusFilter": {
+      "summary": "Showing {{count}} entries for {{workItem}} on {{date}}",
+      "description": "Only entries from the selected grid cell are visible.",
+      "backToGrid": "Back to grid"
+    }
+  },
+  "selectedWorkItem": {
+    "adHocNoWorkItem": "Ad-hoc entry (no work item)"
+  },
+  "contractInfo": {
+    "noContract": "No contract line found for this service. Time will be routed to the system-managed default contract.",
+    "contract": "Contract: {{name}}",
+    "defaultContract": "System-managed default contract",
+    "multipleLines": "Multiple contract lines available - using default selection"
+  },
+  "billableLegend": {
+    "title": "Billable Legend",
+    "description": "Color indicators for billable time ratios"
+  },
+  "intervalItem": {
+    "now": "Now",
+    "autoClosed": "Auto-closed",
+    "active": "Active"
+  },
+  "intervals": {
+    "title": "Ticket Time Intervals",
+    "hideShortIntervals": "Hide intervals under 1 minute",
+    "totalTime": "Total time: {{value}}",
+    "selectedOne": "{{count}} interval selected",
+    "selectedOther": "{{count}} intervals selected",
+    "tooltips": {
+      "createTimeEntry": "Create time entry from selected intervals",
+      "deleteSelected": "Delete selected intervals",
+      "mergeSelected": "Merge selected intervals"
+    },
+    "actions": {
+      "selectAll": "Select All",
+      "deselectAll": "Deselect All",
+      "merge": "Merge"
+    },
+    "states": {
+      "loading": "Loading intervals...",
+      "noIntervalsThisPeriod": "No intervals found for this time period",
+      "noIntervalsThisTicket": "No intervals found for this ticket",
+      "noIntervalsLongerThanMinute": "No intervals longer than 1 minute found"
+    },
+    "entryName": "Ticket Time Entry",
+    "messages": {
+      "cannotFindTimeSheet": "Cannot create time entry - could not find or create time sheet",
+      "mergeFirst": "Please merge intervals first before creating a time entry",
+      "sameTicketOnly": "Can only create time entries from intervals of the same ticket",
+      "mergeSameTicketOnly": "Can only merge intervals from the same ticket",
+      "mergeSuccess": "Intervals merged successfully",
+      "failedMerge": "Failed to merge intervals",
+      "noActivePeriod": "No active time period found",
+      "failedFetchTimeSheet": "Failed to create or fetch time sheet",
+      "failedPrepareTimeEntry": "Failed to prepare time entry",
+      "savedSuccess": "Time entry saved successfully",
+      "failedSave": "Failed to save time entry"
+    }
+  },
+  "addWorkItemDialog": {
+    "title": "Add Work Item",
+    "description": "Select a work item to add to timesheet",
+    "close": "Close add work item dialog",
+    "focus": "Focus on add work item dialog"
+  },
+  "timeEntryReadOnly": {
+    "viewEntryDetails": "View entry details"
+  },
+  "messages": {
+    "serviceRequired": "Selecione um serviço antes de salvar as entradas de tempo",
+    "invalidService": "Serviço selecionado inválido",
+    "taxRegionRequired": "Selecione uma região fiscal para serviços tributáveis",
+    "invalidTimeEntry": "Verifique os valores da entrada de tempo",
+    "savingEntry": "Salvando entrada de tempo...",
+    "entrySaved": "Entrada de tempo salva",
+    "entrySavedSuccess": "Entrada de tempo salva com sucesso",
+    "taskUpdated": "Tarefa atualizada com sucesso",
+    "saveChangesFailed": "Falha ao salvar as alterações",
+    "changesSaved": "Alterações salvas com sucesso",
+    "workItemDeleted": "Item de trabalho excluído com sucesso"
+  }
+}

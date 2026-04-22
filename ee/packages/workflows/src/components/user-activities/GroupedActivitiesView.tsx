@@ -55,6 +55,7 @@ import { InlinePriorityPicker } from './InlinePriorityPicker';
 import { ActivityActionMenu } from './ActivityActionMenu';
 import { useActivityDrawer } from './ActivityDrawerProvider';
 import { cn } from '@alga-psa/ui/lib/utils';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const UNGROUPED_ID = '__ungrouped__';
 
@@ -84,7 +85,27 @@ function DroppableContainer({
   );
 }
 
-export function getActivityTypeLabel(type: ActivityType): string {
+type TFn = (key: string, options?: Record<string, unknown>) => string;
+
+export function getActivityTypeLabel(type: ActivityType, t?: TFn): string {
+  if (t) {
+    switch (type) {
+      case ActivityType.SCHEDULE:
+        return t('table.activityTypes.schedule', { defaultValue: 'Schedule' });
+      case ActivityType.PROJECT_TASK:
+        return t('table.activityTypes.projectTask', { defaultValue: 'Project Task' });
+      case ActivityType.TICKET:
+        return t('table.activityTypes.ticket', { defaultValue: 'Ticket' });
+      case ActivityType.WORKFLOW_TASK:
+        return t('table.activityTypes.workflowTask', { defaultValue: 'Workflow Task' });
+      case ActivityType.TIME_ENTRY:
+        return t('table.activityTypes.timeEntry', { defaultValue: 'Time Entry' });
+      case ActivityType.NOTIFICATION:
+        return t('table.activityTypes.notification', { defaultValue: 'Notification' });
+      default:
+        return t('table.activityTypes.activity', { defaultValue: 'Activity' });
+    }
+  }
   switch (type) {
     case ActivityType.SCHEDULE:
       return 'Schedule';
@@ -183,6 +204,7 @@ interface SortableActivityRowProps {
 }
 
 function SortableActivityRow({ activity, onActionComplete, onOpenDrawer }: SortableActivityRowProps) {
+  const { t } = useTranslation('msp/user-activities');
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `${activity.type}:${activity.id}`,
     data: { activity, type: 'activity' },
@@ -209,7 +231,7 @@ function SortableActivityRow({ activity, onActionComplete, onOpenDrawer }: Sorta
         className="cursor-grab active:cursor-grabbing flex-shrink-0 w-5 p-0.5 text-muted-foreground hover:text-foreground opacity-40 group-hover:opacity-100 transition-opacity"
         {...attributes}
         {...listeners}
-        aria-label="Drag to reorder"
+        aria-label={t('groupedView.ariaLabels.dragToReorder', { defaultValue: 'Drag to reorder' })}
       >
         <GripVertical className="h-4 w-4" />
       </button>
@@ -217,7 +239,7 @@ function SortableActivityRow({ activity, onActionComplete, onOpenDrawer }: Sorta
       {/* Type column: icon only with tooltip */}
       <div
         className="flex-shrink-0 w-6 flex items-center justify-center"
-        title={getActivityTypeLabel(activity.type)}
+        title={getActivityTypeLabel(activity.type, t)}
       >
         {getTypeIcon(activity.type)}
       </div>
@@ -277,6 +299,7 @@ function GroupedViewColumnHeader({
   sortDirection: 'asc' | 'desc';
   onSortChange: (column: GroupSortBy) => void;
 }) {
+  const { t } = useTranslation('msp/user-activities');
   const renderHeader = (column: GroupSortBy, label: string, className: string) => {
     const isActive = sortBy === column;
     return (
@@ -302,10 +325,10 @@ function GroupedViewColumnHeader({
     <div className="flex items-center gap-3 px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b border-border bg-muted/20 rounded-t-md">
       <div className="flex-shrink-0 w-5" aria-hidden="true" />
       <div className="flex-shrink-0 w-6" aria-hidden="true" />
-      {renderHeader('title', 'Title', 'flex-1 min-w-0')}
-      {renderHeader('status', 'Status', 'flex-shrink-0 w-44')}
-      {renderHeader('priority', 'Priority', 'flex-shrink-0 w-40')}
-      {renderHeader('dueDate', 'Due Date', 'flex-shrink-0 w-28')}
+      {renderHeader('title', t('groupedView.columns.title', { defaultValue: 'Title' }), 'flex-1 min-w-0')}
+      {renderHeader('status', t('groupedView.columns.status', { defaultValue: 'Status' }), 'flex-shrink-0 w-44')}
+      {renderHeader('priority', t('groupedView.columns.priority', { defaultValue: 'Priority' }), 'flex-shrink-0 w-40')}
+      {renderHeader('dueDate', t('groupedView.columns.dueDate', { defaultValue: 'Due Date' }), 'flex-shrink-0 w-28')}
       <div className="flex-shrink-0 w-8" aria-hidden="true" />
     </div>
   );
@@ -368,6 +391,7 @@ export function GroupedActivitiesView({
   onGroupsChange,
   onActionComplete,
 }: GroupedActivitiesViewProps) {
+  const { t } = useTranslation('msp/user-activities');
   const { openActivityDrawer } = useActivityDrawer();
 
   const [localGroups, setLocalGroups] = useState<LocalGroup[]>([]);
@@ -672,7 +696,7 @@ export function GroupedActivitiesView({
                     setNewGroupName('');
                   }
                 }}
-                placeholder="Group name"
+                placeholder={t('groupedView.groupNamePlaceholder', { defaultValue: 'Group name' })}
                 autoFocus
                 className="max-w-[240px]"
               />
@@ -699,7 +723,7 @@ export function GroupedActivitiesView({
               onClick={() => setShowNewGroupInput(true)}
             >
               <Plus className="h-4 w-4 mr-1" />
-              Add Group
+              {t('groupedView.addGroup', { defaultValue: 'Add Group' })}
             </Button>
           )}
         </div>
@@ -799,6 +823,7 @@ function GroupSection({
   onOpenDrawer,
   onActionComplete,
 }: GroupSectionProps) {
+  const { t } = useTranslation('msp/user-activities');
   const itemIds = useMemo(
     () => group.activities.map((a) => `${a.type}:${a.id}`),
     [group.activities]
@@ -841,7 +866,7 @@ function GroupSection({
           className="cursor-grab active:cursor-grabbing flex-shrink-0 p-0.5 text-muted-foreground hover:text-foreground opacity-40 hover:opacity-100 transition-opacity"
           {...attributes}
           {...listeners}
-          aria-label="Drag to reorder group"
+          aria-label={t('groupedView.ariaLabels.dragToReorderGroup', { defaultValue: 'Drag to reorder group' })}
         >
           <GripVertical className="h-4 w-4" />
         </button>
@@ -849,7 +874,9 @@ function GroupSection({
           type="button"
           onClick={() => onToggleCollapse(group)}
           className="text-muted-foreground hover:text-foreground"
-          aria-label={group.isCollapsed ? 'Expand group' : 'Collapse group'}
+          aria-label={group.isCollapsed
+            ? t('groupedView.ariaLabels.expandGroup', { defaultValue: 'Expand group' })
+            : t('groupedView.ariaLabels.collapseGroup', { defaultValue: 'Collapse group' })}
         >
           {group.isCollapsed ? (
             <ChevronRight className="h-4 w-4" />
@@ -895,7 +922,7 @@ function GroupSection({
               variant="ghost"
               className="h-7 w-7 p-0"
               onClick={() => onStartRename(group)}
-              aria-label="Rename group"
+              aria-label={t('groupedView.ariaLabels.renameGroup', { defaultValue: 'Rename group' })}
             >
               <Pencil className="h-3.5 w-3.5" />
             </Button>
@@ -905,7 +932,7 @@ function GroupSection({
               variant="ghost"
               className="h-7 w-7 p-0 text-destructive hover:text-destructive"
               onClick={() => onDeleteGroup(group.groupId)}
-              aria-label="Delete group"
+              aria-label={t('groupedView.ariaLabels.deleteGroup', { defaultValue: 'Delete group' })}
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
@@ -919,7 +946,7 @@ function GroupSection({
           <DroppableContainer id={group.groupId} className="min-h-[48px]">
             {group.activities.length === 0 ? (
               <div className="py-6 px-3 text-center text-xs text-muted-foreground">
-                Drop activities here
+                {t('groupedView.dropActivitiesHere', { defaultValue: 'Drop activities here' })}
               </div>
             ) : (
               group.activities.map((activity) => (
@@ -949,6 +976,7 @@ interface UngroupedSectionProps {
 }
 
 function UngroupedSection({ activities, onOpenDrawer, onActionComplete }: UngroupedSectionProps) {
+  const { t } = useTranslation('msp/user-activities');
   const { value: collapsed, setValue: setCollapsed } = useUserPreference<boolean>(
     'activitiesUngroupedCollapsed',
     { defaultValue: false, localStorageKey: 'activitiesUngroupedCollapsed', debounceMs: 300 }
@@ -970,7 +998,7 @@ function UngroupedSection({ activities, onOpenDrawer, onActionComplete }: Ungrou
           <ChevronDown className="h-4 w-4 text-muted-foreground" />
         )}
         <h3 className="text-sm font-semibold text-muted-foreground">
-          Ungrouped{' '}
+          {t('groupedView.ungroupedHeading', { defaultValue: 'Ungrouped' })}{' '}
           <span className="text-xs font-normal">({activities.length})</span>
         </h3>
       </div>
@@ -979,7 +1007,7 @@ function UngroupedSection({ activities, onOpenDrawer, onActionComplete }: Ungrou
         <DroppableContainer id={UNGROUPED_ID} className="min-h-[48px]">
           {activities.length === 0 ? (
             <div className="py-4 px-3 text-center text-xs text-muted-foreground">
-              All activities are in groups
+              {t('groupedView.allInGroups', { defaultValue: 'All activities are in groups' })}
             </div>
           ) : (
             activities.map((activity) => (

@@ -42,6 +42,20 @@
     "confirmDeletion": "Confirm Deletion",
     "saving": "Saving..."
   },
+  "form": {
+    "selectPlaceholder": "Select...",
+    "clearSelection": "Clear selection",
+    "fromDate": "From date",
+    "toDate": "To date",
+    "noResults": "No results found",
+    "searchPlaceholder": "Search..."
+  },
+  "tagFilter": {
+    "placeholder": "Filter by tags...",
+    "filter": "Filter",
+    "selectedCount": "{{count}} selected",
+    "clearAll": "Clear all"
+  },
   "status": {
     "loading": "Loading...",
     "saving": "Saving...",
@@ -97,6 +111,30 @@
   "fields": {
     "notes": "Notes"
   },
+  "auth": {
+    "messages": {
+      "handoffMissingToken": "The login handoff token is missing or invalid. Please sign in again.",
+      "handoffFinalizeFailed": "We could not finalize your login. Please try signing in again.",
+      "handoffNetworkIssue": "Network issue detected while finalizing your login. Please try again."
+    },
+    "checkEmail": {
+      "resendSuccess": "Email sent! Please check your inbox.",
+      "resendFailed": "Failed to resend email. Please try again."
+    }
+  },
+  "share": {
+    "errors": {
+      "loadFailed": "Failed to load share link",
+      "connectionFailed": "Failed to connect to server",
+      "passwordRequired": "Password required",
+      "invalidPassword": "Invalid password",
+      "downloadFailedRetry": "Download failed. Please try again.",
+      "downloadFailed": "Download failed",
+      "linkNotAvailable": "Link Not Available",
+      "linkExpired": "This share link has expired.",
+      "downloadLimitReached": "Download limit has been reached."
+    }
+  },
   "tickets": {
     "origin": {
       "internal": "Created Internally",
@@ -134,7 +172,7 @@
     "currentLanguage": "Current Language",
     "preference": {
       "label": "Language Preference",
-      "helper": "Select your preferred language for the interface and email notifications",
+      "helper": "Select your preferred language for the interface and email notifications. Overrides the organization and client portal defaults for you.",
       "placeholder": "Select a language",
       "cleared": "Language preference cleared. Using default language...",
       "updating": "Updating language preference...",
@@ -144,6 +182,43 @@
         "client": "client default",
         "tenant": "tenant default",
         "system": "system default"
+      }
+    },
+    "hierarchyTable": {
+      "title": "Language Preference Hierarchy",
+      "description": "When resolving which language to use for the interface and email notifications, Alga checks these in order and stops at the first match.",
+      "columns": {
+        "priority": "Priority",
+        "source": "Language Source",
+        "appliesTo": "Applies To",
+        "whereSet": "Where It's Set"
+      },
+      "rows": {
+        "userPreference": {
+          "source": "Individual user preference",
+          "appliesTo": "All users",
+          "whereSet": "User profile"
+        },
+        "clientUserLanguage": {
+          "source": "Client-specific user language",
+          "appliesTo": "Client portal users (per specific client)",
+          "whereSet": "Client Details"
+        },
+        "clientPortalDefault": {
+          "source": "Client Portal default",
+          "appliesTo": "All client portal users",
+          "whereSet": "MSP Settings → Client Portal"
+        },
+        "organizationDefault": {
+          "source": "Organization default",
+          "appliesTo": "All users (MSP staff and client portal)",
+          "whereSet": "MSP Settings → Language"
+        },
+        "systemDefault": {
+          "source": "System default (English)",
+          "appliesTo": "Fallback",
+          "whereSet": "System-defined"
+        }
       }
     }
   },
@@ -928,6 +1003,11 @@
         "error_deleting": "Failed to delete comment. Please try again.",
         "confirm_delete": "Are you sure you want to delete this comment?"
       }
+    }
+  },
+  "enums": {
+    "addOnDescription": {
+      "ai_assistant": "Unlock AI chat, document assistance, sidebar help, and workflow AI tools for your team."
     }
   }
 }

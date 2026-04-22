@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
-import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { LanguageHierarchyTable } from '@alga-psa/ui/components/LanguageHierarchyTable';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Globe } from 'lucide-react';
@@ -11,8 +11,8 @@ import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { LOCALE_CONFIG, filterPseudoLocales, type SupportedLocale } from '@alga-psa/core/i18n/config';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import {
-  getTenantMspLocaleSettingsAction,
-  updateTenantMspLocaleSettingsAction,
+  getTenantLocaleSettingsAction,
+  updateTenantDefaultLocaleAction,
 } from '@alga-psa/tenancy/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
@@ -42,13 +42,13 @@ const MspLanguageSettings = () => {
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const localeSettings = await getTenantMspLocaleSettingsAction();
+        const localeSettings = await getTenantLocaleSettingsAction();
         if (localeSettings) {
           setDefaultLocale(localeSettings.defaultLocale);
           setEnabledLocales(localeSettings.enabledLocales);
         }
       } catch (error) {
-        console.error('Failed to load MSP language settings:', error);
+        console.error('Failed to load organization language settings:', error);
       } finally {
         setLoading(false);
       }
@@ -67,12 +67,12 @@ const MspLanguageSettings = () => {
         ? enabledLocales
         : [...enabledLocales, locale];
 
-      await updateTenantMspLocaleSettingsAction(locale, updatedEnabledLocales);
+      await updateTenantDefaultLocaleAction(locale, updatedEnabledLocales);
       setDefaultLocale(locale);
       setEnabledLocales(updatedEnabledLocales);
-      toast.success(`MSP default language updated to ${LOCALE_CONFIG.localeNames[locale]}`);
+      toast.success(`Organization default language updated to ${LOCALE_CONFIG.localeNames[locale]}`);
     } catch (error) {
-      handleError(error, 'Failed to update MSP language settings');
+      handleError(error, 'Failed to update organization language settings');
     } finally {
       setSaving(false);
     }
@@ -85,11 +85,11 @@ const MspLanguageSettings = () => {
 
     setSaving(true);
     try {
-      await updateTenantMspLocaleSettingsAction(defaultLocale, selectedLocales);
+      await updateTenantDefaultLocaleAction(defaultLocale, selectedLocales);
       setEnabledLocales(selectedLocales);
-      toast.success('Available MSP languages updated');
+      toast.success('Available languages updated');
     } catch (error) {
-      handleError(error, 'Failed to update available MSP languages');
+      handleError(error, 'Failed to update available languages');
     } finally {
       setSaving(false);
     }
@@ -154,16 +154,7 @@ const MspLanguageSettings = () => {
             </div>
           </div>
 
-          <Alert variant="info">
-            <AlertDescription>
-              <h4 className="font-medium mb-2">{t('mspLanguage.hierarchy.title')}</h4>
-              <ol className="space-y-1 list-decimal list-inside">
-                <li>{t('mspLanguage.hierarchy.userPreference')}</li>
-                <li>{t('mspLanguage.hierarchy.orgDefault')}</li>
-                <li>{t('mspLanguage.hierarchy.systemDefault')}</li>
-              </ol>
-            </AlertDescription>
-          </Alert>
+          <LanguageHierarchyTable />
         </div>
       </CardContent>
     </Card>

@@ -3,6 +3,7 @@
     "home": "Start",
     "userActivities": "Benutzeraktivitäten",
     "tickets": "Tickets",
+    "serviceRequests": "Serviceanfragen",
     "surveys": "Umfragen",
     "projects": "Projekte",
     "projectsAll": "Alle Projekte",
@@ -21,11 +22,15 @@
       "sections": {
         "contracts": "Verträge",
         "invoicing": "Rechnungsstellung",
+        "quotes": "Angebote",
         "pricing": "Preise",
         "trackingReports": "Nachverfolgung & Berichte"
       },
       "contractTemplates": "Vertragsvorlagen",
       "clientContracts": "Kundenverträge",
+      "quotes": "Angebote",
+      "quoteBusinessTemplates": "Angebotsvorlagen",
+      "quoteLayouts": "Angebotslayouts",
       "contractLinePresets": "Vertragspositionsvorlagen",
       "invoicing": "Rechnungsstellung",
       "invoiceLayouts": "Rechnungslayouts",
@@ -131,7 +136,7 @@
           "description": "Neues Gerät zu Ihrem Arbeitsbereich hinzufügen"
         },
         "service": {
-          "label": "Service",
+          "label": "Dienst",
           "description": "Neuen abrechenbaren Service hinzufügen"
         },
         "product": {
@@ -220,5 +225,12 @@
   "rightSidebar": {
     "title": "Chat",
     "enterpriseOnly": "Die Chatfunktion ist nur in der Enterprise Edition verfügbar."
+  },
+  "notifications": {
+    "messages": {
+      "error": {
+        "loadFailed": "Benachrichtigungen konnten nicht geladen werden"
+      }
+    }
   }
 }

@@ -1,0 +1,278 @@
+[
+  {
+    "id": "T001",
+    "description": "msp/workflows.json exists for all 9 locales (en, fr, es, de, nl, it, pl, xx, yy) with identical key counts (assert via validate-translations.cjs).",
+    "implemented": false,
+    "featureIds": ["F001", "F045"]
+  },
+  {
+    "id": "T002",
+    "description": "getNamespacesForRoute('/msp/workflows') returns ['common', 'msp/core', 'msp/workflows']; same for /runs and /runs/<id> and /workflow-editor/<id> via prefix match.",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T003",
+    "description": "workflowEnums.ts exports 13 VALUES arrays + 13 LABEL_DEFAULTS records; unit test asserts each LABEL_DEFAULTS has an entry for every VALUES entry.",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T004",
+    "description": "useWorkflowRunStatusOptions() returns 5 options (RUNNING/WAITING/SUCCEEDED/FAILED/CANCELED) when rendered under I18nProvider with en locale; each label matches LABEL_DEFAULTS.",
+    "implemented": false,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T005",
+    "description": "useFormatWorkflowRunStatus() returns translated label for known enum values and returns raw value fallback for unknown values.",
+    "implemented": false,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T006",
+    "description": "useWorkflowRunStatusOptions() under fr locale returns French translations for all 5 statuses (verify via render test with pre-seeded fr resources).",
+    "implemented": false,
+    "featureIds": ["F004", "F042"]
+  },
+  {
+    "id": "T007",
+    "description": "useWorkflowRunStatusOptions() under xx locale returns '11111' for every label (pseudo-locale regression).",
+    "implemented": false,
+    "featureIds": ["F004", "F041"]
+  },
+  {
+    "id": "T008",
+    "description": "All 13 enum option hooks have an i18n render test analogous to T004 covering value-set completeness.",
+    "implemented": false,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T009",
+    "description": "msp/workflows.json contains enums.workflowRunStatus.RUNNING / WAITING / SUCCEEDED / FAILED / CANCELED keys; same structure exists under enums.workflowStepStatus, workflowEventStatus, workflowLogLevel, workflowRunSort, workflowAiSchemaType, workflowInputSourceMode, workflowReferenceSection, workflowTriggerMode, workflowCanvasView, workflowOnError, workflowWaitMode, workflowWaitTiming.",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T010",
+    "description": "Regression: WorkflowRunList renders status filter with translated options; selecting a filter passes the enum VALUE (not the localized label) to the server query.",
+    "implemented": false,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T011",
+    "description": "WorkflowRunList.tsx no longer contains any inline { value: 'X', label: 'Y' } with capitalized English label (grep assertion in the batch audit test).",
+    "implemented": false,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T012",
+    "description": "WorkflowRunDetails step-status filter renders 5 translated options; selecting a filter forwards the raw status value to the server.",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T013",
+    "description": "WorkflowRunDetails log-level filter renders 4 translated levels plus a translated 'All levels' sentinel.",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T014",
+    "description": "WorkflowEventList event-status filter renders 3 translated options plus 'All statuses'.",
+    "implemented": false,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T015",
+    "description": "WorkflowAiSchemaSection primitive-type select renders 6 translated options; no duplication between object-property and array-item selects.",
+    "implemented": false,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T016",
+    "description": "WorkflowActionInputSourceMode toggle renders 2 translated options (reference / fixed value).",
+    "implemented": false,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T017",
+    "description": "workflowReferenceSelector hides sections whose underlying model array is empty even after switching to the hook-based options.",
+    "implemented": false,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T018",
+    "description": "WorkflowDesigner trigger-mode / canvas-view / on-error / wait-mode / wait-timing selects render with translated labels; raw values remain unchanged (snapshot of select value attributes).",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T019",
+    "description": "Grep across ee/server/src/components/workflow-designer|workflow-graph|workflow-run-studio and ee/packages/workflows/src/components/workflow for `\\{\\s*value:\\s*['\"][^'\"]+['\"]\\s*,\\s*label:\\s*['\"][A-Z][^'\"]*['\"]` returns zero matches.",
+    "implemented": false,
+    "featureIds": ["F006", "F007", "F008", "F009", "F010", "F011", "F012"]
+  },
+  {
+    "id": "T020",
+    "description": "Grep for `^export const [A-Z_]+(_DISPLAY|_LABELS|_OPTIONS|_MAP)\\s*[:=]` in the four workflow directories returns zero matches.",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T021",
+    "description": "Grep for `toLocaleDateString\\(['\"]en` and `toLocaleString\\(['\"]en` in the four workflow directories returns zero matches.",
+    "implemented": false,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T022",
+    "description": "Visual QA: /msp/workflows in xx locale — page header, empty state, filters, column headers, row action menu all render '11111' (screenshot-compared manual check).",
+    "implemented": false,
+    "featureIds": ["F013", "F046"]
+  },
+  {
+    "id": "T023",
+    "description": "Visual QA: /msp/workflows/runs in xx locale — all table columns, filter dropdowns, pagination, and bulk-action buttons render '11111'.",
+    "implemented": false,
+    "featureIds": ["F013", "F046"]
+  },
+  {
+    "id": "T024",
+    "description": "Visual QA: /msp/workflows/runs/<runId> in xx locale — step timeline, log viewer tab labels, retry/cancel buttons, event list all render '11111'.",
+    "implemented": false,
+    "featureIds": ["F014", "F016", "F046"]
+  },
+  {
+    "id": "T025",
+    "description": "Visual QA: /msp/workflow-editor/new in xx locale — palette, canvas toolbar, sidebar tabs, save dialog all render '11111'.",
+    "implemented": false,
+    "featureIds": ["F023", "F024", "F046"]
+  },
+  {
+    "id": "T026",
+    "description": "Visual QA: /msp/workflow-editor/<workflowId> in xx locale — opening an existing workflow, step selection, input mapping editor, expression editor, wait editor all render '11111' in chrome (workflow-data-driven labels may remain).",
+    "implemented": false,
+    "featureIds": ["F026", "F027", "F028", "F029", "F032", "F046"]
+  },
+  {
+    "id": "T027",
+    "description": "Visual QA: dead-letter queue and schedules pages in xx locale render '11111' across list, dialogs, and toasts.",
+    "implemented": false,
+    "featureIds": ["F017", "F018", "F046"]
+  },
+  {
+    "id": "T028",
+    "description": "Visual QA: workflow task inbox in xx locale — TaskInbox list, TaskDetails panel, DynamicForm submit flow all render '11111'.",
+    "implemented": false,
+    "featureIds": ["F035", "F036", "F037", "F046"]
+  },
+  {
+    "id": "T029",
+    "description": "Visual QA: React Flow graph mode (/msp/workflow-editor/<id> with canvasView='graph') — empty state, mini-map chrome render '11111'; node body text may stay English (workflow data).",
+    "implemented": false,
+    "featureIds": ["F021", "F046"]
+  },
+  {
+    "id": "T030",
+    "description": "Italian accent audit grep on locales/it/msp/workflows.json returns zero matches for the pattern in translation-guide.md common-pitfalls rule 12.",
+    "implemented": false,
+    "featureIds": ["F043"]
+  },
+  {
+    "id": "T031",
+    "description": "Canonical-name cross-check: every tab or section label in locales/<lang>/msp/workflows.json whose key overlaps with a label in locales/<lang>/msp/core.json matches the core.json wording (manual review).",
+    "implemented": false,
+    "featureIds": ["F044"]
+  },
+  {
+    "id": "T032",
+    "description": "node scripts/validate-translations.cjs reports zero missing and zero extra keys for msp/workflows.json across all 7 production locales (plus xx/yy structural match).",
+    "implemented": false,
+    "featureIds": ["F045"]
+  },
+  {
+    "id": "T033",
+    "description": "CI .github/workflows/validate-translations.yml green on the PR adding msp/workflows translations.",
+    "implemented": false,
+    "featureIds": ["F045"]
+  },
+  {
+    "id": "T034",
+    "description": "Vitest suite in ee/server/src/components/workflow-designer/__tests__/ still passes; assertions that previously relied on English labels updated to use role/testid selectors.",
+    "implemented": false,
+    "featureIds": ["F023", "F026", "F027"]
+  },
+  {
+    "id": "T035",
+    "description": "Feature-flag-off regression: with msp-i18n-enabled set to false, every in-scope component renders the same English copy as before the batch (defaultValue fallback on every t() call).",
+    "implemented": false,
+    "featureIds": ["F006", "F007", "F008", "F012", "F013", "F023"]
+  },
+  {
+    "id": "T036",
+    "description": "Polish plural regression: any msp/workflows.json key with count interpolation uses `_plural` suffix only (no `_few` / `_many`) — confirmed via grep.",
+    "implemented": false,
+    "featureIds": ["F042"]
+  },
+  {
+    "id": "T037",
+    "description": "Server-action error-map coverage: triggering a known failure (e.g. cancel-run permission denied) in WorkflowRunDetails shows the translated toast rather than raw English from the server.",
+    "implemented": false,
+    "featureIds": ["F040"]
+  },
+  {
+    "id": "T038",
+    "description": "German layout spot-check: WorkflowRunList table in de locale does not truncate 'Status' or 'Aktualisiert am' column headers; no visible clipping.",
+    "implemented": false,
+    "featureIds": ["F013", "F022", "F042"]
+  },
+  {
+    "id": "T039",
+    "description": "Dutch layout spot-check: WorkflowDesigner toolbar in nl locale does not overflow the canvas header.",
+    "implemented": false,
+    "featureIds": ["F023", "F042"]
+  },
+  {
+    "id": "T040",
+    "description": "Structural audit test (analogous to ContractLinesSubbatch.i18n.test.ts) iterates over every t() call in the four workflow directories and asserts each key exists in en/msp/workflows.json.",
+    "implemented": false,
+    "featureIds": ["F013", "F014", "F015", "F016", "F017", "F018", "F019", "F020", "F021", "F023", "F024", "F025", "F026", "F027", "F028", "F029", "F030", "F031", "F032", "F033", "F034", "F035", "F036", "F037", "F038", "F039"]
+  },
+  {
+    "id": "T041",
+    "description": "Timestamps in WorkflowRunList / WorkflowRunDetails / WorkflowEventList render in the expected locale format (fr: DD/MM/YYYY; de: DD.MM.YYYY) — verified via render test with stubbed useFormatters().",
+    "implemented": false,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T042",
+    "description": "MSP_i18n_plan.md diff includes msp/workflows row with actual key count and removes Batch 2b-9 from Remaining work.",
+    "implemented": false,
+    "featureIds": ["F047", "F049"]
+  },
+  {
+    "id": "T043",
+    "description": "translation_files_structure.md diff adds msp/workflows row with line/key count and wired-component count.",
+    "implemented": false,
+    "featureIds": ["F048"]
+  },
+  {
+    "id": "T044",
+    "description": "enum-labels-pattern.md diff adds Batch 11 — Workflows entry; getActivityStatusOptions is listed as deferred backlog.",
+    "implemented": false,
+    "featureIds": ["F050"]
+  },
+  {
+    "id": "T045",
+    "description": "Namespace-not-loaded regression: temporarily remove 'msp/workflows' from ROUTE_NAMESPACES['/msp/workflows'] and confirm the page renders key strings (enums.workflowRunStatus.RUNNING) — then restore. This confirms the namespace is actually being loaded on the route, not silently falling back to common.",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T046",
+    "description": "workflowRunTriggerPresentation.ts formatter coverage: manual/event/schedule/recurring trigger labels and schedule status badges resolve through workflow translation keys instead of returning hardcoded English strings.",
+    "implemented": false,
+    "featureIds": ["F051"]
+  }
+]

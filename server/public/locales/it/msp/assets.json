@@ -30,6 +30,14 @@
     "no": "No",
     "yes": "Sì"
   },
+  "enums": {
+    "rmmAgentStatus": {
+      "online": "In linea",
+      "offline": "Non in linea",
+      "overdue": "In ritardo",
+      "unknown": "Sconosciuto"
+    }
+  },
   "assetAlertsSection": {
     "title": "Sezione Avvisi sulle risorse",
     "description": "Wrapper della sezione di avviso aziendale per avvisi RMM specifici per asset e azioni correttive"
@@ -158,12 +166,6 @@
       "rmmManaged": {
         "managed": "Gestito da RMM",
         "unmanaged": "Non gestito"
-      },
-      "agentStatuses": {
-        "online": "In linea",
-        "offline": "Non in linea",
-        "overdue": "In ritardo",
-        "unknown": "Sconosciuto"
       }
     },
     "activeFilters": {
@@ -303,7 +305,7 @@
       "virtualized": "Virtualizzato",
       "primaryIp": "IP primario",
       "hypervisor": "Hypervisor",
-      "os": "OS",
+      "os": "SO",
       "model": "Modello",
       "imei": "IMEI",
       "phoneNumber": "Numero di telefono",
@@ -825,12 +827,6 @@
       "status": "{{status}}{{suffix}}",
       "lastSeen": "- Ultimo visto: {{value}}"
     },
-    "statuses": {
-      "online": "In linea",
-      "offline": "Non in linea",
-      "overdue": "In ritardo",
-      "unknown": "Sconosciuto"
-    },
     "relative": {
       "justNow": "Proprio adesso",
       "minutesAgo": "{{count}}m fa",
@@ -1187,6 +1183,14 @@
     "totalItems": "Articoli totali: {{count}}",
     "values": {
       "unknown": "Sconosciuto"
+    }
+  },
+  "alerts": {
+    "messages": {
+      "alertAcknowledged": "Avviso confermato",
+      "acknowledgeFailed": "Impossibile confermare l'avviso",
+      "ticketCreated": "Ticket creato con successo",
+      "ticketCreateFailed": "Impossibile creare il ticket"
     }
   }
 }

@@ -11,6 +11,7 @@ import {
 } from '@alga-psa/billing/actions/invoiceJobActions';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from 'react-i18next';
 
 interface SendInvoiceEmailDialogProps {
   isOpen: boolean;
@@ -19,28 +20,32 @@ interface SendInvoiceEmailDialogProps {
   onSuccess?: () => void;
 }
 
-type RecipientSourceLabel = {
-  [key in InvoiceEmailRecipientInfo['recipientSource']]: string;
-};
-
-const recipientSourceLabels: RecipientSourceLabel = {
-  billing_contact: 'Billing Contact',
-  billing_email: 'Billing Email',
-  client_email: 'Client Email',
-  none: 'No Email Found'
-};
-
 export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
   isOpen,
   onClose,
   invoiceIds,
   onSuccess
 }) => {
+  const { t } = useTranslation('msp/invoicing');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [recipients, setRecipients] = useState<InvoiceEmailRecipientInfo[]>([]);
   const [errors, setErrors] = useState<Array<{ invoiceId: string; error: string }>>([]);
   const [customMessage, setCustomMessage] = useState('');
+
+  const getRecipientSourceLabel = (source: InvoiceEmailRecipientInfo['recipientSource']) => {
+    switch (source) {
+      case 'billing_contact':
+        return t('sendEmail.recipients.billingContact', { defaultValue: 'Billing Contact' });
+      case 'billing_email':
+        return t('sendEmail.recipients.billingEmail', { defaultValue: 'Billing Email' });
+      case 'client_email':
+        return t('sendEmail.recipients.clientEmail', { defaultValue: 'Client Email' });
+      case 'none':
+      default:
+        return t('sendEmail.recipients.noEmailFound', { defaultValue: 'No Email Found' });
+    }
+  };
 
   useEffect(() => {
     if (isOpen && invoiceIds.length > 0) {
@@ -55,8 +60,9 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
       setRecipients(result.recipients);
       setErrors(result.errors);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to load recipient info';
-      handleError(error, 'Failed to load recipient info');
+      const fallbackError = t('sendEmail.errors.loadRecipients', { defaultValue: 'Failed to load recipient info' });
+      const errorMessage = error instanceof Error ? error.message : fallbackError;
+      handleError(error, fallbackError);
       setErrors([{ invoiceId: 'unknown', error: errorMessage }]);
     } finally {
       setLoading(false);
@@ -66,12 +72,18 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
   const handleSend = async () => {
     const validRecipients = recipients.filter(r => r.recipientEmail);
     if (validRecipients.length === 0) {
-      toast.error('No valid recipients found');
+      toast.error(t('sendEmail.toasts.noValidRecipients', { defaultValue: 'No valid recipients found' }));
       return;
     }
 
     setSending(true);
-    const toastId = toast.loading(`Sending ${validRecipients.length} invoice${validRecipients.length > 1 ? 's' : ''}...`);
+    const toastId = toast.loading(t('sendEmail.actions.sending', {
+      count: validRecipients.length,
+      defaultValue:
+        validRecipients.length === 1
+          ? `Sending ${validRecipients.length} invoice...`
+          : `Sending ${validRecipients.length} invoices...`,
+    }));
 
     try {
       const result = await sendInvoiceEmailAction(
@@ -80,28 +92,35 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
       );
 
       if (result.failureCount === 0) {
-        toast.success(
-          `${result.successCount} invoice${result.successCount > 1 ? 's' : ''} sent successfully`,
-          { id: toastId }
-        );
+        toast.success(t('sendEmail.toasts.sentSuccess', {
+          count: result.successCount,
+          defaultValue:
+            result.successCount === 1
+              ? `${result.successCount} invoice sent successfully`
+              : `${result.successCount} invoices sent successfully`,
+        }), { id: toastId });
         onSuccess?.();
         onClose();
       } else if (result.successCount === 0) {
-        toast.error(
-          `Failed to send ${result.failureCount} invoice${result.failureCount > 1 ? 's' : ''}`,
-          { id: toastId }
-        );
+        toast.error(t('sendEmail.toasts.sentFailure', {
+          count: result.failureCount,
+          defaultValue:
+            result.failureCount === 1
+              ? `Failed to send ${result.failureCount} invoice`
+              : `Failed to send ${result.failureCount} invoices`,
+        }), { id: toastId });
       } else {
-        toast.success(
-          `${result.successCount} sent, ${result.failureCount} failed`,
-          { id: toastId }
-        );
+        toast.success(t('sendEmail.toasts.sentPartial', {
+          successCount: result.successCount,
+          failureCount: result.failureCount,
+          defaultValue: `${result.successCount} sent, ${result.failureCount} failed`,
+        }), { id: toastId });
         onSuccess?.();
         onClose();
       }
     } catch (error) {
       toast.dismiss(toastId);
-      handleError(error, 'Failed to send emails');
+      handleError(error, t('sendEmail.errors.sendFailed', { defaultValue: 'Failed to send emails' }));
     } finally {
       setSending(false);
     }
@@ -114,7 +133,7 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
     <Dialog
       isOpen={isOpen}
       onClose={onClose}
-      title="Send Invoice Email"
+      title={t('sendEmail.title', { defaultValue: 'Send Invoice Email' })}
       id="send-invoice-email-dialog"
       className="max-w-2xl"
       footer={(
@@ -125,7 +144,7 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
             onClick={onClose}
             disabled={sending}
           >
-            Cancel
+            {t('sendEmail.actions.cancel', { defaultValue: 'Cancel' })}
           </Button>
           <Button
             id="send-invoice-email-send"
@@ -135,12 +154,26 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
             {sending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Sending...
+                {t('sendEmail.actions.sending', {
+                  count: Math.max(validRecipientCount, 1),
+                  defaultValue:
+                    validRecipientCount === 1
+                      ? `Sending ${Math.max(validRecipientCount, 1)} invoice...`
+                      : `Sending ${Math.max(validRecipientCount, 1)} invoices...`,
+                })}
               </>
             ) : (
               <>
                 <Mail className="h-4 w-4 mr-2" />
-                Send {validRecipientCount > 0 ? `${validRecipientCount} Email${validRecipientCount > 1 ? 's' : ''}` : 'Email'}
+                {validRecipientCount > 0
+                  ? t('sendEmail.actions.send', {
+                      count: validRecipientCount,
+                      defaultValue:
+                        validRecipientCount === 1
+                          ? `Send ${validRecipientCount} Email`
+                          : `Send ${validRecipientCount} Emails`,
+                    })
+                  : t('sendEmail.actions.sendFallback', { defaultValue: 'Send Email' })}
               </>
             )}
           </Button>
@@ -150,7 +183,9 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
-          <span className="ml-3 text-muted-foreground">Loading recipient information...</span>
+          <span className="ml-3 text-muted-foreground">
+            {t('sendEmail.loading', { defaultValue: 'Loading recipient information...' })}
+          </span>
         </div>
       ) : (
         <div className="space-y-6">
@@ -159,18 +194,36 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <Mail className="h-5 w-5 text-primary-500" />
-                <span className="font-medium">{invoiceIds.length} Invoice{invoiceIds.length > 1 ? 's' : ''}</span>
+                <span className="font-medium">
+                  {t('sendEmail.summary.invoices', {
+                    count: invoiceIds.length,
+                    defaultValue:
+                      invoiceIds.length === 1
+                        ? `${invoiceIds.length} Invoice`
+                        : `${invoiceIds.length} Invoices`,
+                  })}
+                </span>
               </div>
               {validRecipientCount > 0 && (
                 <div className="flex items-center gap-2 text-green-600">
                   <CheckCircle className="h-4 w-4" />
-                  <span>{validRecipientCount} ready to send</span>
+                  <span>
+                    {t('sendEmail.summary.readyToSend', {
+                      count: validRecipientCount,
+                      defaultValue: `${validRecipientCount} ready to send`,
+                    })}
+                  </span>
                 </div>
               )}
               {invalidRecipientCount > 0 && (
                 <div className="flex items-center gap-2 text-amber-600">
                   <AlertCircle className="h-4 w-4" />
-                  <span>{invalidRecipientCount} missing email</span>
+                  <span>
+                    {t('sendEmail.summary.missingEmail', {
+                      count: invalidRecipientCount,
+                      defaultValue: `${invalidRecipientCount} missing email`,
+                    })}
+                  </span>
                 </div>
               )}
             </div>
@@ -178,7 +231,9 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
 
           {/* Recipients List */}
           <div className="space-y-3">
-            <h3 className="text-sm font-medium text-[rgb(var(--color-text-700))]">Recipients</h3>
+            <h3 className="text-sm font-medium text-[rgb(var(--color-text-700))]">
+              {t('sendEmail.recipients.title', { defaultValue: 'Recipients' })}
+            </h3>
             <div className="max-h-64 overflow-y-auto space-y-2">
               {recipients.map((recipient) => (
                 <div
@@ -212,20 +267,24 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
                           <span className="font-medium">{recipient.recipientName}</span>
                           <span className="text-muted-foreground">&lt;{recipient.recipientEmail}&gt;</span>
                           <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                            {recipientSourceLabels[recipient.recipientSource]}
+                            {getRecipientSourceLabel(recipient.recipientSource)}
                           </span>
                         </div>
                       ) : (
                         <div className="flex items-center gap-2 text-sm text-warning">
                           <AlertCircle className="h-4 w-4" />
-                          <span>No email address configured for this client</span>
+                          <span>
+                            {t('sendEmail.recipients.notConfigured', {
+                              defaultValue: 'No email address is configured for this client.',
+                            })}
+                          </span>
                         </div>
                       )}
 
                       {/* Due Date */}
                       {recipient.dueDate && (
                         <div className="text-xs text-muted-foreground mt-1">
-                          Due: {recipient.dueDate}
+                          {t('sendEmail.fields.due', { defaultValue: 'Due' })}: {recipient.dueDate}
                         </div>
                       )}
                     </div>
@@ -251,12 +310,14 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
           {/* Custom Message (Optional) */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-[rgb(var(--color-text-700))]">
-              Additional Message (Optional)
+              {t('sendEmail.fields.additionalMessage', { defaultValue: 'Additional Message' })}
             </label>
             <textarea
               value={customMessage}
               onChange={(e) => setCustomMessage(e.target.value)}
-              placeholder="Add a personal note to include in the email..."
+              placeholder={t('sendEmail.fields.additionalMessagePlaceholder', {
+                defaultValue: 'Add a personal note to include in the email...',
+              })}
               className="w-full px-3 py-2 border border-[rgb(var(--color-border-300))] rounded-md text-sm focus:ring-primary-500 focus:border-primary-500"
               rows={3}
             />
@@ -267,8 +328,11 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
             <p className="flex items-start gap-2">
               <Mail className="h-4 w-4 mt-0.5 text-blue-500" />
               <span>
-                Emails will be sent from <strong>{recipients[0]?.fromEmail || 'noreply@example.com'}</strong> on behalf of <strong>{recipients[0]?.companyName || 'Your Company'}</strong>.
-                Each invoice will be attached as a PDF.
+                {t('sendEmail.preview', {
+                  fromEmail: recipients[0]?.fromEmail || t('sendEmail.values.defaultFromEmail', { defaultValue: 'noreply@example.com' }),
+                  companyName: recipients[0]?.companyName || t('sendEmail.values.defaultCompanyName', { defaultValue: 'Your Company' }),
+                  defaultValue: `Emails will be sent from ${recipients[0]?.fromEmail || 'noreply@example.com'} on behalf of ${recipients[0]?.companyName || 'Your Company'}. Each invoice will be attached as a PDF.`,
+                })}
               </span>
             </p>
           </div>

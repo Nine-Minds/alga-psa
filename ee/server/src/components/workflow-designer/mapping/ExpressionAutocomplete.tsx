@@ -16,6 +16,7 @@
 
 import React, { useCallback, useRef, useEffect } from 'react';
 import { ChevronRight, Hash, ToggleLeft, Type, Braces, List, Calendar, HelpCircle } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { AutocompleteSuggestion } from './expressionAutocompleteUtils';
 
 /**
@@ -79,6 +80,7 @@ export const ExpressionAutocomplete: React.FC<ExpressionAutocompleteProps> = ({
   position,
   visible
 }) => {
+  const { t } = useTranslation('msp/workflows');
   const listRef = useRef<HTMLDivElement>(null);
 
   // Scroll selected item into view
@@ -128,7 +130,7 @@ export const ExpressionAutocomplete: React.FC<ExpressionAutocompleteProps> = ({
       onKeyDown={handleKeyDown}
       ref={listRef}
       role="listbox"
-      aria-label="Expression autocomplete suggestions"
+      aria-label={t('expressionEditor.autocompleteAria', { defaultValue: 'Expression autocomplete suggestions' })}
     >
       {suggestions.map((suggestion, index) => (
         <div

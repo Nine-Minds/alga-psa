@@ -6,6 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { FileText } from 'lucide-react';
 import type { IQuoteDocumentTemplate } from '@alga-psa/types';
 import { renderQuotePreview, updateQuote } from '../../../actions/quoteActions';
@@ -26,6 +27,7 @@ const QuotePreviewPanel: React.FC<QuotePreviewPanelProps> = ({
   onDownload,
   onOpen,
 }) => {
+  const { t } = useTranslation('msp/quotes');
   const [previewHtml, setPreviewHtml] = useState<{ html: string; css: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,7 +83,9 @@ const QuotePreviewPanel: React.FC<QuotePreviewPanelProps> = ({
         setPreviewHtml(result as { html: string; css: string });
       } catch (err) {
         console.error('Error loading quote preview:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load preview');
+        setError(err instanceof Error ? err.message : t('quotePreview.errors.load', {
+          defaultValue: 'Failed to load preview',
+        }));
       } finally {
         setIsLoading(false);
       }
@@ -103,14 +107,18 @@ const QuotePreviewPanel: React.FC<QuotePreviewPanelProps> = ({
     }
   };
 
-  const handleAction = async (action: () => Promise<void>, actionName: string) => {
+  const handleAction = async (
+    action: () => Promise<void>,
+    actionName: string,
+    errorMessage: string,
+  ) => {
     setIsActionLoading(true);
     setError(null);
     try {
       await action();
     } catch (err) {
       console.error(`Error ${actionName}:`, err);
-      setError(`Failed to ${actionName}. Please try again.`);
+      setError(errorMessage);
     } finally {
       setIsActionLoading(false);
     }
@@ -126,7 +134,7 @@ const QuotePreviewPanel: React.FC<QuotePreviewPanelProps> = ({
         <div className="p-6 flex items-center justify-center h-64 text-muted-foreground">
           <div className="text-center">
             <FileText className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
-            <p>Select a quote to preview</p>
+            <p>{t('quotePreview.empty.selectQuote', { defaultValue: 'Select a quote to preview' })}</p>
           </div>
         </div>
       </Card>
@@ -137,16 +145,18 @@ const QuotePreviewPanel: React.FC<QuotePreviewPanelProps> = ({
     <Card className="h-full">
       <div className="p-6" ref={containerRef}>
         <div className="mb-4">
-          <h3 className="text-lg font-semibold mb-2">Quote Preview</h3>
+          <h3 className="text-lg font-semibold mb-2">
+            {t('quotePreview.title', { defaultValue: 'Quote Preview' })}
+          </h3>
           <CustomSelect
             id="quote-preview-layout-select"
-            options={templates.map((t) => ({
-              value: t.template_id,
-              label: `${t.name}${t.isStandard ? ' (Standard)' : ''}`,
+            options={templates.map((template) => ({
+              value: template.template_id,
+              label: `${template.name}${template.isStandard ? ` (${t('common.badges.standard', { defaultValue: 'Standard' })})` : ''}`,
             }))}
             value={effectiveTemplateId}
             onValueChange={(value) => void handleTemplateChange(value)}
-            placeholder="Select quote layout..."
+            placeholder={t('quotePreview.placeholders.selectLayout', { defaultValue: 'Select quote layout...' })}
           />
         </div>
 
@@ -158,7 +168,10 @@ const QuotePreviewPanel: React.FC<QuotePreviewPanelProps> = ({
 
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
-            <LoadingIndicator text="Loading Preview..." spinnerProps={{ size: 'sm' }} />
+            <LoadingIndicator
+              text={t('quotePreview.loading', { defaultValue: 'Loading Preview...' })}
+              spinnerProps={{ size: 'sm' }}
+            />
           </div>
         ) : previewHtml ? (
           <>
@@ -171,17 +184,23 @@ const QuotePreviewPanel: React.FC<QuotePreviewPanelProps> = ({
                   disabled={isActionLoading}
                   className="flex-1"
                 >
-                  Open Quote
+                  {t('quotePreview.actions.openQuote', { defaultValue: 'Open Quote' })}
                 </Button>
               )}
               {onDownload && (
                 <Button
                   id="quote-preview-download-pdf"
-                  onClick={() => handleAction(onDownload, 'download PDF')}
+                  onClick={() => handleAction(
+                    onDownload,
+                    'download PDF',
+                    t('quotePreview.errors.downloadPdf', {
+                      defaultValue: 'Failed to download PDF. Please try again.',
+                    }),
+                  )}
                   disabled={isActionLoading}
                   className="flex-1"
                 >
-                  Download PDF
+                  {t('common.actions.downloadPdf', { defaultValue: 'Download PDF' })}
                 </Button>
               )}
             </div>
@@ -204,7 +223,9 @@ const QuotePreviewPanel: React.FC<QuotePreviewPanelProps> = ({
           </>
         ) : (
           <div className="text-muted-foreground text-center h-64 flex items-center justify-center">
-            Could not display preview. Data might be missing.
+            {t('quotePreview.empty.unavailable', {
+              defaultValue: 'Could not display preview. Data might be missing.',
+            })}
           </div>
         )}
       </div>

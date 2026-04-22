@@ -815,6 +815,7 @@ export const createQuoteFromTemplate = withAuth(async (
         is_taxable: templateItem.is_taxable ?? true,
         cost: templateItem.cost ?? null,
         cost_currency: templateItem.cost_currency ?? null,
+        location_id: templateItem.location_id ?? null,
         created_by: actorUserId,
       });
     }
@@ -899,6 +900,7 @@ export const duplicateQuote = withAuth(async (
         tax_rate: sourceItem.tax_rate ?? null,
         cost: sourceItem.cost ?? null,
         cost_currency: sourceItem.cost_currency ?? null,
+        location_id: sourceItem.location_id ?? null,
         created_by: actorUserId,
       });
     }
@@ -991,6 +993,7 @@ export const saveQuoteAsTemplate = withAuth(async (
         tax_rate: sourceItem.tax_rate ?? null,
         cost: sourceItem.cost ?? null,
         cost_currency: sourceItem.cost_currency ?? null,
+        location_id: sourceItem.location_id ?? null,
         created_by: actorUserId,
       });
     }
@@ -1601,7 +1604,7 @@ export const getQuoteConversionPreview = withAuth(async (
     throw new Error('Permission denied: Cannot read quote');
   }
 
-  return buildQuoteConversionPreview(quote);
+  return buildQuoteConversionPreview(quote, knex, tenant);
 });
 
 export const getQuoteByConvertedContractId = withAuth(async (

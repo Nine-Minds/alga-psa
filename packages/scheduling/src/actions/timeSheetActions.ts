@@ -452,15 +452,18 @@ export const fetchTimeSheetComments = withAuth(async (user, { tenant }, timeShee
         'time_sheets.tenant': tenant
       })
       .select(
+        'time_sheets.user_id',
         'users.first_name',
         'users.last_name',
         'users.email'
       )
-      .first();
+      .first<{ user_id: string; first_name: string; last_name: string; email: string }>();
 
     if (!timeSheet) {
       throw new Error('Time sheet not found');
     }
+
+    await assertCanActOnBehalf(user, tenant, timeSheet.user_id, db);
 
     // Then get all comments with user info
     const comments = await db('time_sheet_comments')

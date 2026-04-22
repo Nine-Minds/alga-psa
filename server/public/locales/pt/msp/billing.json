@@ -1,0 +1,748 @@
+{
+  "common": {
+    "back": "Back",
+    "cancel": "Cancel",
+    "close": "Close",
+    "confirm": "Confirm",
+    "create": "Create",
+    "delete": "Delete",
+    "edit": "Edit",
+    "error": "Error",
+    "loading": "Loading...",
+    "new": "New",
+    "next": "Next",
+    "notAvailable": "N/A",
+    "openMenu": "Open menu",
+    "processing": "Processing...",
+    "refresh": "Refresh",
+    "remove": "Remove",
+    "reset": "Reset",
+    "save": "Save",
+    "saving": "Saving...",
+    "success": "Success",
+    "update": "Update",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "dashboard": {
+    "title": "Billing",
+    "beta": {
+      "title": "Beta Release",
+      "description": "Our revamped billing system is currently in beta. You may encounter issues or incomplete features. We appreciate your patience as we continue to improve the experience."
+    },
+    "errorPrefix": "Error:",
+    "backToPresets": "Back to Contract Line Presets List",
+    "quoteTemplatesHeading": "Quote Templates",
+    "tabs": {
+      "quotes": "Quotes",
+      "quoteLayouts": "Quote Layouts",
+      "quoteTemplates": "Quote Templates",
+      "clientContracts": "Client Contracts",
+      "accountingExports": "Accounting Exports",
+      "contractTemplates": "Contract Templates",
+      "invoicing": "Invoicing",
+      "invoiceLayouts": "Invoice Layouts",
+      "taxRates": "Tax Rates",
+      "contractLinePresets": "Contract Line Presets",
+      "billingCycles": "Billing Cycles",
+      "servicePeriods": "Service Periods",
+      "usageTracking": "Usage Tracking",
+      "reports": "Reports",
+      "serviceCatalog": "Service Catalog",
+      "products": "Products"
+    }
+  },
+  "overview": {
+    "errors": {
+      "loadTitle": "Unable to load billing data",
+      "loadData": "Failed to load billing data"
+    },
+    "metrics": {
+      "activeContractLines": {
+        "title": "Active Contract Lines",
+        "subtitle": "Active Contract Lines"
+      },
+      "billingClients": {
+        "title": "Billing Clients",
+        "subtitle": "Total Clients"
+      },
+      "monthlyRevenue": {
+        "title": "Monthly Revenue",
+        "subtitle": "Current Month"
+      },
+      "activeServices": {
+        "title": "Active Services",
+        "subtitle": "In Catalog"
+      },
+      "outstandingAmount": {
+        "title": "Outstanding Amount",
+        "subtitle": "Unpaid Invoices"
+      },
+      "creditBalance": {
+        "title": "Credit Balance",
+        "subtitle": "Total Credits"
+      },
+      "pendingApprovals": {
+        "title": "Pending Approvals",
+        "subtitle": "Time Entries"
+      }
+    },
+    "states": {
+      "ellipsis": "...",
+      "error": "Error",
+      "zero": "0",
+      "zeroHours": "0 hours"
+    },
+    "sections": {
+      "monthlyActivity": {
+        "title": "Monthly Activity",
+        "subtitle": "Billable hours this month"
+      },
+      "serviceCatalog": {
+        "title": "Service Catalog Management",
+        "description": "Manage your service offerings, pricing, and billing configurations",
+        "activeServicesLabel": "Active Services",
+        "button": "Manage Service Catalog"
+      }
+    },
+    "features": {
+      "paymentProcessing": {
+        "title": "Payment Processing",
+        "description": "Track and manage client payments, process refunds, and handle payment disputes"
+      },
+      "billingCycles": {
+        "title": "Billing Cycles",
+        "description": "Manage client billing schedules, cadence defaults, and invoice frequency settings"
+      },
+      "servicePeriods": {
+        "title": "Service Periods",
+        "description": "Review recurring service periods and understand how invoice windows group them"
+      },
+      "invoiceManagement": {
+        "title": "Invoice Management",
+        "description": "Generate invoice windows for recurring service periods and create manual or prepayment documents when financial handling differs from recurring coverage"
+      },
+      "overduePayments": {
+        "title": "Overdue Payments",
+        "description": "Monitor and follow up on overdue payments and payment reminders"
+      },
+      "serviceCatalog": {
+        "title": "Service Catalog",
+        "description": "Manage your service offerings, pricing, and contracts"
+      }
+    },
+    "debug": {
+      "reportExecuted": "Report executed:",
+      "executionTime": "Execution time:",
+      "reportVersion": "Report version:"
+    }
+  },
+  "reconciliation": {
+    "title": "Resolve Credit Discrepancy",
+    "steps": {
+      "review": "Review Discrepancy",
+      "approval": "Approval",
+      "confirmation": "Confirmation"
+    },
+    "sections": {
+      "discrepancyDetails": "Discrepancy Details",
+      "balanceComparison": "Balance Comparison",
+      "issueDetails": "Issue Details",
+      "resolutionOptions": "Resolution Options",
+      "approvalDetails": "Approval Details",
+      "correctionSummary": "Correction Summary",
+      "confirmResolution": "Confirm Resolution",
+      "resolutionDetails": "Resolution Details",
+      "impactSummary": "Impact Summary",
+      "resolutionComplete": "Resolution Complete",
+      "resolutionSummary": "Resolution Summary"
+    },
+    "fields": {
+      "client": "Client",
+      "status": "Status",
+      "detected": "Detected",
+      "issueType": "Issue Type",
+      "expectedBalance": "Expected Balance",
+      "actualBalance": "Actual Balance",
+      "difference": "Difference",
+      "transactionId": "Transaction ID",
+      "transactionType": "Transaction Type",
+      "transactionAmount": "Transaction Amount",
+      "transactionDate": "Transaction Date",
+      "creditId": "Credit ID",
+      "originalAmount": "Original Amount",
+      "expectedRemaining": "Expected Remaining",
+      "actualRemaining": "Actual Remaining",
+      "reportId": "Report ID",
+      "resolutionType": "Resolution Type",
+      "correctionAmount": "Correction Amount",
+      "currentBalance": "Current Balance",
+      "newBalance": "New Balance",
+      "resolutionNotes": "Resolution Notes",
+      "previousBalance": "Previous Balance"
+    },
+    "issueTypes": {
+      "missingCreditTrackingEntry": "Missing Credit Tracking Entry",
+      "inconsistentCreditRemainingAmount": "Inconsistent Credit Remaining Amount"
+    },
+    "transactionHistory": {
+      "title": "Credit Applications",
+      "columns": {
+        "transactionId": "Transaction ID",
+        "date": "Date",
+        "amount": "Amount"
+      }
+    },
+    "recommendedFix": {
+      "title": "Recommended Fix",
+      "missingTrackingDescription": "Create a credit tracking entry based on the original transaction details and set the remaining amount to match the original transaction amount.",
+      "missingTrackingRemainingAmount": "Remaining Amount: Calculate based on any applications",
+      "inconsistentRemainingDescription": "Update the credit tracking entry's remaining amount to match the calculated expected balance based on applications."
+    },
+    "resolutionTypes": {
+      "recommended": "Recommended Fix",
+      "custom": "Custom Correction",
+      "noAction": "No Action Required"
+    },
+    "customCorrection": {
+      "label": "Correction Amount",
+      "hint": "Enter a positive amount to increase the balance or a negative amount to decrease it."
+    },
+    "notes": {
+      "label": "Resolution Notes",
+      "placeholder": "Explain the reason for this correction...",
+      "hint": "These notes will be recorded in the audit trail for this discrepancy."
+    },
+    "fourEyes": {
+      "requiredTitle": "Four-Eyes Approval Required",
+      "requiredDescription": "This correction exceeds the approval threshold and requires a secondary approver to review and verify the change before it can be submitted.",
+      "approverName": "Secondary Approver Name",
+      "approverEmail": "Secondary Approver Email",
+      "sendRequest": "Send Approval Request",
+      "requestSentTitle": "Approval Request Sent",
+      "requestSentDescription": "Ask the secondary approver for the verification code they received, then enter it below to continue.",
+      "verificationCode": "Verification Code",
+      "verifyCode": "Verify Code",
+      "verificationHint": "Enter the verification code provided by the secondary approver.",
+      "verifiedTitle": "Secondary Approval Verified",
+      "verifiedDescription": "Secondary approval has been verified and this correction can now be submitted."
+    },
+    "confirmation": {
+      "importantTitle": "Important",
+      "importantDescription": "Please review the details below carefully. This action will update reconciliation records and cannot be easily undone.",
+      "verifiedTitle": "Secondary Approval Verified",
+      "verifiedDescription": "A secondary approver has verified this correction and the approval requirement has been satisfied.",
+      "thankYouTitle": "Thank you!",
+      "thankYouDescription": "The discrepancy has been resolved and the billing records have been updated.",
+      "confirmButton": "Confirm Resolution",
+      "closeButton": "Close"
+    },
+    "status": {
+      "open": "Open"
+    },
+    "buttons": {
+      "cancel": "Cancel",
+      "back": "Back",
+      "next": "Next",
+      "confirm": "Confirm Resolution"
+    },
+    "errors": {
+      "loadData": "Failed to load reconciliation report data",
+      "secondaryApprovalRequired": "Secondary approval is required for this correction",
+      "secondaryApproverRequired": "Please enter the name and email of the secondary approver",
+      "invalidVerificationCode": "Invalid verification code",
+      "unknown": "An unknown error occurred",
+      "reportNotFound": "Reconciliation report not found. The report may have been deleted or you may not have permission to view it."
+    }
+  },
+  "discrepancy": {
+    "backToReconciliation": "Back to Reconciliation",
+    "title": "Resolve Credit Discrepancy",
+    "tabs": {
+      "transactionHistory": "Transaction History",
+      "creditTrackingEntries": "Credit Tracking Entries",
+      "issueDetails": "Issue Details"
+    },
+    "cards": {
+      "relatedTransactions": "Related Transactions",
+      "creditTrackingEntries": "Credit Tracking Entries",
+      "issueDetails": "Issue Details",
+      "discrepancyDetails": "Discrepancy Details",
+      "balanceComparison": "Balance Comparison"
+    },
+    "status": {
+      "open": "Open",
+      "inReview": "In Review",
+      "resolved": "Resolved",
+      "expired": "Expired",
+      "active": "Active"
+    },
+    "fields": {
+      "client": "Client",
+      "status": "Status",
+      "detected": "Detected",
+      "resolved": "Resolved",
+      "resolutionNotes": "Resolution Notes",
+      "issueType": "Issue Type",
+      "expectedBalance": "Expected Balance",
+      "actualBalance": "Actual Balance",
+      "difference": "Difference",
+      "transactionId": "Transaction ID",
+      "createdAt": "Created At",
+      "clientId": "Client ID",
+      "userId": "User ID",
+      "invoiceId": "Invoice ID",
+      "metadata": "Metadata",
+      "creditId": "Credit ID",
+      "created": "Created",
+      "amount": "Amount",
+      "remaining": "Remaining",
+      "expiration": "Expiration",
+      "originalAmount": "Original Amount",
+      "remainingAmount": "Remaining Amount",
+      "expirationDate": "Expiration Date",
+      "description": "Description",
+      "type": "Type",
+      "balanceAfter": "Balance After"
+    },
+    "empty": {
+      "transactions": "No related transactions found.",
+      "creditTrackingEntries": "No credit tracking entries found.",
+      "issueDetails": "No issue details available.",
+      "batchNotFound": "Batch not found.",
+      "noNotesProvided": "No notes provided",
+      "noExpiration": "No expiration"
+    },
+    "issueTypes": {
+      "missingCreditTrackingEntry": "Missing Credit Tracking Entry",
+      "inconsistentCreditRemainingAmount": "Inconsistent Credit Remaining Amount"
+    },
+    "recommendedFix": {
+      "title": "Recommended Fix",
+      "missingTrackingDescription": "Create a credit tracking entry based on the original transaction details and set the remaining amount to match the original transaction amount.",
+      "missingTrackingRemainingAmount": "Remaining Amount: Calculate based on any applications",
+      "inconsistentRemainingDescription": "Update the credit tracking entry's remaining amount to match the calculated expected balance based on applications."
+    },
+    "resolutionDialog": {
+      "title": "Resolve Credit Discrepancy",
+      "notesPlaceholder": "Explain the reason for this correction...",
+      "confirmButton": "Confirm Resolution"
+    },
+    "actions": {
+      "applyFix": "Apply Fix",
+      "resolveReport": "Resolve Report"
+    },
+    "errors": {
+      "unknown": "An unknown error occurred"
+    }
+  },
+  "recommendedFix": {
+    "title": "Recommended Fixes",
+    "panels": {
+      "recommendedFix": "Recommended Fix",
+      "alternativeFix": "Alternative Fix",
+      "noActionRequired": "No Action Required",
+      "customAdjustment": "Custom Adjustment"
+    },
+    "buttons": {
+      "createTrackingEntry": "Create Credit Tracking Entry",
+      "updateRemainingAmount": "Update Remaining Amount",
+      "applyAdjustment": "Apply Credit Adjustment",
+      "applyCustomAdjustment": "Apply Custom Adjustment",
+      "markResolvedNoAction": "Mark as Resolved (No Action)",
+      "cancel": "Cancel",
+      "confirm": "Apply Fix"
+    },
+    "descriptions": {
+      "createTrackingEntry": "This will create a new credit tracking entry for the transaction.",
+      "updateRemainingAmount": "This will update the remaining amount in the credit tracking entry.",
+      "applyAdjustment": "This will create a credit adjustment transaction to correct the balance.",
+      "customAdjustment": "This will create a custom credit adjustment transaction.",
+      "noAction": "This will mark the discrepancy as resolved without making any changes.",
+      "missingTrackingRecommended": "Create the missing credit tracking entry so the transaction is reflected in the tracking ledger.",
+      "missingTrackingAlternative": "Create a manual adjustment instead if the original transaction should not produce a tracking entry.",
+      "missingTrackingNoAction": "Leave the discrepancy unresolved only if the transaction was intentionally excluded from credit tracking.",
+      "inconsistentRemainingRecommended": "Update the tracked remaining amount so it matches the expected balance after applications.",
+      "inconsistentRemainingAlternative": "Create a balancing adjustment instead of editing the existing tracking entry.",
+      "inconsistentRemainingNoAction": "Leave the discrepancy unresolved only if the tracking entry is intentionally offset elsewhere.",
+      "genericRecommended": "Apply the recommended correction to bring the balances back into alignment.",
+      "genericCustom": "Enter a custom adjustment if a manual correction is required."
+    },
+    "dialog": {
+      "adjustmentAmount": "Adjustment Amount",
+      "adjustmentHint": "Enter a positive amount to increase the balance or a negative amount to decrease it.",
+      "notes": "Notes",
+      "notesPlaceholder": "Explain the reason for this correction..."
+    },
+    "impactSummary": {
+      "title": "Impact Summary",
+      "currentBalance": "Current Balance",
+      "newBalance": "New Balance"
+    },
+    "resolved": {
+      "title": "This discrepancy has been resolved",
+      "description": "No further action is required unless you need to review the reconciliation history."
+    },
+    "errors": {
+      "notesRequired": "Please provide notes explaining the reason for this correction",
+      "invalidAmount": "Please enter a valid amount",
+      "unknown": "An unknown error occurred"
+    }
+  },
+  "usage": {
+    "bucketHoursOverview": "Bucket Hours Overview",
+    "usageRecords": "Usage Records",
+    "actions": {
+      "addUsage": "Add Usage",
+      "updateUsage": "Update Usage",
+      "edit": "Edit",
+      "delete": "Delete",
+      "resetFilters": "Reset"
+    },
+    "filters": {
+      "client": "Client",
+      "service": "Service",
+      "clientPlaceholder": "Filter by client",
+      "servicePlaceholder": "Filter by service",
+      "allClients": "All Clients",
+      "allServices": "All Services"
+    },
+    "table": {
+      "client": "Client",
+      "service": "Service",
+      "quantity": "Quantity",
+      "usageDate": "Usage Date",
+      "contractLine": "Contract Line",
+      "actions": "Actions",
+      "defaultContractLine": "Default Contract Line",
+      "contractLineLabel": "Contract Line: {{id}}..."
+    },
+    "states": {
+      "loadingRecords": "Loading usage records",
+      "noActiveBucketPlans": "No active bucket plans found."
+    },
+    "dialog": {
+      "addTitle": "Add Usage Record",
+      "editTitle": "Edit Usage Record",
+      "fields": {
+        "client": "Client",
+        "service": "Service",
+        "quantity": "Quantity",
+        "usageDate": "Usage Date",
+        "comments": "Comments (Optional)",
+        "contractLine": "Contract Line"
+      },
+      "servicePlaceholder": "Select service"
+    },
+    "contractLineGuidance": {
+      "multipleLines": "This service appears in multiple contract lines. Please select which contract line to bill against.",
+      "tooltipNoClient": "Client information not available. Usage will route to the system-managed default contract.",
+      "tooltipMultiple": "This service appears in multiple contract lines. Please select which contract line to use. Bucket contract lines are typically used first until depleted.",
+      "tooltipSingle": "This usage will be billed under the \"{{name}}\" contract line.",
+      "tooltipNone": "No eligible contract lines found for this service.",
+      "placeholderNoClient": "Using system-managed default contract",
+      "placeholderNone": "No eligible contract lines",
+      "placeholderSingle": "Using {{name}}",
+      "placeholderSelect": "Select a contract line",
+      "wrongContractLineWarning": "Selecting the wrong contract line may result in incorrect billing",
+      "noClientNotice": "Client information not available. Usage will route to the system-managed default contract.",
+      "noEligibleNotice": "No eligible contract lines found for this service."
+    },
+    "deleteDialog": {
+      "title": "Delete Usage Record",
+      "message": "Are you sure you want to delete this usage record? This action cannot be undone."
+    },
+    "toast": {
+      "loadClientsError": "Failed to load clients",
+      "loadUsageError": "Failed to load usage records",
+      "createSuccess": "Usage record created successfully",
+      "createError": "Failed to create usage record",
+      "updateSuccess": "Usage record updated successfully",
+      "updateError": "Failed to update usage record",
+      "deleteSuccess": "Usage record deleted successfully",
+      "deleteError": "Failed to delete usage record"
+    }
+  },
+  "lineItem": {
+    "collapsed": {
+      "itemDiscount": "Item Discount",
+      "invoiceDiscount": "Invoice Discount",
+      "appliedTo": "Applied to: {{description}}",
+      "selectService": "Select Service",
+      "taxable": "(Taxable)",
+      "nonTaxable": "(Non-Taxable)",
+      "calculatedOnSave": "(calculated on save)"
+    },
+    "expanded": {
+      "discount": "Discount",
+      "item": "Item {{number}}",
+      "markedForRemoval": "Marked for removal"
+    },
+    "fields": {
+      "service": "Service",
+      "quantity": "Quantity",
+      "discountType": "Discount Type",
+      "percentage": "Percentage",
+      "amount": "Amount ({{currencySymbol}})",
+      "discountDescription": "Discount Description",
+      "applyDiscountTo": "Apply Discount To",
+      "entireInvoice": "Entire Invoice",
+      "rate": "Rate ({{currencySymbol}})",
+      "description": "Description"
+    },
+    "placeholders": {
+      "discountDescription": "e.g., Early Payment Discount"
+    },
+    "actions": {
+      "add": "Add",
+      "remove": "Remove",
+      "restore": "Restore"
+    },
+    "hints": {
+      "removed": "This item will be removed when you save changes"
+    },
+    "summary": {
+      "percentageDiscount": "Percentage Discount",
+      "fixedDiscount": "Fixed Discount",
+      "itemTotal": "{{percentage}}% of item total",
+      "invoiceTotal": "{{percentage}}% of invoice total",
+      "amount": "Amount: -{{currencySymbol}}{{amount}}",
+      "appliedTo": "Applied to: {{description}}",
+      "subtotal": "Subtotal: {{currencySymbol}}{{amount}}"
+    },
+    "options": {
+      "percentage": "Percentage",
+      "fixedAmount": "Fixed Amount"
+    }
+  },
+  "contractLineServices": {
+    "table": {
+      "serviceName": "Service Name",
+      "category": "Category",
+      "billingMethod": "Billing Method",
+      "quantity": "Quantity",
+      "defaultRate": "Default Rate",
+      "actions": "Actions"
+    },
+    "billingMethods": {
+      "fixed": "Fixed Price",
+      "hourly": "Hourly",
+      "usageBased": "Usage Based",
+      "usage": "Usage"
+    },
+    "badges": {
+      "product": "Product",
+      "service": "Service"
+    },
+    "actions": {
+      "editQuantity": "Edit Quantity",
+      "remove": "Remove",
+      "addSelectedServices": "Add Selected Services",
+      "addSelectedServicesWithCount": "Add Selected Services ({{count}})"
+    },
+    "tooltip": {
+      "defaultRate": "Service's standard rate, used for internal value allocation and reporting within the fixed plan total. Not directly editable here."
+    },
+    "states": {
+      "loading": "Loading services...",
+      "emptyAssociated": "No services currently associated with this contract line.",
+      "emptyAvailable": "All available services are already associated with this contract line.",
+      "missingPrice": "Missing {{currency}} price"
+    },
+    "addSection": {
+      "title": "Add Services to Contract Line",
+      "serviceType": "Service Type: {{value}}",
+      "method": "Method: {{value}}",
+      "rate": "Rate: {{value}}",
+      "catalogPrice": "{{currency}} price: {{value}}",
+      "catalogPriceMissing": "{{currency}} price: missing",
+      "customRate": "Custom {{currency}} rate",
+      "productMissingPrice": "Product \"{{name}}\" has no {{currency}} price. Enter a custom rate before adding."
+    },
+    "errors": {
+      "loadData": "Failed to load services data",
+      "addServices": "Failed to add services",
+      "removeService": "Failed to remove service"
+    },
+    "unknownService": "Unknown Service"
+  },
+  "presetServices": {
+    "warnings": {
+      "unsavedChanges": "You have unsaved changes. Click \"Save Changes\" to apply them."
+    },
+    "table": {
+      "serviceName": "Service Name",
+      "category": "Category",
+      "billingMethod": "Billing Method",
+      "quantity": "Quantity",
+      "defaultRate": "Default Rate",
+      "actions": "Actions"
+    },
+    "tooltip": {
+      "defaultRate": "Service's standard rate, used for internal value allocation and reporting within the fixed plan total."
+    },
+    "states": {
+      "loading": "Loading services...",
+      "emptyAssociated": "No services currently associated with this contract line.",
+      "emptyAvailable": "All available services are already associated with this contract line."
+    },
+    "addSection": {
+      "title": "Add Services to Contract Line",
+      "serviceType": "Service Type: {{value}}",
+      "method": "Method: {{value}}",
+      "rate": "Rate: ${{value}}"
+    },
+    "actions": {
+      "remove": "Remove",
+      "addSelectedServices": "Add Selected Services",
+      "addSelectedServicesWithCount": "Add Selected Services ({{count}})",
+      "saveChanges": "Save Changes",
+      "saveChangesDirty": "Save Changes *",
+      "saving": "Saving...",
+      "reset": "Reset"
+    },
+    "navigationDialog": {
+      "title": "Unsaved Changes",
+      "message": "You have unsaved changes. Are you sure you want to leave this page? All changes will be lost.",
+      "confirmLabel": "Leave Page",
+      "cancelLabel": "Stay on Page"
+    },
+    "toast": {
+      "saveSuccess": "Contract line preset services saved successfully",
+      "saveError": "Failed to save services"
+    },
+    "unknownService": "Unknown Service"
+  },
+  "accountingExports": {
+    "title": "Accounting Exports",
+    "description": "Create export batches, validate mappings, and deliver files for manual import into your accounting system.",
+    "table": {
+      "batch": "Batch",
+      "adapter": "Adapter",
+      "status": "Status",
+      "created": "Created",
+      "updated": "Updated",
+      "actions": "Actions"
+    },
+    "actions": {
+      "refresh": "Refresh",
+      "newExport": "New Export",
+      "open": "Open",
+      "execute": "Execute",
+      "createBatch": "Create Batch",
+      "creating": "Creating..."
+    },
+    "states": {
+      "loadingBatches": "Loading batches...",
+      "empty": "No export batches yet.",
+      "loadingDetails": "Loading batch details...",
+      "batchNotFound": "Batch not found."
+    },
+    "createDialog": {
+      "title": "New Accounting Export",
+      "fields": {
+        "adapter": "Adapter",
+        "startDate": "Start Date",
+        "endDate": "End Date",
+        "clientSearch": "Client Search",
+        "invoiceStatuses": "Invoice Statuses",
+        "notes": "Notes"
+      },
+      "placeholders": {
+        "clientSearch": "Optional client name filter",
+        "invoiceStatuses": "Comma-separated (optional), e.g. finalized,posted",
+        "notes": "Optional notes"
+      }
+    },
+    "detailDialog": {
+      "title": "Accounting Export Batch",
+      "subtitle": "Batch Details",
+      "fields": {
+        "batchId": "Batch ID",
+        "adapter": "Adapter",
+        "status": "Status",
+        "created": "Created",
+        "lines": "Lines",
+        "errors": "Errors",
+        "delivered": "Delivered"
+      }
+    },
+    "toast": {
+      "created": "Accounting export batch created",
+      "executing": "Batch execution started",
+      "loadBatchesError": "Failed to load accounting export batches",
+      "loadDetailError": "Failed to load batch details",
+      "createError": "Failed to create export batch",
+      "executeError": "Failed to execute batch"
+    },
+    "status": {
+      "pending": "Pending",
+      "validating": "Validating",
+      "ready": "Ready",
+      "delivered": "Delivered",
+      "posted": "Posted",
+      "failed": "Failed",
+      "cancelled": "Cancelled",
+      "needsAttention": "Needs Attention"
+    }
+  },
+  "templateRenderer": {
+    "loading": "Loading template preview...",
+    "errorPrefix": "Error:",
+    "empty": "Please select an invoice and a template to preview."
+  },
+  "templateDesigner": {
+    "propertyEditor": {
+      "selectField": "Select a field",
+      "content": "Content",
+      "dataField": "Data Field",
+      "width": "Width",
+      "height": "Height",
+      "fontSize": "Font Size",
+      "color": "Color",
+      "columns": "{{count}} column(s)",
+      "rows": "{{count}} row(s)"
+    },
+    "conditionalRules": {
+      "title": "Conditional Display Rules",
+      "selectAction": "Select Action",
+      "show": "Show",
+      "hide": "Hide",
+      "format": "Format",
+      "conditionPlaceholder": "Condition",
+      "targetPlaceholder": "Target",
+      "addRule": "Add Rule"
+    }
+  },
+  "contractsHub": {
+    "title": "Contracts",
+    "tabs": {
+      "templates": "Templates",
+      "clientContracts": "Client Contracts"
+    }
+  },
+  "editQuantityDialog": {
+    "title": "Edit Quantity for {{serviceName}}",
+    "fields": {
+      "quantity": "Quantity"
+    },
+    "validation": {
+      "empty": "Quantity cannot be empty.",
+      "positiveWholeNumber": "Quantity must be a positive whole number."
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "saveQuantity": "Save Quantity",
+      "saving": "Saving..."
+    },
+    "errors": {
+      "saveFailed": "Failed to update quantity. Please try again."
+    }
+  },
+  "templateRendererCore": {
+    "notAvailable": "N/A",
+    "unknownValue": "Unknown value",
+    "noDataForList": "No data for list: {{name}}",
+    "uncategorized": "Uncategorized"
+  }
+}

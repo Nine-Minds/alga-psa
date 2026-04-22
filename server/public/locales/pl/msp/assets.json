@@ -30,6 +30,14 @@
     "no": "Nie",
     "yes": "Tak"
   },
+  "enums": {
+    "rmmAgentStatus": {
+      "online": "Online",
+      "offline": "Offline",
+      "overdue": "Zaległy",
+      "unknown": "Nieznany"
+    }
+  },
   "assetAlertsSection": {
     "title": "Sekcja alertów dotyczących zasobów",
     "description": "Opakowanie sekcji alertów przedsiębiorstwa dla alertów RMM dotyczących konkretnych zasobów i działań zaradczych"
@@ -158,12 +166,6 @@
       "rmmManaged": {
         "managed": "Zarządzane RMM",
         "unmanaged": "Nie zarządzane"
-      },
-      "agentStatuses": {
-        "online": "Online",
-        "offline": "Offline",
-        "overdue": "Zaległy",
-        "unknown": "Nieznany"
       }
     },
     "activeFilters": {
@@ -279,7 +281,7 @@
       "status": "Status",
       "created": "Utworzono",
       "updated": "Zaktualizowano",
-      "tenant": "Tenant"
+      "tenant": "Dzierżawca"
     },
     "typeDetails": {
       "workstation": "Szczegóły stacji roboczej",
@@ -303,7 +305,7 @@
       "virtualized": "Zwirtualizowany",
       "primaryIp": "Podstawowy adres IP",
       "hypervisor": "Hiperwizor",
-      "os": "OS",
+      "os": "System operacyjny",
       "model": "Model",
       "imei": "IMEI",
       "phoneNumber": "Numer telefonu",
@@ -825,12 +827,6 @@
       "status": "{{status}}{{suffix}}",
       "lastSeen": " - Ostatnio widziany: {{value}}"
     },
-    "statuses": {
-      "online": "Online",
-      "offline": "Offline",
-      "overdue": "Zaległy",
-      "unknown": "Nieznany"
-    },
     "relative": {
       "justNow": "Właśnie teraz",
       "minutesAgo": "{{count}}m temu",
@@ -1187,6 +1183,14 @@
     "totalItems": "Łączna liczba elementów: {{count}}",
     "values": {
       "unknown": "Nieznany"
+    }
+  },
+  "alerts": {
+    "messages": {
+      "alertAcknowledged": "Alert potwierdzony",
+      "acknowledgeFailed": "Nie udało się potwierdzić alertu",
+      "ticketCreated": "Zgłoszenie utworzone pomyślnie",
+      "ticketCreateFailed": "Nie udało się utworzyć zgłoszenia"
     }
   }
 }

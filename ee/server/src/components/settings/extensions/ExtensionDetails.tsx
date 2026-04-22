@@ -15,6 +15,7 @@ import { Extension } from '../../../lib/extensions/types';
 import { ChevronLeftIcon, InfoIcon, SettingsIcon, PackageIcon, ShieldIcon, CheckCircleIcon, XCircleIcon } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 // Fallback to console for logging in EE components
 import { fetchExtensionById, toggleExtension, uninstallExtension } from '../../../lib/actions/extensionActions';
 import { fetchExtensionVersions } from '../../../lib/actions/extensionVersionActions';
@@ -26,6 +27,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
  * Extension Details page
  */
 export default function ExtensionDetails() {
+  const { t } = useTranslation('msp/extensions');
   const params = useParams();
   const router = useRouter();
   const extensionId = params.id as string;
@@ -108,7 +110,7 @@ export default function ExtensionDetails() {
     try {
       const result = await toggleExtension(extensionId);
       if (!result.success) {
-        toast.error(result.message || 'Failed to update extension state');
+        toast.error(result.message || t('messages.toggleFailed'));
         return;
       }
       
@@ -120,7 +122,7 @@ export default function ExtensionDetails() {
       console.info(`Extension ${extension.is_enabled ? 'disabled' : 'enabled'}`, { extensionId });
     } catch (err) {
       console.error('Failed to toggle extension', { extensionId, error: err });
-      toast.error(`Failed to ${extension.is_enabled ? 'disable' : 'enable'} extension`);
+      toast.error(extension.is_enabled ? t('messages.disableFailed') : t('messages.enableFailed'));
     }
   };
 
@@ -129,7 +131,7 @@ export default function ExtensionDetails() {
       const result = await reprovisionExtension(extensionId);
       setInstallInfo({ domain: result.domain || null, status: { state: 'provisioning' } });
     } catch (_e) {
-      toast.error('Failed to reprovision');
+      toast.error(t('messages.reprovisionFailed'));
     }
   };
   
@@ -144,18 +146,18 @@ export default function ExtensionDetails() {
     try {
       const result = await uninstallExtension(extensionId);
       if (!result.success) {
-        toast.error(result.message || 'Failed to remove extension');
+        toast.error(result.message || t('messages.removeFailed'));
         return;
       }
 
       console.info('Extension removed', { extensionId });
-      toast.success('Extension removed');
+      toast.success(t('messages.extensionRemoved'));
 
       // Navigate back to extensions list
       router.push('/msp/settings/extensions');
     } catch (err) {
       console.error('Failed to remove extension', { extensionId, error: err });
-      toast.error('Failed to remove extension');
+      toast.error(t('messages.removeFailed'));
     }
   };
   

@@ -459,5 +459,158 @@
       "update": "Update Defaults",
       "create": "Create Defaults"
     }
+  },
+  "managed": {
+    "messages": {
+      "loadDomainsFailed": "Failed to load managed domains",
+      "loadOutboundSettingsFailed": "Failed to load outbound email settings",
+      "ticketingFromUpdated": "Ticketing from address updated",
+      "ticketingFromSaveFailed": "Failed to save ticketing from address",
+      "ticketingFromCleared": "Ticketing from address cleared",
+      "ticketingFromClearFailed": "Failed to clear ticketing from address",
+      "switchProviderFailed": "Failed to switch provider",
+      "smtpHostRequired": "SMTP host is required",
+      "fromAddressRequired": "From address is required",
+      "smtpSaved": "SMTP settings saved",
+      "smtpSaveFailed": "Failed to save SMTP settings",
+      "domainRequired": "Enter a domain name",
+      "domainSubmitted": "Domain request submitted",
+      "domainRequestFailed": "Failed to request domain",
+      "verificationRecheckScheduled": "Verification re-check scheduled",
+      "refreshStatusFailed": "Failed to refresh domain status",
+      "domainRemovalScheduled": "Domain removal scheduled",
+      "domainRemovalScheduledWithClear": "Domain removal scheduled and ticketing From address cleared",
+      "removeDomainFailed": "Failed to remove domain"
+    },
+    "tabs": {
+      "inboundEmail": "Inbound Email",
+      "outboundEmail": "Outbound Email"
+    },
+    "outbound": {
+      "intro": "Configure outbound email for your organization.",
+      "providerTitle": "Outbound Provider",
+      "providerDescription": "Choose how outbound emails are sent from your organization.",
+      "providerPlaceholder": "Select outbound provider",
+      "providerOptions": {
+        "resend": "Nine Minds Managed",
+        "smtp": "SMTP"
+      },
+      "resendDescription": "Emails are sent through Nine Minds managed infrastructure. Add and verify a custom domain below.",
+      "smtpDescription": "Emails are sent through your own SMTP server.",
+      "smtpLabel": "SMTP",
+      "upgradeNotice": "Managed email domains are not available on your current plan. Upgrade to use Nine Minds managed outbound infrastructure with custom domains.",
+      "domainsTitle": "Managed Domains",
+      "domainsDescription": "Add a custom domain and follow the DNS instructions to verify ownership.",
+      "domainLabel": "Domain",
+      "domainPlaceholder": "example.com",
+      "addDomainButton": "Add Domain",
+      "smtpConfigTitle": "SMTP Configuration",
+      "smtpConfigDescription": "Enter your SMTP server details to send outbound email.",
+      "smtp": {
+        "hostLabel": "SMTP Host",
+        "hostPlaceholder": "smtp.example.com",
+        "portLabel": "Port",
+        "usernameLabel": "Username",
+        "usernamePlaceholder": "your-email@example.com",
+        "passwordLabel": "Password",
+        "passwordPlaceholder": "Enter password",
+        "fromLabel": "From Address",
+        "fromPlaceholder": "noreply@example.com",
+        "fromHelp": "The default sender address for outbound emails.",
+        "savingButton": "Saving...",
+        "saveButton": "Save SMTP Settings"
+      },
+      "ticketingFrom": {
+        "title": "Ticketing From Address",
+        "description": "Choose the email address that will appear in the From header on ticket notifications.",
+        "smtpHint": "Address should use a domain associated with your SMTP server ({{domain}}). Replies work best when you use a connected inbound inbox.",
+        "managedHint": "Address must use your outbound domain ({{domain}}). Replies work best when you use a connected inbound inbox.",
+        "domainNotSet": "not set",
+        "outboundRequiredTitle": "Outbound domain required",
+        "smtpRequiredMessage": "Save your SMTP configuration with a from address before selecting a ticketing from address.",
+        "managedRequiredMessage": "Add and verify a managed domain before selecting a ticketing from address.",
+        "connectedInboxLabel": "Connected inbox",
+        "customOptionLabel": "Other address on {{domain}}",
+        "selectPlaceholder": "Select from address",
+        "connectedInboxHelp": "Select a connected inbox to keep inbound replies threaded.",
+        "customLabel": "From address",
+        "customPlaceholder": "support@{{domain}}",
+        "customSmtpHelp": "Use a domain your SMTP server is authorized to send from. Using a mismatched domain may cause delivery failures or spam filtering.",
+        "customManagedHelp": "Must match {{domain}}. If this isn't one of your inbound inboxes, inbound ticket processing may not work.",
+        "warningTitle": "Heads up",
+        "errorTitle": "Fix the from address",
+        "clearButton": "Clear From Address",
+        "savingButton": "Saving...",
+        "saveButton": "Save From Address"
+      }
+    },
+    "inbound": {
+      "intro": "Configure inbound email routing and provider-specific automation."
+    },
+    "dialogs": {
+      "clearTicketingFrom": {
+        "title": "Clear Ticketing From Address",
+        "message": "Clear the saved ticketing From address? Ticket notifications will stop using a custom From address until you save a new one.",
+        "confirm": "Clear From Address"
+      },
+      "removeDomain": {
+        "title": "Remove Managed Domain",
+        "messageWithClear": "Remove {{domain}}? This will also clear the saved ticketing From address because this domain is currently active for outbound email.",
+        "message": "Remove {{domain}}?",
+        "fallbackDomain": "this domain",
+        "confirm": "Remove Domain"
+      },
+      "cancel": "Cancel"
+    },
+    "validation": {
+      "enterFromAddress": "Enter a from email address",
+      "saveSmtpFirst": "Save your SMTP configuration with a from address first",
+      "addOutboundFirst": "Add and verify an outbound domain before choosing a from address",
+      "invalidEmail": "Enter a valid email address",
+      "mustMatchDomain": "From address must use @{{domain}}",
+      "customAddressThreadWarning": "Using a custom address may prevent inbound ticket replies from threading correctly.",
+      "smtpDomainMismatchWarning": "This domain does not match your SMTP from address domain ({{domain}}). Emails may fail to deliver or be flagged as spam if your SMTP server is not authorized to send from this domain.",
+      "notConnectedWarning": "Inbound ticket processing may not work with this address because it is not one of your connected inboxes."
+    },
+    "domainList": {
+      "loading": "Loading domains…",
+      "empty": "No managed domains yet. Add one to get started.",
+      "providerDomainId": "Provider domain ID: {{id}}",
+      "providerFallback": "Managed via Resend",
+      "failureReason": "Failure reason: {{reason}}",
+      "recheckButton": "Re-check DNS",
+      "removeButton": "Remove Domain",
+      "dnsRecordsHeading": "DNS Records",
+      "dnsRecordsHelp": "Copy each record below into your DNS provider (GoDaddy, Cloudflare, etc.). We cannot change your DNS for you.",
+      "dnsEmpty": {
+        "pending": "We asked Resend to generate the DNS records for this domain. Once they show up, copy them into your DNS provider because we cannot update it automatically.",
+        "failed": "We still need DNS instructions from Resend. Click Re-check DNS and, when the records load, publish them inside your DNS provider.",
+        "default": "DNS instructions are not available yet. Re-check DNS and copy each record into your DNS provider as soon as it appears."
+      }
+    },
+    "dnsRecords": {
+      "status": {
+        "matched": "Detected",
+        "mismatch": "Mismatch",
+        "missing": "Not Found",
+        "unknown": "Waiting for Check"
+      },
+      "detectedValues": "Detected values",
+      "defaultEmpty": "We are preparing the DNS records for this domain. As soon as they appear, copy them into your DNS provider because we cannot update it for you.",
+      "summary": "Matched {{matched}} of {{total}} required DNS records",
+      "summaryWithCheckedAt": "Matched {{matched}} of {{total}} required DNS records • Last checked {{checkedAt}}.",
+      "lastCheckedNoRecords": "Last checked {{checkedAt}}. We have not detected any records yet.",
+      "copyButton": "Copy",
+      "copyAriaLabel": "Copy DNS value",
+      "copied": "Copied to clipboard",
+      "copyFailed": "Failed to copy",
+      "checkedAt": "Checked {{checkedAt}}",
+      "ttlLabel": "TTL:",
+      "priorityLabel": "Priority:",
+      "missingHelp": "We have not detected this record in DNS yet. Double-check that it exists in your DNS provider with the exact value shown above.",
+      "mismatchHelp": "The DNS record exists, but the value does not match what Resend expects.",
+      "matchedHelp": "Detected value matches what we expected.",
+      "unknownHelp": "We have not checked DNS yet. Re-check DNS to run verification."
+    }
   }
 }

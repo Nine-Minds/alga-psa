@@ -459,5 +459,158 @@
       "update": "Mettre à jour les paramètres par défaut",
       "create": "Créer des valeurs par défaut"
     }
+  },
+  "managed": {
+    "messages": {
+      "loadDomainsFailed": "Échec du chargement des domaines gérés",
+      "loadOutboundSettingsFailed": "Échec du chargement des paramètres d'envoi",
+      "ticketingFromUpdated": "Adresse d'expéditeur de ticket mise à jour",
+      "ticketingFromSaveFailed": "Échec de l'enregistrement de l'adresse d'expéditeur de ticket",
+      "ticketingFromCleared": "Adresse d'expéditeur de ticket effacée",
+      "ticketingFromClearFailed": "Échec de l'effacement de l'adresse d'expéditeur de ticket",
+      "switchProviderFailed": "Échec du changement de fournisseur",
+      "smtpHostRequired": "L'hôte SMTP est requis",
+      "fromAddressRequired": "L'adresse d'expéditeur est requise",
+      "smtpSaved": "Paramètres SMTP enregistrés",
+      "smtpSaveFailed": "Échec de l'enregistrement des paramètres SMTP",
+      "domainRequired": "Saisissez un nom de domaine",
+      "domainSubmitted": "Demande de domaine soumise",
+      "domainRequestFailed": "Échec de la demande de domaine",
+      "verificationRecheckScheduled": "Nouvelle vérification planifiée",
+      "refreshStatusFailed": "Échec de l'actualisation du statut du domaine",
+      "domainRemovalScheduled": "Suppression du domaine planifiée",
+      "domainRemovalScheduledWithClear": "Suppression du domaine planifiée et adresse d'expéditeur de ticket effacée",
+      "removeDomainFailed": "Échec de la suppression du domaine"
+    },
+    "tabs": {
+      "inboundEmail": "E-mail entrant",
+      "outboundEmail": "E-mail sortant"
+    },
+    "outbound": {
+      "intro": "Configurez l'e-mail sortant pour votre organisation.",
+      "providerTitle": "Fournisseur sortant",
+      "providerDescription": "Choisissez comment les e-mails sortants sont envoyés depuis votre organisation.",
+      "providerPlaceholder": "Sélectionnez un fournisseur sortant",
+      "providerOptions": {
+        "resend": "Nine Minds géré",
+        "smtp": "SMTP"
+      },
+      "resendDescription": "Les e-mails sont envoyés via l'infrastructure gérée de Nine Minds. Ajoutez et vérifiez un domaine personnalisé ci-dessous.",
+      "smtpDescription": "Les e-mails sont envoyés via votre propre serveur SMTP.",
+      "smtpLabel": "SMTP",
+      "upgradeNotice": "Les domaines d'e-mail gérés ne sont pas disponibles dans votre forfait actuel. Effectuez une mise à niveau pour utiliser l'infrastructure sortante gérée de Nine Minds avec des domaines personnalisés.",
+      "domainsTitle": "Domaines gérés",
+      "domainsDescription": "Ajoutez un domaine personnalisé et suivez les instructions DNS pour vérifier la propriété.",
+      "domainLabel": "Domaine",
+      "domainPlaceholder": "exemple.com",
+      "addDomainButton": "Ajouter un domaine",
+      "smtpConfigTitle": "Configuration SMTP",
+      "smtpConfigDescription": "Saisissez les détails de votre serveur SMTP pour envoyer des e-mails sortants.",
+      "smtp": {
+        "hostLabel": "Hôte SMTP",
+        "hostPlaceholder": "smtp.exemple.com",
+        "portLabel": "Port",
+        "usernameLabel": "Nom d'utilisateur",
+        "usernamePlaceholder": "votre-email@exemple.com",
+        "passwordLabel": "Mot de passe",
+        "passwordPlaceholder": "Saisissez le mot de passe",
+        "fromLabel": "Adresse d'expéditeur",
+        "fromPlaceholder": "noreply@exemple.com",
+        "fromHelp": "Adresse d'expéditeur par défaut pour les e-mails sortants.",
+        "savingButton": "Enregistrement…",
+        "saveButton": "Enregistrer les paramètres SMTP"
+      },
+      "ticketingFrom": {
+        "title": "Adresse d'expéditeur de ticket",
+        "description": "Choisissez l'adresse e-mail qui apparaîtra dans l'en-tête De des notifications de ticket.",
+        "smtpHint": "L'adresse doit utiliser un domaine associé à votre serveur SMTP ({{domain}}). Les réponses fonctionnent mieux avec une boîte de réception entrante connectée.",
+        "managedHint": "L'adresse doit utiliser votre domaine sortant ({{domain}}). Les réponses fonctionnent mieux avec une boîte de réception entrante connectée.",
+        "domainNotSet": "non défini",
+        "outboundRequiredTitle": "Domaine sortant requis",
+        "smtpRequiredMessage": "Enregistrez votre configuration SMTP avec une adresse d'expéditeur avant de sélectionner une adresse d'expéditeur de ticket.",
+        "managedRequiredMessage": "Ajoutez et vérifiez un domaine géré avant de sélectionner une adresse d'expéditeur de ticket.",
+        "connectedInboxLabel": "Boîte connectée",
+        "customOptionLabel": "Autre adresse sur {{domain}}",
+        "selectPlaceholder": "Sélectionnez l'adresse d'expéditeur",
+        "connectedInboxHelp": "Sélectionnez une boîte de réception connectée pour que les réponses entrantes restent regroupées.",
+        "customLabel": "Adresse d'expéditeur",
+        "customPlaceholder": "support@{{domain}}",
+        "customSmtpHelp": "Utilisez un domaine que votre serveur SMTP est autorisé à utiliser comme expéditeur. Un domaine non concordant peut entraîner des échecs de livraison ou un filtrage anti-spam.",
+        "customManagedHelp": "Doit correspondre à {{domain}}. Si ce n'est pas l'une de vos boîtes de réception entrantes, le traitement des tickets entrants peut ne pas fonctionner.",
+        "warningTitle": "À noter",
+        "errorTitle": "Corrigez l'adresse d'expéditeur",
+        "clearButton": "Effacer l'adresse d'expéditeur",
+        "savingButton": "Enregistrement…",
+        "saveButton": "Enregistrer l'adresse d'expéditeur"
+      }
+    },
+    "inbound": {
+      "intro": "Configurez le routage des e-mails entrants et l'automatisation spécifique au fournisseur."
+    },
+    "dialogs": {
+      "clearTicketingFrom": {
+        "title": "Effacer l'adresse d'expéditeur de ticket",
+        "message": "Effacer l'adresse d'expéditeur de ticket enregistrée ? Les notifications de ticket cesseront d'utiliser une adresse d'expéditeur personnalisée jusqu'à ce que vous en enregistriez une nouvelle.",
+        "confirm": "Effacer l'adresse d'expéditeur"
+      },
+      "removeDomain": {
+        "title": "Supprimer le domaine géré",
+        "messageWithClear": "Supprimer {{domain}} ? Cela effacera également l'adresse d'expéditeur de ticket enregistrée car ce domaine est actuellement actif pour l'e-mail sortant.",
+        "message": "Supprimer {{domain}} ?",
+        "fallbackDomain": "ce domaine",
+        "confirm": "Supprimer le domaine"
+      },
+      "cancel": "Annuler"
+    },
+    "validation": {
+      "enterFromAddress": "Saisissez une adresse d'expéditeur",
+      "saveSmtpFirst": "Enregistrez d'abord votre configuration SMTP avec une adresse d'expéditeur",
+      "addOutboundFirst": "Ajoutez et vérifiez un domaine sortant avant de choisir une adresse d'expéditeur",
+      "invalidEmail": "Saisissez une adresse e-mail valide",
+      "mustMatchDomain": "L'adresse d'expéditeur doit utiliser @{{domain}}",
+      "customAddressThreadWarning": "L'utilisation d'une adresse personnalisée peut empêcher le regroupement correct des réponses entrantes.",
+      "smtpDomainMismatchWarning": "Ce domaine ne correspond pas au domaine d'expéditeur de votre SMTP ({{domain}}). Les e-mails peuvent échouer à livrer ou être signalés comme spam si votre serveur SMTP n'est pas autorisé à envoyer depuis ce domaine.",
+      "notConnectedWarning": "Le traitement des tickets entrants peut ne pas fonctionner avec cette adresse car elle n'est pas l'une de vos boîtes de réception connectées."
+    },
+    "domainList": {
+      "loading": "Chargement des domaines…",
+      "empty": "Aucun domaine géré pour le moment. Ajoutez-en un pour commencer.",
+      "providerDomainId": "ID de domaine fournisseur : {{id}}",
+      "providerFallback": "Géré via Resend",
+      "failureReason": "Motif de l'échec : {{reason}}",
+      "recheckButton": "Revérifier le DNS",
+      "removeButton": "Supprimer le domaine",
+      "dnsRecordsHeading": "Enregistrements DNS",
+      "dnsRecordsHelp": "Copiez chaque enregistrement ci-dessous dans votre fournisseur DNS (GoDaddy, Cloudflare, etc.). Nous ne pouvons pas modifier votre DNS à votre place.",
+      "dnsEmpty": {
+        "pending": "Nous avons demandé à Resend de générer les enregistrements DNS de ce domaine. Dès qu'ils apparaîtront, copiez-les dans votre fournisseur DNS car nous ne pouvons pas le mettre à jour automatiquement.",
+        "failed": "Nous avons encore besoin des instructions DNS de Resend. Cliquez sur Revérifier le DNS et, lorsque les enregistrements se chargent, publiez-les dans votre fournisseur DNS.",
+        "default": "Les instructions DNS ne sont pas encore disponibles. Revérifiez le DNS et copiez chaque enregistrement dans votre fournisseur DNS dès qu'il apparaît."
+      }
+    },
+    "dnsRecords": {
+      "status": {
+        "matched": "Détecté",
+        "mismatch": "Incohérence",
+        "missing": "Introuvable",
+        "unknown": "En attente de vérification"
+      },
+      "detectedValues": "Valeurs détectées",
+      "defaultEmpty": "Nous préparons les enregistrements DNS pour ce domaine. Dès qu'ils apparaissent, copiez-les dans votre fournisseur DNS car nous ne pouvons pas le mettre à jour pour vous.",
+      "summary": "{{matched}} sur {{total}} enregistrements DNS requis correspondent",
+      "summaryWithCheckedAt": "{{matched}} sur {{total}} enregistrements DNS requis correspondent • Dernière vérification {{checkedAt}}.",
+      "lastCheckedNoRecords": "Dernière vérification {{checkedAt}}. Aucun enregistrement détecté pour le moment.",
+      "copyButton": "Copier",
+      "copyAriaLabel": "Copier la valeur DNS",
+      "copied": "Copié dans le presse-papiers",
+      "copyFailed": "Échec de la copie",
+      "checkedAt": "Vérifié {{checkedAt}}",
+      "ttlLabel": "TTL :",
+      "priorityLabel": "Priorité :",
+      "missingHelp": "Nous n'avons pas encore détecté cet enregistrement dans le DNS. Vérifiez qu'il existe dans votre fournisseur DNS avec la valeur exacte indiquée ci-dessus.",
+      "mismatchHelp": "L'enregistrement DNS existe, mais la valeur ne correspond pas à celle attendue par Resend.",
+      "matchedHelp": "La valeur détectée correspond à celle attendue.",
+      "unknownHelp": "Nous n'avons pas encore vérifié le DNS. Revérifiez le DNS pour lancer la vérification."
+    }
   }
 }

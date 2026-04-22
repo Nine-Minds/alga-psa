@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, memo, useEffect } from 'react';
 import { formatISO } from 'date-fns';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { deleteTimeEntry, fetchTimeEntriesForTimeSheet } from '../../../../actions/timeEntryActions';
@@ -57,6 +58,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     onTimeEntriesUpdate,
     inDrawer,
   } = props;
+  const { t } = useTranslation('msp/time-entry');
   const {
     entries,
     services,
@@ -84,7 +86,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
       initializeEntries({
         existingEntries: existingEntries?.slice(0, 1).map(entry => ({
           ...entry,
-          notes: entry.notes || workItem.description || ''
+          notes: entry.notes || ''
         })) || [],
         defaultStartTime,
         defaultEndTime,
@@ -106,14 +108,14 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     const isAdHoc = workItem.type === 'ad_hoc';
 
     if (!entry.service_id?.trim()) {
-      toast.error('Please select a service before saving time entries');
+      toast.error(t('messages.serviceRequired'));
       return;
     }
 
     if (!isAdHoc) {
       const selectedService = services.find(s => s.id === entry.service_id);
       if (!selectedService) {
-        toast.error('Invalid service selected');
+        toast.error(t('messages.invalidService'));
         return;
       }
 
@@ -121,17 +123,17 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
         selectedService.tax_percentage != null &&
         selectedService.tax_percentage > 0;
       if (hasTaxableRate && !entry.tax_region) {
-        toast.error('Please select a tax region for taxable services');
+        toast.error(t('messages.taxRegionRequired'));
         return;
       }
     }
 
     if (!validateTimeEntry(entry)) {
-      toast.error('Please check the time entry values');
+      toast.error(t('messages.invalidTimeEntry'));
       return;
     }
 
-    const loadingToast = toast.loading('Saving time entry...');
+    const loadingToast = toast.loading(t('messages.savingEntry'));
 
     try {
       setIsSaving(true);
@@ -167,7 +169,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
       }
 
       toast.dismiss(loadingToast);
-      toast.success('Time entry saved');
+      toast.success(t('messages.entrySaved'));
       onClose();
     } catch (error) {
       toast.dismiss(loadingToast);

@@ -5,6 +5,7 @@ import React, { useMemo } from 'react';
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Input } from '@alga-psa/ui/components/Input';
 import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   BROWSE_ALL_VALUE,
   COMMON_IANA_TIMEZONES,
@@ -26,6 +27,7 @@ export default function WorkflowScheduleTimezonePicker({
   value,
   onValueChange,
 }: WorkflowScheduleTimezonePickerProps) {
+  const { t } = useTranslation('msp/workflows');
   const [mode, setMode] = React.useState<'common' | 'browse' | 'custom'>('common');
   const supportedTimezones = useMemo(() => getSupportedTimezones(), []);
   const commonTimezones = useMemo(() => [...COMMON_IANA_TIMEZONES], []);
@@ -59,13 +61,13 @@ export default function WorkflowScheduleTimezonePicker({
     })),
     {
       value: BROWSE_ALL_VALUE,
-      label: 'Browse all time zones...',
+      label: t('schedules.timezone.browseAll', { defaultValue: 'Browse all time zones...' }),
     },
     {
       value: CUSTOM_VALUE,
-      label: 'Custom...',
+      label: t('schedules.timezone.custom', { defaultValue: 'Custom...' }),
     },
-  ], [commonTimezones]);
+  ], [commonTimezones, t]);
 
   return (
     <div className="space-y-3">
@@ -87,7 +89,9 @@ export default function WorkflowScheduleTimezonePicker({
       {mode === 'browse' && (
         <div className="space-y-1">
           <div className="text-xs text-[rgb(var(--color-text-500))]">
-            Choose from the full supported IANA timezone list.
+            {t('schedules.timezone.browseHelp', {
+              defaultValue: 'Choose from the full supported IANA timezone list.',
+            })}
           </div>
           <TimezonePicker
             value={value}
@@ -102,10 +106,10 @@ export default function WorkflowScheduleTimezonePicker({
       {mode === 'custom' && (
         <Input
           id={`${id}-custom`}
-          label="Custom timezone"
+          label={t('schedules.timezone.customLabel', { defaultValue: 'Custom timezone' })}
           value={value}
           onChange={(event) => onValueChange(event.target.value)}
-          placeholder="Etc/GMT+5"
+          placeholder={t('schedules.timezone.customPlaceholder', { defaultValue: 'Etc/GMT+5' })}
         />
       )}
     </div>

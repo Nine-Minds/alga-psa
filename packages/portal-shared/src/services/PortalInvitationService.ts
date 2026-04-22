@@ -27,6 +27,7 @@ export interface TokenVerificationResult {
   };
   invitation?: PortalInvitation;
   error?: string;
+  errorCode?: 'INVALID_OR_EXPIRED_TOKEN' | 'VERIFICATION_FAILED';
 }
 
 export class PortalInvitationService {
@@ -234,9 +235,10 @@ export class PortalInvitationService {
           .first();
 
         if (!tokenInfo) {
-          return { 
-            valid: false, 
-            error: 'Invalid or expired invitation token' 
+          return {
+            valid: false,
+            error: 'Invalid or expired invitation token',
+            errorCode: 'INVALID_OR_EXPIRED_TOKEN'
           };
         }
 
@@ -273,9 +275,10 @@ export class PortalInvitationService {
           .first();
 
         if (!invitation) {
-          return { 
-            valid: false, 
-            error: 'Invalid or expired invitation token' 
+          return {
+            valid: false,
+            error: 'Invalid or expired invitation token',
+            errorCode: 'INVALID_OR_EXPIRED_TOKEN'
           };
         }
 
@@ -303,7 +306,11 @@ export class PortalInvitationService {
 
     } catch (error) {
       console.error('Error verifying portal invitation token:', error);
-      return { valid: false, error: 'Failed to verify token' };
+      return {
+        valid: false,
+        error: 'Failed to verify token',
+        errorCode: 'VERIFICATION_FAILED'
+      };
     }
   }
 

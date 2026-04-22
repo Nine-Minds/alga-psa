@@ -42,6 +42,20 @@
     "confirmDeletion": "55555",
     "saving": "55555"
   },
+  "form": {
+    "selectPlaceholder": "55555",
+    "clearSelection": "55555",
+    "fromDate": "55555",
+    "toDate": "55555",
+    "noResults": "55555",
+    "searchPlaceholder": "55555"
+  },
+  "tagFilter": {
+    "placeholder": "55555",
+    "filter": "55555",
+    "selectedCount": "55555 {{count}} 55555",
+    "clearAll": "55555"
+  },
   "status": {
     "loading": "55555",
     "saving": "55555",
@@ -97,6 +111,30 @@
   "fields": {
     "notes": "55555"
   },
+  "auth": {
+    "messages": {
+      "handoffMissingToken": "55555",
+      "handoffFinalizeFailed": "55555",
+      "handoffNetworkIssue": "55555"
+    },
+    "checkEmail": {
+      "resendSuccess": "55555",
+      "resendFailed": "55555"
+    }
+  },
+  "share": {
+    "errors": {
+      "loadFailed": "55555",
+      "connectionFailed": "55555",
+      "passwordRequired": "55555",
+      "invalidPassword": "55555",
+      "downloadFailedRetry": "55555",
+      "downloadFailed": "55555",
+      "linkNotAvailable": "55555",
+      "linkExpired": "55555",
+      "downloadLimitReached": "55555"
+    }
+  },
   "tickets": {
     "origin": {
       "internal": "55555",
@@ -144,6 +182,43 @@
         "client": "55555",
         "tenant": "55555",
         "system": "55555"
+      }
+    },
+    "hierarchyTable": {
+      "title": "55555",
+      "description": "55555",
+      "columns": {
+        "priority": "55555",
+        "source": "55555",
+        "appliesTo": "55555",
+        "whereSet": "55555"
+      },
+      "rows": {
+        "userPreference": {
+          "source": "55555",
+          "appliesTo": "55555",
+          "whereSet": "55555"
+        },
+        "clientUserLanguage": {
+          "source": "55555",
+          "appliesTo": "55555",
+          "whereSet": "55555"
+        },
+        "clientPortalDefault": {
+          "source": "55555",
+          "appliesTo": "55555",
+          "whereSet": "55555"
+        },
+        "organizationDefault": {
+          "source": "55555",
+          "appliesTo": "55555",
+          "whereSet": "55555"
+        },
+        "systemDefault": {
+          "source": "55555",
+          "appliesTo": "55555",
+          "whereSet": "55555"
+        }
       }
     }
   },
@@ -928,6 +1003,11 @@
         "error_deleting": "55555",
         "confirm_delete": "55555"
       }
+    }
+  },
+  "enums": {
+    "addOnDescription": {
+      "ai_assistant": "55555"
     }
   }
 }

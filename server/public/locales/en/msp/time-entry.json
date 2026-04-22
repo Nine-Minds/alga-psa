@@ -401,5 +401,18 @@
   },
   "timeEntryReadOnly": {
     "viewEntryDetails": "View entry details"
+  },
+  "messages": {
+    "serviceRequired": "Please select a service before saving time entries",
+    "invalidService": "Invalid service selected",
+    "taxRegionRequired": "Please select a tax region for taxable services",
+    "invalidTimeEntry": "Please check the time entry values",
+    "savingEntry": "Saving time entry...",
+    "entrySaved": "Time entry saved",
+    "entrySavedSuccess": "Time entry saved successfully",
+    "taskUpdated": "Task updated successfully",
+    "saveChangesFailed": "Failed to save changes",
+    "changesSaved": "Changes saved successfully",
+    "workItemDeleted": "Work item deleted successfully"
   }
 }

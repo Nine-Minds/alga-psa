@@ -11,7 +11,19 @@
   "viewContractLineDetails": "Zobacz szczegóły linii umowy",
   "viewAllInvoices": "Zobacz wszystkie faktury",
   "failedToLoad": "Nie udało się wczytać faktur. Spróbuj ponownie.",
-  "invoices": "Faktury",
+  "invoices": {
+    "locations": {
+      "groupHeading": "Lokalizacja",
+      "subtotal": "Suma częściowa lokalizacji",
+      "unassigned": "Elementy bez lokalizacji",
+      "pickerPlaceholder": "Wybierz lokalizację",
+      "addLocationButton": "+ Dodaj lokalizację",
+      "removeGroup": "Usuń lokalizację",
+      "emptyGroup": "Brak elementów dla tej lokalizacji.",
+      "needMoreLocations": "Ten klient ma tylko jedną aktywną lokalizację. Dodaj drugą lokalizację w ustawieniach klienta, aby włączyć fakturowanie wielolokalizacyjne.",
+      "notSet": "Nie wybrano lokalizacji"
+    }
+  },
   "payments": "Płatności",
   "contractLines": "Linie umów serwisowych",
   "usage": "Metryki wykorzystania",
@@ -119,10 +131,28 @@
     "pendingQuotes": "Oczekujące oferty",
     "awaitingResponse": "{{count}} ofert(a) oczekuje na Twoją odpowiedź",
     "noPending": "Brak oczekujących ofert",
-    "viewAll": "Wyświetl wszystkie oferty"
+    "viewAll": "Wyświetl wszystkie oferty",
+    "locations": {
+      "primaryLocationHeading": "Lokalizacja oferty",
+      "changeButton": "Zmień",
+      "cancelChange": "Anuluj",
+      "notSet": "Nie wybrano lokalizacji",
+      "groupHeading": "Lokalizacja",
+      "pickerPlaceholder": "Wybierz lokalizację",
+      "addLocationButton": "+ Dodaj lokalizację",
+      "removeGroup": "Usuń lokalizację",
+      "needMoreLocations": "Ten klient ma tylko jedną aktywną lokalizację. Dodaj drugą lokalizację w ustawieniach klienta, aby włączyć ofertowanie wielolokalizacyjne.",
+      "emptyGroup": "Brak elementów dla tej lokalizacji.",
+      "subtotal": "Suma częściowa lokalizacji",
+      "unassigned": "Elementy bez lokalizacji"
+    },
+    "lineItems": {
+      "searchPlaceholder": "Wyszukaj lub wpisz nazwę elementu niestandardowego..."
+    }
   },
   "enums": {
     "billingFrequency": {
+      "weekly": "Tygodniowo",
       "monthly": "Miesięcznie",
       "quarterly": "Kwartalnie",
       "annually": "Rocznie"
@@ -131,6 +161,171 @@
       "Fixed": "Stała stawka",
       "Hourly": "Godzinowe",
       "Usage": "Na podstawie zużycia"
+    },
+    "quoteStatus": {
+      "draft": "Szkic",
+      "pending_approval": "Oczekuje na zatwierdzenie",
+      "approved": "Zatwierdzony",
+      "sent": "Wysłany",
+      "accepted": "Zaakceptowany",
+      "rejected": "Odrzucony",
+      "expired": "Wygasły",
+      "converted": "Przekształcony",
+      "cancelled": "Anulowany",
+      "superseded": "Zastąpiony",
+      "archived": "Zarchiwizowany"
+    },
+    "quoteStatusDescription": {
+      "draft": "Oferta jest przygotowywana",
+      "pending_approval": "Oferta czeka na wewnętrzne zatwierdzenie",
+      "approved": "Oferta jest zatwierdzona i gotowa do wysłania",
+      "sent": "Oferta została wysłana do klienta",
+      "accepted": "Klient zaakceptował ofertę",
+      "rejected": "Klient odrzucił ofertę",
+      "expired": "Oferta przekroczyła datę ważności",
+      "converted": "Oferta została przekształcona w rekordy fakturowania",
+      "cancelled": "Oferta została anulowana przed przekształceniem",
+      "superseded": "Oferta została zastąpiona przez nową wersję",
+      "archived": "Oferta jest zarchiwizowana i tylko do odczytu"
+    },
+    "invoiceStatus": {
+      "draft": "Szkic",
+      "sent": "Wysłana",
+      "paid": "Opłacona",
+      "overdue": "Zaległa",
+      "cancelled": "Anulowana",
+      "pending": "Oczekująca",
+      "prepayment": "Zaliczka",
+      "partially_applied": "Częściowo zastosowana"
+    },
+    "invoiceStatusDescription": {
+      "draft": "Faktury w przygotowaniu, jeszcze niewysłane do klienta",
+      "sent": "Faktury sfinalizowane i wysłane do klienta",
+      "paid": "W pełni opłacone faktury gotowe do uzgodnienia",
+      "overdue": "Sfinalizowane faktury po terminie płatności",
+      "cancelled": "Faktury anulowane lub unieważnione",
+      "pending": "Faktury oczekujące na zatwierdzenie lub dalsze przetwarzanie",
+      "prepayment": "Faktury zaliczkowe lub depozytowe",
+      "partially_applied": "Faktury z zastosowanymi częściowymi płatnościami"
+    }
+  },
+  "quoteForm": {
+    "noticeTitle": "Oferta",
+    "readOnlyNotice": "Ta oferta jest tylko do odczytu. Aby wprowadzić zmiany, utwórz nową wersję.",
+    "breadcrumb": {
+      "billing": "Rozliczenia",
+      "quotes": "Oferty",
+      "quoteTemplates": "Szablony ofert",
+      "newQuote": "Nowa oferta"
+    },
+    "header": {
+      "editQuote": "Edytuj ofertę",
+      "newQuote": "Nowa oferta",
+      "editTemplate": "Edytuj szablon oferty",
+      "newTemplate": "Nowy szablon oferty",
+      "quoteTotalLabel": "Suma oferty",
+      "version": "v{{version}}"
+    },
+    "subtitle": {
+      "forClient": "Dla {{clientName}}",
+      "expires": "Wygasa {{date}}",
+      "template": "Szablon · {{description}}"
+    },
+    "actions": {
+      "pdf": "PDF",
+      "duplicate": "Duplikuj",
+      "back": "Wstecz",
+      "cancel": "Anuluj",
+      "previewPdf": "Podgląd PDF",
+      "moreActions": "Więcej akcji",
+      "saving": "Zapisywanie…",
+      "saveQuote": "Zapisz ofertę",
+      "saveTemplate": "Zapisz szablon",
+      "sendToClient": "Wyślij do klienta",
+      "requestApproval": "Poproś o zatwierdzenie",
+      "requestChanges": "Poproś o zmiany",
+      "approve": "Zatwierdź",
+      "revise": "Popraw",
+      "createNewRevision": "Utwórz nową wersję",
+      "convertToContract": "Konwertuj na umowę",
+      "convertToInvoice": "Konwertuj na fakturę",
+      "convertToBoth": "Konwertuj na oba",
+      "resend": "Wyślij ponownie",
+      "sendReminder": "Wyślij przypomnienie",
+      "cancelQuote": "Anuluj ofertę"
+    },
+    "banners": {
+      "acceptedTitle": "Oferta zaakceptowana",
+      "acceptedBy": "Zaakceptowane przez: {{name}}",
+      "acceptedOn": "Zaakceptowane: {{date}}",
+      "rejectedTitle": "Oferta odrzucona",
+      "rejectedOn": "Odrzucono: {{date}}",
+      "rejectedReason": "Powód: {{reason}}",
+      "convertedTitle": "Oferta przekonwertowana",
+      "convertedDescription": "Ta oferta została przekonwertowana na umowę i/lub fakturę."
+    },
+    "essentials": {
+      "title": "Podstawy",
+      "subtitle": "Widoczne dla klienta w dokumencie oferty.",
+      "titleField": "Tytuł",
+      "descriptionField": "Opis / Zakres",
+      "descriptionHelp": "Krótki akapit wyświetlany tuż pod tytułem na PDF.",
+      "client": "Klient",
+      "clientPlaceholder": "Wybierz klienta",
+      "contact": "Kontakt",
+      "contactPlaceholder": "Wybierz kontakt",
+      "currency": "Waluta",
+      "currencyPlaceholder": "Wybierz walutę",
+      "quoteDate": "Data oferty",
+      "validUntil": "Ważne do",
+      "validUntilHelp": "Oferta automatycznie wygasa w tym dniu."
+    },
+    "lineItems": {
+      "title": "Pozycje",
+      "subtitleEmpty": "Brak pozycji.",
+      "subtitleCount": "{{count}} pozycji · {{mix}}",
+      "mixBoth": "cykliczny i jednorazowy",
+      "mixRecurring": "cykliczny",
+      "mixOneTime": "jednorazowy",
+      "addLocation": "+ Dodaj lokalizację",
+      "fromTemplate": "+ Z szablonu"
+    },
+    "clientFacing": {
+      "title": "Tekst widoczny dla klienta",
+      "subtitle": "Pojawia się na PDF, pod sumami.",
+      "notes": "Uwagi dla klienta (opcjonalnie)",
+      "terms": "Warunki (opcjonalnie)"
+    },
+    "moreDetails": {
+      "title": "Więcej szczegółów",
+      "subtitle": "Numer zamówienia, szansa, układ PDF",
+      "poNumber": "Numer zamówienia",
+      "opportunity": "Szansa",
+      "opportunityPlaceholder": "ID szansy (opcjonalnie)",
+      "pdfLayout": "Układ PDF",
+      "pdfLayoutPlaceholder": "Użyj domyślnego układu",
+      "pdfLayoutHelp": "Wybierz układ, który zobaczy klient. Pozostaw domyślny, aby użyć domyślnego dzierżawy."
+    },
+    "footer": {
+      "savedAgo": "Zmiany zapisane · {{ago}}",
+      "saving": "Zapisywanie…",
+      "unsaved": "Niezapisane zmiany"
+    },
+    "sidebar": {
+      "quoteTotal": "Suma oferty",
+      "recurringPerMonth": "{{amount}} cyklicznie / miesiąc",
+      "subtotal": "Suma częściowa",
+      "discounts": "Rabaty",
+      "tax": "Podatek",
+      "statusLabel": "Status",
+      "approvalLabel": "Zatwierdzenie",
+      "approvalMessage": "Oferty wymagają zatwierdzenia przez kierownika sprzedaży przed wysłaniem.",
+      "documentLayoutLabel": "Układ dokumentu",
+      "defaultLayout": "Domyślny dzierżawcy",
+      "standardLayout": "Standardowy",
+      "customLayout": "Niestandardowy",
+      "tenantDefault": "Domyślny dzierżawcy",
+      "changeLayout": "Zmień"
     }
   }
 }

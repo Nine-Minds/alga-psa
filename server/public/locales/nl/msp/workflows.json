@@ -1,0 +1,2278 @@
+{
+  "page": {
+    "title": "Workflows"
+  },
+  "nav": {
+    "designer": "Ontwerper",
+    "runs": "Uitvoeringen",
+    "control": "Workflow-beheer",
+    "tasks": "Taken"
+  },
+  "sections": {
+    "definitions": "Workflowdefinities",
+    "runStudio": "Uitvoeringsstudio"
+  },
+  "empty": {
+    "title": "Geen workflows gevonden",
+    "description": "Workflows verschijnen hier zodra ze zijn aangemaakt."
+  },
+  "filters": {
+    "allStatuses": "Alle statussen",
+    "allLevels": "Alle niveaus",
+    "allTypes": "Alle typen"
+  },
+  "actions": {
+    "create": "Workflow maken",
+    "open": "Openen",
+    "close": "Sluiten"
+  },
+  "runList": {
+    "quickRanges": {
+      "last24h": "Laatste 24 uur",
+      "last7d": "Laatste 7 dagen"
+    },
+    "summary": {
+      "total": "Totaal",
+      "activeWorkflows": "Actieve workflows",
+      "runCount": "{{count}} uitvoeringen"
+    },
+    "filters": {
+      "all": "Alle",
+      "allWorkflows": "Alle workflows",
+      "searchLabel": "Uitvoerings-ID of correlatiesleutel",
+      "searchPlaceholder": "Zoeken op uitvoerings-ID of correlatiesleutel",
+      "statusLabel": "Status",
+      "workflowLabel": "Workflow",
+      "versionLabel": "Workflowversie",
+      "versionPlaceholder": "Elke versie",
+      "fromLabel": "Van",
+      "toLabel": "Tot",
+      "sortLabel": "Sorteren"
+    },
+    "actions": {
+      "applyFilters": "Filters toepassen",
+      "reset": "Resetten",
+      "viewLatestRun": "Laatste uitvoering bekijken",
+      "runNow": "Nu uitvoeren",
+      "exportCsv": "CSV exporteren",
+      "refresh": "Vernieuwen",
+      "resumeSelected": "Selectie hervatten ({{count}})",
+      "cancelSelected": "Selectie annuleren ({{count}})",
+      "clearSelection": "Selectie wissen",
+      "details": "Details",
+      "loadMore": "Meer laden"
+    },
+    "table": {
+      "runId": "Uitvoerings-ID",
+      "workflow": "Workflow",
+      "version": "Versie",
+      "tenant": "Tenant",
+      "triggerPayload": "Triggerpayload",
+      "status": "Status",
+      "started": "Gestart",
+      "updated": "Bijgewerkt",
+      "duration": "Duur",
+      "emptyValue": "—",
+      "trigger": {
+        "manual": "Handmatig",
+        "mapped": "Gekoppeld",
+        "identity": "Identiteit"
+      }
+    },
+    "states": {
+      "loading": "Uitvoeringen laden…",
+      "empty": "Geen uitvoeringen voldoen aan de huidige filters."
+    },
+    "bulk": {
+      "resumeTitle": "Geselecteerde uitvoeringen hervatten",
+      "resumeMessage": "{{count}} geselecteerde uitvoering(en) hervatten?",
+      "cancelTitle": "Geselecteerde uitvoeringen annuleren",
+      "cancelMessage": "{{count}} geselecteerde uitvoering(en) annuleren? Dit kan niet ongedaan worden gemaakt.",
+      "reasonLabel": "Reden",
+      "resumeReasonPlaceholder": "Geef een reden voor hervatten",
+      "cancelReasonPlaceholder": "Geef een reden voor annulering",
+      "resumeConfirm": "Uitvoeringen hervatten",
+      "cancelConfirm": "Uitvoeringen annuleren"
+    },
+    "toasts": {
+      "loadRunsFailed": "Kan uitvoeringen niet laden",
+      "selectWorkflowForLatestRun": "Selecteer een workflow om de laatste uitvoering te bekijken.",
+      "noRunsFoundForWorkflow": "Geen uitvoeringen gevonden voor die workflow.",
+      "loadLatestRunFailed": "Kan laatste uitvoering niet laden",
+      "selectWorkflowToRun": "Selecteer een workflow om uit te voeren.",
+      "exportReady": "Uitvoeringsexport gereed",
+      "exportFailed": "Kan uitvoeringen niet exporteren",
+      "selectRunsForBulkAction": "Selecteer uitvoeringen om deze actie uit te voeren.",
+      "bulkReasonTooShort": "De reden moet minimaal 3 tekens bevatten.",
+      "noEligibleRuns": "Geen van de geselecteerde uitvoeringen komt in aanmerking voor die actie.",
+      "bulkResumeFailedCount": "Kan {{count}} uitvoering(en) niet hervatten.",
+      "bulkCancelFailedCount": "Kan {{count}} uitvoering(en) niet annuleren.",
+      "bulkResumeSuccessCount": "{{count}} uitvoering(en) hervat.",
+      "bulkCancelSuccessCount": "{{count}} uitvoering(en) geannuleerd.",
+      "bulkSkippedIneligibleCount": "{{count}} niet-geschikte uitvoering(en) overgeslagen.",
+      "bulkActionFailed": "Bulkactie mislukt"
+    }
+  },
+  "runDetails": {
+    "common": {
+      "emptyValue": "—"
+    },
+    "header": {
+      "runIdLabel": "Uitvoerings-ID",
+      "workflowIdLabel": "Workflow-ID:",
+      "triggerLabel": "Trigger:"
+    },
+    "actions": {
+      "resume": "Hervatten",
+      "cancel": "Annuleren",
+      "export": "Exporteren",
+      "retry": "Opnieuw proberen",
+      "replay": "Opnieuw afspelen",
+      "requeueEvent": "Gebeurtenis opnieuw in de wachtrij plaatsen",
+      "close": "Sluiten",
+      "view": "Bekijken",
+      "apply": "Toepassen",
+      "reset": "Resetten",
+      "exportCsv": "CSV exporteren",
+      "loadMore": "Meer laden",
+      "exportAuditCsv": "Audit als CSV exporteren"
+    },
+    "summary": {
+      "statusLabel": "Status",
+      "startedLabel": "Gestart",
+      "updatedLabel": "Bijgewerkt",
+      "completedLabel": "Voltooid",
+      "triggerLabel": "Trigger",
+      "scheduleStateLabel": "Planningstatus",
+      "scheduledForLabel": "Gepland voor",
+      "cronLabel": "Cron",
+      "nodePathLabel": "Knooppuntpad:",
+      "eventTypeLabel": "Gebeurtenistype:",
+      "triggerPayloadSchemaLabel": "Trigger-payload-schema:",
+      "mapped": "Gekoppeld",
+      "identity": "Identiteit",
+      "runErrorFallback": "Uitvoeringsfout",
+      "errorCategoryFallback": "Fout"
+    },
+    "stepTimeline": {
+      "title": "Tijdlijn van stappen",
+      "description": "Pogingen, duur en fouten per stap.",
+      "loading": "Laden…",
+      "stepStatusLabel": "Stapstatus",
+      "nodeTypeLabel": "Knooppunttype",
+      "collapseNestedLabel": "Geneste blokken inklappen",
+      "columns": {
+        "stepPath": "Staplocatie",
+        "type": "Type",
+        "status": "Status",
+        "attempt": "Poging",
+        "duration": "Duur",
+        "nextRetry": "Volgende poging",
+        "started": "Gestart",
+        "error": "Fout"
+      },
+      "empty": "Nog geen stapgeschiedenis."
+    },
+    "stepDetails": {
+      "title": "Stapdetails",
+      "statusLabel": "Status",
+      "attemptLabel": "Poging",
+      "startedLabel": "Gestart",
+      "completedLabel": "Voltooid",
+      "durationLabel": "Duur",
+      "nodeTypeLabel": "Knooppunttype",
+      "definitionStepIdLabel": "Definitiestap-ID",
+      "nextRetryLabel": "Volgende poging",
+      "errorTitle": "Fout",
+      "stepErrorFallback": "Stapfout",
+      "errorCategoryFallback": "Fout"
+    },
+    "waitHistory": {
+      "title": "Wachtgeschiedenis",
+      "eventLine": "Gebeurtenis: {{event}} · Sleutel: {{key}} · Filters: {{count}}",
+      "timeLine": "Modus: {{mode}} · Geplande hervatting: {{scheduledResume}}",
+      "timeoutLine": "Time-out: {{timeout}} · Opgelost: {{resolved}}"
+    },
+    "envelope": {
+      "title": "Envelop-gegevens",
+      "description": "Payload, variabelen, metadata en fout uit de laatste snapshot.",
+      "redactedNotice": "Verwijderde waarden worden weergegeven als {{marker}}.",
+      "noSnapshot": "Geen snapshot beschikbaar.",
+      "tabs": {
+        "payload": "Payload",
+        "vars": "Variabelen",
+        "meta": "Meta",
+        "error": "Fout",
+        "raw": "Ruw"
+      }
+    },
+    "invocations": {
+      "title": "Actieaanroepen",
+      "redactedNotice": "Verwijderde waarden worden weergegeven als {{marker}}.",
+      "empty": "Geen actieaanroepen vastgelegd voor deze stap.",
+      "attemptLine": "Poging {{count}}",
+      "durationLine": "Duur: {{duration}}",
+      "sizeLine": "Invoergrootte: {{inputSize}}{{inputSuffix}} · Uitvoergrootte: {{outputSize}}{{outputSuffix}}",
+      "truncatedSuffix": " (truncated)",
+      "inputLabel": "Invoer",
+      "outputLabel": "Uitvoer"
+    },
+    "logs": {
+      "title": "Uitvoeringslogboeken",
+      "description": "Operationele loggebeurtenissen voor deze uitvoering.",
+      "searchLabel": "Zoeken",
+      "searchPlaceholder": "Logberichten doorzoeken",
+      "levelLabel": "Niveau",
+      "empty": "Geen logvermeldingen gevonden.",
+      "columns": {
+        "timestamp": "Tijdstempel",
+        "level": "Niveau",
+        "message": "Bericht",
+        "step": "Stap",
+        "event": "Gebeurtenis",
+        "correlation": "Correlatie"
+      }
+    },
+    "audit": {
+      "title": "Auditspoor",
+      "description": "Administratieve acties voor deze uitvoering.",
+      "empty": "Nog geen auditgegevens.",
+      "systemUser": "systeem",
+      "columns": {
+        "timestamp": "Tijdstempel",
+        "operation": "Bewerking",
+        "user": "Gebruiker",
+        "details": "Details"
+      }
+    },
+    "dialogs": {
+      "reasonLabel": "Reden",
+      "resumeTitle": "Workflow-uitvoering hervatten",
+      "resumeMessage": "Deze uitvoering nu hervatten?",
+      "resumeReasonPlaceholder": "Geef een reden voor hervatten",
+      "cancelTitle": "Workflowuitvoering annuleren",
+      "cancelMessage": "Deze uitvoering annuleren? Dit kan niet ongedaan worden gemaakt.",
+      "cancelReasonPlaceholder": "Geef een reden voor annulering",
+      "cancelConfirm": "Uitvoering annuleren",
+      "retryTitle": "Workflow-uitvoering opnieuw proberen",
+      "retryMessage": "Deze uitvoering hervatten vanaf de laatste mislukte stap?",
+      "retryReasonPlaceholder": "Geef een reden voor opnieuw proberen",
+      "retryConfirm": "Uitvoering opnieuw proberen",
+      "replayTitle": "Workflowuitvoering opnieuw afspelen",
+      "replayMessage": "Deze uitvoering herhalen met een nieuwe payload.",
+      "replayReasonPlaceholder": "Geef een reden voor herhaling",
+      "payloadLabel": "Payload (JSON)",
+      "replayConfirm": "Uitvoering herhalen",
+      "requeueTitle": "Gebeurteniswacht opnieuw in de wachtrij plaatsen",
+      "requeueMessage": "De meest recente gebeurteniswacht voor deze uitvoering opnieuw in de wachtrij plaatsen?",
+      "requeueReasonPlaceholder": "Geef een reden voor opnieuw in de wachtrij plaatsen",
+      "requeueConfirm": "Wacht opnieuw in de wachtrij plaatsen"
+    },
+    "toasts": {
+      "loadRunDetailsFailed": "Kan uitvoeringsdetails niet laden",
+      "loadLogsFailed": "Kan logs niet laden",
+      "loadAuditLogsFailed": "Kan auditlogs niet laden",
+      "logExportReady": "Logexport gereed",
+      "exportLogsFailed": "Kan logs niet exporteren",
+      "reasonTooShort": "De reden moet minimaal 3 tekens bevatten.",
+      "runResumed": "Uitvoering hervat",
+      "resumeRunFailed": "Kan uitvoering niet hervatten",
+      "runCanceled": "Uitvoering geannuleerd",
+      "cancelRunFailed": "Kan uitvoering niet annuleren",
+      "runExportReady": "Uitvoeringsexport gereed",
+      "exportRunFailed": "Kan uitvoering niet exporteren",
+      "runRetryStarted": "Nieuwe poging gestart",
+      "retryRunFailed": "Kan uitvoering niet opnieuw proberen",
+      "replayPayloadInvalid": "Herhalingspayload moet geldige JSON zijn.",
+      "runReplayStarted": "Herhaling van uitvoering gestart",
+      "replayRunFailed": "Kan uitvoering niet herhalen",
+      "eventWaitRequeued": "Gebeurteniswacht opnieuw in de wachtrij geplaatst",
+      "requeueEventWaitFailed": "Kan gebeurteniswacht niet opnieuw in de wachtrij plaatsen",
+      "auditExportReady": "Auditexport gereed",
+      "exportAuditLogsFailed": "Kan auditlogs niet exporteren"
+    }
+  },
+  "runDialog": {
+    "title": "Workflow uitvoeren",
+    "description": "Provide a synthetic payload to preview (and run) a workflow.",
+    "descriptionEvent": "Gebeurtenis: {{name}}.",
+    "draftWarning": "Conceptversie wijkt af van gepubliceerde versie (v{{version}}).",
+    "concurrencyLimit": "Gelijktijdigheidslimiet: {{count}} uitvoering(en) tegelijk.",
+    "common": {
+      "emptyValue": "—"
+    },
+    "actions": {
+      "addField": "Veld toevoegen",
+      "addItem": "Item toevoegen",
+      "cloneLatestRun": "Laatste uitvoering klonen",
+      "close": "Sluiten",
+      "copyPayload": "Payload kopiëren",
+      "formBuilder": "Formulierwizard",
+      "hide": "Verbergen",
+      "jsonEditor": "JSON-editor",
+      "openEventCatalog": "Gebeurteniscatalogus openen",
+      "publishDraft": "Concept publiceren",
+      "publishLatest": "Laatste versie publiceren",
+      "remove": "Verwijderen",
+      "reset": "Resetten",
+      "resetToDefaults": "Standaardwaarden herstellen",
+      "savePreset": "Voorinstelling opslaan",
+      "show": "Tonen",
+      "startRun": "Uitvoering starten",
+      "starting": "Bezig met starten…"
+    },
+    "eventCatalog": {
+      "title": "Gebeurteniscatalogus",
+      "description": "Kies een gebeurtenistype om payload-schema’s te initialiseren.",
+      "searchLabel": "Gebeurtenissen zoeken",
+      "searchPlaceholder": "Zoeken op naam, type of categorie",
+      "eventTypeLabel": "Gebeurtenistype",
+      "loadingEvents": "Gebeurtenissen laden…",
+      "selectEventType": "Gebeurtenistype selecteren",
+      "systemBadge": "Systeem",
+      "tenantBadge": "Tenant",
+      "systemEvent": "Systeemgebeurtenis",
+      "tenantEvent": "Tenantgebeurtenis",
+      "uncategorized": "Niet gecategoriseerd"
+    },
+    "fields": {
+      "workflowLabel": "Workflow",
+      "publishedVersionLabel": "Gepubliceerde versie",
+      "triggerLabel": "Trigger",
+      "manualTrigger": "Handmatig",
+      "workflowStatusLabel": "Workflowstatus",
+      "statusActive": "actief",
+      "statusPaused": "gepauzeerd"
+    },
+    "form": {
+      "booleanTrue": "Waar",
+      "booleanFalse": "Onwaar",
+      "mapEntriesTitle": "Map-vermeldingen",
+      "mapEntriesPrompt": "Veldnaam of -pad invoeren",
+      "mapEntriesDescription": "Voeg voor map-achtige objecten sleutels toe en stel elke waarde in.",
+      "mapEntriesEmpty": "Geen map-vermeldingen toegevoegd.",
+      "noSchema": "Geen schema beschikbaar om een formulier weer te geven."
+    },
+    "noPublishedVersion": {
+      "title": "Geen gepubliceerde versie",
+      "description": "U kunt de payload-wizard bekijken, maar u moet de workflow publiceren voordat u een uitvoering start."
+    },
+    "payload": {
+      "largePayloadWarning": "Payload-grootte overschrijdt 256 KB; uitvoeringen kunnen langzamer zijn.",
+      "payloadJsonLabel": "Payload (JSON)",
+      "payloadLabel": "payload",
+      "payloadSize": "Payload-grootte: {{size}} KB"
+    },
+    "presets": {
+      "presetNameLabel": "Naam voorinstelling",
+      "presetNamePlaceholder": "bijv. regressiepayload",
+      "savedPresets": "Opgeslagen voorinstellingen"
+    },
+    "schema": {
+      "sourceLabel": "Schemabron",
+      "workflowSchema": "Workflowschema",
+      "eventSchema": "Gebeurtenisschema",
+      "schemaRef": "Schemaverwijzing",
+      "schemaRefLabel": "Schemaverwijzing",
+      "selectSchema": "Schema selecteren…",
+      "noSchemasFound": "Geen schema’s gevonden",
+      "unknownSchemaRef": "Onbekende schemaverwijzing.",
+      "useEventSchema": "Gebeurtenisschema gebruiken",
+      "viewSchemaDiff": "Schema-diff bekijken",
+      "hideSchemaDiff": "Schema-diff verbergen",
+      "onlyInEvent": "Alleen in gebeurtenisschema",
+      "requiredOnlyInEvent": "Alleen vereist in gebeurtenis",
+      "onlyInWorkflow": "Alleen in workflowschema",
+      "requiredOnlyInWorkflow": "Alleen vereist in workflow",
+      "typeMismatches": "Type-inconsistenties",
+      "typeMismatchLine": "{{field}}: gebeurtenis {{eventType}} vs workflow {{payloadType}}",
+      "selectedEventWarningPrefix": "De geselecteerde gebeurtenis ({{selectedEventType}}) komt mogelijk niet overeen met de trigger van deze workflow ({{triggerEventName}}). ",
+      "matchOptional": "Schemaverwijzingen komen overeen; triggerkoppeling wordt toegepast (optioneel).",
+      "matchIdentity": "Schemaverwijzingen komen overeen; identiteitskoppeling wordt gebruikt (geen koppeling nodig).",
+      "diffWillApply": "Schemaverwijzingen verschillen ({{eventSchemaRef}} → {{payloadSchemaRef}}); triggerkoppeling wordt toegepast.",
+      "diffRequiredMissing": "Schemaverwijzingen verschillen ({{eventSchemaRef}} → {{payloadSchemaRef}}); triggerkoppeling is vereist maar niet geconfigureerd.",
+      "triggerEventDiffers": "Het gebeurtenisschema van de trigger verschilt van het payload-schema van de workflow. Schakel over naar \"Gebeurtenisschema\" als u een trigger-gebeurtenispayload wilt invoeren.",
+      "eventUnavailable": "Gebeurtenisschema niet beschikbaar; workflowschema wordt in plaats daarvan gebruikt.",
+      "mapping": {
+        "identityOptional": "Identiteitskoppeling (geen koppeling nodig)",
+        "requiredMissing": "Triggerkoppeling is vereist maar niet geconfigureerd",
+        "willApply": "Triggerkoppeling wordt toegepast",
+        "willApplyOptional": "Triggerkoppeling wordt toegepast (optioneel)"
+      }
+    },
+    "systemWorkflowWarning": "Dit is een systeemworkflow. Het uitvoeren ervan kan invloed hebben op kernautomatisering.",
+    "systemWorkflowConfirm": "Ik begrijp het en wil hem uitvoeren.",
+    "templates": {
+      "exampleLabel": "Voorbeeld {{count}}",
+      "eventTemplates": "Gebeurtenissjablonen",
+      "sampleTemplates": "Voorbeeldsjablonen",
+      "emailTemplate": "Binnenkomende e-mail",
+      "webhookTemplate": "Webhook-gebeurtenis"
+    },
+    "toasts": {
+      "confirmSystemRun": "Bevestig dat u deze systeemworkflow wilt uitvoeren.",
+      "eventMissingSchemaRef": "Geselecteerde gebeurtenis heeft geen payload-schemaverwijzing; uitvoering met triggerkoppeling is niet mogelijk.",
+      "loadLatestRunFailed": "Kan laatste uitvoering niet laden",
+      "mapEntryExists": "Die sleutel bestaat al.",
+      "noPriorPayload": "No prior run payload found.",
+      "payloadCopied": "Payload naar klembord gekopieerd.",
+      "presetSaved": "Voorinstelling opgeslagen.",
+      "providePresetName": "Geef een naam voor de voorinstelling op.",
+      "startRunFailed": "Kan uitvoering niet starten",
+      "triggerMappingMissing": "Voor dit gebeurtenisschema is een triggerkoppeling vereist, maar deze is niet geconfigureerd op de workflow."
+    },
+    "validation": {
+      "invalidJson": "Ongeldige JSON",
+      "summaryTitle": "Payload heeft nog verplichte gebeurtenisvelden nodig voordat deze uitvoering kan starten",
+      "summaryDescription": "Vul de ontbrekende velden hieronder in, schakel over naar de formulierwizard of gebruik een voorbeeld-payloadknop.",
+      "moreErrors": "+{{count}} meer…"
+    }
+  },
+  "eventList": {
+    "common": {
+      "emptyValue": "—"
+    },
+    "summary": {
+      "total": "Totaal",
+      "matched": "Gekoppeld",
+      "unmatched": "Niet gekoppeld",
+      "errors": "Fouten"
+    },
+    "filters": {
+      "eventNameLabel": "Gebeurtenisnaam",
+      "eventNamePlaceholder": "workflow.event",
+      "correlationKeyLabel": "Correlatiesleutel",
+      "correlationKeyPlaceholder": "corr-123",
+      "statusLabel": "Status",
+      "fromLabel": "Van",
+      "toLabel": "Tot"
+    },
+    "actions": {
+      "applyFilters": "Filters toepassen",
+      "reset": "Resetten",
+      "exportCsv": "CSV exporteren",
+      "exportJson": "JSON exporteren",
+      "close": "Sluiten",
+      "viewRunDetails": "Uitvoeringsdetails bekijken"
+    },
+    "table": {
+      "schemaConflict": "catalogus ≠ indiening",
+      "columns": {
+        "event": "Gebeurtenis",
+        "correlation": "Correlatie",
+        "schema": "Schema",
+        "status": "Status",
+        "matchedRun": "Gekoppelde uitvoering",
+        "payload": "Payload",
+        "created": "Aangemaakt"
+      }
+    },
+    "states": {
+      "loading": "Gebeurtenissen laden…",
+      "empty": "Geen workflow-gebeurtenissen gevonden."
+    },
+    "detail": {
+      "title": "Gebeurtenisdetails",
+      "loading": "Gebeurtenisdetails laden…",
+      "eventIdLabel": "Gebeurtenis-ID",
+      "statusLabel": "Status",
+      "eventNameLabel": "Gebeurtenisnaam",
+      "correlationKeyLabel": "Correlatiesleutel",
+      "payloadSchemaRefLabel": "Payload-schemaverwijzing",
+      "schemaConflict": "Schemaverwijzingsconflict: catalogus {{catalog}} vs indiening {{submission}}",
+      "createdLabel": "Aangemaakt",
+      "processedLabel": "Verwerkt",
+      "errorLine": "Fout: {{message}}",
+      "waitLabel": "Wacht",
+      "waitIdLine": "Wacht-ID: {{waitId}}",
+      "waitStatusLine": "Status: {{status}}",
+      "waitTimeoutLine": "Time-out: {{value}}",
+      "waitResolvedLine": "Opgelost: {{value}}",
+      "waitStepLine": "Stap: {{value}}",
+      "matchedRunLabel": "Gekoppelde uitvoering",
+      "runStatusLine": "Status: {{status}}",
+      "payloadLabel": "Payload"
+    },
+    "toasts": {
+      "loadEventsFailed": "Kan workflow-gebeurtenissen niet laden",
+      "loadEventDetailFailed": "Kan gebeurtenisdetails niet laden",
+      "exportReady": "Gebeurtenisexport gereed",
+      "exportFailed": "Kan gebeurtenissen niet exporteren"
+    }
+  },
+  "deadLetter": {
+    "common": {
+      "emptyValue": "—"
+    },
+    "filters": {
+      "minimumRetriesLabel": "Minimale pogingen",
+      "minimumRetriesPlaceholder": "3"
+    },
+    "actions": {
+      "refresh": "Vernieuwen",
+      "loadMore": "Meer laden"
+    },
+    "table": {
+      "columns": {
+        "runId": "Uitvoerings-ID",
+        "workflow": "Workflow",
+        "version": "Versie",
+        "status": "Status",
+        "retries": "Nieuwe pogingen",
+        "failedSteps": "Mislukte stappen",
+        "updated": "Bijgewerkt"
+      }
+    },
+    "states": {
+      "empty": "Geen onbestelbare uitvoeringen gevonden.",
+      "loading": "Onbestelbare uitvoeringen laden…"
+    },
+    "toasts": {
+      "loadFailed": "Kan onbestelbare uitvoeringen niet laden"
+    }
+  },
+  "audit": {
+    "common": {
+      "emptyValue": "—"
+    },
+    "header": {
+      "title": "Workflow-audit"
+    },
+    "actions": {
+      "exportCsv": "CSV exporteren",
+      "loadMore": "Meer laden"
+    },
+    "table": {
+      "columns": {
+        "timestamp": "Tijdstempel",
+        "operation": "Bewerking",
+        "user": "Gebruiker",
+        "details": "Details"
+      }
+    },
+    "states": {
+      "selectWorkflow": "Selecteer een workflow om de auditgeschiedenis te bekijken.",
+      "empty": "Nog geen auditgegevens."
+    },
+    "values": {
+      "system": "systeem"
+    },
+    "toasts": {
+      "loadFailed": "Kan auditlogs niet laden",
+      "exportReady": "Auditexport gereed",
+      "exportFailed": "Kan auditlogs niet exporteren"
+    }
+  },
+  "designer": {
+    "page": {
+      "controlPanelTitle": "Workflow-configuratiescherm",
+      "controlPanelDescription": "Beheer planningen, uitvoeringen, gebeurtenissen en de gebeurteniscatalogus.",
+      "designerTitle": "Workflowontwerper",
+      "designerDescription": "Bouw en onderhoud workflowautomatiseringen.",
+      "editorTitle": "Workfloweditor",
+      "editorDescription": "Kies een workflow om te bewerken of maak een nieuwe workflow aan."
+    },
+    "controlPanel": {
+      "tabs": {
+        "schedules": "Planningen",
+        "runs": "Uitvoeringen",
+        "events": "Gebeurtenissen",
+        "eventCatalog": "Gebeurteniscatalogus",
+        "deadLetter": "Dead letter"
+      }
+    },
+    "toolbar": {
+      "backToList": "Terug naar workflows",
+      "newWorkflow": "Nieuwe workflow",
+      "saveDraft": "Concept opslaan",
+      "saving": "Opslaan...",
+      "publish": "Publiceren",
+      "publishing": "Publiceren...",
+      "run": "Uitvoeren",
+      "previewOnly": "Alleen voorbeeld totdat een versie is gepubliceerd.",
+      "validation": {
+        "lastValidated": "Laatst gevalideerd: {{timestamp}}",
+        "unknown": "Validatiestatus onbekend"
+      }
+    },
+    "form": {
+      "nameLabel": "Workflownaam",
+      "versionLabel": "Versie",
+      "descriptionLabel": "Beschrijving",
+      "latestPublishedVersion": "Laatst gepubliceerde versie: {{version}}",
+      "triggerTypeLabel": "Triggertype",
+      "triggerTypePlaceholder": "Triggertype selecteren",
+      "triggerTypeHelp": "Kies of deze workflow handmatig of vanuit een gebeurtenis start. Herbruikbare planningen worden beheerd in het Workflow-beheer.",
+      "manualTriggerNote": "Deze workflow heeft geen trigger. Hij kan nog steeds handmatig worden uitgevoerd en vanuit het Workflow-beheer worden gepland zodra er een vastgepind payload-schema en een gepubliceerde versie zijn.",
+      "eventCategoryLabel": "Gebeurteniscategorie",
+      "eventLabel": "Gebeurtenis",
+      "selectEventCategory": "Gebeurteniscategorie selecteren",
+      "selectEvent": "Gebeurtenis selecteren",
+      "selectCategoryFirst": "Selecteer eerst een categorie",
+      "inputDataLabel": "Invoergegevens van de workflow",
+      "inputDataEvent": "Uw stappen lezen gegevens van de geselecteerde trigger.",
+      "inputDataTimePrefix": "Deze workflow ontvangt een vaste synthetische klok-payload. Het contract is vastgezet op",
+      "inputDataManualPrefix": "Geen trigger gebruikt",
+      "inputDataManualSuffix": "standaard. Wijzig dit in geavanceerde schema-instellingen als deze workflow een ander handmatig contract nodig heeft.",
+      "triggerMappingRequired": "Een triggerkoppeling is vereist. Open geavanceerde schema-instellingen om deze te configureren.",
+      "schemaLocked": "Schemaversie vergrendeld",
+      "schemaAutoSelected": "Automatisch geselecteerd vanuit de trigger",
+      "schemaSuffixClock": " naar het vaste klok-payloadcontract.",
+      "schemaSuffixPinned": " om deze workflow stabiel te houden als triggerschema’s wijzigen.",
+      "chooseTriggerHint": "Kies een trigger om de beschikbare velden te definiëren.",
+      "schemaLoadErrorPrefix": "Schema-informatie kon niet worden geladen voor",
+      "schemaLoadErrorSuffix": "Controleer het vermelding in de gebeurteniscatalogus.",
+      "draftDifferent": "Conceptcontract wijkt af van gepubliceerd contract",
+      "publishedUsesPrefix": "De gepubliceerde versie gebruikt",
+      "draftResolvesTo": "Dit concept verwijst momenteel naar",
+      "lockToPublished": "Vastzetten op gepubliceerd contract",
+      "advancedSchemaSettings": "Geavanceerde schema-instellingen",
+      "inferredSchemaPrefix": "Huidig afgeleid schema:",
+      "noSchemaInferred": "Nog geen schema afgeleid.",
+      "unknownSchemaRef": "Onbekende schemaverwijzing. Open geavanceerde schema-instellingen en kies een geldige versie.",
+      "workflowStepsHeading": "Workflowstappen",
+      "workflowStepsListHint": "Sleep stappen om ze te herschikken of tussen pipes te verplaatsen.",
+      "workflowStepsGraphHint": "Verschuif/zoom de grafiek. Vertakkingen worden als aparte banen weergegeven.",
+      "workflowStepsViewAria": "Weergave van workflowstappen",
+      "warningsCount": "{{count}} waarschuwingen"
+    },
+    "stepPanel": {
+      "readOnly": "Alleen-lezentoegang: het bewerken van stappen is uitgeschakeld.",
+      "selectPrompt": "Selecteer een stap om de configuratie ervan te bewerken."
+    },
+    "stepConfig": {
+      "eventLabel": "Gebeurtenis",
+      "selectEvent": "Gebeurtenis selecteren",
+      "correlationKey": "Expressie voor correlatiesleutel",
+      "payloadFilters": "Payload-filters",
+      "addFilter": "Filter toevoegen",
+      "noFiltersConfigured": "Geen filters geconfigureerd.",
+      "loadingEventSchema": "Gebeurtenisschemavelden laden...",
+      "timeoutMs": "Time-out (ms)",
+      "assignOnResume": "Toewijzen bij hervatten",
+      "fieldLabel": "Veld",
+      "fieldPathLabel": "Veldpad",
+      "dataContextToggle": "Welke gegevens kan ik hier benaderen?"
+    },
+    "mappingExpr": {
+      "add": "Toevoegen",
+      "remove": "Verwijderen",
+      "empty": "Nog geen koppelingen.",
+      "expressionLabel": "Expressie"
+    },
+    "schemaForm": {
+      "sectionTitle": "Knooppuntconfiguratie",
+      "stepSettings": "Stapinstellingen",
+      "missingRequired": "Ontbrekende verplichte velden: {{fields}}"
+    },
+    "fieldMetadata": {
+      "actionId": {
+        "label": "Actie",
+        "description": "De aan te roepen actie"
+      },
+      "version": {
+        "label": "Versie",
+        "description": "Versienummer van de actie"
+      },
+      "inputMapping": {
+        "label": "Invoerkoppeling",
+        "description": "Gegevens koppelen aan de invoer van de actie"
+      },
+      "saveAs": {
+        "label": "Resultaat opslaan als",
+        "description": "Variabelenaam of toewijzingspad (bijv. result, vars.result, payload.result)"
+      },
+      "idempotencyKey": {
+        "label": "Idempotentiesleutel",
+        "description": "Expressie die een unieke sleutel produceert om dubbele uitvoeringen te voorkomen. Als dezelfde sleutel twee keer voorkomt, wordt het opgeslagen resultaat geretourneerd."
+      },
+      "onError": {
+        "label": "Foutafhandeling",
+        "description": "Hoe fouten moeten worden afgehandeld"
+      },
+      "eventName": {
+        "label": "Gebeurtenisnaam",
+        "description": "Naam van de gebeurtenis waarop wordt gewacht"
+      },
+      "correlationKey": {
+        "label": "Correlatiesleutel",
+        "description": "Expressie om inkomende gebeurtenissen te matchen"
+      },
+      "filters": {
+        "label": "Payload-filters",
+        "description": "Optionele payloadfilters voor gebeurtenissen (EN-semantiek)"
+      },
+      "timeoutMs": {
+        "label": "Time-out (ms)",
+        "description": "Maximale wachttijd in milliseconden"
+      },
+      "mode": {
+        "label": "Wachtmodus",
+        "description": "Duur of tot een tijdstip"
+      },
+      "durationMs": {
+        "label": "Duur",
+        "description": "Relatieve duur opgeslagen in milliseconden"
+      },
+      "until": {
+        "label": "Tot",
+        "description": "Expressie die oplost naar een absolute datum/tijd"
+      },
+      "state": {
+        "label": "Statusnaam",
+        "description": "De status waarnaar moet worden overgegaan"
+      },
+      "assign": {
+        "label": "Toewijzingen",
+        "description": "Toe te wijzen variabelen"
+      },
+      "taskType": {
+        "label": "Taaktype",
+        "description": "Type handmatige taak"
+      },
+      "title": {
+        "label": "Titel",
+        "description": "Taaktitel die aan de toegewezene wordt getoond"
+      },
+      "contextData": {
+        "label": "Contextgegevens",
+        "description": "Aanvullende gegevens om bij de taak op te nemen"
+      }
+    },
+    "actions": {
+      "ai.infer": {
+        "label": "Gestructureerde uitvoer afleiden",
+        "description": "Gestructureerde workflowgegevens genereren vanuit een prompt via de geconfigureerde AI-provider."
+      }
+    },
+    "validation": {
+      "badge": {
+        "invalid": "Ongeldig",
+        "warnings": "Waarschuwingen",
+        "valid": "Geldig",
+        "unknown": "Onbekend"
+      }
+    },
+    "discardDialog": {
+      "title": "Niet-opgeslagen wijzigingen negeren?",
+      "message": "U heeft niet-opgeslagen wijzigingen in deze workflow. Wilt u deze negeren en doorgaan?",
+      "confirm": "Wijzigingen negeren",
+      "cancel": "Doorgaan met bewerken"
+    },
+    "eventSchemaDialog": {
+      "title": "Invoerschema van workflow wijzigen?",
+      "messageWithEvent": "De geselecteerde gebeurtenis {{eventName}} gebruikt {{schemaRef}}. Wilt u deze workflow op dat gebeurtenisschema overzetten?",
+      "messageFallback": "Wilt u deze workflow overschakelen naar het geselecteerde gebeurtenisschema?",
+      "confirm": "Gebeurtenisschema gebruiken",
+      "cancel": "Huidig schema behouden"
+    },
+    "blockSection": {
+      "then": "DAN",
+      "else": "ANDERS",
+      "try": "TRY",
+      "catch": "CATCH",
+      "body": "BODY"
+    },
+    "palette": {
+      "showPalette": "Palet weergeven",
+      "hidePalette": "Palet verbergen",
+      "searchPlaceholder": "Zoeken",
+      "dragHint": "Sleep naar de pijplijn om toe te voegen",
+      "chooseAction": "Kies een actie nadat u deze stap hebt toegevoegd",
+      "returnsSummary": "Retourneert: {{list}}{{suffix}}",
+      "categories": {
+        "Control": "Besturing",
+        "Core": "Kern",
+        "Transform": "Transformeren",
+        "AI": "AI",
+        "Apps": "Apps",
+        "Action": "Actie",
+        "Email": "E-mail",
+        "Nodes": "Knooppunten"
+      },
+      "controlBlocks": {
+        "control.if": {
+          "label": "Als",
+          "description": "Voorwaardelijke vertakking"
+        },
+        "control.forEach": {
+          "label": "Voor elk",
+          "description": "Itereren over items"
+        },
+        "control.tryCatch": {
+          "label": "Try/Catch",
+          "description": "Fouten afhandelen"
+        },
+        "control.callWorkflow": {
+          "label": "Workflow aanroepen",
+          "description": "Een andere workflow aanroepen"
+        },
+        "control.return": {
+          "label": "Terugkeren",
+          "description": "Uitvoering stoppen"
+        }
+      },
+      "nodes": {
+        "state.set": {
+          "label": "Status instellen",
+          "description": "De workflowstatus bijwerken"
+        },
+        "event.wait": {
+          "label": "Wachten op gebeurtenis",
+          "description": "Wachten op een externe gebeurtenis"
+        },
+        "time.wait": {
+          "label": "Wachten op tijd",
+          "description": "Wachten op een duur of tot een datum/tijd"
+        },
+        "transform.assign": {
+          "label": "Toewijzen",
+          "description": "Waarden toewijzen aan payload of variabelen"
+        },
+        "action.call": {
+          "label": "Actie aanroepen",
+          "description": "Een geregistreerde actie aanroepen"
+        },
+        "email.parseBody": {
+          "label": "E-mailinhoud parseren",
+          "description": "E-mailantwoord parseren en opschonen"
+        },
+        "email.renderCommentBlocks": {
+          "label": "Reactieblokken weergeven",
+          "description": "Reactieblokken weergeven vanuit e-mailinhoud"
+        },
+        "human.task": {
+          "label": "Handmatige taak",
+          "description": "Pauzeren tot voltooiing van een handmatige taak"
+        }
+      },
+      "groups": {
+        "ticket": {
+          "label": "Ticket",
+          "description": "Ticketacties"
+        },
+        "contact": {
+          "label": "Contact",
+          "description": "Contactacties"
+        },
+        "client": {
+          "label": "Klant",
+          "description": "Klantacties"
+        },
+        "communication": {
+          "label": "Communicatie",
+          "description": "Communicatieacties"
+        },
+        "scheduling": {
+          "label": "Planning",
+          "description": "Planningsacties"
+        },
+        "project": {
+          "label": "Project",
+          "description": "Projectacties"
+        },
+        "time": {
+          "label": "Tijd",
+          "description": "Tijdacties"
+        },
+        "crm": {
+          "label": "CRM",
+          "description": "CRM-acties"
+        },
+        "transform": {
+          "label": "Transformeren",
+          "description": "Transformatieacties"
+        },
+        "ai": {
+          "label": "AI",
+          "description": "AI-acties"
+        }
+      }
+    },
+    "stepCard": {
+      "selectAriaLabel": "Stap {{label}} selecteren",
+      "badges": {
+        "if": "Als",
+        "loop": "Lus",
+        "try": "Proberen",
+        "block": "Blok"
+      },
+      "mapping": {
+        "unmappedTitle": "{{count}} verplichte velden niet gekoppeld",
+        "unmappedBadge": "{{count}} verplicht niet gekoppeld",
+        "allMappedTitle": "Alle {{count}} verplichte velden zijn gekoppeld",
+        "allMappedAria": "Alle verplichte velden gekoppeld"
+      },
+      "errorCount": "{{count}} {{noun}}",
+      "errorSingular": "fout",
+      "errorPlural": "fouten",
+      "actions": {
+        "duplicate": "Stap dupliceren",
+        "duplicateAriaLabel": "Stap {{label}} dupliceren",
+        "delete": "Stap verwijderen"
+      },
+      "forEachSummary": "Element: {{itemVar}} | Gelijktijdigheid: {{concurrency}}"
+    },
+    "toasts": {
+      "loadRegistriesFailed": "Kan workflowregisters niet laden",
+      "loadPermissionsFailed": "Kan machtigingen niet laden",
+      "loadWorkflowsFailed": "Kan workflows niet laden",
+      "loadEventCatalogFailed": "Kan gebeurteniscatalogus niet laden",
+      "settingsUpdated": "Workflowinstellingen bijgewerkt",
+      "settingsUpdateFailed": "Kan workflowinstellingen niet bijwerken",
+      "created": "Workflow aangemaakt",
+      "saved": "Workflow opgeslagen",
+      "saveFailed": "Kan workflow niet opslaan",
+      "saveBeforePublish": "Sla de workflow op voordat u publiceert",
+      "published": "Workflow gepubliceerd",
+      "publishFailed": "Kan workflow niet publiceren",
+      "publishValidationErrors": "Publiceren mislukt - corrigeer validatiefouten",
+      "systemEventMissingSchema": "Deze systeemgebeurtenis heeft geen geldig schema en kan niet worden geselecteerd totdat dit is opgelost."
+    }
+  },
+  "actionInputFieldInfo": {
+    "required": "Verplicht",
+    "requiredTitle": "Verplicht",
+    "requiredMissingTitle": "Verplicht veld mist een waarde",
+    "format": "Formaat: {{value}}",
+    "eachItem": "Elk element: {{value}}",
+    "length": "Lengte: {{min}} - {{max}}",
+    "range": "Bereik: {{min}} - {{max}}",
+    "any": "elk",
+    "defaultPrefix": "Standaard:",
+    "examplePrefix": "Voorbeeld:"
+  },
+  "actionInputSection": {
+    "heading": "Action inputs"
+  },
+  "actionInputFixedPicker": {
+    "loadingOptions": "Opties laden…",
+    "ticketSearchPlaceholder": "Tickets zoeken op nummer of titel",
+    "ticketSelect": "Ticket selecteren",
+    "ticketTypeAbove": "Typ hierboven om tickets te zoeken",
+    "placeholders": {
+      "board": "Bord selecteren",
+      "client": "Klant selecteren",
+      "contact": "Contact selecteren",
+      "user": "Gebruiker selecteren",
+      "userOrTeam": "Gebruiker of team selecteren"
+    },
+    "errors": {
+      "loadTicket": "Kan ticket niet laden",
+      "searchTickets": "Kan tickets niet doorzoeken",
+      "loadOptions": "Kan opties niet laden"
+    },
+    "dependencyHints": {
+      "contact": {
+        "client_id": "Kies eerst een vaste klant om contactopties te laden."
+      },
+      "client-location": {
+        "client_id": "Kies eerst een vaste klant om locatieopties te laden."
+      },
+      "ticket-category": {
+        "board_id": "Kies eerst een vast bord om categorieopties te laden."
+      },
+      "ticket-status": {
+        "board_id": "Kies eerst een vast bord om statusopties te laden.",
+        "ticket_id": "Kies eerst een vast ticket om statusopties te laden."
+      },
+      "ticket-subcategory": {
+        "board_id": "Kies eerst een vast bord om subcategorieopties te laden.",
+        "category_id": "Kies eerst een vaste categorie om subcategorieopties te laden."
+      }
+    }
+  },
+  "serverErrors": {
+    "forbidden": "U hebt geen toestemming om deze actie uit te voeren.",
+    "unauthorized": "U moet aangemeld zijn om deze actie uit te voeren.",
+    "notFound": "Niet gevonden.",
+    "workflowNotFound": "Workflow niet gevonden.",
+    "workflowVersionNotFound": "Workflowversie niet gevonden.",
+    "workflowVersionExists": "Workflowversie {{version}} bestaat al. Vernieuw en probeer opnieuw.",
+    "workflowValidationFailed": "Workflow-validatie is mislukt.",
+    "noPublishedVersions": "Deze workflow heeft nog geen gepubliceerde versies.",
+    "workflowPaused": "Deze workflow is gepauzeerd.",
+    "concurrencyLimitReached": "De gelijktijdigheidslimiet van de workflow is bereikt.",
+    "rateLimitExceeded": "De uitvoeringslimiet van de workflow is overschreden.",
+    "payloadNotSerializable": "De payload moet JSON-serializeerbaar zijn.",
+    "payloadTooLarge": "De payload overschrijdt de maximaal toegestane omvang.",
+    "payloadValidationFailed": "De payload heeft de validatie niet doorstaan.",
+    "missingPayloadSchemaRef": "Deze workflow heeft geen payload-schemaverwijzing.",
+    "missingSourcePayloadSchemaRef": "In de gebeurtenis-payload ontbreekt een bronschemaverwijzing.",
+    "triggerMappingRequired": "Een triggerkoppeling is vereist voor deze uitvoering.",
+    "runNotFailed": "De uitvoering heeft geen mislukte status.",
+    "failedStepNotFound": "De mislukte stap kon niet worden gevonden.",
+    "noEventWaitFound": "Voor deze uitvoering is geen gebeurteniswacht gevonden.",
+    "cancelTemporalRunFailed": "Workflow-uitvoering kon niet worden geannuleerd op de uitvoeringsengine.",
+    "noDefinitionToPublish": "Er is geen workflowdefinitie om te publiceren.",
+    "deleteActiveRunsBlocked": "Deze workflow heeft actieve uitvoeringen. Annuleer alle uitvoeringen voordat u deze verwijdert.",
+    "scheduleOneTimeRunAtRequired": "Eenmalige planningen vereisen een uitvoeringstijdstempel.",
+    "scheduleOneTimeInvalidTimestamp": "Eenmalige planningen vereisen een geldige ISO 8601-tijdstempel.",
+    "scheduleOneTimeMustBeFuture": "Eenmalige planningen moeten in de toekomst liggen.",
+    "scheduleOneTimeDayOfWeek": "Eenmalige planningen ondersteunen alleen “Elke dag”.",
+    "scheduleOneTimeBusinessHours": "Eenmalige planningen kunnen de instellingen voor werkuren niet overschrijven.",
+    "scheduleRecurringCronRequired": "Terugkerende planningen vereisen een cron-expressie.",
+    "scheduleRecurringCronFields": "Terugkerende planningen vereisen een cron-expressie met 5 velden.",
+    "scheduleRecurringTimezone": "Terugkerende planningen vereisen een geldige IANA-tijdzone.",
+    "cronTooLong": "De cron-expressie is te lang.",
+    "cronUnsupportedCharacters": "De cron-expressie bevat niet-ondersteunde tekens.",
+    "cronDayConflict": "Een cron-expressie kan niet zowel dag-van-de-maand als dag-van-de-week instellen.",
+    "cronTooFrequent": "Deze cron-planning wordt te vaak uitgevoerd (minimuminterval is 5 minuten).",
+    "schedulePublishedRequired": "Planningen kunnen alleen worden gemaakt voor gepubliceerde workflows.",
+    "schedulePinnedSchemaRequired": "Planningen worden alleen ondersteund voor workflows met een vastgepind payload-schema.",
+    "scheduleSchemaNotRegistered": "De meest recent gepubliceerde workflowversie heeft geen geregistreerd vastgepind payload-schema.",
+    "schedulePayloadInvalid": "De planning-payload is niet gevalideerd tegen het payload-schema van de workflow.",
+    "processEventFailed": "Kan de workflow-gebeurtenis niet verwerken."
+  },
+  "taskInbox": {
+    "title": "Taken-inbox",
+    "backToList": "← Terug naar takenlijst",
+    "tabs": {
+      "pending": "In behandeling",
+      "claimed": "Geclaimd",
+      "completed": "Voltooid",
+      "all": "Alle taken"
+    }
+  },
+  "taskList": {
+    "pagination": {
+      "previous": "Vorige",
+      "next": "Volgende",
+      "pageLabel": "Page {{current}} of {{total}}"
+    },
+    "errors": {
+      "loadFailed": "Kan taken niet laden. Probeer het opnieuw.",
+      "claimFailed": "Kan taak niet toewijzen: {{error}}",
+      "unclaimFailed": "Kan taak niet vrijgeven: {{error}}",
+      "unknown": "Onbekende fout"
+    },
+    "actions": {
+      "claim": "Claimen",
+      "unclaim": "Claim opheffen"
+    },
+    "noDueDate": "Geen vervaldatum",
+    "overdueSuffix": "(Verlopen)",
+    "empty": "Geen taken gevonden",
+    "duePrefix": "Vervalt:"
+  },
+  "taskDetails": {
+    "notAvailable": "n.v.t.",
+    "notFound": "Taak niet gevonden",
+    "retry": "Opnieuw proberen",
+    "youPronoun": "U",
+    "noForm": "Geen formulier beschikbaar voor deze taak.",
+    "contextData": "Contextgegevens",
+    "responseData": "Antwoordgegevens",
+    "fields": {
+      "status": "Status",
+      "priority": "Prioriteit",
+      "created": "Aangemaakt",
+      "dueDate": "Vervaldatum",
+      "claimedBy": "Toegewezen aan",
+      "completedBy": "Voltooid door"
+    },
+    "tabs": {
+      "details": "Details",
+      "form": "Formulier",
+      "history": "Geschiedenis"
+    },
+    "actions": {
+      "claim": "Taak claimen",
+      "unclaim": "Claim opheffen"
+    },
+    "errors": {
+      "loadFailed": "Kan taakdetails niet laden. Probeer het opnieuw.",
+      "claimFailed": "Kan taak niet toewijzen: {{error}}",
+      "unclaimFailed": "Kan taak niet vrijgeven: {{error}}",
+      "unknown": "Onbekende fout"
+    }
+  },
+  "taskHistory": {
+    "empty": "Geen geschiedenis beschikbaar voor deze taak.",
+    "byPrefix": "Door:",
+    "system": "Systeem",
+    "detailsLabel": "Details",
+    "actions": {
+      "created": "Aangemaakt",
+      "claimed": "Geclaimd",
+      "unclaimed": "Niet meer geclaimd",
+      "completed": "Voltooid",
+      "canceled": "Geannuleerd",
+      "expired": "Verlopen"
+    },
+    "errors": {
+      "loadFailed": "Kan taakgeschiedenis niet laden. Probeer het opnieuw."
+    }
+  },
+  "taskForm": {
+    "actions": {
+      "complete": "Taak voltooien",
+      "cancel": "Annuleren"
+    }
+  },
+  "dynamicForm": {
+    "actions": {
+      "submit": "Verzenden",
+      "cancel": "Annuleren"
+    },
+    "errors": {
+      "generic": "Er is een fout opgetreden"
+    }
+  },
+  "embeddedTaskInbox": {
+    "title": "Mijn taken",
+    "viewAll": "Alles bekijken",
+    "backToTasks": "← Terug naar taken"
+  },
+  "actionButton": {
+    "processing": "Verwerken...",
+    "confirm": "Bevestigen",
+    "cancel": "Annuleren",
+    "confirmTitle": "Actie bevestigen"
+  },
+  "stepNameField": {
+    "label": "Stapnaam"
+  },
+  "stepSaveOutput": {
+    "toggleLabel": "Uitvoer opslaan",
+    "placeholder": "bijv. ticketDefaults",
+    "copyPathTitle": "Volledig pad kopiëren",
+    "accessibleAs": "Toegankelijk als:"
+  },
+  "aiSchemaSection": {
+    "heading": "AI-antwoordformaat",
+    "headingDescription": "Kies wat het AI-antwoord moet bevatten voor latere stappen.",
+    "modeSimple": "Eenvoudig",
+    "modeAdvanced": "Geavanceerd",
+    "addField": "Veld toevoegen",
+    "addNested": "Geneste veld toevoegen",
+    "remove": "Verwijderen",
+    "nameLabel": "Naam",
+    "answerType": "Antwoordtype",
+    "arrayItems": "Array-items",
+    "required": "Verplicht",
+    "descriptionLabel": "Beschrijving",
+    "objectItemFields": "Velden van objectitem",
+    "nestedFields": "Geneste velden",
+    "jsonSchemaLabel": "JSON Schema",
+    "advancedHelperText": "De geavanceerde modus ondersteunt objectgebaseerde schema's plus geneste objecten, arrays, beschrijvingen, beperkingen en additionalProperties.",
+    "validationHeading": "Schemavalidatie",
+    "advancedFallback": "Dit opgeslagen schema gebruikt geavanceerde JSON Schema-functies en wordt daarom weergegeven in de geavanceerde modus.",
+    "simpleModeUnsupported": "Dit schema kan niet worden weergegeven in de eenvoudige modus.",
+    "errors": {
+      "jsonRequired": "JSON voor AI-uitvoerschema is verplicht."
+    }
+  },
+  "composeText": {
+    "heading": "Tekstuitvoer samenstellen",
+    "headingDescription": "Maak één of meer markdown-uitvoeren met stabiele referentiesleutels voor verderop.",
+    "addOutput": "Uitvoer toevoegen",
+    "untitled": "Naamloze uitvoer",
+    "outputFallback": "uitvoer {{index}}",
+    "moveUpAria": "{{label}} omhoog verplaatsen",
+    "moveDownAria": "{{label}} omlaag verplaatsen",
+    "deleteAria": "{{label}} verwijderen",
+    "outputLabel": "Uitvoerlabel",
+    "stableKeyLabel": "Stabiele sleutel",
+    "keyHintSafe": "Veilige sleutel voor verderop",
+    "keyHintInvalid": "Gebruik alleen kleine letters, cijfers en onderstrepingstekens.",
+    "regenerate": "Opnieuw genereren",
+    "validationHeading": "Validatie",
+    "downstreamPathLabel": "Referentiepad voor verderop",
+    "pathFallback": "Sla de uitvoer op om een referentiepad te zien.",
+    "copied": "Gekopieerd",
+    "copyPath": "Pad kopiëren",
+    "contentHeading": "Inhoud samenstellen",
+    "contentDescription": "Gebruik markdown-veilige opmaak en inline workflowreferentiechips.",
+    "insertReference": "Referentie invoegen",
+    "insertReferenceHeading": "Workflowreferentie invoegen",
+    "errors": {
+      "noCodeBlock": "Referenties kunnen niet in codeblokken worden ingevoegd. Plaats de cursor in een ander blok en probeer het opnieuw."
+    }
+  },
+  "referenceSelector": {
+    "placeholders": {
+      "scope": "Bronbereik selecteren...",
+      "step": "Stap selecteren...",
+      "field": "Veld selecteren..."
+    }
+  },
+  "pipeline": {
+    "start": "Start",
+    "insertStepHere": "Stap hier invoegen",
+    "emptyDisabled": "Nog geen stappen.",
+    "emptySelectPrompt": "Selecteer een stap in het paneel om te beginnen."
+  },
+  "expressionEditor": {
+    "ariaLabel": "Expressie-editor",
+    "autocompleteAria": "Autoaanvullingssuggesties voor expressies",
+    "textAreaPlaceholder": "JSONata-expressie invoeren...",
+    "field": {
+      "placeholder": "Expressie invoeren...",
+      "insertFieldPlaceholder": "Veld invoegen"
+    }
+  },
+  "sourceDataTree": {
+    "searchPlaceholder": "Velden doorzoeken...",
+    "sections": {
+      "payload": "Payload",
+      "vars": "Stapuitvoer (vars)",
+      "loopContext": "Luscontext",
+      "workflowMeta": "Workflow-metagegevens",
+      "errorContext": "Foutcontext"
+    },
+    "vars": {
+      "emptyPrefix": "Nog geen vars. Gebruik",
+      "saveOutput": "Uitvoer opslaan",
+      "emptyConjunction": "of een",
+      "assignStep": "Toewijzen",
+      "emptySuffix": "stap om te vullen"
+    },
+    "loop": {
+      "currentItem": "huidig item",
+      "loopIndex": "lusindex"
+    }
+  },
+  "validationBadge": {
+    "status": {
+      "valid": "Geldig",
+      "warning": "Waarschuwingen",
+      "error": "Fouten",
+      "incomplete": "Onvolledig"
+    },
+    "tooltip": {
+      "valid": "Alle verplichte invoer is toegewezen",
+      "incomplete": "Invoertoewijzingen configureren",
+      "mappingCount": "{{mapped}} van {{required}} verplichte velden toegewezen"
+    },
+    "openEditor": "Toewijzingseditor openen",
+    "errorsHeading": "Fouten ({{count}})",
+    "warningsHeading": "Waarschuwingen ({{count}})",
+    "moreErrors": "+{{count}} meer fouten",
+    "moreWarnings": "+{{count}} meer waarschuwingen"
+  },
+  "inputMappingEditor": {
+    "empty": "Deze actie heeft geen invoervelden.",
+    "browseSources": "Bronnen doorbladeren",
+    "objectFields": "Objectvelden",
+    "itemTitle": "Item {{index}}",
+    "reset": "Resetten",
+    "addItem": "Item toevoegen",
+    "fill": "Invullen",
+    "clearValues": "Waarden wissen",
+    "applySuggestions": "Suggesties toepassen ({{count}})",
+    "applySuggestionTitle": "Suggestie toepassen: {{sourcePath}}",
+    "fuzzySuffix": "(benaderend)",
+    "removeMapping": "Toewijzing verwijderen (Delete/Backspace)",
+    "invalidJson": "Ongeldige JSON",
+    "stringPlaceholder": "Waarde invoeren...",
+    "aria": {
+      "listbox": "Invoervelden van actie",
+      "fieldList": "Lijst met invoervelden van actie"
+    },
+    "summary": {
+      "filledCount": "{{filled}} van {{total}} velden ingevuld",
+      "missingCount": "{{count}} verplichte ontbreken",
+      "missingTitle": "Verplichte velden missen waarden"
+    },
+    "mode": {
+      "structured": "Gestructureerd",
+      "rawJson": "Ruwe JSON"
+    },
+    "nullable": {
+      "useValue": "Waarde gebruiken",
+      "setNull": "Op null zetten"
+    },
+    "primitiveList": {
+      "placeholder": "Voer één waarde per regel in of gescheiden door komma's",
+      "helperText": "Gebruik nieuwe regel, komma of puntkomma als scheidingsteken."
+    },
+    "structuredGroup": {
+      "collapseAria": "{{title}} inklappen",
+      "expandAria": "{{title}} uitklappen"
+    },
+    "legacy": {
+      "title": "Verouderde toewijzing wordt hier niet meer ondersteund",
+      "description": "Dit veld gebruikt een opgeslagen expressie of secret. Vervang dit door een gestructureerde referentie of een vaste waarde.",
+      "useReference": "Referentie gebruiken",
+      "useFixedValue": "Vaste waarde gebruiken"
+    },
+    "fixedValueDialog": {
+      "title": "{{fieldName}} bewerken",
+      "description": "Gebruik de grotere editor voor langere inhoud met vaste waarden.",
+      "openEditor": "Editor openen",
+      "apply": "Toepassen",
+      "cancel": "Annuleren"
+    }
+  },
+  "schemaReference": {
+    "selectAction": "Selecteer een actie om het invoer-/uitvoerschema ervan te zien",
+    "viewDetails": "Schemadetails bekijken",
+    "hideDetails": "Schemadetails verbergen",
+    "inputSchemaTitle": "Invoerschema",
+    "outputSchemaTitle": "Uitvoerschema",
+    "noInputParameters": "Geen invoerparameters",
+    "noOutputFields": "Geen uitvoervelden",
+    "noFields": "Geen velden",
+    "outputAvailablePrefix": "Uitvoer beschikbaar op",
+    "showRawJson": "Ruwe JSON Schema weergeven",
+    "hideRawJson": "Ruwe JSON Schema verbergen",
+    "exportSchema": "Schema exporteren",
+    "exportSchemaTitle": "Schema downloaden als JSON-bestand",
+    "rawInputComment": "// Invoerschema",
+    "rawOutputComment": "// Uitvoerschema",
+    "copyPathTitle": "{{path}} kopiëren",
+    "copyAllPaths": "Alle paden kopiëren",
+    "copyAllPathsTitle": "Alle veldpaden kopiëren",
+    "copied": "Gekopieerd!",
+    "pathsCopied": "{{count}} paden gekopieerd",
+    "nullableSuffix": "| null",
+    "constraints": {
+      "values": "Waarden: {{list}}{{suffix}}",
+      "min": "Min.: {{value}}",
+      "max": "Max.: {{value}}",
+      "minLength": "Minimale lengte: {{value}}",
+      "maxLength": "Maximale lengte: {{value}}",
+      "pattern": "Patroon: {{value}}",
+      "format": "Formaat: {{value}}",
+      "examples": "Voorbeelden: {{list}}",
+      "default": "Standaard: {{value}}"
+    }
+  },
+  "groupedAction": {
+    "groupHeading": "Groep",
+    "actionLabel": "Actie",
+    "actionPlaceholder": "{{group}}-actie selecteren",
+    "required": {
+      "title": "Actie vereist",
+      "message": "Selecteer een {{group}}-actie voordat u invoer configureert of deze workflow publiceert."
+    },
+    "tileKind": {
+      "core-object": "Kern",
+      "transform": "Transformeren",
+      "app": "App",
+      "ai": "AI"
+    }
+  },
+  "trigger": {
+    "manual": "Handmatig",
+    "event": "Gebeurtenis",
+    "eventWithType": "Gebeurtenis: {{eventType}}",
+    "oneTimeSchedule": "Eenmalige planning",
+    "recurringSchedule": "Terugkerende planning"
+  },
+  "scheduleStatus": {
+    "unknown": "Onbekend",
+    "scheduled": "Gepland",
+    "paused": "Gepauzeerd",
+    "disabled": "Uitgeschakeld",
+    "completed": "Voltooid",
+    "failed": "Mislukt"
+  },
+  "graph": {
+    "start": {
+      "label": "Start"
+    },
+    "states": {
+      "buildingGraph": "Grafiek opbouwen…"
+    },
+    "errors": {
+      "buildFailed": "Kan workflowgrafiek niet opbouwen.",
+      "renderErrorTitle": "Fout bij renderen van grafiek",
+      "switchToList": "Schakel over naar lijstweergave om verder te bewerken."
+    },
+    "empty": {
+      "readonly": "Selecteer een stap in het paneel om te beginnen.",
+      "dropFirst": "Sleep hierheen om toe te voegen als eerste stap",
+      "dragPrompt": "Sleep een stap uit het paneel of selecteer er een om te beginnen."
+    },
+    "mapping": {
+      "unmappedTitle": "{{count}} verplichte velden niet gekoppeld",
+      "unmappedBadge": "{{count}} verplicht niet gekoppeld",
+      "allMapped": "Alle verplichte velden gekoppeld"
+    },
+    "insert": {
+      "title": "Drop a step here to insert"
+    },
+    "actions": {
+      "deleteStep": "Stap verwijderen"
+    }
+  },
+  "runStudio": {
+    "header": {
+      "kicker": "Uitvoeringsstudio",
+      "fallbackTitle": "Workflowuitvoering",
+      "version": "Versie {{version}}",
+      "updated": "Bijgewerkt {{time}}",
+      "backToWorkflows": "← Terug naar workflows"
+    },
+    "actions": {
+      "replay": "Opnieuw afspelen",
+      "cancel": "Annuleren"
+    },
+    "status": {
+      "running": "Wordt uitgevoerd",
+      "succeeded": "Geslaagd",
+      "retrying": "Opnieuw proberen",
+      "failed": "Mislukt",
+      "pending": "In behandeling",
+      "canceled": "Geannuleerd"
+    },
+    "failure": {
+      "title": "Uitvoering mislukt",
+      "lastSuccessfulStep": "Laatste geslaagde stap: {{label}}"
+    },
+    "pipeline": {
+      "title": "Uitvoeringspijplijn",
+      "emptyBranch": "Geen stappen in deze vertakking.",
+      "view": {
+        "graph": "Grafiek",
+        "list": "Lijst"
+      },
+      "states": {
+        "loadingDefinition": "Workflowdefinitie laden…",
+        "loadingDefinitionPlain": "Workflowdefinitie laden...",
+        "noSteps": "Geen stappen om weer te geven."
+      }
+    },
+    "details": {
+      "title": "Uitvoeringsdetails",
+      "fields": {
+        "runId": "Uitvoerings-ID",
+        "started": "Gestart",
+        "duration": "Duur",
+        "tenant": "Tenant",
+        "trigger": "Trigger",
+        "eventType": "Gebeurtenistype",
+        "scheduleState": "Planningsstatus",
+        "scheduledFor": "Gepland voor",
+        "cron": "Cron",
+        "waitingFor": "Wacht op",
+        "counts": "Aantallen"
+      },
+      "values": {
+        "resumeEvent": "Gebeurtenis hervatten",
+        "counts": "{{steps}} stappen · {{logs}} logs · {{waits}} wachtingen"
+      }
+    },
+    "errors": {
+      "title": "Uitvoeringsfouten",
+      "runErrorPayload": "Foutpayload van uitvoering",
+      "resumeEventPayload": "Payload van hervattingsgebeurtenis"
+    },
+    "stepDetails": {
+      "title": "Stapdetails",
+      "empty": "Selecteer een stap in de pijplijn om invoer, uitvoer en snapshots te bekijken.",
+      "fields": {
+        "step": "Stap"
+      },
+      "panels": {
+        "configuration": "Stapconfiguratie",
+        "inputResolved": "Invoer (opgelost)",
+        "output": "Uitvoer",
+        "envelopeSnapshot": "Envelope-snapshot"
+      }
+    },
+    "timeline": {
+      "title": "Uitvoeringstijdlijn",
+      "searchLabel": "Tijdlijn doorzoeken",
+      "searchPlaceholder": "Zoek op staplocatie, wachttype of status",
+      "empty": "Nog geen tijdlijnvermeldingen.",
+      "waitTitle": "Wachten · {{waitType}}",
+      "attempt": "Poging {{attempt}} · {{status}}",
+      "inProgress": "Bezig",
+      "statusLine": "Status: {{status}}",
+      "eventSegment": " · Gebeurtenis: {{eventName}}",
+      "keySegment": " · Sleutel: {{key}}",
+      "createdLine": "Aangemaakt: {{createdAt}}",
+      "resolvedSegment": " · Opgelost: {{resolvedAt}}",
+      "actions": {
+        "jump": "Springen"
+      }
+    },
+    "logs": {
+      "title": "Uitvoeringslogboeken",
+      "searchLabel": "Logboeken doorzoeken",
+      "searchPlaceholder": "Zoek op bericht of staplocatie",
+      "empty": "Nog geen logboeken.",
+      "actions": {
+        "clear": "Wissen"
+      }
+    },
+    "dialog": {
+      "title": {
+        "cancel": "Uitvoering annuleren",
+        "replay": "Uitvoering opnieuw afspelen"
+      },
+      "heading": {
+        "cancel": "Workflowuitvoering annuleren",
+        "replay": "Workflowuitvoering opnieuw afspelen"
+      },
+      "description": {
+        "cancel": "Bij annuleren worden alle lopende of wachtende stappen van deze uitvoering gestopt.",
+        "replay": "Bij opnieuw afspelen wordt een nieuwe uitvoering gestart met de onderstaande payload."
+      },
+      "fields": {
+        "reason": "Reden",
+        "reasonPlaceholder": "bijv. Annuleren om invoer aan te passen",
+        "payloadJson": "Payload (JSON)"
+      },
+      "actions": {
+        "close": "Sluiten",
+        "confirmCancel": "Annulering bevestigen",
+        "startReplay": "Opnieuw afspelen starten",
+        "working": "Bezig..."
+      },
+      "errors": {
+        "invalidJson": "Ongeldige JSON"
+      }
+    },
+    "stepLabels": {
+      "action": "Actie: {{actionId}}",
+      "ifCondition": "Als-voorwaarde",
+      "forEach": "Voor elk",
+      "tryCatch": "Try/Catch",
+      "waitForEvent": "Wachten op gebeurtenis",
+      "waitForTime": "Wachten op tijd",
+      "humanTask": "Handmatige taak",
+      "setState": "Status instellen",
+      "assign": "Toewijzen"
+    },
+    "stepCard": {
+      "lastStatus": "Laatste status: {{status}} ({{timestamp}})",
+      "attempt": "Poging {{attempt}}",
+      "forEachSummary": "Element: {{itemVar}} | Gelijktijdigheid: {{concurrency}}",
+      "badges": {
+        "if": "Als",
+        "loop": "Lus",
+        "try": "Proberen",
+        "block": "Blok"
+      },
+      "sections": {
+        "then": "DAN",
+        "else": "ANDERS",
+        "try": "TRY",
+        "catch": "CATCH",
+        "body": "BODY"
+      }
+    },
+    "jsonPanel": {
+      "serializeFailed": "Kan waarde niet serialiseren."
+    },
+    "toasts": {
+      "reasonRequired": "Reden is verplicht (minimaal 3 tekens).",
+      "canceled": "Uitvoering geannuleerd.",
+      "replayStarted": "Opnieuw afspelen van uitvoering gestart.",
+      "actionFailed": "Kan actie niet uitvoeren."
+    }
+  },
+  "schedules": {
+    "common": {
+      "emptyValue": "—",
+      "entityName": "planning"
+    },
+    "heading": {
+      "reflectionLabel": "Workflowplanningen",
+      "title": "Planningen",
+      "description": "Beheer herbruikbare workflowplanningen en hun opgeslagen payloads."
+    },
+    "actions": {
+      "new": "Nieuwe planning",
+      "edit": "Bewerken",
+      "pause": "Pauzeren",
+      "resume": "Hervatten",
+      "delete": "Verwijderen",
+      "cancel": "Annuleren",
+      "saving": "Bezig met opslaan…",
+      "saveChanges": "Wijzigingen opslaan",
+      "create": "Planning maken",
+      "rowMenu": "Planningsacties voor {{name}}"
+    },
+    "filters": {
+      "allWorkflows": "Alle workflows",
+      "allStatuses": "Alle statussen",
+      "allTriggers": "Alle triggers",
+      "searchPlaceholder": "Planningen zoeken…"
+    },
+    "status": {
+      "enabled": "Ingeschakeld",
+      "paused": "Gepauzeerd",
+      "failed": "Mislukt",
+      "completed": "Voltooid",
+      "disabled": "Uitgeschakeld"
+    },
+    "triggerType": {
+      "schedule": "Eenmalig",
+      "recurring": "Terugkerend"
+    },
+    "dayType": {
+      "any": "Elke dag",
+      "business": "Werkdagen",
+      "nonBusiness": "Niet-werkdagen"
+    },
+    "table": {
+      "workflowVersion": "Workflow v{{version}}",
+      "columns": {
+        "schedule": "Planning",
+        "workflow": "Workflow",
+        "triggerType": "Triggertype",
+        "nextFire": "Volgende uitvoering",
+        "lastFire": "Laatste uitvoering",
+        "status": "Status",
+        "lastError": "Laatste fout",
+        "actions": "Acties"
+      }
+    },
+    "states": {
+      "loadingReflection": "Planningen laden",
+      "loading": "Planningen laden…",
+      "never": "Nooit",
+      "calendarMisconfigured": "Kalender onjuist geconfigureerd",
+      "noEligibleUpcomingRun": "Geen geschikte aankomende uitvoering",
+      "unknownWorkflow": "Onbekende workflow",
+      "empty": "Geen planningen gevonden",
+      "emptyDescription": "Maak een eenmalige of terugkerende planning om een gepubliceerde workflow uit te voeren met opgeslagen invoergegevens."
+    },
+    "errors": {
+      "loadFailed": "Kan planningen niet laden.",
+      "updateFailed": "Kan planning niet bijwerken.",
+      "deleteFailed": "Kan planning niet verwijderen."
+    },
+    "timezone": {
+      "browseAll": "Alle tijdzones doorzoeken…",
+      "custom": "Aangepast…",
+      "browseHelp": "Kies uit de volledige lijst met ondersteunde IANA-tijdzones.",
+      "customLabel": "Aangepaste tijdzone",
+      "customPlaceholder": "Etc/GMT+5"
+    },
+    "dialog": {
+      "title": {
+        "edit": "Planning bewerken",
+        "create": "Planning maken"
+      },
+      "description": "Configureer timing en statische payload-gegevens voor een workflowplanning.",
+      "states": {
+        "loading": "Planningsdetails laden…"
+      },
+      "fields": {
+        "workflow": "Workflow",
+        "workflowPlaceholder": "Kies een workflow",
+        "name": "Planningsnaam",
+        "namePlaceholder": "Maandeinde-AP-synchronisatie",
+        "triggerType": "Triggertype",
+        "enabled": "Ingeschakeld",
+        "enabledHelp": "De planning wordt uitgevoerd zodra deze geldig is.",
+        "disabledHelp": "De planning blijft gepauzeerd totdat deze wordt hervat.",
+        "runAt": "Uitvoeren om",
+        "runOn": "Uitgevoerd op",
+        "businessDaysOnly": "Alleen werkdagen",
+        "nonBusinessDaysOnly": "Alleen niet-werkdagen",
+        "calendarSource": "Kalenderbron",
+        "businessHoursSchedule": "Werktijdenschema",
+        "businessHoursSchedulePlaceholder": "Kies een werktijdenschema",
+        "frequency": "Frequentie",
+        "time": "Tijd",
+        "dayOfMonth": "Dag van de maand",
+        "weekdays": "Werkdagen",
+        "cron": "Cron",
+        "timezone": "Tijdzone"
+      },
+      "workflow": {
+        "badges": {
+          "unpublished": "Niet gepubliceerd",
+          "inferredSchema": "Afgeleid schema"
+        }
+      },
+      "eligibility": {
+        "chooseWorkflow": "Kies een workflow voordat u opslaat.",
+        "unpublished": "Planningen kunnen alleen worden gemaakt voor gepubliceerde workflows.",
+        "pinnedOnly": "Planningen worden alleen ondersteund voor workflows met een vastgepind payload-schema.",
+        "noPinnedSchema": "De geselecteerde workflow stelt geen vastgepind payload-schema beschikbaar.",
+        "unavailableSchemaRef": "De geselecteerde workflow gebruikt een niet-beschikbare payload-schemaverwijzing: {{schemaRef}}."
+      },
+      "calendarSource": {
+        "tenantDefault": "Standaard werktijden van de tenant",
+        "tenantDefaultMissing": "Standaard werktijden van de tenant (niet geconfigureerd)",
+        "tenantDefaultHint": "Stel eerst een standaard werktijdenschema voor de tenant in, of kies een specifiek schema.",
+        "specific": "Specifiek werktijdenschema",
+        "specificHint": "Maak eerst een werktijdenschema aan.",
+        "tenantDefaultMissingDescription": "Er is nog geen standaard werktijdenschema voor de tenant geconfigureerd. Kies een specifiek schema of stel eerst een tenantstandaard in.",
+        "holidaysNote": "Feestdagen worden altijd als niet-werkdagen behandeld."
+      },
+      "businessHours": {
+        "defaultSuffix": " (Default)",
+        "noneConfigured": "Er zijn nog geen werktijdenschema’s geconfigureerd.",
+        "usingTenantDefault": "Gebruikt het standaard werktijdenschema van de tenant.",
+        "noTenantDefault": "Er is nog geen standaard werktijdenschema voor de tenant geconfigureerd."
+      },
+      "recurring": {
+        "title": "Terugkerende planning",
+        "description": "Kies een veelvoorkomend herhalingspatroon. Geavanceerde cron is beschikbaar voor aangepaste planningen.",
+        "builderMode": "Planningswizard",
+        "advancedMode": "Geavanceerde cron",
+        "dailyHelper": "Wordt elke dag op het geselecteerde tijdstip uitgevoerd.",
+        "weeklyHelper": "Kies hieronder één of meerdere werkdagen.",
+        "customCronWarning": "Deze planning gebruikt een aangepaste cron-expressie. Blijf hier bewerken, of ga terug naar de wizard om deze door een standaardpatroon te vervangen.",
+        "cronPreview": "Cron: {{cron}}"
+      },
+      "payload": {
+        "title": "Payload",
+        "description": "Schrijf statische invoer die bij elke geplande uitvoering wordt meegegeven.",
+        "rootLabel": "Payload",
+        "rootKey": "payload",
+        "mode": {
+          "form": "Formuliermodus",
+          "json": "JSON-modus"
+        },
+        "actions": {
+          "addItem": "Item toevoegen",
+          "removeItem": "Verwijderen"
+        },
+        "states": {
+          "noItems": "Nog geen items."
+        },
+        "boolean": {
+          "true": "Waar",
+          "false": "Onwaar"
+        },
+        "noSchema": {
+          "title": "Er is nog geen payload-schema beschikbaar voor deze workflow.",
+          "description": "Formuliervelden verschijnen hier zodra deze workflow een vastgepind payload-schema publiceert."
+        }
+      },
+      "validation": {
+        "title": "Validatiefouten van payload",
+        "more": "+{{count}} meer…",
+        "invalidValue": "Ongeldige waarde",
+        "valueMustBeAllowed": "Waarde moet een van de toegestane opties zijn.",
+        "expectedObject": "Object verwacht.",
+        "requiredFieldMissing": "Verplicht veld ontbreekt.",
+        "unknownProperty": "Onbekende eigenschap.",
+        "expectedArray": "Array verwacht.",
+        "expectedString": "Tekenreeks verwacht.",
+        "expectedNumber": "Getal verwacht.",
+        "expectedBoolean": "Booleaanse waarde verwacht.",
+        "payloadMustBeObject": "Planning-payload moet een JSON-object zijn.",
+        "invalidJson": "Ongeldige JSON"
+      },
+      "errors": {
+        "loadScheduleFailed": "Kan planning niet laden.",
+        "saveFailed": "Kan planning niet opslaan."
+      }
+    },
+    "recurrence": {
+      "andWord": "en",
+      "frequency": {
+        "daily": "Daily",
+        "weekly": "Wekelijks",
+        "monthly": "Maandelijks"
+      },
+      "validation": {
+        "validTime": "Kies een geldige tijd.",
+        "weekdayRequired": "Kies minstens één werkdag.",
+        "dayOfMonthRange": "Kies een dag van de maand tussen 1 en 31."
+      },
+      "summary": {
+        "daily": "Wordt elke dag om {{timeLabel}} {{timezoneLabel}} uitgevoerd",
+        "weekly": "Wordt elke {{weekdayLabels}} om {{timeLabel}} {{timezoneLabel}} uitgevoerd",
+        "monthly": "Wordt op dag {{dayOfMonth}} van elke maand om {{timeLabel}} {{timezoneLabel}} uitgevoerd"
+      },
+      "weekdays": {
+        "0": {
+          "short": "Zo",
+          "long": "Zondag"
+        },
+        "1": {
+          "short": "Ma",
+          "long": "Maandag"
+        },
+        "2": {
+          "short": "Di",
+          "long": "Dinsdag"
+        },
+        "3": {
+          "short": "Wo",
+          "long": "Woensdag"
+        },
+        "4": {
+          "short": "Do",
+          "long": "Donderdag"
+        },
+        "5": {
+          "short": "Vr",
+          "long": "Vrijdag"
+        },
+        "6": {
+          "short": "Za",
+          "long": "Zaterdag"
+        }
+      }
+    }
+  },
+  "enums": {
+    "workflowRunStatus": {
+      "RUNNING": "Wordt uitgevoerd",
+      "WAITING": "Wachten",
+      "SUCCEEDED": "Geslaagd",
+      "FAILED": "Mislukt",
+      "CANCELED": "Geannuleerd"
+    },
+    "workflowRunSort": {
+      "started_at:desc": "Nieuwste eerst",
+      "started_at:asc": "Oudste eerst",
+      "updated_at:desc": "Recent bijgewerkt",
+      "updated_at:asc": "Minst recent bijgewerkt"
+    },
+    "workflowEventStatus": {
+      "matched": "Gekoppeld",
+      "unmatched": "Niet gekoppeld",
+      "error": "Fout"
+    },
+    "workflowStepStatus": {
+      "STARTED": "Gestart",
+      "SUCCEEDED": "Geslaagd",
+      "FAILED": "Mislukt",
+      "RETRY_SCHEDULED": "Nieuwe poging gepland",
+      "CANCELED": "Geannuleerd"
+    },
+    "workflowLogLevel": {
+      "DEBUG": "Debug",
+      "INFO": "Info",
+      "WARN": "Waarschuwing",
+      "ERROR": "Fout"
+    },
+    "workflowAiSchemaType": {
+      "string": "Tekenreeks",
+      "number": "Getal",
+      "integer": "Geheel getal",
+      "boolean": "Boolean",
+      "object": "Object",
+      "array": "Array"
+    },
+    "workflowInputSourceMode": {
+      "reference": "Verwijzing",
+      "fixed": "Vaste waarde"
+    },
+    "workflowReferenceSection": {
+      "payload": "Payload",
+      "vars": "Stapresultaten",
+      "meta": "Workflowdetails",
+      "error": "Fout",
+      "forEach": "Luscontext"
+    },
+    "workflowTriggerMode": {
+      "manual": "Geen trigger",
+      "event": "Gebeurtenis"
+    },
+    "workflowCanvasView": {
+      "list": "Lijst",
+      "graph": "Grafiek"
+    },
+    "workflowOnError": {
+      "continue": "Doorgaan",
+      "fail": "Falen"
+    },
+    "workflowWaitMode": {
+      "duration": "Duur",
+      "until": "Tot"
+    },
+    "workflowWaitTiming": {
+      "fixed": "Specifieke datum en tijd",
+      "expression": "Geavanceerde expressie"
+    }
+  },
+  "automation": {
+    "createWorkflow": {
+      "dialogTitle": "Nieuwe workflow maken",
+      "fields": {
+        "name": "Workflow-naam",
+        "namePlaceholder": "bijv. Welkomst-e-mail verzenden",
+        "triggerType": "Triggertype"
+      },
+      "validation": {
+        "nameRequired": "Workflow-naam is verplicht",
+        "nameTooShort": "De naam moet minstens 3 tekens lang zijn"
+      },
+      "actions": {
+        "cancel": "Annuleren",
+        "create": "Workflow maken"
+      },
+      "triggers": {
+        "event": {
+          "title": "Op basis van een gebeurtenis",
+          "description": "Wordt automatisch geactiveerd wanneer specifieke gebeurtenissen plaatsvinden (bijv. ticket aangemaakt, factuur betaald)."
+        },
+        "scheduled": {
+          "title": "Gepland",
+          "description": "Wordt uitgevoerd volgens een terugkerend schema met cron-expressies (bijv. dagelijks, wekelijks)."
+        },
+        "manual": {
+          "title": "Handmatig",
+          "description": "Wordt op verzoek gestart door gebruikers of via API-aanroepen. Geen automatische triggers."
+        }
+      }
+    },
+    "workflowList": {
+      "header": "Workflows",
+      "stats": {
+        "total": "{{count}} totaal",
+        "active": "{{count}} actief",
+        "draft": "{{count}} concept",
+        "paused": "{{count}} gepauzeerd"
+      },
+      "actions": {
+        "eventCatalog": "Gebeurteniscatalogus",
+        "newWorkflow": "Nieuwe workflow",
+        "createFirst": "Maak uw eerste workflow",
+        "retry": "Opnieuw proberen",
+        "resetFilters": "Resetten"
+      },
+      "searchPlaceholder": "Workflows zoeken...",
+      "statusFilter": {
+        "all": "Alle statussen",
+        "active": "Actief",
+        "draft": "Concept",
+        "paused": "Gepauzeerd",
+        "archived": "Gearchiveerd"
+      },
+      "triggerFilter": {
+        "all": "Alle triggers",
+        "event": "Op basis van een gebeurtenis",
+        "schedule": "Eenmalige planning",
+        "recurring": "Terugkerende planning",
+        "manual": "Handmatig"
+      },
+      "triggerLabels": {
+        "manual": "Handmatig",
+        "schedule": "Eenmalige planning",
+        "recurring": "Terugkerende planning",
+        "event": "Gebeurtenis"
+      },
+      "bulk": {
+        "selectedSingular": "{{count}} workflow geselecteerd",
+        "selectedPlural": "{{count}} workflows geselecteerd",
+        "pause": "Pauzeren",
+        "resume": "Hervatten",
+        "delete": "Verwijderen",
+        "clearSelection": "Selectie wissen",
+        "deleteDialogTitle": "Geselecteerde workflows verwijderen",
+        "deleteConfirmSingular": "{{count}} workflow verwijderen",
+        "deleteConfirmPlural": "{{count}} workflows verwijderen",
+        "deleteClose": "Sluiten",
+        "deleteCancel": "Annuleren",
+        "selectedSummarySingular": "U hebt <1>{{count}}</1> workflow geselecteerd.",
+        "selectedSummaryPlural": "U hebt <1>{{count}}</1> workflows geselecteerd.",
+        "willBeDeleted": "<1>{{count}}</1> wordt verwijderd.",
+        "willBeSkipped": "<1>{{count}}</1> wordt overgeslagen.",
+        "skippedHeading": "Overgeslagen workflows",
+        "systemWorkflowReason": "Systeemworkflow"
+      },
+      "columns": {
+        "name": "Naam",
+        "status": "Status",
+        "version": "Versie",
+        "trigger": "Trigger",
+        "lastModified": "Laatst gewijzigd",
+        "actions": "Acties"
+      },
+      "statusLabels": {
+        "active": "Actief",
+        "draft": "Concept",
+        "archived": "Gearchiveerd",
+        "paused": "Gepauzeerd"
+      },
+      "tableValues": {
+        "system": "Systeem",
+        "draftVersion": "Concept: v{{version}}"
+      },
+      "rowMenu": {
+        "ariaLabel": "Workflow-acties",
+        "resume": "Hervatten",
+        "pause": "Pauzeren",
+        "duplicate": "Dupliceren",
+        "viewRuns": "Uitvoeringen bekijken",
+        "delete": "Verwijderen"
+      },
+      "states": {
+        "errorTitle": "Workflows konden niet worden geladen",
+        "errorFallback": "Workflows konden niet worden opgehaald",
+        "validationFailed": "Validatie van verwijdering mislukt. Probeer het opnieuw.",
+        "emptyTitle": "Nog geen workflows",
+        "emptyDescription": "Maak uw eerste workflow om taken te automatiseren, op gebeurtenissen te reageren en uw processen te stroomlijnen.",
+        "noResultsTitle": "Geen workflows gevonden",
+        "noResultsDescription": "Pas uw zoekopdracht of filters aan om te vinden waar u naar zoekt."
+      },
+      "deleteDialog": {
+        "fallbackEntityName": "deze workflow"
+      }
+    },
+    "eventsCatalog": {
+      "header": {
+        "title": "Workflow-gebeurteniscatalogus",
+        "subtitle": "Verken, beheer en ontwerp workflows voor systeemgebeurtenissen en triggers.",
+        "defineCustomEvent": "Aangepaste gebeurtenis definiëren",
+        "managePermissionTitle": "Vereist de machtiging workflow:manage"
+      },
+      "filters": {
+        "searchPlaceholder": "Gebeurtenissen zoeken (bijv. ticket.create, email.receive)...",
+        "allCategories": "Alle categorieën",
+        "status": "Status",
+        "statusOptions": {
+          "all": "Alle statussen",
+          "active": "Actief",
+          "beta": "Bèta",
+          "draft": "Concept",
+          "deprecated": "Verouderd"
+        },
+        "source": "Bron",
+        "sourceOptions": {
+          "all": "Alle bronnen",
+          "system": "Systeem",
+          "tenant": "Tenant"
+        },
+        "sort": "Sortering",
+        "sortOptions": {
+          "categoryName": "Categorie · Naam",
+          "mostActive": "Meest actief (7 d)"
+        },
+        "apply": "Toepassen",
+        "clear": "Wissen",
+        "viewGrid": "Rasterweergave",
+        "viewList": "Lijstweergave"
+      },
+      "card": {
+        "workflowsCount": "{{count}} workflows",
+        "actions": {
+          "simulate": "Simuleren",
+          "metrics": "Statistieken",
+          "attachTitle": "Koppelen (nieuwe workflow)"
+        },
+        "metrics": {
+          "executions": "Uitvoeringen",
+          "successRate": "Slaagpercentage",
+          "avgLatency": "Gem. latentie"
+        }
+      },
+      "states": {
+        "noEventsTitle": "Geen gebeurtenissen gevonden",
+        "noEventsDescription": "Pas uw filters aan.",
+        "noEventsInRange": "Geen gebeurtenissen in dit bereik.",
+        "noDataAvailable": "Geen gegevens beschikbaar.",
+        "loading": "Laden…"
+      },
+      "pagination": {
+        "showing": "Toont {{start}} tot {{end}} van {{total}} resultaten",
+        "prev": "Vorige",
+        "next": "Volgende",
+        "page": "Pagina {{page}} / {{total}}"
+      },
+      "badges": {
+        "system": "Systeem",
+        "tenant": "Tenant",
+        "noSchema": "Geen schema",
+        "unknownSchema": "Onbekend schema",
+        "schema": "Schema"
+      },
+      "details": {
+        "title": "Gebeurtenisdetails",
+        "close": "Sluiten",
+        "simulate": "Simuleren",
+        "metrics": "Statistieken",
+        "attach": "Koppelen",
+        "schema": {
+          "heading": "Schema",
+          "viewFull": "Volledig schema bekijken",
+          "managedNotice": "Het schema wordt beheerd door het schemaregister.",
+          "missingNotice": "Geen schemaRef ingesteld; de gebeurtenis is mogelijk niet bruikbaar als workflow-trigger.",
+          "topLevelFields": "Velden op het hoogste niveau",
+          "required": "verplicht",
+          "moreFieldsHint": "De eerste 12 velden worden weergegeven. Gebruik \"Volledig schema bekijken\" voor meer."
+        },
+        "attached": {
+          "heading": "Gekoppelde workflows",
+          "loading": "Laden…",
+          "empty": "Geen workflows gekoppeld.",
+          "publishedBadge": "Gepubliceerd",
+          "systemBadge": "Systeem",
+          "pausedBadge": "Gepauzeerd",
+          "hiddenBadge": "Verborgen",
+          "open": "Openen",
+          "detach": "Loskoppelen",
+          "publishTooltip": "Vereist de machtiging workflow:publish",
+          "adminTooltip": "Vereist workflow:admin voor systeemworkflows"
+        }
+      },
+      "schemaModal": {
+        "title": "Schema",
+        "close": "Sluiten",
+        "headerTitle": "Payload-schema",
+        "loading": "Laden…",
+        "unavailable": "Schema niet beschikbaar.",
+        "copy": "Kopiëren",
+        "copySuccess": "Gekopieerd",
+        "copyFailed": "Kopiëren mislukt"
+      },
+      "metricsDialog": {
+        "title": "Statistieken",
+        "close": "Sluiten",
+        "headerTitle": "Statistieken · {{eventType}}",
+        "from": "Vanaf",
+        "to": "Tot",
+        "refresh": "Vernieuwen",
+        "openWorkflowEditor": "Workflow-editor openen",
+        "loading": "Laden…",
+        "totals": {
+          "totalEvents": "Totaal aantal gebeurtenissen",
+          "matched": "Overeenkomsten",
+          "unmatched": "Geen overeenkomst",
+          "errors": "Fouten",
+          "runsStarted": "Gestarte uitvoeringen",
+          "runSuccessRate": "Slaagpercentage uitvoeringen",
+          "avgRunDuration": "Gem. duur uitvoering"
+        },
+        "executionsOverTime": "Uitvoeringen in de tijd",
+        "recentEvents": "Recente gebeurtenissen",
+        "viewInEvents": "Bekijken in gebeurtenissen",
+        "openRun": "Uitvoering",
+        "loadFailed": "Statistieken konden niet worden geladen",
+        "rangeShowing": "Toont {{start}}–{{end}} van {{total}}",
+        "prev": "Vorige",
+        "next": "Volgende"
+      },
+      "simulateDialog": {
+        "title": "Gebeurtenis simuleren",
+        "headerTitle": "Simuleren · {{eventType}}",
+        "submit": "Simuleren",
+        "submitting": "Verzenden…",
+        "close": "Sluiten",
+        "fields": {
+          "correlationKey": "Correlatiesleutel (optioneel)",
+          "correlationKeyPlaceholder": "Wordt gebruikt om wachtende gebeurtenissen op te lossen",
+          "schemaRef": "Schema-referentie voor gebeurtenis-payload (geavanceerd)",
+          "schemaRefPlaceholderEmpty": "Geen schemaRef voor deze gebeurtenis",
+          "payloadJson": "Payload (JSON)",
+          "payload": "Payload"
+        },
+        "modes": {
+          "form": "Formulier",
+          "json": "JSON",
+          "noSchema": "Geen schema beschikbaar; formuliermodus uitgeschakeld."
+        },
+        "errors": {
+          "schemaValidationTitle": "Schemavalidatiefouten",
+          "moreErrors": "+{{count}} meer",
+          "fixBeforeSubmit": "Los schemavalidatiefouten op voordat u verzendt.",
+          "simulationTitle": "Simulatiefout",
+          "submitFallback": "Simuleren mislukt",
+          "submitToast": "Simuleren mislukt",
+          "invalidJson": "Ongeldige JSON.",
+          "valueMustBeAllowed": "De waarde moet een van de toegestane opties zijn.",
+          "expectedObject": "Object verwacht.",
+          "expectedArray": "Array verwacht.",
+          "expectedString": "Tekenreeks verwacht.",
+          "expectedNumber": "Getal verwacht.",
+          "expectedBoolean": "Booleaanse waarde verwacht.",
+          "requiredField": "Verplicht veld ontbreekt."
+        },
+        "result": {
+          "title": "Resultaat",
+          "status": "Status",
+          "eventId": "Gebeurtenis-ID",
+          "startedRuns": "Gestarte uitvoeringen",
+          "open": "Openen",
+          "resumedRun": "Hervatte uitvoering",
+          "openResumedRun": "Hervatte uitvoering openen"
+        },
+        "toasts": {
+          "success": "Gebeurtenis gesimuleerd"
+        },
+        "form": {
+          "remove": "Verwijderen",
+          "addItem": "Item toevoegen",
+          "rootLabel": "Payload",
+          "payloadJsonLabel": "Payload (JSON)",
+          "true": "Waar",
+          "false": "Onwaar"
+        }
+      },
+      "defineEventDialog": {
+        "title": "Aangepaste gebeurtenis definiëren",
+        "headerTitle": "Aangepaste gebeurtenis definiëren",
+        "cancel": "Annuleren",
+        "submit": "Gebeurtenis maken",
+        "submitting": "Maken…",
+        "fields": {
+          "eventType": "Gebeurtenistype",
+          "eventTypePlaceholder": "bijv. ticket.created",
+          "name": "Naam",
+          "namePlaceholder": "Gebruiksvriendelijke naam",
+          "category": "Categorie",
+          "categoryPlaceholder": "bijv. Tickets",
+          "description": "Beschrijving",
+          "descriptionPlaceholder": "Optionele beschrijving",
+          "useSchemaRef": "Schema-referentie gebruiken",
+          "useInline": "Inline schema (geavanceerd)",
+          "selectSchemaRef": "Schema-referentie voor payload selecteren",
+          "selectPlaceholder": "Selecteren…",
+          "payloadSchemaJson": "Payload-schema (JSON)"
+        },
+        "footer": "Aangepaste gebeurtenissen zijn beperkt tot de tenant en kunnen worden gebruikt als workflow-trigger.",
+        "validation": {
+          "typeAndNameRequired": "Het gebeurtenistype en de naam zijn verplicht.",
+          "schemaRefRequired": "Selecteer een schema-referentie voor payload (of gebruik een inline schema).",
+          "invalidJson": "Het payload-schema moet geldige JSON zijn."
+        },
+        "toasts": {
+          "createSuccess": "Aangepaste gebeurtenis gemaakt",
+          "createFailed": "Gebeurtenis kon niet worden gemaakt"
+        }
+      },
+      "toasts": {
+        "loadEventsFailed": "Gebeurtenissen konden niet worden geladen",
+        "workflowCreated": "Workflow gemaakt",
+        "createWorkflowFailed": "Workflow kon niet worden gemaakt",
+        "detachConfirm": "Deze workflow loskoppelen van de gebeurtenis? Hiermee wordt een nieuwe versie gepubliceerd zonder de trigger.",
+        "detachValidationFailed": "Loskoppelen mislukt (validatiefouten)",
+        "detached": "Losgekoppeld",
+        "detachFailed": "Loskoppelen mislukt"
+      }
+    },
+    "actionInput": {
+      "fallbacks": {
+        "loadingOptions": "Opties worden geladen...",
+        "selectName": "{{name}} selecteren",
+        "ticketSearchPlaceholder": "Tickets zoeken op nummer of titel",
+        "ticketSelect": "Ticket selecteren",
+        "ticketTypeAbove": "Typ hierboven om tickets te zoeken",
+        "selectBoard": "Board selecteren",
+        "selectClient": "Klant selecteren",
+        "selectContact": "Contactpersoon selecteren",
+        "selectUser": "Gebruiker selecteren",
+        "selectUserOrTeam": "Gebruiker of team selecteren"
+      },
+      "errors": {
+        "loadTicket": "Ticket kon niet worden geladen",
+        "searchTickets": "Tickets konden niet worden gezocht",
+        "loadOptions": "Opties konden niet worden geladen"
+      },
+      "dependencyHints": {
+        "contactClient": "Kies eerst een vaste klant om contactopties te laden.",
+        "locationClient": "Kies eerst een vaste klant om locatieopties te laden.",
+        "categoryBoard": "Kies eerst een vast board om categorieopties te laden.",
+        "statusBoard": "Kies eerst een vast board om statusopties te laden.",
+        "statusTicket": "Kies eerst een vast ticket om statusopties te laden.",
+        "subcategoryBoard": "Kies eerst een vast board om subcategorieopties te laden.",
+        "subcategoryCategory": "Kies eerst een vaste categorie om subcategorieopties te laden."
+      }
+    }
+  },
+  "automationGate": {
+    "loading": "Workflowautomatisering wordt geladen...",
+    "featureName": "Workflowautomatisering",
+    "notEnabled": "Deze functie is experimenteel en niet ingeschakeld voor uw tenant.",
+    "experimental": "Experimenteel",
+    "enableHint": "Schakel Workflowautomatisering in bij Instellingen om er toegang toe te krijgen.",
+    "goToExperimental": "Ga naar experimentele functies",
+    "openSettings": "Instellingen openen"
+  }
+}

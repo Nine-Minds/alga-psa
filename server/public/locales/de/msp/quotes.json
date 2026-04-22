@@ -1,0 +1,757 @@
+{
+  "common": {
+    "actions": {
+      "approve": "Genehmigen",
+      "back": "Zurück",
+      "cancel": "Stornieren",
+      "close": "Schließen",
+      "clone": "Klon",
+      "convert": "Konvertieren",
+      "delete": "Löschen",
+      "downloadPdf": "PDF herunterladen",
+      "duplicate": "Duplikat",
+      "edit": "Bearbeiten",
+      "editAsCopy": "Als Kopie bearbeiten",
+      "newLayout": "Neues Layout",
+      "newQuote": "Neues Angebot",
+      "newTemplate": "Neue Vorlage",
+      "open": "Offen",
+      "requestChanges": "Änderungen anfordern",
+      "resend": "Erneut senden",
+      "revise": "Überarbeiten",
+      "save": "Speichern",
+      "saveQuote": "Angebot speichern",
+      "saveTemplate": "Vorlage speichern",
+      "send": "Schicken",
+      "sendReminder": "Erinnerung senden",
+      "sendToClient": "An den Kunden senden",
+      "setAsDefault": "Als Standard festlegen",
+      "submitForApproval": "Zur Genehmigung einreichen"
+    },
+    "badges": {
+      "standard": "Standard"
+    },
+    "columns": {
+      "actions": "Aktionen",
+      "amount": "Menge",
+      "client": "Kunde",
+      "created": "Erstellt",
+      "currency": "Währung",
+      "date": "Datum",
+      "default": "Standard",
+      "items": "Artikel",
+      "name": "Name",
+      "quoteDate": "Angebotsdatum",
+      "quoteNumber": "Angebotsnr.",
+      "source": "Quelle",
+      "status": "Status",
+      "title": "Titel",
+      "total": "Gesamt",
+      "validUntil": "Gültig bis"
+    },
+    "labels": {
+      "client": "Kunde",
+      "contact": "Kontakt",
+      "currency": "Währung",
+      "description": "Beschreibung/Umfang",
+      "discounts": "Rabatte",
+      "lineItems": "Werbebuchungen",
+      "poNumber": "Bestellnummer",
+      "quoteDate": "Angebotsdatum",
+      "quoteLayout": "Angebotslayout",
+      "subtotal": "Zwischensumme",
+      "tax": "Steuer",
+      "termsAndConditions": "Allgemeine Geschäftsbedingungen",
+      "title": "Titel",
+      "total": "Gesamt",
+      "validUntil": "Gültig bis"
+    },
+    "states": {
+      "generating": "Generieren...",
+      "loading": "Laden...",
+      "saving": "Sparen...",
+      "sending": "Senden..."
+    }
+  },
+  "quotesTab": {
+    "title": "Angebote",
+    "actions": {
+      "quoteActions": "Angebotsaktionen"
+    },
+    "tabs": {
+      "active": "Aktiv ({{count}})",
+      "approval": "Genehmigungswarteschlange",
+      "closed": "Geschlossen ({{count}})",
+      "sent": "Gesendet ({{count}})"
+    },
+    "filters": {
+      "allClients": "Alle Kunden",
+      "client": "Kunde"
+    },
+    "empty": {
+      "byCategory": "Keine Angebote in dieser Kategorie.",
+      "title": "Keine Angebote gefunden",
+      "description": "Erstellen Sie ein Angebot, um zu beginnen."
+    },
+    "dialogs": {
+      "delete": {
+        "title": "Angebot löschen",
+        "description": "Diese Aktion kann nicht rückgängig gemacht werden."
+      },
+      "send": {
+        "additionalEmails": "Zusätzliche Empfänger",
+        "additionalEmailsPlaceholder": "email@example.com, another@example.com",
+        "additionalRecipients": "Zusätzliche Empfänger (durch Kommas getrennt)",
+        "description": "Dadurch wird die Angebots-PDF-Datei per E-Mail an die Rechnungskontakte des Kunden gesendet und ihr Status wird in „Gesendet“ geändert.",
+        "message": "Nachricht",
+        "messageOptional": "Nachricht (optional)",
+        "messagePlaceholder": "Fügen Sie eine persönliche Notiz für den Empfänger hinzu...",
+        "title": "Angebot senden"
+      }
+    },
+    "errors": {
+      "delete": "Das Angebot konnte nicht gelöscht werden.",
+      "duplicate": "Das Angebot konnte nicht dupliziert werden.",
+      "load": "Angebote konnten nicht geladen werden",
+      "send": "Angebot konnte nicht gesendet werden."
+    },
+    "loading": "Angebote werden geladen...",
+    "rowActions": {
+      "delete": "Löschen",
+      "downloadPdf": "PDF herunterladen",
+      "duplicate": "Duplikat",
+      "open": "Offen",
+      "resend": "Erneut senden",
+      "sendReminder": "Erinnerung senden",
+      "sendToClient": "An den Kunden senden"
+    }
+  },
+  "quoteForm": {
+    "actions": {
+      "cancelQuote": "Angebot stornieren",
+      "convertToBoth": "In „Beide“ konvertieren",
+      "convertToContract": "In Vertrag umwandeln",
+      "convertToInvoice": "In Rechnung umwandeln",
+      "createNewRevision": "Neue Revision erstellen",
+      "sendQuote": "Angebot senden",
+      "saving": "Wird gespeichert…",
+      "saveTemplate": "Vorlage speichern",
+      "saveQuote": "Angebot speichern",
+      "requestApproval": "Genehmigung anfordern",
+      "sendToClient": "An Kunden senden",
+      "approve": "Genehmigen",
+      "revise": "Überarbeiten",
+      "requestChanges": "Änderungen anfordern",
+      "resend": "Erneut senden",
+      "sendReminder": "Erinnerung senden",
+      "pdf": "PDF",
+      "duplicate": "Duplizieren",
+      "back": "Zurück",
+      "moreActions": "Weitere Aktionen",
+      "cancel": "Abbrechen",
+      "previewPdf": "PDF-Vorschau"
+    },
+    "headings": {
+      "editQuote": "Angebot bearbeiten",
+      "editTemplate": "Angebotsvorlage bearbeiten",
+      "newQuote": "Neues Angebot",
+      "newTemplate": "Neue Angebotsvorlage",
+      "quote": "Angebot",
+      "quoteWithNumber": "Angebot {{quoteNumber}}",
+      "quoteWithNumberAndVersion": "Angebot {{quoteNumber}} v{{version}}",
+      "templateQuoteFallback": "Vorlagenangebot"
+    },
+    "fields": {
+      "additionalEmails": "Zusätzliche E-Mail-Adressen (durch Kommas getrennt)",
+      "clientNotes": "Hinweise für den Kunden",
+      "createFromTemplate": "Aus Vorlage erstellen",
+      "messageOptional": "Nachricht (optional)",
+      "quoteLayoutHelp": "Wählen Sie das Layout aus, das Sie für die PDF-Datei dieses Angebots verwenden möchten. Lassen Sie das Feld leer, um die Standardeinstellung zu verwenden.",
+      "recipients": "Empfänger"
+    },
+    "placeholders": {
+      "additionalEmails": "email@example.com, another@example.com",
+      "message": "Fügen Sie eine persönliche Notiz für den Kunden hinzu...",
+      "selectClient": "Wählen Sie den Kunden aus",
+      "selectContact": "Kontakt auswählen",
+      "selectCurrency": "Währung auswählen",
+      "startFromScratch": "Fangen Sie bei Null an",
+      "useDefaultLayout": "Standardlayout verwenden"
+    },
+    "alerts": {
+      "accepted": "Angebot angenommen",
+      "converted": "Angebot konvertiert",
+      "convertedDescription": "Dieses Angebot wurde in einen Vertrag und/oder eine Rechnung umgewandelt.",
+      "quote": "Angebot",
+      "rejected": "Angebot abgelehnt"
+    },
+    "dialogs": {
+      "approval": {
+        "approveDescription": "Genehmigen Sie dieses Angebot, damit es an den Kunden gesendet werden kann.",
+        "approveTitle": "Angebot genehmigen",
+        "approveComment": "Kommentar (optional)",
+        "approveCommentPlaceholder": "Fügen Sie eine optionale Notiz hinzu...",
+        "changesDescription": "Senden Sie dieses Angebot mit den gewünschten Änderungen an den Entwurf zurück.",
+        "changesTitle": "Änderungen anfordern",
+        "changesComment": "Gewünschte Änderungen",
+        "changesCommentPlaceholder": "Beschreiben Sie die erforderlichen Änderungen ...",
+        "processing": "Verarbeitung..."
+      },
+      "conversion": {
+        "title": "Konvertierungsvorschau",
+        "description": "Überprüfen Sie vor der Bestätigung, was diese Angebotsumwandlung bewirkt."
+      },
+      "send": {
+        "description": "Dadurch wird das Angebot per E-Mail an die Rechnungskontakte des Kunden gesendet und sein Status in „Gesendet“ geändert.",
+        "title": "Angebot an den Kunden senden",
+        "additionalEmails": "Zusätzliche Empfänger",
+        "message": "Nachricht"
+      }
+    },
+    "errorActions": {
+      "approveQuote": "Angebot genehmigen",
+      "cancelQuote": "Angebot stornieren",
+      "requestChanges": "Änderungen anfordern",
+      "resendQuote": "Angebot erneut senden",
+      "sendQuote": "Angebot senden",
+      "sendReminder": "Erinnerung senden",
+      "submitForApproval": "zur Genehmigung einreichen"
+    },
+    "errors": {
+      "convert": "Das Angebot konnte nicht konvertiert werden",
+      "createRevision": "Revision konnte nicht erstellt werden",
+      "downloadPdf": "PDF konnte nicht heruntergeladen werden",
+      "duplicate": "Das Angebot konnte nicht dupliziert werden",
+      "load": "Angebotsformular konnte nicht geladen werden",
+      "loadConversionPreview": "Konvertierungsvorschau konnte nicht geladen werden",
+      "notFound": "Angebot nicht gefunden",
+      "save": "Angebot konnte nicht gespeichert werden",
+      "saveFailed": "Das Speichern des Angebots ist fehlgeschlagen",
+      "workflowAction": "{{action}} fehlgeschlagen"
+    },
+    "loading": "Angebotsformular wird geladen...",
+    "notices": {
+      "approved": "Das Angebot wurde genehmigt und ist versandbereit.",
+      "cancelled": "Angebot storniert.",
+      "createdDraftContract": "Vertragsentwurf {{name}} erstellt.",
+      "createdDraftContractAndInvoice": "Vertragsentwurf {{contractName}} und Rechnungsentwurf {{invoiceName}} erstellt.",
+      "createdDraftInvoice": "Rechnungsentwurf {{name}} erstellt.",
+      "reminderSent": "Angebotserinnerung gesendet.",
+      "requestedChanges": "Das Angebot wurde mit den gewünschten Änderungen in den Entwurf zurückversetzt.",
+      "resent": "Angebot erneut gesendet.",
+      "sent": "Angebot an den Kunden gesendet.",
+      "submittedForApproval": "Angebot zur internen Genehmigung eingereicht."
+    },
+    "readOnlyNotice": "Dieses Angebot ist schreibgeschützt. Um Änderungen vorzunehmen, erstellen Sie eine neue Revision.",
+    "validation": {
+      "clientRequired": "Kunde ist erforderlich",
+      "titleRequired": "Der Titel ist erforderlich, es sei denn, es wird aus einer Vorlage erstellt"
+    },
+    "header": {
+      "editTemplate": "Angebotsvorlage bearbeiten",
+      "newTemplate": "Neue Angebotsvorlage",
+      "editQuote": "Angebot bearbeiten",
+      "newQuote": "Neues Angebot",
+      "version": "v{{version}}",
+      "quoteTotalLabel": "Angebotsgesamtbetrag"
+    },
+    "breadcrumb": {
+      "billing": "Abrechnung",
+      "quoteTemplates": "Angebotsvorlagen",
+      "quotes": "Angebote",
+      "newQuote": "Neues Angebot"
+    },
+    "subtitle": {
+      "template": "Vorlage · {{description}}",
+      "forClient": "Für {{clientName}}",
+      "expires": "Läuft ab am {{date}}"
+    },
+    "banners": {
+      "acceptedTitle": "Angebot angenommen",
+      "acceptedBy": "Akzeptiert von: {{name}}",
+      "acceptedOn": "Akzeptiert am: {{date}}",
+      "rejectedTitle": "Angebot abgelehnt",
+      "rejectedOn": "Abgelehnt am: {{date}}",
+      "rejectedReason": "Grund: {{reason}}",
+      "convertedTitle": "Angebot konvertiert",
+      "convertedDescription": "Dieses Angebot wurde in einen Vertrag und/oder eine Rechnung konvertiert."
+    },
+    "noticeTitle": "Angebot",
+    "essentials": {
+      "title": "Grundlagen",
+      "subtitle": "Wird dem Kunden im Angebotsdokument angezeigt.",
+      "titleField": "Titel",
+      "descriptionField": "Beschreibung / Umfang",
+      "descriptionHelp": "Ein kurzer Absatz, der direkt unter dem Titel im PDF erscheint.",
+      "client": "Kunde",
+      "clientPlaceholder": "Kunden auswählen",
+      "contact": "Kontakt",
+      "contactPlaceholder": "Kontakt auswählen",
+      "currency": "Währung",
+      "currencyPlaceholder": "Währung auswählen",
+      "quoteDate": "Angebotsdatum",
+      "validUntil": "Gültig bis",
+      "validUntilHelp": "Angebot läuft an diesem Datum automatisch ab."
+    },
+    "lineItems": {
+      "title": "Positionen",
+      "subtitleEmpty": "Noch keine Einträge.",
+      "subtitleCount": "{{count}} Positionen · {{mix}}",
+      "mixBoth": "wiederkehrend und einmalig",
+      "mixRecurring": "wiederkehrend",
+      "mixOneTime": "einmalig",
+      "addLocation": "+ Standort hinzufügen",
+      "fromTemplate": "+ Aus Vorlage"
+    },
+    "clientFacing": {
+      "title": "Kundensichtbarer Text",
+      "subtitle": "Erscheint im PDF unter den Summen.",
+      "notes": "Notizen an den Kunden (optional)",
+      "terms": "Geschäftsbedingungen (optional)"
+    },
+    "moreDetails": {
+      "title": "Weitere Details",
+      "subtitle": "Bestellnummer, Gelegenheit, PDF-Layout",
+      "poNumber": "Bestellnummer",
+      "opportunity": "Gelegenheit",
+      "opportunityPlaceholder": "Gelegenheits-ID (optional)",
+      "pdfLayout": "PDF-Layout",
+      "pdfLayoutPlaceholder": "Standard-Layout verwenden",
+      "pdfLayoutHelp": "Wählen Sie das Layout, das der Kunde sieht. Leer lassen, um den Mandanten-Standard zu verwenden."
+    },
+    "footer": {
+      "savedAgo": "Änderungen gespeichert · {{ago}}",
+      "saving": "Wird gespeichert…",
+      "unsaved": "Nicht gespeicherte Änderungen"
+    },
+    "sidebar": {
+      "quoteTotal": "Angebotsgesamtbetrag",
+      "recurringPerMonth": "{{amount}} wiederkehrend / Monat",
+      "subtotal": "Zwischensumme",
+      "discounts": "Rabatte",
+      "tax": "Steuer",
+      "statusLabel": "Status",
+      "approvalLabel": "Genehmigung",
+      "approvalMessage": "Angebote benötigen vor dem Versand die Genehmigung durch den Vertriebsleiter.",
+      "documentLayoutLabel": "Dokumentlayout",
+      "defaultLayout": "Mandanten-Standard",
+      "standardLayout": "Standard",
+      "customLayout": "Benutzerdefiniert",
+      "tenantDefault": "Mandanten-Standard",
+      "changeLayout": "Ändern"
+    }
+  },
+  "quoteDetail": {
+    "title": "Angebotsdetails",
+    "actions": {
+      "backToQuotes": "Zurück zu den Angeboten",
+      "openConvertedContract": "Konvertierten Vertrag öffnen",
+      "openConvertedInvoice": "Öffnen Sie die umgewandelte Rechnung",
+      "preview": "Vorschau",
+      "saveAsTemplate": "Als Vorlage speichern"
+    },
+    "sections": {
+      "activityLog": "Aktivitätsprotokoll",
+      "clientNotes": "Kundennotizen",
+      "internalNotes": "Interne Notizen",
+      "lineItems": "Werbebuchungen",
+      "quoteLayout": "Angebotslayout",
+      "scopeOfWork": "Arbeitsumfang",
+      "termsAndConditions": "Allgemeine Geschäftsbedingungen",
+      "versionHistory": "Versionsverlauf"
+    },
+    "alerts": {
+      "clientConfigurationSubmitted": "Client-Konfiguration übermittelt",
+      "clientConfigurationSubmittedDescription": "Sehen Sie sich die optionalen Einzelposten unten an, bevor Sie dieses Angebot umwandeln. Ausgewählte Artikel werden als enthalten markiert und abgelehnte Artikel werden zur Nachverfolgung hervorgehoben.",
+      "update": "Angebotsaktualisierung"
+    },
+    "dialogs": {
+      "approval": {
+        "approveDescription": "Genehmigen Sie dieses Angebot, damit es an den Kunden gesendet werden kann. Sie können optional einen Kommentar hinzufügen.",
+        "changesDescription": "Senden Sie dieses Angebot mit den gewünschten Änderungen an den Entwurf zurück. Bitte beschreiben Sie, was überarbeitet werden muss."
+      },
+      "send": {
+        "message": "Optionale Nachricht, die in die E-Mail aufgenommen werden soll"
+      }
+    },
+    "status": {
+      "accepted": "Angebot angenommen",
+      "acceptedBy": "Akzeptiert von:",
+      "acceptedOn": "Angenommen am:",
+      "reason": "Grund:",
+      "rejected": "Angebot abgelehnt",
+      "rejectedOn": "Abgelehnt am:"
+    },
+    "empty": {
+      "activity": "Es wurde noch keine Angebotsaktivität aufgezeichnet.",
+      "lineItems": "Für dieses Angebot gibt es noch keine Werbebuchungen.",
+      "revisions": "Für dieses Angebot liegen noch keine früheren Revisionen vor."
+    },
+    "clientSelections": {
+      "declinedOptionalItem": "Der Kunde hat diesen optionalen Artikel abgelehnt",
+      "selectedOptionalItem": "Der Kunde hat dieses optionale Element ausgewählt"
+    },
+    "errors": {
+      "approve": "Das Angebot konnte nicht genehmigt werden",
+      "assignTemplate": "Vorlage konnte nicht zugewiesen werden",
+      "cancel": "Das Angebot konnte nicht storniert werden",
+      "convert": "Das Angebot konnte nicht konvertiert werden",
+      "delete": "Das Angebot konnte nicht gelöscht werden",
+      "deleteUnavailable": "Das Angebot konnte nicht gelöscht werden",
+      "downloadPdf": "Angebots-PDF konnte nicht generiert werden",
+      "duplicate": "Das Angebot konnte nicht dupliziert werden",
+      "load": "Angebotsdetails konnten nicht geladen werden",
+      "loadConversionPreview": "Konvertierungsvorschau konnte nicht geladen werden",
+      "notFound": "Angebot nicht gefunden",
+      "preview": "Angebotsvorschau konnte nicht erstellt werden",
+      "requestChanges": "Angebotsänderungen konnten nicht angefordert werden",
+      "resend": "Das erneute Senden des Angebots ist fehlgeschlagen",
+      "revise": "Die Angebotsrevision konnte nicht erstellt werden",
+      "saveAsTemplate": "Das Angebot konnte nicht als Vorlage gespeichert werden",
+      "send": "Angebot konnte nicht gesendet werden",
+      "sendReminder": "Angebotserinnerung konnte nicht gesendet werden",
+      "submitForApproval": "Das Angebot konnte nicht zur Genehmigung eingereicht werden"
+    },
+    "labels": {
+      "phase": "Phase: {{phase}}",
+      "templateQuote": "Vorlagenangebot"
+    },
+    "loading": "Angebotsdetails werden geladen...",
+    "notices": {
+      "approved": "Das Angebot wurde genehmigt und ist versandbereit.",
+      "reminderSent": "Angebotserinnerung wird an die konfigurierten Rechnungsempfänger gesendet.",
+      "requestedChanges": "Das Angebot wurde mit den gewünschten Änderungen in den Entwurf zurückversetzt.",
+      "resent": "Angebot wird erneut an die konfigurierten Rechnungsempfänger gesendet.",
+      "sent": "Angebot an den Kunden gesendet.",
+      "submittedForApproval": "Angebot zur internen Genehmigung eingereicht.",
+      "templateAssigned": "Dokumentvorlage zugewiesen.",
+      "templateCleared": "Dokumentvorlage gelöscht (Standardeinstellung)."
+    },
+    "preview": {
+      "loading": "Vorschau wird geladen..."
+    },
+    "table": {
+      "description": "Beschreibung"
+    },
+    "locations": {
+      "groupHeading": "Standort",
+      "unassigned": "Positionen ohne Standort",
+      "subtotal": "Standort-Zwischensumme"
+    }
+  },
+  "quoteLineItems": {
+    "title": "Werbebuchungen",
+    "actions": {
+      "addDiscount": "Rabatt hinzufügen",
+      "collapse": "Zusammenbruch",
+      "expand": "Expandieren",
+      "hideDiscount": "Rabatt ausblenden",
+      "remove": "Entfernen"
+    },
+    "billingMethods": {
+      "fixed": "Behoben",
+      "hourly": "Stündlich",
+      "perUnit": "Pro Einheit",
+      "usage": "Nutzungsbasiert"
+    },
+    "columns": {
+      "actions": "Aktionen",
+      "billing": "Abrechnung",
+      "flags": "Flaggen",
+      "item": "Artikel",
+      "move": "Bewegen",
+      "quantity": "Menge",
+      "total": "Gesamt",
+      "unitPrice": "Stückpreis"
+    },
+    "labels": {
+      "customItem": "Benutzerdefinierter Artikel",
+      "itemCountOne": "1 Artikel",
+      "itemCountOther": "{{count}} Artikel",
+      "noPriceInCurrency": "Kein Preis in {{currencyCode}}",
+      "optional": "Optional",
+      "phaseSection": "Phase / Abschnitt",
+      "recurring": "Wiederkehrend",
+      "service": "Service",
+      "setPrice": "Preis festlegen",
+      "ungroupedItems": "Nicht gruppierte Elemente"
+    },
+    "placeholders": {
+      "phaseSection": "z.B. Entdeckung, Einführung, fortlaufend",
+      "selectItem": "Element auswählen",
+      "selectService": "Dienst auswählen",
+      "servicePicker": "Suchen Sie nach einem benutzerdefinierten Elementnamen oder geben Sie ihn ein..."
+    },
+    "discounts": {
+      "badge": "Rabatt",
+      "description": {
+        "fixed": "Rabatt",
+        "percentage": "Rabatt ({{value}}%)"
+      },
+      "fixed": "Fester Rabatt",
+      "fullQuoteSubtotal": "Gilt für die gesamte Angebotszwischensumme",
+      "fullQuote": "Gesamtes Angebot",
+      "item": "Spezifischer Artikel",
+      "percentage": "Prozentualer Rabatt",
+      "service": "Spezifischer Service",
+      "targets": {
+        "fullQuote": "auf das gesamte Angebot",
+        "namedItem": "auf „{{name}}“",
+        "namedService": "am {{name}}",
+        "specificItem": "auf einen bestimmten Artikel",
+        "specificService": "auf einen bestimmten Service"
+      },
+      "types": {
+        "fixed": "Behoben",
+        "percentage": "Prozentsatz"
+      }
+    },
+    "markup": {
+      "badge": "{{sign}}{{value}}% Aufschlag",
+      "unavailable": "Aufschlag nicht verfügbar",
+      "unavailableTooltip": "Der Aufschlag kann nicht berechnet werden, da die Kosten in {{costCurrency}} erfasst werden und sich dieses Angebot in {{quoteCurrency}} befindet."
+    },
+    "empty": "Noch keine Werbebuchungen. Verwenden Sie die Katalogsuche oben, um Ihren ersten Artikel hinzuzufügen.",
+    "searchPlaceholder": "Suchen oder eigenen Positionsnamen eingeben…",
+    "locations": {
+      "groupHeading": "Standort {{index}}",
+      "pickerPlaceholder": "Standort auswählen",
+      "unassigned": "Positionen ohne Standort werden hier aufgeführt, bis einer ausgewählt wird.",
+      "removeGroup": "Standort entfernen",
+      "subtotal": "Standort-Zwischensumme",
+      "addLocationButton": "+ Standort hinzufügen",
+      "needMoreLocations": "Dieser Kunde hat nur einen aktiven Standort. Fügen Sie in den Kundeneinstellungen einen zweiten Standort hinzu, um Multi-Site-Angebote zu aktivieren.",
+      "emptyGroup": "Noch keine Positionen für diesen Standort."
+    }
+  },
+  "quoteRecipients": {
+    "trigger": {
+      "add": "Internen Benutzer- oder Kundenkontakt hinzufügen...",
+      "noClient": "Wählen Sie zuerst einen Kunden aus",
+      "noneAvailable": "Keine Benutzer oder Kontakte verfügbar"
+    },
+    "searchPlaceholder": "Nach Name oder E-Mail suchen...",
+    "empty": {
+      "noMatches": "Keine Übereinstimmungen",
+      "noneAvailable": "Keine Empfänger verfügbar"
+    },
+    "kind": {
+      "contact": "Kontakt",
+      "internal": "Intern"
+    },
+    "removeAriaLabel": "{{email}} entfernen"
+  },
+  "quoteConversion": {
+    "title": "Angebot konvertieren",
+    "description": "Wandeln Sie das akzeptierte Angebot „{{title}}“ in Verträge und/oder Rechnungen um.",
+    "loading": "Konvertierungsvorschau wird geladen...",
+    "mode": {
+      "contract": {
+        "label": "Nur Vertrag",
+        "description": "Erstellt einen Vertragsentwurf mit wiederkehrenden Servicelinien. Einmalartikel werden nicht berücksichtigt."
+      },
+      "invoice": {
+        "label": "Nur Rechnung",
+        "description": "Erstellt einen Rechnungsentwurf mit einmaligen Gebühren. Wiederkehrende Artikel werden nicht berücksichtigt."
+      },
+      "both": {
+        "label": "Vertrag + Rechnung",
+        "description": "Erstellt sowohl einen Vertragsentwurf (für wiederkehrende Artikel) als auch einen Rechnungsentwurf (für einmalige Artikel)."
+      }
+    },
+    "sections": {
+      "contractItems": "Vertragsgegenstände",
+      "conversionMode": "Konvertierungsmodus",
+      "excludedItems": "Ausgeschlossene Artikel",
+      "excludedFromConversion": "Von der Konvertierung ausgeschlossen",
+      "invoiceItems": "Rechnungspositionen",
+      "itemMappingPreview": "Vorschau der Elementzuordnung",
+      "quoteTotal": "Angebot insgesamt",
+      "statusAfterConversion": "Status nach der Konvertierung",
+      "willBecomeContractLines": "Werden zu Vertragslinien",
+      "willBecomeInvoiceCharges": "Werden zu Rechnungsgebühren"
+    },
+    "empty": {
+      "contractItems": "Es werden keine wiederkehrenden Artikel in einen Vertrag umgewandelt.",
+      "invoiceItems": "Es werden keine einmaligen Posten in eine Rechnung umgewandelt."
+    },
+    "summary": {
+      "converted": "Konvertiert",
+      "discount": "Rabatt",
+      "fixed": "behoben",
+      "notConverted": "Nicht konvertiert"
+    },
+    "partial": {
+      "alreadyConverted": "Dieses Angebot wurde bereits teilweise umgewandelt.",
+      "contractCreated": "Es wurde ein Vertrag erstellt.",
+      "invoiceCreated": "Eine Rechnung wurde erstellt.",
+      "remainingItems": "Die restlichen Artikel können Sie umwandeln.",
+      "title": "Teilkonvertierung",
+      "description": "Für dieses Angebot sind bereits einige Datensätze vorhanden."
+    },
+    "actions": {
+      "contract": "Vertragsentwurf erstellen",
+      "convertQuote": "Angebot konvertieren",
+      "invoice": "Rechnungsentwurf erstellen",
+      "both": "Erstellen Sie beide Datensätze",
+      "converting": "Konvertieren..."
+    },
+    "errors": {
+      "convert": "Das Angebot konnte nicht konvertiert werden",
+      "load": "Konvertierungsvorschau konnte nicht geladen werden",
+      "title": "Fehler"
+    }
+  },
+  "quoteApproval": {
+    "title": "Angebotsfreigaben",
+    "description": "Überprüfen Sie Angebote, die auf die Genehmigung durch den Manager warten, bevor sie an Kunden gesendet werden können.",
+    "actions": {
+      "backToQuotes": "Zurück zu den Angeboten"
+    },
+    "settings": {
+      "label": "Vor dem Versand ist eine Genehmigung erforderlich",
+      "enabled": "Angebotsentwürfe müssen vor dem Absenden genehmigt werden.",
+      "disabled": "Angebotsentwürfe können ohne Genehmigung versendet werden."
+    },
+    "filters": {
+      "status": "Status",
+      "approved": "Genehmigt",
+      "pendingApproval": "Ausstehende Genehmigung"
+    },
+    "empty": {
+      "approved": "Derzeit befinden sich keine Angebote in der genehmigten Warteschlange.",
+      "pendingApproval": "Derzeit befinden sich keine Angebote in der Warteschlange für ausstehende Genehmigungen.",
+      "title": "Keine Angebote gefunden"
+    },
+    "errors": {
+      "load": "Angebotsgenehmigungen konnten nicht geladen werden",
+      "settings": "Die Einstellungen für die Angebotsgenehmigung konnten nicht aktualisiert werden"
+    },
+    "loading": "Genehmigungswarteschlange wird geladen..."
+  },
+  "quoteTemplates": {
+    "title": "Vorlagen",
+    "description": "Mit Angebotsvorlagen können Sie wiederverwendbare Sätze von Einzelposten, Bedingungen und Notizen speichern. Wählen Sie beim Erstellen eines neuen Angebots eine Vorlage aus, um mit vorab ausgefüllten Daten zu beginnen.",
+    "empty": {
+      "inline": "Noch keine Angebotsvorlagen. Erstellen Sie eine Vorlage, indem Sie in der Detailansicht eines Angebots auf „Als Vorlage speichern“ klicken.",
+      "title": "Noch keine Angebotsvorlagen",
+      "description": "Verwenden Sie „Als Vorlage speichern“ aus einem Angebot, um Ihre erste wiederverwendbare Vorlage zu erstellen."
+    },
+    "actions": {
+      "createQuoteFromTemplate": "Angebot aus Vorlage erstellen",
+      "delete": "Löschen",
+      "editTemplate": "Vorlage bearbeiten",
+      "templateActions": "Vorlagenaktionen"
+    },
+    "dialogs": {
+      "delete": {
+        "message": "Sind Sie sicher, dass Sie diese Angebotsvorlage löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+        "title": "Vorlage löschen"
+      }
+    },
+    "errors": {
+      "delete": "Vorlage konnte nicht gelöscht werden.",
+      "load": "Vorlagen konnten nicht geladen werden"
+    },
+    "loading": "Vorlagen werden geladen..."
+  },
+  "quotePreview": {
+    "title": "Angebotsvorschau",
+    "empty": {
+      "selectQuote": "Wählen Sie ein Angebot zur Vorschau aus",
+      "unavailable": "Vorschau konnte nicht angezeigt werden. Möglicherweise fehlen Daten."
+    },
+    "placeholders": {
+      "selectLayout": "Angebotslayout auswählen..."
+    },
+    "actions": {
+      "openQuote": "Angebot öffnen"
+    },
+    "errors": {
+      "downloadPdf": "PDF konnte nicht heruntergeladen werden. Bitte versuchen Sie es erneut.",
+      "load": "Vorschau konnte nicht geladen werden"
+    },
+    "loading": "Vorschau wird geladen..."
+  },
+  "templateEditor": {
+    "actions": {
+      "backToLayouts": "Zurück zu Layouts",
+      "rerun": "Wiederholung",
+      "saveLayout": "Layout speichern"
+    },
+    "codeReadonly": "Die Codeansicht wird aus dem visuellen Arbeitsbereich generiert und ist schreibgeschützt.",
+    "defaults": {
+      "copyOf": "Kopie von {{name}}",
+      "standardTemplate": "Standardvorlage"
+    },
+    "title": "Angebotslayout-Editor",
+    "description": "Entwerfen Sie das Angebotslayout mit dem visuellen Editor und zeigen Sie dann eine Vorschau mit Beispieldaten an.",
+    "errors": {
+      "exportAst": "Die AST-Vorlage konnte nicht aus dem visuellen Arbeitsbereich exportiert werden: {{message}}",
+      "load": "Der Angebotsvorlagen-Editor konnte nicht geladen werden",
+      "nameRequired": "Der Name der Vorlage ist erforderlich.",
+      "notFound": "Angebotsdokumentvorlage nicht gefunden.",
+      "previewPipeline": "Vorschau-Pipeline fehlgeschlagen.",
+      "saveFailed": "Angebotsvorlage konnte nicht gespeichert werden",
+      "unknownAstExport": "Unbekannter AST-Exportfehler"
+    },
+    "fields": {
+      "layoutDetails": "Layoutdetails",
+      "templateName": "Vorlagenname",
+      "version": "Version"
+    },
+    "footer": {
+      "created": "Erstellt:",
+      "lastUpdated": "Letzte Aktualisierung:"
+    },
+    "headings": {
+      "editLayout": "Angebotslayout bearbeiten",
+      "newLayout": "Neues Angebotslayout"
+    },
+    "placeholders": {
+      "templateName": "Angebotsvorlage"
+    },
+    "preview": {
+      "renderFailed": "Das Rendern der Vorschau ist fehlgeschlagen.",
+      "rendering": "Formungs- und Rendering-Vorschau...",
+      "sampleScenario": "Beispielszenario",
+      "selectScenario": "Szenario auswählen...",
+      "selectScenarioPrompt": "Wählen Sie ein Beispielszenario aus, um eine verlässliche Vorschau zu erstellen.",
+      "templateGenerationFailed": "Die Vorschauvorlage konnte nicht aus dem aktuellen Arbeitsbereich generiert werden."
+    },
+    "pipeline": {
+      "render": "Machen",
+      "shape": "Form"
+    },
+    "tabs": {
+      "code": "Code",
+      "design": "Entwurf",
+      "preview": "Vorschau",
+      "transforms": "Verwandelt",
+      "visual": "Visuell"
+    }
+  },
+  "templatesPage": {
+    "title": "Angebotslayouts",
+    "description": "Entwerfen Sie die Layouts, die zum Rendern von Angebots-PDFs und Vorschauen verwendet werden.",
+    "actions": {
+      "openMenu": "Menü öffnen"
+    },
+    "cards": {
+      "availableLayouts": "Verfügbare Layouts"
+    },
+    "dialogs": {
+      "deleteConfirm": "Sind Sie sicher, dass Sie „{{name}}“ löschen möchten?"
+    },
+    "errors": {
+      "clone": "Vorlage konnte nicht geklont werden",
+      "delete": "Vorlage konnte nicht gelöscht werden",
+      "editCopy": "Es konnte keine bearbeitbare Kopie erstellt werden",
+      "load": "Angebotsdokumentvorlagen konnten nicht geladen werden",
+      "setDefault": "Standardvorlage konnte nicht festgelegt werden"
+    },
+    "labels": {
+      "custom": "Brauch"
+    }
+  }
+}

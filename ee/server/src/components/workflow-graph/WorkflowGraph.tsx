@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Droppable } from '@hello-pangea/dnd';
 import ReactFlow, {
   BaseEdge,
@@ -40,6 +41,7 @@ type WorkflowGraphProps<TStep> = {
 };
 
 const StartNode: React.FC<{ data: WorkflowGraphNodeData }> = ({ data }) => {
+  const { t } = useTranslation('msp/workflows');
   return (
     <div
       className="rounded-full bg-success/15 border-2 border-success flex items-center justify-center text-xs font-semibold text-success shadow-sm"
@@ -51,7 +53,7 @@ const StartNode: React.FC<{ data: WorkflowGraphNodeData }> = ({ data }) => {
         position={Position.Bottom}
         style={{ opacity: 0, pointerEvents: 'none' }}
       />
-      {data.label}
+      {t('graph.start.label', { defaultValue: data.label ?? 'Start' })}
     </div>
   );
 };
@@ -97,6 +99,7 @@ const statusStyles = (status?: string | null) => {
 };
 
 const StepNode: React.FC<NodeProps<WorkflowGraphNodeData>> = ({ data, selected }) => {
+  const { t } = useTranslation('msp/workflows');
   const stepType = data.stepType ?? 'unknown';
   const colors = getStepTypeColor(stepType);
   const icon = getStepTypeIcon(stepType);
@@ -138,15 +141,21 @@ const StepNode: React.FC<NodeProps<WorkflowGraphNodeData>> = ({ data, selected }
             hasUnmappedRequiredInputs ? (
               <div
                 className="text-[10px] px-1.5 py-0.5 rounded-full border whitespace-nowrap bg-destructive/10 text-destructive border-destructive/30"
-                title={`${unmappedRequiredInputCount} required fields unmapped`}
+                title={t('graph.mapping.unmappedTitle', {
+                  defaultValue: '{{count}} required fields unmapped',
+                  count: unmappedRequiredInputCount,
+                })}
               >
-                {unmappedRequiredInputCount} req unmapped
+                {t('graph.mapping.unmappedBadge', {
+                  defaultValue: '{{count}} req unmapped',
+                  count: unmappedRequiredInputCount,
+                })}
               </div>
             ) : (
               <div
                 className="inline-flex items-center text-emerald-700/80"
-                title="All required fields mapped"
-                aria-label="All required fields mapped"
+                title={t('graph.mapping.allMapped', { defaultValue: 'All required fields mapped' })}
+                aria-label={t('graph.mapping.allMapped', { defaultValue: 'All required fields mapped' })}
               >
                 <Link2 className="h-3.5 w-3.5" />
               </div>
@@ -164,8 +173,8 @@ const StepNode: React.FC<NodeProps<WorkflowGraphNodeData>> = ({ data, selected }
         <button
           type="button"
           className="absolute -right-2 -top-2 rounded-full border border-gray-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] shadow-sm p-1 text-gray-500 hover:text-destructive hover:border-destructive/30"
-          aria-label="Delete step"
-          title="Delete step"
+          aria-label={t('graph.actions.deleteStep', { defaultValue: 'Delete step' })}
+          title={t('graph.actions.deleteStep', { defaultValue: 'Delete step' })}
           onClick={(event) => {
             event.stopPropagation();
             data.onRequestDelete?.(data.stepId!);
@@ -179,6 +188,7 @@ const StepNode: React.FC<NodeProps<WorkflowGraphNodeData>> = ({ data, selected }
 };
 
 const InsertNode: React.FC<{ data: WorkflowGraphNodeData }> = ({ data }) => {
+  const { t } = useTranslation('msp/workflows');
   const pipePath = data.pipePath ?? 'root';
   const insertIndex = data.insertIndex ?? 0;
   const droppableId = `insert:${pipePath}:${insertIndex}`;
@@ -198,7 +208,7 @@ const InsertNode: React.FC<{ data: WorkflowGraphNodeData }> = ({ data }) => {
               : 'border-dashed border-[rgb(var(--color-border-200))]'
           ].join(' ')}
           style={{ width: 30, height: 30, boxSizing: 'border-box' }}
-          title="Drop a step here to insert"
+          title={t('graph.insert.title', { defaultValue: 'Drop a step here to insert' })}
         >
           <Handle
             id="in"
@@ -254,6 +264,7 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
     className
   } = props;
 
+  const { t } = useTranslation('msp/workflows');
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
   const [nodes, setNodes] = useState<Node<WorkflowGraphNodeData>[]>([]);
@@ -321,7 +332,7 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
       } catch (err) {
         if (!cancelled) {
           const message = err instanceof Error ? err.message : String(err);
-          setBuildError(message || 'Failed to build workflow graph.');
+          setBuildError(message || t('graph.errors.buildFailed', { defaultValue: 'Failed to build workflow graph.' }));
           setNodes([]);
           setEdges([]);
         }
@@ -333,7 +344,7 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
     return () => {
       cancelled = true;
     };
-  }, [editable, rootPipePath, steps]);
+  }, [editable, rootPipePath, steps, t]);
 
   useEffect(() => {
     if (loading) return;
@@ -369,7 +380,7 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
   if (loading) {
     return (
       <div className={`w-full h-full flex items-center justify-center text-sm text-gray-500 ${className ?? ''}`}>
-        Building graph…
+        {t('graph.states.buildingGraph', { defaultValue: 'Building graph…' })}
       </div>
     );
   }
@@ -378,10 +389,12 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
     return (
       <div className={`w-full h-full flex items-center justify-center ${className ?? ''}`}>
         <div className="max-w-xl rounded border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
-          <div className="font-semibold">Graph render error</div>
+          <div className="font-semibold">
+            {t('graph.errors.renderErrorTitle', { defaultValue: 'Graph render error' })}
+          </div>
           <div className="mt-1 font-mono text-[11px] break-words">{buildError}</div>
           <div className="mt-2 text-xs">
-            Switch to List view to continue editing.
+            {t('graph.errors.switchToList', { defaultValue: 'Switch to List view to continue editing.' })}
           </div>
         </div>
       </div>
@@ -396,7 +409,7 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
             <Play className="h-5 w-5 text-success ml-0.5" />
           </div>
           <p className="text-sm text-gray-500">
-            Select a step from the panel to get started.
+            {t('graph.empty.readonly', { defaultValue: 'Select a step from the panel to get started.' })}
           </p>
         </div>
       );
@@ -418,8 +431,8 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
             </div>
             <p className="text-sm text-gray-500">
               {snapshot.isDraggingOver
-                ? 'Drop to add as the first step'
-                : 'Drag a step from the panel, or select one to get started.'}
+                ? t('graph.empty.dropFirst', { defaultValue: 'Drop to add as the first step' })
+                : t('graph.empty.dragPrompt', { defaultValue: 'Drag a step from the panel, or select one to get started.' })}
             </p>
             <div className="hidden">{provided.placeholder}</div>
           </div>

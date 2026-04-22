@@ -1,13 +1,22 @@
 'use client';
 
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal invoice details intentionally reuses billing feature presentation helpers for the shared location-grouped layout. */
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
-import type { InvoiceViewModel, IInvoiceTemplate } from '@alga-psa/types';
+import type { InvoiceViewModel, IInvoiceTemplate, IInvoiceCharge } from '@alga-psa/types';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Download, X, Mail } from 'lucide-react';
 import { getClientInvoiceById, downloadClientInvoicePdf, sendClientInvoiceEmail } from '@alga-psa/client-portal/actions';
+import { getActiveClientLocationsForBilling, type BillingLocationSummary } from '@alga-psa/billing/actions/billingClientLocationActions';
+import {
+  LocationAddress,
+  buildLocationGroups,
+  shouldShowLocationGroups,
+  type LocationGroupEntry,
+} from '@alga-psa/billing/components/billing-dashboard/locations';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
@@ -32,6 +41,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
   const [error, setError] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [clientLocations, setClientLocations] = useState<BillingLocationSummary[]>([]);
   const { t } = useTranslation('features/billing');
   const { t: tCommon } = useTranslation('common');
 
@@ -150,6 +160,31 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
     fetchInvoiceDetails();
   }, [isOpen, invoiceId]);
 
+  // Hydrate client_locations lookup so we can render a grouped layout when
+  // the invoice's items span ≥2 distinct locations. Scoped to the invoice's
+  // client — tenant filtering is enforced inside the server action.
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      const clientId = invoice?.client_id;
+      if (!clientId) {
+        setClientLocations([]);
+        return;
+      }
+      try {
+        const locations = await getActiveClientLocationsForBilling(clientId);
+        if (!cancelled) setClientLocations(locations);
+      } catch (locationError) {
+        console.error('Failed to load client locations for invoice details:', locationError);
+        if (!cancelled) setClientLocations([]);
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [invoice?.client_id]);
+
   const handleDownloadPdf = async () => {
     if (!invoiceId) return;
 
@@ -205,7 +240,74 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
   // Memoize the invoice details content to prevent unnecessary re-renders
   const invoiceContent = useMemo(() => {
     if (!invoice) return null;
-    
+
+    const charges = invoice.invoice_charges ?? [];
+    const useLocationGrouping = shouldShowLocationGroups(charges);
+    const locationGroups: LocationGroupEntry<IInvoiceCharge>[] = useLocationGrouping
+      ? buildLocationGroups(charges, clientLocations)
+      : [];
+
+    // One consistent row renderer so both the flat layout and the per-location
+    // tables agree on column formatting / service-period badging.
+    const renderChargeRow = (item: IInvoiceCharge, idx: number, keyPrefix: string) => (
+      <tr key={`${keyPrefix}-${idx}`} data-automation-id={`invoice-line-item-${keyPrefix}-${idx}`}>
+        <td className="px-3 py-2">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span>{item.description}</span>
+              {item.service_item_kind === 'product' ? (
+                <Badge variant="secondary">Product</Badge>
+              ) : null}
+              {item.billing_timing ? (
+                <Badge variant="outline">
+                  {item.billing_timing === 'advance'
+                    ? t('invoice.advanceTiming', 'Advance')
+                    : t('invoice.arrearsTiming', 'Arrears')}
+                </Badge>
+              ) : null}
+              {item.service_item_kind === 'product' && item.service_sku ? (
+                <span className="text-xs text-muted-foreground">{item.service_sku}</span>
+              ) : null}
+            </div>
+            {item.recurring_detail_periods && item.recurring_detail_periods.length > 0
+              ? renderRecurringDetailPeriods(item.recurring_detail_periods)
+              : formatServicePeriodRange(item.service_period_start, item.service_period_end) ? (
+                  <div className="text-xs text-muted-foreground">
+                    {t('invoice.servicePeriod', 'Service Period')}: {formatServicePeriodRange(item.service_period_start, item.service_period_end)}
+                  </div>
+                ) : renderFinancialArtifactNote(item)}
+          </div>
+        </td>
+        <td className="px-3 py-2">{item.quantity}</td>
+        <td className="px-3 py-2">{formatCurrency(item.unit_price, invoice.currencyCode)}</td>
+        <td className="px-3 py-2">{formatCurrency(item.total_price, invoice.currencyCode)}</td>
+      </tr>
+    );
+
+    const renderChargesTable = (rows: IInvoiceCharge[], keyPrefix: string) => (
+      <table className="min-w-full divide-y divide-gray-200 mt-2">
+        <thead>
+          <tr>
+            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('invoice.description', 'Description')}</th>
+            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('invoice.quantity', 'Quantity')}</th>
+            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('invoice.unitPrice', 'Unit Price')}</th>
+            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('invoice.total', 'Total')}</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-200">
+          {rows.length > 0
+            ? rows.map((item, idx) => renderChargeRow(item, idx, keyPrefix))
+            : (
+                <tr>
+                  <td colSpan={4} className="px-3 py-2 text-center text-gray-500">
+                    {t('invoice.noLineItems', 'No line items available')}
+                  </td>
+                </tr>
+              )}
+        </tbody>
+      </table>
+    );
+
     return (
       <>
         <div className="space-y-4">
@@ -240,61 +342,59 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
 
           <div>
             <h4 className="font-semibold mt-4">{t('invoice.lineItems', 'Line Items')}</h4>
-            <table className="min-w-full divide-y divide-gray-200 mt-2">
-              <thead>
-                <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('invoice.description', 'Description')}</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('invoice.quantity', 'Quantity')}</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('invoice.unitPrice', 'Unit Price')}</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('invoice.total', 'Total')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {invoice.invoice_charges && invoice.invoice_charges.length > 0 ? (
-                  invoice.invoice_charges.map((item, idx) => (
-                    <tr key={idx} data-automation-id={`invoice-line-item-${idx}`}>
-                      <td className="px-3 py-2">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span>{item.description}</span>
-                            {item.service_item_kind === 'product' ? (
-                              <Badge variant="secondary">Product</Badge>
-                            ) : null}
-                            {item.billing_timing ? (
-                              <Badge variant="outline">
-                                {item.billing_timing === 'advance'
-                                  ? t('invoice.advanceTiming', 'Advance')
-                                  : t('invoice.arrearsTiming', 'Arrears')}
-                              </Badge>
-                            ) : null}
-                            {item.service_item_kind === 'product' && item.service_sku ? (
-                              <span className="text-xs text-muted-foreground">{item.service_sku}</span>
-                            ) : null}
+
+            {/*
+              Auto-flip: items spanning ≥2 distinct locations render the
+              per-location grouped layout with address header + subtotal;
+              otherwise render the original flat table.
+            */}
+            {useLocationGrouping ? (
+              <div className="space-y-4 mt-2" id="client-invoice-items-by-location">
+                {locationGroups.map((group) => {
+                  const subtotal = group.items.reduce(
+                    (sum, item) => sum + (Number(item.total_price) || 0),
+                    0,
+                  );
+                  return (
+                    <div
+                      key={group.key}
+                      id={`client-invoice-items-location-group-${group.key}`}
+                      className="overflow-hidden rounded-md border border-gray-200"
+                    >
+                      <div className="flex flex-col gap-2 border-b border-gray-200 bg-gray-50 px-4 py-3 md:flex-row md:items-start md:justify-between">
+                        <div>
+                          <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                            {t('invoices.locations.groupHeading', { defaultValue: 'Location' })}
                           </div>
-                          {item.recurring_detail_periods && item.recurring_detail_periods.length > 0
-                            ? renderRecurringDetailPeriods(item.recurring_detail_periods)
-                            // Historical or flattened rows keep a single compatibility summary range.
-                            : formatServicePeriodRange(item.service_period_start, item.service_period_end) ? (
-                                <div className="text-xs text-muted-foreground">
-                                  {t('invoice.servicePeriod', 'Service Period')}: {formatServicePeriodRange(item.service_period_start, item.service_period_end)}
-                                </div>
-                              ) : renderFinancialArtifactNote(item)}
+                          <div className="mt-1">
+                            <LocationAddress
+                              location={group.location}
+                              showName
+                              emptyText={t('invoices.locations.unassigned', {
+                                defaultValue: 'Items without a location',
+                              })}
+                            />
+                          </div>
                         </div>
-                      </td>
-                      <td className="px-3 py-2">{item.quantity}</td>
-                      <td className="px-3 py-2">{formatCurrency(item.unit_price, invoice.currencyCode)}</td>
-                      <td className="px-3 py-2">{formatCurrency(item.total_price, invoice.currencyCode)}</td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={4} className="px-3 py-2 text-center text-gray-500">
-                      {t('invoice.noLineItems', 'No line items available')}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                        <div className="text-sm">
+                          <div className="text-xs uppercase tracking-wide text-gray-500">
+                            {t('invoices.locations.subtotal', { defaultValue: 'Location subtotal' })}
+                          </div>
+                          <div className="mt-1 font-semibold">
+                            {formatCurrency(subtotal, invoice.currencyCode)}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="overflow-x-auto">
+                        {renderChargesTable(group.items, `group-${group.key}`)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              renderChargesTable(charges, 'flat')
+            )}
           </div>
 
           <div>
@@ -309,7 +409,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
         </div>
       </>
     );
-  }, [invoice, formatDate, formatCurrency]);
+  }, [invoice, clientLocations, formatDate, formatCurrency]);
 
   // Loading skeleton for when invoice is being fetched
   const loadingSkeleton = (

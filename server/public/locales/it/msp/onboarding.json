@@ -318,6 +318,11 @@
         "label": "Indirizzo email",
         "placeholder": "john@acmeit.com",
         "help": "Verrà usato per accedere al tuo account."
+      },
+      "language": {
+        "label": "Lingua",
+        "placeholder": "Seleziona una lingua",
+        "help": "Diventa l'impostazione predefinita dell'organizzazione per tutti: personale MSP e utenti del portale cliente. I singoli utenti e i clienti possono sovrascriverla in seguito."
       }
     },
     "password": {
@@ -406,7 +411,7 @@
         "placeholder": "Smith"
       },
       "email": {
-        "label": "Email",
+        "label": "E-mail",
         "placeholder": "jane@client.com"
       },
       "role": {
@@ -606,7 +611,7 @@
       "tip": "Le board non condividono gli stati. Cambia board qui per rivedere o modificare il set di stati di ciascuna board.",
       "fields": {
         "board": {
-          "label": "Board",
+          "label": "Bacheca",
           "placeholder": "Seleziona board"
         }
       },

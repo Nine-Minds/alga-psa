@@ -26,22 +26,26 @@ type MappingLoadConfig<TAlga> = {
   mapAlga: (entity: TAlga) => { id: string; name: string };
 };
 
-export function createXeroCsvMappingModules(): AccountingMappingModule[] {
+type TFn = (key: string, options?: Record<string, unknown>) => string;
+
+export function createXeroCsvMappingModules(t?: TFn): AccountingMappingModule[] {
+  const tab = (key: string, fallback: string) =>
+    t ? t(`integrations.accounting.modules.tabs.${key}`, { defaultValue: fallback }) : fallback;
   return [
-    createClientModule(),
-    createServiceModule(),
-    createTaxCodeModule()
+    createClientModule(tab('clients', 'Clients')),
+    createServiceModule(tab('itemsServices', 'Items / Services')),
+    createTaxCodeModule(tab('taxCodes', 'Tax Codes'))
   ];
 }
 
-function createClientModule(): AccountingMappingModule {
+function createClientModule(tabLabel: string): AccountingMappingModule {
   return {
     id: 'xero-csv-client-mappings',
     adapterType: ADAPTER_TYPE,
     algaEntityType: 'client',
     externalEntityType: 'Contact',
     labels: {
-      tab: 'Clients',
+      tab: tabLabel,
       description: 'Map Alga clients to Xero contact names. The contact name appears in the "ContactName" column of the CSV export.',
       addButton: 'Add Client Mapping',
       algaColumn: 'Alga Client',
@@ -101,7 +105,7 @@ function createClientModule(): AccountingMappingModule {
   };
 }
 
-function createServiceModule(): AccountingMappingModule {
+function createServiceModule(tabLabel: string): AccountingMappingModule {
   return {
     id: 'xero-csv-service-mappings',
     adapterType: ADAPTER_TYPE,
@@ -109,7 +113,7 @@ function createServiceModule(): AccountingMappingModule {
     externalEntityType: 'Item',
     overridesKey: 'itemMappingOverrides',
     labels: {
-      tab: 'Items / Services',
+      tab: tabLabel,
       description: 'Map Alga services to Xero inventory item codes. The item code appears in the "InventoryItemCode" column of the CSV export.',
       addButton: 'Add Item Mapping',
       algaColumn: 'Alga Service',
@@ -181,14 +185,14 @@ function createServiceModule(): AccountingMappingModule {
   };
 }
 
-function createTaxCodeModule(): AccountingMappingModule {
+function createTaxCodeModule(tabLabel: string): AccountingMappingModule {
   return {
     id: 'xero-csv-tax-code-mappings',
     adapterType: ADAPTER_TYPE,
     algaEntityType: 'tax_code',
     externalEntityType: 'TaxType',
     labels: {
-      tab: 'Tax Codes',
+      tab: tabLabel,
       description: 'Map Alga tax regions to Xero tax types. The tax type appears in the "TaxType" column of the CSV export. Find tax types in Xero under Settings → Tax Rates.',
       addButton: 'Add Tax Code Mapping',
       algaColumn: 'Alga Tax Region',

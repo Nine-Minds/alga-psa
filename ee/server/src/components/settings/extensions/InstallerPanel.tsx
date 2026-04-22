@@ -11,6 +11,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // EE server actions
 import { extFinalizeUpload, extAbortUpload, extUploadProxy } from '../../../lib/actions/extBundleActions';
@@ -39,6 +40,7 @@ type ApiError = {
 const DEFAULT_CONTENT_TYPE = 'application/octet-stream';
 
 export default function InstallerPanel() {
+  const { t } = useTranslation('msp/extensions');
   // Core UI state (minimal)
   const [file, setFile] = useState<File | null>(null);
   const [installing, setInstalling] = useState(false);
@@ -65,7 +67,7 @@ export default function InstallerPanel() {
         const text = await f.text();
         setManifestJson(text);
       } catch {
-        toast.error('Failed to read manifest file');
+        toast.error(t('messages.manifestReadFailed'));
       }
     }
     e.target.value = '';
@@ -97,7 +99,7 @@ export default function InstallerPanel() {
     const f = e.target.files?.[0] ?? null;
     if (f) {
       if (!f.name.endsWith('.tar.zst')) {
-        toast.error(`File must end with ".tar.zst": ${f.name}`);
+        toast.error(t('messages.invalidBundleExtension', { filename: f.name }));
         e.currentTarget.value = '';
         return;
       }

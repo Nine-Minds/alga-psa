@@ -325,7 +325,7 @@ async function createKernelAuthorizationContext(
     };
 }
 
-async function filterAuthorizedTicketIds(
+export async function filterAuthorizedTicketIds(
     trx: Knex.Transaction,
     tenant: string,
     user: IUserWithRoles,

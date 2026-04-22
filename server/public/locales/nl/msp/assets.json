@@ -17,7 +17,7 @@
       "saving": "Opslaan...",
       "search": "Zoekopdracht",
       "select": "Selecteer",
-      "update": "Update",
+      "update": "Bijwerken",
       "view": "Weergave"
     },
     "states": {
@@ -29,6 +29,14 @@
     },
     "no": "Nee",
     "yes": "Ja"
+  },
+  "enums": {
+    "rmmAgentStatus": {
+      "online": "Online",
+      "offline": "Offline",
+      "overdue": "Verlopen",
+      "unknown": "Onbekend"
+    }
   },
   "assetAlertsSection": {
     "title": "Sectie Activawaarschuwingen",
@@ -158,12 +166,6 @@
       "rmmManaged": {
         "managed": "RMM beheerd",
         "unmanaged": "Niet beheerd"
-      },
-      "agentStatuses": {
-        "online": "Online",
-        "offline": "Offline",
-        "overdue": "Verlopen",
-        "unknown": "Onbekend"
       }
     },
     "activeFilters": {
@@ -303,7 +305,7 @@
       "virtualized": "Gevirtualiseerd",
       "primaryIp": "Primair IP-adres",
       "hypervisor": "Hypervisor",
-      "os": "OS",
+      "os": "Besturingssysteem",
       "model": "Model",
       "imei": "IMEI",
       "phoneNumber": "Telefoonnummer",
@@ -655,7 +657,7 @@
         "available": "Er zijn geen activa beschikbaar voor deze klant"
       },
       "relationship": {
-        "placeholder": "Type..."
+        "placeholder": "Type…"
       },
       "actions": {
         "addAssets": "Item toevoegen{{suffix}}"
@@ -825,12 +827,6 @@
       "status": "{{status}}{{suffix}}",
       "lastSeen": "- Laatst gezien: {{value}}"
     },
-    "statuses": {
-      "online": "Online",
-      "offline": "Offline",
-      "overdue": "Verlopen",
-      "unknown": "Onbekend"
-    },
     "relative": {
       "justNow": "Zojuist",
       "minutesAgo": "{{count}}m geleden",
@@ -906,7 +902,7 @@
       "never": "Nooit"
     },
     "empty": {
-      "title": "RMM Vitals",
+      "title": "RMM-vitaliteit",
       "notConnected": "Niet verbonden met RMM"
     },
     "uptime": "{{days}} dagen, {{hours}} uur, {{minutes}} minuten"
@@ -1187,6 +1183,14 @@
     "totalItems": "Totaal aantal artikelen: {{count}}",
     "values": {
       "unknown": "Onbekend"
+    }
+  },
+  "alerts": {
+    "messages": {
+      "alertAcknowledged": "Melding bevestigd",
+      "acknowledgeFailed": "Kan melding niet bevestigen",
+      "ticketCreated": "Ticket succesvol aangemaakt",
+      "ticketCreateFailed": "Kan ticket niet aanmaken"
     }
   }
 }

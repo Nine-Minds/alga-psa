@@ -240,21 +240,40 @@ export async function getEntraSyncRunProgress(
   return runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
 
-    const [runRow, tenantRows] = await Promise.all([
-      knex('entra_sync_runs')
+    // The UI gets back the Temporal firstExecutionRunId from startWorkflow,
+    // which is a distinct identifier from the DB-side entra_sync_runs.run_id
+    // the activity generates. Try run_id first when the value looks like a
+    // UUID; otherwise (or if that misses) match against workflow_id so
+    // single-click sync polls reach a terminal state.
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    let runRow: any = null;
+    if (UUID_RE.test(runId)) {
+      runRow = await knex('entra_sync_runs')
         .where({
           tenant: tenantId,
           run_id: runId,
         })
-        .first(),
-      knex('entra_sync_run_tenants')
+        .first();
+    }
+    if (!runRow) {
+      runRow = await knex('entra_sync_runs')
         .where({
           tenant: tenantId,
-          run_id: runId,
+          workflow_id: runId,
         })
-        .orderBy('created_at', 'asc')
-        .select('*'),
-    ]);
+        .orderBy('created_at', 'desc')
+        .first();
+    }
+
+    const tenantRows = runRow?.run_id
+      ? await knex('entra_sync_run_tenants')
+          .where({
+            tenant: tenantId,
+            run_id: runRow.run_id,
+          })
+          .orderBy('created_at', 'asc')
+          .select('*')
+      : [];
 
     return {
       run: runRow

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { AccountingMappingContext, AccountingMappingModule } from './types';
 import { AccountingMappingModuleView } from './AccountingMappingModuleView';
 
@@ -27,6 +28,7 @@ export function AccountingMappingManager({
   defaultTabId,
   urlParamKey
 }: AccountingMappingManagerProps) {
+  const { t } = useTranslation('msp/integrations');
   const searchParams = useSearchParams();
   const paramKey = urlParamKey ?? 'tab';
   const tabParam = searchParams?.get(paramKey);
@@ -62,7 +64,7 @@ export function AccountingMappingManager({
   };
 
   if (!modules.length) {
-    return <div>No mapping modules configured.</div>;
+    return <div>{t('integrations.accounting.manager.noModules', { defaultValue: 'No mapping modules configured.' })}</div>;
   }
 
   const tabs: TabContent[] = modules.map((module) => ({

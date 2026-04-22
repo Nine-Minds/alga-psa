@@ -73,6 +73,16 @@
     "id": "T009",
     "description": "CIPP connection option is hidden when `entra-integration-cipp` is disabled.",
     "implemented": true,
+    "descoped": true,
+    "descopedNote": "Descoped 2026-04-17 — CIPP removed from Phase 1. Phase 1 enforces a stronger invariant: CIPP option is hidden unconditionally. See T009b.",
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T009b",
+    "description": "CIPP connection option is hidden regardless of the `entra-integration-cipp` flag value (Phase 1 Direct-only invariant).",
+    "implemented": false,
     "featureIds": [
       "F011"
     ]
@@ -310,6 +320,8 @@
     "id": "T036",
     "description": "CIPP connect action validates base URL format and rejects invalid values.",
     "implemented": true,
+    "descoped": true,
+    "descopedNote": "Descoped 2026-04-17 — CIPP removed from Phase 1. Unit test retained in repo but not required for Phase 1 sign-off.",
     "featureIds": [
       "F039"
     ]
@@ -318,6 +330,8 @@
     "id": "T037",
     "description": "CIPP connect action stores API token via tenant secret provider (not plaintext DB field).",
     "implemented": true,
+    "descoped": true,
+    "descopedNote": "Descoped 2026-04-17 — CIPP removed from Phase 1. Unit test retained in repo but not required for Phase 1 sign-off.",
     "featureIds": [
       "F039",
       "F040"
@@ -336,6 +350,8 @@
     "id": "T039",
     "description": "CIPP validation action succeeds with valid CIPP token and tenant endpoint response.",
     "implemented": true,
+    "descoped": true,
+    "descopedNote": "Descoped 2026-04-17 — CIPP removed from Phase 1. Validation route retained but not required for Phase 1 sign-off.",
     "featureIds": [
       "F042",
       "F049"
@@ -353,6 +369,8 @@
     "id": "T041",
     "description": "Switching direct->CIPP removes stale direct tokens and vice versa.",
     "implemented": true,
+    "descoped": true,
+    "descopedNote": "Descoped 2026-04-17 — CIPP removed from Phase 1. User-triggered switching is not exposed; defensive cleanup logic retained.",
     "featureIds": [
       "F045"
     ]
@@ -403,6 +421,8 @@
     "id": "T047",
     "description": "Provider factory returns CIPP adapter when connection type is cipp.",
     "implemented": true,
+    "descoped": true,
+    "descopedNote": "Descoped 2026-04-17 — CIPP removed from Phase 1. Factory path retained in code for future reinstatement.",
     "featureIds": [
       "F046",
       "F049",
@@ -429,6 +449,8 @@
     "id": "T050",
     "description": "CIPP adapter tenant responses normalize into canonical managed-tenant DTO fields.",
     "implemented": true,
+    "descoped": true,
+    "descopedNote": "Descoped 2026-04-17 — CIPP removed from Phase 1. Adapter test retained in repo but not required for Phase 1 sign-off.",
     "featureIds": [
       "F049"
     ]
@@ -437,6 +459,8 @@
     "id": "T051",
     "description": "CIPP adapter user responses normalize into canonical sync-user DTO fields.",
     "implemented": true,
+    "descoped": true,
+    "descopedNote": "Descoped 2026-04-17 — CIPP removed from Phase 1. Adapter test retained in repo but not required for Phase 1 sign-off.",
     "featureIds": [
       "F050"
     ]
@@ -1145,6 +1169,16 @@
     "id": "T135",
     "description": "EE docs include both direct and CIPP setup paths and decision guidance.",
     "implemented": true,
+    "descoped": true,
+    "descopedNote": "Descoped 2026-04-17 — CIPP removed from Phase 1. Docs should now cover Direct setup only; CIPP decision guidance is no longer required. Docs update is tracked as T135b.",
+    "featureIds": [
+      "F120"
+    ]
+  },
+  {
+    "id": "T135b",
+    "description": "EE docs cover Direct Microsoft partner auth setup as the sole Phase 1 connection path, and note that CIPP has been descoped from Phase 1.",
+    "implemented": false,
     "featureIds": [
       "F120"
     ]

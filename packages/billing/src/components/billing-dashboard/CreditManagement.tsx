@@ -7,11 +7,12 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { CustomTabs } from '@alga-psa/ui/components/CustomTabs';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCurrency } from '@alga-psa/core';
 import { formatDateOnly } from '@alga-psa/core';
 import { ColumnDefinition } from '@alga-psa/types';
 import { ICreditTracking } from '@alga-psa/types';
-import { listClientCredits, getCreditDetails } from '@alga-psa/billing/actions/creditActions';
+import { listClientCredits } from '@alga-psa/billing/actions/creditActions';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import {
   BarChart,
@@ -39,7 +40,8 @@ function formatCreditServicePeriod(
 }
 
 function renderCreditContext(
-  record: ICreditTracking & { transaction_description?: string; invoice_number?: string }
+  record: ICreditTracking & { transaction_description?: string; invoice_number?: string },
+  t: ReturnType<typeof useTranslation>['t'],
 ) {
   const periodLabel = formatCreditServicePeriod(
     record.invoice_service_period_start,
@@ -49,9 +51,11 @@ function renderCreditContext(
   if (record.invoice_context_status === 'missing_source_context') {
     return (
       <div className="text-sm">
-        <div className="font-medium">Lineage Missing</div>
+        <div className="font-medium">{t('context.lineageMissing', { defaultValue: 'Lineage Missing' })}</div>
         <div className="text-muted-foreground">
-          Source invoice metadata could not be recovered. Treat this as financial-date context until lineage is repaired.
+          {t('context.lineageMissingDescription', {
+            defaultValue: 'Source invoice metadata could not be recovered. Treat this as financial-date context until lineage is repaired.',
+          })}
         </div>
       </div>
     );
@@ -61,10 +65,19 @@ function renderCreditContext(
     return (
       <div className="text-sm">
         <div className="font-medium">
-          {record.lineage_origin === 'transferred_credit' ? 'Transferred Recurring Credit' : 'Recurring Source'}
+          {record.lineage_origin === 'transferred_credit'
+            ? t('context.transferredRecurringCredit', { defaultValue: 'Transferred Recurring Credit' })
+            : t('context.recurringSource', { defaultValue: 'Recurring Source' })}
         </div>
         <div className="text-muted-foreground">
-          {periodLabel ? `Service Period: ${periodLabel}` : 'Recurring source lineage preserved'}
+          {periodLabel
+            ? t('context.servicePeriod', {
+                period: periodLabel,
+                defaultValue: 'Service Period: {{period}}',
+              })
+            : t('context.recurringLineagePreserved', {
+                defaultValue: 'Recurring source lineage preserved',
+              })}
         </div>
       </div>
     );
@@ -72,66 +85,70 @@ function renderCreditContext(
 
   return (
     <div className="text-sm">
-      <div className="font-medium">Financial Only</div>
-      <div className="text-muted-foreground">No recurring service period</div>
+      <div className="font-medium">{t('context.financialOnly', { defaultValue: 'Financial Only' })}</div>
+      <div className="text-muted-foreground">
+        {t('context.noRecurringServicePeriod', { defaultValue: 'No recurring service period' })}
+      </div>
     </div>
   );
 }
 
 // Define columns for the credits table
-const columns: ColumnDefinition<ICreditTracking & { transaction_description?: string, invoice_number?: string }>[] = [
+const createColumns = (
+  t: ReturnType<typeof useTranslation>['t'],
+): ColumnDefinition<ICreditTracking & { transaction_description?: string, invoice_number?: string }>[] => [
   {
-    title: 'Credit ID',
+    title: t('columns.creditId', { defaultValue: 'Credit ID' }),
     dataIndex: 'credit_id',
     render: (value: string) => (
       <span className="font-mono text-xs">{value.substring(0, 8)}...</span>
     )
   },
   {
-    title: 'Created',
+    title: t('columns.created', { defaultValue: 'Created' }),
     dataIndex: 'created_at',
     render: (value: string) => (
       <span>{new Date(value).toLocaleDateString()}</span>
     )
   },
   {
-    title: 'Description',
+    title: t('columns.description', { defaultValue: 'Description' }),
     dataIndex: 'transaction_description',
-    render: (value: string | undefined) => value || 'N/A'
+    render: (value: string | undefined) => value || t('status.na', { defaultValue: 'N/A' })
   },
   {
-    title: 'Context',
+    title: t('columns.context', { defaultValue: 'Context' }),
     dataIndex: 'invoice_context_status',
-    render: (_value: string | undefined, record) => renderCreditContext(record)
+    render: (_value: string | undefined, record) => renderCreditContext(record, t)
   },
   {
-    title: 'Original Amount',
+    title: t('columns.originalAmount', { defaultValue: 'Original Amount' }),
     dataIndex: 'amount',
     render: (value: number) => formatCurrency(value)
   },
   {
-    title: 'Remaining',
+    title: t('columns.remaining', { defaultValue: 'Remaining' }),
     dataIndex: 'remaining_amount',
     render: (value: number) => formatCurrency(value)
   },
   {
-    title: 'Expires',
+    title: t('columns.expires', { defaultValue: 'Expires' }),
     dataIndex: 'expiration_date',
     render: (value: string | undefined) => {
-      if (!value) return <span className="text-muted-foreground">Never</span>;
+      if (!value) return <span className="text-muted-foreground">{t('status.never', { defaultValue: 'Never' })}</span>;
       return <span>{new Date(value).toLocaleDateString()}</span>;
     }
   },
   {
-    title: 'Status',
+    title: t('columns.status', { defaultValue: 'Status' }),
     dataIndex: 'is_expired',
     render: (isExpired: boolean, record) => {
       if (isExpired) {
-        return <span className="text-red-600 font-medium">Expired</span>;
+        return <span className="text-red-600 font-medium">{t('status.expired', { defaultValue: 'Expired' })}</span>;
       }
       
       if (!record.expiration_date) {
-        return <span className="text-blue-600 font-medium">Active</span>;
+        return <span className="text-blue-600 font-medium">{t('status.active', { defaultValue: 'Active' })}</span>;
       }
       
       const now = new Date();
@@ -139,14 +156,21 @@ const columns: ColumnDefinition<ICreditTracking & { transaction_description?: st
       const daysUntilExpiration = Math.ceil((expDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
       
       if (daysUntilExpiration <= 7) {
-        return <span className="text-orange-500 font-medium">Expiring Soon ({daysUntilExpiration} days)</span>;
+        return (
+          <span className="text-orange-500 font-medium">
+            {t('status.expiringSoon', {
+              days: daysUntilExpiration,
+              defaultValue: 'Expiring Soon ({{days}} days)',
+            })}
+          </span>
+        );
       }
       
-      return <span className="text-blue-600 font-medium">Active</span>;
+      return <span className="text-blue-600 font-medium">{t('status.active', { defaultValue: 'Active' })}</span>;
     }
   },
   {
-    title: 'Actions',
+    title: t('columns.actions', { defaultValue: 'Actions' }),
     dataIndex: 'credit_id',
     width: '10%',
     render: (value: string, record) => {
@@ -159,7 +183,7 @@ const columns: ColumnDefinition<ICreditTracking & { transaction_description?: st
             size="sm"
             id={`view-credit-${value}`}
           >
-            View
+            {t('actions.view', { defaultValue: 'View' })}
           </Button>
           {!isExpired && (
             <>
@@ -168,7 +192,7 @@ const columns: ColumnDefinition<ICreditTracking & { transaction_description?: st
                 size="sm"
                 id={`edit-credit-${value}`}
               >
-                Edit
+                {t('actions.edit', { defaultValue: 'Edit' })}
               </Button>
               <Button
                 variant="outline"
@@ -176,7 +200,7 @@ const columns: ColumnDefinition<ICreditTracking & { transaction_description?: st
                 id={`expire-credit-${value}`}
                 className="text-destructive hover:bg-destructive/10"
               >
-                Expire
+                {t('actions.expire', { defaultValue: 'Expire' })}
               </Button>
             </>
           )}
@@ -190,7 +214,10 @@ const columns: ColumnDefinition<ICreditTracking & { transaction_description?: st
 // In a production environment, this data would come from dedicated analytics endpoints
 
 // Function to generate expiration data based on active credits
-const generateExpirationChartData = (credits: ICreditTracking[]) => {
+const generateExpirationChartData = (
+  credits: ICreditTracking[],
+  t: ReturnType<typeof useTranslation>['t'],
+) => {
   // Group credits by expiration timeframe
   const within7Days = credits.filter(credit =>
     credit.expiration_date &&
@@ -216,37 +243,27 @@ const generateExpirationChartData = (credits: ICreditTracking[]) => {
   
   return [
     {
-      name: '< 7 days',
+      name: t('charts.lessThan7Days', { defaultValue: '< 7 days' }),
       value: within7Days.reduce((sum, credit) => sum + credit.remaining_amount, 0),
       count: within7Days.length
     },
     {
-      name: '< 30 days',
+      name: t('charts.lessThan30Days', { defaultValue: '< 30 days' }),
       value: within30Days.reduce((sum, credit) => sum + credit.remaining_amount, 0),
       count: within30Days.length
     },
     {
-      name: '< 90 days',
+      name: t('charts.lessThan90Days', { defaultValue: '< 90 days' }),
       value: within90Days.reduce((sum, credit) => sum + credit.remaining_amount, 0),
       count: within90Days.length
     },
     {
-      name: '> 90 days',
+      name: t('charts.greaterThan90Days', { defaultValue: '> 90 days' }),
       value: beyond90Days.reduce((sum, credit) => sum + credit.remaining_amount, 0),
       count: beyond90Days.length
     },
   ];
 };
-
-// Placeholder for credit usage history - in production, this would come from an analytics endpoint
-const placeholderCreditUsageData = [
-  { month: 'Jan', applied: 4000, expired: 1000, issued: 6000 },
-  { month: 'Feb', applied: 3000, expired: 500, issued: 4000 },
-  { month: 'Mar', applied: 5000, expired: 1500, issued: 3000 },
-  { month: 'Apr', applied: 2780, expired: 800, issued: 5000 },
-  { month: 'May', applied: 1890, expired: 300, issued: 3500 },
-  { month: 'Jun', applied: 2390, expired: 200, issued: 2800 },
-];
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
@@ -256,6 +273,8 @@ const DEFAULT_TAB = 'active-credits';
 const CreditManagement: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useTranslation('msp/credits');
+  const columns = createColumns(t);
   const tabParam = searchParams?.get('creditTab');
 
   // Determine initial active tab based on URL parameter
@@ -281,7 +300,14 @@ const CreditManagement: React.FC = () => {
 
   // State for chart data
   const [expiringCreditsData, setExpiringCreditsData] = useState<Array<{name: string, value: number, count: number}>>([]);
-  const [creditUsageData] = useState(placeholderCreditUsageData);
+  const creditUsageData = [
+    { month: t('charts.months.jan', { defaultValue: 'Jan' }), applied: 4000, expired: 1000, issued: 6000 },
+    { month: t('charts.months.feb', { defaultValue: 'Feb' }), applied: 3000, expired: 500, issued: 4000 },
+    { month: t('charts.months.mar', { defaultValue: 'Mar' }), applied: 5000, expired: 1500, issued: 3000 },
+    { month: t('charts.months.apr', { defaultValue: 'Apr' }), applied: 2780, expired: 800, issued: 5000 },
+    { month: t('charts.months.may', { defaultValue: 'May' }), applied: 1890, expired: 300, issued: 3500 },
+    { month: t('charts.months.jun', { defaultValue: 'Jun' }), applied: 2390, expired: 200, issued: 2800 },
+  ];
 
   // Pagination state for Active Credits
   const [activeCurrentPage, setActiveCurrentPage] = useState(1);
@@ -348,9 +374,6 @@ const CreditManagement: React.FC = () => {
             .reduce((sum, credit) => sum + (credit.amount - credit.remaining_amount), 0)
         });
         
-        // Generate chart data
-        setExpiringCreditsData(generateExpirationChartData(activeCreditsFiltered));
-        
         setLoading(false);
       } catch (error) {
         console.error('Error fetching credit data:', error);
@@ -360,6 +383,10 @@ const CreditManagement: React.FC = () => {
     
     fetchData();
   }, []);
+
+  useEffect(() => {
+    setExpiringCreditsData(generateExpirationChartData(activeCredits, t));
+  }, [activeCredits, t]);
 
   // Update active tab when URL parameter changes
   useEffect(() => {
@@ -432,21 +459,25 @@ const CreditManagement: React.FC = () => {
             id="add-credit-button"
             onClick={handleAddCredit}
           >
-            Add Credit
+            {t('actions.addCredit', { defaultValue: 'Add Credit' })}
           </Button>
         </div>
       </div>
       
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Credit Management</h2>
+        <h2 className="text-2xl font-bold">{t('management.title', { defaultValue: 'Credit Management' })}</h2>
       </div>
       
       {/* Credit Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Credit Expiration Summary</CardTitle>
-            <CardDescription>Overview of credits expiring soon</CardDescription>
+            <CardTitle>{t('charts.expirationSummary', { defaultValue: 'Credit Expiration Summary' })}</CardTitle>
+            <CardDescription>
+              {t('charts.expirationSummaryDescription', {
+                defaultValue: 'Overview of credits expiring soon',
+              })}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-64">
@@ -473,11 +504,15 @@ const CreditManagement: React.FC = () => {
             </div>
             <div className="mt-4 grid grid-cols-2 gap-4">
               <div className="bg-primary/10 p-3 rounded-md">
-                <p className="text-sm text-primary">Total Active Credits</p>
+                <p className="text-sm text-primary">
+                  {t('stats.totalActiveCredits', { defaultValue: 'Total Active Credits' })}
+                </p>
                 <p className="text-xl font-bold">{formatCurrency(creditStats.totalActive)}</p>
               </div>
               <div className="bg-warning/10 p-3 rounded-md">
-                <p className="text-sm text-warning">Expiring in 30 Days</p>
+                <p className="text-sm text-warning">
+                  {t('stats.expiringIn30Days', { defaultValue: 'Expiring in 30 Days' })}
+                </p>
                 <p className="text-xl font-bold">{formatCurrency(creditStats.expiringWithin30Days)}</p>
               </div>
             </div>
@@ -486,8 +521,12 @@ const CreditManagement: React.FC = () => {
         
         <Card>
           <CardHeader>
-            <CardTitle>Credit Usage Trends</CardTitle>
-            <CardDescription>Historical credit usage patterns</CardDescription>
+            <CardTitle>{t('charts.usageTrends', { defaultValue: 'Credit Usage Trends' })}</CardTitle>
+            <CardDescription>
+              {t('charts.usageTrendsDescription', {
+                defaultValue: 'Historical credit usage patterns',
+              })}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-64">
@@ -506,19 +545,35 @@ const CreditManagement: React.FC = () => {
                   <YAxis tickFormatter={(value) => `$${value}`} />
                   <Tooltip formatter={(value) => formatCurrency(value as number)} />
                   <Legend />
-                  <Bar dataKey="issued" fill="#8884d8" name="Credits Issued" />
-                  <Bar dataKey="applied" fill="#82ca9d" name="Credits Applied" />
-                  <Bar dataKey="expired" fill="#ff8042" name="Credits Expired" />
+                  <Bar
+                    dataKey="issued"
+                    fill="#8884d8"
+                    name={t('charts.creditsIssued', { defaultValue: 'Credits Issued' })}
+                  />
+                  <Bar
+                    dataKey="applied"
+                    fill="#82ca9d"
+                    name={t('charts.creditsApplied', { defaultValue: 'Credits Applied' })}
+                  />
+                  <Bar
+                    dataKey="expired"
+                    fill="#ff8042"
+                    name={t('charts.creditsExpired', { defaultValue: 'Credits Expired' })}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-4">
               <div className="bg-success/10 p-3 rounded-md">
-                <p className="text-sm text-success">Total Credits Applied</p>
+                <p className="text-sm text-success">
+                  {t('stats.totalCreditsApplied', { defaultValue: 'Total Credits Applied' })}
+                </p>
                 <p className="text-xl font-bold">{formatCurrency(creditStats.totalCreditsApplied)}</p>
               </div>
               <div className="bg-destructive/10 p-3 rounded-md">
-                <p className="text-sm text-destructive">Total Credits Expired</p>
+                <p className="text-sm text-destructive">
+                  {t('stats.totalCreditsExpired', { defaultValue: 'Total Credits Expired' })}
+                </p>
                 <p className="text-xl font-bold">{formatCurrency(creditStats.totalExpired)}</p>
               </div>
             </div>
@@ -529,9 +584,11 @@ const CreditManagement: React.FC = () => {
       {/* Credits Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Credits</CardTitle>
+          <CardTitle>{t('management.recentCredits', { defaultValue: 'Recent Credits' })}</CardTitle>
           <CardDescription>
-            View and manage your client credits. Credits stay financial artifacts, and recurring service periods appear only when the source invoice carried canonical coverage.
+            {t('management.recentCreditsDescription', {
+              defaultValue: 'View and manage your client credits. Credits stay financial artifacts, and recurring service periods appear only when the source invoice carried canonical coverage.',
+            })}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -539,7 +596,7 @@ const CreditManagement: React.FC = () => {
             tabs={[
               {
                 id: 'active-credits',
-                label: "Active Credits",
+                label: t('tabs.activeCredits', { defaultValue: 'Active Credits' }),
                 content: (
                   <DataTable
                     id="credit-management-table"
@@ -555,7 +612,7 @@ const CreditManagement: React.FC = () => {
               },
               {
                 id: 'expired-credits',
-                label: "Expired Credits",
+                label: t('tabs.expiredCredits', { defaultValue: 'Expired Credits' }),
                 content: (
                   <DataTable
                     id="credit-management-expired-table"
@@ -571,7 +628,7 @@ const CreditManagement: React.FC = () => {
               },
               {
                 id: 'all-credits',
-                label: "All Credits",
+                label: t('tabs.allCredits', { defaultValue: 'All Credits' }),
                 content: (
                   <DataTable
                     id="credit-management-all-table"
@@ -599,7 +656,7 @@ const CreditManagement: React.FC = () => {
               onClick={handleViewAllCredits}
               id="view-all-credits-button"
             >
-              View All Credits
+              {t('actions.viewAllCredits', { defaultValue: 'View All Credits' })}
             </Button>
           </div>
         </CardContent>
@@ -609,13 +666,15 @@ const CreditManagement: React.FC = () => {
       <Dialog
         isOpen={isAddCreditModalOpen}
         onClose={() => setIsAddCreditModalOpen(false)}
-        title="Add Credit"
+        title={t('actions.addCredit', { defaultValue: 'Add Credit' })}
       >
         <DialogContent>
           {/* Add credit form would go here */}
           <div className="py-4">
             <p className="text-muted-foreground">
-              Credit amount and details form would be implemented here.
+              {t('management.addCreditPlaceholder', {
+                defaultValue: 'Credit amount and details form would be implemented here.',
+              })}
             </p>
           </div>
         </DialogContent>
@@ -625,13 +684,13 @@ const CreditManagement: React.FC = () => {
             variant="outline"
             onClick={() => setIsAddCreditModalOpen(false)}
           >
-            Cancel
+            {t('actions.cancel', { defaultValue: 'Cancel' })}
           </Button>
           <Button
             id="submit-add-credit-button"
             onClick={handleSubmitAddCredit}
           >
-            Add Credit
+            {t('actions.addCredit', { defaultValue: 'Add Credit' })}
           </Button>
         </DialogFooter>
       </Dialog>

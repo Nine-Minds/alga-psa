@@ -59,6 +59,16 @@ export interface TemplateSectionNode extends TemplateNodeBase {
 export interface TemplateStackNode extends TemplateNodeBase {
   type: 'stack';
   direction?: 'row' | 'column';
+  /**
+   * Optional repeat-region binding. When present, the stack renders its
+   * `children` once per item in the resolved source collection. The current
+   * item is pushed onto the render scope under `itemBinding` (same semantics
+   * as `dynamic-table.repeat.itemBinding`) so nested `path` expressions and
+   * inner `dynamic-table` nodes can resolve against the per-iteration item.
+   * Without `repeat`, the stack renders its children exactly once using the
+   * outer scope — backward compatible.
+   */
+  repeat?: TemplateRepeatRegionBinding;
   children: TemplateNode[];
 }
 

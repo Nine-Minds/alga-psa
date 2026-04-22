@@ -135,7 +135,8 @@ export const createAuthorizationBundleAction = withAuth(
 );
 
 async function assertSecuritySettingsPermission(user: unknown, action: 'read' | 'write'): Promise<void> {
-  const allowed = await hasPermission(user as any, 'system_settings', action);
+  const permissionAction = action === 'write' ? 'update' : 'read';
+  const allowed = await hasPermission(user as any, 'system_settings', permissionAction);
   if (!allowed) {
     throw new Error('You do not have permission to manage authorization bundles.');
   }
@@ -275,7 +276,7 @@ export const getAuthorizationBundleDraftEditorAction = withAuth(
       throw new Error('Bundle not found in tenant scope.');
     }
 
-    const canWrite = await hasPermission(user as any, 'system_settings', 'write');
+    const canWrite = await hasPermission(user as any, 'system_settings', 'update');
 
     const draftRevisionId = canWrite
       ? (
@@ -826,7 +827,7 @@ export const runAuthorizationBundleSimulationAction = withAuth(
       principalUserType: principal.user_type,
     });
 
-    const canWrite = await hasPermission(user as any, 'system_settings', 'write');
+    const canWrite = await hasPermission(user as any, 'system_settings', 'update');
 
     const [roleRows, teamRows, managedRows, bundle] = await Promise.all([
       knex('user_roles').where({ tenant, user_id: principal.user_id }).select<{ role_id: string }[]>('role_id'),

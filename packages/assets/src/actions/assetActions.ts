@@ -1392,8 +1392,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 query.orderBy('assets.created_at', 'desc');
             };
 
-            const fetchPage = async (sourcePage: number, sourceLimit: number) => {
-                const offset = (sourcePage - 1) * sourceLimit;
+            const buildAssetListQuery = () => {
                 const query = trx('assets')
                     .where('assets.tenant', tenant)
                     .leftJoin('clients', function(this: Knex.JoinClause) {
@@ -1403,12 +1402,24 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                     });
 
                 applyFilters(query);
+                return query;
+            };
 
-                return query
+            const fetchPage = async (sourcePage: number, sourceLimit: number) => {
+                const offset = (sourcePage - 1) * sourceLimit;
+                const countRow = await buildAssetListQuery()
+                    .count<{ count: string }>('assets.asset_id as count')
+                    .first();
+                const rows = await buildAssetListQuery()
                     .select('assets.*', 'clients.client_name')
                     .modify(applySort)
                     .limit(sourceLimit)
                     .offset(offset);
+
+                return {
+                    data: rows,
+                    total: Number(countRow?.count || 0),
+                };
             };
 
             const page = validatedParams.page || 1;

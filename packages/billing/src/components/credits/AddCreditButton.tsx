@@ -3,8 +3,10 @@
 import { useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export default function AddCreditButton() {
+  const { t } = useTranslation('msp/credits');
   const [isAddCreditModalOpen, setIsAddCreditModalOpen] = useState(false);
 
   const handleAddCredit = () => {
@@ -19,18 +21,20 @@ export default function AddCreditButton() {
         variant="default"
         onClick={() => setIsAddCreditModalOpen(true)}
       >
-        Add Credit
+        {t('actions.addCredit', { defaultValue: 'Add Credit' })}
       </Button>
 
       <Dialog
         isOpen={isAddCreditModalOpen}
         onClose={() => setIsAddCreditModalOpen(false)}
-        title="Add Credit"
+        title={t('actions.addCredit', { defaultValue: 'Add Credit' })}
       >
         <DialogContent>
           <div className="py-4">
             <p className="text-muted-foreground">
-              Credit amount and details form would be implemented here.
+              {t('management.addCreditPlaceholder', {
+                defaultValue: 'Credit amount and details form would be implemented here.',
+              })}
             </p>
           </div>
         </DialogContent>
@@ -40,14 +44,13 @@ export default function AddCreditButton() {
             variant="outline"
             onClick={() => setIsAddCreditModalOpen(false)}
           >
-            Cancel
+            {t('actions.cancel', { defaultValue: 'Cancel' })}
           </Button>
           <Button id="submit-add-credit-button" onClick={handleAddCredit}>
-            Add Credit
+            {t('actions.addCredit', { defaultValue: 'Add Credit' })}
           </Button>
         </DialogFooter>
       </Dialog>
     </>
   );
 }
-

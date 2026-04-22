@@ -1096,5 +1096,24 @@
       "load": "Nie udało się załadować ustawień numeracji.",
       "save": "Nie udało się zaktualizować ustawień."
     }
+  },
+  "payment": {
+    "messages": {
+      "loadConfigFailed": "Nie udało się załadować konfiguracji płatności",
+      "keysRequired": "Wprowadź zarówno klucz tajny, jak i klucz publikowalny",
+      "invalidSecretKey": "Klucz tajny powinien zaczynać się od sk_",
+      "invalidPublishableKey": "Klucz publikowalny powinien zaczynać się od pk_",
+      "connectSuccess": "Stripe połączony, a webhooki zostały skonfigurowane automatycznie!",
+      "connectPartialSuccess": "Stripe połączony! Uwaga: automatyczna konfiguracja webhooków nie powiodła się — być może trzeba skonfigurować je ręcznie w panelu Stripe.",
+      "connectFailed": "Nie udało się połączyć ze Stripe",
+      "disconnected": "Stripe rozłączony",
+      "disconnectFailed": "Nie udało się rozłączyć Stripe",
+      "connectionSuccess": "Połączenie udane!",
+      "connectionTestFailed": "Test połączenia nie powiódł się",
+      "settingsSaved": "Ustawienia zapisane pomyślnie",
+      "saveSettingsFailed": "Nie udało się zapisać ustawień",
+      "webhookConfigured": "Webhook skonfigurowany pomyślnie!",
+      "webhookConfigureFailed": "Nie udało się skonfigurować webhooka"
+    }
   }
 }

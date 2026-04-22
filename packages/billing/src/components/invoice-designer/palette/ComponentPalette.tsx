@@ -8,6 +8,7 @@ import {
 import { COMPONENT_CATALOG, ComponentDefinition } from '../constants/componentCatalog';
 import { LAYOUT_PRESETS } from '../constants/presets';
 import { OutlineView } from './OutlineView';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import clsx from 'clsx';
 import { useInvoiceDesignerStore } from '../state/designerStore';
 import { resolveDesignerDocumentKind } from '../utils/documentKind';
@@ -179,8 +180,12 @@ interface TemplateVariableRowProps {
 }
 
 const TemplateVariableRow: React.FC<TemplateVariableRowProps> = ({ option, onInsert }) => {
+  const { t } = useTranslation('msp/invoicing');
   const token = `{{${option.path}}}`;
   const automationKey = option.path.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const keySlug = option.path.replace(/\./g, '_');
+  const translatedLabel = t(`designer.fields.${keySlug}.label`, { defaultValue: option.label });
+  const translatedDescription = t(`designer.fields.${keySlug}.description`, { defaultValue: option.description });
   return (
     <button
       type="button"
@@ -191,16 +196,16 @@ const TemplateVariableRow: React.FC<TemplateVariableRowProps> = ({ option, onIns
         'focus:outline-none focus:ring-2 focus:ring-blue-500/40'
       )}
       onClick={() => onInsert?.(option.path)}
-      title={option.description}
+      title={translatedDescription}
       data-automation-id={`designer-template-variable-${automationKey}`}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="truncate text-xs font-medium text-slate-800 dark:text-slate-200">{option.label}</span>
+        <span className="truncate text-xs font-medium text-slate-800 dark:text-slate-200">{translatedLabel}</span>
         <span className="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono text-slate-600 dark:bg-slate-700 dark:text-slate-300">
           {token}
         </span>
       </div>
-      <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">{option.description}</p>
+      <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">{translatedDescription}</p>
     </button>
   );
 };
@@ -210,6 +215,7 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
   onInsertPreset,
   onInsertTemplateVariable,
 }) => {
+  const { t } = useTranslation('msp/invoicing');
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
   const documentKind = useMemo(() => resolveDesignerDocumentKind(nodes), [nodes]);
   const [activeTab, setActiveTab] = useState<'blocks' | 'presets' | 'fields' | 'outline'>('blocks');
@@ -286,7 +292,7 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
             )}
             onClick={() => setActiveTab('blocks')}
           >
-            BLOCKS
+            {t('designer.palette.tabs.blocks', { defaultValue: 'BLOCKS' })}
           </button>
           <button
             className={clsx(
@@ -295,7 +301,7 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
             )}
             onClick={() => setActiveTab('presets')}
           >
-            PRESETS
+            {t('designer.palette.tabs.presets', { defaultValue: 'PRESETS' })}
           </button>
           <button
             className={clsx(
@@ -304,7 +310,7 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
             )}
             onClick={() => setActiveTab('fields')}
           >
-            FIELDS
+            {t('designer.palette.tabs.fields', { defaultValue: 'FIELDS' })}
           </button>
           <button
             className={clsx(
@@ -313,7 +319,7 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
             )}
             onClick={() => setActiveTab('outline')}
           >
-            OUTLINE
+            {t('designer.palette.tabs.outline', { defaultValue: 'OUTLINE' })}
           </button>
         </div>
         {activeTab !== 'outline' && (
@@ -324,10 +330,10 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
             className="mt-2 h-7 w-full rounded border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-[rgb(var(--color-background))] px-2 text-xs text-slate-700 dark:text-slate-300 outline-none focus:border-blue-400"
             placeholder={
               activeTab === 'blocks'
-                ? 'Search blocks...'
+                ? t('designer.palette.search.blocks', { defaultValue: 'Search blocks...' })
                 : activeTab === 'presets'
-                  ? 'Search presets...'
-                  : 'Search fields...'
+                  ? t('designer.palette.search.presets', { defaultValue: 'Search presets...' })
+                  : t('designer.palette.search.fields', { defaultValue: 'Search fields...' })
             }
             data-automation-id="designer-palette-search"
           />
@@ -337,53 +343,61 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
       <div className="flex-1 overflow-y-auto">
         {activeTab === 'blocks' ? (
           <div className="px-2 py-2 space-y-2">
-            <p className="px-1 text-[11px] text-slate-500 dark:text-slate-400">Drag or tap `+` to insert.</p>
+            <p className="px-1 text-[11px] text-slate-500 dark:text-slate-400">{t('designer.palette.dragHint', { defaultValue: 'Drag or tap `+` to insert.' })}</p>
             {Object.entries(filteredPaletteGroups).map(([category, components]) => (
               <section key={category}>
-                <h4 className="px-1 pb-1 text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{category}</h4>
-                {components.map((component) => (
-                  <CompactPaletteRow
-                    key={component.type}
-                    draggableId={`component-${component.type}`}
-                    draggableData={{ source: 'component', componentType: component.type }}
-                    label={component.label}
-                    description={component.description}
-                    icon={component.category.charAt(0)}
-                    dataComponentType={component.type}
-                    addAutomationId={`designer-palette-add-${component.type}`}
-                    addAriaLabel={`Add ${component.label}`}
-                    onAdd={onInsertComponent ? () => onInsertComponent(component.type) : undefined}
-                  />
-                ))}
+                <h4 className="px-1 pb-1 text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  {t(`designer.palette.categories.${category.toLowerCase()}`, { defaultValue: category })}
+                </h4>
+                {components.map((component) => {
+                  const translatedLabel = t(`designer.blocks.${component.type}.label`, { defaultValue: component.label });
+                  return (
+                    <CompactPaletteRow
+                      key={component.type}
+                      draggableId={`component-${component.type}`}
+                      draggableData={{ source: 'component', componentType: component.type }}
+                      label={translatedLabel}
+                      description={t(`designer.blocks.${component.type}.description`, { defaultValue: component.description })}
+                      icon={component.category.charAt(0)}
+                      dataComponentType={component.type}
+                      addAutomationId={`designer-palette-add-${component.type}`}
+                      addAriaLabel={t('designer.palette.addAriaLabel', { defaultValue: 'Add {{label}}', label: translatedLabel })}
+                      onAdd={onInsertComponent ? () => onInsertComponent(component.type) : undefined}
+                    />
+                  );
+                })}
               </section>
             ))}
             {Object.keys(filteredPaletteGroups).length === 0 && (
-              <p className="px-1 text-xs text-slate-500">No blocks match this search.</p>
+              <p className="px-1 text-xs text-slate-500">{t('designer.palette.noBlocksMatch', { defaultValue: 'No blocks match this search.' })}</p>
             )}
           </div>
         ) : activeTab === 'presets' ? (
           <div className="px-2 py-2">
             <div className="rounded-md border border-blue-200 dark:border-blue-800 bg-blue-50/70 dark:bg-blue-900/20 p-2 shadow-[inset_3px_0_0_0_rgb(59,130,246)]">
               <p className="mb-1 px-1 text-[10px] font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-400">
-                Macro Templates
+                {t('designer.palette.presets.sectionTitle', { defaultValue: 'Macro Templates' })}
               </p>
-              <p className="mb-2 px-1 text-[11px] text-blue-700/80 dark:text-blue-400/80">Preset bundles for common invoice sections.</p>
+              <p className="mb-2 px-1 text-[11px] text-blue-700/80 dark:text-blue-400/80">{t('designer.palette.presets.sectionDescription', { defaultValue: 'Preset bundles for common invoice sections.' })}</p>
               <div className="space-y-1">
-                {filteredPresets.map((preset) => (
-                  <CompactPaletteRow
-                    key={preset.id}
-                    draggableId={`preset-${preset.id}`}
-                    draggableData={{ source: 'preset', presetId: preset.id }}
-                    label={preset.label}
-                    description={preset.description}
-                    icon="P"
-                    addAutomationId={`designer-palette-add-preset-${preset.id}`}
-                    addAriaLabel={`Add ${preset.label}`}
-                    onAdd={onInsertPreset ? () => onInsertPreset(preset.id) : undefined}
-                  />
-                ))}
+                {filteredPresets.map((preset) => {
+                  const translatedLabel = t(`designer.presets.${preset.id}.label`, { defaultValue: preset.label });
+                  return (
+                    <CompactPaletteRow
+                      key={preset.id}
+                      draggableId={`preset-${preset.id}`}
+                      draggableData={{ source: 'preset', presetId: preset.id }}
+                      label={translatedLabel}
+                      description={t(`designer.presets.${preset.id}.description`, { defaultValue: preset.description })}
+                      icon="P"
+                      addAutomationId={`designer-palette-add-preset-${preset.id}`}
+                      addAriaLabel={t('designer.palette.addAriaLabel', { defaultValue: 'Add {{label}}', label: translatedLabel })}
+                      onAdd={onInsertPreset ? () => onInsertPreset(preset.id) : undefined}
+                    />
+                  );
+                })}
                 {filteredPresets.length === 0 && (
-                  <p className="px-1 text-xs text-blue-700/80">No presets match this search.</p>
+                  <p className="px-1 text-xs text-blue-700/80">{t('designer.palette.noPresetsMatch', { defaultValue: 'No presets match this search.' })}</p>
                 )}
               </div>
             </div>
@@ -391,12 +405,12 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
         ) : activeTab === 'fields' ? (
           <div className="px-2 py-2 space-y-2">
             <p className="px-1 text-[11px] text-slate-500 dark:text-slate-400">
-              Click a field to insert into the focused text input.
+              {t('designer.palette.fields.insertHint', { defaultValue: 'Click a field to insert into the focused text input.' })}
             </p>
             {Object.entries(filteredTemplateVariableGroups).map(([category, variables]) => (
               <section key={category}>
                 <h4 className="px-1 pb-1 text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  {category}
+                  {t(`designer.palette.fields.categories.${category.toLowerCase().replace(/\s+/g, '-')}`, { defaultValue: category })}
                 </h4>
                 <div className="space-y-1">
                   {variables.map((option) => (
@@ -410,7 +424,7 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
               </section>
             ))}
             {Object.keys(filteredTemplateVariableGroups).length === 0 && (
-              <p className="px-1 text-xs text-slate-500">No fields match this search.</p>
+              <p className="px-1 text-xs text-slate-500">{t('designer.palette.noFieldsMatch', { defaultValue: 'No fields match this search.' })}</p>
             )}
           </div>
         ) : (

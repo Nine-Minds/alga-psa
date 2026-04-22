@@ -155,10 +155,11 @@ describe('authorization bundle lifecycle integrity integration', () => {
       actorUserId: ctx.user.user_id,
     });
 
-    const tempIndexName = `authorization_bundle_rules_copy_guard_${randomUUID().replace(/-/g, '')}`;
+    const tempIndexName = `ab_rule_copy_guard_${randomUUID().replace(/-/g, '')}`;
     await ctx.db.raw(`
       CREATE UNIQUE INDEX ${tempIndexName}
       ON authorization_bundle_rules (tenant, revision_id, resource_type, action, template_key, position)
+      WHERE revision_id <> '${created.revisionId}'
     `);
 
     try {
@@ -297,6 +298,23 @@ describe('authorization bundle lifecycle integrity integration', () => {
         actorUserId: ctx.user.user_id,
       })
     ).rejects.toThrow('Cannot activate an assignment for an archived bundle.');
+
+    await expect(
+      ensureDraftBundleRevision(ctx.db, {
+        tenant: ctx.tenantId,
+        bundleId: created.bundleId,
+        actorUserId: ctx.user.user_id,
+      })
+    ).rejects.toThrow('Cannot create or retrieve drafts for an archived bundle.');
+
+    await expect(
+      publishBundleRevision(ctx.db, {
+        tenant: ctx.tenantId,
+        bundleId: created.bundleId,
+        revisionId: created.revisionId,
+        actorUserId: ctx.user.user_id,
+      })
+    ).rejects.toThrow('Cannot publish revisions for an archived bundle.');
 
     await expect(
       setBundleAssignmentStatus(ctx.db, {

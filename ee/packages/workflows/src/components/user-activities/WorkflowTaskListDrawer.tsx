@@ -15,12 +15,14 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Filter, SortAsc, SortDesc } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface WorkflowTaskListDrawerProps {
   onSelectTask: (task: WorkflowTaskActivity) => void;
 }
 
 export function WorkflowTaskListDrawer({ onSelectTask }: WorkflowTaskListDrawerProps) {
+  const { t } = useTranslation('msp/user-activities');
   const [tasks, setTasks] = useState<WorkflowTaskActivity[]>([]);
   const [filteredTasks, setFilteredTasks] = useState<WorkflowTaskActivity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,7 +58,7 @@ export function WorkflowTaskListDrawer({ onSelectTask }: WorkflowTaskListDrawerP
       setError(null);
     } catch (err) {
       console.error('Error loading workflow tasks:', err);
-      setError('Failed to load workflow tasks. Please try again later.');
+      setError(t('sections.workflowTasks.listDrawer.errors.loadFailed', { defaultValue: 'Failed to load workflow tasks. Please try again later.' }));
     } finally {
       setLoading(false);
     }
@@ -155,29 +157,29 @@ export function WorkflowTaskListDrawer({ onSelectTask }: WorkflowTaskListDrawerP
           <div className="flex-1 mr-4">
             <Input
               id="workflow-task-search"
-              placeholder="Search tasks..."
+              placeholder={t('sections.workflowTasks.listDrawer.searchPlaceholder', { defaultValue: 'Search tasks...' })}
               value={searchTerm}
               onChange={handleSearchChange}
             />
           </div>
           <div className="flex items-center space-x-2">
-            <Button 
-              id="workflow-task-filter-button" 
-              variant="outline" 
+            <Button
+              id="workflow-task-filter-button"
+              variant="outline"
               size="sm"
               onClick={handleToggleFilters}
             >
               <Filter className="h-4 w-4 mr-2" />
-              Filters
+              {t('sections.workflowTasks.listDrawer.filters', { defaultValue: 'Filters' })}
             </Button>
-            <Button 
-              id="workflow-task-refresh-button" 
-              variant="outline" 
+            <Button
+              id="workflow-task-refresh-button"
+              variant="outline"
               size="sm"
               onClick={handleRefresh}
               disabled={loading}
             >
-              Refresh
+              {t('sections.workflowTasks.listDrawer.refresh', { defaultValue: 'Refresh' })}
             </Button>
           </div>
         </div>
@@ -185,7 +187,7 @@ export function WorkflowTaskListDrawer({ onSelectTask }: WorkflowTaskListDrawerP
         {/* Sort controls */}
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
-            <Label htmlFor="sort-field">Sort by:</Label>
+            <Label htmlFor="sort-field">{t('sections.workflowTasks.listDrawer.sortBy', { defaultValue: 'Sort by:' })}</Label>
             <div className="relative">
               <select
                 id="sort-field"
@@ -193,10 +195,10 @@ export function WorkflowTaskListDrawer({ onSelectTask }: WorkflowTaskListDrawerP
                 value={sortField}
                 onChange={(e) => handleSortFieldChange(e.target.value)}
               >
-                <option value="priority">Priority</option>
-                <option value="dueDate">Due Date</option>
-                <option value="createdAt">Created Date</option>
-                <option value="title">Title</option>
+                <option value="priority">{t('sections.workflowTasks.listDrawer.sortOptions.priority', { defaultValue: 'Priority' })}</option>
+                <option value="dueDate">{t('sections.workflowTasks.listDrawer.sortOptions.dueDate', { defaultValue: 'Due Date' })}</option>
+                <option value="createdAt">{t('sections.workflowTasks.listDrawer.sortOptions.createdAt', { defaultValue: 'Created Date' })}</option>
+                <option value="title">{t('sections.workflowTasks.listDrawer.sortOptions.title', { defaultValue: 'Title' })}</option>
               </select>
             </div>
           </div>
@@ -211,7 +213,9 @@ export function WorkflowTaskListDrawer({ onSelectTask }: WorkflowTaskListDrawerP
             ) : (
               <SortDesc className="h-4 w-4 mr-2" />
             )}
-            {sortDirection === 'asc' ? 'Ascending' : 'Descending'}
+            {sortDirection === 'asc'
+              ? t('sections.workflowTasks.listDrawer.ascending', { defaultValue: 'Ascending' })
+              : t('sections.workflowTasks.listDrawer.descending', { defaultValue: 'Descending' })}
           </Button>
         </div>
 
@@ -229,7 +233,7 @@ export function WorkflowTaskListDrawer({ onSelectTask }: WorkflowTaskListDrawerP
       {/* Tasks table */}
       {loading ? (
         <div className="flex justify-center items-center h-40">
-          <p className="text-gray-500">Loading workflow tasks...</p>
+          <p className="text-gray-500">{t('sections.workflowTasks.listDrawer.states.loading', { defaultValue: 'Loading workflow tasks...' })}</p>
         </div>
       ) : error ? (
         <div className="flex justify-center items-center h-40">
@@ -237,7 +241,7 @@ export function WorkflowTaskListDrawer({ onSelectTask }: WorkflowTaskListDrawerP
         </div>
       ) : filteredTasks.length === 0 ? (
         <div className="flex justify-center items-center h-40">
-          <p className="text-gray-500">No workflow tasks found</p>
+          <p className="text-gray-500">{t('sections.workflowTasks.listDrawer.states.empty', { defaultValue: 'No workflow tasks found' })}</p>
         </div>
       ) : (
         <ActivitiesDataTable

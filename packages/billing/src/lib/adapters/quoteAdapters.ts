@@ -1,4 +1,4 @@
-import type { IQuote, QuoteViewModel, QuoteViewModelLineItem, QuoteViewModelParty, QuoteViewModelPhase } from '@alga-psa/types';
+import type { IQuote, QuoteViewModel, QuoteViewModelLineItem, QuoteViewModelLocation, QuoteViewModelLocationGroup, QuoteViewModelParty, QuoteViewModelPhase } from '@alga-psa/types';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
 import type { Knex } from 'knex';
 
@@ -41,33 +41,137 @@ const buildAddress = (record: Record<string, unknown> | null | undefined): strin
   return parts.length > 0 ? parts.join(', ') : null;
 };
 
-const mapQuoteItemToViewModel = (item: NonNullable<IQuote['quote_items']>[number]): QuoteViewModelLineItem => ({
-  quote_item_id: item.quote_item_id,
-  service_id: item.service_id ?? null,
-  service_item_kind: item.service_item_kind ?? null,
-  service_name: item.service_name ?? null,
-  service_sku: item.service_sku ?? null,
-  billing_method: item.billing_method ?? null,
-  description: item.description,
-  quantity: toFiniteNumber(item.quantity),
-  unit_price: toFiniteNumber(item.unit_price),
-  total_price: toFiniteNumber(item.total_price),
-  tax_amount: toFiniteNumber(item.tax_amount),
-  net_amount: toFiniteNumber(item.net_amount),
-  unit_of_measure: item.unit_of_measure ?? null,
-  phase: item.phase ?? null,
-  is_optional: Boolean(item.is_optional),
-  is_selected: item.is_selected !== false,
-  is_recurring: Boolean(item.is_recurring),
-  billing_frequency: item.billing_frequency ?? null,
-  is_discount: Boolean(item.is_discount),
-  discount_type: item.discount_type ?? null,
-  discount_percentage: item.discount_percentage ?? null,
-  applies_to_item_id: item.applies_to_item_id ?? null,
-  applies_to_service_id: item.applies_to_service_id ?? null,
-  tax_region: item.tax_region ?? null,
-  tax_rate: item.tax_rate ?? null,
-});
+const mapQuoteItemToViewModel = (
+  item: NonNullable<IQuote['quote_items']>[number],
+  locationsById: Map<string, QuoteViewModelLocation>,
+): QuoteViewModelLineItem => {
+  const locationId = item.location_id ?? null;
+  const resolvedLocation = locationId ? locationsById.get(locationId) ?? null : null;
+  return {
+    quote_item_id: item.quote_item_id,
+    service_id: item.service_id ?? null,
+    service_item_kind: item.service_item_kind ?? null,
+    service_name: item.service_name ?? null,
+    service_sku: item.service_sku ?? null,
+    billing_method: item.billing_method ?? null,
+    description: item.description,
+    quantity: toFiniteNumber(item.quantity),
+    unit_price: toFiniteNumber(item.unit_price),
+    total_price: toFiniteNumber(item.total_price),
+    tax_amount: toFiniteNumber(item.tax_amount),
+    net_amount: toFiniteNumber(item.net_amount),
+    unit_of_measure: item.unit_of_measure ?? null,
+    phase: item.phase ?? null,
+    is_optional: Boolean(item.is_optional),
+    is_selected: item.is_selected !== false,
+    is_recurring: Boolean(item.is_recurring),
+    billing_frequency: item.billing_frequency ?? null,
+    is_discount: Boolean(item.is_discount),
+    discount_type: item.discount_type ?? null,
+    discount_percentage: item.discount_percentage ?? null,
+    applies_to_item_id: item.applies_to_item_id ?? null,
+    applies_to_service_id: item.applies_to_service_id ?? null,
+    tax_region: item.tax_region ?? null,
+    tax_rate: item.tax_rate ?? null,
+    location_id: locationId,
+    location: resolvedLocation,
+  };
+};
+
+const buildLocationAddress = (location: QuoteViewModelLocation | null): string | null => {
+  if (!location) return null;
+  const lines: string[] = [];
+  for (const field of [location.address_line1, location.address_line2, location.address_line3]) {
+    const trimmed = asTrimmedString(field);
+    if (trimmed) lines.push(trimmed);
+  }
+  const cityLine = [location.city, location.state_province, location.postal_code]
+    .map(asTrimmedString)
+    .filter((v) => v.length > 0)
+    .join(', ');
+  if (cityLine) lines.push(cityLine);
+  const country = asTrimmedString(location.country_name) || asTrimmedString(location.country_code);
+  if (country) lines.push(country);
+  return lines.length > 0 ? lines.join('\n') : null;
+};
+
+const buildLocationGroups = (
+  items: QuoteViewModelLineItem[],
+): QuoteViewModelLocationGroup[] => {
+  const order: string[] = [];
+  const grouped = new Map<string, QuoteViewModelLocationGroup>();
+  const UNASSIGNED = '__unassigned__';
+
+  for (const item of items) {
+    const key = item.location_id ?? UNASSIGNED;
+    let entry = grouped.get(key);
+    if (!entry) {
+      entry = {
+        location_id: key === UNASSIGNED ? null : key,
+        location: item.location ?? null,
+        name: item.location?.location_name ?? null,
+        address: buildLocationAddress(item.location ?? null),
+        items: [],
+        subtotal: 0,
+        tax: 0,
+        total: 0,
+      };
+      grouped.set(key, entry);
+      order.push(key);
+    }
+    entry.items.push(item);
+  }
+
+  for (const entry of grouped.values()) {
+    const included = entry.items.filter((i) => !i.is_discount && i.is_selected !== false);
+    entry.subtotal = included.reduce((sum, i) => sum + toFiniteNumber(i.total_price), 0);
+    entry.tax = included.reduce((sum, i) => sum + toFiniteNumber(i.tax_amount), 0);
+    entry.total = entry.subtotal + entry.tax;
+  }
+
+  return order.map((key) => grouped.get(key)!);
+};
+
+async function fetchQuoteItemLocations(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  locationIds: string[],
+): Promise<QuoteViewModelLocation[]> {
+  if (locationIds.length === 0) return [];
+  const rows = await knexOrTrx('client_locations')
+    .select(
+      'location_id as id',
+      'location_name',
+      'address_line1',
+      'address_line2',
+      'address_line3',
+      'city',
+      'state_province',
+      'postal_code',
+      'country_code',
+      'country_name',
+      'region_code',
+    )
+    .where({ tenant })
+    .whereIn('location_id', locationIds);
+
+  return rows.map((row: Record<string, unknown>) => {
+    const base: QuoteViewModelLocation = {
+      id: String(row.id),
+      location_name: (row.location_name as string | null) ?? null,
+      address_line1: (row.address_line1 as string | null) ?? null,
+      address_line2: (row.address_line2 as string | null) ?? null,
+      address_line3: (row.address_line3 as string | null) ?? null,
+      city: (row.city as string | null) ?? null,
+      state_province: (row.state_province as string | null) ?? null,
+      postal_code: (row.postal_code as string | null) ?? null,
+      country_code: (row.country_code as string | null) ?? null,
+      country_name: (row.country_name as string | null) ?? null,
+      region_code: (row.region_code as string | null) ?? null,
+    };
+    return { ...base, full_address: buildLocationAddress(base) };
+  });
+}
 
 const buildPhaseViewModels = (items: QuoteViewModelLineItem[]): QuoteViewModelPhase[] => {
   const grouped = new Map<string, QuoteViewModelLineItem[]>();
@@ -233,14 +337,29 @@ export async function mapLoadedQuoteToViewModel(
   tenant: string,
   quote: IQuote
 ): Promise<QuoteViewModel> {
-  const [client, contact, tenantParty, acceptedByName] = await Promise.all([
+  const rawItems = quote.quote_items ?? [];
+  const locationIds = Array.from(
+    new Set(
+      rawItems
+        .map((item) => item.location_id)
+        .filter((id): id is string => typeof id === 'string' && id.trim().length > 0),
+    ),
+  );
+
+  const [client, contact, tenantParty, acceptedByName, locations] = await Promise.all([
     fetchClientParty(knexOrTrx, tenant, quote.client_id),
     fetchContactParty(knexOrTrx, tenant, quote.contact_id),
     fetchTenantParty(knexOrTrx, tenant),
     resolveAcceptedByName(knexOrTrx, tenant, quote.accepted_by),
+    fetchQuoteItemLocations(knexOrTrx, tenant, locationIds),
   ]);
 
-  const lineItems = (quote.quote_items ?? []).map(mapQuoteItemToViewModel);
+  const locationsById = new Map<string, QuoteViewModelLocation>();
+  for (const location of locations) {
+    locationsById.set(location.id, location);
+  }
+
+  const lineItems = rawItems.map((item) => mapQuoteItemToViewModel(item, locationsById));
   const recurringSummary = buildQuoteItemGroupSummary(lineItems, (item) => item.is_recurring === true);
   const onetimeSummary = buildQuoteItemGroupSummary(lineItems, (item) => item.is_recurring !== true);
   const serviceSummary = buildQuoteItemGroupSummary(lineItems, (item) => item.service_item_kind === 'service');
@@ -287,6 +406,8 @@ export async function mapLoadedQuoteToViewModel(
     product_tax: productSummary.tax,
     product_total: productSummary.total,
     phases: buildPhaseViewModels(lineItems),
+    groups_by_location: buildLocationGroups(lineItems),
+    has_multiple_locations: locationsById.size >= 2,
     accepted_by_name: acceptedByName,
     accepted_at: quote.accepted_at ?? null,
   };

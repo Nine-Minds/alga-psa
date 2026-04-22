@@ -30,6 +30,14 @@
     "no": "11111",
     "yes": "11111"
   },
+  "enums": {
+    "rmmAgentStatus": {
+      "online": "11111",
+      "offline": "11111",
+      "overdue": "11111",
+      "unknown": "11111"
+    }
+  },
   "assetAlertsSection": {
     "title": "11111",
     "description": "11111"
@@ -158,12 +166,6 @@
       "rmmManaged": {
         "managed": "11111",
         "unmanaged": "11111"
-      },
-      "agentStatuses": {
-        "online": "11111",
-        "offline": "11111",
-        "overdue": "11111",
-        "unknown": "11111"
       }
     },
     "activeFilters": {
@@ -825,12 +827,6 @@
       "status": "11111 {{status}} 11111 {{suffix}} 11111",
       "lastSeen": "11111 {{value}} 11111"
     },
-    "statuses": {
-      "online": "11111",
-      "offline": "11111",
-      "overdue": "11111",
-      "unknown": "11111"
-    },
     "relative": {
       "justNow": "11111",
       "minutesAgo": "11111 {{count}} 11111",
@@ -1187,6 +1183,14 @@
     "totalItems": "11111 {{count}} 11111",
     "values": {
       "unknown": "11111"
+    }
+  },
+  "alerts": {
+    "messages": {
+      "alertAcknowledged": "11111",
+      "acknowledgeFailed": "11111",
+      "ticketCreated": "11111",
+      "ticketCreateFailed": "11111"
     }
   }
 }

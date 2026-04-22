@@ -27,6 +27,8 @@ import {
   validateOnboardingDefaults
 } from '../actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { updateTenantDefaultLocaleAction } from '@alga-psa/tenancy/actions';
+import { isSupportedLocale, type SupportedLocale } from '@alga-psa/core/i18n/config';
 
 const STEPS = ONBOARDING_WIZARD_STEPS;
 const REQUIRED_STEPS = ONBOARDING_WIZARD_REQUIRED_STEP_INDEXES;
@@ -151,6 +153,17 @@ export function OnboardingWizard({
               defaultValue: 'Failed to save client info'
             }) }));
             return false;
+          }
+          if (wizardData.locale && isSupportedLocale(wizardData.locale)) {
+            const chosenLocale = wizardData.locale as SupportedLocale;
+            const enabledLocales: SupportedLocale[] = chosenLocale === 'en'
+              ? ['en']
+              : [chosenLocale, 'en'];
+            try {
+              await updateTenantDefaultLocaleAction(chosenLocale, enabledLocales);
+            } catch (localeError) {
+              console.error('Failed to persist organization default locale:', localeError);
+            }
           }
           break;
           

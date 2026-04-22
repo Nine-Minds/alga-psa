@@ -24,6 +24,7 @@ import {
 import { IPermission, IRole } from '@alga-psa/types';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type ViewMode = 'msp' | 'client';
 
@@ -53,6 +54,7 @@ interface RolePermissionRow {
 }
 
 export default function PermissionsMatrix() {
+  const { t } = useTranslation('msp/settings');
   const [permissions, setPermissions] = useState<IPermission[]>([]);
   const [roles, setRoles] = useState<IRole[]>([]);
   const [selectedRole, setSelectedRole] = useState<string>('all');
@@ -218,7 +220,7 @@ export default function PermissionsMatrix() {
     // Check if this is an admin role
     const selectedRoleObj = roles.find(r => r.role_id === selectedRole);
     if (selectedRoleObj && selectedRoleObj.role_name.toLowerCase() === 'admin') {
-      toast.error("Admin role permissions cannot be modified");
+      toast.error(t('permissions.messages.adminLocked'));
       return; // Don't make any changes for admin roles
     }
 
@@ -260,7 +262,7 @@ export default function PermissionsMatrix() {
     // Check if this is an admin role
     const roleObj = roles.find(r => r.role_id === roleId);
     if (roleObj && roleObj.role_name.toLowerCase() === 'admin') {
-      toast.error("Admin role permissions cannot be modified");
+      toast.error(t('permissions.messages.adminLocked'));
       return; // Don't make any changes for admin roles
     }
 
@@ -360,7 +362,7 @@ export default function PermissionsMatrix() {
         await fetchRolePermissions(selectedRole);
       }
       
-      toast.success("Permissions updated successfully");
+      toast.success(t('permissions.messages.permissionsUpdated'));
     } catch (err) {
       setError('Failed to save permissions');
       handleError(err, 'Failed to save permissions');

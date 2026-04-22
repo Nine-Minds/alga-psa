@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Card, Box } from '@radix-ui/themes';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { Plus, ChevronDown, ChevronUp, Trash2, Package, Edit, Check, X, Loader2 } from 'lucide-react';
+import { Plus, ChevronDown, ChevronUp, Trash2, Package, Edit, Check, X, Loader2, MapPin } from 'lucide-react';
 import { IContract } from '@alga-psa/types';
 import { updateContractLine } from '@alga-psa/billing/actions/contractLineAction';
 import {
@@ -23,6 +23,10 @@ import {
   updateConfiguration,
   upsertPlanServiceBucketConfigurationAction as upsertContractLineServiceBucketConfigurationAction
 } from '@alga-psa/billing/actions/contractLineServiceConfigurationActions';
+import {
+  getActiveClientLocationsForBilling,
+  type BillingLocationSummary,
+} from '@alga-psa/billing/actions/billingClientLocationActions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
@@ -38,6 +42,12 @@ import { useFormatBillingFrequency, useFormatContractLineType } from '@alga-psa/
 
 interface ContractLinesProps {
   contract: IContract;
+  /**
+   * Client that owns this contract. Required to populate the location picker
+   * for per-line location assignment. When null (e.g. system-managed defaults
+   * with no owner), location controls are hidden.
+   */
+  clientId?: string | null;
   onContractLinesChanged?: () => void;
   isReadOnly?: boolean;
 }
@@ -57,7 +67,31 @@ interface DetailedContractLineMapping {
   default_rate?: number | null;
   minimum_billable_time?: number | null;
   round_up_to_nearest?: number | null;
+  location_id?: string | null;
 }
+
+/**
+ * Sentinel value for a contract line that has no assigned location.
+ * Used as a stable group key so unassigned lines can be grouped together
+ * without colliding with a real location UUID.
+ */
+const UNASSIGNED_LOCATION_KEY = '__unassigned__';
+
+/**
+ * Format a one-line address summary for a location group header.
+ * Returns '' when no address components are present.
+ */
+const formatLocationAddress = (location?: BillingLocationSummary | null): string => {
+  if (!location) return '';
+  const parts: string[] = [];
+  if (location.address_line1) parts.push(location.address_line1);
+  const regionSegments = [
+    location.city,
+    [location.state_province, location.postal_code].filter(Boolean).join(' ').trim(),
+  ].filter((segment): segment is string => Boolean(segment && segment.length > 0));
+  if (regionSegments.length > 0) parts.push(regionSegments.join(', '));
+  return parts.join(' · ');
+};
 
 interface ServiceConfiguration {
   service: {
@@ -78,7 +112,7 @@ interface ServiceConfiguration {
   bucketConfig?: any; // Add bucketConfig property for merged bucket data
 }
 
-const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLinesChanged, isReadOnly = false }) => {
+const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null, onContractLinesChanged, isReadOnly = false }) => {
   const { t } = useTranslation('msp/contracts');
   const { formatCurrency } = useFormatters();
   const formatBillingFrequency = useFormatBillingFrequency();
@@ -118,11 +152,140 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
   const [editServiceConfigs, setEditServiceConfigs] = useState<Record<string, any>>({});
   const [editBucketConfigs, setEditBucketConfigs] = useState<Record<string, BucketOverlayInput | null>>({});
 
+  // Location grouping state
+  const [clientLocations, setClientLocations] = useState<BillingLocationSummary[]>([]);
+  /**
+   * Transient location keys that have been added via "Add location" but do not
+   * yet have any contract lines. Kept client-side only; once a contract line
+   * is created with a matching location_id the group becomes real.
+   */
+  const [pendingLocationIds, setPendingLocationIds] = useState<string[]>([]);
+
   useEffect(() => {
     if (contract.contract_id) {
       void fetchData();
     }
   }, [contract.contract_id]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadLocations = async () => {
+      if (!clientId) {
+        setClientLocations([]);
+        return;
+      }
+      try {
+        const locations = await getActiveClientLocationsForBilling(clientId);
+        if (isActive) {
+          setClientLocations(locations);
+        }
+      } catch (err) {
+        console.error('Error loading client locations for contract lines:', err);
+        if (isActive) {
+          setClientLocations([]);
+        }
+      }
+    };
+
+    void loadLocations();
+
+    return () => {
+      isActive = false;
+    };
+  }, [clientId]);
+
+  /**
+   * Lookup map of location_id -> location summary. Includes only active
+   * locations; lines referencing deactivated locations will fall back to
+   * the "Location" label in the group header.
+   */
+  const locationsById = useMemo<Record<string, BillingLocationSummary>>(() => {
+    const map: Record<string, BillingLocationSummary> = {};
+    for (const loc of clientLocations) {
+      if (loc.location_id) {
+        map[loc.location_id] = loc;
+      }
+    }
+    return map;
+  }, [clientLocations]);
+
+  const defaultLocationId = useMemo<string | null>(() => {
+    const def = clientLocations.find((loc) => loc.is_default);
+    return def?.location_id ?? null;
+  }, [clientLocations]);
+
+  /**
+   * Group contract lines by location_id. Groups preserve first-occurrence
+   * order based on the lowest display_order in each group (so the UI ordering
+   * reflects how lines were originally authored).
+   *
+   * Pending locations (added via "Add location" but without lines yet) appear
+   * after real groups so the user can see where newly-created lines will land.
+   */
+  type LineGroup = {
+    key: string;
+    locationId: string | null;
+    lines: DetailedContractLineMapping[];
+    isPending: boolean;
+  };
+
+  const groupedLines = useMemo<LineGroup[]>(() => {
+    const byKey = new Map<string, LineGroup>();
+    for (const line of contractLines) {
+      const locationId = line.location_id ?? null;
+      const key = locationId ?? UNASSIGNED_LOCATION_KEY;
+      if (!byKey.has(key)) {
+        byKey.set(key, { key, locationId, lines: [], isPending: false });
+      }
+      byKey.get(key)!.lines.push(line);
+    }
+    const realGroups = Array.from(byKey.values());
+    // Preserve first-occurrence ordering via the lowest display_order in each group.
+    realGroups.sort((a, b) => {
+      const orderA = Math.min(...a.lines.map((line) => line.display_order ?? Number.MAX_SAFE_INTEGER));
+      const orderB = Math.min(...b.lines.map((line) => line.display_order ?? Number.MAX_SAFE_INTEGER));
+      return orderA - orderB;
+    });
+
+    const pendingOnly = pendingLocationIds
+      .filter((locId) => !byKey.has(locId))
+      .map<LineGroup>((locId) => ({
+        key: locId,
+        locationId: locId,
+        lines: [],
+        isPending: true,
+      }));
+
+    return [...realGroups, ...pendingOnly];
+  }, [contractLines, pendingLocationIds]);
+
+  const distinctLocationCount = useMemo(() => {
+    const ids = new Set<string>();
+    for (const line of contractLines) {
+      ids.add(line.location_id ?? UNASSIGNED_LOCATION_KEY);
+    }
+    // Pending groups count too, so users see the grouped layout as soon as
+    // they click "Add location".
+    for (const locId of pendingLocationIds) {
+      ids.add(locId);
+    }
+    return ids.size;
+  }, [contractLines, pendingLocationIds]);
+
+  const shouldRenderGrouped = distinctLocationCount >= 2;
+
+  /** Build dropdown options from active client locations. */
+  const locationSelectOptions = useMemo(() => {
+    return clientLocations
+      .filter((loc): loc is BillingLocationSummary & { location_id: string } => Boolean(loc.location_id))
+      .map((loc) => ({
+        value: loc.location_id,
+        label: loc.location_name
+          ? `${loc.location_name}${loc.address_line1 ? ` — ${loc.address_line1}` : ''}`
+          : (loc.address_line1 ?? t('contractLines.location.unnamed', { defaultValue: 'Location' })),
+      }));
+  }, [clientLocations, t]);
 
   const fetchData = async () => {
     if (!contract.contract_id) return;
@@ -243,6 +406,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
         cadence_owner: line.cadence_owner ?? 'client',
         minimum_billable_time: line.minimum_billable_time,
         round_up_to_nearest: line.round_up_to_nearest,
+        location_id: line.location_id ?? defaultLocationId ?? null,
       });
       const serviceConfigsData: Record<string, any> = {};
       const bucketConfigsData: Record<string, BucketOverlayInput | null> = {};
@@ -292,7 +456,13 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
         cadence_owner: editLineData.cadence_owner,
         minimum_billable_time: editLineData.minimum_billable_time,
         round_up_to_nearest: editLineData.round_up_to_nearest,
+        location_id: editLineData.location_id ?? null,
       });
+      // If the saved line adopts a pending location, drop it from the pending set
+      // so the group is no longer rendered as a placeholder.
+      if (editLineData.location_id) {
+        setPendingLocationIds((prev) => prev.filter((id) => id !== editLineData.location_id));
+      }
 
       // Update all service configurations based on what was actually edited
       // Use editServiceConfigs keys to ensure we update the correct config_ids
@@ -424,6 +594,30 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {clientId && locationSelectOptions.length > 0 && (
+              <CustomSelect
+                id="add-location-group-select"
+                value=""
+                placeholder={t('contractLines.location.addLocation', { defaultValue: '+ Add location' })}
+                options={locationSelectOptions.filter((opt) => {
+                  // Only offer locations that aren't already represented as a group.
+                  const usedIds = new Set<string | null>(
+                    contractLines.map((line) => line.location_id ?? null),
+                  );
+                  for (const pending of pendingLocationIds) {
+                    usedIds.add(pending);
+                  }
+                  return !usedIds.has(opt.value);
+                })}
+                onValueChange={(value) => {
+                  if (value && !pendingLocationIds.includes(value)) {
+                    setPendingLocationIds((prev) => [...prev, value]);
+                  }
+                }}
+                disabled={isReadOnly}
+                className="w-[220px]"
+              />
+            )}
             <Button
               id="add-contract-line-from-preset-btn"
               variant="outline"
@@ -451,7 +645,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
           </Alert>
         )}
 
-        {contractLines.length === 0 ? (
+        {contractLines.length === 0 && pendingLocationIds.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             <p>{t('contractLines.empty.noneAdded', { defaultValue: 'No contract lines added yet.' })}</p>
             <p className="text-sm mt-1">
@@ -459,8 +653,88 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
             </p>
           </div>
         ) : (
-          <div className="space-y-2">
-            {contractLines.map((line) => {
+          <div className="space-y-4">
+            {groupedLines.map((group) => {
+              const location = group.locationId ? locationsById[group.locationId] : null;
+              const headerAddress = formatLocationAddress(location);
+              const headerName =
+                location?.location_name
+                  ?? (group.locationId
+                    ? t('contractLines.location.fallback', { defaultValue: 'Location' })
+                    : t('contractLines.location.unassigned', { defaultValue: 'No location assigned' }));
+              const canRemovePendingGroup =
+                group.isPending
+                && !isReadOnly
+                && group.locationId !== null
+                && group.locationId !== defaultLocationId;
+
+              return (
+                <div
+                  key={`group-${group.key}`}
+                  className={shouldRenderGrouped ? 'space-y-2' : 'contents'}
+                >
+                  {shouldRenderGrouped && (
+                    <div
+                      id={`contract-line-location-group-${group.key}`}
+                      className="flex items-start justify-between gap-3 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-primary-50))]/50 px-4 py-2"
+                    >
+                      <div className="flex items-start gap-2 min-w-0">
+                        <MapPin className="h-4 w-4 text-[rgb(var(--color-primary-600))] mt-0.5 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-[rgb(var(--color-text-900))] truncate">
+                            {headerName}
+                          </p>
+                          {headerAddress && (
+                            <p className="text-xs text-muted-foreground truncate">
+                              {headerAddress}
+                            </p>
+                          )}
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {group.lines.length === 1
+                              ? t('contractLines.location.lineCountSingle', {
+                                count: group.lines.length,
+                                defaultValue: '{{count}} line',
+                              })
+                              : t('contractLines.location.lineCountPlural', {
+                                count: group.lines.length,
+                                defaultValue: '{{count}} lines',
+                              })}
+                          </p>
+                        </div>
+                      </div>
+                      {canRemovePendingGroup && (
+                        <Button
+                          id={`remove-pending-location-group-${group.key}`}
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            setPendingLocationIds((prev) =>
+                              prev.filter((id) => id !== group.locationId),
+                            )
+                          }
+                          className="h-7 text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="h-4 w-4" />
+                          <span className="sr-only">
+                            {t('contractLines.location.removePendingGroup', {
+                              defaultValue: 'Remove empty location group',
+                            })}
+                          </span>
+                        </Button>
+                      )}
+                    </div>
+                  )}
+
+                  {group.isPending && group.lines.length === 0 ? (
+                    <div className="rounded-md border border-dashed border-[rgb(var(--color-border-200))] bg-muted/50 p-4 text-center text-sm text-muted-foreground">
+                      {t('contractLines.location.pendingEmptyHint', {
+                        defaultValue:
+                          'No contract lines yet for this location. Add a line, then assign it to this location via its Edit panel.',
+                      })}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {group.lines.map((line) => {
               const isExpanded = expandedLines[line.contract_line_id];
               const services = lineServices[line.contract_line_id] || [];
               const isLoadingServices = loadingServices[line.contract_line_id];
@@ -545,6 +819,17 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                             <span>•</span>
                             <span className="text-blue-600 font-medium">
                               {t('contractLines.customRate', { defaultValue: 'Custom' })}: {formatRate(line.custom_rate)}
+                            </span>
+                          </>
+                        )}
+                        {line.location_id && (
+                          <>
+                            <span>•</span>
+                            <span className="inline-flex items-center gap-1 text-[rgb(var(--color-primary-700))]">
+                              <MapPin className="h-3 w-3" />
+                              {locationsById[line.location_id]?.location_name
+                                ?? locationsById[line.location_id]?.address_line1
+                                ?? t('contractLines.location.fallback', { defaultValue: 'Location' })}
                             </span>
                           </>
                         )}
@@ -654,6 +939,48 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                 </div>
                               ) : null}
                             </div>
+
+                            {/* Location picker — only shown when the contract has an owning
+                                client and at least one active location. Location is a
+                                group-level assignment in the plan; per-row pickers are
+                                explicitly forbidden, but each contract line is itself the
+                                atomic billing unit that maps to exactly one location, so
+                                this picker acts as the group-level selector for this line's
+                                group. */}
+                            {clientId && locationSelectOptions.length > 0 && (
+                              <div className="grid gap-4 md:grid-cols-2">
+                                <div className="md:col-span-2">
+                                  <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                                    {t('contractLines.location.label', { defaultValue: 'Location' })}
+                                  </Label>
+                                  {editingLineId === line.contract_line_id ? (
+                                    <CustomSelect
+                                      id={`location-${line.contract_line_id}`}
+                                      value={editLineData.location_id ?? ''}
+                                      onValueChange={(value) =>
+                                        setEditLineData({
+                                          ...editLineData,
+                                          location_id: value ? value : null,
+                                        })
+                                      }
+                                      options={locationSelectOptions}
+                                      placeholder={t('contractLines.location.placeholder', {
+                                        defaultValue: 'Select a location',
+                                      })}
+                                      className="mt-1"
+                                    />
+                                  ) : (
+                                    <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
+                                      {line.location_id && locationsById[line.location_id]
+                                        ? (locationsById[line.location_id].location_name
+                                            ?? locationsById[line.location_id].address_line1
+                                            ?? t('contractLines.location.fallback', { defaultValue: 'Location' }))
+                                        : t('contractLines.location.none', { defaultValue: 'No location assigned' })}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
 
                             {/* Billing timing and cadence owner - applies to all recurring line types */}
                             <div className="grid gap-4 md:grid-cols-2">
@@ -1087,6 +1414,11 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                           </div>
                         </div>
                       )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
                     </div>
                   )}
                 </div>

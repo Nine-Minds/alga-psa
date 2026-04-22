@@ -11,6 +11,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IQuote, QuoteConversionPreview } from '@alga-psa/types';
 import {
   getQuoteConversionPreview,
@@ -31,13 +32,6 @@ interface QuoteConversionDialogProps {
   }) => void;
 }
 
-function formatCurrency(minorUnits: number, currencyCode: string): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currencyCode,
-  }).format((minorUnits || 0) / 100);
-}
-
 function determineSuggestedMode(preview: QuoteConversionPreview): ConversionMode | null {
   const hasContract = preview.contract_items.length > 0;
   const hasInvoice = preview.invoice_items.length > 0;
@@ -53,6 +47,8 @@ const QuoteConversionDialog: React.FC<QuoteConversionDialogProps> = ({
   onClose,
   onConversionComplete,
 }) => {
+  const { t } = useTranslation('msp/quotes');
+  const { formatCurrency } = useFormatters();
   const [preview, setPreview] = useState<QuoteConversionPreview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isConverting, setIsConverting] = useState(false);
@@ -84,7 +80,9 @@ const QuoteConversionDialog: React.FC<QuoteConversionDialogProps> = ({
       setSelectedMode(determineSuggestedMode(previewResult));
     } catch (loadError) {
       console.error('Error loading conversion preview:', loadError);
-      setError(loadError instanceof Error ? loadError.message : 'Failed to load conversion preview');
+      setError(loadError instanceof Error ? loadError.message : t('quoteConversion.errors.load', {
+        defaultValue: 'Failed to load conversion preview',
+      }));
     } finally {
       setIsLoading(false);
     }
@@ -121,7 +119,9 @@ const QuoteConversionDialog: React.FC<QuoteConversionDialogProps> = ({
       onClose();
     } catch (convertError) {
       console.error('Error converting quote:', convertError);
-      setError(convertError instanceof Error ? convertError.message : 'Failed to convert quote');
+      setError(convertError instanceof Error ? convertError.message : t('quoteConversion.errors.convert', {
+        defaultValue: 'Failed to convert quote',
+      }));
     } finally {
       setIsConverting(false);
     }
@@ -133,25 +133,46 @@ const QuoteConversionDialog: React.FC<QuoteConversionDialogProps> = ({
 
   const getModeLabel = (mode: ConversionMode): string => {
     switch (mode) {
-      case 'contract': return 'Contract Only';
-      case 'invoice': return 'Invoice Only';
-      case 'both': return 'Contract + Invoice';
+      case 'contract':
+        return t('quoteConversion.mode.contract.label', { defaultValue: 'Contract Only' });
+      case 'invoice':
+        return t('quoteConversion.mode.invoice.label', { defaultValue: 'Invoice Only' });
+      case 'both':
+        return t('quoteConversion.mode.both.label', { defaultValue: 'Contract + Invoice' });
     }
   };
 
   const getModeDescription = (mode: ConversionMode): string => {
     switch (mode) {
-      case 'contract': return 'Creates a draft contract with recurring service lines. One-time items will not be included.';
-      case 'invoice': return 'Creates a draft invoice with one-time charges. Recurring items will not be included.';
-      case 'both': return 'Creates both a draft contract (for recurring items) and a draft invoice (for one-time items).';
+      case 'contract':
+        return t('quoteConversion.mode.contract.description', {
+          defaultValue: 'Creates a draft contract with recurring service lines. One-time items will not be included.',
+        });
+      case 'invoice':
+        return t('quoteConversion.mode.invoice.description', {
+          defaultValue: 'Creates a draft invoice with one-time charges. Recurring items will not be included.',
+        });
+      case 'both':
+        return t('quoteConversion.mode.both.description', {
+          defaultValue: 'Creates both a draft contract (for recurring items) and a draft invoice (for one-time items).',
+        });
     }
   };
 
   return (
-    <Dialog isOpen={open} onClose={onClose} id="quote-conversion-dialog" title="Convert Quote" className="max-w-2xl">
+    <Dialog
+      isOpen={open}
+      onClose={onClose}
+      id="quote-conversion-dialog"
+      title={t('quoteConversion.title', { defaultValue: 'Convert Quote' })}
+      className="max-w-2xl"
+    >
       <DialogContent className="max-h-[75vh] overflow-y-auto">
         <DialogDescription>
-          Convert the accepted quote &ldquo;{quote.title}&rdquo; into contracts and/or invoices.
+          {t('quoteConversion.description', {
+            defaultValue: 'Convert the accepted quote "{{title}}" into contracts and/or invoices.',
+            title: quote.title,
+          })}
         </DialogDescription>
 
         {isLoading ? (
@@ -160,31 +181,41 @@ const QuoteConversionDialog: React.FC<QuoteConversionDialogProps> = ({
               className="text-muted-foreground"
               layout="stacked"
               spinnerProps={{ size: 'md' }}
-              text="Loading conversion preview..."
+              text={t('quoteConversion.loading', { defaultValue: 'Loading conversion preview...' })}
               textClassName="text-muted-foreground"
             />
           </div>
         ) : error ? (
           <Alert variant="destructive">
-            <AlertTitle>Error</AlertTitle>
+            <AlertTitle>{t('quoteConversion.errors.title', { defaultValue: 'Error' })}</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         ) : preview ? (
           <div className="space-y-4">
             {quote.converted_contract_id || quote.converted_invoice_id ? (
               <Alert>
-                <AlertTitle>Partial Conversion</AlertTitle>
+                <AlertTitle>{t('quoteConversion.partial.title', { defaultValue: 'Partial Conversion' })}</AlertTitle>
                 <AlertDescription>
-                  This quote has already been partially converted.
-                  {quote.converted_contract_id && ' A contract was created.'}
-                  {quote.converted_invoice_id && ' An invoice was created.'}
-                  {' '}You can convert the remaining items.
+                  {t('quoteConversion.partial.alreadyConverted', {
+                    defaultValue: 'This quote has already been partially converted.',
+                  })}
+                  {quote.converted_contract_id ? ` ${t('quoteConversion.partial.contractCreated', {
+                    defaultValue: 'A contract was created.',
+                  })}` : ''}
+                  {quote.converted_invoice_id ? ` ${t('quoteConversion.partial.invoiceCreated', {
+                    defaultValue: 'An invoice was created.',
+                  })}` : ''}
+                  {` ${t('quoteConversion.partial.remainingItems', {
+                    defaultValue: 'You can convert the remaining items.',
+                  })}`}
                 </AlertDescription>
               </Alert>
             ) : null}
 
             <section className="space-y-3">
-              <h4 className="font-medium text-foreground">Conversion Mode</h4>
+              <h4 className="font-medium text-foreground">
+                {t('quoteConversion.sections.conversionMode', { defaultValue: 'Conversion Mode' })}
+              </h4>
               <RadioGroup
                 id="quote-conversion-mode"
                 name="conversionMode"
@@ -200,19 +231,23 @@ const QuoteConversionDialog: React.FC<QuoteConversionDialogProps> = ({
             </section>
 
             <section className="space-y-3">
-              <h4 className="font-medium text-foreground">Item Mapping Preview</h4>
+              <h4 className="font-medium text-foreground">
+                {t('quoteConversion.sections.itemMappingPreview', { defaultValue: 'Item Mapping Preview' })}
+              </h4>
 
               {preview.contract_items.length > 0 ? (
                 <div className="space-y-2">
                   <div className="text-sm font-medium text-emerald-700">
-                    Contract Items ({preview.contract_items.length})
+                    {t('quoteConversion.sections.contractItems', { defaultValue: 'Contract Items' })} ({preview.contract_items.length})
                   </div>
                   <ul className="text-sm text-muted-foreground space-y-1 pl-4">
                     {preview.contract_items.map((item) => (
                       <li key={item.quote_item_id} className="flex items-center gap-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                         <span>{item.description}</span>
-                        <span className="text-xs text-muted-foreground/70">({item.billing_method || 'fixed'})</span>
+                        <span className="text-xs text-muted-foreground/70">
+                          ({item.billing_method || t('quoteConversion.summary.fixed', { defaultValue: 'fixed' })})
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -222,7 +257,7 @@ const QuoteConversionDialog: React.FC<QuoteConversionDialogProps> = ({
               {preview.invoice_items.length > 0 ? (
                 <div className="space-y-2">
                   <div className="text-sm font-medium text-blue-700">
-                    Invoice Items ({preview.invoice_items.length})
+                    {t('quoteConversion.sections.invoiceItems', { defaultValue: 'Invoice Items' })} ({preview.invoice_items.length})
                   </div>
                   <ul className="text-sm text-muted-foreground space-y-1 pl-4">
                     {preview.invoice_items.map((item) => (
@@ -230,7 +265,9 @@ const QuoteConversionDialog: React.FC<QuoteConversionDialogProps> = ({
                         <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
                         <span>{item.description}</span>
                         {item.is_discount ? (
-                          <span className="text-xs text-muted-foreground/70">(discount)</span>
+                          <span className="text-xs text-muted-foreground/70">
+                            ({t('quoteConversion.summary.discount', { defaultValue: 'Discount' })})
+                          </span>
                         ) : null}
                       </li>
                     ))}
@@ -241,7 +278,7 @@ const QuoteConversionDialog: React.FC<QuoteConversionDialogProps> = ({
               {preview.excluded_items.length > 0 ? (
                 <div className="space-y-2">
                   <div className="text-sm font-medium text-amber-700">
-                    Excluded Items ({preview.excluded_items.length})
+                    {t('quoteConversion.sections.excludedItems', { defaultValue: 'Excluded Items' })} ({preview.excluded_items.length})
                   </div>
                   <ul className="text-sm text-muted-foreground space-y-1 pl-4">
                     {preview.excluded_items.map((item) => (
@@ -261,12 +298,20 @@ const QuoteConversionDialog: React.FC<QuoteConversionDialogProps> = ({
             <section className="rounded-lg bg-muted/50 p-3">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <div className="text-muted-foreground">Quote Total</div>
-                  <div className="font-medium">{formatCurrency(quote.total_amount, quote.currency_code || 'USD')}</div>
+                  <div className="text-muted-foreground">
+                    {t('quoteConversion.sections.quoteTotal', { defaultValue: 'Quote Total' })}
+                  </div>
+                  <div className="font-medium">
+                    {formatCurrency((quote.total_amount || 0) / 100, quote.currency_code || 'USD')}
+                  </div>
                 </div>
                 <div>
-                  <div className="text-muted-foreground">Status After Conversion</div>
-                  <div className="font-medium">Converted</div>
+                  <div className="text-muted-foreground">
+                    {t('quoteConversion.sections.statusAfterConversion', { defaultValue: 'Status After Conversion' })}
+                  </div>
+                  <div className="font-medium">
+                    {t('quoteConversion.summary.converted', { defaultValue: 'Converted' })}
+                  </div>
                 </div>
               </div>
             </section>
@@ -275,14 +320,16 @@ const QuoteConversionDialog: React.FC<QuoteConversionDialogProps> = ({
 
         <DialogFooter>
           <Button id="quote-conversion-cancel" variant="outline" onClick={onClose} disabled={isConverting}>
-            Cancel
+            {t('common.actions.cancel', { defaultValue: 'Cancel' })}
           </Button>
           <Button
             id="quote-conversion-confirm"
             onClick={() => void handleConvert()}
             disabled={isLoading || isConverting || !selectedMode || !!error}
           >
-            {isConverting ? 'Converting...' : 'Convert Quote'}
+            {isConverting
+              ? t('quoteConversion.actions.converting', { defaultValue: 'Converting...' })
+              : t('quoteConversion.actions.convertQuote', { defaultValue: 'Convert Quote' })}
           </Button>
         </DialogFooter>
       </DialogContent>

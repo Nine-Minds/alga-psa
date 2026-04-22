@@ -1,4 +1,5 @@
 export * from './Alert';
+export * from './LanguageHierarchyTable';
 export type { SelectOption as AsyncSearchableSelectOption } from './AsyncSearchableSelect';
 export { default as AsyncSearchableSelect } from './AsyncSearchableSelect';
 export * from './AvatarIcon';

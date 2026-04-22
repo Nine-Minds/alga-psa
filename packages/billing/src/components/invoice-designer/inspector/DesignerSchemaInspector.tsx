@@ -3,6 +3,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { Input } from '@alga-psa/ui/components/Input';
 import ColorPicker from '@alga-psa/ui/components/ColorPicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import {
   buildInvoiceExpressionPathOptions,
   type SharedExpressionPathOption,
@@ -16,6 +17,7 @@ import type {
   DesignerInspectorVisibleWhen,
 } from '../schema/inspectorSchema';
 import { TableEditorWidget } from './widgets/TableEditorWidget';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getTemplateFieldDefinition,
   humanizeBindingToken,
@@ -560,6 +562,17 @@ const CssLengthBoxField: React.FC<CssLengthFieldProps> = ({
 };
 
 export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById }) => {
+  const { t } = useTranslation('msp/invoicing');
+  const translateFieldLabel = useCallback(
+    (panel: DesignerInspectorPanel, field: DesignerInspectorField) =>
+      t(`designer.schema.panels.${panel.id}.fields.${field.id}.label`, { defaultValue: 'label' in field ? (field as { label?: string }).label ?? field.id : field.id }),
+    [t],
+  );
+  const translateOption = useCallback(
+    (panel: DesignerInspectorPanel, field: DesignerInspectorField, optionValue: string, optionLabel: string) =>
+      t(`designer.schema.panels.${panel.id}.fields.${field.id}.options.${optionValue}`, { defaultValue: optionLabel }),
+    [t],
+  );
   const setNodeProp = useInvoiceDesignerStore((state) => state.setNodeProp);
   const unsetNodeProp = useInvoiceDesignerStore((state) => state.unsetNodeProp);
 
@@ -623,7 +636,7 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById }) =>
       return (
         <div key={field.id}>
           <label htmlFor={domId} className="text-xs text-slate-500 block mb-1">
-            {field.label}
+            {translateFieldLabel(panel, field)}
           </label>
           <Input
             id={domId}
@@ -643,7 +656,7 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById }) =>
       return (
         <div key={field.id}>
           <label htmlFor={domId} className="text-xs text-slate-500 block mb-1">
-            {field.label}
+            {translateFieldLabel(panel, field)}
           </label>
           <textarea
             id={domId}
@@ -664,7 +677,7 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById }) =>
       return (
         <div key={field.id}>
           <label htmlFor={domId} className="text-xs text-slate-500 block mb-1">
-            {field.label}
+            {translateFieldLabel(panel, field)}
           </label>
           <Input
             id={domId}
@@ -690,15 +703,51 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById }) =>
       return (
         <div key={field.id}>
           <label htmlFor={domId} className="text-xs text-slate-500 block mb-1">
-            {field.label}
+            {translateFieldLabel(panel, field)}
           </label>
           <CustomSelect
             id={domId}
-            options={field.options.map((option) => ({ value: option.value, label: option.label }))}
+            options={field.options.map((option) => ({ value: option.value, label: translateOption(panel, field, option.value, option.label) }))}
             value={valueAsString}
             onValueChange={(value: string) => setNodeProp(node.id, field.path, value, true)}
             size="sm"
           />
+        </div>
+      );
+    }
+
+    if (field.kind === 'icon-enum') {
+      const value = resolveValue(field);
+      const valueAsString = typeof value === 'string' ? value : field.options[0]?.value ?? '';
+      const columns = field.columns ?? Math.min(field.options.length, 3);
+      return (
+        <div key={field.id}>
+          <p className="text-xs text-slate-500 block mb-1">{translateFieldLabel(panel, field)}</p>
+          <div id={domId} className="grid gap-1" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
+            {field.options.map((option) => {
+              const Icon = option.icon;
+              const isSelected = option.value === valueAsString;
+              return (
+                <Tooltip key={option.value} content={option.tooltip ?? option.label}>
+                  <button
+                    type="button"
+                    onClick={() => setNodeProp(node.id, field.path, option.value, true)}
+                    className={[
+                      'h-8 rounded border transition-colors inline-flex items-center justify-center',
+                      isSelected
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                        : 'border-slate-200 dark:border-[rgb(var(--color-border-200))] text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    ].join(' ')}
+                    aria-pressed={isSelected}
+                    aria-label={`${translateFieldLabel(panel, field)}: ${option.label}`}
+                    data-automation-id={`designer-inspector-icon-enum-${field.id}-${option.value}`}
+                  >
+                    <Icon className="h-4 w-4" />
+                  </button>
+                </Tooltip>
+              );
+            })}
+          </div>
         </div>
       );
     }
@@ -709,7 +758,7 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById }) =>
       return (
         <div key={field.id}>
           <label htmlFor={domId} className="text-[10px] text-slate-500 block mb-1">
-            {field.label}
+            {translateFieldLabel(panel, field)}
           </label>
           <Input
             id={domId}
@@ -728,7 +777,7 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById }) =>
         <CssLengthStepperField
           key={field.id}
           domId={domId}
-          label={field.label}
+          label={translateFieldLabel(panel, field)}
           path={field.path}
           rawValue={typeof value === 'string' ? value : undefined}
           allowedUnits={field.allowedUnits}
@@ -744,7 +793,7 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById }) =>
         <CssLengthBoxField
           key={`${node.id}-${field.id}`}
           domId={domId}
-          label={field.label}
+          label={translateFieldLabel(panel, field)}
           path={field.path}
           rawValue={typeof value === 'string' ? value : undefined}
           allowedUnits={field.allowedUnits}
@@ -761,7 +810,7 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById }) =>
       return (
         <div key={field.id}>
           <label htmlFor={domId} className="text-[10px] text-slate-500 block mb-1">
-            {field.label}
+            {translateFieldLabel(panel, field)}
           </label>
           <div className="flex items-center gap-2">
             <Input
@@ -810,7 +859,7 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById }) =>
             checked={checked}
             onChange={(event) => setNodeProp(node.id, field.path, event.target.checked, true)}
           />
-          {field.label}
+          {translateFieldLabel(panel, field)}
         </label>
       );
     }
@@ -826,7 +875,7 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById }) =>
             key={`${node.id}-${field.id}`}
             nodeId={node.id}
             domId={domId}
-            label={field.label}
+            label={translateFieldLabel(panel, field)}
             path={field.path}
             value={typeof value === 'string' ? value : ''}
             applyNormalized={applyNormalized}
@@ -849,7 +898,7 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById }) =>
         .filter((panel) => resolveVisibleWhenValue(panel.visibleWhen))
         .map((panel) => (
           <div key={panel.id} className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-2">
-            <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{panel.title}</p>
+            <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t(`designer.schema.panels.${panel.id}.title`, { defaultValue: panel.title })}</p>
             <div className="space-y-2">{panel.fields.map((field) => renderField(panel, field))}</div>
           </div>
         ))}

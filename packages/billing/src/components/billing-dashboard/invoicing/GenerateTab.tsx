@@ -15,6 +15,7 @@ import PrepaymentInvoices from '../PrepaymentInvoices';
 import SuccessDialog from '@alga-psa/ui/components/SuccessDialog';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { useTranslation } from 'react-i18next';
 
 interface GenerateTabProps {
   initialServices: IService[];
@@ -35,6 +36,7 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
   onGenerateSuccess,
   refreshTrigger
 }) => {
+  const { t } = useTranslation('msp/invoicing');
   const router = useRouter();
   const { enabled: billingEnabled } = useFeatureFlag('billing-enabled');
   const [invoiceType, setInvoiceType] = useState<InvoiceType>('automatic');
@@ -68,14 +70,14 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
         setServices([]);
       }
     } catch (err) {
-      setError('Failed to load data');
+      setError(t('generateTab.messages.loadFailed', { defaultValue: 'Failed to load data' }));
       console.error('Error loading data:', err);
     }
   };
 
   const handleGenerateSuccess = () => {
     setInternalRefreshTrigger(prev => prev + 1);
-    setSuccessMessage('Invoice generated successfully!');
+    setSuccessMessage(t('generateTab.messages.success', { defaultValue: 'Invoice generated successfully!' }));
     setShowSuccessDialog(true);
     onGenerateSuccess();
   };
@@ -88,31 +90,31 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
   const allInvoiceTypeOptions: SelectOption[] = [
     {
       value: 'automatic',
-      textValue: 'Automatic Invoices',
+      textValue: t('generateTab.types.automatic', { defaultValue: 'Automatic Invoices' }),
       label: (
         <div className="flex items-center gap-2">
           <Receipt className="h-4 w-4" />
-          <span>Automatic Invoices</span>
+          <span>{t('generateTab.types.automatic', { defaultValue: 'Automatic Invoices' })}</span>
         </div>
       )
     },
     {
       value: 'manual',
-      textValue: 'Manual Invoice',
+      textValue: t('generateTab.types.manual', { defaultValue: 'Manual Invoice' }),
       label: (
         <div className="flex items-center gap-2">
           <FileText className="h-4 w-4" />
-          <span>Manual Invoice</span>
+          <span>{t('generateTab.types.manual', { defaultValue: 'Manual Invoice' })}</span>
         </div>
       )
     },
     {
       value: 'prepayment',
-      textValue: 'Prepayment',
+      textValue: t('generateTab.types.prepayment', { defaultValue: 'Prepayment' }),
       label: (
         <div className="flex items-center gap-2">
           <Coins className="h-4 w-4" />
-          <span>Prepayment</span>
+          <span>{t('generateTab.types.prepayment', { defaultValue: 'Prepayment' })}</span>
         </div>
       )
     }
@@ -126,9 +128,15 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
   }, [billingEnabled]);
 
   const invoiceTypeDescription = {
-    automatic: 'Use invoice windows to review due recurring service periods before generating a recurring batch.',
-    manual: 'Use manual invoices for one-off or adjustment lines. They do not redefine recurring service periods.',
-    prepayment: 'Use prepayment and credit flows for financial value that should stay separate from recurring service-period coverage.',
+    automatic: t('generateTab.descriptions.automatic', {
+      defaultValue: 'Use invoice windows to review due recurring service periods before generating a recurring batch.',
+    }),
+    manual: t('generateTab.descriptions.manual', {
+      defaultValue: 'Use manual invoices for one-off or adjustment lines. They do not redefine recurring service periods.',
+    }),
+    prepayment: t('generateTab.descriptions.prepayment', {
+      defaultValue: 'Use prepayment and credit flows for financial value that should stay separate from recurring service-period coverage.',
+    }),
   } satisfies Record<InvoiceType, string>;
 
   const renderContent = () => {
@@ -170,7 +178,7 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
           <div className="p-4">
             <div className="mb-6">
               <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-2">
-                Invoice Type
+                {t('generateTab.fields.invoiceType', { defaultValue: 'Invoice Type' })}
               </label>
               <CustomSelect
                 value={invoiceType}

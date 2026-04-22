@@ -55,7 +55,7 @@
       "noUserFound": "Kein Benutzer gefunden"
     },
     "units": {
-      "hoursShort": "h",
+      "hoursShort": "Std.",
       "minutesShort": "m",
       "hoursAbbrev": "Std.",
       "dayOne": "Tag",
@@ -99,7 +99,7 @@
   },
   "timeEntryForm": {
     "labels": {
-      "service": "Service",
+      "service": "Dienst",
       "date": "Datum",
       "startTime": "Startzeit",
       "endTime": "Endzeit",
@@ -204,7 +204,7 @@
       "billable": "Abrechnungsfähig",
       "nonBillable": "Nicht abrechenbar",
       "workItem": "Arbeitselement",
-      "service": "Service",
+      "service": "Dienst",
       "duration": "Dauer",
       "notes": "Notizen",
       "entryChangeSuggestion": "Vorschlag zur Eintragsänderung",
@@ -401,5 +401,18 @@
   },
   "timeEntryReadOnly": {
     "viewEntryDetails": "Eintragsdetails anzeigen"
+  },
+  "messages": {
+    "serviceRequired": "Bitte wählen Sie einen Dienst, bevor Sie Zeiteinträge speichern",
+    "invalidService": "Ungültiger Dienst ausgewählt",
+    "taxRegionRequired": "Bitte wählen Sie eine Steuerregion für steuerpflichtige Dienste",
+    "invalidTimeEntry": "Bitte überprüfen Sie die Werte des Zeiteintrags",
+    "savingEntry": "Zeiteintrag wird gespeichert...",
+    "entrySaved": "Zeiteintrag gespeichert",
+    "entrySavedSuccess": "Zeiteintrag erfolgreich gespeichert",
+    "taskUpdated": "Aufgabe erfolgreich aktualisiert",
+    "saveChangesFailed": "Änderungen konnten nicht gespeichert werden",
+    "changesSaved": "Änderungen erfolgreich gespeichert",
+    "workItemDeleted": "Arbeitsposten erfolgreich gelöscht"
   }
 }

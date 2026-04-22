@@ -9,6 +9,8 @@ vi.mock('../../src/models/quote', () => ({
 const getStandardMock = vi.fn();
 vi.mock('../../src/lib/quote-template-ast/standardTemplates', () => ({
   getStandardQuoteTemplateAstByCode: (...args: any[]) => getStandardMock(...args),
+  STANDARD_QUOTE_DEFAULT_CODE: 'standard-quote-default',
+  STANDARD_QUOTE_BY_LOCATION_CODE: 'standard-quote-by-location',
 }));
 
 import { resolveQuoteTemplateAst } from '../../src/lib/quote-template-ast/templateSelection';

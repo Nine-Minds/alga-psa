@@ -2,6 +2,7 @@ import React from 'react';
 import { Label } from './Label';
 import { DatePicker } from './DatePicker';
 import { AutomationProps } from '../ui-reflection/types';
+import { useTranslation } from '../lib/i18n/client';
 
 export interface DateRange {
   from: Date | undefined;
@@ -21,6 +22,7 @@ export const DateRangePicker = ({
   value,
   onChange
 }: DateRangePickerProps & AutomationProps) => {
+  const { t } = useTranslation();
   return (
     <div id={id} className="space-y-2">
       {label && <Label>{label}</Label>}
@@ -29,14 +31,14 @@ export const DateRangePicker = ({
           id={id ? `${id}-from` : undefined}
           value={value.from}
           onChange={(date) => onChange({ ...value, from: date })}
-          placeholder="From date"
+          placeholder={t('form.fromDate', { defaultValue: 'From date' })}
           className="min-w-[160px]"
         />
         <DatePicker
           id={id ? `${id}-to` : undefined}
           value={value.to}
           onChange={(date) => onChange({ ...value, to: date })}
-          placeholder="To date"
+          placeholder={t('form.toDate', { defaultValue: 'To date' })}
           className="min-w-[160px]"
         />
       </div>
@@ -63,6 +65,7 @@ export const StringDateRangePicker = ({
   value,
   onChange
 }: StringDateRangePickerProps & AutomationProps) => {
+  const { t } = useTranslation();
   return (
     <div id={id} className="space-y-2">
       {label && <Label>{label}</Label>}
@@ -74,7 +77,7 @@ export const StringDateRangePicker = ({
             ...value,
             from: date ? date.toISOString().split('T')[0] : ''
           })}
-          placeholder="From date"
+          placeholder={t('form.fromDate', { defaultValue: 'From date' })}
           className="min-w-[160px]"
         />
         <DatePicker
@@ -84,7 +87,7 @@ export const StringDateRangePicker = ({
             ...value,
             to: date ? date.toISOString().split('T')[0] : ''
           })}
-          placeholder="To date"
+          placeholder={t('form.toDate', { defaultValue: 'To date' })}
           className="min-w-[160px]"
         />
       </div>

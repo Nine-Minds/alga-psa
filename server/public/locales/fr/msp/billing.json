@@ -11,7 +11,7 @@
     "loading": "Chargement...",
     "new": "Nouveau",
     "next": "Suivant",
-    "notAvailable": "N/A",
+    "notAvailable": "S/O",
     "openMenu": "Ouvrir le menu",
     "processing": "Traitement...",
     "refresh": "Rafraîchir",
@@ -528,7 +528,7 @@
       "fixed": "Prix ​​fixe",
       "hourly": "Horaire",
       "usageBased": "Basé sur l'utilisation",
-      "usage": "Usage"
+      "usage": "Utilisation"
     },
     "badges": {
       "product": "Produit",
@@ -740,7 +740,7 @@
     }
   },
   "templateRendererCore": {
-    "notAvailable": "N/A",
+    "notAvailable": "S/O",
     "unknownValue": "Valeur inconnue",
     "noDataForList": "Aucune donnée pour la liste : {{name}}",
     "uncategorized": "Non classé"

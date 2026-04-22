@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDroppable, useDraggable } from '@dnd-kit/core';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   SortableContext,
   useSortable,
@@ -24,6 +25,8 @@ import {
   resolveInvoiceBindingRawValue,
   resolveTableItemBindingRawValue,
 } from '../preview/previewBindings';
+
+type DesignerTranslator = (key: string, options?: Record<string, unknown>) => string;
 
 interface DesignCanvasProps {
   nodes: DesignerNode[];
@@ -472,7 +475,7 @@ const resolveTotalsRowPreviewModel = (
 const renderTablePreview = (
   metadata: Record<string, unknown>,
   previewData: WasmInvoiceViewModel | null,
-  options: { fillHeight: boolean }
+  options: { fillHeight: boolean; t?: DesignerTranslator }
 ): React.ReactNode => {
   const borderConfig = resolveTableBorderConfig(metadata);
   const headerWeightClass = FONT_WEIGHT_CLASS[
@@ -531,7 +534,7 @@ const renderTablePreview = (
         ))}
       </div>
       {visibleRows.length === 0 ? (
-        <div className="px-2 py-2 text-slate-400 italic">No line items</div>
+        <div className="px-2 py-2 text-slate-400 italic">{options.t?.('designer.canvas.noLineItems', { defaultValue: 'No line items' }) ?? 'No line items'}</div>
       ) : (
         <div className="pt-1">
           {visibleRows.map((item, rowIndex) => (
@@ -566,12 +569,12 @@ const renderTablePreview = (
           ))}
         </div>
       )}
-      {rows.length > 5 && <div className="px-1 pt-1 text-[10px] text-slate-400">+{rows.length - 5} more rows</div>}
+      {rows.length > 5 && <div className="px-1 pt-1 text-[10px] text-slate-400">{options.t?.('designer.canvas.moreRows', { count: rows.length - 5, defaultValue: '+{{count}} more rows' }) ?? `+${rows.length - 5} more rows`}</div>}
     </div>
   );
 };
 
-const renderTotalsSummaryPreview = (previewData: WasmInvoiceViewModel | null): React.ReactNode => {
+const renderTotalsSummaryPreview = (previewData: WasmInvoiceViewModel | null, t?: DesignerTranslator): React.ReactNode => {
   const currencyCode = previewData?.currencyCode ?? 'USD';
   const subtotal = formatBoundValue(previewData?.subtotal ?? null, 'currency', currencyCode) ?? '$0.00';
   const tax = formatBoundValue(previewData?.tax ?? null, 'currency', currencyCode) ?? '$0.00';
@@ -579,22 +582,22 @@ const renderTotalsSummaryPreview = (previewData: WasmInvoiceViewModel | null): R
   return (
     <div className="space-y-1 text-[11px]">
       <div className="flex items-center justify-between text-slate-600">
-        <span>Subtotal</span>
+        <span>{t?.('designer.canvas.subtotal', { defaultValue: 'Subtotal' }) ?? 'Subtotal'}</span>
         <span className="tabular-nums font-medium">{subtotal}</span>
       </div>
       <div className="flex items-center justify-between text-slate-600">
-        <span>Tax</span>
+        <span>{t?.('designer.canvas.tax', { defaultValue: 'Tax' }) ?? 'Tax'}</span>
         <span className="tabular-nums font-medium">{tax}</span>
       </div>
       <div className={clsx('flex items-center justify-between border-t pt-1 font-semibold text-slate-900', INVOICE_BORDER_COLOR_CLASS)}>
-        <span>Total</span>
+        <span>{t?.('designer.canvas.total', { defaultValue: 'Total' }) ?? 'Total'}</span>
         <span className="tabular-nums">{total}</span>
       </div>
     </div>
   );
 };
 
-const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel | null): PreviewContentResult => {
+const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel | null, t?: DesignerTranslator): PreviewContentResult => {
   const metadata = getNodeMetadata(node);
   switch (node.type) {
     case 'field': {
@@ -749,24 +752,24 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
     case 'dynamic-table': {
       const fillHeight = inferHeightMode(getNodeStyle(node)) === 'fixed';
       return {
-        content: renderTablePreview(metadata, previewData, { fillHeight }),
+        content: renderTablePreview(metadata, previewData, { fillHeight, t }),
       };
     }
     case 'action-button':
-      return { content: metadata.label ? `Button: ${metadata.label}` : 'Button' };
+      return { content: metadata.label ? `${t?.('designer.canvas.buttonLabel', { defaultValue: 'Button' }) ?? 'Button'}: ${metadata.label}` : (t?.('designer.canvas.buttonLabel', { defaultValue: 'Button' }) ?? 'Button') };
     case 'signature':
-      return { content: metadata.signerLabel ? `Signature · ${metadata.signerLabel}` : 'Signature' };
+      return { content: metadata.signerLabel ? `${t?.('designer.canvas.signatureLabel', { defaultValue: 'Signature' }) ?? 'Signature'} · ${metadata.signerLabel}` : (t?.('designer.canvas.signatureLabel', { defaultValue: 'Signature' }) ?? 'Signature') };
     case 'attachment-list':
-      return { content: metadata.title ? `Attachments: ${metadata.title}` : 'Attachments' };
+      return { content: metadata.title ? `${t?.('designer.canvas.attachmentsLabel', { defaultValue: 'Attachments' }) ?? 'Attachments'}: ${metadata.title}` : (t?.('designer.canvas.attachmentsLabel', { defaultValue: 'Attachments' }) ?? 'Attachments') };
     case 'totals':
-      return { content: renderTotalsSummaryPreview(previewData) };
+      return { content: renderTotalsSummaryPreview(previewData, t) };
     case 'divider':
       return { content: <div className={clsx('w-full border-t my-1', INVOICE_BORDER_COLOR_CLASS)} /> };
 	    case 'spacer':
 	      return {
 	        content: (
 	          <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-300 dark:text-slate-600 bg-slate-50/50 dark:bg-slate-800/50 border border-dashed border-slate-200 dark:border-slate-700">
-	            Spacer
+	            {t?.('designer.canvas.spacerLabel', { defaultValue: 'Spacer' }) ?? 'Spacer'}
 	          </div>
 	        ),
 	      };
@@ -787,7 +790,11 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
         const objectPosition = getNodeStyle(node)?.objectPosition;
 
         if (!src) {
-          const label = node.type === 'qr' ? 'QR Code' : node.type === 'logo' ? 'Logo' : 'Image';
+          const label = node.type === 'qr'
+            ? (t?.('designer.blocks.qr.label', { defaultValue: 'QR Code' }) ?? 'QR Code')
+            : node.type === 'logo'
+              ? (t?.('designer.blocks.logo.label', { defaultValue: 'Logo' }) ?? 'Logo')
+              : (t?.('designer.blocks.image.label', { defaultValue: 'Image' }) ?? 'Image');
           return {
             content: (
               <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400 dark:text-slate-500 bg-slate-50/50 dark:bg-slate-800/50 border border-dashed border-slate-200 dark:border-slate-700">
@@ -839,6 +846,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   applySelectionDeemphasis,
   dnd,
 }) => {
+  const { t } = useTranslation('msp/invoicing');
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = dnd;
   const [isEditingText, setIsEditingText] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -948,7 +956,15 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   );
 
   const draggablePointerDown = listeners?.onPointerDown;
-  const previewContent = useMemo(() => getPreviewContent(node, previewData), [node, previewData]);
+  const previewContent = useMemo(() => getPreviewContent(node, previewData, t), [node, previewData, t]);
+  const fieldNodeStyle = isFieldNode ? getNodeStyle(node) : undefined;
+  const fieldLayoutStyle = isFieldNode
+    ? {
+        justifyContent: fieldNodeStyle?.justifyContent ?? 'space-between',
+        alignItems: fieldNodeStyle?.alignItems ?? (previewContent.singleLine ? 'center' : 'flex-start'),
+        gap: fieldNodeStyle?.gap,
+      }
+    : undefined;
   const pointerDownPositionRef = useRef<{ x: number; y: number } | null>(null);
   const pointerDownSelectedRef = useRef(false);
   const pointerMovedRef = useRef(false);
@@ -1122,7 +1138,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
       )}
       {showOverlayNodeBadge && (
         <div className="absolute left-2 top-1 z-10 flex max-w-[calc(100%-1rem)] items-center gap-1.5 rounded bg-slate-900/80 px-2 py-0.5 text-[10px] uppercase tracking-wide text-white pointer-events-none">
-          <span className="truncate">{getNodeName(node)} · {node.type}</span>
+          <span className="truncate">{getNodeName(node)} · {t(`designer.blocks.${node.type}.label`, { defaultValue: node.type })}</span>
           {sectionCue && (
             <span className={clsx('rounded border px-1 py-0.5 text-[9px] font-semibold', sectionCue.chipClass)}>
               {sectionCue.label}
@@ -1150,6 +1166,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
                 previewContent.singleLine ? 'whitespace-nowrap overflow-hidden' : 'items-start',
                 previewContent.isPlaceholder && 'text-slate-400'
               )}
+              style={fieldLayoutStyle}
             >
               {fieldDisplayLabel && (
                 <span
@@ -1307,6 +1324,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   readOnly = false,
   previewData = null,
 }) => {
+  const { t } = useTranslation('msp/invoicing');
   const artboardRef = useRef<HTMLDivElement>(null);
   const documentNode = useMemo(
     () => nodes.find((node) => node.type === 'document') ?? nodes.find((node) => node.parentId === null),
@@ -1554,7 +1572,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
             }}
           >
             <div className="absolute left-3 top-2 z-20 rounded bg-slate-900/80 px-2 py-0.5 text-[10px] uppercase tracking-wide text-white pointer-events-none">
-              Template Boundary
+              {t('designer.canvas.templateBoundary', { defaultValue: 'Template Boundary' })}
             </div>
             <div
               className="absolute inset-0"

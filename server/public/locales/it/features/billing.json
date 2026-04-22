@@ -11,7 +11,19 @@
   "viewContractLineDetails": "Visualizza dettagli della linea di contratto",
   "viewAllInvoices": "Mostra tutte le fatture",
   "failedToLoad": "Impossibile caricare le fatture. Riprova.",
-  "invoices": "Fatture",
+  "invoices": {
+    "locations": {
+      "groupHeading": "Posizione",
+      "subtotal": "Subtotale posizione",
+      "unassigned": "Elementi senza posizione",
+      "pickerPlaceholder": "Seleziona una posizione",
+      "addLocationButton": "+ Aggiungi posizione",
+      "removeGroup": "Rimuovi posizione",
+      "emptyGroup": "Nessun elemento ancora per questa posizione.",
+      "needMoreLocations": "Questo cliente ha una sola posizione attiva. Aggiungi una seconda posizione nelle impostazioni del cliente per abilitare la fatturazione multi-sito.",
+      "notSet": "Nessuna posizione selezionata"
+    }
+  },
   "payments": "Pagamenti",
   "contractLines": "Linee di contratto servizio",
   "usage": "Metriche di utilizzo",
@@ -119,10 +131,28 @@
     "pendingQuotes": "Preventivi in sospeso",
     "awaitingResponse": "{{count}} preventivo/i in attesa della tua risposta",
     "noPending": "Nessun preventivo in sospeso",
-    "viewAll": "Visualizza tutti i preventivi"
+    "viewAll": "Visualizza tutti i preventivi",
+    "locations": {
+      "primaryLocationHeading": "Posizione del preventivo",
+      "changeButton": "Modifica",
+      "cancelChange": "Annulla",
+      "notSet": "Nessuna posizione selezionata",
+      "groupHeading": "Posizione",
+      "pickerPlaceholder": "Seleziona una posizione",
+      "addLocationButton": "+ Aggiungi posizione",
+      "removeGroup": "Rimuovi posizione",
+      "needMoreLocations": "Questo cliente ha una sola posizione attiva. Aggiungi una seconda posizione nelle impostazioni del cliente per abilitare i preventivi multi-sito.",
+      "emptyGroup": "Nessun elemento ancora per questa posizione.",
+      "subtotal": "Subtotale posizione",
+      "unassigned": "Elementi senza posizione"
+    },
+    "lineItems": {
+      "searchPlaceholder": "Cerca o digita un nome di elemento personalizzato..."
+    }
   },
   "enums": {
     "billingFrequency": {
+      "weekly": "Settimanale",
       "monthly": "Mensile",
       "quarterly": "Trimestrale",
       "annually": "Annuale"
@@ -131,6 +161,171 @@
       "Fixed": "Fisso",
       "Hourly": "A ore",
       "Usage": "A consumo"
+    },
+    "quoteStatus": {
+      "draft": "Bozza",
+      "pending_approval": "In attesa di approvazione",
+      "approved": "Approvato",
+      "sent": "Inviato",
+      "accepted": "Accettato",
+      "rejected": "Rifiutato",
+      "expired": "Scaduto",
+      "converted": "Convertito",
+      "cancelled": "Annullato",
+      "superseded": "Sostituito",
+      "archived": "Archiviato"
+    },
+    "quoteStatusDescription": {
+      "draft": "Il preventivo è in preparazione",
+      "pending_approval": "Il preventivo è in attesa di approvazione interna",
+      "approved": "Il preventivo è approvato e pronto da inviare",
+      "sent": "Il preventivo è stato inviato al cliente",
+      "accepted": "Il cliente ha accettato il preventivo",
+      "rejected": "Il cliente ha rifiutato il preventivo",
+      "expired": "Il preventivo ha superato la data di validità",
+      "converted": "Il preventivo è stato convertito in fatturazione",
+      "cancelled": "Il preventivo è stato annullato prima della conversione",
+      "superseded": "Il preventivo è stato sostituito da una revisione",
+      "archived": "Il preventivo è archiviato e in sola lettura"
+    },
+    "invoiceStatus": {
+      "draft": "Bozza",
+      "sent": "Inviata",
+      "paid": "Pagata",
+      "overdue": "Scaduta",
+      "cancelled": "Annullata",
+      "pending": "In attesa",
+      "prepayment": "Acconto",
+      "partially_applied": "Parzialmente applicata"
+    },
+    "invoiceStatusDescription": {
+      "draft": "Fatture in preparazione non ancora inviate al cliente",
+      "sent": "Fatture finalizzate e inviate al cliente",
+      "paid": "Fatture interamente pagate pronte per la riconciliazione",
+      "overdue": "Fatture finalizzate che hanno superato la data di scadenza",
+      "cancelled": "Fatture annullate o invalidate",
+      "pending": "Fatture in attesa di approvazione o ulteriore elaborazione",
+      "prepayment": "Fatture di acconto o anticipo",
+      "partially_applied": "Fatture con pagamenti parziali applicati"
+    }
+  },
+  "quoteForm": {
+    "noticeTitle": "Preventivo",
+    "readOnlyNotice": "Questo preventivo è di sola lettura. Per apportare modifiche, crea una nuova revisione.",
+    "breadcrumb": {
+      "billing": "Fatturazione",
+      "quotes": "Preventivi",
+      "quoteTemplates": "Modelli di preventivo",
+      "newQuote": "Nuovo preventivo"
+    },
+    "header": {
+      "editQuote": "Modifica preventivo",
+      "newQuote": "Nuovo preventivo",
+      "editTemplate": "Modifica modello preventivo",
+      "newTemplate": "Nuovo modello preventivo",
+      "quoteTotalLabel": "Totale preventivo",
+      "version": "v{{version}}"
+    },
+    "subtitle": {
+      "forClient": "Per {{clientName}}",
+      "expires": "Scade il {{date}}",
+      "template": "Modello · {{description}}"
+    },
+    "actions": {
+      "pdf": "PDF",
+      "duplicate": "Duplica",
+      "back": "Indietro",
+      "cancel": "Annulla",
+      "previewPdf": "Anteprima PDF",
+      "moreActions": "Altre azioni",
+      "saving": "Salvataggio…",
+      "saveQuote": "Salva preventivo",
+      "saveTemplate": "Salva modello",
+      "sendToClient": "Invia al cliente",
+      "requestApproval": "Richiedi approvazione",
+      "requestChanges": "Richiedi modifiche",
+      "approve": "Approva",
+      "revise": "Rivedi",
+      "createNewRevision": "Crea nuova revisione",
+      "convertToContract": "Converti in contratto",
+      "convertToInvoice": "Converti in fattura",
+      "convertToBoth": "Converti in entrambi",
+      "resend": "Reinvia",
+      "sendReminder": "Invia promemoria",
+      "cancelQuote": "Annulla preventivo"
+    },
+    "banners": {
+      "acceptedTitle": "Preventivo accettato",
+      "acceptedBy": "Accettato da: {{name}}",
+      "acceptedOn": "Accettato il: {{date}}",
+      "rejectedTitle": "Preventivo rifiutato",
+      "rejectedOn": "Rifiutato il: {{date}}",
+      "rejectedReason": "Motivo: {{reason}}",
+      "convertedTitle": "Preventivo convertito",
+      "convertedDescription": "Questo preventivo è stato convertito in contratto e/o fattura."
+    },
+    "essentials": {
+      "title": "Essenziali",
+      "subtitle": "Mostrato al cliente nel documento del preventivo.",
+      "titleField": "Titolo",
+      "descriptionField": "Descrizione / Ambito",
+      "descriptionHelp": "Un breve paragrafo che appare proprio sotto il titolo nel PDF.",
+      "client": "Cliente",
+      "clientPlaceholder": "Seleziona cliente",
+      "contact": "Contatto",
+      "contactPlaceholder": "Seleziona contatto",
+      "currency": "Valuta",
+      "currencyPlaceholder": "Seleziona valuta",
+      "quoteDate": "Data preventivo",
+      "validUntil": "Valido fino al",
+      "validUntilHelp": "Il preventivo scade automaticamente in questa data."
+    },
+    "lineItems": {
+      "title": "Voci",
+      "subtitleEmpty": "Ancora nessun elemento.",
+      "subtitleCount": "{{count}} voci · {{mix}}",
+      "mixBoth": "ricorrente e una tantum",
+      "mixRecurring": "ricorrente",
+      "mixOneTime": "una tantum",
+      "addLocation": "+ Aggiungi sede",
+      "fromTemplate": "+ Da modello"
+    },
+    "clientFacing": {
+      "title": "Testo visibile al cliente",
+      "subtitle": "Appare nel PDF, sotto i totali.",
+      "notes": "Note per il cliente (opzionale)",
+      "terms": "Termini e condizioni (opzionale)"
+    },
+    "moreDetails": {
+      "title": "Altri dettagli",
+      "subtitle": "Numero OdA, opportunità, layout PDF",
+      "poNumber": "Numero OdA",
+      "opportunity": "Opportunità",
+      "opportunityPlaceholder": "ID opportunità (opzionale)",
+      "pdfLayout": "Layout PDF",
+      "pdfLayoutPlaceholder": "Usa layout predefinito",
+      "pdfLayoutHelp": "Scegli quale layout vedrà il cliente. Lascia il predefinito per usare quello del tenant."
+    },
+    "footer": {
+      "savedAgo": "Modifiche salvate · {{ago}}",
+      "saving": "Salvataggio…",
+      "unsaved": "Modifiche non salvate"
+    },
+    "sidebar": {
+      "quoteTotal": "Totale preventivo",
+      "recurringPerMonth": "{{amount}} ricorrente / mese",
+      "subtotal": "Subtotale",
+      "discounts": "Sconti",
+      "tax": "Imposta",
+      "statusLabel": "Stato",
+      "approvalLabel": "Approvazione",
+      "approvalMessage": "I preventivi richiedono l'approvazione del responsabile vendite prima dell'invio.",
+      "documentLayoutLabel": "Layout del documento",
+      "defaultLayout": "Predefinito tenant",
+      "standardLayout": "Standard",
+      "customLayout": "Personalizzato",
+      "tenantDefault": "Predefinito tenant",
+      "changeLayout": "Modifica"
     }
   }
 }

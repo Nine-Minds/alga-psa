@@ -10,13 +10,12 @@ import type { IInvoiceTemplate, IQuote, TaxSource, InvoiceViewModel as DbInvoice
 import type { WasmInvoiceViewModel } from '@alga-psa/types';
 import type { DraftInvoicePropertiesUpdateResult } from '@alga-psa/billing/actions/invoiceModification';
 import {
-  getInvoiceForRendering,
+  getEnrichedInvoiceViewModel,
   getInvoicePurchaseOrderSummary,
   getResolvedInvoiceTemplateId,
   type InvoicePurchaseOrderSummary
 } from '@alga-psa/billing/actions/invoiceQueries';
 import { getQuoteByConvertedInvoiceId } from '@alga-psa/billing/actions/quoteActions';
-import { mapDbInvoiceToWasmViewModel } from '../../../lib/adapters/invoiceAdapters';
 import { PurchaseOrderSummaryBanner } from './PurchaseOrderSummaryBanner';
 import { TemplateRenderer } from '../TemplateRenderer';
 import PaperInvoice from '../PaperInvoice';
@@ -26,6 +25,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { InvoiceTaxSourceBadge } from '../../invoices/InvoiceTaxSourceBadge';
 import { resolveTemplatePrintSettingsFromAst } from '../../../lib/invoice-template-ast/printSettings';
 import DraftInvoiceDetailsCard, { type DraftInvoiceDetailsSummary } from './DraftInvoiceDetailsCard';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface InvoicePreviewPanelProps {
   invoiceId: string | null;
@@ -60,6 +60,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   creditApplied = 0,
   draftInvoiceSummary = null
 }) => {
+  const { t } = useTranslation('msp/invoicing');
   const router = useRouter();
   const [detailedInvoiceData, setDetailedInvoiceData] = useState<WasmInvoiceViewModel | null>(null);
   const [poSummary, setPoSummary] = useState<InvoicePurchaseOrderSummary | null>(null);
@@ -133,24 +134,18 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
       setPoSummary(null);
 
       try {
-        const [dbInvoiceData, summary, templateId] = await Promise.all([
-          getInvoiceForRendering(invoiceId),
+        const [viewModel, summary, templateId] = await Promise.all([
+          getEnrichedInvoiceViewModel(invoiceId),
           getInvoicePurchaseOrderSummary(invoiceId),
           getResolvedInvoiceTemplateId(invoiceId),
         ]);
 
-        if (!dbInvoiceData) {
+        if (!viewModel) {
           throw new Error(`Invoice data for ID ${invoiceId} not found.`);
         }
 
-        // Extract tax_source from the invoice data
-        setTaxSource(dbInvoiceData.tax_source || 'internal');
-
-        const viewModel = mapDbInvoiceToWasmViewModel(dbInvoiceData);
-
-        if (!viewModel) {
-          throw new Error(`Failed to map invoice data for ID ${invoiceId} to view model.`);
-        }
+        // Extract tax source from the enriched view model (mapped as taxSource).
+        setTaxSource(((viewModel as unknown as { taxSource?: TaxSource }).taxSource) || 'internal');
 
         setPoSummary(summary);
         setResolvedTemplateId(templateId);
@@ -159,7 +154,10 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
       } catch (err) {
         console.error(`Error fetching detailed data for invoice ${invoiceId}:`, err);
         const message = err instanceof Error ? err.message : 'An unknown error occurred.';
-        setError(`Failed to load preview: ${message}`);
+        setError(t('invoicePreview.errors.loadFailed', {
+          message,
+          defaultValue: 'Failed to load preview: {{message}}',
+        }));
         setDetailedInvoiceData(null);
         setPoSummary(null);
         setResolvedTemplateId(null);
@@ -209,14 +207,17 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
     };
   }, [invoiceId]);
 
-  const handleAction = async (action: () => Promise<void>, actionName: string) => {
+  const handleAction = async (action: () => Promise<void>, actionLabel: string) => {
     setIsActionLoading(true);
     setError(null);
     try {
       await action();
     } catch (err) {
-      console.error(`Error ${actionName}:`, err);
-      setError(`Failed to ${actionName}. Please try again.`);
+      console.error(`Error ${actionLabel}:`, err);
+      setError(t('invoicePreview.errors.actionFailed', {
+        action: actionLabel,
+        defaultValue: 'Failed to {{action}}. Please try again.',
+      }));
     } finally {
       setIsActionLoading(false);
     }
@@ -252,7 +253,11 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
         <div className="p-6 flex items-center justify-center h-64 text-muted-foreground">
           <div className="text-center">
             <FileText className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
-            <p>Select an invoice to preview</p>
+            <p>
+              {t('invoicePreview.empty', {
+                defaultValue: 'Select an invoice to preview',
+              })}
+            </p>
           </div>
         </div>
       </Card>
@@ -271,7 +276,9 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
 
         <div className="mb-4">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-lg font-semibold">Invoice Preview</h3>
+            <h3 className="text-lg font-semibold">
+              {t('invoicePreview.title', { defaultValue: 'Invoice Preview' })}
+            </h3>
             <InvoiceTaxSourceBadge taxSource={taxSource} />
           </div>
           <CustomSelect
@@ -280,7 +287,10 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
               label: (
                 <div className="flex items-center gap-2">
                   {template.isStandard ? (
-                    <><FileText className="w-4 h-4" /> {template.name} (Standard)</>
+                    <>
+                      <FileText className="w-4 h-4" /> {template.name}
+                      {t('invoicePreview.labels.standard', { defaultValue: ' (Standard)' })}
+                    </>
                   ) : (
                     <><Settings className="w-4 h-4" /> {template.name}</>
                   )}
@@ -289,7 +299,9 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
             }))}
             onValueChange={onTemplateChange}
             value={effectiveTemplateId || ''}
-            placeholder="Select invoice template..."
+            placeholder={t('invoicePreview.templatePlaceholder', {
+              defaultValue: 'Select invoice template...',
+            })}
           />
         </div>
 
@@ -306,14 +318,22 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
               variant="outline"
               onClick={() => router.push(`/msp/billing?tab=quotes&quoteId=${sourceQuote.quote_id}`)}
             >
-              View Source Quote {sourceQuote.quote_number ? `(${sourceQuote.quote_number})` : ''}
+              {t('invoicePreview.actions.viewSourceQuote', {
+                defaultValue: 'View Source Quote',
+              })}{' '}
+              {sourceQuote.quote_number ? `(${sourceQuote.quote_number})` : ''}
             </Button>
           </div>
         ) : null}
 
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
-            <LoadingIndicator text="Loading Preview..." spinnerProps={{ size: "sm" }} />
+            <LoadingIndicator
+              text={t('invoicePreview.loading', {
+                defaultValue: 'Loading Preview...',
+              })}
+              spinnerProps={{ size: "sm" }}
+            />
           </div>
         ) : detailedInvoiceData && selectedTemplate ? (
           <>
@@ -323,11 +343,15 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
               {!isFinalized && onFinalize && (
                 <Button
                   id="invoice-finalize"
-                  onClick={() => handleAction(onFinalize, 'finalize invoice')}
+                  onClick={() => handleAction(onFinalize, t('invoicePreview.errors.actionLabels.finalizeInvoice', {
+                    defaultValue: 'finalize invoice',
+                  }))}
                   disabled={isActionLoading}
                   className="flex-1"
                 >
-                  Finalize Invoice
+                  {t('invoicePreview.actions.finalizeInvoice', {
+                    defaultValue: 'Finalize Invoice',
+                  })}
                 </Button>
               )}
 
@@ -339,18 +363,24 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                   disabled={isActionLoading}
                   className="flex-1"
                 >
-                  Edit Items
+                  {t('invoicePreview.actions.editItems', {
+                    defaultValue: 'Edit Items',
+                  })}
                 </Button>
               )}
 
               {onDownload && (
                 <Button
                   id="invoice-download-pdf"
-                  onClick={() => handleAction(onDownload, 'download PDF')}
+                  onClick={() => handleAction(onDownload, t('invoicePreview.errors.actionLabels.downloadPdf', {
+                    defaultValue: 'download PDF',
+                  }))}
                   disabled={isActionLoading}
                   className="flex-1"
                 >
-                  Download PDF
+                  {t('invoicePreview.actions.downloadPdf', {
+                    defaultValue: 'Download PDF',
+                  })}
                 </Button>
               )}
 
@@ -358,11 +388,15 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                 <Button
                   id="invoice-reverse-draft-button"
                   variant="destructive"
-                  onClick={() => handleAction(onReverse, 'reverse draft')}
+                  onClick={() => handleAction(onReverse, t('invoicePreview.errors.actionLabels.reverseDraft', {
+                    defaultValue: 'reverse draft',
+                  }))}
                   disabled={isActionLoading}
                   className="flex-1"
                 >
-                  Reverse Draft
+                  {t('invoicePreview.actions.reverseDraft', {
+                    defaultValue: 'Reverse Draft',
+                  })}
                 </Button>
               )}
 
@@ -370,11 +404,15 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                 <Button
                   id="invoice-send-email"
                   variant="secondary"
-                  onClick={() => handleAction(onEmail, 'send email')}
+                  onClick={() => handleAction(onEmail, t('invoicePreview.errors.actionLabels.sendEmail', {
+                    defaultValue: 'send email',
+                  }))}
                   disabled={isActionLoading}
                   className="flex-1"
                 >
-                  Send Email
+                  {t('invoicePreview.actions.sendEmail', {
+                    defaultValue: 'Send Email',
+                  })}
                 </Button>
               )}
 
@@ -382,11 +420,15 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                 <Button
                   id="invoice-unfinalize"
                   variant="destructive"
-                  onClick={() => handleAction(onUnfinalize, 'unfinalize invoice')}
+                  onClick={() => handleAction(onUnfinalize, t('invoicePreview.errors.actionLabels.unfinalize', {
+                    defaultValue: 'unfinalize invoice',
+                  }))}
                   disabled={isActionLoading}
                   className="flex-1"
                 >
-                  Unfinalize
+                  {t('invoicePreview.actions.unfinalize', {
+                    defaultValue: 'Unfinalize',
+                  })}
                 </Button>
               )}
             </div>
@@ -419,7 +461,9 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
           </>
         ) : (
           <div className="text-muted-foreground text-center h-64 flex items-center justify-center">
-            Could not display preview. Data might be missing.
+            {t('invoicePreview.errorDescription', {
+              defaultValue: 'Could not display preview. Data might be missing.',
+            })}
           </div>
         )}
       </div>

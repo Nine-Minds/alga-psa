@@ -68,7 +68,8 @@ export interface QuoteToBothConversionResult {
 function toPreviewItem(
   item: IQuoteItem,
   target: QuoteConversionPreviewItem['target'],
-  reason?: string | null
+  reason?: string | null,
+  locationName?: string | null
 ): QuoteConversionPreviewItem {
   return {
     quote_item_id: item.quote_item_id,
@@ -83,7 +84,42 @@ function toPreviewItem(
     billing_method: item.billing_method ?? null,
     target,
     reason: reason ?? null,
+    location_id: item.location_id ?? null,
+    location_name: locationName ?? null,
   };
+}
+
+async function resolveLocationNames(
+  knexOrTrx: Knex | Knex.Transaction | undefined,
+  tenant: string | undefined,
+  items: IQuoteItem[]
+): Promise<Map<string, string>> {
+  const locationIds = Array.from(
+    new Set(
+      items
+        .map((item) => item.location_id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0)
+    )
+  );
+
+  if (locationIds.length === 0 || !knexOrTrx || !tenant) {
+    return new Map();
+  }
+
+  const rows = await knexOrTrx('client_locations')
+    .where({ tenant })
+    .whereIn('location_id', locationIds)
+    .select('location_id', 'location_name', 'address_line1');
+
+  const map = new Map<string, string>();
+  for (const row of rows) {
+    const name = row.location_name
+      ?? row.address_line1
+      ?? row.location_id;
+    map.set(row.location_id as string, name as string);
+  }
+
+  return map;
 }
 
 interface ContractLineMapping {
@@ -166,12 +202,22 @@ function getSelectedOneTimeItems(items: IQuoteItem[] = []): IQuoteItem[] {
   });
 }
 
-export function buildQuoteConversionPreview(quote: IQuote): QuoteConversionPreview {
+export async function buildQuoteConversionPreview(
+  quote: IQuote,
+  knexOrTrx?: Knex | Knex.Transaction,
+  tenant?: string
+): Promise<QuoteConversionPreview> {
   const quoteItems = quote.quote_items ?? [];
   const recurringItems = getSelectedRecurringItems(quoteItems);
   const oneTimeItems = getSelectedOneTimeItems(quoteItems);
   const recurringIds = new Set(recurringItems.map((item) => item.quote_item_id));
   const oneTimeIds = new Set(oneTimeItems.map((item) => item.quote_item_id));
+
+  const resolvedTenant = tenant ?? quote.tenant;
+  const locationNameMap = await resolveLocationNames(knexOrTrx, resolvedTenant, quoteItems);
+  const lookupName = (item: IQuoteItem): string | null => (
+    item.location_id ? (locationNameMap.get(item.location_id) ?? null) : null
+  );
 
   const contractItems: QuoteConversionPreviewItem[] = [];
   const invoiceItems: QuoteConversionPreviewItem[] = [];
@@ -179,12 +225,12 @@ export function buildQuoteConversionPreview(quote: IQuote): QuoteConversionPrevi
 
   for (const item of quoteItems) {
     if (recurringIds.has(item.quote_item_id)) {
-      contractItems.push(toPreviewItem(item, 'contract'));
+      contractItems.push(toPreviewItem(item, 'contract', null, lookupName(item)));
       continue;
     }
 
     if (oneTimeIds.has(item.quote_item_id)) {
-      invoiceItems.push(toPreviewItem(item, 'invoice'));
+      invoiceItems.push(toPreviewItem(item, 'invoice', null, lookupName(item)));
       continue;
     }
 
@@ -199,7 +245,7 @@ export function buildQuoteConversionPreview(quote: IQuote): QuoteConversionPrevi
       reason = 'Discount line does not apply to any converted one-time item';
     }
 
-    excludedItems.push(toPreviewItem(item, 'excluded', reason));
+    excludedItems.push(toPreviewItem(item, 'excluded', reason, lookupName(item)));
   }
 
   const availableActions: Array<'contract' | 'invoice' | 'both'> = [];
@@ -304,6 +350,7 @@ export async function convertQuoteToDraftContract(
       minimum_billable_time: contractLineType === 'Hourly' ? 15 : null,
       round_up_to_nearest: contractLineType === 'Hourly' ? 15 : null,
       is_active: false,
+      location_id: item.location_id ?? null,
       created_at: nowIso,
       updated_at: nowIso,
     }))
@@ -556,6 +603,7 @@ export async function convertQuoteToDraftInvoice(
       discount_percentage: item.discount_percentage ?? null,
       applies_to_item_id: item.applies_to_item_id ?? null,
       applies_to_service_id: item.applies_to_service_id ?? null,
+      location_id: item.location_id ?? null,
       created_by: quote.accepted_by ?? quote.updated_by ?? quote.created_by ?? null,
       updated_by: quote.accepted_by ?? quote.updated_by ?? quote.created_by ?? null,
       created_at: nowIso,

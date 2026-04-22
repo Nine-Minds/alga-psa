@@ -1,0 +1,867 @@
+{
+  "common": {
+    "actions": {
+      "back": "Back",
+      "cancel": "Cancel",
+      "close": "Close",
+      "continue": "Continue",
+      "finish": "Finish",
+      "invite": "Invite",
+      "next": "Next",
+      "retry": "Retry",
+      "save": "Save",
+      "saving": "Saving...",
+      "skip": "Skip",
+      "submit": "Submit"
+    },
+    "states": {
+      "loading": "Loading...",
+      "optional": "Optional",
+      "required": "Required"
+    },
+    "no": "No",
+    "yes": "Yes"
+  },
+  "onboardingProvider": {
+    "title": "Onboarding Provider",
+    "description": "Route-level onboarding gate that checks tenant completion state and redirects incomplete tenants into the wizard"
+  },
+  "onboardingWizard": {
+    "title": "Onboarding Wizard",
+    "description": "Wizard shell for MSP tenant setup with dialog/full-page presentation, progress, validation, and completion flows",
+    "steps": {
+      "clientInfo": "Client Info",
+      "teamMembers": "Team Members",
+      "addClient": "Add Client",
+      "clientContact": "Client Contact",
+      "billing": "Billing",
+      "ticketing": "Ticketing"
+    },
+    "errors": {
+      "saveClientInfo": "Failed to save client info",
+      "addTeamMembers": "Failed to add team members",
+      "saveClient": "Failed to save client",
+      "addContact": "Failed to add contact",
+      "setupBilling": "Failed to setup billing",
+      "unknown": "Unknown error",
+      "validationFailed": "Validation failed",
+      "configureTicketing": "Failed to configure ticketing",
+      "completeOnboarding": "Failed to complete onboarding"
+    },
+    "debug": {
+      "title": "Debug Info:",
+      "currentStep": "Current Step: {{stepIndex}} ({{stepName}})",
+      "isValid": "Is Valid: {{value}}",
+      "isRequired": "Is Required: {{value}}",
+      "viewData": "View Data"
+    },
+    "actions": {
+      "finish": "Finish Setup",
+      "saving": "Saving...",
+      "completing": "Completing..."
+    },
+    "shell": {
+      "title": "Setup Your System",
+      "description": "Let's get your workspace configured and ready to use."
+    }
+  },
+  "addClientStep": {
+    "title": "Add Client Step",
+    "description": "Wizard step for creating or revisiting the primary client record during onboarding",
+    "validation": {
+      "email": {
+        "invalid": "Please enter a valid email address"
+      },
+      "website": {
+        "example": "Please enter a valid website (e.g., example.com)",
+        "format": "Please enter a valid website format"
+      },
+      "phone": {
+        "tooShort": "Phone number seems too short",
+        "tooLong": "Phone number seems too long",
+        "invalidCharacters": "Phone number contains invalid characters"
+      }
+    },
+    "header": {
+      "title": "Add Your First Client",
+      "description": "Let's add your first client to get started. You can skip this and add clients later."
+    },
+    "created": {
+      "title": "Client created successfully!",
+      "description": "{{clientName}} has been added to your client list."
+    },
+    "fields": {
+      "clientName": {
+        "label": "Client Name",
+        "placeholder": "Example Corp"
+      },
+      "clientEmail": {
+        "label": "Client Email",
+        "placeholder": "contact@example.com"
+      },
+      "clientPhone": {
+        "label": "Phone Number",
+        "placeholder": "+1 (555) 123-4567"
+      },
+      "website": {
+        "label": "Website",
+        "placeholder": "https://example.com"
+      }
+    },
+    "common": {
+      "noteLabel": "Note:",
+      "optionalLabel": "Optional:"
+    },
+    "note": {
+      "defaultTaxSettings": "The client will be created with default non-taxable (0%) tax settings. You can configure tax rates later in the client settings.",
+      "optional": "You can skip this step and add clients later from your dashboard."
+    }
+  },
+  "billingSetupStep": {
+    "title": "Billing Setup Step",
+    "description": "Wizard step for defining the initial service, pricing, billing mode, and contract line defaults",
+    "serviceTypes": {
+      "toasts": {
+        "deleted": "Service type deleted successfully"
+      },
+      "errors": {
+        "delete": "Failed to delete service type",
+        "nameRequired": "Service type name is required",
+        "duplicate": "Service type with this name already exists",
+        "create": "Failed to create service type",
+        "createRetry": "Failed to create service type. Please try again."
+      },
+      "actions": {
+        "manage": "Manage Service Types",
+        "import": "Import from Standard",
+        "add": "Add New",
+        "confirmAdd": "Add Service Type"
+      },
+      "noteLabel": "Note:",
+      "description": "Service types are taxonomy labels for organization and filtering. Billing mode is configured separately on each service.",
+      "addForm": {
+        "title": "Add New Service Type",
+        "fields": {
+          "name": {
+            "label": "Name *",
+            "placeholder": "e.g., Premium Support"
+          },
+          "description": {
+            "label": "Description",
+            "placeholder": "Describe this service type..."
+          },
+          "billingMethod": {
+            "label": "Billing Method *"
+          },
+          "displayOrder": {
+            "label": "Display Order",
+            "placeholder": "Leave empty for auto-generate",
+            "help": "Controls the order in which service types appear in dropdown menus throughout the platform. Lower numbers appear first."
+          }
+        }
+      },
+      "import": {
+        "title": "Import Standard Service Types",
+        "description": "Select standard service types to import into your system:",
+        "success": {
+          "titleOne": "Service type imported successfully!",
+          "titleOther": "Service types imported successfully!",
+          "description": "{{count}} type{{suffix}} added to your catalog.",
+          "skipped": "{{count}} skipped."
+        },
+        "actions": {
+          "importing": "Importing...",
+          "importSelected": "Import Selected ({{count}})"
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Name",
+          "billingMethod": "Billing Method",
+          "order": "Order",
+          "actions": "Actions"
+        }
+      },
+      "current": {
+        "title": "Current Service Types",
+        "removeTitle": "Remove service type"
+      }
+    },
+    "header": {
+      "title": "Create Your First Service",
+      "description": "Add a service and choose how it should be billed. Service type identifies the service category, while billing mode controls pricing behavior.",
+      "serviceTitle": "Create Your First Service",
+      "serviceDescription": "Add a service and choose how it should be billed. Service type identifies the service category, while billing mode controls pricing behavior."
+    },
+    "created": {
+      "title": "Service created successfully!",
+      "description": "{{serviceName}} has been added to your service catalog."
+    },
+    "fields": {
+      "serviceName": {
+        "label": "Service Name *",
+        "placeholder": "Managed IT Services"
+      },
+      "serviceDescription": {
+        "label": "Service Description",
+        "placeholder": "Comprehensive IT support and management services..."
+      },
+      "serviceType": {
+        "label": "Service Type *",
+        "required": "(Required)",
+        "emptyPlaceholder": "Create or import service types",
+        "placeholder": "Select a service type",
+        "emptyHelp": "Click \"Manage Service Types\" to create or import service types"
+      },
+      "billingMode": {
+        "label": "Billing Mode"
+      },
+      "defaultRate": {
+        "label": "Default Rate",
+        "placeholder": "150"
+      },
+      "defaultCurrency": {
+        "label": "Default Currency *",
+        "description": "This currency will be used as the default across all billing — services, contracts, quotes, and invoices. You can override it per client later."
+      }
+    },
+    "billingMethods": {
+      "fixed": "Fixed",
+      "hourly": "Hourly",
+      "usageBased": "Usage Based",
+      "usage": "Usage"
+    },
+    "validation": {
+      "actionRequiredLabel": "Action Required:",
+      "actionRequiredDescription": "Click \"Manage Service Types\" above to create or import at least one service type before creating a service."
+    }
+  },
+  "clientContactStep": {
+    "title": "Client Contact Step",
+    "description": "Wizard step for collecting the main client contact details",
+    "validation": {
+      "email": {
+        "invalid": "Please enter a valid email address"
+      }
+    },
+    "empty": {
+      "title": "Client Contact",
+      "description": "No client information was provided. Skip this step or go back to add a client first."
+    },
+    "header": {
+      "title": "Add Contact for {{clientName}}",
+      "clientFallback": "Client",
+      "description": "Add a primary contact person for this client."
+    },
+    "created": {
+      "title": "Contact created successfully!",
+      "description": "{{contactName}} has been added to {{clientName}}.",
+      "contactFallback": "The contact",
+      "clientFallback": "the client"
+    },
+    "fields": {
+      "contactName": {
+        "label": "Contact Name",
+        "placeholder": "John Smith"
+      },
+      "contactEmail": {
+        "label": "Contact Email",
+        "placeholder": "john.smith@example.com"
+      },
+      "contactRole": {
+        "label": "Role/Title",
+        "placeholder": "IT Manager"
+      }
+    },
+    "common": {
+      "optionalLabel": "Optional:"
+    },
+    "footer": {
+      "optional": "You can skip this step and add contacts later from the client's profile."
+    }
+  },
+  "clientInfoStep": {
+    "title": "Client Info Step",
+    "description": "Wizard step for collecting MSP operator identity, company information, and initial client basics",
+    "revisit": {
+      "title": "Company Information",
+      "description": "Review or update your company details.",
+      "fields": {
+        "companyName": {
+          "label": "Company Name",
+          "placeholder": "Acme IT Solutions"
+        }
+      },
+      "note": "You can use this wizard to reconfigure your workspace settings at any time."
+    },
+    "common": {
+      "noteLabel": "Note:"
+    },
+    "header": {
+      "title": "Client Information",
+      "description": "Let's start by setting up your client profile."
+    },
+    "fields": {
+      "firstName": {
+        "label": "First Name",
+        "placeholder": "John"
+      },
+      "lastName": {
+        "label": "Last Name",
+        "placeholder": "Doe"
+      },
+      "companyName": {
+        "label": "Company Name",
+        "placeholder": "Acme IT Solutions"
+      },
+      "email": {
+        "label": "Email Address",
+        "placeholder": "john@acmeit.com",
+        "help": "This will be used for signing in to your account."
+      },
+      "language": {
+        "label": "Idioma",
+        "placeholder": "Selecione um idioma",
+        "help": "Torna-se o padrão da organização para todos — equipe MSP e usuários do portal do cliente. Usuários individuais e clientes podem substituí-lo depois."
+      }
+    },
+    "password": {
+      "resetRequired": {
+        "title": "Password Reset Required",
+        "description": "You must set a new password to continue with the setup process. This step cannot be skipped."
+      },
+      "title": "Set Your Password",
+      "description": "Please set a new password to replace your temporary password.",
+      "fields": {
+        "newPassword": {
+          "label": "New Password",
+          "placeholder": "Create a strong password"
+        },
+        "confirmPassword": {
+          "label": "Confirm Password",
+          "placeholder": "Re-enter your password",
+          "match": "Passwords match",
+          "mismatch": "Passwords do not match"
+        }
+      },
+      "requirements": {
+        "title": "Password must contain:",
+        "minLength": "At least 8 characters",
+        "uppercase": "One uppercase letter",
+        "lowercase": "One lowercase letter",
+        "number": "One number",
+        "specialCharacter": "One special character"
+      },
+      "strength": {
+        "label": "Password strength: {{strength}}",
+        "strong": "Strong",
+        "medium": "Medium",
+        "weak": "Weak"
+      }
+    },
+    "footer": {
+      "note": "All fields on this page are required to proceed."
+    }
+  },
+  "teamMembersStep": {
+    "title": "Team Members Step",
+    "description": "Wizard step for inviting initial team members and assigning onboarding roles",
+    "license": {
+      "limitReached": "License limit reached ({{current}}/{{limit}}). Contact support to increase your license limit.",
+      "remaining": {
+        "one": "You can add 1 more team member.",
+        "other": "You can add {{count}} more team members."
+      },
+      "summary": {
+        "noLimit": "Users: {{count}} (No limit)",
+        "limited": "Users: {{current}}/{{limit}}"
+      }
+    },
+    "errors": {
+      "requiredFields": "Please fill in all required fields including password",
+      "invalidEmail": "Please enter a valid email address",
+      "passwordLength": "Password must be at least 8 characters long",
+      "saveFailed": "Failed to save team member",
+      "generic": "An error occurred"
+    },
+    "header": {
+      "title": "Invite Team Members",
+      "description": "Add your team members to get them started. You can skip this step and add them later."
+    },
+    "created": {
+      "titleOne": "1 team member created successfully!",
+      "titleOther": "{{count}} team members created successfully!",
+      "users": "Created users: {{users}}"
+    },
+    "member": {
+      "title": "Team Member {{index}}",
+      "createdBadge": "Created",
+      "actions": {
+        "saving": "Saving...",
+        "save": "Save"
+      }
+    },
+    "fields": {
+      "firstName": {
+        "label": "First Name",
+        "placeholder": "Jane"
+      },
+      "lastName": {
+        "label": "Last Name",
+        "placeholder": "Smith"
+      },
+      "email": {
+        "label": "Email",
+        "placeholder": "jane@client.com"
+      },
+      "role": {
+        "label": "Role"
+      },
+      "password": {
+        "label": "Temporary Password",
+        "placeholder": "Set temporary password",
+        "help": "The user will need to change this password on first login"
+      }
+    },
+    "roles": {
+      "admin": "Admin",
+      "technician": "Technician",
+      "manager": "Manager",
+      "user": "User"
+    },
+    "actions": {
+      "saveCurrentFirst": "Save Current Team Member First",
+      "addAnother": "Add Another Team Member"
+    },
+    "unsaved": {
+      "title": "Unsaved team member",
+      "description": "Please save the current team member before adding a new one."
+    },
+    "limitReached": {
+      "title": "User limit reached",
+      "description": "You've reached the maximum number of users for your current plan. Contact support to increase your limit."
+    },
+    "optional": {
+      "label": "Optional:",
+      "description": "You can skip this step and invite team members later from the settings page."
+    }
+  },
+  "ticketingConfigStep": {
+    "title": "Ticketing Config Step",
+    "description": "Wizard step for configuring boards, statuses, priorities, categories, and SLA defaults during onboarding",
+    "boards": {
+      "toasts": {
+        "firstDefaultSet": "First board automatically set as default",
+        "deleted": "Board deleted successfully",
+        "defaultUpdated": "Default board updated successfully"
+      },
+      "errors": {
+        "import": "Failed to import boards",
+        "delete": "Failed to delete board.",
+        "defaultRequired": "At least one board must be set as default",
+        "defaultUpdate": "Failed to set default board",
+        "duplicate": "Board already exists",
+        "create": "Failed to create board. Please try again."
+      },
+      "delete": {
+        "fallbackEntity": "this board"
+      },
+      "title": "Boards",
+      "description": "Boards help organize tickets by department, team, or workflow type. When clients create tickets through the client portal, they will automatically be assigned to the board marked as default.",
+      "tip": "Click the star in the Default column to change which board is the default.",
+      "actions": {
+        "import": "Import from Standard",
+        "add": "Add New Board",
+        "confirmAdd": "Add Board"
+      },
+      "addForm": {
+        "title": "Add New Board",
+        "fields": {
+          "name": {
+            "label": "Board Name *",
+            "placeholder": "Enter board name"
+          },
+          "description": {
+            "label": "Description",
+            "placeholder": "Enter description"
+          },
+          "displayOrder": {
+            "label": "Display Order",
+            "placeholder": "Leave empty for auto-generate",
+            "help": "Controls the order in which boards appear in dropdown menus throughout the platform. Lower numbers appear first."
+          },
+          "itil": {
+            "label": "Make this board ITIL compliant"
+          }
+        },
+        "configurationTitle": "Board Configuration"
+      },
+      "import": {
+        "title": "Import Standard Boards",
+        "success": {
+          "one": "Successfully imported 1 board.",
+          "other": "Successfully imported {{count}} boards."
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Name",
+          "default": "Default",
+          "order": "Order",
+          "itil": "ITIL"
+        }
+      },
+      "current": {
+        "title": "Current Boards",
+        "defaultTitle": "Default board",
+        "setDefaultTitle": "Set as default board",
+        "removeTitle": "Remove board"
+      }
+    },
+    "categories": {
+      "import": {
+        "unknownParent": "Unknown parent",
+        "title": "Import Standard Categories",
+        "success": {
+          "one": "Successfully imported 1 category.",
+          "other": "Successfully imported {{count}} categories."
+        },
+        "targetBoard": {
+          "label": "Target Board *",
+          "placeholder": "Select a board for imported categories",
+          "help": "All imported categories will be assigned to this board"
+        },
+        "parentAutoSelectTitle": "Parent category will be automatically selected"
+      },
+      "errors": {
+        "missingParents": "Cannot import subcategories without their parent categories. Please also select: {{parents}}",
+        "duplicate": "Category already exists in this board",
+        "create": "Failed to create category. Please try again.",
+        "delete": "Failed to delete category."
+      },
+      "delete": {
+        "fallbackEntity": "this category"
+      },
+      "toasts": {
+        "deleted": "Category deleted successfully"
+      },
+      "title": "Categories",
+      "requiresBoard": "(requires board)",
+      "description": "Categories help organize tickets by type of issue or request. You can create parent categories with subcategories for better organization. Examples include Technical Support (with subcategories like Hardware, Software, Network) or Service Requests.",
+      "actions": {
+        "import": "Import from Standard",
+        "add": "Add New Category",
+        "confirmAdd": "Add Category"
+      },
+      "addForm": {
+        "title": "Add New Category",
+        "fields": {
+          "name": {
+            "label": "Category Name *",
+            "placeholder": "Enter category name"
+          },
+          "board": {
+            "label": "Target Board *",
+            "placeholder": "Select a board"
+          },
+          "parent": {
+            "label": "Parent Category",
+            "noneOption": "None (Top-level category)",
+            "placeholder": "Select parent category"
+          },
+          "displayOrder": {
+            "label": "Display Order",
+            "placeholder": "Leave empty for auto-generate",
+            "help": "Controls the order in which categories appear in dropdown menus throughout the platform. Lower numbers appear first."
+          }
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Name",
+          "order": "Order"
+        }
+      },
+      "current": {
+        "title": "Current Categories ({{count}} total)",
+        "removeTitle": "Remove category"
+      }
+    },
+    "statuses": {
+      "toasts": {
+        "firstDefaultSet": "First open status automatically set as default",
+        "deleted": "Status deleted successfully",
+        "defaultUpdated": "Default status updated successfully"
+      },
+      "delete": {
+        "fallbackEntity": "this status"
+      },
+      "errors": {
+        "delete": "Failed to delete status.",
+        "defaultRequired": "At least one status must be set as default",
+        "closedCannotBeDefault": "Closed statuses cannot be set as default",
+        "selectBoardForDefault": "Select or create a board before changing status defaults.",
+        "defaultUpdate": "Failed to set default status",
+        "duplicate": "Status already exists",
+        "selectBoardForAdd": "Select or create a board before adding statuses.",
+        "create": "Failed to create status. Please try again."
+      },
+      "title": "Statuses",
+      "description": "Statuses are configured per board. Select a board below to define the lifecycle for tickets on that board. The Default open status for the selected board is automatically assigned to new tickets created on that board.",
+      "tip": "Boards do not share statuses. Switch boards here to review or change each board's status set.",
+      "fields": {
+        "board": {
+          "label": "Board",
+          "placeholder": "Select board"
+        }
+      },
+      "noBoardWarning": "Create or import a board before configuring statuses. Each board needs its own open default status.",
+      "actions": {
+        "import": "Import from Standard",
+        "add": "Add New Status",
+        "confirmAdd": "Add Status"
+      },
+      "addForm": {
+        "title": "Add New Status",
+        "fields": {
+          "name": {
+            "label": "Status Name *",
+            "placeholder": "Enter status name"
+          },
+          "displayOrder": {
+            "label": "Display Order",
+            "placeholder": "Leave empty for auto-generate",
+            "help": "Controls the order in which statuses appear in dropdown menus throughout the platform. Lower numbers appear first."
+          },
+          "state": {
+            "closedLabel": "Closed Status",
+            "openLabel": "Open Status",
+            "closedHelp": "This status indicates the ticket is resolved and closed",
+            "openHelp": "This status indicates the ticket is still open and needs attention"
+          }
+        }
+      },
+      "import": {
+        "title": "Import Standard Statuses",
+        "targetBoard": "Importing into {{boardName}}.",
+        "success": {
+          "one": "Successfully imported 1 status.",
+          "other": "Successfully imported {{count}} statuses."
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Name",
+          "type": "Type",
+          "default": "Default",
+          "order": "Order"
+        }
+      },
+      "types": {
+        "closed": "Closed",
+        "open": "Open"
+      },
+      "current": {
+        "title": "Current Statuses",
+        "titleWithBoard": "Current Statuses for {{boardName}}",
+        "defaultTitle": "Default status",
+        "setDefaultTitle": "Set as default status",
+        "removeTitle": "Remove status"
+      },
+      "empty": {
+        "forBoard": "{{boardName}} does not have any statuses yet. Add or import at least one open default status before completing onboarding.",
+        "noBoardSelected": "Select a board to configure its statuses."
+      }
+    },
+    "priorities": {
+      "errors": {
+        "duplicate": "Priority already exists",
+        "missingSession": "User session not found. Please refresh and try again.",
+        "create": "Failed to create priority. Please try again.",
+        "delete": "Failed to delete priority."
+      },
+      "delete": {
+        "fallbackEntity": "this priority"
+      },
+      "toasts": {
+        "deleted": "Priority deleted successfully"
+      },
+      "title": "Priorities",
+      "description": "Priorities help determine the urgency of tickets and service level agreements (SLAs). Each priority has a color for quick visual identification. Typical priorities include Critical (red), High (orange), Medium (blue), and Low (green).",
+      "actions": {
+        "import": "Import from Standard",
+        "add": "Add New Priority",
+        "confirmAdd": "Add Priority"
+      },
+      "addForm": {
+        "title": "Add New Priority",
+        "fields": {
+          "name": {
+            "label": "Priority Name *",
+            "placeholder": "Enter priority name"
+          },
+          "displayOrder": {
+            "label": "Display Order",
+            "placeholder": "Leave empty for auto-generate",
+            "help": "Controls the order in which priorities appear in dropdown menus throughout the platform. Lower numbers appear first."
+          },
+          "color": {
+            "label": "Priority Color",
+            "choose": "Choose Color"
+          }
+        }
+      },
+      "import": {
+        "title": "Import Standard Priorities",
+        "success": {
+          "one": "Successfully imported 1 priority.",
+          "other": "Successfully imported {{count}} priorities."
+        }
+      },
+      "table": {
+        "headers": {
+          "name": "Name",
+          "color": "Color",
+          "order": "Order"
+        }
+      },
+      "current": {
+        "title": "Current Priorities",
+        "removeTitle": "Remove priority"
+      }
+    },
+    "common": {
+      "errors": {
+        "validateDeletion": "Failed to validate deletion. Please try again."
+      },
+      "noteLabel": "Note:",
+      "tipLabel": "Tip:",
+      "actions": {
+        "importing": "Importing...",
+        "importCount": "Import ({{count}})"
+      },
+      "table": {
+        "actions": "Actions"
+      }
+    },
+    "header": {
+      "title": "Configure Ticketing System",
+      "description": "Set up your support ticketing system. Import standard configurations or create your own."
+    },
+    "loading": {
+      "description": "Loading existing configuration..."
+    },
+    "numbering": {
+      "title": "Ticket Numbering",
+      "description": "Configure how ticket numbers are generated. Each ticket will have a unique identifier consisting of an optional prefix and a sequential number with optional zero-padding.",
+      "fields": {
+        "prefix": {
+          "label": "Ticket Prefix",
+          "placeholder": "TK-",
+          "help": "Optional. Leave empty for no prefix or enter a custom prefix (e.g., \"TK-\", \"TICKET-\")"
+        },
+        "paddingLength": {
+          "label": "Padding Length",
+          "help": "Minimum total digits. E.g., 6 makes \"1\" become \"000001\""
+        },
+        "startNumber": {
+          "label": "Starting Number"
+        }
+      },
+      "example": "Example: {{value}}"
+    },
+    "itil": {
+      "actions": {
+        "openReference": "View ITIL categories and priority matrix"
+      },
+      "title": "ITIL Standards Reference",
+      "categories": {
+        "title": "ITIL Standard Categories and Subcategories",
+        "hardware": {
+          "title": "Hardware",
+          "server": "• Server",
+          "desktopLaptop": "• Desktop/Laptop",
+          "networkEquipment": "• Network Equipment",
+          "printer": "• Printer",
+          "storage": "• Storage",
+          "mobileDevice": "• Mobile Device"
+        },
+        "software": {
+          "title": "Software",
+          "operatingSystem": "• Operating System",
+          "businessApplication": "• Business Application",
+          "database": "• Database",
+          "emailCollaboration": "• Email/Collaboration",
+          "securitySoftware": "• Security Software",
+          "customApplication": "• Custom Application"
+        },
+        "network": {
+          "title": "Network",
+          "connectivity": "• Connectivity",
+          "vpn": "• VPN",
+          "wifi": "• Wi-Fi",
+          "internetAccess": "• Internet Access",
+          "lanWan": "• LAN/WAN",
+          "firewall": "• Firewall"
+        },
+        "security": {
+          "title": "Security",
+          "malwareVirus": "• Malware/Virus",
+          "unauthorizedAccess": "• Unauthorized Access",
+          "dataBreach": "• Data Breach",
+          "phishingSpam": "• Phishing/Spam",
+          "policyViolation": "• Policy Violation",
+          "accountLockout": "• Account Lockout"
+        },
+        "serviceRequest": {
+          "title": "Service Request",
+          "accessRequest": "• Access Request",
+          "newUserSetup": "• New User Setup",
+          "softwareInstallation": "• Software Installation",
+          "equipmentRequest": "• Equipment Request",
+          "informationRequest": "• Information Request",
+          "changeRequest": "• Change Request"
+        }
+      },
+      "matrix": {
+        "title": "ITIL Priority Matrix (Impact × Urgency)",
+        "urgency": {
+          "high": "High",
+          "label": "Urgency",
+          "mediumHigh": "Medium-High",
+          "medium": "Medium",
+          "mediumLow": "Medium-Low",
+          "low": "Low"
+        },
+        "impact": {
+          "high": "High Impact (1)",
+          "mediumHigh": "Medium-High Impact (2)",
+          "medium": "Medium Impact (3)",
+          "mediumLow": "Medium-Low Impact (4)",
+          "low": "Low Impact (5)"
+        },
+        "priority": {
+          "critical": "Critical (1)",
+          "high": "High (2)",
+          "medium": "Medium (3)",
+          "low": "Low (4)",
+          "planning": "Planning (5)"
+        },
+        "explanation": {
+          "impact": "Impact: How many users/business functions are affected?",
+          "urgency": "Urgency: How quickly does this need to be resolved?",
+          "priority": "Priority: Automatically calculated based on Impact × Urgency matrix above."
+        }
+      }
+    },
+    "supportEmail": {
+      "label": "Support Email",
+      "placeholder": "support@yourclient.com",
+      "help": "This email address will be used to create support tickets. Emails sent to this address will automatically generate tickets in your system."
+    },
+    "finalRequirement": {
+      "label": "Required:",
+      "description": "Please configure at least one board and one priority to complete setup. Import standard configurations to quickly set up your ticketing system."
+    }
+  }
+}

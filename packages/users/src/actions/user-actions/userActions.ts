@@ -39,8 +39,32 @@ const ADD_USER_VALIDATION_ERRORS = new Set([
   SOLO_USER_LIMIT_MESSAGE,
 ]);
 
+const UPDATE_USER_VALIDATION_ERRORS = new Set([
+  'A user with this email address already exists',
+  'reports_to cannot reference the user itself',
+  'reports_to would create a circular reporting chain',
+]);
+
 const getErrorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : '';
+
+async function findExistingUserByEmailGlobally(
+  email: string,
+  options?: { excludeUserId?: string }
+): Promise<Pick<IUser, 'user_id'> | undefined> {
+  const db = await getAdminConnection();
+
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    let query = trx('users')
+      .where({ email: email.toLowerCase() });
+
+    if (options?.excludeUserId) {
+      query = query.whereNot('user_id', options.excludeUserId);
+    }
+
+    return await query.first('user_id');
+  });
+}
 
 /**
  * Check if an email exists globally across all tenants
@@ -62,8 +86,7 @@ export const checkEmailExistsGlobally = withAuth(async (
 
       const existingUser = await trx('users')
         .where({ email: email.toLowerCase() })
-        .first();
-
+        .first('user_id');
       return !!existingUser;
     });
   } catch (error) {
@@ -320,12 +343,36 @@ export const updateUser = withAuth(async (
         }
       }
 
-      await User.update(trx, userId, userData);
+      let normalizedUserData = userData;
+      if (userData.email) {
+        const normalizedEmail = userData.email.toLowerCase();
+        const existingUser = await findExistingUserByEmailGlobally(normalizedEmail, {
+          excludeUserId: userId,
+        });
+
+        if (existingUser) {
+          throw new Error('A user with this email address already exists');
+        }
+
+        normalizedUserData = {
+          ...userData,
+          email: normalizedEmail,
+        };
+      }
+
+      await User.update(trx, userId, normalizedUserData);
       const updatedUser = await User.getUserWithRoles(trx, userId);
       return updatedUser || null;
     });
   } catch (error) {
     logger.error(`Failed to update user with id ${userId}:`, error);
+    const message = getErrorMessage(error);
+    if (
+      UPDATE_USER_VALIDATION_ERRORS.has(message) ||
+      message === 'Permission denied: Cannot update user'
+    ) {
+      throw error;
+    }
     throw new Error('Failed to update user');
   }
 });

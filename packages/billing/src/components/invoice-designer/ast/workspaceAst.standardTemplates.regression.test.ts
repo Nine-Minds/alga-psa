@@ -60,6 +60,7 @@ describe('workspaceAst standard template regression coverage', () => {
     ['standard-default', ['invoice-number', 'line-items', 'totals']] as const,
     ['standard-detailed', ['issuer-logo', 'party-blocks', 'bill-to-card', 'totals-wrap']] as const,
     ['standard-grouped', ['issuer-logo', 'recurring-items', 'onetime-items', 'notes-totals-row']] as const,
+    ['standard-invoice-by-location', ['location-bands', 'location-band-header', 'location-band-items', 'location-band-subtotal', 'totals-wrap']] as const,
   ])('keeps invoice template %s structurally stable across designer import/export', (templateCode, criticalNodeIds) => {
     const source = getStandardTemplateAstByCode(templateCode);
     expect(source).toBeTruthy();
@@ -72,6 +73,7 @@ describe('workspaceAst standard template regression coverage', () => {
     ['standard-quote-default', ['quote-number', 'line-items', 'totals', 'signature-block']] as const,
     ['standard-quote-detailed', ['phase-summary', 'line-items-detailed', 'version', 'signature-block']] as const,
     ['standard-quote-grouped', ['monthly-items', 'onetime-items', 'terms-section', 'signature-block']] as const,
+    ['standard-quote-by-location', ['location-bands', 'location-band-header', 'location-band-items', 'location-band-subtotal', 'totals', 'signature-block']] as const,
   ])('keeps quote template %s structurally stable across designer import/export', (templateCode, criticalNodeIds) => {
     const source = getStandardQuoteTemplateAstByCode(templateCode);
     expect(source).toBeTruthy();
@@ -81,7 +83,17 @@ describe('workspaceAst standard template regression coverage', () => {
   });
 
   it('covers every shipped standard invoice and quote template code', () => {
-    expect(Object.keys(STANDARD_INVOICE_TEMPLATE_ASTS).sort()).toEqual(['standard-default', 'standard-detailed', 'standard-grouped']);
-    expect(Object.keys(STANDARD_QUOTE_TEMPLATE_ASTS).sort()).toEqual(['standard-quote-default', 'standard-quote-detailed', 'standard-quote-grouped']);
+    expect(Object.keys(STANDARD_INVOICE_TEMPLATE_ASTS).sort()).toEqual([
+      'standard-default',
+      'standard-detailed',
+      'standard-grouped',
+      'standard-invoice-by-location',
+    ]);
+    expect(Object.keys(STANDARD_QUOTE_TEMPLATE_ASTS).sort()).toEqual([
+      'standard-quote-by-location',
+      'standard-quote-default',
+      'standard-quote-detailed',
+      'standard-quote-grouped',
+    ]);
   });
 });

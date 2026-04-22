@@ -1,0 +1,449 @@
+{
+  "taxRates": {
+    "errors": {
+      "loadRegions": "Kan belastingregio's niet laden.",
+      "validateDeletion": "Kan de verwijdering niet valideren. Probeer het opnieuw.",
+      "fetchRates": "Kan belastingtarieven niet ophalen",
+      "add": "Kan het belastingtarief niet toevoegen",
+      "update": "Kan het belastingtarief niet updaten",
+      "confirmDeletion": "Kan het verwijderen van het belastingtarief niet bevestigen."
+    },
+    "validation": {
+      "requiredFieldsTitle": "Vul de verplichte velden in:",
+      "region": "Belastingregio",
+      "percentage": "Belastingpercentage",
+      "startDate": "Startdatum"
+    },
+    "table": {
+      "description": "Beschrijving",
+      "startDate": "Startdatum",
+      "endDate": "Einddatum",
+      "actions": "Acties",
+      "notAvailable": "N.v.t",
+      "region": "Regio",
+      "taxPercentage": "Belastingpercentage",
+      "composite": "Composiet"
+    },
+    "actions": {
+      "openMenu": "Menu openen",
+      "edit": "Bewerking",
+      "delete": "Verwijderen",
+      "advancedSettings": "Geavanceerde instellingen",
+      "addNew": "Nieuw belastingtarief toevoegen",
+      "add": "Belastingtarief toevoegen",
+      "update": "Belastingtarief bijwerken"
+    },
+    "dialog": {
+      "fields": {
+        "description": "Beschrijving",
+        "startDate": "Startdatum *",
+        "endDate": "Einddatum (optioneel)",
+        "region": "Belastingregio *",
+        "percentage": "Belastingpercentage *"
+      },
+      "placeholders": {
+        "loadingRegions": "Regio's laden...",
+        "selectRegion": "Selecteer Belastingregio",
+        "percentage": "Voer percentage in"
+      },
+      "addTitle": "Nieuw belastingtarief toevoegen",
+      "editTitle": "Belastingtarief bewerken",
+      "description": "Voer de gegevens voor het belastingtarief in."
+    },
+    "title": "Belastingtarieven",
+    "loading": "Belastingtarieven laden",
+    "deleteEntity": {
+      "fallback": "dit belastingtarief",
+      "withRegion": "{{regionName}} belastingtarief"
+    }
+  },
+  "taxRateDetail": {
+    "fields": {
+      "regionCode": "Regiocode",
+      "description": "Beschrijving",
+      "startDate": "Startdatum",
+      "endDate": "Einddatum",
+      "taxPercentage": "Belastingpercentage",
+      "taxType": "Belastingtype",
+      "isComposite": "Is samengesteld",
+      "isActive": "Is actief"
+    },
+    "values": {
+      "dash": "-",
+      "noEndDate": "Geen einddatum",
+      "yes": "Ja",
+      "no": "Nee",
+      "active": "Actief",
+      "inactive": "Inactief",
+      "composite": "Composiet"
+    },
+    "actions": {
+      "back": "Terug naar Belastingtarieven"
+    },
+    "subtitle": "{{regionCode}} - {{percentage}}%",
+    "tabs": {
+      "details": "Details",
+      "components": "Componenten",
+      "brackets": "Schijven",
+      "holidays": "Feestdagen"
+    },
+    "precedence": {
+      "title": "Voorrang bij belastingberekening",
+      "clientExempt": "De klantbelastingvrijstellingsvlag wordt eerst aangevinkt (indien vrijgesteld, wordt er geen belasting toegepast)",
+      "serviceSpecific": "Indien toegewezen, wordt een servicespecifiek belastingtarief gebruikt",
+      "clientDefault": "Het standaardbelastingtarief van de klant wordt gebruikt als fallback",
+      "regionLookup": "Bij het opzoeken van de belastingregio wordt het toepasselijke tarief bepaald op basis van de locatie"
+    },
+    "components": {
+      "simpleRateMessage": "Dit is een eenvoudig belastingtarief, geen samengesteld tarief. Belastingcomponenten worden alleen gebruikt bij samengestelde belastingen.",
+      "enableCompositeMessage": "Als u belastingcomponenten wilt gebruiken, markeert u dit tarief als samengesteld wanneer u het bewerkt."
+    },
+    "brackets": {
+      "intro": "Progressieve belastingschijven passen verschillende tarieven toe op verschillende delen van een bedrag.",
+      "precedence": "Wanneer haakjes zijn gedefinieerd, hebben deze voorrang op het vaste percentage."
+    }
+  },
+  "serviceForm": {
+    "errors": {
+      "loadServiceTypes": "Kan servicetypen niet ophalen",
+      "serviceTypeNotFound": "Geselecteerd servicetype niet gevonden",
+      "create": "Kan service niet maken",
+      "loadTaxData": "Kan belastinggegevens niet laden.",
+      "selectServiceType": "Selecteer een servicetype"
+    },
+    "fields": {
+      "serviceName": {
+        "placeholder": "Dienstnaam"
+      },
+      "serviceType": {
+        "label": "Servicetype",
+        "placeholder": "Selecteer Servicetype"
+      },
+      "billingMethod": {
+        "label": "Factureringsmethode",
+        "placeholder": "Selecteer Factureringsmethode"
+      },
+      "description": {
+        "label": "Beschrijving",
+        "placeholder": "Dienstbeschrijving"
+      },
+      "taxRate": {
+        "label": "Belastingtarief",
+        "placeholderLoading": "Belastinggegevens laden...",
+        "placeholder": "Selecteer belastingtarief (optioneel)"
+      },
+      "defaultRate": {
+        "placeholder": "Standaardtarief"
+      },
+      "unitOfMeasure": {
+        "placeholder": "Maateenheid"
+      }
+    },
+    "options": {
+      "billingMethod": {
+        "hourly": "Per uur",
+        "usage": "Gebruik gebaseerd",
+        "fixed": "Vaste prijs"
+      }
+    },
+    "taxRateOption": {
+      "fallback": "N.v.t",
+      "label": "{{description}} - {{percentage}}%"
+    },
+    "actions": {
+      "submit": "Dienst toevoegen"
+    }
+  },
+  "serviceSelection": {
+    "table": {
+      "type": "Type",
+      "unit": "Eenheid",
+      "rate": "Tarief",
+      "product": "Product",
+      "itemName": "Artikelnaam",
+      "service": "Dienst",
+      "unknown": "Onbekend"
+    },
+    "actions": {
+      "cancel": "Annuleren",
+      "addSelected": "Voeg geselecteerde services toe",
+      "adding": "Toevoegen..."
+    },
+    "title": "Diensten en producten toevoegen aan plan",
+    "searchPlaceholder": "Diensten/producten zoeken...",
+    "errors": {
+      "load": "Kan services niet laden",
+      "add": "Het is niet gelukt om services aan het plan toe te voegen"
+    },
+    "states": {
+      "loading": "Diensten laden...",
+      "empty": "Geen diensten gevonden"
+    },
+    "selection": {
+      "countOne": "{{count}}-service geselecteerd",
+      "countOther": "{{count}} services geselecteerd"
+    },
+    "quickAdd": {
+      "label": "Snel toevoegen:",
+      "allType": "Alle {{type}}"
+    }
+  },
+  "configType": {
+    "warningDialog": {
+      "cancel": "Annuleren",
+      "title": "Configuratietype wijzigen?",
+      "description": "Als u het configuratietype wijzigt, worden alle typespecifieke instellingen gereset. Deze actie kan niet ongedaan worden gemaakt.",
+      "confirm": "Type wijzigen"
+    },
+    "placeholder": "Selecteer configuratietype",
+    "options": {
+      "Fixed": {
+        "label": "Vaste prijs",
+        "description": "Een service tegen een vaste prijs met consistente facturering, ongeacht het gebruik. Ideaal voor voorspelbare diensten."
+      },
+      "Hourly": {
+        "label": "Uurtarief",
+        "description": "Tijdgebaseerde facturering met configureerbare tarieven. Het beste voor variabele werklasten, gefactureerd op basis van bestede tijd."
+      },
+      "Usage": {
+        "label": "Op gebruik gebaseerd",
+        "description": "Op gebruik gebaseerde facturering met gelaagde prijsopties. Perfect voor diensten gemeten op basis van verbruik."
+      },
+      "Bucket": {
+        "label": "Urenbundel",
+        "description": "Vooraf ingekochte uren die in de loop van de tijd kunnen worden gebruikt. Geschikt voor klanten die flexibiliteit nodig hebben met een budgetplafond."
+      }
+    }
+  },
+  "serviceConfig": {
+    "fields": {
+      "quantity": {
+        "label": "Aantal",
+        "placeholder": "Voer het aantal in",
+        "help": "Aantal eenheden van deze service",
+        "errorNegative": "De hoeveelheid kan niet negatief zijn"
+      },
+      "customRate": {
+        "label": "Aangepast tarief",
+        "placeholder": "Voer tarief in",
+        "placeholderDefault": "Standaard: {{rate}}",
+        "helpCustom": "Speciaal tarief voor deze service",
+        "helpUseDefault": "Laat dit veld leeg om het standaardtarief te gebruiken ({{rate}})",
+        "errorNegative": "Het tarief kan niet negatief zijn"
+      },
+      "configurationType": "Configuratietype"
+    },
+    "actions": {
+      "cancel": "Annuleren",
+      "saving": "Besparing...",
+      "save": "Configuratie opslaan"
+    },
+    "title": "Serviceconfiguratie",
+    "serviceLabel": "Dienst",
+    "effectiveModeLabel": "Effectieve modus",
+    "defaultSourceLabel": "Standaardbron",
+    "modes": {
+      "Fixed": "Vaste prijs",
+      "Hourly": "Uurtarief",
+      "Usage": "Op gebruik gebaseerd",
+      "Bucket": "Urenbundel"
+    },
+    "defaultSources": {
+      "catalog default": "standaard catalogus",
+      "contract override": "contractoverschrijding",
+      "none": "geen"
+    },
+    "bucketOverlay": {
+      "recommendHours": "Beveel uren aan",
+      "recommendUsage": "Aanbevolen emmer consumptie"
+    }
+  },
+  "hourlyConfig": {
+    "fields": {
+      "minimumBillableTime": {
+        "placeholder": "15",
+        "label": "Minimale factureerbare tijd (minuten)",
+        "help": "Minimale tijd om te factureren (bijvoorbeeld 15 minuten)",
+        "errorNegative": "De minimale factureerbare tijd kan niet negatief zijn"
+      },
+      "roundUpToNearest": {
+        "placeholder": "15",
+        "label": "Naar boven afronden naar dichtstbijzijnde (minuten)",
+        "help": "Rond tijdinvoer af naar de dichtstbijzijnde stapgrootte",
+        "errorNegative": "De afgeronde waarde kan niet negatief zijn"
+      },
+      "newUserType": {
+        "label": "Gebruikerstype",
+        "placeholder": "Selecteer gebruikerstype"
+      },
+      "newUserTypeRate": {
+        "label": "Tarief",
+        "placeholder": "Voer tarief in",
+        "errorNegative": "Het gebruikerstypepercentage kan niet negatief zijn"
+      }
+    },
+    "userTypeRates": {
+      "headers": {
+        "userType": "Gebruikerstype",
+        "rate": "Tarief"
+      },
+      "title": "Tarieven voor gebruikerstypes",
+      "options": {
+        "technician": "Technicus",
+        "engineer": "Ingenieur",
+        "consultant": "Adviseur",
+        "project_manager": "Projectmanager",
+        "admin": "Beheerder"
+      },
+      "actions": {
+        "addRate": "Tarief toevoegen"
+      }
+    },
+    "title": "Uurtariefconfiguratie"
+  },
+  "usageConfig": {
+    "defaults": {
+      "unitOfMeasure": "Eenheid"
+    },
+    "fields": {
+      "unitOfMeasure": {
+        "errorRequired": "Maateenheid is vereist",
+        "label": "Maateenheid",
+        "placeholder": "Voer de maateenheid in",
+        "help": "De eenheid die wordt gebruikt om het gebruik te meten (bijvoorbeeld GB, Gebruiker, Apparaat)"
+      },
+      "minimumUsage": {
+        "placeholder": "0",
+        "label": "Minimale gebruiksdrempel",
+        "help": "Minimaal factureerbaar gebruik per periode (0 voor geen minimum)",
+        "errorNegative": "Minimumverbruik kan niet negatief zijn"
+      },
+      "enableTieredPricing": "Schakel gedifferentieerde prijzen in"
+    },
+    "title": "Op gebruik gebaseerde configuratie",
+    "tiers": {
+      "title": "Prijsniveaus",
+      "addTier": "Niveau toevoegen",
+      "empty": "Geen lagen geconfigureerd. Voeg een laag toe om op volume gebaseerde prijzen te definiëren.",
+      "from": "Van ({{unit}})",
+      "to": "Aan ({{unit}})",
+      "ratePer": "Tarief per {{unit}}",
+      "unlimited": "Onbeperkt",
+      "help": "Configureer op volume gebaseerde prijsniveaus. Elk niveau past zijn tarief toe op gebruik dat binnen zijn bereik valt.",
+      "errors": {
+        "onlyLastUnlimited": "Alleen het laatste niveau kan een onbeperkte bovengrens hebben",
+        "overlap": "Niveaus kunnen elkaar niet overlappen",
+        "upperGreaterThanLower": "De bovengrens van het niveau moet groter zijn dan de ondergrens",
+        "rateNegative": "Tierrentes kunnen niet negatief zijn"
+      }
+    }
+  },
+  "rateTiers": {
+    "table": {
+      "actions": "Acties",
+      "minQuantity": "Minimale hoeveelheid",
+      "maxQuantity": "Maximale hoeveelheid",
+      "rate": "Tarief ({{unit}})",
+      "unlimited": "Onbeperkt"
+    },
+    "actions": {
+      "saving": "Besparing...",
+      "addTier": "Niveau toevoegen",
+      "save": "Tariefniveaus opslaan"
+    },
+    "title": "Beoordeel niveaus en hoeveelheidskortingen",
+    "description": "Configureer verschillende tarieven op basis van hoeveelheidsbereiken. Voor grotere hoeveelheden kunnen kortingstarieven gelden.",
+    "loading": "Tariefniveaus laden...",
+    "formattedRate": "{{rate}} per {{unit}}",
+    "errors": {
+      "load": "Kan tariefniveaus niet laden",
+      "save": "Kan tariefniveaus niet opslaan",
+      "lastTier": "Kan het laatste niveau niet verwijderen",
+      "minPositive": "Minimale hoeveelheid moet groter zijn dan 0",
+      "maxGreaterThanMin": "De maximale hoeveelheid moet groter zijn dan de minimale hoeveelheid",
+      "rateNegative": "Het tarief kan niet negatief zijn",
+      "overlap": "Niveaubereiken kunnen elkaar niet overlappen"
+    }
+  },
+  "serviceTaxSettings": {
+    "fields": {
+      "taxRate": {
+        "label": "Belastingtarief",
+        "placeholderLoading": "Tarieven laden...",
+        "placeholder": "Selecteer Belastingtarief",
+        "help": "Selecteer 'Niet belastbaar' als deze dienst niet belast mag worden."
+      }
+    },
+    "options": {
+      "nonTaxable": "Niet-belastbaar"
+    },
+    "errors": {
+      "loadTaxRates": "Kan belastingtarieven niet laden.",
+      "save": "Kan belastinginstellingen niet opslaan"
+    },
+    "actions": {
+      "saving": "Besparing...",
+      "save": "Belastinginstellingen opslaan"
+    },
+    "title": "Belastinginstellingen",
+    "optionLabel": "{{taxType}} ({{countryCode}}) - {{percentage}}%"
+  },
+  "fixedConfig": {
+    "title": "Configuratie met vaste prijs",
+    "fields": {
+      "adjustForPartialPeriods": "Aanpassen voor gedeeltelijke perioden",
+      "billingCycleAlignment": {
+        "label": "Factureringscyclus uitlijnen",
+        "placeholder": "Selecteer uitlijning",
+        "help": "Bepaalt hoe de dekking voor een gedeeltelijke periode wordt berekend wanneer de terugkerende vergoeding moet worden opgeschaald naar minder dan een volledige serviceperiode."
+      }
+    },
+    "options": {
+      "start": "Begin van de factureringscyclus",
+      "end": "Einde van de factureringscyclus",
+      "prorated": "Proportionele dekking"
+    }
+  },
+  "bucketConfig": {
+    "title": "Configuratie urenbundel",
+    "fields": {
+      "totalMinutes": {
+        "label": "Totaal aantal minuten",
+        "placeholder": "Voer het totaal aantal uren in",
+        "help": "Het totale aantal minuten dat is opgenomen in deze bucketcontractregel",
+        "errorPositive": "Het totale aantal minuten moet groter zijn dan nul"
+      },
+      "billingPeriod": {
+        "label": "Factureringsperiode",
+        "placeholder": "Selecteer factureringsperiode",
+        "help": "De periode waarover de bucketuren worden verdeeld",
+        "mismatchPrefix": "Verschil:",
+        "mismatch": "De factureringsperiode van de urenbundel ({{billingPeriod}}) moet overeenkomen met de factureringsfrequentie van de contractregel ({{contractLineBillingFrequency}})."
+      },
+      "overageRate": {
+        "label": "Overschrijdingspercentage",
+        "placeholder": "Voer het overschrijdingstarief in",
+        "help": "Het uurtarief dat in rekening wordt gebracht voor verbruikte uren buiten de bucketlimiet",
+        "errorNegative": "Het overschrijdingspercentage kan niet negatief zijn"
+      },
+      "allowRollover": "Laat ongebruikte uren meenemen naar de volgende periode"
+    }
+  },
+  "serviceDetail": {
+    "loading": "Serviceconfiguratie laden...",
+    "errors": {
+      "notFound": "Dienst niet gevonden",
+      "load": "Kan de serviceconfiguratie niet laden"
+    },
+    "title": "Serviceconfiguratie: {{serviceName}}",
+    "description": "Configureer servicedetails, prijzen en belastinginstellingen",
+    "sections": {
+      "unitOfMeasure": "Maateenheid",
+      "baseRate": "Basistarief"
+    },
+    "baseRate": {
+      "summary": "{{rate}} per {{unit}}",
+      "help": "Het basistarief kan worden overschreven met onderstaande op hoeveelheden gebaseerde niveaus."
+    }
+  }
+}

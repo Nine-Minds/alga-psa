@@ -72,6 +72,30 @@
   "fields": {
     "notes": "Notas"
   },
+  "auth": {
+    "messages": {
+      "handoffMissingToken": "El token de transferencia de sesión falta o no es válido. Inicie sesión nuevamente.",
+      "handoffFinalizeFailed": "No pudimos finalizar su inicio de sesión. Intente iniciar sesión de nuevo.",
+      "handoffNetworkIssue": "Se detectó un problema de red al finalizar el inicio de sesión. Inténtelo de nuevo."
+    },
+    "checkEmail": {
+      "resendSuccess": "¡Correo enviado! Revisa tu bandeja de entrada.",
+      "resendFailed": "No se pudo reenviar el correo. Inténtalo de nuevo."
+    }
+  },
+  "share": {
+    "errors": {
+      "loadFailed": "No se pudo cargar el enlace compartido",
+      "connectionFailed": "No se pudo conectar al servidor",
+      "passwordRequired": "Se requiere contraseña",
+      "invalidPassword": "Contraseña no válida",
+      "downloadFailedRetry": "La descarga falló. Inténtalo de nuevo.",
+      "downloadFailed": "La descarga falló",
+      "linkNotAvailable": "Enlace no disponible",
+      "linkExpired": "Este enlace compartido ha caducado.",
+      "downloadLimitReached": "Se alcanzó el límite de descargas."
+    }
+  },
   "tickets": {
     "responseSource": {
       "clientPortal": "Recibido vía Portal de Cliente",
@@ -144,6 +168,43 @@
         "client": "predeterminado de la empresa",
         "tenant": "predeterminado del inquilino",
         "system": "predeterminado del sistema"
+      }
+    },
+    "hierarchyTable": {
+      "title": "Jerarquía de preferencia de idioma",
+      "description": "Al determinar qué idioma usar para la interfaz y las notificaciones por correo electrónico, Alga verifica estos elementos en orden y se detiene en la primera coincidencia.",
+      "columns": {
+        "priority": "Prioridad",
+        "source": "Origen del idioma",
+        "appliesTo": "Se aplica a",
+        "whereSet": "Dónde se configura"
+      },
+      "rows": {
+        "userPreference": {
+          "source": "Preferencia individual del usuario",
+          "appliesTo": "Todos los usuarios",
+          "whereSet": "Perfil de usuario"
+        },
+        "clientUserLanguage": {
+          "source": "Idioma específico del cliente",
+          "appliesTo": "Usuarios del portal del cliente (por cliente específico)",
+          "whereSet": "Detalles del cliente"
+        },
+        "clientPortalDefault": {
+          "source": "Predeterminado del portal del cliente",
+          "appliesTo": "Todos los usuarios del portal del cliente",
+          "whereSet": "Configuración MSP → Portal del cliente"
+        },
+        "organizationDefault": {
+          "source": "Predeterminado de la organización",
+          "appliesTo": "Todos los usuarios (personal MSP y portal del cliente)",
+          "whereSet": "Configuración MSP → Idioma"
+        },
+        "systemDefault": {
+          "source": "Predeterminado del sistema (inglés)",
+          "appliesTo": "Alternativa",
+          "whereSet": "Definido por el sistema"
+        }
       }
     }
   },
@@ -390,7 +451,7 @@
         "pdf": "PDF",
         "image": "Imágenes",
         "text": "Documentos",
-        "video": "Video",
+        "video": "Vídeo",
         "other": "Otros"
       },
       "sortOptions": {
@@ -515,7 +576,6 @@
     "downloadAsMarkdown": "Descargar como Markdown",
     "move": "Mover"
   },
-  "notifications": {},
   "surveys": {
     "common": {
       "loading": "Cargando..."
@@ -827,8 +887,8 @@
     },
     "loginMethods": {
       "password": "Contraseña",
-      "googleOAuth": "Google OAuth",
-      "microsoftOAuth": "Microsoft OAuth",
+      "googleOAuth": "OAuth de Google",
+      "microsoftOAuth": "OAuth de Microsoft",
       "keycloak": "Keycloak"
     },
     "userTypes": {
@@ -930,5 +990,24 @@
     "deleteCommentAriaLabel": "Eliminar comentario",
     "deleteComment": "Eliminar comentario",
     "deleteCommentConfirmation": "¿Está seguro de que desea eliminar este comentario? Esta acción no se puede deshacer."
+  },
+  "enums": {
+    "addOnDescription": {
+      "ai_assistant": "Desbloquea el chat con IA, la asistencia de documentos, la ayuda en la barra lateral y las herramientas de IA de flujo de trabajo para tu equipo."
+    }
+  },
+  "form": {
+    "selectPlaceholder": "Seleccionar...",
+    "clearSelection": "Borrar selección",
+    "fromDate": "Desde",
+    "toDate": "Hasta",
+    "noResults": "No se encontraron resultados",
+    "searchPlaceholder": "Buscar..."
+  },
+  "tagFilter": {
+    "placeholder": "Filtrar por etiquetas...",
+    "filter": "Filtrar",
+    "selectedCount": "{{count}} seleccionados",
+    "clearAll": "Borrar todo"
   }
 }

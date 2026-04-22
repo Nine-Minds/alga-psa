@@ -11,7 +11,19 @@
   "viewContractLineDetails": "Abonnementsdetails bekijken",
   "viewAllInvoices": "Alle facturen bekijken",
   "failedToLoad": "Facturen laden is mislukt. Probeer het opnieuw.",
-  "invoices": "Facturen",
+  "invoices": {
+    "locations": {
+      "groupHeading": "Locatie",
+      "subtotal": "Subtotaal locatie",
+      "unassigned": "Items zonder locatie",
+      "pickerPlaceholder": "Selecteer een locatie",
+      "addLocationButton": "+ Locatie toevoegen",
+      "removeGroup": "Locatie verwijderen",
+      "emptyGroup": "Nog geen items voor deze locatie.",
+      "needMoreLocations": "Deze klant heeft slechts één actieve locatie. Voeg een tweede locatie toe in de klantinstellingen om facturatie voor meerdere locaties mogelijk te maken.",
+      "notSet": "Geen locatie geselecteerd"
+    }
+  },
   "payments": "Betalingen",
   "contractLines": "Service-abonnementen",
   "usage": "Verbruiksstatistieken",
@@ -119,10 +131,28 @@
     "pendingQuotes": "Openstaande offertes",
     "awaitingResponse": "{{count}} offerte(s) wacht(en) op uw reactie",
     "noPending": "Geen openstaande offertes",
-    "viewAll": "Alle offertes bekijken"
+    "viewAll": "Alle offertes bekijken",
+    "locations": {
+      "primaryLocationHeading": "Offertelocatie",
+      "changeButton": "Wijzigen",
+      "cancelChange": "Annuleren",
+      "notSet": "Geen locatie geselecteerd",
+      "groupHeading": "Locatie",
+      "pickerPlaceholder": "Selecteer een locatie",
+      "addLocationButton": "+ Locatie toevoegen",
+      "removeGroup": "Locatie verwijderen",
+      "needMoreLocations": "Deze klant heeft slechts één actieve locatie. Voeg een tweede locatie toe in de klantinstellingen om offertes voor meerdere locaties mogelijk te maken.",
+      "emptyGroup": "Nog geen items voor deze locatie.",
+      "subtotal": "Subtotaal locatie",
+      "unassigned": "Items zonder locatie"
+    },
+    "lineItems": {
+      "searchPlaceholder": "Zoeken of aangepaste itemnaam typen..."
+    }
   },
   "enums": {
     "billingFrequency": {
+      "weekly": "Wekelijks",
       "monthly": "Maandelijks",
       "quarterly": "Per kwartaal",
       "annually": "Jaarlijks"
@@ -131,6 +161,171 @@
       "Fixed": "Vast",
       "Hourly": "Per uur",
       "Usage": "Op verbruik"
+    },
+    "quoteStatus": {
+      "draft": "Concept",
+      "pending_approval": "Wacht op goedkeuring",
+      "approved": "Goedgekeurd",
+      "sent": "Verzonden",
+      "accepted": "Geaccepteerd",
+      "rejected": "Afgewezen",
+      "expired": "Verlopen",
+      "converted": "Geconverteerd",
+      "cancelled": "Geannuleerd",
+      "superseded": "Vervangen",
+      "archived": "Gearchiveerd"
+    },
+    "quoteStatusDescription": {
+      "draft": "Offerte wordt voorbereid",
+      "pending_approval": "Offerte wacht op interne goedkeuring",
+      "approved": "Offerte is goedgekeurd en klaar om te versturen",
+      "sent": "Offerte is naar de klant verzonden",
+      "accepted": "Klant heeft de offerte geaccepteerd",
+      "rejected": "Klant heeft de offerte afgewezen",
+      "expired": "Offerte heeft de geldigheidsdatum overschreden",
+      "converted": "Offerte is geconverteerd naar facturatie",
+      "cancelled": "Offerte is geannuleerd vóór conversie",
+      "superseded": "Offerte is vervangen door een herziening",
+      "archived": "Offerte is gearchiveerd en alleen-lezen"
+    },
+    "invoiceStatus": {
+      "draft": "Concept",
+      "sent": "Verzonden",
+      "paid": "Betaald",
+      "overdue": "Verlopen",
+      "cancelled": "Geannuleerd",
+      "pending": "In afwachting",
+      "prepayment": "Vooruitbetaling",
+      "partially_applied": "Gedeeltelijk toegepast"
+    },
+    "invoiceStatusDescription": {
+      "draft": "Facturen die nog niet naar de klant zijn verzonden",
+      "sent": "Facturen die gefinaliseerd en naar de klant zijn verzonden",
+      "paid": "Volledig betaalde facturen, klaar voor afstemming",
+      "overdue": "Gefinaliseerde facturen waarvan de vervaldatum is verstreken",
+      "cancelled": "Facturen die zijn geannuleerd of ongeldig gemaakt",
+      "pending": "Facturen die wachten op goedkeuring of verdere verwerking",
+      "prepayment": "Facturen voor vooruitbetaling of aanbetaling",
+      "partially_applied": "Facturen met gedeeltelijke betalingen toegepast"
+    }
+  },
+  "quoteForm": {
+    "noticeTitle": "Offerte",
+    "readOnlyNotice": "Deze offerte is alleen-lezen. Maak een nieuwe revisie om wijzigingen aan te brengen.",
+    "breadcrumb": {
+      "billing": "Facturering",
+      "quotes": "Offertes",
+      "quoteTemplates": "Offertesjablonen",
+      "newQuote": "Nieuwe offerte"
+    },
+    "header": {
+      "editQuote": "Offerte bewerken",
+      "newQuote": "Nieuwe offerte",
+      "editTemplate": "Offertesjabloon bewerken",
+      "newTemplate": "Nieuw offertesjabloon",
+      "quoteTotalLabel": "Offertetotaal",
+      "version": "v{{version}}"
+    },
+    "subtitle": {
+      "forClient": "Voor {{clientName}}",
+      "expires": "Verloopt op {{date}}",
+      "template": "Sjabloon · {{description}}"
+    },
+    "actions": {
+      "pdf": "PDF",
+      "duplicate": "Dupliceren",
+      "back": "Terug",
+      "cancel": "Annuleren",
+      "previewPdf": "Pdf-voorvertoning",
+      "moreActions": "Meer acties",
+      "saving": "Opslaan…",
+      "saveQuote": "Offerte opslaan",
+      "saveTemplate": "Sjabloon opslaan",
+      "sendToClient": "Naar klant verzenden",
+      "requestApproval": "Goedkeuring aanvragen",
+      "requestChanges": "Wijzigingen aanvragen",
+      "approve": "Goedkeuren",
+      "revise": "Reviseren",
+      "createNewRevision": "Nieuwe revisie maken",
+      "convertToContract": "Converteren naar contract",
+      "convertToInvoice": "Converteren naar factuur",
+      "convertToBoth": "Converteren naar beide",
+      "resend": "Opnieuw verzenden",
+      "sendReminder": "Herinnering verzenden",
+      "cancelQuote": "Offerte annuleren"
+    },
+    "banners": {
+      "acceptedTitle": "Offerte geaccepteerd",
+      "acceptedBy": "Geaccepteerd door: {{name}}",
+      "acceptedOn": "Geaccepteerd op: {{date}}",
+      "rejectedTitle": "Offerte afgewezen",
+      "rejectedOn": "Afgewezen op: {{date}}",
+      "rejectedReason": "Reden: {{reason}}",
+      "convertedTitle": "Offerte geconverteerd",
+      "convertedDescription": "Deze offerte is omgezet naar een contract en/of factuur."
+    },
+    "essentials": {
+      "title": "Basis",
+      "subtitle": "Getoond aan de klant op het offertedocument.",
+      "titleField": "Titel",
+      "descriptionField": "Beschrijving / Scope",
+      "descriptionHelp": "Een korte alinea die direct onder de titel in de pdf verschijnt.",
+      "client": "Klant",
+      "clientPlaceholder": "Klant selecteren",
+      "contact": "Contact",
+      "contactPlaceholder": "Contact selecteren",
+      "currency": "Valuta",
+      "currencyPlaceholder": "Valuta selecteren",
+      "quoteDate": "Offertedatum",
+      "validUntil": "Geldig tot",
+      "validUntilHelp": "Offerte verloopt automatisch op deze datum."
+    },
+    "lineItems": {
+      "title": "Regels",
+      "subtitleEmpty": "Nog geen items.",
+      "subtitleCount": "{{count}} items · {{mix}}",
+      "mixBoth": "terugkerend en eenmalig",
+      "mixRecurring": "terugkerend",
+      "mixOneTime": "eenmalig",
+      "addLocation": "+ Locatie toevoegen",
+      "fromTemplate": "+ Uit sjabloon"
+    },
+    "clientFacing": {
+      "title": "Klantgerichte tekst",
+      "subtitle": "Verschijnt op de pdf, onder de totalen.",
+      "notes": "Notities aan klant (optioneel)",
+      "terms": "Voorwaarden (optioneel)"
+    },
+    "moreDetails": {
+      "title": "Meer details",
+      "subtitle": "PO-nummer, opportunity, pdf-lay-out",
+      "poNumber": "PO-nummer",
+      "opportunity": "Kans",
+      "opportunityPlaceholder": "Opportunity-ID (optioneel)",
+      "pdfLayout": "Pdf-lay-out",
+      "pdfLayoutPlaceholder": "Standaard lay-out gebruiken",
+      "pdfLayoutHelp": "Kies welke lay-out de klant ziet. Laat standaard staan om tenant-standaard te gebruiken."
+    },
+    "footer": {
+      "savedAgo": "Wijzigingen opgeslagen · {{ago}}",
+      "saving": "Opslaan…",
+      "unsaved": "Niet-opgeslagen wijzigingen"
+    },
+    "sidebar": {
+      "quoteTotal": "Offertetotaal",
+      "recurringPerMonth": "{{amount}} terugkerend / maand",
+      "subtotal": "Subtotaal",
+      "discounts": "Kortingen",
+      "tax": "Btw",
+      "statusLabel": "Status",
+      "approvalLabel": "Goedkeuring",
+      "approvalMessage": "Offertes vereisen goedkeuring door de salesmanager vóór verzending.",
+      "documentLayoutLabel": "Documentlay-out",
+      "defaultLayout": "Tenant-standaard",
+      "standardLayout": "Standaard",
+      "customLayout": "Aangepast",
+      "tenantDefault": "Tenant-standaard",
+      "changeLayout": "Wijzigen"
     }
   }
 }

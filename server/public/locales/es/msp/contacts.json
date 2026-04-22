@@ -370,7 +370,20 @@
       "updateStatusPermissionDenied": "No tiene permiso para actualizar el estado del usuario",
       "userActivated": "Usuario activado correctamente",
       "userDeactivated": "Usuario desactivado correctamente",
-      "updateUserStatusFailed": "No se pudo actualizar el estado del usuario"
+      "updateUserStatusFailed": "No se pudo actualizar el estado del usuario",
+      "errors": {
+        "permissionDeniedInvite": "No tienes permiso para invitar usuarios.",
+        "emailNotConfigured": "El servicio de correo electrónico está deshabilitado o no está configurado.",
+        "contactNotFound": "Contacto no encontrado.",
+        "contactMissingEmail": "El contacto no tiene dirección de correo electrónico. Agrega una dirección de correo al contacto antes de enviar una invitación.",
+        "contactInvalidEmail": "El contacto tiene una dirección de correo electrónico no válida. Actualiza el contacto con una dirección válida antes de enviar una invitación.",
+        "userExistsForContact": "Ya existe una cuenta de usuario para este contacto. Usa el restablecimiento de contraseña en lugar de enviar una invitación.",
+        "noDefaultClient": "No hay un cliente predeterminado configurado para este tenant. Configura un cliente predeterminado en Configuración General.",
+        "noDefaultLocation": "El cliente predeterminado debe tener una ubicación predeterminada configurada para enviar invitaciones al portal.",
+        "noLocationEmail": "La ubicación del cliente predeterminado debe tener un correo electrónico de contacto configurado.",
+        "noBaseUrl": "La URL base no está configurada para las invitaciones al portal.",
+        "invitationNotFound": "Invitación no encontrada o ya utilizada."
+      }
     }
   },
   "quickAddContact": {
@@ -577,5 +590,11 @@
       "unknown": "Error desconocido"
     },
     "lastUpdated": "Última actualización: {{date}}"
+  },
+  "notes": {
+    "messages": {
+      "saveSuccess": "Notas guardadas",
+      "saveFailed": "No se pudieron guardar las notas"
+    }
   }
 }

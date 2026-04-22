@@ -184,7 +184,7 @@
     },
     "labels": {
       "provider": "Provider:",
-      "mailbox": "Mailbox:",
+      "mailbox": "Postvak:",
       "overall": "Algemeen:",
       "resource": "Resource: {{resource}}",
       "recommendations": "Aanbevelingen",

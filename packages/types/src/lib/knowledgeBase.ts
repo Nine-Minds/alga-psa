@@ -5,6 +5,46 @@ export type ArticleAudience = 'internal' | 'client' | 'public';
 export type ArticleStatus = 'draft' | 'review' | 'published' | 'archived';
 export type ReviewStatus = 'pending' | 'approved' | 'rejected' | 'changes_requested';
 
+export const ARTICLE_TYPE_VALUES: ReadonlyArray<ArticleType> = [
+  'how_to',
+  'faq',
+  'troubleshooting',
+  'reference',
+] as const;
+
+export const ARTICLE_AUDIENCE_VALUES: ReadonlyArray<ArticleAudience> = [
+  'internal',
+  'client',
+  'public',
+] as const;
+
+export const ARTICLE_STATUS_VALUES: ReadonlyArray<ArticleStatus> = [
+  'draft',
+  'review',
+  'published',
+  'archived',
+] as const;
+
+export const ARTICLE_TYPE_LABEL_DEFAULTS: Record<ArticleType, string> = {
+  how_to: 'How-To',
+  faq: 'FAQ',
+  troubleshooting: 'Troubleshooting',
+  reference: 'Reference',
+};
+
+export const ARTICLE_AUDIENCE_LABEL_DEFAULTS: Record<ArticleAudience, string> = {
+  internal: 'Internal',
+  client: 'Client',
+  public: 'Public',
+};
+
+export const ARTICLE_STATUS_LABEL_DEFAULTS: Record<ArticleStatus, string> = {
+  draft: 'Draft',
+  review: 'In Review',
+  published: 'Published',
+  archived: 'Archived',
+};
+
 export interface IKBArticle {
   article_id: string;
   tenant: string;

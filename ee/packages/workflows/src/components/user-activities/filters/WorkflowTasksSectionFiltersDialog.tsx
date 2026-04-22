@@ -18,6 +18,7 @@ import { ActivityFilters, ActivityPriority } from "@alga-psa/types";
 import { DateRange } from 'react-day-picker';
 import { ISO8601String } from '@alga-psa/types';
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface WorkflowExecution {
   execution_id: string;
@@ -39,6 +40,7 @@ export function WorkflowTasksSectionFiltersDialog({
   onApplyFilters,
   workflowExecutions = [],
 }: WorkflowTasksSectionFiltersDialogProps) {
+  const { t } = useTranslation('msp/user-activities');
   // Local state for filters
   const [localFilters, setLocalFilters] = useState<Partial<ActivityFilters>>(() => {
     return { ...initialFilters };
@@ -108,10 +110,10 @@ export function WorkflowTasksSectionFiltersDialog({
 
   const footer = (
     <div className="flex justify-between w-full">
-      <Button id="workflow-task-filter-clear" variant="outline" onClick={handleClear}>Reset</Button>
+      <Button id="workflow-task-filter-clear" variant="outline" onClick={handleClear}>{t('sections.workflowTasks.filterDialog.actions.reset', { defaultValue: 'Reset' })}</Button>
       <div>
-        <Button id="workflow-task-filter-cancel" variant="ghost" className="mr-2" onClick={() => onOpenChange(false)}>Cancel</Button>
-        <Button id="workflow-task-filter-apply" onClick={handleApply}>Apply Filters</Button>
+        <Button id="workflow-task-filter-cancel" variant="ghost" className="mr-2" onClick={() => onOpenChange(false)}>{t('sections.workflowTasks.filterDialog.actions.cancel', { defaultValue: 'Cancel' })}</Button>
+        <Button id="workflow-task-filter-apply" onClick={handleApply}>{t('sections.workflowTasks.filterDialog.actions.apply', { defaultValue: 'Apply Filters' })}</Button>
       </div>
     </div>
   );
@@ -120,61 +122,61 @@ export function WorkflowTasksSectionFiltersDialog({
     <Dialog isOpen={isOpen} onClose={() => onOpenChange(false)} footer={footer}>
       <DialogContent className="sm:max-w-[700]">
         <DialogHeader>
-          <DialogTitle>Filter Workflow Tasks</DialogTitle>
+          <DialogTitle>{t('sections.workflowTasks.filterDialog.title', { defaultValue: 'Filter Workflow Tasks' })}</DialogTitle>
           <DialogDescription>
-            Select criteria to filter workflow task activities.
+            {t('sections.workflowTasks.filterDialog.description', { defaultValue: 'Select criteria to filter workflow task activities.' })}
           </DialogDescription>
         </DialogHeader>
         <div className="py-2 space-y-4">
           {/* Search Filter */}
           <div className="space-y-1">
-            <Label htmlFor="workflow-task-search" className="text-base font-semibold">Search</Label>
+            <Label htmlFor="workflow-task-search" className="text-base font-semibold">{t('sections.workflowTasks.filterDialog.fields.search', { defaultValue: 'Search' })}</Label>
             <Input
               id="workflow-task-search"
               value={localFilters.search || ''}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleSingleFilterChange('search', e.target.value)}
-              placeholder="Search title, description"
+              placeholder={t('sections.workflowTasks.filterDialog.fields.searchPlaceholder', { defaultValue: 'Search title, description' })}
             />
           </div>
 
           {/* Workflow Execution Filter */}
           <div className="space-y-1">
-            <Label htmlFor="workflow-execution-select" className="text-base font-semibold">Workflow Execution</Label>
+            <Label htmlFor="workflow-execution-select" className="text-base font-semibold">{t('sections.workflowTasks.filterDialog.fields.workflowExecution', { defaultValue: 'Workflow Execution' })}</Label>
             <CustomSelect
               id="workflow-execution-select"
               value={localFilters.executionId || 'all'}
               onValueChange={(value) => handleSingleFilterChange('executionId', value === 'all' ? undefined : value)}
               options={[
-                { value: 'all', label: 'All Executions' },
+                { value: 'all', label: t('sections.workflowTasks.filterDialog.fields.allExecutions', { defaultValue: 'All Executions' }) },
                 ...workflowExecutions.map(execution => ({
                   value: execution.execution_id,
                   label: execution.workflow_name || execution.execution_id
                 }))
               ]}
-              placeholder="Select Workflow Execution..."
+              placeholder={t('sections.workflowTasks.filterDialog.fields.workflowExecutionPlaceholder', { defaultValue: 'Select Workflow Execution...' })}
             />
           </div>
 
           {/* Priority Filter */}
           <div className="space-y-1">
-            <Label htmlFor="workflow-task-priority-select" className="text-base font-semibold">Priority</Label>
+            <Label htmlFor="workflow-task-priority-select" className="text-base font-semibold">{t('sections.workflowTasks.filterDialog.fields.priority', { defaultValue: 'Priority' })}</Label>
             <CustomSelect
               id="workflow-task-priority-select"
               value={selectedPriority}
               onValueChange={(value) => setSelectedPriority(value)}
               options={[
-                { value: 'all', label: 'All Priorities' },
-                { value: ActivityPriority.HIGH, label: 'High' },
-                { value: ActivityPriority.MEDIUM, label: 'Medium' },
-                { value: ActivityPriority.LOW, label: 'Low' },
+                { value: 'all', label: t('sections.workflowTasks.filterDialog.fields.allPriorities', { defaultValue: 'All Priorities' }) },
+                { value: ActivityPriority.HIGH, label: t('sections.workflowTasks.filterDialog.fields.priorityHigh', { defaultValue: 'High' }) },
+                { value: ActivityPriority.MEDIUM, label: t('sections.workflowTasks.filterDialog.fields.priorityMedium', { defaultValue: 'Medium' }) },
+                { value: ActivityPriority.LOW, label: t('sections.workflowTasks.filterDialog.fields.priorityLow', { defaultValue: 'Low' }) },
               ]}
-              placeholder="Select Priority..."
+              placeholder={t('sections.workflowTasks.filterDialog.fields.priorityPlaceholder', { defaultValue: 'Select Priority...' })}
             />
           </div>
 
           {/* Due Date Range */}
           <div className="space-y-1">
-            <Label htmlFor="workflow-task-due-date-range" className="text-base font-semibold">Due Date Range</Label>
+            <Label htmlFor="workflow-task-due-date-range" className="text-base font-semibold">{t('sections.workflowTasks.filterDialog.fields.dueDateRange', { defaultValue: 'Due Date Range' })}</Label>
             <StringDateRangePicker
               id="workflow-task-due-date-range"
               value={{
@@ -189,7 +191,7 @@ export function WorkflowTasksSectionFiltersDialog({
           <div className="pt-2">
             <Checkbox
               id="show-closed-workflow-tasks"
-              label="Show Closed Tasks"
+              label={t('sections.workflowTasks.filterDialog.fields.showClosedTasks', { defaultValue: 'Show Closed Tasks' })}
               checked={localFilters.isClosed}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLocalFilters(prev => ({ ...prev, isClosed: e.target.checked }))}
             />
@@ -199,7 +201,7 @@ export function WorkflowTasksSectionFiltersDialog({
           <div className="pt-2">
             <Checkbox
               id="include-hidden-workflow-tasks"
-              label="Include Hidden Tasks"
+              label={t('sections.workflowTasks.filterDialog.fields.includeHiddenTasks', { defaultValue: 'Include Hidden Tasks' })}
               checked={localFilters.includeHidden}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLocalFilters(prev => ({ ...prev, includeHidden: e.target.checked }))}
             />

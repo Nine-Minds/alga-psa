@@ -592,7 +592,7 @@ describe('Quote conversion infrastructure', () => {
       },
     ]);
 
-    const preview = buildQuoteConversionPreview(quote);
+    const preview = await buildQuoteConversionPreview(quote);
 
     expect(preview.available_actions).toEqual(['contract', 'invoice', 'both']);
     expect(preview.contract_items.map((item) => item.description)).toEqual(['Recurring support plan']);

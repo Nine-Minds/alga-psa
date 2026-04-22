@@ -4,18 +4,24 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { toast } from 'react-hot-toast';
+import { mapWorkflowServerError } from './workflowServerErrors';
 import {
   exportWorkflowEventsAction,
   getWorkflowEventAction,
   listWorkflowEventSummaryAction,
   listWorkflowEventsPagedAction
 } from '@alga-psa/workflows/actions';
+import {
+  useFormatWorkflowEventStatus,
+  useWorkflowEventStatusOptions,
+} from '@alga-psa/workflows/hooks/useWorkflowEnumOptions';
 import WorkflowRunDetails from './WorkflowRunDetails';
 
 type WorkflowEventRecord = {
@@ -69,13 +75,6 @@ type EventFilters = {
   to: string;
 };
 
-const STATUS_OPTIONS: SelectOption[] = [
-  { value: 'all', label: 'All statuses' },
-  { value: 'matched', label: 'Matched' },
-  { value: 'unmatched', label: 'Unmatched' },
-  { value: 'error', label: 'Error' }
-];
-
 const EVENT_STATUS_VARIANTS: Record<WorkflowEventRecord['status'], 'success' | 'warning' | 'error'> = {
   matched: 'success',
   unmatched: 'warning',
@@ -90,11 +89,17 @@ const DEFAULT_FILTERS: EventFilters = {
   to: ''
 };
 
-const formatDateTime = (value?: string | null) => {
-  if (!value) return '—';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
+const useFormatDateTime = () => {
+  const { formatDate } = useFormatters();
+  return useCallback(
+    (value?: string | null) => {
+      if (!value) return '—';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return formatDate(date, { dateStyle: 'medium', timeStyle: 'short' });
+    },
+    [formatDate]
+  );
 };
 
 const payloadPreview = (payload?: Record<string, unknown> | null) => {
@@ -110,6 +115,10 @@ interface WorkflowEventListProps {
 }
 
 const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmin = false }) => {
+  const { t } = useTranslation('msp/workflows');
+  const formatDateTime = useFormatDateTime();
+  const formatWorkflowEventStatus = useFormatWorkflowEventStatus();
+  const workflowEventStatusOptions = useWorkflowEventStatusOptions();
   const [filters, setFilters] = useState<EventFilters>(DEFAULT_FILTERS);
   const [appliedFilters, setAppliedFilters] = useState<EventFilters>(DEFAULT_FILTERS);
   const [events, setEvents] = useState<WorkflowEventRecord[]>([]);
@@ -125,6 +134,16 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
   const [totalItems, setTotalItems] = useState(0);
   const [sortBy, setSortBy] = useState<WorkflowEventSortBy>('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const statusOptions = useMemo<SelectOption[]>(
+    () => [
+      {
+        value: 'all',
+        label: t('filters.allStatuses', { defaultValue: 'All statuses' }),
+      },
+      ...workflowEventStatusOptions,
+    ],
+    [t, workflowEventStatusOptions]
+  );
 
   const fetchEvents = useCallback(
     async (override?: {
@@ -153,12 +172,14 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
         setEvents((data as any)?.items ?? []);
         setTotalItems(Number((data as any)?.totalItems ?? 0));
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to load workflow events');
+        toast.error(mapWorkflowServerError(t, error, t('eventList.toasts.loadEventsFailed', {
+          defaultValue: 'Failed to load workflow events',
+        })));
       } finally {
         setIsLoading(false);
       }
     },
-    [appliedFilters, currentPage, sortBy, sortDirection]
+    [appliedFilters, currentPage, sortBy, sortDirection, t]
   );
 
   const fetchSummary = useCallback(
@@ -186,13 +207,15 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
       setEventDetail(data);
       setSelectedRunId(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to load event detail');
+      toast.error(mapWorkflowServerError(t, error, t('eventList.toasts.loadEventDetailFailed', {
+        defaultValue: 'Failed to load event detail',
+      })));
       setEventDetail(null);
       setSelectedRunId(null);
     } finally {
       setDetailLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (!isActive) return;
@@ -243,9 +266,11 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
       link.download = result.filename;
       link.click();
       window.URL.revokeObjectURL(url);
-      toast.success('Event export ready');
+      toast.success(t('eventList.toasts.exportReady', { defaultValue: 'Event export ready' }));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to export events');
+      toast.error(mapWorkflowServerError(t, error, t('eventList.toasts.exportFailed', {
+        defaultValue: 'Failed to export events',
+      })));
     }
   };
 
@@ -259,12 +284,9 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
   }, [eventDetail]);
 
   const columns: ColumnDefinition<WorkflowEventRecord>[] = useMemo(() => {
-    const statusLabel = (status: WorkflowEventRecord['status']) =>
-      status === 'error' ? 'Error' : status.charAt(0).toUpperCase() + status.slice(1);
-
     return [
       {
-        title: 'Event',
+        title: t('eventList.table.columns.event', { defaultValue: 'Event' }),
         dataIndex: 'event_name',
         sortable: true,
         render: (value: unknown, record: WorkflowEventRecord) => (
@@ -274,52 +296,52 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
         )
       },
       {
-        title: 'Correlation',
+        title: t('eventList.table.columns.correlation', { defaultValue: 'Correlation' }),
         dataIndex: 'correlation_key',
         sortable: true,
         width: '160px',
         render: (value: unknown, record: WorkflowEventRecord) => (
-          <div className="font-mono text-xs truncate">{record.correlation_key ?? '—'}</div>
+          <div className="font-mono text-xs truncate">{record.correlation_key ?? t('eventList.common.emptyValue', { defaultValue: '—' })}</div>
         )
       },
       {
-        title: 'Schema',
+        title: t('eventList.table.columns.schema', { defaultValue: 'Schema' }),
         dataIndex: 'payload_schema_ref',
         sortable: false,
         width: '220px',
         render: (value: unknown, record: WorkflowEventRecord) => (
             <div className="text-[11px] text-[rgb(var(--color-text-600))] max-w-[260px]">
-              <div className="font-mono truncate">{record.payload_schema_ref ?? '—'}</div>
+              <div className="font-mono truncate">{record.payload_schema_ref ?? t('eventList.common.emptyValue', { defaultValue: '—' })}</div>
               {record.schema_ref_conflict && (
               <div className="text-[10px] text-[rgb(var(--color-warning-600))]">
-                catalog ≠ submission
+                {t('eventList.table.schemaConflict', { defaultValue: 'catalog ≠ submission' })}
               </div>
             )}
           </div>
         )
       },
       {
-        title: 'Status',
+        title: t('eventList.table.columns.status', { defaultValue: 'Status' }),
         dataIndex: 'status',
         sortable: true,
         width: '120px',
         render: (value: unknown, record: WorkflowEventRecord) => (
           <Badge variant={EVENT_STATUS_VARIANTS[record.status]}>
-            {statusLabel(record.status)}
+            {formatWorkflowEventStatus(record.status)}
           </Badge>
         )
       },
       {
-        title: 'Matched Run',
+        title: t('eventList.table.columns.matchedRun', { defaultValue: 'Matched Run' }),
         dataIndex: 'matched_run_id',
         sortable: false,
         width: '160px',
         render: (value: unknown, record: WorkflowEventRecord) => (
-          <div className="font-mono text-xs truncate">{record.matched_run_id ?? '—'}</div>
+          <div className="font-mono text-xs truncate">{record.matched_run_id ?? t('eventList.common.emptyValue', { defaultValue: '—' })}</div>
         )
       },
       {
-        title: 'Payload',
+        title: t('eventList.table.columns.payload', { defaultValue: 'Payload' }),
         dataIndex: 'payload',
         sortable: false,
         render: (value: unknown, record: WorkflowEventRecord) => (
@@ -329,7 +351,7 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
         )
       },
       {
-        title: 'Created',
+        title: t('eventList.table.columns.created', { defaultValue: 'Created' }),
         dataIndex: 'created_at',
         sortable: true,
         width: '180px',
@@ -338,7 +360,7 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
         )
       }
     ];
-  }, []);
+  }, [formatWorkflowEventStatus, t]);
 
   return (
     <div className="flex h-full gap-4">
@@ -346,44 +368,44 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
         <Card className="p-4 space-y-3">
           {summary && (
             <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
-              <span>Total: {summary.total}</span>
-              <Badge variant="success">Matched: {summary.matched}</Badge>
-              <Badge variant="warning">Unmatched: {summary.unmatched}</Badge>
-              <Badge variant="error">Errors: {summary.error}</Badge>
+              <span>{t('eventList.summary.total', { defaultValue: 'Total' })}: {summary.total}</span>
+              <Badge variant="success">{t('eventList.summary.matched', { defaultValue: 'Matched' })}: {summary.matched}</Badge>
+              <Badge variant="warning">{t('eventList.summary.unmatched', { defaultValue: 'Unmatched' })}: {summary.unmatched}</Badge>
+              <Badge variant="error">{t('eventList.summary.errors', { defaultValue: 'Errors' })}: {summary.error}</Badge>
             </div>
           )}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Input
               id="workflow-events-name"
-              label="Event name"
+              label={t('eventList.filters.eventNameLabel', { defaultValue: 'Event name' })}
               value={filters.eventName}
               onChange={(event) => setFilters((prev) => ({ ...prev, eventName: event.target.value }))}
-              placeholder="workflow.event"
+              placeholder={t('eventList.filters.eventNamePlaceholder', { defaultValue: 'workflow.event' })}
             />
             <Input
               id="workflow-events-correlation"
-              label="Correlation key"
+              label={t('eventList.filters.correlationKeyLabel', { defaultValue: 'Correlation key' })}
               value={filters.correlationKey}
               onChange={(event) => setFilters((prev) => ({ ...prev, correlationKey: event.target.value }))}
-              placeholder="corr-123"
+              placeholder={t('eventList.filters.correlationKeyPlaceholder', { defaultValue: 'corr-123' })}
             />
             <CustomSelect
               id="workflow-events-status"
-              label="Status"
-              options={STATUS_OPTIONS}
+              label={t('eventList.filters.statusLabel', { defaultValue: 'Status' })}
+              options={statusOptions}
               value={filters.status}
               onValueChange={(value) => setFilters((prev) => ({ ...prev, status: value }))}
             />
             <Input
               id="workflow-events-from"
-              label="From"
+              label={t('eventList.filters.fromLabel', { defaultValue: 'From' })}
               type="date"
               value={filters.from}
               onChange={(event) => setFilters((prev) => ({ ...prev, from: event.target.value }))}
             />
             <Input
               id="workflow-events-to"
-              label="To"
+              label={t('eventList.filters.toLabel', { defaultValue: 'To' })}
               type="date"
               value={filters.to}
               onChange={(event) => setFilters((prev) => ({ ...prev, to: event.target.value }))}
@@ -391,25 +413,25 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
           </div>
           <div className="flex items-center gap-2">
             <Button id="workflow-events-apply" onClick={handleApplyFilters} disabled={isLoading}>
-              Apply filters
+              {t('eventList.actions.applyFilters', { defaultValue: 'Apply filters' })}
             </Button>
             <Button id="workflow-events-reset" variant="outline" onClick={handleResetFilters} disabled={isLoading}>
-              Reset
+              {t('eventList.actions.reset', { defaultValue: 'Reset' })}
             </Button>
             <Button id="workflow-events-export-csv" variant="outline" onClick={() => handleExport('csv')}>
-              Export CSV
+              {t('eventList.actions.exportCsv', { defaultValue: 'Export CSV' })}
             </Button>
             <Button id="workflow-events-export-json" variant="outline" onClick={() => handleExport('json')}>
-              Export JSON
+              {t('eventList.actions.exportJson', { defaultValue: 'Export JSON' })}
             </Button>
           </div>
         </Card>
 
         <Card className="p-4 flex-1 min-h-0 overflow-y-auto">
-          {isLoading && <div className="text-sm text-gray-500 py-2">Loading events...</div>}
+          {isLoading && <div className="text-sm text-gray-500 py-2">{t('eventList.states.loading', { defaultValue: 'Loading events...' })}</div>}
 
           {!isLoading && events.length === 0 && (
-            <div className="text-center text-sm text-gray-500 py-6">No workflow events found.</div>
+            <div className="text-center text-sm text-gray-500 py-6">{t('eventList.states.empty', { defaultValue: 'No workflow events found.' })}</div>
           )}
 
           <DataTable
@@ -447,84 +469,89 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
         <div className="w-[480px] shrink-0 overflow-auto space-y-4">
           <Card id="workflow-event-detail-panel" className="p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <div className="text-sm font-semibold">Event Detail</div>
+              <div className="text-sm font-semibold">{t('eventList.detail.title', { defaultValue: 'Event Detail' })}</div>
               <Button id="workflow-event-detail-close" variant="ghost" onClick={() => setSelectedEventId(null)}>
-                Close
+                {t('eventList.actions.close', { defaultValue: 'Close' })}
               </Button>
             </div>
-            {detailLoading && <div className="text-sm text-gray-500">Loading event detail...</div>}
+            {detailLoading && <div className="text-sm text-gray-500">{t('eventList.detail.loading', { defaultValue: 'Loading event detail...' })}</div>}
             {!detailLoading && eventDetail && (
               <>
-                <div className="text-xs text-gray-500">Event ID</div>
+                <div className="text-xs text-gray-500">{t('eventList.detail.eventIdLabel', { defaultValue: 'Event ID' })}</div>
                 <div id="workflow-event-detail-event-id" className="text-xs font-mono">
                   {eventDetail.event.event_id}
                 </div>
-                <div className="text-xs text-gray-500">Status</div>
+                <div className="text-xs text-gray-500">{t('eventList.detail.statusLabel', { defaultValue: 'Status' })}</div>
                 <Badge
                   id="workflow-event-detail-status"
                   variant={EVENT_STATUS_VARIANTS[eventDetail.event.status]}
                 >
-                  {eventDetail.event.status === 'error'
-                    ? 'Error'
-                    : eventDetail.event.status.charAt(0).toUpperCase() + eventDetail.event.status.slice(1)}
+                  {formatWorkflowEventStatus(eventDetail.event.status)}
                 </Badge>
-                <div className="text-xs text-gray-500">Event name</div>
+                <div className="text-xs text-gray-500">{t('eventList.detail.eventNameLabel', { defaultValue: 'Event name' })}</div>
                 <div className="text-sm">{eventDetail.event.event_name}</div>
-                <div className="text-xs text-gray-500">Correlation key</div>
+                <div className="text-xs text-gray-500">{t('eventList.detail.correlationKeyLabel', { defaultValue: 'Correlation key' })}</div>
                 <div id="workflow-event-detail-correlation" className="text-sm font-mono">
-                  {eventDetail.event.correlation_key ?? '—'}
+                  {eventDetail.event.correlation_key ?? t('eventList.common.emptyValue', { defaultValue: '—' })}
                 </div>
-                <div className="text-xs text-gray-500">Payload schema ref</div>
+                <div className="text-xs text-gray-500">{t('eventList.detail.payloadSchemaRefLabel', { defaultValue: 'Payload schema ref' })}</div>
                 <div className="text-sm font-mono break-all">
-                  {eventDetail.event.payload_schema_ref ?? '—'}
+                  {eventDetail.event.payload_schema_ref ?? t('eventList.common.emptyValue', { defaultValue: '—' })}
                 </div>
                 {eventDetail.event.schema_ref_conflict && (
                   <div className="rounded border border-warning/30 bg-warning/10 p-2 text-[11px] text-warning-foreground">
-                    Schema ref conflict: catalog <code className="bg-warning/20 px-1 rounded">{eventDetail.event.schema_ref_conflict.catalog}</code> vs submission <code className="bg-warning/20 px-1 rounded">{eventDetail.event.schema_ref_conflict.submission}</code>
+                    {t('eventList.detail.schemaConflict', {
+                      defaultValue: 'Schema ref conflict: catalog {{catalog}} vs submission {{submission}}',
+                      catalog: eventDetail.event.schema_ref_conflict.catalog,
+                      submission: eventDetail.event.schema_ref_conflict.submission,
+                    })}
                   </div>
                 )}
-                <div className="text-xs text-gray-500">Created</div>
+                <div className="text-xs text-gray-500">{t('eventList.detail.createdLabel', { defaultValue: 'Created' })}</div>
                 <div className="text-sm">{formatDateTime(eventDetail.event.created_at)}</div>
-                <div className="text-xs text-gray-500">Processed</div>
+                <div className="text-xs text-gray-500">{t('eventList.detail.processedLabel', { defaultValue: 'Processed' })}</div>
                 <div className="text-sm">{formatDateTime(eventDetail.event.processed_at ?? null)}</div>
                 {eventDetail.event.error_message && (
-                  <div className="text-sm text-destructive">Error: {eventDetail.event.error_message}</div>
+                  <div className="text-sm text-destructive">{t('eventList.detail.errorLine', {
+                    defaultValue: 'Error: {{message}}',
+                    message: eventDetail.event.error_message,
+                  })}</div>
                 )}
                 {eventDetail.wait && (
                   <div className="space-y-1">
-                    <div className="text-xs text-gray-500">Wait</div>
+                    <div className="text-xs text-gray-500">{t('eventList.detail.waitLabel', { defaultValue: 'Wait' })}</div>
                     <div id="workflow-event-detail-wait-id" className="text-xs font-mono">
-                      Wait ID: {eventDetail.wait.wait_id}
+                      {t('eventList.detail.waitIdLine', { defaultValue: 'Wait ID: {{waitId}}', waitId: eventDetail.wait.wait_id })}
                     </div>
                     <div id="workflow-event-detail-wait-status" className="text-xs">
-                      Status: {eventDetail.wait.status}
+                      {t('eventList.detail.waitStatusLine', { defaultValue: 'Status: {{status}}', status: eventDetail.wait.status })}
                     </div>
-                    <div className="text-xs">Timeout: {formatDateTime(eventDetail.wait.timeout_at ?? null)}</div>
-                    <div className="text-xs">Resolved: {formatDateTime(eventDetail.wait.resolved_at ?? null)}</div>
-                    <div className="text-xs">Step: {eventDetail.wait.step_path ?? '—'}</div>
+                    <div className="text-xs">{t('eventList.detail.waitTimeoutLine', { defaultValue: 'Timeout: {{value}}', value: formatDateTime(eventDetail.wait.timeout_at ?? null) })}</div>
+                    <div className="text-xs">{t('eventList.detail.waitResolvedLine', { defaultValue: 'Resolved: {{value}}', value: formatDateTime(eventDetail.wait.resolved_at ?? null) })}</div>
+                    <div className="text-xs">{t('eventList.detail.waitStepLine', { defaultValue: 'Step: {{value}}', value: eventDetail.wait.step_path ?? t('eventList.common.emptyValue', { defaultValue: '—' }) })}</div>
                   </div>
                 )}
                 {eventDetail.run && (
                   <div className="space-y-2">
-                    <div className="text-xs text-gray-500">Matched run</div>
+                    <div className="text-xs text-gray-500">{t('eventList.detail.matchedRunLabel', { defaultValue: 'Matched run' })}</div>
                     <div id="workflow-event-detail-run-id" className="text-xs font-mono">
                       {eventDetail.run.run_id}
                     </div>
                     <div id="workflow-event-detail-run-status" className="text-xs">
-                      Status: {eventDetail.run.status}
+                      {t('eventList.detail.runStatusLine', { defaultValue: 'Status: {{status}}', status: eventDetail.run.status })}
                     </div>
                     <Button
                       id="workflow-event-view-run"
                       variant="outline"
                       onClick={() => setSelectedRunId(eventDetail.run?.run_id ?? null)}
                     >
-                      View run details
+                      {t('eventList.actions.viewRunDetails', { defaultValue: 'View run details' })}
                     </Button>
                   </div>
                 )}
                 <TextArea
                   id="workflow-event-payload"
-                  label="Payload"
+                  label={t('eventList.detail.payloadLabel', { defaultValue: 'Payload' })}
                   value={detailPayload}
                   readOnly
                   rows={8}

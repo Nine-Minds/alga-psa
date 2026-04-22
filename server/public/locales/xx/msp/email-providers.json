@@ -459,5 +459,158 @@
       "update": "11111",
       "create": "11111"
     }
+  },
+  "managed": {
+    "messages": {
+      "loadDomainsFailed": "11111",
+      "loadOutboundSettingsFailed": "11111",
+      "ticketingFromUpdated": "11111",
+      "ticketingFromSaveFailed": "11111",
+      "ticketingFromCleared": "11111",
+      "ticketingFromClearFailed": "11111",
+      "switchProviderFailed": "11111",
+      "smtpHostRequired": "11111",
+      "fromAddressRequired": "11111",
+      "smtpSaved": "11111",
+      "smtpSaveFailed": "11111",
+      "domainRequired": "11111",
+      "domainSubmitted": "11111",
+      "domainRequestFailed": "11111",
+      "verificationRecheckScheduled": "11111",
+      "refreshStatusFailed": "11111",
+      "domainRemovalScheduled": "11111",
+      "domainRemovalScheduledWithClear": "11111",
+      "removeDomainFailed": "11111"
+    },
+    "tabs": {
+      "inboundEmail": "11111",
+      "outboundEmail": "11111"
+    },
+    "outbound": {
+      "intro": "11111",
+      "providerTitle": "11111",
+      "providerDescription": "11111",
+      "providerPlaceholder": "11111",
+      "providerOptions": {
+        "resend": "11111",
+        "smtp": "11111"
+      },
+      "resendDescription": "11111",
+      "smtpDescription": "11111",
+      "smtpLabel": "11111",
+      "upgradeNotice": "11111",
+      "domainsTitle": "11111",
+      "domainsDescription": "11111",
+      "domainLabel": "11111",
+      "domainPlaceholder": "11111",
+      "addDomainButton": "11111",
+      "smtpConfigTitle": "11111",
+      "smtpConfigDescription": "11111",
+      "smtp": {
+        "hostLabel": "11111",
+        "hostPlaceholder": "11111",
+        "portLabel": "11111",
+        "usernameLabel": "11111",
+        "usernamePlaceholder": "11111",
+        "passwordLabel": "11111",
+        "passwordPlaceholder": "11111",
+        "fromLabel": "11111",
+        "fromPlaceholder": "11111",
+        "fromHelp": "11111",
+        "savingButton": "11111",
+        "saveButton": "11111"
+      },
+      "ticketingFrom": {
+        "title": "11111",
+        "description": "11111",
+        "smtpHint": "11111 {{domain}} 11111",
+        "managedHint": "11111 {{domain}} 11111",
+        "domainNotSet": "11111",
+        "outboundRequiredTitle": "11111",
+        "smtpRequiredMessage": "11111",
+        "managedRequiredMessage": "11111",
+        "connectedInboxLabel": "11111",
+        "customOptionLabel": "11111 {{domain}} 11111",
+        "selectPlaceholder": "11111",
+        "connectedInboxHelp": "11111",
+        "customLabel": "11111",
+        "customPlaceholder": "11111 {{domain}} 11111",
+        "customSmtpHelp": "11111",
+        "customManagedHelp": "11111 {{domain}} 11111",
+        "warningTitle": "11111",
+        "errorTitle": "11111",
+        "clearButton": "11111",
+        "savingButton": "11111",
+        "saveButton": "11111"
+      }
+    },
+    "inbound": {
+      "intro": "11111"
+    },
+    "dialogs": {
+      "clearTicketingFrom": {
+        "title": "11111",
+        "message": "11111",
+        "confirm": "11111"
+      },
+      "removeDomain": {
+        "title": "11111",
+        "messageWithClear": "11111 {{domain}} 11111",
+        "message": "11111 {{domain}} 11111",
+        "fallbackDomain": "11111",
+        "confirm": "11111"
+      },
+      "cancel": "11111"
+    },
+    "validation": {
+      "enterFromAddress": "11111",
+      "saveSmtpFirst": "11111",
+      "addOutboundFirst": "11111",
+      "invalidEmail": "11111",
+      "mustMatchDomain": "11111 {{domain}} 11111",
+      "customAddressThreadWarning": "11111",
+      "smtpDomainMismatchWarning": "11111 {{domain}} 11111",
+      "notConnectedWarning": "11111"
+    },
+    "domainList": {
+      "loading": "11111",
+      "empty": "11111",
+      "providerDomainId": "11111 {{id}} 11111",
+      "providerFallback": "11111",
+      "failureReason": "11111 {{reason}} 11111",
+      "recheckButton": "11111",
+      "removeButton": "11111",
+      "dnsRecordsHeading": "11111",
+      "dnsRecordsHelp": "11111",
+      "dnsEmpty": {
+        "pending": "11111",
+        "failed": "11111",
+        "default": "11111"
+      }
+    },
+    "dnsRecords": {
+      "status": {
+        "matched": "11111",
+        "mismatch": "11111",
+        "missing": "11111",
+        "unknown": "11111"
+      },
+      "detectedValues": "11111",
+      "defaultEmpty": "11111",
+      "summary": "11111 {{matched}} 11111 {{total}} 11111",
+      "summaryWithCheckedAt": "11111 {{matched}} 11111 {{total}} 11111 {{checkedAt}} 11111",
+      "lastCheckedNoRecords": "11111 {{checkedAt}} 11111",
+      "copyButton": "11111",
+      "copyAriaLabel": "11111",
+      "copied": "11111",
+      "copyFailed": "11111",
+      "checkedAt": "11111 {{checkedAt}} 11111",
+      "ttlLabel": "11111",
+      "priorityLabel": "11111",
+      "missingHelp": "11111",
+      "mismatchHelp": "11111",
+      "matchedHelp": "11111",
+      "unknownHelp": "11111"
+    }
   }
 }

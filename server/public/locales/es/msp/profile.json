@@ -153,8 +153,8 @@
       },
       "loginMethods": {
         "password": "Contraseña",
-        "google": "Google OAuth",
-        "microsoft": "Microsoft OAuth",
+        "google": "OAuth de Google",
+        "microsoft": "OAuth de Microsoft",
         "keycloak": "Keycloak"
       },
       "userTypes": {

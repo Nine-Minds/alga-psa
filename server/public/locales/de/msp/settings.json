@@ -223,7 +223,18 @@
         "portalUserExistsForContact": "Für diesen Kontakt existiert bereits ein Portalbenutzer. Verwenden Sie die Passwort-Zurücksetzung für den bestehenden Benutzer.",
         "selectAppropriateRole": "Bitte wählen Sie eine geeignete Rolle für diesen Benutzertyp aus",
         "contactMissingEmail": "Dem Kontakt \"{{name}}\" fehlt eine E-Mail-Adresse. Bitte aktualisieren Sie die E-Mail-Adresse des Kontakts, bevor Sie eine Einladung senden.",
-        "licenseLimit": "Benutzer kann nicht aktiviert werden: Lizenzlimit erreicht. Bitte deaktivieren Sie einen anderen Benutzer oder erweitern Sie Ihre Lizenz."
+        "licenseLimit": "Benutzer kann nicht aktiviert werden: Lizenzlimit erreicht. Bitte deaktivieren Sie einen anderen Benutzer oder erweitern Sie Ihre Lizenz.",
+        "permissionDeniedInvite": "Sie haben keine Berechtigung, Benutzer einzuladen.",
+        "permissionDeniedCreate": "Sie haben keine Berechtigung, Benutzer zu erstellen.",
+        "emailNotConfigured": "Der E-Mail-Dienst ist deaktiviert oder nicht konfiguriert.",
+        "contactNotFound": "Kontakt nicht gefunden.",
+        "contactMissingEmailGeneric": "Der Kontakt hat keine E-Mail-Adresse. Bitte fügen Sie dem Kontakt eine E-Mail-Adresse hinzu, bevor Sie eine Einladung senden.",
+        "contactInvalidEmail": "Der Kontakt hat eine ungültige E-Mail-Adresse. Bitte aktualisieren Sie den Kontakt mit einer gültigen E-Mail-Adresse, bevor Sie eine Einladung senden.",
+        "noDefaultClient": "Kein Standard-Client für diesen Mandanten konfiguriert. Bitte legen Sie in den allgemeinen Einstellungen einen Standard-Client fest.",
+        "noDefaultLocation": "Der Standard-Client muss einen Standard-Standort konfiguriert haben, um Portaleinladungen zu senden.",
+        "noLocationEmail": "Der Standort des Standard-Clients muss eine Kontakt-E-Mail-Adresse konfiguriert haben.",
+        "noBaseUrl": "Die Basis-URL ist nicht für Portaleinladungen konfiguriert.",
+        "passwordTooShort": "Das Passwort muss mindestens 8 Zeichen lang sein."
       }
     }
   },
@@ -343,7 +354,9 @@
         "loadFailed": "Teams konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
         "fetchUsers": "Benutzer konnten nicht abgerufen werden",
         "createFailed": "Team konnte nicht erstellt werden: {{error}}",
-        "deleteFailed": "Team konnte nicht gelöscht werden"
+        "deleteFailed": "Team konnte nicht gelöscht werden",
+        "updateName": "Teamname konnte nicht aktualisiert werden",
+        "saveChanges": "Änderungen konnten nicht gespeichert werden. Bitte versuche es erneut."
       }
     }
   },
@@ -398,7 +411,10 @@
         "error": {
           "noSettings": "Keine Ticketnummerierungseinstellungen gefunden. Bitte kontaktieren Sie Ihren Administrator.",
           "loadFailed": "Ticketnummerierungseinstellungen konnten nicht geladen werden",
-          "updateFailed": "Einstellungen konnten nicht aktualisiert werden"
+          "updateFailed": "Einstellungen konnten nicht aktualisiert werden",
+          "updatePaddingFailed": "Auffüllungslänge konnte nicht aktualisiert werden",
+          "updateLastNumberFailed": "Letzte Nummer konnte nicht aktualisiert werden",
+          "updateInitialValueFailed": "Anfangswert konnte nicht aktualisiert werden"
         },
         "success": {
           "updated": "Ticketnummerierungseinstellungen erfolgreich aktualisiert"
@@ -428,6 +444,7 @@
         "edit": "Bearbeiten",
         "delete": "Löschen"
       },
+      "retiredAlert": "Ticket-Status werden jetzt innerhalb jedes Boards verwaltet. Verwenden Sie den Tab Boards, um die Ticket-Lebenszyklen für ein bestimmtes Board zu bearbeiten.",
       "messages": {
         "success": {
           "deleted": "Status erfolgreich gelöscht",
@@ -468,7 +485,11 @@
         "close": "Schließen",
         "create": "Erstellen",
         "update": "Aktualisieren",
-        "importSelected": "Auswahl importieren"
+        "importSelected": "Auswahl importieren",
+        "up": "Nach oben",
+        "down": "Nach unten",
+        "remove": "Entfernen",
+        "addStatus": "Status hinzufügen"
       },
       "fields": {
         "boardName": {
@@ -508,6 +529,46 @@
           "placeholder": "SLA-Richtlinie auswählen",
           "help": "Die SLA-Richtlinie, die auf Tickets in diesem Board angewendet wird",
           "none": "Keine"
+        },
+        "ticketStatusSetup": {
+          "label": "Ticket-Status-Einrichtung",
+          "help": "Wählen Sie, ob dieses Board mit einem bestehenden Lebenszyklus oder einer neuen Inline-Statusliste startet.",
+          "copyExisting": "Von bestehendem Board kopieren",
+          "createInline": "Inline-Status erstellen"
+        },
+        "copyTicketStatuses": {
+          "label": "Ticket-Status kopieren von",
+          "help": "Neue Boards klonen ihren Ticket-Lebenszyklus von einem bestehenden Board.",
+          "selectSource": "Quell-Board auswählen",
+          "noSourceAvailable": "Keine Quell-Boards verfügbar",
+          "unnamedBoard": "Unbenanntes Board"
+        },
+        "ticketStatuses": {
+          "labelEditing": "Board-Ticket-Status",
+          "labelCopied": "Kopierte Ticket-Status",
+          "labelInline": "Inline-Ticket-Status",
+          "helpEditing": "Bearbeiten Sie den Ticket-Lebenszyklus nur für dieses Board.",
+          "helpCopied": "Überprüfen und passen Sie den kopierten Lebenszyklus an, bevor Sie das neue Board speichern.",
+          "helpInline": "Erstellen Sie den initialen Ticket-Lebenszyklus des Boards vor dem Speichern.",
+          "loading": "Board-Ticket-Status werden geladen…",
+          "statusName": "Statusname",
+          "closed": "Geschlossen",
+          "default": "Standard"
+        },
+        "inboundReplyReopen": {
+          "enabledLabel": "Geschlossene Tickets bei eingehenden Antworten wieder öffnen",
+          "enabledHelp": "Gilt für Thread-Antworten, die zu bereits geschlossenen Tickets auf diesem Board passen.",
+          "cutoffHoursLabel": "Wiederöffnungs-Grenzwert (Stunden)",
+          "cutoffHoursHelp": "Antworten, die nach diesem Zeitraum eingehen, erstellen neue Tickets, anstatt alte wieder zu öffnen.",
+          "statusLabel": "Wiederöffnungs-Status (optional)",
+          "statusPlaceholder": "Wiederöffnungs-Status auswählen",
+          "statusUseDefault": "Standard-Offenstatus des Boards verwenden",
+          "suppressAiLabel": "Wiederöffnen bei kurzen Bestätigungsantworten unterdrücken (KI)",
+          "suppressAiHelp": "Nur Enterprise AI Assistant Add-on. Falls nicht verfügbar, öffnen Antworten normal wieder."
+        },
+        "liveTimer": {
+          "label": "Live-Ticket-Timer aktivieren",
+          "help": "Zeigt den Live-Timer und erfasste Zeitintervalle auf Tickets in diesem Board an. Manuelle Zeiterfassung bleibt verfügbar."
         }
       },
       "dialog": {
@@ -556,8 +617,98 @@
           "fetchAvailableFailed": "Verfügbare Boards zum Importieren konnten nicht abgerufen werden",
           "nameRequired": "Board-Name ist erforderlich",
           "saveFailed": "Board konnte nicht gespeichert werden",
-          "lastDefault": "Das letzte Standard-Board kann nicht entfernt werden"
+          "lastDefault": "Das letzte Standard-Board kann nicht entfernt werden",
+          "statusRequired": "Füge mindestens einen Ticketstatus hinzu, bevor du das Board speicherst.",
+          "duplicateStatusName": "Ticketstatusnamen müssen innerhalb eines Boards eindeutig sein.",
+          "invalidOpenDefault": "Wähle genau einen offenen Standard-Ticketstatus aus, bevor du das Board speicherst.",
+          "nameAlreadyExists": "Ein Board mit diesem Namen existiert bereits.",
+          "selectBoardToCopy": "Wähle ein vorhandenes Board aus, von dem die Ticketstatus kopiert werden sollen.",
+          "fetchStatusesFailed": "Ticketstatus des Boards konnten nicht geladen werden.",
+          "deleteFailed": "Board konnte nicht gelöscht werden",
+          "importFailed": "Boards konnten nicht importiert werden",
+          "updateStatusFailed": "Boardstatus konnte nicht aktualisiert werden",
+          "updateDefaultFailed": "Standard-Board konnte nicht aktualisiert werden"
         }
+      }
+    },
+    "priorities": {
+      "title": {
+        "ticket": "Ticket-Prioritäten",
+        "projectTask": "Projektaufgaben-Prioritäten"
+      },
+      "alert": {
+        "header": "Prioritätsverwaltung:",
+        "description": "Erstellen Sie benutzerdefinierte Prioritäten für Ihre Organisation oder importieren Sie aus Standardvorlagen.",
+        "itilNote": "ITIL-Standardprioritäten können nicht bearbeitet oder gelöscht werden.",
+        "nonItilNote": "Alle Prioritäten können bearbeitet oder gelöscht werden, um Ihrem Workflow zu entsprechen."
+      },
+      "table": {
+        "name": "Name",
+        "type": "Typ",
+        "color": "Farbe",
+        "order": "Reihenfolge",
+        "actions": "Aktionen",
+        "standardTag": "(Standard)",
+        "itilProtected": "Geschützt"
+      },
+      "itemTypes": {
+        "ticket": "Ticket",
+        "projectTask": "Projektaufgabe"
+      },
+      "actions": {
+        "addPriority": "Priorität hinzufügen",
+        "importStandard": "Aus Standardprioritäten importieren",
+        "openMenu": "Menü öffnen",
+        "edit": "Bearbeiten",
+        "delete": "Löschen",
+        "cancel": "Abbrechen"
+      },
+      "dialog": {
+        "addTitle": "Neue Priorität hinzufügen",
+        "editTitle": "Priorität bearbeiten",
+        "submitAdd": "Priorität hinzufügen",
+        "submitUpdate": "Priorität aktualisieren"
+      },
+      "fields": {
+        "priorityName": {
+          "label": "Name der Priorität",
+          "placeholder": "z. B. Dringend"
+        },
+        "orderNumber": {
+          "label": "Reihenfolgenummer (1-100, höhere Zahlen erscheinen zuerst)",
+          "help": "Steuert die Reihenfolge, in der Prioritäten in Dropdown-Menüs der Plattform erscheinen. Höhere Zahlen erscheinen zuerst für Prioritäten.",
+          "used": "Verwendete Reihenfolgenummern: {{numbers}}",
+          "noneUsed": "Noch keine Reihenfolgenummern verwendet"
+        },
+        "color": {
+          "label": "Farbe",
+          "chooseButton": "Farbe auswählen"
+        }
+      },
+      "import": {
+        "title": "Standardprioritäten importieren",
+        "submit": "Importieren ({{count}})",
+        "allImportedTicket": "Alle Standardprioritäten wurden bereits für Tickets importiert.",
+        "allImportedProjectTask": "Alle Standardprioritäten wurden bereits für Projektaufgaben importiert.",
+        "instructions": "Wählen Sie die Standardprioritäten aus, die Sie importieren möchten. Diese werden in die Prioritäten Ihrer Organisation kopiert."
+      },
+      "messages": {
+        "success": {
+          "deleted": "Priorität erfolgreich gelöscht",
+          "imported": "{{count}} Prioritäten erfolgreich importiert",
+          "skipped": "{{count}} Prioritäten übersprungen (existieren bereits)"
+        },
+        "error": {
+          "orderTaken": "Die Reihenfolgenummer {{order}} wird bereits von „{{name}}“ verwendet. Bitte wählen Sie eine andere Reihenfolgenummer.",
+          "uniqueConstraint": "Diese Reihenfolgenummer wird bereits verwendet. Bitte wählen Sie eine andere Reihenfolgenummer.",
+          "saveFailed": "Priorität konnte nicht gespeichert werden",
+          "deleteFailed": "Priorität konnte nicht gelöscht werden",
+          "deleteValidationFailed": "Löschung konnte nicht validiert werden. Bitte erneut versuchen.",
+          "importFailed": "Prioritäten konnten nicht importiert werden"
+        }
+      },
+      "entity": {
+        "fallback": "diese Priorität"
       }
     }
   },
@@ -643,7 +794,9 @@
         },
         "error": {
           "lastClosed": "Mindestens ein Status muss als geschlossen markiert bleiben",
-          "deleteLastClosed": "Der letzte geschlossene Status für diesen Typ kann nicht gelöscht werden."
+          "deleteLastClosed": "Der letzte geschlossene Status für diesen Typ kann nicht gelöscht werden.",
+          "skipped": "{{count}} Status übersprungen ({{reason}})",
+          "importFailed": "Status konnten nicht importiert werden"
         }
       }
     },
@@ -685,27 +838,6 @@
     }
   },
   "clientPortal": {
-    "language": {
-      "title": "Spracheinstellungen",
-      "description": "Konfigurieren Sie die Standardspracheinstellungen für Ihr Kundenportal. Diese Einstellungen gelten für alle Benutzer und Kunden, sofern sie nicht überschrieben werden.",
-      "fields": {
-        "defaultLanguage": "Standardsprache",
-        "availableLanguages": "Verfügbare Sprachen"
-      },
-      "help": {
-        "defaultLanguage": "Dies wird die Standardsprache für alle Kundenportal-Benutzer und E-Mail-Benachrichtigungen, sofern sie nicht durch Kundeneinstellungen oder individuelle Benutzerpräferenzen überschrieben wird",
-        "availableLanguages": "Wählen Sie aus, welche Sprachen den Benutzern zur Auswahl stehen"
-      },
-      "hierarchy": {
-        "title": "Sprachpräferenz-Hierarchie",
-        "description": "Diese Hierarchie gilt sowohl für die Kundenportal-Oberfläche als auch für E-Mail-Benachrichtigungen an Kundenportal-Benutzer:",
-        "userPreference": "Individuelle Benutzerpräferenz (höchste Priorität)",
-        "clientDefault": "Standard-Kundensprache",
-        "orgDefault": "Organisationsstandard (hier konfiguriert)",
-        "systemDefault": "Systemstandard (Englisch)",
-        "note": "Hinweis: Interne MSP-Benutzer erhalten E-Mails immer auf Englisch"
-      }
-    },
     "branding": {
       "title": "Branding & Erscheinungsbild",
       "description": "Passen Sie das Erscheinungsbild Ihres Kundenportals mit Ihrem Unternehmensbranding an.",
@@ -791,21 +923,15 @@
     }
   },
   "mspLanguage": {
-    "title": "Sprache",
-    "description": "Konfigurieren Sie die Standardspracheinstellungen für das MSP-Portal. Diese Einstellungen gelten für alle MSP-Benutzer, sofern sie nicht durch individuelle Präferenzen überschrieben werden.",
+    "title": "Organisationssprache",
+    "description": "Legen Sie die Standardsprache für die gesamte Organisation fest — MSP-Mitarbeiter, Client-Portal-Benutzer und E-Mail-Benachrichtigungen. Einzelne Benutzer oder Kunden können sie für sich selbst überschreiben.",
     "fields": {
       "defaultLanguage": "Standardsprache",
       "availableLanguages": "Verfügbare Sprachen"
     },
     "help": {
-      "defaultLanguage": "Dies wird die Standardsprache für alle MSP-Portal-Benutzer, sofern sie nicht durch deren persönliche Präferenz überschrieben wird.",
-      "availableLanguages": "Wählen Sie aus, welche Sprachen den MSP-Benutzern zur Auswahl stehen"
-    },
-    "hierarchy": {
-      "title": "Sprachpräferenz-Hierarchie",
-      "userPreference": "Individuelle Benutzerpräferenz (höchste Priorität)",
-      "orgDefault": "Organisationsstandard (hier konfiguriert)",
-      "systemDefault": "Systemstandard (Englisch)"
+      "defaultLanguage": "Gilt überall, sofern nicht durch die persönliche Präferenz eines Benutzers oder die konfigurierte Sprache eines Kunden überschrieben.",
+      "availableLanguages": "Wählen Sie aus, welche Sprachen den Benutzern zur Auswahl stehen."
     }
   },
   "notifications": {
@@ -1050,6 +1176,16 @@
         "noValues": "Keine Werte"
       },
       "truncated": "Es werden die ersten {{count}} Datensätze angezeigt. Laden Sie die Auftragsergebnisse für den vollständigen Verlauf herunter."
+    },
+    "messages": {
+      "error": {
+        "loadImportData": "Importdaten konnten nicht geladen werden",
+        "createPreview": "Vorschau konnte nicht erstellt werden",
+        "selectPreviewFirst": "Wähle vor dem Import eine Vorschau zur Genehmigung aus.",
+        "startImportJob": "Importauftrag konnte nicht gestartet werden",
+        "loadJobDetails": "Auftragsdetails konnten nicht geladen werden",
+        "refreshHistory": "Importverlauf konnte nicht aktualisiert werden"
+      }
     }
   },
   "email": {
@@ -1085,7 +1221,7 @@
       "permissions": "Berechtigungen",
       "userRoles": "Benutzerrollen",
       "policies": "Richtlinien",
-      "apiKeys": "API Keys"
+      "apiKeys": "API-Schlüssel"
     },
     "loading": {
       "roles": "Rollenkonfiguration wird geladen...",
@@ -1182,7 +1318,7 @@
       "profile": "Profil",
       "security": "Sicherheit",
       "sso": "Single Sign-On",
-      "apiKeys": "API Keys",
+      "apiKeys": "API-Schlüssel",
       "notifications": "Benachrichtigungen",
       "calendar": "Kalender"
     },
@@ -1347,5 +1483,39 @@
     "badge": {
       "inactive": "Inaktiv"
     }
+  },
+  "permissions": {
+    "messages": {
+      "adminLocked": "Berechtigungen der Administratorrolle können nicht geändert werden",
+      "permissionsUpdated": "Berechtigungen erfolgreich aktualisiert"
+    }
+  },
+  "sla": {
+    "messages": {
+      "scheduleNotFound": "Zeitplan nicht gefunden",
+      "scheduleUpdated": "Zeitplan erfolgreich aktualisiert",
+      "scheduleCreated": "Zeitplan erfolgreich erstellt",
+      "scheduleDeleted": "Zeitplan erfolgreich gelöscht",
+      "defaultHoursCreated": "Standard-Geschäftszeitenplan erstellt",
+      "scheduleRequired": "Bitte wählen Sie zuerst einen Zeitplan",
+      "holidayNameRequired": "Feiertagsname ist erforderlich",
+      "holidayDateRequired": "Feiertagsdatum ist erforderlich",
+      "holidayAdded": "Feiertag erfolgreich hinzugefügt",
+      "holidayDeleted": "Feiertag erfolgreich gelöscht"
+    }
+  },
+  "clientPortalLanguage": {
+    "title": "Client-Portal-Sprache",
+    "description": "Überschreiben Sie die Standardsprache nur für Client-Portal-Benutzer. MSP-Mitarbeiter behalten den Organisationsstandard.",
+    "fields": {
+      "defaultLanguage": "Standardsprache"
+    },
+    "help": {
+      "defaultLanguage": "Wenn festgelegt, sehen Client-Portal-Benutzer diese Sprache, sofern nicht durch ihre persönliche Präferenz oder die für ihren Kunden konfigurierte Sprache überschrieben."
+    },
+    "placeholder": "Sprache auswählen",
+    "inheritOption": "Organisationsstandard verwenden ({{language}})",
+    "unsetHint": "Um die Client-Portal-Überschreibung zu entfernen, ändern Sie den Organisationsstandard unter Einstellungen → Sprache.",
+    "updated": "Client-Portal-Standardsprache auf {{language}} aktualisiert"
   }
 }

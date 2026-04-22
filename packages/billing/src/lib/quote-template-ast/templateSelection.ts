@@ -2,7 +2,25 @@ import type { TemplateAst, IQuote } from '@alga-psa/types';
 import type { Knex } from 'knex';
 
 import Quote from '../../models/quote';
-import { getStandardQuoteTemplateAstByCode } from './standardTemplates';
+import {
+  STANDARD_QUOTE_BY_LOCATION_CODE,
+  STANDARD_QUOTE_DEFAULT_CODE,
+  getStandardQuoteTemplateAstByCode,
+} from './standardTemplates';
+
+/**
+ * Count distinct non-null location_ids on a quote's items. Used to decide
+ * whether the standard-fallback template should auto-branch to the
+ * per-location layout.
+ */
+function countDistinctItemLocations(quote: IQuote): number {
+  const items = quote.quote_items ?? [];
+  const seen = new Set<string>();
+  for (const item of items) {
+    if (item.location_id) seen.add(item.location_id);
+  }
+  return seen.size;
+}
 
 const cloneAst = (ast: TemplateAst): TemplateAst =>
   JSON.parse(JSON.stringify(ast)) as TemplateAst;
@@ -36,6 +54,25 @@ const getStandardTemplateAst = async (
   return getStandardQuoteTemplateAstByCode(code);
 };
 
+const getStandardTemplateAstByTemplateId = async (
+  knexOrTrx: Knex | Knex.Transaction,
+  templateId: string
+): Promise<{ templateAst: TemplateAst; standardCode: string } | null> => {
+  const record = await knexOrTrx('standard_quote_document_templates')
+    .select('templateAst', 'standard_quote_document_template_code')
+    .where({ template_id: templateId })
+    .first<{ templateAst?: TemplateAst | null; standard_quote_document_template_code?: string }>();
+
+  if (record?.templateAst && record.standard_quote_document_template_code) {
+    return {
+      templateAst: cloneAst(record.templateAst),
+      standardCode: record.standard_quote_document_template_code,
+    };
+  }
+
+  return null;
+};
+
 export interface ResolvedQuoteTemplate {
   templateAst: TemplateAst;
   source: 'quote' | 'tenant-default' | 'standard-fallback';
@@ -62,6 +99,16 @@ export async function resolveQuoteTemplateAst(
         templateAst: customAst,
         source: 'quote',
         templateId: quote.template_id,
+      };
+    }
+
+    const standardMatch = await getStandardTemplateAstByTemplateId(knexOrTrx, quote.template_id);
+    if (standardMatch) {
+      return {
+        templateAst: standardMatch.templateAst,
+        source: 'quote',
+        templateId: quote.template_id,
+        standardCode: standardMatch.standardCode,
       };
     }
   }
@@ -107,7 +154,15 @@ export async function resolveQuoteTemplateAst(
     }
   }
 
-  const fallbackCode = 'standard-quote-default';
+  // Auto-branch: when no explicit (per-quote or tenant-level) template is
+  // chosen, pick the multi-location standard template when the quote spans
+  // ≥2 distinct locations; otherwise keep the flat default. Custom templates
+  // are explicitly NOT auto-swapped — they only pick up the new binding if
+  // their authors opt in.
+  const distinctLocations = countDistinctItemLocations(quote);
+  const fallbackCode = distinctLocations >= 2
+    ? STANDARD_QUOTE_BY_LOCATION_CODE
+    : STANDARD_QUOTE_DEFAULT_CODE;
   const fallbackAst = await getStandardTemplateAst(knexOrTrx, fallbackCode);
 
   if (!fallbackAst) {

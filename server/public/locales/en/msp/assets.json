@@ -30,6 +30,14 @@
     "no": "No",
     "yes": "Yes"
   },
+  "enums": {
+    "rmmAgentStatus": {
+      "online": "Online",
+      "offline": "Offline",
+      "overdue": "Overdue",
+      "unknown": "Unknown"
+    }
+  },
   "assetAlertsSection": {
     "title": "Asset Alerts Section",
     "description": "Enterprise alert section wrapper for asset-specific RMM alerts and remediation actions"
@@ -158,12 +166,6 @@
       "rmmManaged": {
         "managed": "RMM Managed",
         "unmanaged": "Not Managed"
-      },
-      "agentStatuses": {
-        "online": "Online",
-        "offline": "Offline",
-        "overdue": "Overdue",
-        "unknown": "Unknown"
       }
     },
     "activeFilters": {
@@ -825,12 +827,6 @@
       "status": "{{status}}{{suffix}}",
       "lastSeen": " - Last seen: {{value}}"
     },
-    "statuses": {
-      "online": "Online",
-      "offline": "Offline",
-      "overdue": "Overdue",
-      "unknown": "Unknown"
-    },
     "relative": {
       "justNow": "Just now",
       "minutesAgo": "{{count}}m ago",
@@ -1187,6 +1183,14 @@
     "totalItems": "Total Items: {{count}}",
     "values": {
       "unknown": "Unknown"
+    }
+  },
+  "alerts": {
+    "messages": {
+      "alertAcknowledged": "Alert acknowledged",
+      "acknowledgeFailed": "Failed to acknowledge alert",
+      "ticketCreated": "Ticket created successfully",
+      "ticketCreateFailed": "Failed to create ticket"
     }
   }
 }

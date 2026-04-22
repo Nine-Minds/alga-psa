@@ -11,7 +11,19 @@
   "viewContractLineDetails": "Tarifdetails anzeigen",
   "viewAllInvoices": "Alle Rechnungen anzeigen",
   "failedToLoad": "Rechnungen konnten nicht geladen werden. Bitte versuche es erneut.",
-  "invoices": "Rechnungen",
+  "invoices": {
+    "locations": {
+      "groupHeading": "Standort",
+      "subtotal": "Zwischensumme Standort",
+      "unassigned": "Elemente ohne Standort",
+      "pickerPlaceholder": "Standort auswählen",
+      "addLocationButton": "+ Standort hinzufügen",
+      "removeGroup": "Standort entfernen",
+      "emptyGroup": "Noch keine Elemente für diesen Standort.",
+      "needMoreLocations": "Dieser Kunde hat nur einen aktiven Standort. Fügen Sie in den Kundeneinstellungen einen zweiten Standort hinzu, um die standortübergreifende Rechnungsstellung zu aktivieren.",
+      "notSet": "Kein Standort ausgewählt"
+    }
+  },
   "payments": "Zahlungen",
   "contractLines": "Servicevertragslinien",
   "usage": "Nutzungsmetriken",
@@ -119,10 +131,28 @@
     "pendingQuotes": "Ausstehende Angebote",
     "awaitingResponse": "{{count}} Angebot(e) warten auf Ihre Antwort",
     "noPending": "Keine ausstehenden Angebote",
-    "viewAll": "Alle Angebote anzeigen"
+    "viewAll": "Alle Angebote anzeigen",
+    "locations": {
+      "primaryLocationHeading": "Angebotsstandort",
+      "changeButton": "Ändern",
+      "cancelChange": "Abbrechen",
+      "notSet": "Kein Standort ausgewählt",
+      "groupHeading": "Standort",
+      "pickerPlaceholder": "Standort auswählen",
+      "addLocationButton": "+ Standort hinzufügen",
+      "removeGroup": "Standort entfernen",
+      "needMoreLocations": "Dieser Kunde hat nur einen aktiven Standort. Fügen Sie in den Kundeneinstellungen einen zweiten Standort hinzu, um die standortübergreifende Angebotserstellung zu aktivieren.",
+      "emptyGroup": "Noch keine Elemente für diesen Standort.",
+      "subtotal": "Zwischensumme Standort",
+      "unassigned": "Elemente ohne Standort"
+    },
+    "lineItems": {
+      "searchPlaceholder": "Benutzerdefinierten Elementnamen suchen oder eingeben..."
+    }
   },
   "enums": {
     "billingFrequency": {
+      "weekly": "Wöchentlich",
       "monthly": "Monatlich",
       "quarterly": "Vierteljährlich",
       "annually": "Jährlich"
@@ -131,6 +161,171 @@
       "Fixed": "Festpreis",
       "Hourly": "Stündlich",
       "Usage": "Nutzungsbasiert"
+    },
+    "quoteStatus": {
+      "draft": "Entwurf",
+      "pending_approval": "Genehmigung ausstehend",
+      "approved": "Genehmigt",
+      "sent": "Gesendet",
+      "accepted": "Akzeptiert",
+      "rejected": "Abgelehnt",
+      "expired": "Abgelaufen",
+      "converted": "Umgewandelt",
+      "cancelled": "Storniert",
+      "superseded": "Ersetzt",
+      "archived": "Archiviert"
+    },
+    "quoteStatusDescription": {
+      "draft": "Angebot wird vorbereitet",
+      "pending_approval": "Angebot wartet auf interne Genehmigung",
+      "approved": "Angebot ist genehmigt und versandbereit",
+      "sent": "Angebot wurde an den Kunden gesendet",
+      "accepted": "Kunde hat das Angebot akzeptiert",
+      "rejected": "Kunde hat das Angebot abgelehnt",
+      "expired": "Angebot hat das Gültigkeitsdatum überschritten",
+      "converted": "Angebot wurde in Abrechnungsdatensätze umgewandelt",
+      "cancelled": "Angebot wurde vor der Umwandlung storniert",
+      "superseded": "Angebot wurde durch eine Überarbeitung ersetzt",
+      "archived": "Angebot ist archiviert und schreibgeschützt"
+    },
+    "invoiceStatus": {
+      "draft": "Entwurf",
+      "sent": "Versendet",
+      "paid": "Bezahlt",
+      "overdue": "Überfällig",
+      "cancelled": "Storniert",
+      "pending": "Ausstehend",
+      "prepayment": "Vorauszahlung",
+      "partially_applied": "Teilweise zugeordnet"
+    },
+    "invoiceStatusDescription": {
+      "draft": "In Bearbeitung befindliche Rechnungen, die noch nicht an den Kunden gesendet wurden",
+      "sent": "Finalisierte Rechnungen, die an den Kunden gesendet wurden",
+      "paid": "Vollständig bezahlte Rechnungen, bereit für Abstimmung",
+      "overdue": "Finalisierte Rechnungen, deren Fälligkeitsdatum überschritten ist",
+      "cancelled": "Stornierte oder ungültig gemachte Rechnungen",
+      "pending": "Rechnungen, die auf Genehmigung oder weitere Bearbeitung warten",
+      "prepayment": "Anzahlungs- oder Vorauszahlungsrechnungen",
+      "partially_applied": "Rechnungen mit teilweise zugeordneten Zahlungen"
+    }
+  },
+  "quoteForm": {
+    "noticeTitle": "Angebot",
+    "readOnlyNotice": "Dieses Angebot ist schreibgeschützt. Um Änderungen vorzunehmen, erstellen Sie eine neue Revision.",
+    "breadcrumb": {
+      "billing": "Abrechnung",
+      "quotes": "Angebote",
+      "quoteTemplates": "Angebotsvorlagen",
+      "newQuote": "Neues Angebot"
+    },
+    "header": {
+      "editQuote": "Angebot bearbeiten",
+      "newQuote": "Neues Angebot",
+      "editTemplate": "Angebotsvorlage bearbeiten",
+      "newTemplate": "Neue Angebotsvorlage",
+      "quoteTotalLabel": "Angebotsgesamtbetrag",
+      "version": "v{{version}}"
+    },
+    "subtitle": {
+      "forClient": "Für {{clientName}}",
+      "expires": "Läuft ab am {{date}}",
+      "template": "Vorlage · {{description}}"
+    },
+    "actions": {
+      "pdf": "PDF",
+      "duplicate": "Duplizieren",
+      "back": "Zurück",
+      "cancel": "Abbrechen",
+      "previewPdf": "PDF-Vorschau",
+      "moreActions": "Weitere Aktionen",
+      "saving": "Wird gespeichert…",
+      "saveQuote": "Angebot speichern",
+      "saveTemplate": "Vorlage speichern",
+      "sendToClient": "An Kunden senden",
+      "requestApproval": "Genehmigung anfordern",
+      "requestChanges": "Änderungen anfordern",
+      "approve": "Genehmigen",
+      "revise": "Überarbeiten",
+      "createNewRevision": "Neue Revision erstellen",
+      "convertToContract": "In Vertrag konvertieren",
+      "convertToInvoice": "In Rechnung konvertieren",
+      "convertToBoth": "In beides konvertieren",
+      "resend": "Erneut senden",
+      "sendReminder": "Erinnerung senden",
+      "cancelQuote": "Angebot stornieren"
+    },
+    "banners": {
+      "acceptedTitle": "Angebot angenommen",
+      "acceptedBy": "Akzeptiert von: {{name}}",
+      "acceptedOn": "Akzeptiert am: {{date}}",
+      "rejectedTitle": "Angebot abgelehnt",
+      "rejectedOn": "Abgelehnt am: {{date}}",
+      "rejectedReason": "Grund: {{reason}}",
+      "convertedTitle": "Angebot konvertiert",
+      "convertedDescription": "Dieses Angebot wurde in einen Vertrag und/oder eine Rechnung konvertiert."
+    },
+    "essentials": {
+      "title": "Grundlagen",
+      "subtitle": "Wird dem Kunden im Angebotsdokument angezeigt.",
+      "titleField": "Titel",
+      "descriptionField": "Beschreibung / Umfang",
+      "descriptionHelp": "Ein kurzer Absatz, der direkt unter dem Titel im PDF erscheint.",
+      "client": "Kunde",
+      "clientPlaceholder": "Kunden auswählen",
+      "contact": "Kontakt",
+      "contactPlaceholder": "Kontakt auswählen",
+      "currency": "Währung",
+      "currencyPlaceholder": "Währung auswählen",
+      "quoteDate": "Angebotsdatum",
+      "validUntil": "Gültig bis",
+      "validUntilHelp": "Angebot läuft an diesem Datum automatisch ab."
+    },
+    "lineItems": {
+      "title": "Positionen",
+      "subtitleEmpty": "Noch keine Einträge.",
+      "subtitleCount": "{{count}} Positionen · {{mix}}",
+      "mixBoth": "wiederkehrend und einmalig",
+      "mixRecurring": "wiederkehrend",
+      "mixOneTime": "einmalig",
+      "addLocation": "+ Standort hinzufügen",
+      "fromTemplate": "+ Aus Vorlage"
+    },
+    "clientFacing": {
+      "title": "Kundensichtbarer Text",
+      "subtitle": "Erscheint im PDF unter den Summen.",
+      "notes": "Notizen an den Kunden (optional)",
+      "terms": "Geschäftsbedingungen (optional)"
+    },
+    "moreDetails": {
+      "title": "Weitere Details",
+      "subtitle": "Bestellnummer, Gelegenheit, PDF-Layout",
+      "poNumber": "Bestellnummer",
+      "opportunity": "Gelegenheit",
+      "opportunityPlaceholder": "Gelegenheits-ID (optional)",
+      "pdfLayout": "PDF-Layout",
+      "pdfLayoutPlaceholder": "Standard-Layout verwenden",
+      "pdfLayoutHelp": "Wählen Sie das Layout, das der Kunde sieht. Leer lassen, um den Mandanten-Standard zu verwenden."
+    },
+    "footer": {
+      "savedAgo": "Änderungen gespeichert · {{ago}}",
+      "saving": "Wird gespeichert…",
+      "unsaved": "Nicht gespeicherte Änderungen"
+    },
+    "sidebar": {
+      "quoteTotal": "Angebotsgesamtbetrag",
+      "recurringPerMonth": "{{amount}} wiederkehrend / Monat",
+      "subtotal": "Zwischensumme",
+      "discounts": "Rabatte",
+      "tax": "Steuer",
+      "statusLabel": "Status",
+      "approvalLabel": "Genehmigung",
+      "approvalMessage": "Angebote benötigen vor dem Versand die Genehmigung durch den Vertriebsleiter.",
+      "documentLayoutLabel": "Dokumentlayout",
+      "defaultLayout": "Mandanten-Standard",
+      "standardLayout": "Standard",
+      "customLayout": "Benutzerdefiniert",
+      "tenantDefault": "Mandanten-Standard",
+      "changeLayout": "Ändern"
     }
   }
 }

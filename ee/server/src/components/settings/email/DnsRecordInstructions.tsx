@@ -7,6 +7,7 @@ import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import { Label } from '@alga-psa/ui/components/Label';
 import type { DnsRecord, DnsLookupResult } from '@alga-psa/types';
 import toast from 'react-hot-toast';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface DnsRecordInstructionsProps {
   records: DnsRecord[];
@@ -19,25 +20,25 @@ type DetectionStatus = 'matched' | 'mismatch' | 'missing' | 'unknown';
 
 const STATUS_STYLES: Record<
   DetectionStatus,
-  { label: string; className: string; icon: React.ReactNode }
+  { labelKey: string; className: string; icon: React.ReactNode }
 > = {
   matched: {
-    label: 'Detected',
+    labelKey: 'managed.dnsRecords.status.matched',
     className: 'text-emerald-600 bg-emerald-500/10 border border-emerald-500/30',
     icon: <CheckCircle2 className="h-3.5 w-3.5" />,
   },
   mismatch: {
-    label: 'Mismatch',
+    labelKey: 'managed.dnsRecords.status.mismatch',
     className: 'text-amber-600 bg-amber-500/10 border border-amber-500/30',
     icon: <AlertTriangle className="h-3.5 w-3.5" />,
   },
   missing: {
-    label: 'Not Found',
+    labelKey: 'managed.dnsRecords.status.missing',
     className: 'text-destructive bg-red-500/10 border border-red-500/30',
     icon: <XCircle className="h-3.5 w-3.5" />,
   },
   unknown: {
-    label: 'Waiting for Check',
+    labelKey: 'managed.dnsRecords.status.unknown',
     className: 'text-gray-600 bg-gray-500/10 border border-gray-500/30',
     icon: <Clock className="h-3.5 w-3.5" />,
   },
@@ -70,14 +71,15 @@ function getDetectionStatus(record: DnsRecord, detection?: DnsLookupResult): Det
   return 'mismatch';
 }
 
-const renderDetectedValues = (values: string[]) => {
+function DetectedValues({ values }: { values: string[] }) {
+  const { t } = useTranslation('msp/email-providers');
   if (!values.length) {
     return null;
   }
 
   return (
     <div className="text-xs text-gray-600 space-y-1">
-      <span className="font-medium text-gray-700">Detected values</span>
+      <span className="font-medium text-gray-700">{t('managed.dnsRecords.detectedValues')}</span>
       <ul className="list-disc pl-5 space-y-1">
         {values.map((value, valueIndex) => (
           <li key={`${value}-${valueIndex}`}>
@@ -87,14 +89,15 @@ const renderDetectedValues = (values: string[]) => {
       </ul>
     </div>
   );
-};
+}
 
 export default function DnsRecordInstructions({ records, emptyMessage, detections, lastCheckedAt }: DnsRecordInstructionsProps) {
+  const { t } = useTranslation('msp/email-providers');
+
   if (!records || records.length === 0) {
     return (
       <p className="text-sm text-gray-500">
-        {emptyMessage ??
-          'We are preparing the DNS records for this domain. As soon as they appear, copy them into your DNS provider because we cannot update it for you.'}
+        {emptyMessage ?? t('managed.dnsRecords.defaultEmpty')}
       </p>
     );
   }
@@ -111,8 +114,8 @@ export default function DnsRecordInstructions({ records, emptyMessage, detection
 
   const handleCopy = (value: string) => {
     navigator.clipboard?.writeText(value).then(
-      () => toast.success('Copied to clipboard'),
-      () => toast.error('Failed to copy')
+      () => toast.success(t('managed.dnsRecords.copied')),
+      () => toast.error(t('managed.dnsRecords.copyFailed'))
     );
   };
 
@@ -120,11 +123,12 @@ export default function DnsRecordInstructions({ records, emptyMessage, detection
     <div className="space-y-3">
       {detections && detections.length > 0 ? (
         <div className="text-xs text-gray-600">
-          Matched {matchedCount} of {totalTracked} required DNS records
-          {lastCheckedReadable ? ` • Last checked ${lastCheckedReadable}` : ''}.
+          {lastCheckedReadable
+            ? t('managed.dnsRecords.summaryWithCheckedAt', { matched: matchedCount, total: totalTracked, checkedAt: lastCheckedReadable })
+            : `${t('managed.dnsRecords.summary', { matched: matchedCount, total: totalTracked })}.`}
         </div>
       ) : lastCheckedReadable ? (
-        <div className="text-xs text-gray-500">Last checked {lastCheckedReadable}. We have not detected any records yet.</div>
+        <div className="text-xs text-gray-500">{t('managed.dnsRecords.lastCheckedNoRecords', { checkedAt: lastCheckedReadable })}</div>
       ) : null}
 
       {records.map((record, index) => {
@@ -151,11 +155,11 @@ export default function DnsRecordInstructions({ records, emptyMessage, detection
                 variant="ghost"
                 size="sm"
                 onClick={() => handleCopy(record.value)}
-                aria-label="Copy DNS value"
+                aria-label={t('managed.dnsRecords.copyAriaLabel')}
                 data-automation-id="managed-domain-copy-dns"
               >
                 <Copy className="h-4 w-4 mr-2" />
-                Copy
+                {t('managed.dnsRecords.copyButton')}
               </Button>
             </div>
 
@@ -168,11 +172,11 @@ export default function DnsRecordInstructions({ records, emptyMessage, detection
                 data-status={status}
               >
                 {statusStyle.icon}
-                {statusStyle.label}
+                {t(statusStyle.labelKey)}
               </span>
               {detection?.checkedAt ? (
                 <span className="text-[11px] text-gray-500">
-                  Checked {formatTimestamp(detection.checkedAt) ?? detection.checkedAt}
+                  {t('managed.dnsRecords.checkedAt', { checkedAt: formatTimestamp(detection.checkedAt) ?? detection.checkedAt })}
                 </span>
               ) : null}
             </div>
@@ -180,39 +184,38 @@ export default function DnsRecordInstructions({ records, emptyMessage, detection
             <div className="flex flex-wrap gap-4 text-xs text-gray-500">
               {record.ttl ? (
                 <span>
-                  <Label className="text-gray-500">TTL:</Label> {record.ttl}
+                  <Label className="text-gray-500">{t('managed.dnsRecords.ttlLabel')}</Label> {record.ttl}
                 </span>
               ) : null}
               {record.priority ? (
                 <span>
-                  <Label className="text-gray-500">Priority:</Label> {record.priority}
+                  <Label className="text-gray-500">{t('managed.dnsRecords.priorityLabel')}</Label> {record.priority}
                 </span>
               ) : null}
             </div>
 
             {status === 'missing' ? (
               <div className="text-xs text-destructive">
-                We have not detected this record in DNS yet. Double-check that it exists in your DNS provider with the exact value
-                shown above.
+                {t('managed.dnsRecords.missingHelp')}
               </div>
             ) : null}
 
             {status === 'mismatch' && detection ? (
               <div className="text-xs text-warning space-y-1">
-                <p>The DNS record exists, but the value does not match what Resend expects.</p>
-                {renderDetectedValues(detection.values)}
+                <p>{t('managed.dnsRecords.mismatchHelp')}</p>
+                <DetectedValues values={detection.values} />
               </div>
             ) : null}
 
             {status === 'matched' && detection ? (
               <div className="text-xs text-emerald-700 space-y-1">
-                <p>Detected value matches what we expected.</p>
-                {renderDetectedValues(detection.values)}
+                <p>{t('managed.dnsRecords.matchedHelp')}</p>
+                <DetectedValues values={detection.values} />
               </div>
             ) : null}
 
               {status === 'unknown' && !detections?.length ? (
-                <div className="text-xs text-gray-500">We have not checked DNS yet. Re-check DNS to run verification.</div>
+                <div className="text-xs text-gray-500">{t('managed.dnsRecords.unknownHelp')}</div>
               ) : null}
             </CardContent>
           </Card>

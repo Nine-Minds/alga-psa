@@ -1,0 +1,449 @@
+{
+  "taxRates": {
+    "errors": {
+      "loadRegions": "Nie udało się załadować regionów podatkowych.",
+      "validateDeletion": "Nie udało się potwierdzić usunięcia. Spróbuj ponownie.",
+      "fetchRates": "Nie udało się pobrać stawek podatku",
+      "add": "Nie udało się dodać stawki podatku",
+      "update": "Nie udało się zaktualizować stawki podatku",
+      "confirmDeletion": "Nie udało się potwierdzić usunięcia stawki podatku."
+    },
+    "validation": {
+      "requiredFieldsTitle": "Proszę wypełnić wymagane pola:",
+      "region": "Region podatkowy",
+      "percentage": "Procent podatku",
+      "startDate": "Data rozpoczęcia"
+    },
+    "table": {
+      "description": "Opis",
+      "startDate": "Data rozpoczęcia",
+      "endDate": "Data zakończenia",
+      "actions": "Działania",
+      "notAvailable": "Nie dotyczy",
+      "region": "Region",
+      "taxPercentage": "Procent podatku",
+      "composite": "Kompozyt"
+    },
+    "actions": {
+      "openMenu": "Otwórz menu",
+      "edit": "Redagować",
+      "delete": "Usuwać",
+      "advancedSettings": "Ustawienia zaawansowane",
+      "addNew": "Dodaj nową stawkę podatku",
+      "add": "Dodaj stawkę podatku",
+      "update": "Zaktualizuj stawkę podatku"
+    },
+    "dialog": {
+      "fields": {
+        "description": "Opis",
+        "startDate": "Data rozpoczęcia *",
+        "endDate": "Data zakończenia (opcjonalnie)",
+        "region": "Region podatkowy *",
+        "percentage": "Procent podatku *"
+      },
+      "placeholders": {
+        "loadingRegions": "Ładowanie regionów...",
+        "selectRegion": "Wybierz region podatkowy",
+        "percentage": "Wpisz procent"
+      },
+      "addTitle": "Dodaj nową stawkę podatku",
+      "editTitle": "Edytuj stawkę podatku",
+      "description": "Wprowadź szczegóły stawki podatku."
+    },
+    "title": "Stawki podatkowe",
+    "loading": "Ładowanie stawek podatkowych",
+    "deleteEntity": {
+      "fallback": "tę stawkę podatku",
+      "withRegion": "{{regionName}} stawka podatku"
+    }
+  },
+  "taxRateDetail": {
+    "fields": {
+      "regionCode": "Kod regionu",
+      "description": "Opis",
+      "startDate": "Data rozpoczęcia",
+      "endDate": "Data zakończenia",
+      "taxPercentage": "Procent podatku",
+      "taxType": "Rodzaj podatku",
+      "isComposite": "Jest kompozytowy",
+      "isActive": "Jest aktywny"
+    },
+    "values": {
+      "dash": "-",
+      "noEndDate": "Brak daty zakończenia",
+      "yes": "Tak",
+      "no": "NIE",
+      "active": "Aktywny",
+      "inactive": "Nieaktywny",
+      "composite": "Kompozyt"
+    },
+    "actions": {
+      "back": "Wracając do stawek podatkowych"
+    },
+    "subtitle": "{{regionCode}} – {{percentage}}%",
+    "tabs": {
+      "details": "Szczegóły",
+      "components": "Komponenty",
+      "brackets": "Progi",
+      "holidays": "Święta"
+    },
+    "precedence": {
+      "title": "Pierwszeństwo naliczania podatku",
+      "clientExempt": "Flaga zwolnienia klienta z podatku jest sprawdzana jako pierwsza (jeśli jest zwolniona, nie ma zastosowania żaden podatek)",
+      "serviceSpecific": "Stosowana jest stawka podatku specyficzna dla usługi, jeśli została przypisana",
+      "clientDefault": "Domyślna stawka podatku klienta jest używana jako rezerwa",
+      "regionLookup": "Wyszukiwanie regionu podatkowego określa obowiązującą stawkę na podstawie lokalizacji"
+    },
+    "components": {
+      "simpleRateMessage": "Jest to prosta stawka podatku, a nie stawka złożona. Składniki podatku są stosowane wyłącznie w przypadku podatków złożonych.",
+      "enableCompositeMessage": "Aby skorzystać ze składników podatku należy podczas edycji zaznaczyć tę stawkę jako złożoną."
+    },
+    "brackets": {
+      "intro": "Progresywne progi podatkowe stosują różne stawki dla różnych części kwoty.",
+      "precedence": "Kiedy nawiasy są zdefiniowane, mają one pierwszeństwo przed zryczałtowaną stawką procentową."
+    }
+  },
+  "serviceForm": {
+    "errors": {
+      "loadServiceTypes": "Nie udało się pobrać typów usług",
+      "serviceTypeNotFound": "Nie znaleziono wybranego typu usługi",
+      "create": "Nie udało się utworzyć usługi",
+      "loadTaxData": "Nie udało się załadować danych podatkowych.",
+      "selectServiceType": "Proszę wybrać rodzaj usługi"
+    },
+    "fields": {
+      "serviceName": {
+        "placeholder": "Nazwa usługi"
+      },
+      "serviceType": {
+        "label": "Typ usługi",
+        "placeholder": "Wybierz typ usługi"
+      },
+      "billingMethod": {
+        "label": "Metoda rozliczeniowa",
+        "placeholder": "Wybierz metodę rozliczeń"
+      },
+      "description": {
+        "label": "Opis",
+        "placeholder": "Opis usługi"
+      },
+      "taxRate": {
+        "label": "Stawka podatku",
+        "placeholderLoading": "Ładowanie danych podatkowych...",
+        "placeholder": "Wybierz stawkę podatku (opcjonalnie)"
+      },
+      "defaultRate": {
+        "placeholder": "Stawka domyślna"
+      },
+      "unitOfMeasure": {
+        "placeholder": "Jednostka miary"
+      }
+    },
+    "options": {
+      "billingMethod": {
+        "hourly": "Cogodzinny",
+        "usage": "Oparte na użytkowaniu",
+        "fixed": "Stała cena"
+      }
+    },
+    "taxRateOption": {
+      "fallback": "Nie dotyczy",
+      "label": "{{description}} – {{percentage}}%"
+    },
+    "actions": {
+      "submit": "Dodaj usługę"
+    }
+  },
+  "serviceSelection": {
+    "table": {
+      "type": "Typ",
+      "unit": "Jednostka",
+      "rate": "Stawka",
+      "product": "Produkt",
+      "itemName": "Nazwa przedmiotu",
+      "service": "Serwis",
+      "unknown": "Nieznany"
+    },
+    "actions": {
+      "cancel": "Anuluj",
+      "addSelected": "Dodaj wybrane usługi",
+      "adding": "Dodawanie..."
+    },
+    "title": "Dodaj usługi i produkty do planu",
+    "searchPlaceholder": "Wyszukaj usługi/produkty...",
+    "errors": {
+      "load": "Nie udało się załadować usług",
+      "add": "Nie udało się dodać usług do planu"
+    },
+    "states": {
+      "loading": "Ładowanie usług...",
+      "empty": "Nie znaleziono usług"
+    },
+    "selection": {
+      "countOne": "Wybrano usługę {{count}}.",
+      "countOther": "Wybrano {{count}} usługi"
+    },
+    "quickAdd": {
+      "label": "Szybkie dodawanie:",
+      "allType": "Wszystkie {{type}}"
+    }
+  },
+  "configType": {
+    "warningDialog": {
+      "cancel": "Anuluj",
+      "title": "Zmienić typ konfiguracji?",
+      "description": "Zmiana typu konfiguracji spowoduje zresetowanie wszelkich ustawień specyficznych dla typu. Tej akcji nie można cofnąć.",
+      "confirm": "Zmień typ"
+    },
+    "placeholder": "Wybierz typ konfiguracji",
+    "options": {
+      "Fixed": {
+        "label": "Stała cena",
+        "description": "Usługa o stałej cenie ze spójnymi rozliczeniami niezależnie od użytkowania. Idealny do przewidywalnych usług."
+      },
+      "Hourly": {
+        "label": "Stawka godzinowa",
+        "description": "Rozliczenia czasowe z konfigurowalnymi stawkami. Najlepsze rozwiązanie w przypadku zmiennych obciążeń rozliczanych według poświęconego czasu."
+      },
+      "Usage": {
+        "label": "Oparte na użyciu",
+        "description": "Rozliczenia oparte na wykorzystaniu z wielopoziomowymi opcjami cenowymi. Idealny pod usługi mierzone konsumpcją."
+      },
+      "Bucket": {
+        "label": "Pakiet godzin",
+        "description": "Wykupione z góry godziny, które można wykorzystać w czasie. Dobre rozwiązanie dla klientów potrzebujących elastyczności przy ograniczonym budżecie."
+      }
+    }
+  },
+  "serviceConfig": {
+    "fields": {
+      "quantity": {
+        "label": "Ilość",
+        "placeholder": "Wprowadź ilość",
+        "help": "Liczba jednostek tej usługi",
+        "errorNegative": "Ilość nie może być ujemna"
+      },
+      "customRate": {
+        "label": "Stawka niestandardowa",
+        "placeholder": "Wprowadź stawkę",
+        "placeholderDefault": "Wartość domyślna: {{rate}}",
+        "helpCustom": "Niestandardowa stawka za tę usługę",
+        "helpUseDefault": "Pozostaw puste, aby użyć stawki domyślnej ({{rate}})",
+        "errorNegative": "Stawka nie może być ujemna"
+      },
+      "configurationType": "Typ konfiguracji"
+    },
+    "actions": {
+      "cancel": "Anuluj",
+      "saving": "Oszczędność...",
+      "save": "Zapisz konfigurację"
+    },
+    "title": "Konfiguracja usługi",
+    "serviceLabel": "Serwis",
+    "effectiveModeLabel": "Tryb efektywny",
+    "defaultSourceLabel": "Domyślne źródło",
+    "modes": {
+      "Fixed": "Stała cena",
+      "Hourly": "Stawka godzinowa",
+      "Usage": "Oparte na użyciu",
+      "Bucket": "Pakiet godzin"
+    },
+    "defaultSources": {
+      "catalog default": "domyślny katalog",
+      "contract override": "unieważnienie umowy",
+      "none": "żaden"
+    },
+    "bucketOverlay": {
+      "recommendHours": "Polecam kubeł godzin",
+      "recommendUsage": "Polecam kubeł konsumpcji"
+    }
+  },
+  "hourlyConfig": {
+    "fields": {
+      "minimumBillableTime": {
+        "placeholder": "15",
+        "label": "Minimalny czas rozliczeniowy (minuty)",
+        "help": "Minimalny czas na rozliczenie (np. 15 minut)",
+        "errorNegative": "Minimalny czas rozliczeniowy nie może być ujemny"
+      },
+      "roundUpToNearest": {
+        "placeholder": "15",
+        "label": "Zaokrąglij do najbliższego (minuty)",
+        "help": "Okrągłe wpisy czasu do najbliższego przyrostu",
+        "errorNegative": "Wartość zaokrąglenia nie może być ujemna"
+      },
+      "newUserType": {
+        "label": "Typ użytkownika",
+        "placeholder": "Wybierz typ użytkownika"
+      },
+      "newUserTypeRate": {
+        "label": "Stawka",
+        "placeholder": "Wprowadź stawkę",
+        "errorNegative": "Współczynnik typu użytkownika nie może być ujemny"
+      }
+    },
+    "userTypeRates": {
+      "headers": {
+        "userType": "Typ użytkownika",
+        "rate": "Stawka"
+      },
+      "title": "Stawki za typ użytkownika",
+      "options": {
+        "technician": "Technik",
+        "engineer": "Inżynier",
+        "consultant": "Konsultant",
+        "project_manager": "Kierownik projektu",
+        "admin": "Administrator"
+      },
+      "actions": {
+        "addRate": "Dodaj stawkę"
+      }
+    },
+    "title": "Konfiguracja stawki godzinowej"
+  },
+  "usageConfig": {
+    "defaults": {
+      "unitOfMeasure": "Jednostka"
+    },
+    "fields": {
+      "unitOfMeasure": {
+        "errorRequired": "Jednostka miary jest wymagana",
+        "label": "Jednostka miary",
+        "placeholder": "Wprowadź jednostkę miary",
+        "help": "Jednostka używana do pomiaru użycia (np. GB, użytkownik, urządzenie)"
+      },
+      "minimumUsage": {
+        "placeholder": "0",
+        "label": "Minimalny próg wykorzystania",
+        "help": "Minimalne płatne użycie w okresie (0 oznacza brak minimum)",
+        "errorNegative": "Minimalne użycie nie może być ujemne"
+      },
+      "enableTieredPricing": "Włącz ceny warstwowe"
+    },
+    "title": "Konfiguracja oparta na użyciu",
+    "tiers": {
+      "title": "Poziomy cenowe",
+      "addTier": "Dodaj poziom",
+      "empty": "Nie skonfigurowano żadnych poziomów. Dodaj poziom, aby zdefiniować ceny oparte na wolumenie.",
+      "from": "Od ({{unit}})",
+      "to": "Do ({{unit}})",
+      "ratePer": "Stawka za {{unit}}",
+      "unlimited": "Nieograniczony",
+      "help": "Skonfiguruj poziomy cenowe oparte na wolumenie. Każdy poziom stosuje swoją stawkę do wykorzystania mieszczącego się w jego zakresie.",
+      "errors": {
+        "onlyLastUnlimited": "Tylko ostatni poziom może mieć nieograniczoną górną granicę",
+        "overlap": "Poziomy nie mogą się pokrywać",
+        "upperGreaterThanLower": "Górna granica poziomu musi być większa niż dolna granica",
+        "rateNegative": "Stawki poziomów nie mogą być ujemne"
+      }
+    }
+  },
+  "rateTiers": {
+    "table": {
+      "actions": "Działania",
+      "minQuantity": "Minimalna ilość",
+      "maxQuantity": "Maksymalna ilość",
+      "rate": "Stawka ({{unit}})",
+      "unlimited": "Nieograniczony"
+    },
+    "actions": {
+      "saving": "Oszczędność...",
+      "addTier": "Dodaj poziom",
+      "save": "Zapisz poziomy stawek"
+    },
+    "title": "Poziomy stawek i rabaty ilościowe",
+    "description": "Skonfiguruj różne stawki w oparciu o zakresy ilości. Większe ilości mogą mieć zniżki.",
+    "loading": "Wczytuję poziomy stawek...",
+    "formattedRate": "{{rate}} na {{unit}}",
+    "errors": {
+      "load": "Nie udało się wczytać poziomów stawek",
+      "save": "Nie udało się zapisać poziomów stawek",
+      "lastTier": "Nie można usunąć ostatniego poziomu",
+      "minPositive": "Minimalna ilość musi być większa niż 0",
+      "maxGreaterThanMin": "Ilość maksymalna musi być większa niż ilość minimalna",
+      "rateNegative": "Stawka nie może być ujemna",
+      "overlap": "Zakresy poziomów nie mogą się pokrywać"
+    }
+  },
+  "serviceTaxSettings": {
+    "fields": {
+      "taxRate": {
+        "label": "Stawka podatku",
+        "placeholderLoading": "Ładowanie stawek...",
+        "placeholder": "Wybierz Stawkę podatku",
+        "help": "Wybierz opcję „Niepodlegające opodatkowaniu”, jeśli ta usługa nie powinna być opodatkowana."
+      }
+    },
+    "options": {
+      "nonTaxable": "Nie podlega opodatkowaniu"
+    },
+    "errors": {
+      "loadTaxRates": "Nie udało się wczytać stawek podatku.",
+      "save": "Nie udało się zapisać ustawień podatkowych"
+    },
+    "actions": {
+      "saving": "Oszczędność...",
+      "save": "Zapisz ustawienia podatkowe"
+    },
+    "title": "Ustawienia podatkowe",
+    "optionLabel": "{{taxType}} ({{countryCode}}) – {{percentage}}%"
+  },
+  "fixedConfig": {
+    "title": "Konfiguracja ze stałą ceną",
+    "fields": {
+      "adjustForPartialPeriods": "Dostosuj do okresów częściowych",
+      "billingCycleAlignment": {
+        "label": "Wyrównanie cykli rozliczeniowych",
+        "placeholder": "Wybierz wyrównanie",
+        "help": "Kontroluje sposób obliczania zasięgu częściowego okresu, gdy opłata cykliczna musi zostać skalowana do okresu krótszego niż pełny okres świadczenia usługi."
+      }
+    },
+    "options": {
+      "start": "Początek cyklu rozliczeniowego",
+      "end": "Koniec cyklu rozliczeniowego",
+      "prorated": "Proporcjonalne pokrycie"
+    }
+  },
+  "bucketConfig": {
+    "title": "Konfiguracja pakietu godzin",
+    "fields": {
+      "totalMinutes": {
+        "label": "Łączna liczba minut",
+        "placeholder": "Wprowadź łączną liczbę godzin",
+        "help": "Całkowita liczba minut zawarta w tej pozycji kontraktu segmentowego",
+        "errorPositive": "Całkowita liczba minut musi być większa od zera"
+      },
+      "billingPeriod": {
+        "label": "Okres rozliczeniowy",
+        "placeholder": "Wybierz okres rozliczeniowy",
+        "help": "Okres, na który przydzielane są godziny segmentu",
+        "mismatchPrefix": "Niedopasowanie:",
+        "mismatch": "Okres rozliczeniowy pakietu ({{billingPeriod}}) powinien odpowiadać częstotliwości rozliczeniowej pozycji umowy ({{contractLineBillingFrequency}})."
+      },
+      "overageRate": {
+        "label": "Wskaźnik nadwyżki",
+        "placeholder": "Wprowadź stawkę nadwyżki",
+        "help": "Stawka godzinowa naliczana za godziny wykorzystania przekraczające limit koszyka",
+        "errorNegative": "Wskaźnik nadwyżki nie może być ujemny"
+      },
+      "allowRollover": "Pozwól, aby niewykorzystane godziny przeszły na następny okres"
+    }
+  },
+  "serviceDetail": {
+    "loading": "Ładowanie konfiguracji usługi...",
+    "errors": {
+      "notFound": "Nie znaleziono usługi",
+      "load": "Nie udało się załadować konfiguracji usługi"
+    },
+    "title": "Konfiguracja usługi: {{serviceName}}",
+    "description": "Skonfiguruj szczegóły usługi, ceny i ustawienia podatkowe",
+    "sections": {
+      "unitOfMeasure": "Jednostka miary",
+      "baseRate": "Stawka podstawowa"
+    },
+    "baseRate": {
+      "summary": "{{rate}} na {{unit}}",
+      "help": "Stawkę podstawową można zastąpić poniższymi progami opartymi na ilości."
+    }
+  }
+}

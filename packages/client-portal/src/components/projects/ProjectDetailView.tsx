@@ -103,6 +103,7 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
   const config = project.client_portal_config ?? DEFAULT_CLIENT_PORTAL_CONFIG;
   const showPhases = config.show_phases ?? false;
   const showTasks = config.show_tasks ?? false;
+  const showBudgetHours = config.show_budget_hours ?? false;
 
   // Determine effective view mode - kanban only makes sense when tasks are shown
   // When only phases are enabled (no tasks), force list view
@@ -216,7 +217,7 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
           {project.description || t('messages.noDescription', 'No description provided')}
         </p>
 
-        <ClientPortalProjectMetrics projectId={project.project_id} />
+        <ClientPortalProjectMetrics projectId={project.project_id} showBudgetHours={showBudgetHours} />
 
         <div>
           <h3 className="text-lg font-semibold mb-2">{t('details')}</h3>

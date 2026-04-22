@@ -8,11 +8,12 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Download, FileText, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import {
-  INVOICE_STATUS_METADATA,
   INVOICE_STATUS_DISPLAY_ORDER,
   DEFAULT_ACCOUNTING_EXPORT_STATUSES,
   type InvoiceStatus
 } from '@alga-psa/types';
+import { useInvoiceStatusOptions } from '@alga-psa/ui/hooks/useInvoiceEnumOptions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ExportFilters {
   startDate?: string;
@@ -31,13 +32,9 @@ type ExportErrorDetail = {
   metadata?: Record<string, any> | null;
 };
 
-// Build status options from the canonical invoice status metadata
-const INVOICE_STATUS_OPTIONS = INVOICE_STATUS_DISPLAY_ORDER.map((status) => ({
-  value: status,
-  label: INVOICE_STATUS_METADATA[status].label
-}));
-
 export function CSVExportPanel({ onExportComplete }: CSVExportPanelProps) {
+  const { t } = useTranslation('msp/integrations');
+  const INVOICE_STATUS_OPTIONS = useInvoiceStatusOptions(INVOICE_STATUS_DISPLAY_ORDER);
   const [dateRange, setDateRange] = useState<{ from: string; to: string }>({
     from: '',
     to: ''
@@ -110,7 +107,7 @@ export function CSVExportPanel({ onExportComplete }: CSVExportPanelProps) {
         const message =
           (data && typeof data.message === 'string' && data.message) ||
           (data && typeof data.error?.message === 'string' && data.error.message) ||
-          'Export failed';
+          t('integrations.csv.export.errors.failed', { defaultValue: 'Export failed' });
         const errors = data && Array.isArray(data.errors) ? (data.errors as ExportErrorDetail[]) : null;
         setError(message);
         setExportErrors(errors);
@@ -137,21 +134,21 @@ export function CSVExportPanel({ onExportComplete }: CSVExportPanelProps) {
       setSuccess({ filename, invoiceCount });
       onExportComplete?.({ filename, invoiceCount });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Export failed');
+      setError(t('integrations.csv.export.errors.failed', { defaultValue: 'Export failed' }));
     } finally {
       setIsLoading(false);
     }
-  }, [dateRange, selectedStatuses, onExportComplete]);
+  }, [dateRange, selectedStatuses, onExportComplete, t]);
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <FileText className="h-5 w-5" />
-          CSV Export for QuickBooks
+          {t('integrations.csv.export.title', { defaultValue: 'CSV Export for QuickBooks' })}
         </CardTitle>
         <CardDescription>
-          Export invoices as a CSV file for manual import into QuickBooks.
+          {t('integrations.csv.export.description', { defaultValue: 'Export invoices as a CSV file for manual import into QuickBooks.' })}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -159,7 +156,7 @@ export function CSVExportPanel({ onExportComplete }: CSVExportPanelProps) {
         <div>
           <StringDateRangePicker
             id="csv-export-date-range"
-            label="Date Range (optional)"
+            label={t('integrations.csv.export.fields.dateRange', { defaultValue: 'Date Range (optional)' })}
             value={dateRange}
             onChange={setDateRange}
           />
@@ -167,7 +164,7 @@ export function CSVExportPanel({ onExportComplete }: CSVExportPanelProps) {
 
         {/* Invoice Statuses */}
         <div className="space-y-2">
-          <Label>Invoice Statuses</Label>
+          <Label>{t('integrations.csv.export.fields.invoiceStatuses', { defaultValue: 'Invoice Statuses' })}</Label>
           <div className="flex flex-wrap gap-2">
             {INVOICE_STATUS_OPTIONS.map((option) => (
               <button
@@ -198,14 +195,18 @@ export function CSVExportPanel({ onExportComplete }: CSVExportPanelProps) {
                     const serviceId = item.metadata?.service_id as string | undefined;
                     const label =
                       item.code === 'missing_service_mapping'
-                        ? `Missing item mapping${serviceName ? `: ${serviceName}` : ''}${!serviceName && serviceId ? ` (${serviceId})` : ''}`
+                        ? (serviceName
+                            ? t('integrations.csv.export.errors.missingItemMappingNamed', { defaultValue: 'Missing item mapping: {{serviceName}}', serviceName })
+                            : serviceId
+                              ? t('integrations.csv.export.errors.missingItemMappingId', { defaultValue: 'Missing item mapping ({{serviceId}})', serviceId })
+                              : t('integrations.csv.export.errors.missingItemMapping', { defaultValue: 'Missing item mapping' }))
                         : item.message;
                     return <li key={`${item.code}-${index}`}>{label}</li>;
                   })}
                 </ul>
               )}
               <div className="mt-2 ml-2 text-sm opacity-80">
-                Configure missing mappings above, then retry the export.
+                {t('integrations.csv.export.errors.configureMissingMappings', { defaultValue: 'Configure missing mappings above, then retry the export.' })}
               </div>
             </AlertDescription>
           </Alert>
@@ -215,8 +216,9 @@ export function CSVExportPanel({ onExportComplete }: CSVExportPanelProps) {
         {success && (
           <Alert variant="success">
             <AlertDescription>
-              Exported {success.invoiceCount} invoice{success.invoiceCount !== 1 ? 's' : ''} to{' '}
-              <strong>{success.filename}</strong>
+              {success.invoiceCount === 1
+                ? t('integrations.csv.export.success.one', { defaultValue: 'Exported {{count}} invoice to {{filename}}', count: success.invoiceCount, filename: success.filename })
+                : t('integrations.csv.export.success.other', { defaultValue: 'Exported {{count}} invoices to {{filename}}', count: success.invoiceCount, filename: success.filename })}
             </AlertDescription>
           </Alert>
         )}
@@ -231,12 +233,12 @@ export function CSVExportPanel({ onExportComplete }: CSVExportPanelProps) {
             {isLoading ? (
               <>
                 <span className="animate-spin mr-2">⏳</span>
-                Generating...
+                {t('integrations.csv.export.actions.generating', { defaultValue: 'Generating...' })}
               </>
             ) : (
               <>
                 <Download className="h-4 w-4 mr-2" />
-                Export CSV
+                {t('integrations.csv.export.actions.exportCsv', { defaultValue: 'Export CSV' })}
               </>
             )}
           </Button>

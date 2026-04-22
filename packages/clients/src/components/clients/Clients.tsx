@@ -746,9 +746,12 @@ const Clients: React.FC = () => {
       }
 
       if (result.contactsDeactivated > 0) {
-        toast.success(`${clientName} and ${result.contactsDeactivated} contact${result.contactsDeactivated !== 1 ? 's' : ''} have been deactivated successfully.`);
+        toast.success(t('clientsPage.singleInactiveWithContactsSuccess', {
+          name: clientName,
+          count: result.contactsDeactivated,
+        }));
       } else {
-        toast.success(`${clientName} has been marked as inactive successfully.`);
+        toast.success(t('clientsPage.singleInactiveSuccess', { name: clientName }));
       }
 
       // Close dialog first, then refresh
@@ -779,7 +782,7 @@ const Clients: React.FC = () => {
         return;
       }
 
-      toast.success(`${clientName} has been marked as inactive successfully.`);
+      toast.success(t('clientsPage.singleInactiveSuccess', { name: clientName }));
 
       // Close dialog first, then refresh
       resetDeleteState();

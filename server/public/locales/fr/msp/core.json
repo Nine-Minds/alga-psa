@@ -3,6 +3,7 @@
     "home": "Accueil",
     "userActivities": "Activités des utilisateurs",
     "tickets": "Tickets",
+    "serviceRequests": "Demandes de service",
     "surveys": "Sondages",
     "projects": "Projets",
     "projectsAll": "Tous les projets",
@@ -21,11 +22,15 @@
       "sections": {
         "contracts": "Contrats",
         "invoicing": "Facturation",
+        "quotes": "Devis",
         "pricing": "Tarification",
         "trackingReports": "Suivi et rapports"
       },
       "contractTemplates": "Modèles de contrat",
       "clientContracts": "Contrats client",
+      "quotes": "Devis",
+      "quoteBusinessTemplates": "Modèles de devis",
+      "quoteLayouts": "Mises en page des devis",
       "contractLinePresets": "Préréglages de lignes de contrat",
       "invoicing": "Facturation",
       "invoiceLayouts": "Mises en page de facture",
@@ -40,13 +45,13 @@
     },
     "schedule": "Planning",
     "technicianDispatch": "Répartition des techniciens",
-    "automationHub": "Workflows",
-    "workflows": "Workflows",
+    "automationHub": "Flux de travail",
+    "workflows": "Flux de travail",
     "controlPanel": "Panneau de contrôle",
     "workflowEditor": "Éditeur de workflows",
     "runs": "Exécutions",
     "events": "Événements",
-    "deadLetter": "Dead Letter",
+    "deadLetter": "File d'attente des lettres mortes",
     "systemMonitor": "Moniteur système",
     "systemMonitoring": "Supervision système",
     "jobMonitoring": "Supervision des tâches",
@@ -218,7 +223,14 @@
     }
   },
   "rightSidebar": {
-    "title": "Chat",
+    "title": "Discussion",
     "enterpriseOnly": "La fonctionnalité de chat est disponible uniquement dans l'édition Enterprise."
+  },
+  "notifications": {
+    "messages": {
+      "error": {
+        "loadFailed": "Échec du chargement des notifications"
+      }
+    }
   }
 }

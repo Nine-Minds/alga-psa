@@ -87,6 +87,9 @@
     "bulkDeleteSuccess": "11111 {{count}} 11111 {{clientsLabel}} 11111 {{verb}} 11111",
     "bulkInactiveFailed": "11111 {{count}} 11111 {{clientsLabel}} 11111",
     "bulkInactiveWithContactsSuccess": "11111 {{clientCount}} 11111 {{clientsLabel}} 11111 {{contactCount}} 11111 {{contactsLabel}} 11111",
+    "singleInactiveSuccess": "11111 {{name}} 11111",
+    "singleInactiveWithContactsSuccess_one": "11111 {{name}} 11111 {{count}} 11111",
+    "singleInactiveWithContactsSuccess_other": "11111 {{name}} 11111 {{count}} 11111",
     "bulkInactiveSuccess": "11111 {{count}} 11111 {{clientsLabel}} 11111 {{verb}} 11111",
     "bulkInactiveShortSuccess": "11111 {{count}} 11111 {{clientsLabel}} 11111 {{verb}} 11111",
     "bulkInactiveWithContactsShortSuccess": "11111 {{clientCount}} 11111 {{clientsLabel}} 11111 {{contactCount}} 11111 {{contactsLabel}} 11111",
@@ -180,6 +183,11 @@
     "markInactiveError": "11111",
     "reactivateError": "11111",
     "entraSyncError": "11111",
+    "entraSyncStarted": "11111 {{runId}} 11111",
+    "inboundDomainAdded": "11111",
+    "inboundDomainAddFailed": "11111",
+    "inboundDomainRemoved": "11111",
+    "inboundDomainRemoveFailed": "11111",
     "deleteError": "11111",
     "deactivateWithContactsSuccess": "11111 {{count}} 11111",
     "reactivateWithContactsSuccess": "11111 {{count}} 11111",
@@ -1081,5 +1089,11 @@
     "error": "11111",
     "saving": "11111",
     "success": "11111"
+  },
+  "notes": {
+    "messages": {
+      "saveSuccess": "11111",
+      "saveFailed": "11111"
+    }
   }
 }

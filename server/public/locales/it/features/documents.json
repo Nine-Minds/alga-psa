@@ -47,7 +47,25 @@
     "downloadFailed": "Impossibile scaricare il documento",
     "bulkDeleteFailed": "Impossibile eliminare alcuni documenti",
     "bulkDeleteSuccess_one": "{{count}} documento eliminato correttamente",
-    "bulkDeleteSuccess_other": "{{count}} documenti eliminati correttamente"
+    "bulkDeleteSuccess_other": "{{count}} documenti eliminati correttamente",
+    "passwordRequired": "La password è obbligatoria",
+    "shareLinkCreateFailed": "Impossibile creare il link di condivisione",
+    "shareLinkCreated": "Link di condivisione creato",
+    "linkCopied": "Link copiato negli appunti",
+    "shareLinkRevokeFailed": "Impossibile revocare il link di condivisione",
+    "shareLinkRevoked": "Link di condivisione revocato",
+    "shareLinksLoadFailed": "Impossibile caricare i link di condivisione",
+    "folderPathRequired": "Il percorso della cartella è obbligatorio",
+    "folderAlreadyExists": "La cartella esiste già",
+    "defaultsSaveFailed": "Salvataggio non riuscito",
+    "defaultsRemoved": "Cartelle predefinite per {{entity}} rimosse",
+    "defaultsSaved": "Cartelle predefinite per {{entity}} salvate",
+    "suggestedDefaultsAllLoaded": "Tutti i valori predefiniti suggeriti sono già caricati",
+    "suggestedDefaultsLoaded_one": "Caricati i valori predefiniti per {{count}} tipo di entità",
+    "suggestedDefaultsLoaded_other": "Caricati i valori predefiniti per {{count}} tipi di entità",
+    "suggestedDefaultsLoadFailed": "Impossibile caricare i valori predefiniti suggeriti",
+    "entityTypesAllConfigured": "Tutti i tipi di entità hanno già cartelle predefinite configurate",
+    "defaultFoldersLoadFailed": "Impossibile caricare le cartelle predefinite"
   },
   "validation": {
     "nameRequired": "Il nome del documento è obbligatorio"
@@ -221,5 +239,33 @@
   },
   "empty": {
     "default": "Nessun documento trovato"
+  },
+  "shared": {
+    "statusLabels": {
+      "draft": "Bozza",
+      "review": "In revisione",
+      "published": "Pubblicato",
+      "archived": "Archiviato"
+    },
+    "audienceLabels": {
+      "internal": "Interno",
+      "client": "Cliente",
+      "public": "Pubblico"
+    },
+    "typeLabels": {
+      "how_to": "Come fare",
+      "faq": "Domande frequenti",
+      "troubleshooting": "Risoluzione dei problemi",
+      "reference": "Riferimento"
+    }
+  },
+  "documents": {
+    "messages": {
+      "error": {
+        "noPermission": "Non hai il permesso di visualizzare i documenti",
+        "invalidData": "Dati del documento non validi ricevuti",
+        "fetchFailed": "Impossibile recuperare i documenti"
+      }
+    }
   }
 }

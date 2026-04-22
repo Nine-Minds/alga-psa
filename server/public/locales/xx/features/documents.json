@@ -47,7 +47,25 @@
     "downloadFailed": "11111",
     "bulkDeleteFailed": "11111",
     "bulkDeleteSuccess_one": "11111 {{count}} 11111",
-    "bulkDeleteSuccess_other": "11111 {{count}} 11111"
+    "bulkDeleteSuccess_other": "11111 {{count}} 11111",
+    "passwordRequired": "11111",
+    "shareLinkCreateFailed": "11111",
+    "shareLinkCreated": "11111",
+    "linkCopied": "11111",
+    "shareLinkRevokeFailed": "11111",
+    "shareLinkRevoked": "11111",
+    "shareLinksLoadFailed": "11111",
+    "folderPathRequired": "11111",
+    "folderAlreadyExists": "11111",
+    "defaultsSaveFailed": "11111",
+    "defaultsRemoved": "11111 {{entity}} 11111",
+    "defaultsSaved": "11111 {{entity}} 11111",
+    "suggestedDefaultsAllLoaded": "11111",
+    "suggestedDefaultsLoaded_one": "11111 {{count}} 11111",
+    "suggestedDefaultsLoaded_other": "11111 {{count}} 11111",
+    "suggestedDefaultsLoadFailed": "11111",
+    "entityTypesAllConfigured": "11111",
+    "defaultFoldersLoadFailed": "11111"
   },
   "validation": {
     "nameRequired": "11111"
@@ -221,5 +239,33 @@
   },
   "empty": {
     "default": "11111"
+  },
+  "shared": {
+    "statusLabels": {
+      "draft": "11111",
+      "review": "11111",
+      "published": "11111",
+      "archived": "11111"
+    },
+    "audienceLabels": {
+      "internal": "11111",
+      "client": "11111",
+      "public": "11111"
+    },
+    "typeLabels": {
+      "how_to": "11111",
+      "faq": "11111",
+      "troubleshooting": "11111",
+      "reference": "11111"
+    }
+  },
+  "documents": {
+    "messages": {
+      "error": {
+        "noPermission": "11111",
+        "invalidData": "11111",
+        "fetchFailed": "11111"
+      }
+    }
   }
 }

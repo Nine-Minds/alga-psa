@@ -21,6 +21,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from '../contracts/BucketOverlayFields';
 import { BucketOverlayInput } from '@alga-psa/billing/actions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ServiceConfigurationPanelProps {
   configuration: Partial<IContractLineServiceConfiguration>;
@@ -72,6 +73,7 @@ export function ServiceConfigurationPanel({
   bucketOverlay,
   onBucketOverlayChange
 }: ServiceConfigurationPanelProps) {
+  const { t } = useTranslation('msp/service-catalog');
   const [configurationType, setConfigurationType] = useState<'Fixed' | 'Hourly' | 'Usage' | 'Bucket'>(
     configuration.configuration_type || 'Fixed'
   );
@@ -221,7 +223,13 @@ export function ServiceConfigurationPanel({
       {(configurationType === 'Hourly' || configurationType === 'Usage') && onBucketOverlayChange && (
         <div className="space-y-3 pt-4 border-t border-dashed border-gray-200">
           <SwitchWithLabel
-            label={configurationType === 'Hourly' ? 'Recommend bucket of hours' : 'Recommend bucket of consumption'}
+            label={configurationType === 'Hourly'
+              ? t('serviceConfig.bucketOverlay.recommendHours', {
+                  defaultValue: 'Recommend bucket of hours',
+                })
+              : t('serviceConfig.bucketOverlay.recommendUsage', {
+                  defaultValue: 'Recommend bucket of consumption',
+                })}
             checked={Boolean(bucketOverlay)}
             onCheckedChange={(checked) => {
               if (checked) {
@@ -259,7 +267,7 @@ export function ServiceConfigurationPanel({
               onClick={onCancel}
               disabled={isSubmitting}
             >
-              Cancel
+              {t('serviceConfig.actions.cancel', { defaultValue: 'Cancel' })}
             </Button>
           )}
           {onSave && (
@@ -269,7 +277,11 @@ export function ServiceConfigurationPanel({
               onClick={onSave}
               disabled={disabled || isSubmitting}
             >
-              {isSubmitting ? 'Saving...' : 'Save Configuration'}
+              {isSubmitting
+                ? t('serviceConfig.actions.saving', { defaultValue: 'Saving...' })
+                : t('serviceConfig.actions.save', {
+                    defaultValue: 'Save Configuration',
+                  })}
             </Button>
           )}
         </div>

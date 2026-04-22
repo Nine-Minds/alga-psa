@@ -18,7 +18,7 @@ export const LOCALE_CONFIG = {
    * Array of supported locales
    * Add new languages here to enable them throughout the application
    */
-  supportedLocales: ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'xx', 'yy'] as const,
+  supportedLocales: ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt', 'xx', 'yy'] as const,
 
   /**
    * Human-readable names for each locale
@@ -32,6 +32,7 @@ export const LOCALE_CONFIG = {
     nl: 'Nederlands',
     it: 'Italiano',
     pl: 'Polski',
+    pt: 'Português',
     xx: 'Pseudo (xx)',
     yy: 'Pseudo (yy)',
   } as const,
@@ -110,14 +111,24 @@ export const I18N_CONFIG = {
 export const PSEUDO_LOCALES: ReadonlyArray<SupportedLocale> = ['xx', 'yy'];
 
 /**
- * Filter pseudo-locales from a locale list based on a toggle.
+ * Locales whose translation packs are still in progress and should not yet be
+ * offered in user-facing pickers. Translations remain on disk so existing
+ * users who already selected them keep working, and so we can continue
+ * iterating on them, but they won't appear as new selections.
+ */
+export const INCOMPLETE_LOCALES: ReadonlyArray<SupportedLocale> = ['pt'];
+
+/**
+ * Filter pseudo-locales (and always-hidden incomplete locales) from a list.
  */
 export function filterPseudoLocales(
   locales: readonly SupportedLocale[],
   includePseudo: boolean,
 ): SupportedLocale[] {
-  if (includePseudo) return [...locales];
-  return locales.filter((l) => !(PSEUDO_LOCALES as readonly string[]).includes(l));
+  const base = includePseudo
+    ? [...locales]
+    : locales.filter((l) => !(PSEUDO_LOCALES as readonly string[]).includes(l));
+  return base.filter((l) => !(INCOMPLETE_LOCALES as readonly string[]).includes(l));
 }
 
 /**
@@ -131,6 +142,7 @@ export const ROUTE_NAMESPACES = {
   '/client-portal/documents': ['common', 'client-portal', 'features/documents'],
   '/client-portal/kb': ['common', 'client-portal', 'features/documents'],
   '/client-portal/appointments': ['common', 'client-portal', 'features/appointments'],
+  '/client-portal/request-services': ['common', 'client-portal', 'client-portal/service-requests'],
   '/msp': ['common', 'msp/core', 'msp/dashboard'],
   '/msp/dashboard': ['common', 'msp/core', 'msp/dashboard'],
   '/msp/surveys': ['common', 'msp/core', 'msp/surveys'],
@@ -139,23 +151,32 @@ export const ROUTE_NAMESPACES = {
   '/msp/jobs': ['common', 'msp/core', 'msp/jobs'],
   '/msp/tickets': ['common', 'msp/core', 'features/tickets'],
   '/msp/projects': ['common', 'msp/core', 'features/projects'],
-  '/msp/billing': ['common', 'msp/core', 'features/billing', 'msp/reports', 'msp/billing', 'msp/contract-lines', 'msp/contracts'],
+  '/msp/billing/credits': ['common', 'msp/core', 'features/billing', 'msp/credits'],
+  '/msp/billing': ['common', 'msp/core', 'features/billing', 'msp/quotes', 'msp/reports', 'msp/billing', 'msp/contract-lines', 'msp/contracts', 'msp/invoicing'],
+  '/msp/quote-approvals': ['common', 'msp/core', 'features/billing', 'msp/quotes'],
+  '/msp/quote-document-templates': ['common', 'msp/core', 'features/billing', 'msp/quotes'],
   '/msp/clients': ['common', 'msp/core', 'msp/clients'],
   '/msp/contacts': ['common', 'msp/core', 'msp/contacts'],
   '/msp/assets': ['common', 'msp/core', 'msp/assets'],
   '/msp/onboarding': ['common', 'msp/core', 'msp/onboarding'],
+  '/msp/workflows': ['common', 'msp/core', 'msp/workflows'],
+  '/msp/workflows/runs': ['common', 'msp/core', 'msp/workflows'],
+  '/msp/workflow-editor': ['common', 'msp/core', 'msp/workflows'],
+  '/msp/workflow-control': ['common', 'msp/core', 'msp/workflows'],
   '/msp/technician-dispatch': ['common', 'msp/core', 'msp/dispatch'],
   '/msp/time-entry': ['common', 'msp/core', 'msp/time-entry'],
   '/msp/time-sheet-approvals': ['common', 'msp/core', 'msp/time-entry'],
   '/msp/time-management': ['common', 'msp/core', 'msp/time-entry'],
-  '/msp/service-requests': ['common', 'msp/core', 'features/tickets'],
+  '/msp/service-requests': ['common', 'msp/core', 'features/tickets', 'msp/service-requests'],
   '/msp/settings/extensions': ['common', 'msp/core', 'msp/settings', 'msp/extensions'],
-  '/msp/settings': ['common', 'msp/core', 'msp/settings', 'msp/admin', 'msp/email-providers', 'features/projects', 'features/tickets', 'msp/billing-settings'],
-  '/msp/profile': ['common', 'msp/core', 'msp/settings', 'msp/profile'],
+  '/msp/settings': ['common', 'msp/core', 'msp/settings', 'msp/admin', 'msp/email-providers', 'features/projects', 'features/tickets', 'msp/billing-settings', 'msp/service-catalog', 'features/billing', 'msp/calendar', 'msp/integrations'],
+  '/msp/profile': ['common', 'msp/core', 'msp/settings', 'msp/profile', 'msp/calendar'],
   '/msp/security-settings': ['common', 'msp/core', 'msp/settings', 'msp/profile'],
   '/msp/platform-updates': ['common', 'msp/core', 'msp/profile'],
   '/msp/extensions': ['common', 'msp/core', 'msp/extensions'],
   '/msp/licenses': ['common', 'msp/core', 'msp/licensing'],
+  '/msp/account': ['common', 'msp/core', 'msp/account', 'msp/licensing'],
+  '/msp/user-activities': ['common', 'msp/core', 'msp/user-activities', 'msp/workflows', 'features/tickets', 'features/projects', 'msp/schedule'],
 } as const;
 
 /**

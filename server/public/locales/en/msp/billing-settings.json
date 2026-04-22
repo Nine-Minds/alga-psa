@@ -206,22 +206,22 @@
         "save": "Save Changes",
         "saving": "Saving..."
       },
-    "toast": {
-      "created": "Tax region created successfully.",
-      "updated": "Tax region updated successfully.",
-      "activatePending": "Attempting to activate {{name}}...",
-      "deactivatePending": "Attempting to deactivate {{name}}...",
-      "activated": "Tax region {{name}} activated successfully.",
-      "deactivated": "Tax region {{name}} deactivated successfully."
+      "toast": {
+        "created": "Tax region created successfully.",
+        "updated": "Tax region updated successfully.",
+        "activatePending": "Attempting to activate {{name}}...",
+        "deactivatePending": "Attempting to deactivate {{name}}...",
+        "activated": "Tax region {{name}} activated successfully.",
+        "deactivated": "Tax region {{name}} deactivated successfully."
+      },
+      "errors": {
+        "load": "Failed to load tax regions.",
+        "create": "Failed to create tax region.",
+        "update": "Failed to update tax region.",
+        "activate": "Failed to activate tax region.",
+        "deactivate": "Failed to deactivate tax region."
+      }
     },
-    "errors": {
-      "load": "Failed to load tax regions.",
-      "create": "Failed to create tax region.",
-      "update": "Failed to update tax region.",
-      "activate": "Failed to activate tax region.",
-      "deactivate": "Failed to deactivate tax region."
-    }
-  },
     "thresholds": {
       "title": "Progressive Tax Brackets",
       "tooltip": "Define progressive tax brackets where different rates apply to different portions of the amount. Each bracket applies only to the amount within its range.",
@@ -1095,6 +1095,25 @@
     "errors": {
       "load": "Failed to load numbering settings.",
       "save": "Failed to update settings."
+    }
+  },
+  "payment": {
+    "messages": {
+      "loadConfigFailed": "Failed to load payment configuration",
+      "keysRequired": "Please enter both secret key and publishable key",
+      "invalidSecretKey": "Secret key should start with sk_",
+      "invalidPublishableKey": "Publishable key should start with pk_",
+      "connectSuccess": "Stripe connected and webhooks configured automatically!",
+      "connectPartialSuccess": "Stripe connected! Note: Webhook auto-configuration failed - you may need to configure webhooks manually in Stripe Dashboard.",
+      "connectFailed": "Failed to connect Stripe",
+      "disconnected": "Stripe disconnected",
+      "disconnectFailed": "Failed to disconnect Stripe",
+      "connectionSuccess": "Connection successful!",
+      "connectionTestFailed": "Connection test failed",
+      "settingsSaved": "Settings saved successfully",
+      "saveSettingsFailed": "Failed to save settings",
+      "webhookConfigured": "Webhook configured successfully!",
+      "webhookConfigureFailed": "Failed to configure webhook"
     }
   }
 }

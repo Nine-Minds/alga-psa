@@ -1,0 +1,247 @@
+{
+  "calendar": {
+    "integrations": {
+      "loadError": "Impossibile caricare i provider del calendario",
+      "header": {
+        "title": "Integrazioni del calendario",
+        "description": "Collega il tuo calendario personale Google o Microsoft per sincronizzare le voci di pianificazione assegnate. Gli eventi che crei in Alga appariranno nel tuo calendario esterno quando ti vengono assegnati."
+      },
+      "buttons": {
+        "googleCalendar": "Google Calendar",
+        "outlookCalendar": "Calendario Outlook",
+        "addGoogleCalendar": "Aggiungi Google Calendar",
+        "addOutlookCalendar": "Aggiungi calendario Outlook"
+      },
+      "proTip": {
+        "label": "Suggerimento",
+        "body": "Per importare un evento dal tuo calendario esterno in Alga, aggiungi semplicemente"
+      },
+      "proTipSuffix": "al titolo o alla descrizione.",
+      "empty": {
+        "title": "Nessun calendario collegato",
+        "description": "Collega un calendario per sincronizzare automaticamente la tua pianificazione e non perdere mai un'assegnazione."
+      },
+      "providerLabels": {
+        "google": "Google",
+        "microsoft": "Microsoft",
+        "calendar": "Calendario"
+      },
+      "connectionStatus": {
+        "connected": "Connesso",
+        "error": "Errore",
+        "disconnected": "Disconnesso",
+        "configuring": "Configurazione in corso"
+      },
+      "oauthStatus": {
+        "actionRequired": "Azione richiesta",
+        "complete": "OAuth completato"
+      },
+      "active": {
+        "active": "Attivo",
+        "inactive": "Inattivo"
+      },
+      "fields": {
+        "type": "Tipo:",
+        "calendarId": "ID calendario:",
+        "syncDirection": "Direzione di sincronizzazione:",
+        "lastSync": "Ultima sincronizzazione:"
+      },
+      "providerType": {
+        "google": "Google Calendar",
+        "microsoft": "Microsoft Outlook Calendar"
+      },
+      "syncDirection": {
+        "bidirectional": "Bidirezionale",
+        "toExternal": "Alga → Esterno",
+        "fromExternal": "Esterno → Alga"
+      },
+      "values": {
+        "notSet": "Non impostato",
+        "notYetRun": "Non ancora eseguito"
+      },
+      "syncing": {
+        "inProgress": "Sincronizzazione in corso..."
+      },
+      "actions": {
+        "syncing": "Sincronizzazione…",
+        "syncNow": "Sincronizza ora",
+        "edit": "Modifica",
+        "delete": "Elimina"
+      },
+      "toasts": {
+        "deleted": {
+          "title": "Provider del calendario eliminato",
+          "description": "{{name}} è stato rimosso correttamente."
+        },
+        "deleteFailed": {
+          "title": "Impossibile eliminare il provider del calendario",
+          "fallback": "Impossibile eliminare il provider del calendario"
+        },
+        "syncStarted": {
+          "title": "Sincronizzazione avviata",
+          "descriptionWithName": "La sincronizzazione di {{name}} è in esecuzione in background.",
+          "descriptionGeneric": "La sincronizzazione del calendario è in esecuzione in background."
+        },
+        "syncStartedFeedback": "Sincronizzazione avviata. Torna a controllare a breve per i risultati.",
+        "syncFailed": {
+          "title": "Impossibile avviare la sincronizzazione",
+          "fallback": "Impossibile avviare la sincronizzazione."
+        },
+        "syncException": {
+          "title": "Sincronizzazione manuale non riuscita",
+          "fallback": "Impossibile sincronizzare il provider del calendario"
+        }
+      },
+      "dialogs": {
+        "addTitle": "Aggiungi provider del calendario {{provider}}",
+        "addDescription": "Collega il tuo calendario personale per sincronizzare le voci di pianificazione assegnate.",
+        "editTitle": "Modifica provider del calendario {{provider}}",
+        "editDescription": "Aggiorna le impostazioni di connessione del tuo calendario personale.",
+        "delete": {
+          "title": "Elimina provider del calendario",
+          "messageWithName": "L'eliminazione di {{name}} interromperà la sincronizzazione futura e rimuoverà i webhook associati. Questa azione non può essere annullata.",
+          "messageGeneric": "Sei sicuro di voler eliminare questo provider del calendario?",
+          "confirmLabel": "Elimina provider",
+          "cancelLabel": "Mantieni provider"
+        }
+      }
+    },
+    "sync": {
+      "compact": {
+        "syncing": "Sincronizzazione...",
+        "google": "Google",
+        "outlook": "Outlook"
+      },
+      "tooltip": {
+        "status": "Stato: {{status}}",
+        "lastSync": "Ultima sincronizzazione: {{value}}",
+        "error": "Errore: {{message}}"
+      },
+      "status": {
+        "synced": "Sincronizzato",
+        "pending": "In sospeso",
+        "conflict": "Conflitto",
+        "error": "Errore",
+        "unknown": "Sconosciuto"
+      },
+      "header": {
+        "title": "Stato di sincronizzazione del calendario",
+        "refresh": "Aggiorna"
+      },
+      "empty": "Nessuna integrazione del calendario configurata",
+      "inactive": "Inattivo",
+      "fields": {
+        "syncDirection": "Direzione di sincronizzazione:",
+        "lastSync": "Ultima sincronizzazione:",
+        "externalId": "ID esterno:"
+      },
+      "loadError": "Impossibile caricare lo stato di sincronizzazione",
+      "conflictAlert": "Conflitto rilevato: entrambi i calendari sono stati modificati. Risolvi il conflitto nelle impostazioni del calendario."
+    },
+    "providers": {
+      "common": {
+        "oauth": {
+          "badge": {
+            "authorized": "Autorizzato",
+            "authorizing": "Autorizzazione in corso",
+            "error": "Errore di autorizzazione",
+            "notAuthorized": "Non autorizzato"
+          },
+          "status": "Stato della connessione",
+          "connecting": "Connessione...",
+          "connected": "Connesso",
+          "connect": "Connetti",
+          "popupBlocked": "Popup bloccato. Consenti i popup per questo sito.",
+          "callbackFailed": "Autorizzazione OAuth non riuscita",
+          "initiateFailed": "Impossibile avviare OAuth"
+        },
+        "actions": {
+          "cancel": "Annulla",
+          "saving": "Salvataggio...",
+          "updateProvider": "Aggiorna provider",
+          "createProvider": "Crea provider"
+        },
+        "errors": {
+          "createFailed": "Impossibile creare il provider del calendario",
+          "saveFailed": "Impossibile salvare il provider"
+        },
+        "syncDirections": {
+          "bidirectional": "Bidirezionale (consigliato)"
+        }
+      },
+      "google": {
+        "config": {
+          "title": "Configurazione Google Calendar",
+          "description": "Collega il tuo Google Calendar per sincronizzare le voci di pianificazione"
+        },
+        "fields": {
+          "providerName": "Nome del provider *",
+          "providerNamePlaceholder": "es. Il mio Google Calendar",
+          "calendarId": "ID calendario *",
+          "calendarIdPlaceholder": "primary",
+          "calendarIdHint": "Di solito \"primary\" per il calendario principale",
+          "syncDirection": "Direzione di sincronizzazione *",
+          "enableProvider": "Abilita questo provider"
+        },
+        "syncDirections": {
+          "toExternal": "Solo Alga → Google Calendar",
+          "fromExternal": "Solo Google Calendar → Alga"
+        },
+        "oauth": {
+          "title": "Autorizzazione OAuth Google",
+          "description": "Autorizza l'accesso al tuo Google Calendar"
+        },
+        "configAlert": {
+          "title": "Google non è configurato per questo tenant.",
+          "body": "Configura prima l'OAuth Google del tenant in <strong>Impostazioni → Integrazioni → Provider</strong>.",
+          "openSettings": "Apri impostazioni Google"
+        },
+        "errors": {
+          "notConfigured": "L'integrazione Google non è configurata per questo tenant. Configura prima Google, poi riprova."
+        },
+        "defaults": {
+          "providerName": "Google Calendar",
+          "calendarId": "primary"
+        }
+      },
+      "microsoft": {
+        "config": {
+          "title": "Configurazione Microsoft Outlook Calendar",
+          "description": "Collega il tuo Microsoft Outlook Calendar per sincronizzare le voci di pianificazione"
+        },
+        "fields": {
+          "providerName": "Nome del provider *",
+          "providerNamePlaceholder": "es. Il mio calendario Outlook",
+          "calendarId": "ID calendario *",
+          "calendarIdPlaceholder": "calendar",
+          "calendarIdHint": "Di solito \"calendar\" per il calendario principale",
+          "syncDirection": "Direzione di sincronizzazione *",
+          "enableProvider": "Abilita questo provider"
+        },
+        "syncDirections": {
+          "toExternal": "Solo Alga → Outlook Calendar",
+          "fromExternal": "Solo Outlook Calendar → Alga"
+        },
+        "oauth": {
+          "title": "Autorizzazione OAuth Microsoft",
+          "description": "Autorizza l'accesso al tuo Microsoft Outlook Calendar"
+        },
+        "configAlert": {
+          "title": "Le impostazioni del provider Microsoft non sono configurate.",
+          "body": "Configura prima i provider in Impostazioni → Integrazioni → Provider, poi torna qui per collegare Outlook Calendar.",
+          "openSettings": "Apri impostazioni provider"
+        },
+        "setupReason": {
+          "unsupported_consumer": "Tipo di consumatore Microsoft non supportato per il calendario.",
+          "binding_not_configured": "Il calendario non è ancora associato a un profilo Microsoft. Configura prima i provider e torna qui per collegare Outlook Calendar.",
+          "profile_missing": "Il profilo Microsoft associato al calendario è mancante o archiviato. Seleziona un profilo attivo in Provider e torna qui.",
+          "profile_credentials_missing": "Al profilo Microsoft associato al calendario mancano le credenziali richieste. Aggiorna il profilo in Provider e torna qui."
+        },
+        "defaults": {
+          "providerName": "Outlook Calendar",
+          "calendarId": "calendar"
+        }
+      }
+    }
+  }
+}

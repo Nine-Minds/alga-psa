@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { Spinner, Button } from '@alga-psa/ui/components';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface PortalSessionHandoffProps {
   ott: string | null;
@@ -23,6 +24,7 @@ export default function PortalSessionHandoff({
   returnPath,
   fallbackLoginUrl,
 }: PortalSessionHandoffProps) {
+  const { t } = useTranslation('common');
   const router = useRouter();
   const [state, setState] = useState<ExchangeState>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +42,7 @@ export default function PortalSessionHandoff({
     if (!ott || ott.length === 0) {
       setState('error');
       setError('Missing or invalid login token. Please try signing in again.');
-      toast.error('The login handoff token is missing or invalid. Please sign in again.');
+      toast.error(t('auth.messages.handoffMissingToken'));
       return;
     }
 
@@ -74,7 +76,7 @@ export default function PortalSessionHandoff({
           if (payload?.canonicalHost) {
             setCanonicalHost(payload.canonicalHost);
           }
-          toast.error('We could not finalize your login. Please try signing in again.');
+          toast.error(t('auth.messages.handoffFinalizeFailed'));
           return;
         }
 
@@ -90,7 +92,7 @@ export default function PortalSessionHandoff({
         }
         setState('error');
         setError('We encountered a network issue while finalizing your login.');
-        toast.error('Network issue detected while finalizing your login. Please try again.');
+        toast.error(t('auth.messages.handoffNetworkIssue'));
       }
     }
 

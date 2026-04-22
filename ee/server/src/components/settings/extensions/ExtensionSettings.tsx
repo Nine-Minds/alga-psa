@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { ChevronLeft, Plus, Trash2, Lock, Eye, EyeOff } from 'lucide-react';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -38,6 +39,7 @@ const STORED_SECRET_PLACEHOLDER = '__STORED_SECRET_DO_NOT_CHANGE__';
 const automationId = (id: string) => ({ 'data-automation-id': id });
 
 export default function ExtensionSettings() {
+  const { t } = useTranslation('msp/extensions');
   const params = useParams();
   const router = useRouter();
   const extensionId = params?.id as string;
@@ -226,7 +228,7 @@ export default function ExtensionSettings() {
         }
       } catch (error) {
         console.error('Failed to load extension settings', error);
-        toast.error('Failed to load extension settings.');
+        toast.error(t('messages.loadSettingsFailed'));
       } finally {
         setIsLoading(false);
       }
@@ -249,7 +251,7 @@ export default function ExtensionSettings() {
       console.error('Failed to refresh schedules', e);
       const msg = e instanceof Error ? e.message : String(e);
       setSchedulesError(msg || 'Failed to refresh schedules');
-      toast.error(msg || 'Failed to refresh schedules.');
+      toast.error(msg || t('messages.refreshSchedulesFailed'));
     } finally {
       setSchedulesLoading(false);
     }
@@ -328,12 +330,12 @@ export default function ExtensionSettings() {
         (definition) => definition.required && !secretValues[definition.key]
       );
       if (missingRequired.length > 0) {
-        toast.error('Please provide values for required secrets before saving.');
+        toast.error(t('messages.requiredSecretsMissing'));
         return;
       }
       const hasAnySecretInput = Object.values(secretValues).some((value) => value && value.length > 0);
       if (!hasAnySecretInput) {
-        toast.error('Enter secret values before saving.');
+        toast.error(t('messages.enterSecretValues'));
         return;
       }
     }
@@ -350,7 +352,7 @@ export default function ExtensionSettings() {
       );
 
       if (invalidKeys.length > 0) {
-        toast.error('Custom keys can only contain letters, numbers, underscores, dots, and dashes.');
+        toast.error(t('messages.invalidCustomKey'));
         return;
       }
 
@@ -383,7 +385,7 @@ export default function ExtensionSettings() {
       if (hasChanges || customSecretKeys.length > 0) {
         const updateResult = await updateExtensionSettings(extensionId, mergedSettings);
         if (!updateResult.success) {
-          toast.error(updateResult.message || 'Failed to save extension settings.');
+          toast.error(updateResult.message || t('messages.saveSettingsFailed'));
           return;
         }
         configMessage = updateResult.message || 'Extension settings saved successfully.';
@@ -422,10 +424,10 @@ export default function ExtensionSettings() {
       if (hasSecretsToSave || (secretDefinitions.length > 0 && !hasStoredSecrets)) {
         const secretResult = await updateExtensionSecrets(extensionId, secretsPayload);
         if (!secretResult.success) {
-          toast.error(secretResult.message || 'Failed to update extension secrets.');
+          toast.error(secretResult.message || t('messages.updateSecretsFailed'));
           return;
         }
-        toast.success(secretResult.message || 'Extension secrets updated.');
+        toast.success(secretResult.message || t('messages.secretsUpdated'));
         const metadata = await getExtensionSecretsMetadata(extensionId);
         setHasStoredSecrets(Boolean(metadata?.hasEnvelope));
         setSecretsVersion(metadata?.secretsVersion ?? null);
@@ -442,12 +444,12 @@ export default function ExtensionSettings() {
         toast.success(configMessage);
       }
       if (!configMessage && !(secretDefinitions.length > 0 && (Object.keys(secretsPayload).length > 0 || !hasStoredSecrets))) {
-        toast.success('Extension settings saved successfully.');
+        toast.success(t('messages.settingsSaved'));
       }
       setHasChanges(false);
     } catch (error) {
       console.error('Failed to save extension settings', error);
-      toast.error('Failed to save extension settings.');
+      toast.error(t('messages.saveSettingsFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -465,7 +467,7 @@ export default function ExtensionSettings() {
       const result = await resetExtensionSettings(extensionId);
 
       if (!result.success) {
-        toast.error(result.message || 'Failed to reset extension settings.');
+        toast.error(result.message || t('messages.resetSettingsFailed'));
         return;
       }
 
@@ -486,10 +488,10 @@ export default function ExtensionSettings() {
       );
       setSecretChanged(false);
 
-      toast.success('Settings reset to default values.');
+      toast.success(t('messages.settingsReset'));
     } catch (error) {
       console.error('Failed to reset extension settings', error);
-      toast.error('Failed to reset extension settings.');
+      toast.error(t('messages.resetSettingsFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -893,7 +895,7 @@ export default function ExtensionSettings() {
                             try {
                               payloadJson = JSON.parse(trimmed);
                             } catch {
-                              toast.error('Payload must be valid JSON.');
+                              toast.error(t('messages.invalidPayloadJson'));
                               return;
                             }
                           }
@@ -908,10 +910,10 @@ export default function ExtensionSettings() {
                               payloadJson,
                             });
                             if (!result.success) {
-                              toast.error(result.message || 'Failed to create schedule.');
+                              toast.error(result.message || t('messages.createScheduleFailed'));
                               return;
                             }
-                            toast.success('Schedule created.');
+                            toast.success(t('messages.scheduleCreated'));
                             setNewSchedulePayload('');
                             await refreshSchedules();
                           } finally {
@@ -973,7 +975,7 @@ export default function ExtensionSettings() {
                                       try {
                                         payloadJson = JSON.parse(trimmed);
                                       } catch {
-                                        toast.error('Payload must be valid JSON.');
+                                        toast.error(t('messages.invalidPayloadJson'));
                                         return;
                                       }
                                     } else {
@@ -986,10 +988,10 @@ export default function ExtensionSettings() {
                                       payloadJson,
                                     });
                                     if (!out.success) {
-                                      toast.error(out.message || 'Failed to update schedule.');
+                                      toast.error(out.message || t('messages.updateScheduleFailed'));
                                       return;
                                     }
-                                    toast.success('Schedule updated.');
+                                    toast.success(t('messages.scheduleUpdated'));
                                     setEditingScheduleId(null);
                                     await refreshSchedules();
                                   }}
@@ -1023,7 +1025,7 @@ export default function ExtensionSettings() {
                             onCheckedChange={async (checked) => {
                               const out = await updateExtensionSchedule(extensionId, s.id, { enabled: checked });
                               if (!out.success) {
-                                toast.error(out.message || 'Failed to update schedule.');
+                                toast.error(out.message || t('messages.updateScheduleFailed'));
                                 return;
                               }
                               await refreshSchedules();
@@ -1051,10 +1053,10 @@ export default function ExtensionSettings() {
                             onClick={async () => {
                               const out = await runExtensionScheduleNow(extensionId, s.id);
                               if (!out.success) {
-                                toast.error(out.message || 'Failed to run schedule.');
+                                toast.error(out.message || t('messages.runScheduleFailed'));
                                 return;
                               }
-                              toast.success('Schedule run enqueued.');
+                              toast.success(t('messages.scheduleRunEnqueued'));
                             }}
                           >
                             Run now
@@ -1068,10 +1070,10 @@ export default function ExtensionSettings() {
                               if (!confirm('Delete this schedule?')) return;
                               const out = await deleteExtensionSchedule(extensionId, s.id);
                               if (!out.success) {
-                                toast.error(out.message || 'Failed to delete schedule.');
+                                toast.error(out.message || t('messages.deleteScheduleFailed'));
                                 return;
                               }
-                              toast.success('Schedule deleted.');
+                              toast.success(t('messages.scheduleDeleted'));
                               await refreshSchedules();
                             }}
                           >

@@ -586,7 +586,7 @@
         "rateType": {
           "monthly": "Mensuel",
           "perHour": "Par heure",
-          "usage": "Usage",
+          "usage": "Utilisation",
           "rate": "Taux"
         }
       },
@@ -658,7 +658,7 @@
       "search": "Recherche",
       "edit": "Modifier",
       "restore": "Restaurer",
-      "archive": "Archive",
+      "archive": "Archiver",
       "delete": "Supprimer"
     },
     "filters": {
@@ -738,7 +738,7 @@
         "rateType": {
           "monthly": "Mensuel",
           "perHour": "Par heure",
-          "usage": "Usage",
+          "usage": "Utilisation",
           "rate": "Taux"
         }
       },
@@ -1005,7 +1005,7 @@
       "fixed": "Fixé",
       "fixedFee": "Frais fixes",
       "hourly": "Horaire",
-      "usage": "Usage",
+      "usage": "Utilisation",
       "usageBased": "Basé sur l'utilisation"
     },
     "licenseTerm": {
@@ -1095,6 +1095,25 @@
     "errors": {
       "load": "Échec du chargement des paramètres de numérotation.",
       "save": "Échec de la mise à jour des paramètres."
+    }
+  },
+  "payment": {
+    "messages": {
+      "loadConfigFailed": "Échec du chargement de la configuration de paiement",
+      "keysRequired": "Veuillez saisir à la fois la clé secrète et la clé publiable",
+      "invalidSecretKey": "La clé secrète doit commencer par sk_",
+      "invalidPublishableKey": "La clé publiable doit commencer par pk_",
+      "connectSuccess": "Stripe connecté et webhooks configurés automatiquement !",
+      "connectPartialSuccess": "Stripe connecté ! Remarque : la configuration automatique du webhook a échoué — vous devrez peut-être configurer les webhooks manuellement dans le tableau de bord Stripe.",
+      "connectFailed": "Échec de la connexion à Stripe",
+      "disconnected": "Stripe déconnecté",
+      "disconnectFailed": "Échec de la déconnexion de Stripe",
+      "connectionSuccess": "Connexion réussie !",
+      "connectionTestFailed": "Échec du test de connexion",
+      "settingsSaved": "Paramètres enregistrés avec succès",
+      "saveSettingsFailed": "Échec de l'enregistrement des paramètres",
+      "webhookConfigured": "Webhook configuré avec succès !",
+      "webhookConfigureFailed": "Échec de la configuration du webhook"
     }
   }
 }

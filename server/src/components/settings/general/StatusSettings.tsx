@@ -17,7 +17,7 @@ const StatusSettings = (_props: StatusSettingsProps): React.JSX.Element => {
     <div className="space-y-4">
       <Alert variant="info" data-testid="ticket-statuses-retired-alert">
         <AlertDescription>
-          Ticket statuses are now managed inside each board. Use the Boards tab to edit ticket lifecycles for a specific board.
+          {t('ticketing.statuses.retiredAlert')}
         </AlertDescription>
       </Alert>
       <Button

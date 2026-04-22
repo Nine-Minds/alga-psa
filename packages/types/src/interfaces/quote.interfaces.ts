@@ -47,6 +47,7 @@ export interface IQuoteItem extends TenantEntity {
   is_taxable?: boolean;
   tax_region?: string | null;
   tax_rate?: number | null;
+  location_id?: string | null;
   created_by?: string | null;
   updated_by?: string | null;
   created_at?: ISO8601String;
@@ -134,6 +135,8 @@ export interface QuoteConversionPreviewItem {
   billing_method?: 'fixed' | 'hourly' | 'usage' | 'per_unit' | null;
   target: QuoteConversionTarget;
   reason?: string | null;
+  location_id?: string | null;
+  location_name?: string | null;
 }
 
 export interface QuoteConversionPreview {
@@ -150,6 +153,22 @@ export interface QuoteViewModelParty {
   email?: string | null;
   phone?: string | null;
   logo_url?: string | null;
+}
+
+export interface QuoteViewModelLocation {
+  id: string;
+  location_name?: string | null;
+  address_line1?: string | null;
+  address_line2?: string | null;
+  address_line3?: string | null;
+  city?: string | null;
+  state_province?: string | null;
+  postal_code?: string | null;
+  country_code?: string | null;
+  country_name?: string | null;
+  region_code?: string | null;
+  /** Pre-joined full address, handy for single-line template fields. */
+  full_address?: string | null;
 }
 
 export interface QuoteViewModelLineItem {
@@ -178,11 +197,26 @@ export interface QuoteViewModelLineItem {
   applies_to_service_id?: string | null;
   tax_region?: string | null;
   tax_rate?: number | null;
+  location_id?: string | null;
+  /** Resolved location object, when available. */
+  location?: QuoteViewModelLocation | null;
 }
 
 export interface QuoteViewModelPhase {
   name: string;
   items: QuoteViewModelLineItem[];
+}
+
+export interface QuoteViewModelLocationGroup {
+  location_id: string | null;
+  location?: QuoteViewModelLocation | null;
+  /** Convenience fields duplicated for simpler template binding expressions. */
+  name?: string | null;
+  address?: string | null;
+  items: QuoteViewModelLineItem[];
+  subtotal: number;
+  tax: number;
+  total: number;
 }
 
 export interface QuoteViewModel {
@@ -226,6 +260,16 @@ export interface QuoteViewModel {
   product_tax?: number;
   product_total?: number;
   phases?: QuoteViewModelPhase[];
+  /**
+   * Pre-computed location groupings for templates that want per-location
+   * bands. When items span only one location (or none), this may be empty.
+   */
+  groups_by_location?: QuoteViewModelLocationGroup[];
+  /**
+   * True when items span ≥2 distinct locations — a convenience flag for
+   * templates that auto-branch between flat and grouped layouts.
+   */
+  has_multiple_locations?: boolean;
   accepted_by_name?: string | null;
   accepted_at?: ISO8601String | null;
 }
@@ -247,16 +291,59 @@ export interface IQuoteDocumentTemplate extends TenantEntity {
   updated_at?: ISO8601String;
 }
 
-export const QUOTE_STATUS_METADATA: Record<QuoteStatus, { label: string; description: string }> = {
-  draft: { label: 'Draft', description: 'Quote is being prepared' },
-  pending_approval: { label: 'Pending Approval', description: 'Quote is waiting for internal approval' },
-  approved: { label: 'Approved', description: 'Quote is approved and ready to send' },
-  sent: { label: 'Sent', description: 'Quote has been sent to the client' },
-  accepted: { label: 'Accepted', description: 'Client accepted the quote' },
-  rejected: { label: 'Rejected', description: 'Client rejected the quote' },
-  expired: { label: 'Expired', description: 'Quote passed its validity date' },
-  converted: { label: 'Converted', description: 'Quote has been converted to billing records' },
-  cancelled: { label: 'Cancelled', description: 'Quote was cancelled before conversion' },
-  superseded: { label: 'Superseded', description: 'Quote was replaced by a revision' },
-  archived: { label: 'Archived', description: 'Quote is archived and read-only' }
+export const QUOTE_STATUS_VALUES: ReadonlyArray<QuoteStatus> = [
+  'draft',
+  'pending_approval',
+  'approved',
+  'sent',
+  'accepted',
+  'rejected',
+  'expired',
+  'converted',
+  'cancelled',
+  'superseded',
+  'archived',
+] as const;
+
+export const QUOTE_STATUS_LABEL_DEFAULTS: Record<QuoteStatus, string> = {
+  draft: 'Draft',
+  pending_approval: 'Pending Approval',
+  approved: 'Approved',
+  sent: 'Sent',
+  accepted: 'Accepted',
+  rejected: 'Rejected',
+  expired: 'Expired',
+  converted: 'Converted',
+  cancelled: 'Cancelled',
+  superseded: 'Superseded',
+  archived: 'Archived',
 };
+
+export const QUOTE_STATUS_DESCRIPTION_DEFAULTS: Record<QuoteStatus, string> = {
+  draft: 'Quote is being prepared',
+  pending_approval: 'Quote is waiting for internal approval',
+  approved: 'Quote is approved and ready to send',
+  sent: 'Quote has been sent to the client',
+  accepted: 'Client accepted the quote',
+  rejected: 'Client rejected the quote',
+  expired: 'Quote passed its validity date',
+  converted: 'Quote has been converted to billing records',
+  cancelled: 'Quote was cancelled before conversion',
+  superseded: 'Quote was replaced by a revision',
+  archived: 'Quote is archived and read-only',
+};
+
+/**
+ * @deprecated Use the `useQuoteStatusOptions`, `useFormatQuoteStatus`, or
+ * `useFormatQuoteStatusDescription` hooks from `@alga-psa/billing/hooks/useQuoteEnumOptions`
+ * for UI rendering. This map stays in place as an English-only fallback for
+ * non-UI callers (logging, tests); do not add new consumers.
+ */
+export const QUOTE_STATUS_METADATA: Record<QuoteStatus, { label: string; description: string }> =
+  QUOTE_STATUS_VALUES.reduce((acc, value) => {
+    acc[value] = {
+      label: QUOTE_STATUS_LABEL_DEFAULTS[value],
+      description: QUOTE_STATUS_DESCRIPTION_DEFAULTS[value],
+    };
+    return acc;
+  }, {} as Record<QuoteStatus, { label: string; description: string }>);

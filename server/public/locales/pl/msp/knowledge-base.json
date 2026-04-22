@@ -3,7 +3,7 @@
     "title": "Baza wiedzy",
     "subtitle": "Twórz artykuły w bazie wiedzy i zarządzaj nimi",
     "actions": {
-      "import": "Import",
+      "import": "Importuj",
       "newArticle": "Nowy artykuł"
     },
     "tabs": {

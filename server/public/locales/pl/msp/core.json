@@ -3,6 +3,7 @@
     "home": "Strona główna",
     "userActivities": "Aktywności użytkowników",
     "tickets": "Zgłoszenia",
+    "serviceRequests": "Zgłoszenia usług",
     "surveys": "Ankiety",
     "projects": "Projekty",
     "projectsAll": "Wszystkie projekty",
@@ -21,11 +22,15 @@
       "sections": {
         "contracts": "Umowy",
         "invoicing": "Fakturowanie",
+        "quotes": "Wyceny",
         "pricing": "Cennik",
         "trackingReports": "Śledzenie i raporty"
       },
       "contractTemplates": "Szablony umów",
       "clientContracts": "Umowy klientów",
+      "quotes": "Wyceny",
+      "quoteBusinessTemplates": "Szablony wycen",
+      "quoteLayouts": "Układy wyceny",
       "contractLinePresets": "Predefiniowane pozycje umów",
       "invoicing": "Fakturowanie",
       "invoiceLayouts": "Układy faktur",
@@ -220,5 +225,12 @@
   "rightSidebar": {
     "title": "Czat",
     "enterpriseOnly": "Funkcja czatu jest dostępna tylko w edycji Enterprise."
+  },
+  "notifications": {
+    "messages": {
+      "error": {
+        "loadFailed": "Nie udało się załadować powiadomień"
+      }
+    }
   }
 }

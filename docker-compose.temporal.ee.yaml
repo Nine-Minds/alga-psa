@@ -51,6 +51,22 @@ services:
       - PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE=${PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE:-msp/alga-psa-vs}
       - REDIS_HOST=${REDIS_HOST:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
+      # Smoke-only: defaults to unset so the worker uses the real GDAP endpoints. Override in
+      # the compose invocation or shell env to test self-tenant mode without CSP/GDAP.
+      - ENTRA_DIRECT_SMOKE_SELF_TENANT_MODE=${ENTRA_DIRECT_SMOKE_SELF_TENANT_MODE:-}
+      # Smoke-only: partitions the self-tenant /users response into N synthetic managed
+      # tenants so cross-client bleed (Flow 2) can be exercised without CSP/GDAP. Format:
+      # comma-separated `id|primary_domain|display_name` entries.
+      - ENTRA_DIRECT_SMOKE_SYNTHETIC_TENANTS=${ENTRA_DIRECT_SMOKE_SYNTHETIC_TENANTS:-}
+      # Smoke-only: forces accountEnabled=false for listed emails/UPNs so the
+      # offboard → deactivate path (Flow 5) can be exercised without disabling
+      # real users in Entra. Format: comma-separated email/UPN list.
+      - ENTRA_DIRECT_SMOKE_DISABLED_USER_EMAILS=${ENTRA_DIRECT_SMOKE_DISABLED_USER_EMAILS:-}
+      # Smoke-only: injects fake users into the /users response pinned to a
+      # specific synthetic tenant bucket so Flow 7 (ambiguous match) can be
+      # exercised without adding real users to Entra. Format: comma-separated
+      # `objectId|upn|displayName|bucketIndex` entries.
+      - ENTRA_DIRECT_SMOKE_EXTRA_USERS=${ENTRA_DIRECT_SMOKE_EXTRA_USERS:-}
     volumes:
       - type: bind
         source: ./secrets/tenants

@@ -223,7 +223,18 @@
         "portalUserExistsForContact": "55555",
         "selectAppropriateRole": "55555",
         "contactMissingEmail": "55555 {{name}} 55555",
-        "licenseLimit": "55555"
+        "licenseLimit": "55555",
+        "permissionDeniedInvite": "55555",
+        "permissionDeniedCreate": "55555",
+        "emailNotConfigured": "55555",
+        "contactNotFound": "55555",
+        "contactMissingEmailGeneric": "55555",
+        "contactInvalidEmail": "55555",
+        "noDefaultClient": "55555",
+        "noDefaultLocation": "55555",
+        "noLocationEmail": "55555",
+        "noBaseUrl": "55555",
+        "passwordTooShort": "55555"
       }
     }
   },
@@ -343,7 +354,9 @@
         "loadFailed": "55555",
         "fetchUsers": "55555",
         "createFailed": "55555 {{error}} 55555",
-        "deleteFailed": "55555"
+        "deleteFailed": "55555",
+        "updateName": "55555",
+        "saveChanges": "55555"
       }
     }
   },
@@ -398,7 +411,10 @@
         "error": {
           "noSettings": "55555",
           "loadFailed": "55555",
-          "updateFailed": "55555"
+          "updateFailed": "55555",
+          "updatePaddingFailed": "55555",
+          "updateLastNumberFailed": "55555",
+          "updateInitialValueFailed": "55555"
         },
         "success": {
           "updated": "55555"
@@ -428,6 +444,7 @@
         "edit": "55555",
         "delete": "55555"
       },
+      "retiredAlert": "55555",
       "messages": {
         "success": {
           "deleted": "55555",
@@ -468,7 +485,11 @@
         "close": "55555",
         "create": "55555",
         "update": "55555",
-        "importSelected": "55555"
+        "importSelected": "55555",
+        "up": "55555",
+        "down": "55555",
+        "remove": "55555",
+        "addStatus": "55555"
       },
       "fields": {
         "boardName": {
@@ -508,6 +529,46 @@
           "placeholder": "55555",
           "help": "55555",
           "none": "55555"
+        },
+        "ticketStatusSetup": {
+          "label": "55555",
+          "help": "55555",
+          "copyExisting": "55555",
+          "createInline": "55555"
+        },
+        "copyTicketStatuses": {
+          "label": "55555",
+          "help": "55555",
+          "selectSource": "55555",
+          "noSourceAvailable": "55555",
+          "unnamedBoard": "55555"
+        },
+        "ticketStatuses": {
+          "labelEditing": "55555",
+          "labelCopied": "55555",
+          "labelInline": "55555",
+          "helpEditing": "55555",
+          "helpCopied": "55555",
+          "helpInline": "55555",
+          "loading": "55555",
+          "statusName": "55555",
+          "closed": "55555",
+          "default": "55555"
+        },
+        "inboundReplyReopen": {
+          "enabledLabel": "55555",
+          "enabledHelp": "55555",
+          "cutoffHoursLabel": "55555",
+          "cutoffHoursHelp": "55555",
+          "statusLabel": "55555",
+          "statusPlaceholder": "55555",
+          "statusUseDefault": "55555",
+          "suppressAiLabel": "55555",
+          "suppressAiHelp": "55555"
+        },
+        "liveTimer": {
+          "label": "55555",
+          "help": "55555"
         }
       },
       "dialog": {
@@ -556,8 +617,98 @@
           "fetchAvailableFailed": "55555",
           "nameRequired": "55555",
           "saveFailed": "55555",
-          "lastDefault": "55555"
+          "lastDefault": "55555",
+          "statusRequired": "55555",
+          "duplicateStatusName": "55555",
+          "invalidOpenDefault": "55555",
+          "nameAlreadyExists": "55555",
+          "selectBoardToCopy": "55555",
+          "fetchStatusesFailed": "55555",
+          "deleteFailed": "55555",
+          "importFailed": "55555",
+          "updateStatusFailed": "55555",
+          "updateDefaultFailed": "55555"
         }
+      }
+    },
+    "priorities": {
+      "title": {
+        "ticket": "55555",
+        "projectTask": "55555"
+      },
+      "alert": {
+        "header": "55555",
+        "description": "55555",
+        "itilNote": "55555",
+        "nonItilNote": "55555"
+      },
+      "table": {
+        "name": "55555",
+        "type": "55555",
+        "color": "55555",
+        "order": "55555",
+        "actions": "55555",
+        "standardTag": "55555",
+        "itilProtected": "55555"
+      },
+      "itemTypes": {
+        "ticket": "55555",
+        "projectTask": "55555"
+      },
+      "actions": {
+        "addPriority": "55555",
+        "importStandard": "55555",
+        "openMenu": "55555",
+        "edit": "55555",
+        "delete": "55555",
+        "cancel": "55555"
+      },
+      "dialog": {
+        "addTitle": "55555",
+        "editTitle": "55555",
+        "submitAdd": "55555",
+        "submitUpdate": "55555"
+      },
+      "fields": {
+        "priorityName": {
+          "label": "55555",
+          "placeholder": "55555"
+        },
+        "orderNumber": {
+          "label": "55555",
+          "help": "55555",
+          "used": "55555 {{numbers}} 55555",
+          "noneUsed": "55555"
+        },
+        "color": {
+          "label": "55555",
+          "chooseButton": "55555"
+        }
+      },
+      "import": {
+        "title": "55555",
+        "submit": "55555 {{count}} 55555",
+        "allImportedTicket": "55555",
+        "allImportedProjectTask": "55555",
+        "instructions": "55555"
+      },
+      "messages": {
+        "success": {
+          "deleted": "55555",
+          "imported": "55555 {{count}} 55555",
+          "skipped": "55555 {{count}} 55555"
+        },
+        "error": {
+          "orderTaken": "55555 {{order}} 55555 {{name}} 55555",
+          "uniqueConstraint": "55555",
+          "saveFailed": "55555",
+          "deleteFailed": "55555",
+          "deleteValidationFailed": "55555",
+          "importFailed": "55555"
+        }
+      },
+      "entity": {
+        "fallback": "55555"
       }
     }
   },
@@ -643,7 +794,9 @@
         },
         "error": {
           "lastClosed": "55555",
-          "deleteLastClosed": "55555"
+          "deleteLastClosed": "55555",
+          "skipped": "55555 {{count}} 55555 {{reason}} 55555",
+          "importFailed": "55555"
         }
       }
     },
@@ -685,27 +838,6 @@
     }
   },
   "clientPortal": {
-    "language": {
-      "title": "55555",
-      "description": "55555",
-      "fields": {
-        "defaultLanguage": "55555",
-        "availableLanguages": "55555"
-      },
-      "help": {
-        "defaultLanguage": "55555",
-        "availableLanguages": "55555"
-      },
-      "hierarchy": {
-        "title": "55555",
-        "description": "55555",
-        "userPreference": "55555",
-        "clientDefault": "55555",
-        "orgDefault": "55555",
-        "systemDefault": "55555",
-        "note": "55555"
-      }
-    },
     "branding": {
       "title": "55555",
       "description": "55555",
@@ -800,12 +932,6 @@
     "help": {
       "defaultLanguage": "55555",
       "availableLanguages": "55555"
-    },
-    "hierarchy": {
-      "title": "55555",
-      "userPreference": "55555",
-      "orgDefault": "55555",
-      "systemDefault": "55555"
     }
   },
   "notifications": {
@@ -1050,6 +1176,16 @@
         "noValues": "55555"
       },
       "truncated": "55555 {{count}} 55555"
+    },
+    "messages": {
+      "error": {
+        "loadImportData": "55555",
+        "createPreview": "55555",
+        "selectPreviewFirst": "55555",
+        "startImportJob": "55555",
+        "loadJobDetails": "55555",
+        "refreshHistory": "55555"
+      }
     }
   },
   "email": {
@@ -1347,5 +1483,39 @@
     "badge": {
       "inactive": "55555"
     }
+  },
+  "permissions": {
+    "messages": {
+      "adminLocked": "55555",
+      "permissionsUpdated": "55555"
+    }
+  },
+  "sla": {
+    "messages": {
+      "scheduleNotFound": "55555",
+      "scheduleUpdated": "55555",
+      "scheduleCreated": "55555",
+      "scheduleDeleted": "55555",
+      "defaultHoursCreated": "55555",
+      "scheduleRequired": "55555",
+      "holidayNameRequired": "55555",
+      "holidayDateRequired": "55555",
+      "holidayAdded": "55555",
+      "holidayDeleted": "55555"
+    }
+  },
+  "clientPortalLanguage": {
+    "title": "55555",
+    "description": "55555",
+    "fields": {
+      "defaultLanguage": "55555"
+    },
+    "help": {
+      "defaultLanguage": "55555"
+    },
+    "placeholder": "55555",
+    "inheritOption": "55555 {{language}} 55555",
+    "unsetHint": "55555",
+    "updated": "55555 {{language}} 55555"
   }
 }

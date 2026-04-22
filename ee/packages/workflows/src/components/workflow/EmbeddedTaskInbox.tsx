@@ -4,6 +4,7 @@ import { TaskDetailsComponent } from './TaskDetails';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { WorkflowTaskStatus } from '@alga-psa/workflows/persistence';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface EmbeddedTaskInboxProps {
   maxItems?: number;
@@ -22,6 +23,7 @@ export function EmbeddedTaskInbox({
   className = '',
   showAllTasksLink = true
 }: EmbeddedTaskInboxProps) {
+  const { t } = useTranslation('msp/workflows');
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   
   // Handle task selection
@@ -43,14 +45,14 @@ export function EmbeddedTaskInbox({
   return (
     <Card className={`p-4 ${className}`}>
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold">My Tasks</h2>
+        <h2 className="text-lg font-semibold">{t('embeddedTaskInbox.title', { defaultValue: 'My Tasks' })}</h2>
         {showAllTasksLink && (
           <Button
             id="view-all-tasks"
             variant="link"
             onClick={handleViewAllTasks}
           >
-            View All
+            {t('embeddedTaskInbox.viewAll', { defaultValue: 'View All' })}
           </Button>
         )}
       </div>
@@ -63,7 +65,7 @@ export function EmbeddedTaskInbox({
             className="mb-4"
             onClick={() => setSelectedTaskId(null)}
           >
-            ← Back to Tasks
+            {t('embeddedTaskInbox.backToTasks', { defaultValue: '← Back to Tasks' })}
           </Button>
           
           <TaskDetailsComponent

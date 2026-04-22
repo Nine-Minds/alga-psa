@@ -14,6 +14,8 @@ import { getAvailableStatuses, getTicketFieldOptions } from '@alga-psa/integrati
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getTeamAvatarUrlsBatchAction, getTeamsBasic } from '@alga-psa/teams/actions';
 import { getTicketById, getTicketsForList } from '@alga-psa/tickets/actions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import type { TFunction } from 'i18next';
 import type {
   IBoard,
   IClient,
@@ -91,7 +93,9 @@ const EMPTY_TICKET_FIELD_OPTIONS: TicketFieldOptions = {
   locations: [],
 };
 
-const TICKET_PICKER_DEPENDENCY_HINTS: Partial<Record<string, Record<string, string>>> = {
+type DependencyHintDefaults = Partial<Record<string, Record<string, string>>>;
+
+const TICKET_PICKER_DEPENDENCY_HINT_DEFAULTS: DependencyHintDefaults = {
   contact: {
     client_id: 'Choose a fixed Client first to load contact options.',
   },
@@ -191,23 +195,28 @@ const resolveDependency = (
 };
 
 const buildDisabledExplanation = (
+  t: TFunction,
   kind: string,
   dependencies: DependencyResolution[]
 ): string | undefined => {
-  const hints = TICKET_PICKER_DEPENDENCY_HINTS[kind];
+  const hints = TICKET_PICKER_DEPENDENCY_HINT_DEFAULTS[kind];
   if (!hints) return undefined;
 
   const unresolved = dependencies.find((dependency) => dependency.status !== 'fixed' && hints[dependency.path]);
-  return unresolved ? hints[unresolved.path] : undefined;
+  if (!unresolved) return undefined;
+  return t(`actionInputFixedPicker.dependencyHints.${kind}.${unresolved.path}`, {
+    defaultValue: hints[unresolved.path],
+  });
 };
 
 const getWorkflowPickerPlaceholder = (
+  t: TFunction,
   field: WorkflowActionInputPickerField,
   isLoading: boolean,
   explanation?: string
 ): string => {
   if (isLoading) {
-    return 'Loading options...';
+    return t('actionInputFixedPicker.loadingOptions', { defaultValue: 'Loading options...' });
   }
 
   if (explanation) {
@@ -472,6 +481,7 @@ const WorkflowTicketPicker: React.FC<{
   idPrefix: string;
   disabled?: boolean;
 }> = ({ field, value, onChange, idPrefix, disabled }) => {
+  const { t } = useTranslation('msp/workflows');
   const [search, setSearch] = useState('');
   const [options, setOptions] = useState<WorkflowPickerOption[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -497,7 +507,7 @@ const WorkflowTicketPicker: React.FC<{
             if (!active) return;
             console.error('Failed to load selected workflow ticket picker value:', error);
             setOptions(value ? [{ value, label: value }] : []);
-            setLoadError(error instanceof Error ? error.message : 'Failed to load ticket');
+            setLoadError(error instanceof Error ? error.message : t('actionInputFixedPicker.errors.loadTicket', { defaultValue: 'Failed to load ticket' }));
           } finally {
             if (active) {
               setIsLoading(false);
@@ -531,7 +541,7 @@ const WorkflowTicketPicker: React.FC<{
         if (!active) return;
         console.error('Failed to search tickets for workflow picker:', error);
         setOptions(appendCurrentValueOption([], value));
-        setLoadError(error instanceof Error ? error.message : 'Failed to search tickets');
+        setLoadError(error instanceof Error ? error.message : t('actionInputFixedPicker.errors.searchTickets', { defaultValue: 'Failed to search tickets' }));
       } finally {
         if (active) {
           setIsLoading(false);
@@ -547,9 +557,9 @@ const WorkflowTicketPicker: React.FC<{
       active = false;
       window.clearTimeout(timeoutId);
     };
-  }, [search, value]);
+  }, [search, value, t]);
 
-  const placeholder = field.editor?.fixedValueHint?.trim() ?? field.picker?.fixedValueHint?.trim() ?? 'Search tickets by number or title';
+  const placeholder = field.editor?.fixedValueHint?.trim() ?? field.picker?.fixedValueHint?.trim() ?? t('actionInputFixedPicker.ticketSearchPlaceholder', { defaultValue: 'Search tickets by number or title' });
 
   return (
     <div className="space-y-2">
@@ -565,7 +575,9 @@ const WorkflowTicketPicker: React.FC<{
         options={options}
         value={value ?? ''}
         onValueChange={(nextValue) => onChange(nextValue || null)}
-        placeholder={search.trim().length > 0 ? 'Select ticket' : 'Type above to search tickets'}
+        placeholder={search.trim().length > 0
+          ? t('actionInputFixedPicker.ticketSelect', { defaultValue: 'Select ticket' })
+          : t('actionInputFixedPicker.ticketTypeAbove', { defaultValue: 'Type above to search tickets' })}
         disabled={disabled || isLoading || (search.trim().length === 0 && !value)}
       />
       {loadError && (
@@ -576,6 +588,7 @@ const WorkflowTicketPicker: React.FC<{
 };
 
 const renderDedicatedPicker = ({
+  t,
   field,
   pickerKind,
   data,
@@ -585,6 +598,7 @@ const renderDedicatedPicker = ({
   idPrefix,
   disabled,
 }: {
+  t: TFunction;
   field: WorkflowActionInputPickerField;
   pickerKind: string;
   data: WorkflowPickerData;
@@ -605,7 +619,7 @@ const renderDedicatedPicker = ({
           onSelect={(nextValue) => onChange(nextValue)}
           filterState="active"
           onFilterStateChange={() => {}}
-          placeholder={field.editor?.fixedValueHint?.trim() ?? field.picker?.fixedValueHint?.trim() ?? 'Select Board'}
+          placeholder={field.editor?.fixedValueHint?.trim() ?? field.picker?.fixedValueHint?.trim() ?? t('actionInputFixedPicker.placeholders.board', { defaultValue: 'Select Board' })}
         />
       );
     }
@@ -621,7 +635,7 @@ const renderDedicatedPicker = ({
           onFilterStateChange={() => {}}
           clientTypeFilter="all"
           onClientTypeFilterChange={() => {}}
-          placeholder={field.editor?.fixedValueHint?.trim() ?? field.picker?.fixedValueHint?.trim() ?? 'Select Client'}
+          placeholder={field.editor?.fixedValueHint?.trim() ?? field.picker?.fixedValueHint?.trim() ?? t('actionInputFixedPicker.placeholders.client', { defaultValue: 'Select Client' })}
         />
       );
     }
@@ -634,7 +648,7 @@ const renderDedicatedPicker = ({
           onValueChange={(nextValue) => onChange(nextValue || null)}
           clientId={getResolvedDependencyValue(dependencyResolutions, 'client_id')}
           label={field.name.replace(/_/g, ' ')}
-          placeholder={field.editor?.fixedValueHint?.trim() ?? field.picker?.fixedValueHint?.trim() ?? 'Select Contact'}
+          placeholder={field.editor?.fixedValueHint?.trim() ?? field.picker?.fixedValueHint?.trim() ?? t('actionInputFixedPicker.placeholders.contact', { defaultValue: 'Select Contact' })}
         />
       );
     case 'user':
@@ -647,7 +661,7 @@ const renderDedicatedPicker = ({
           users={data.users}
           userTypeFilter="internal"
           getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-          placeholder={field.editor?.fixedValueHint?.trim() ?? field.picker?.fixedValueHint?.trim() ?? 'Select User'}
+          placeholder={field.editor?.fixedValueHint?.trim() ?? field.picker?.fixedValueHint?.trim() ?? t('actionInputFixedPicker.placeholders.user', { defaultValue: 'Select User' })}
           buttonWidth="full"
         />
       );
@@ -664,7 +678,7 @@ const renderDedicatedPicker = ({
           userTypeFilter="internal"
           getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
           getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
-          placeholder={field.editor?.fixedValueHint?.trim() ?? field.picker?.fixedValueHint?.trim() ?? 'Select User or Team'}
+          placeholder={field.editor?.fixedValueHint?.trim() ?? field.picker?.fixedValueHint?.trim() ?? t('actionInputFixedPicker.placeholders.userOrTeam', { defaultValue: 'Select User or Team' })}
           buttonWidth="full"
         />
       );
@@ -703,6 +717,7 @@ export const WorkflowActionInputFixedPicker: React.FC<{
   rootInputMapping,
   disabled,
 }) => {
+  const { t } = useTranslation('msp/workflows');
   const [data, setData] = useState<WorkflowPickerData>(EMPTY_PICKER_DATA);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -717,8 +732,8 @@ export const WorkflowActionInputFixedPicker: React.FC<{
     [field.editor?.dependencies, field.picker?.dependencies, rootInputMapping]
   );
   const disabledExplanation = useMemo(
-    () => (pickerKind ? buildDisabledExplanation(pickerKind, dependencyResolutions) : undefined),
-    [dependencyResolutions, pickerKind]
+    () => (pickerKind ? buildDisabledExplanation(t, pickerKind, dependencyResolutions) : undefined),
+    [dependencyResolutions, pickerKind, t]
   );
   const dependencySignature = useMemo(
     () => JSON.stringify(dependencyResolutions),
@@ -773,7 +788,7 @@ export const WorkflowActionInputFixedPicker: React.FC<{
         if (!active) return;
         console.error('Failed to load workflow picker options:', error);
         setData(EMPTY_PICKER_DATA);
-        setLoadError(error instanceof Error ? error.message : 'Failed to load options');
+        setLoadError(error instanceof Error ? error.message : t('actionInputFixedPicker.errors.loadOptions', { defaultValue: 'Failed to load options' }));
       })
       .finally(() => {
         if (active) {
@@ -784,7 +799,7 @@ export const WorkflowActionInputFixedPicker: React.FC<{
     return () => {
       active = false;
     };
-  }, [dependencyResolutions, dependencySignature, disabledExplanation, pickerKind]);
+  }, [dependencyResolutions, dependencySignature, disabledExplanation, pickerKind, t]);
 
   useEffect(() => {
     if (!hasResolvedDependencies || !value || loadedDependencySignature !== dependencySignature) {
@@ -816,11 +831,12 @@ export const WorkflowActionInputFixedPicker: React.FC<{
           options={pickerOptions}
           value={value ?? ''}
           onValueChange={(nextValue) => onChange(nextValue || null)}
-          placeholder={getWorkflowPickerPlaceholder(field, isLoading, disabledExplanation)}
+          placeholder={getWorkflowPickerPlaceholder(t, field, isLoading, disabledExplanation)}
           disabled={disabled || isLoading || Boolean(disabledExplanation) || Boolean(loadError)}
         />
       ) : (
         renderDedicatedPicker({
+          t,
           field,
           pickerKind,
           data,

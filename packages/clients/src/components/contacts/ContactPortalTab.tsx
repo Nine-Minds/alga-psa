@@ -35,7 +35,23 @@ import {
   revokePortalInvitation,
   updateClientUser
 } from '../../actions/contact-actions/portalInvitationBridgeActions';
-import type { InvitationHistoryItem } from '@alga-psa/portal-shared/types';
+import type { InvitationHistoryItem, PortalInvitationErrorCode } from '@alga-psa/portal-shared/types';
+
+const PORTAL_INVITE_ERROR_KEYS: Partial<Record<PortalInvitationErrorCode, string>> = {
+  PERMISSION_DENIED_INVITE: 'contactPortalTab.toast.errors.permissionDeniedInvite',
+  EMAIL_NOT_CONFIGURED: 'contactPortalTab.toast.errors.emailNotConfigured',
+  CONTACT_NOT_FOUND: 'contactPortalTab.toast.errors.contactNotFound',
+  CONTACT_MISSING_EMAIL: 'contactPortalTab.toast.errors.contactMissingEmail',
+  CONTACT_INVALID_EMAIL: 'contactPortalTab.toast.errors.contactInvalidEmail',
+  USER_EXISTS_FOR_CONTACT: 'contactPortalTab.toast.errors.userExistsForContact',
+  NO_DEFAULT_CLIENT: 'contactPortalTab.toast.errors.noDefaultClient',
+  NO_DEFAULT_LOCATION: 'contactPortalTab.toast.errors.noDefaultLocation',
+  NO_LOCATION_EMAIL: 'contactPortalTab.toast.errors.noLocationEmail',
+  BASE_URL_NOT_CONFIGURED: 'contactPortalTab.toast.errors.noBaseUrl',
+  INVITATION_FAILED: 'contactPortalTab.toast.sendInviteFailed',
+  INVITATION_NOT_FOUND: 'contactPortalTab.toast.errors.invitationNotFound',
+  REVOKE_FAILED: 'contactPortalTab.toast.revokeInviteFailed'
+};
 import { useToast } from '@alga-psa/ui';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -72,6 +88,20 @@ interface UserRole {
 
 export function ContactPortalTab({ contact, currentUserPermissions }: ContactPortalTabProps) {
   const { t } = useTranslation('msp/contacts');
+
+  const translatePortalInvitationError = (
+    result: { error?: string; errorCode?: PortalInvitationErrorCode },
+    defaultKey: string,
+    defaultValue: string
+  ): string => {
+    if (result.errorCode) {
+      const key = PORTAL_INVITE_ERROR_KEYS[result.errorCode];
+      if (key) {
+        return t(key, { defaultValue: result.error ?? defaultValue });
+      }
+    }
+    return result.error || t(defaultKey, { defaultValue });
+  };
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isSendingInvitation, setIsSendingInvitation] = useState(false);
@@ -311,7 +341,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       } else {
         toast({
           title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
-          description: result.error || result.message || t('contactPortalTab.toast.sendInviteFailed', { defaultValue: 'Failed to send invitation' }),
+          description: translatePortalInvitationError(result, 'contactPortalTab.toast.sendInviteFailed', 'Failed to send invitation'),
           variant: "destructive"
         });
       }
@@ -342,7 +372,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       } else {
         toast({
           title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
-          description: result.error || t('contactPortalTab.toast.revokeInviteFailed', { defaultValue: 'Failed to revoke invitation' }),
+          description: translatePortalInvitationError(result, 'contactPortalTab.toast.revokeInviteFailed', 'Failed to revoke invitation'),
           variant: "destructive"
         });
       }
@@ -381,7 +411,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       } else {
         toast({
           title: t('contactPortalTab.toast.errorTitle', { defaultValue: 'Error' }),
-          description: result.error || result.message || t('contactPortalTab.toast.resendInviteFailed', { defaultValue: 'Failed to resend invitation' }),
+          description: translatePortalInvitationError(result, 'contactPortalTab.toast.resendInviteFailed', 'Failed to resend invitation'),
           variant: "destructive"
         });
       }

@@ -2,7 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hasPermissionMock = vi.hoisted(() => vi.fn());
 const assertTierAccessMock = vi.hoisted(() => vi.fn(async () => undefined));
-const createTenantKnexMock = vi.hoisted(() => vi.fn(async () => ({ knex: vi.fn() })));
+const createTenantKnexMock = vi.hoisted(() =>
+  vi.fn(async () => ({
+    knex: Object.assign(vi.fn(), {
+      transaction: vi.fn(async (callback: (trx: unknown) => Promise<unknown>) => callback({})),
+    }),
+  }))
+);
 const serviceMocks = vi.hoisted(() => ({
   createAuthorizationBundle: vi.fn(),
   ensureDraftBundleRevision: vi.fn(),
@@ -72,7 +78,11 @@ describe('authorization bundle management permission guards', () => {
 
     assertTierAccessMock.mockResolvedValue(undefined);
     hasPermissionMock.mockResolvedValue(true);
-    createTenantKnexMock.mockResolvedValue({ knex: vi.fn() });
+    createTenantKnexMock.mockResolvedValue({
+      knex: Object.assign(vi.fn(), {
+        transaction: vi.fn(async (callback: (trx: unknown) => Promise<unknown>) => callback({})),
+      }),
+    });
     serviceMocks.ensureDraftBundleRevision.mockResolvedValue({ revisionId: 'draft-1' });
     serviceMocks.listBundleRulesForRevision.mockResolvedValue([]);
   });

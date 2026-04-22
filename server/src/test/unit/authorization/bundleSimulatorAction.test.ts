@@ -347,7 +347,7 @@ describe('runAuthorizationBundleSimulationAction', () => {
 
   it('does not create draft revisions during simulation for read-only users', async () => {
     hasPermissionMock.mockImplementation(async (_user: unknown, resource: string, action: string) => {
-      if (resource === 'system_settings' && action === 'write') {
+      if (resource === 'system_settings' && action === 'update') {
         return false;
       }
       if (resource === 'system_settings' && action === 'read') {

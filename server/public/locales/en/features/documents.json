@@ -47,7 +47,25 @@
     "downloadFailed": "Failed to download document",
     "bulkDeleteFailed": "Failed to delete some documents",
     "bulkDeleteSuccess_one": "{{count}} document deleted successfully",
-    "bulkDeleteSuccess_other": "{{count}} documents deleted successfully"
+    "bulkDeleteSuccess_other": "{{count}} documents deleted successfully",
+    "passwordRequired": "Password is required",
+    "shareLinkCreateFailed": "Failed to create share link",
+    "shareLinkCreated": "Share link created",
+    "linkCopied": "Link copied to clipboard",
+    "shareLinkRevokeFailed": "Failed to revoke share link",
+    "shareLinkRevoked": "Share link revoked",
+    "shareLinksLoadFailed": "Failed to load share links",
+    "folderPathRequired": "Folder path is required",
+    "folderAlreadyExists": "Folder already exists",
+    "defaultsSaveFailed": "Failed to save",
+    "defaultsRemoved": "Default folders for {{entity}} removed",
+    "defaultsSaved": "Default folders for {{entity}} saved",
+    "suggestedDefaultsAllLoaded": "All suggested defaults are already loaded",
+    "suggestedDefaultsLoaded_one": "Loaded defaults for {{count}} entity type",
+    "suggestedDefaultsLoaded_other": "Loaded defaults for {{count}} entity types",
+    "suggestedDefaultsLoadFailed": "Failed to load suggested defaults",
+    "entityTypesAllConfigured": "All entity types already have default folders configured",
+    "defaultFoldersLoadFailed": "Failed to load default folders"
   },
   "validation": {
     "nameRequired": "Document name is required"
@@ -221,5 +239,33 @@
   },
   "empty": {
     "default": "No documents found"
+  },
+  "shared": {
+    "statusLabels": {
+      "draft": "Draft",
+      "review": "In Review",
+      "published": "Published",
+      "archived": "Archived"
+    },
+    "audienceLabels": {
+      "internal": "Internal",
+      "client": "Client",
+      "public": "Public"
+    },
+    "typeLabels": {
+      "how_to": "How-To",
+      "faq": "FAQ",
+      "troubleshooting": "Troubleshooting",
+      "reference": "Reference"
+    }
+  },
+  "documents": {
+    "messages": {
+      "error": {
+        "noPermission": "You do not have permission to view documents",
+        "invalidData": "Invalid document data received",
+        "fetchFailed": "Failed to fetch documents"
+      }
+    }
   }
 }

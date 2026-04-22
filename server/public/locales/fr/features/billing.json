@@ -11,7 +11,19 @@
   "viewContractLineDetails": "Voir les détails du forfait",
   "viewAllInvoices": "Voir toutes les factures",
   "failedToLoad": "Échec du chargement des factures. Veuillez réessayer.",
-  "invoices": "Factures",
+  "invoices": {
+    "locations": {
+      "groupHeading": "Emplacement",
+      "subtotal": "Sous-total de l'emplacement",
+      "unassigned": "Éléments sans emplacement",
+      "pickerPlaceholder": "Sélectionnez un emplacement",
+      "addLocationButton": "+ Ajouter un emplacement",
+      "removeGroup": "Retirer l'emplacement",
+      "emptyGroup": "Aucun élément pour le moment pour cet emplacement.",
+      "needMoreLocations": "Ce client n'a qu'un seul emplacement actif. Ajoutez un deuxième emplacement dans les paramètres du client pour activer la facturation multi-sites.",
+      "notSet": "Aucun emplacement sélectionné"
+    }
+  },
   "payments": "Paiements",
   "contractLines": "Lignes de contrat de service",
   "usage": "Indicateurs d'utilisation",
@@ -119,10 +131,28 @@
     "pendingQuotes": "Devis en attente",
     "awaitingResponse": "{{count}} devis en attente de votre réponse",
     "noPending": "Aucun devis en attente",
-    "viewAll": "Voir tous les devis"
+    "viewAll": "Voir tous les devis",
+    "locations": {
+      "primaryLocationHeading": "Emplacement du devis",
+      "changeButton": "Modifier",
+      "cancelChange": "Annuler",
+      "notSet": "Aucun emplacement sélectionné",
+      "groupHeading": "Emplacement",
+      "pickerPlaceholder": "Sélectionnez un emplacement",
+      "addLocationButton": "+ Ajouter un emplacement",
+      "removeGroup": "Retirer l'emplacement",
+      "needMoreLocations": "Ce client n'a qu'un seul emplacement actif. Ajoutez un deuxième emplacement dans les paramètres du client pour activer les devis multi-sites.",
+      "emptyGroup": "Aucun élément pour le moment pour cet emplacement.",
+      "subtotal": "Sous-total de l'emplacement",
+      "unassigned": "Éléments sans emplacement"
+    },
+    "lineItems": {
+      "searchPlaceholder": "Rechercher ou saisir un nom d'élément personnalisé..."
+    }
   },
   "enums": {
     "billingFrequency": {
+      "weekly": "Hebdomadaire",
       "monthly": "Mensuel",
       "quarterly": "Trimestriel",
       "annually": "Annuel"
@@ -131,6 +161,171 @@
       "Fixed": "Forfait",
       "Hourly": "Horaire",
       "Usage": "À l'usage"
+    },
+    "quoteStatus": {
+      "draft": "Brouillon",
+      "pending_approval": "En attente d'approbation",
+      "approved": "Approuvé",
+      "sent": "Envoyé",
+      "accepted": "Accepté",
+      "rejected": "Refusé",
+      "expired": "Expiré",
+      "converted": "Converti",
+      "cancelled": "Annulé",
+      "superseded": "Remplacé",
+      "archived": "Archivé"
+    },
+    "quoteStatusDescription": {
+      "draft": "Le devis est en cours de préparation",
+      "pending_approval": "Le devis attend une approbation interne",
+      "approved": "Le devis est approuvé et prêt à être envoyé",
+      "sent": "Le devis a été envoyé au client",
+      "accepted": "Le client a accepté le devis",
+      "rejected": "Le client a refusé le devis",
+      "expired": "Le devis a dépassé sa date de validité",
+      "converted": "Le devis a été converti en facturation",
+      "cancelled": "Le devis a été annulé avant conversion",
+      "superseded": "Le devis a été remplacé par une révision",
+      "archived": "Le devis est archivé et en lecture seule"
+    },
+    "invoiceStatus": {
+      "draft": "Brouillon",
+      "sent": "Envoyée",
+      "paid": "Payée",
+      "overdue": "En retard",
+      "cancelled": "Annulée",
+      "pending": "En attente",
+      "prepayment": "Acompte",
+      "partially_applied": "Partiellement appliquée"
+    },
+    "invoiceStatusDescription": {
+      "draft": "Factures en cours de préparation, non envoyées au client",
+      "sent": "Factures finalisées et envoyées au client",
+      "paid": "Factures entièrement payées prêtes pour rapprochement",
+      "overdue": "Factures finalisées dont la date d'échéance est dépassée",
+      "cancelled": "Factures annulées ou invalidées",
+      "pending": "Factures en attente d'approbation ou de traitement",
+      "prepayment": "Factures d'acompte ou de dépôt",
+      "partially_applied": "Factures avec paiements partiels appliqués"
+    }
+  },
+  "quoteForm": {
+    "noticeTitle": "Devis",
+    "readOnlyNotice": "Ce devis est en lecture seule. Pour apporter des modifications, créez une nouvelle révision.",
+    "breadcrumb": {
+      "billing": "Facturation",
+      "quotes": "Devis",
+      "quoteTemplates": "Modèles de devis",
+      "newQuote": "Nouveau devis"
+    },
+    "header": {
+      "editQuote": "Modifier le devis",
+      "newQuote": "Nouveau devis",
+      "editTemplate": "Modifier le modèle de devis",
+      "newTemplate": "Nouveau modèle de devis",
+      "quoteTotalLabel": "Total du devis",
+      "version": "v{{version}}"
+    },
+    "subtitle": {
+      "forClient": "Pour {{clientName}}",
+      "expires": "Expire le {{date}}",
+      "template": "Modèle · {{description}}"
+    },
+    "actions": {
+      "pdf": "PDF",
+      "duplicate": "Dupliquer",
+      "back": "Retour",
+      "cancel": "Annuler",
+      "previewPdf": "Aperçu PDF",
+      "moreActions": "Plus d'actions",
+      "saving": "Enregistrement…",
+      "saveQuote": "Enregistrer le devis",
+      "saveTemplate": "Enregistrer le modèle",
+      "sendToClient": "Envoyer au client",
+      "requestApproval": "Demander l'approbation",
+      "requestChanges": "Demander des modifications",
+      "approve": "Approuver",
+      "revise": "Réviser",
+      "createNewRevision": "Créer une nouvelle révision",
+      "convertToContract": "Convertir en contrat",
+      "convertToInvoice": "Convertir en facture",
+      "convertToBoth": "Convertir en les deux",
+      "resend": "Renvoyer",
+      "sendReminder": "Envoyer un rappel",
+      "cancelQuote": "Annuler le devis"
+    },
+    "banners": {
+      "acceptedTitle": "Devis accepté",
+      "acceptedBy": "Accepté par : {{name}}",
+      "acceptedOn": "Accepté le : {{date}}",
+      "rejectedTitle": "Devis rejeté",
+      "rejectedOn": "Rejeté le : {{date}}",
+      "rejectedReason": "Motif : {{reason}}",
+      "convertedTitle": "Devis converti",
+      "convertedDescription": "Ce devis a été converti en contrat et/ou facture."
+    },
+    "essentials": {
+      "title": "Essentiels",
+      "subtitle": "Affiché au client sur le document du devis.",
+      "titleField": "Titre",
+      "descriptionField": "Description / Portée",
+      "descriptionHelp": "Un court paragraphe qui apparaît juste sous le titre du PDF.",
+      "client": "Client",
+      "clientPlaceholder": "Sélectionner un client",
+      "contact": "Contact",
+      "contactPlaceholder": "Sélectionner un contact",
+      "currency": "Devise",
+      "currencyPlaceholder": "Sélectionner une devise",
+      "quoteDate": "Date du devis",
+      "validUntil": "Valable jusqu'au",
+      "validUntilHelp": "Le devis expire automatiquement à cette date."
+    },
+    "lineItems": {
+      "title": "Lignes",
+      "subtitleEmpty": "Aucun élément pour le moment.",
+      "subtitleCount": "{{count}} éléments · {{mix}}",
+      "mixBoth": "récurrent et ponctuel",
+      "mixRecurring": "récurrent",
+      "mixOneTime": "ponctuel",
+      "addLocation": "+ Ajouter un emplacement",
+      "fromTemplate": "+ À partir du modèle"
+    },
+    "clientFacing": {
+      "title": "Texte visible par le client",
+      "subtitle": "Apparaît sur le PDF, sous les totaux.",
+      "notes": "Notes au client (facultatif)",
+      "terms": "Conditions générales (facultatif)"
+    },
+    "moreDetails": {
+      "title": "Plus de détails",
+      "subtitle": "Numéro de BC, opportunité, mise en page PDF",
+      "poNumber": "Numéro de BC",
+      "opportunity": "Opportunité",
+      "opportunityPlaceholder": "ID d'opportunité (facultatif)",
+      "pdfLayout": "Mise en page PDF",
+      "pdfLayoutPlaceholder": "Utiliser la mise en page par défaut",
+      "pdfLayoutHelp": "Choisissez la mise en page vue par le client. Laissez vide pour utiliser la valeur par défaut du locataire."
+    },
+    "footer": {
+      "savedAgo": "Modifications enregistrées · {{ago}}",
+      "saving": "Enregistrement…",
+      "unsaved": "Modifications non enregistrées"
+    },
+    "sidebar": {
+      "quoteTotal": "Total du devis",
+      "recurringPerMonth": "{{amount}} récurrent / mois",
+      "subtotal": "Sous-total",
+      "discounts": "Remises",
+      "tax": "Taxe",
+      "statusLabel": "Statut",
+      "approvalLabel": "Approbation",
+      "approvalMessage": "Les devis nécessitent l'approbation du responsable des ventes avant envoi.",
+      "documentLayoutLabel": "Mise en page du document",
+      "defaultLayout": "Valeur par défaut du locataire",
+      "standardLayout": "Standard",
+      "customLayout": "Personnalisé",
+      "tenantDefault": "Valeur par défaut du locataire",
+      "changeLayout": "Modifier"
     }
   }
 }

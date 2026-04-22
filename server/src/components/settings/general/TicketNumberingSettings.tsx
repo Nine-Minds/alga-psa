@@ -86,21 +86,21 @@ const TicketNumberingSettings = () => {
       if (formState.padding_length !== settings.padding_length) {
         const result = await updatePaddingLength(formState.padding_length!);
         if (!result.success) {
-          throw new Error(result.error || 'Failed to update padding length');
+          throw new Error(result.error || t('ticketing.numbering.messages.error.updatePaddingFailed'));
         }
       }
 
       if (formState.last_number !== settings.last_number) {
         const result = await updateLastNumber(formState.last_number!);
         if (!result.success) {
-          throw new Error(result.error || 'Failed to update last number');
+          throw new Error(result.error || t('ticketing.numbering.messages.error.updateLastNumberFailed'));
         }
       }
 
       if (settings.initial_value === null && formState.initial_value !== null) {
         const result = await updateInitialValue(formState.initial_value!);
         if (!result.success) {
-          throw new Error(result.error || 'Failed to update initial value');
+          throw new Error(result.error || t('ticketing.numbering.messages.error.updateInitialValueFailed'));
         }
       }
 

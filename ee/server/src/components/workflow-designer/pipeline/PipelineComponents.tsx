@@ -31,6 +31,7 @@ import {
 import { Card } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { Step, IfBlock, ForEachBlock, TryCatchBlock, NodeStep } from '@alga-psa/workflows/runtime';
 import { formatTimeWaitDuration } from '../timeWaitDuration';
 
@@ -187,12 +188,15 @@ export const PipelineStart: React.FC<{
   onInsert?: () => void;
   disabled?: boolean;
 }> = ({ onInsert, disabled }) => {
+  const { t } = useTranslation('msp/workflows');
   return (
     <div className="flex flex-col items-center">
       <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-500/15 border-2 border-green-500">
         <Play className="h-4 w-4 text-green-600 ml-0.5" />
       </div>
-      <div className="text-xs text-gray-500 mt-1">Start</div>
+      <div className="text-xs text-gray-500 mt-1">
+        {t('pipeline.start', { defaultValue: 'Start' })}
+      </div>
       {onInsert && !disabled && (
         <PipelineConnector onInsert={onInsert} position="start" />
       )}
@@ -209,6 +213,7 @@ export const PipelineConnector: React.FC<{
   position?: 'start' | 'middle' | 'end';
   disabled?: boolean;
 }> = ({ onInsert, position = 'middle', disabled }) => {
+  const { t } = useTranslation('msp/workflows');
   const [isHovered, setIsHovered] = useState(false);
 
   return (
@@ -235,7 +240,7 @@ export const PipelineConnector: React.FC<{
             ${isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}
             bg-primary-500 hover:bg-primary-600 text-white shadow-sm
             transition-all duration-150 ease-out z-10`}
-          title="Insert step here"
+          title={t('pipeline.insertStepHere', { defaultValue: 'Insert step here' })}
           data-testid="pipeline-insert-button"
         >
           <Plus className="h-3 w-3" />
@@ -252,6 +257,7 @@ export const EmptyPipeline: React.FC<{
   onAddStep?: () => void;
   disabled?: boolean;
 }> = ({ onAddStep, disabled }) => {
+  const { t } = useTranslation('msp/workflows');
   return (
     <div
       className="flex flex-col items-center justify-center py-8 px-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50"
@@ -262,8 +268,8 @@ export const EmptyPipeline: React.FC<{
       </div>
       <p className="text-sm text-gray-500 text-center">
         {disabled
-          ? 'No steps yet.'
-          : 'Select a step from the panel to get started.'}
+          ? t('pipeline.emptyDisabled', { defaultValue: 'No steps yet.' })
+          : t('pipeline.emptySelectPrompt', { defaultValue: 'Select a step from the panel to get started.' })}
       </p>
     </div>
   );

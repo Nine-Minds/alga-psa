@@ -71,6 +71,7 @@ import { ClientLanguagePreference } from './ClientLanguagePreference';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { SurveyClientSatisfactionSummary } from '@alga-psa/types';
 import {
+  formatEntraRunStatusLabel,
   isTerminalEntraRunStatus,
   resolveEntraClientSyncStartState,
   shouldShowEntraSyncAction,
@@ -268,7 +269,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   );
 
   const fetchEntraSyncRunStatus = useCallback(async (runId: string): Promise<string | null> => {
-    const response = await fetch(`/api/integrations/entra/sync/runs/${runId}`, {
+    const response = await fetch(`/api/integrations/entra/sync/runs/${encodeURIComponent(runId)}`, {
       method: 'GET',
       credentials: 'same-origin',
       cache: 'no-store',
@@ -301,7 +302,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           return;
         }
 
-        setEntraSyncStatus(`Run ${entraSyncRunId}: ${nextStatus}`);
+        setEntraSyncStatus(formatEntraRunStatusLabel(nextStatus));
         if (isTerminalEntraRunStatus(nextStatus)) {
           setEntraSyncRunId(null);
         }
@@ -370,7 +371,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       }
     } catch (error: any) {
       console.error('Failed to delete client:', error);
-      toast.error(error.message || 'Failed to delete client. Please try again.');
+      toast.error(error.message || t('clientDetails.deleteError'));
     } finally {
       setIsDeleteProcessing(false);
     }
@@ -892,11 +893,15 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         return;
       }
 
-      const syncState = resolveEntraClientSyncStartState(result.data?.runId);
+      // The status endpoint looks up by entra_sync_runs.run_id or workflow_id.
+      // Prefer workflowId because the upstream `runId` here is Temporal's
+      // firstExecutionRunId, which has no row in entra_sync_runs — polling it
+      // would never reach a terminal state.
+      const syncState = resolveEntraClientSyncStartState(result.data?.workflowId || result.data?.runId);
       if (syncState.shouldPoll && syncState.runId) {
         setEntraSyncRunId(syncState.runId);
         setEntraSyncStatus(syncState.statusMessage);
-        toast.success(`Entra sync started. Run ID: ${syncState.runId}`);
+        toast.success(t('clientDetails.entraSyncStarted', { runId: syncState.runId }));
       } else {
         setEntraSyncStatus(syncState.statusMessage);
         toast.success(syncState.statusMessage);
@@ -1053,9 +1058,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         return next;
       });
       setInboundDomainDraft('');
-      toast.success('Inbound email domain added');
+      toast.success(t('clientDetails.inboundDomainAdded'));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to add domain');
+      toast.error(error instanceof Error ? error.message : t('clientDetails.inboundDomainAddFailed'));
     } finally {
       setIsInboundDomainBusy(false);
     }
@@ -1067,9 +1072,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     try {
       await removeClientInboundEmailDomain(editedClient.client_id, domainId);
       setInboundEmailDomains((prev) => prev.filter((d) => d.id !== domainId));
-      toast.success('Inbound email domain removed');
+      toast.success(t('clientDetails.inboundDomainRemoved'));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to remove domain');
+      toast.error(error instanceof Error ? error.message : t('clientDetails.inboundDomainRemoveFailed'));
     } finally {
       setIsInboundDomainBusy(false);
     }
@@ -1722,7 +1727,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                   {t('clientDetails.syncEntraNow', { defaultValue: 'Sync Entra Now' })}
                 </Button>
                 {entraSyncStatus ? (
-                  <p className="text-xs text-muted-foreground" id={`${id}-sync-entra-status`}>
+                  <p
+                    className="text-xs text-muted-foreground"
+                    id={`${id}-sync-entra-status`}
+                    title={entraSyncRunId || undefined}
+                  >
                     {entraSyncStatus}
                   </p>
                 ) : null}

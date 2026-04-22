@@ -24,11 +24,19 @@
       "active": "Activo",
       "inactive": "Inactivo",
       "loading": "Cargando...",
-      "na": "N/A",
+      "na": "N/D",
       "none": "Ninguno"
     },
     "no": "No",
     "yes": "Sí"
+  },
+  "enums": {
+    "rmmAgentStatus": {
+      "online": "En línea",
+      "offline": "Desconectado",
+      "overdue": "Atrasado",
+      "unknown": "Desconocido"
+    }
   },
   "assetAlertsSection": {
     "title": "Sección de alertas de activos",
@@ -158,12 +166,6 @@
       "rmmManaged": {
         "managed": "RMM Gestionado",
         "unmanaged": "No gestionado"
-      },
-      "agentStatuses": {
-        "online": "En línea",
-        "offline": "Desconectado",
-        "overdue": "Atrasado",
-        "unknown": "Desconocido"
       }
     },
     "activeFilters": {
@@ -303,7 +305,7 @@
       "virtualized": "Virtualizado",
       "primaryIp": "IP principal",
       "hypervisor": "Hipervisor",
-      "os": "OS",
+      "os": "SO",
       "model": "Modelo",
       "imei": "IMEI",
       "phoneNumber": "Número de teléfono",
@@ -445,7 +447,7 @@
       "maintenance": "Mantenimiento"
     },
     "deviceTypes": {
-      "switch": "Switch",
+      "switch": "Conmutador",
       "router": "Enrutador",
       "firewall": "Cortafuegos",
       "access_point": "Punto de acceso",
@@ -542,7 +544,7 @@
       "maintenance": "Mantenimiento"
     },
     "networkDeviceTypes": {
-      "switch": "Switch",
+      "switch": "Conmutador",
       "router": "Enrutador",
       "firewall": "Cortafuegos",
       "access_point": "Punto de acceso",
@@ -802,7 +804,7 @@
       "printer": "Impresora"
     },
     "networkDeviceTypes": {
-      "switch": "Switch",
+      "switch": "Conmutador",
       "router": "Enrutador",
       "firewall": "Cortafuegos",
       "accessPoint": "Punto de acceso",
@@ -824,12 +826,6 @@
       "unknown": "Estado del agente desconocido",
       "status": "{{status}}{{suffix}}",
       "lastSeen": "- Visto por última vez: {{value}}"
-    },
-    "statuses": {
-      "online": "En línea",
-      "offline": "Desconectado",
-      "overdue": "Atrasado",
-      "unknown": "Desconocido"
     },
     "relative": {
       "justNow": "En este momento",
@@ -900,7 +896,7 @@
       "uptime": "tiempo de actividad",
       "lastSync": "Última sincronización RMM",
       "network": "Red",
-      "networkValue": "LAN IP: {{lan}} | WAN IP: {{wan}}"
+      "networkValue": "IP LAN: {{lan}} | IP WAN: {{wan}}"
     },
     "values": {
       "never": "Nunca"
@@ -1187,6 +1183,14 @@
     "totalItems": "Total de artículos: {{count}}",
     "values": {
       "unknown": "Desconocido"
+    }
+  },
+  "alerts": {
+    "messages": {
+      "alertAcknowledged": "Alerta confirmada",
+      "acknowledgeFailed": "Error al confirmar la alerta",
+      "ticketCreated": "Ticket creado correctamente",
+      "ticketCreateFailed": "Error al crear el ticket"
     }
   }
 }

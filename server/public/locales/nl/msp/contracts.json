@@ -16,7 +16,7 @@
       "saveChangesDirty": "Wijzigingen opslaan *",
       "saving": "Besparing...",
       "view": "Weergave",
-      "openMenu": "Open menu"
+      "openMenu": "Menu openen"
     },
     "alerts": {
       "saveSuccess": "Wijzigingen zijn succesvol opgeslagen.",
@@ -39,9 +39,9 @@
       "description": "Beschrijving",
       "lastUpdated": "Laatst bijgewerkt",
       "name": "Naam",
+      "no": "Nee",
       "status": "Status",
-      "no": "No",
-      "yes": "Yes"
+      "yes": "Ja"
     },
     "tabs": {
       "clientContracts": "Klantcontracten",
@@ -90,7 +90,7 @@
     "labels": {
       "billingFrequency": "Factureringsfrequentie",
       "timing": "Factureringstijdstip",
-      "cadenceOwner": "Cadence Owner"
+      "cadenceOwner": "Cadanseigenaar"
     },
     "timing": {
       "advance": "Van tevoren",
@@ -105,6 +105,10 @@
     }
   },
   "contractDetail": {
+    "alerts": {
+      "saveSuccess": "Contract succesvol opgeslagen!",
+      "unsavedChanges": "U heeft niet-opgeslagen wijzigingen. Klik op \"Wijzigingen opslaan\" om ze toe te passen."
+    },
     "cards": {
       "assignment": "Klantopdracht",
       "clientOwnership": "Eigendom van de klant",
@@ -113,21 +117,90 @@
       "quickActions": "Snelle acties",
       "renewalHandling": "Verlengingsafhandeling"
     },
+    "clientAssignment": {
+      "clientContractId": "Klantcontract-ID: {{id}}",
+      "empty": "Dit contract is nog niet aan een klant toegewezen.",
+      "endDate": "Einddatum",
+      "endDateLabel": "Einddatum toewijzing",
+      "loadingStatuses": "Statussen laden...",
+      "notRequired": "Niet vereist",
+      "noticePeriodDays": "Opzegtermijn (dagen)",
+      "noticePeriodPlaceholder": "bijv. 30",
+      "noticePrefix": "Opzegging:",
+      "renewalHandling": "Verlengingsafhandeling",
+      "renewalTermMonths": "Verlengingstermijn (maanden)",
+      "renewalTermPlaceholder": "bijv. 12",
+      "renewalTicketBoard": "Verlengingsticketbord",
+      "renewalTicketStatus": "Verlengingsticketstatus",
+      "required": "Verplicht",
+      "selectBoard": "Selecteer bord",
+      "selectBoardFirst": "Selecteer eerst een bord",
+      "selectRenewalMode": "Selecteer verlengingsmodus",
+      "selectStartDate": "Selecteer startdatum",
+      "selectStatus": "Selecteer status",
+      "startDate": "Startdatum",
+      "startDateLabel": "Startdatum toewijzing",
+      "startDateLocked": "Startdatum kan niet worden gewijzigd voor actieve contracten",
+      "title": "Klanttoewijzing",
+      "useTenantRenewalDefaults": "Standaardverlengingswaarden tenant gebruiken",
+      "usingCustomSettings": "Aangepaste toewijzingsinstellingen in gebruik",
+      "usingTenantDefaults": "Standaardwaarden tenant in gebruik"
+    },
+    "clientOwnership": {
+      "assignmentStatus": "Toewijzingsstatus",
+      "clientName": "Klantnaam",
+      "endDate": "Einddatum",
+      "ownerClient": "Eigenaarklant",
+      "required": "Verplicht",
+      "startDate": "Startdatum",
+      "systemManaged": "Eigendom wordt door het systeem beheerd voor dit standaardcontract.",
+      "title": "Klanteigendom"
+    },
+    "detailsCard": {
+      "actions": {
+        "cancelDescription": "Beschrijvingsbewerkingen annuleren",
+        "cancelName": "Contractnaam annuleren",
+        "editDescription": "Contractbeschrijving bewerken",
+        "editName": "Contractnaam bewerken",
+        "saveDescription": "Beschrijving opslaan",
+        "saveName": "Contractnaam opslaan"
+      },
+      "contractNameLabel": "Contractnaam *",
+      "contractNamePlaceholder": "Voer contractnaam in",
+      "descriptionLabel": "Beschrijving",
+      "descriptionPlaceholder": "Voer contractbeschrijving in",
+      "title": "Contractdetails"
+    },
+    "headerCard": {
+      "assignmentLifecycleHint": "De live klantstatus wordt beheerd door de onderstaande toewijzingslevenscyclus.",
+      "assignmentStatus": "Toewijzingsstatus",
+      "billingFrequencyLabel": "Factureerfrequentie *",
+      "billingFrequencyPlaceholder": "Selecteer factureerfrequentie",
+      "customSettings": "Aangepaste instellingen",
+      "expiredStatusNote": "Verlopen contracten kunnen niet naar een andere status worden gewijzigd",
+      "notice": "Opzegging",
+      "noticeDay": "{{count}} dag",
+      "noticeDays": "{{count}} dagen",
+      "ongoingNoEndDate": "Lopend (geen einddatum)",
+      "renewalHeading": "Verlenging",
+      "tenantDefaults": "Standaardwaarden tenant",
+      "title": "Contractkop"
+    },
     "dialogs": {
       "delete": {
+        "cancel": "Annuleren",
         "confirm": "Contract verwijderen",
+        "deleting": "Bezig met verwijderen…",
         "description": "Weet u zeker dat u dit contract wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
-        "title": "Contract verwijderen",
-        "cancel": "Cancel",
-        "deleting": "Deleting…",
-        "message": "Are you sure you want to delete this contract? This action cannot be undone and will remove all associated data."
+        "message": "Weet u zeker dat u dit contract wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt en verwijdert alle bijbehorende gegevens.",
+        "title": "Contract verwijderen"
       },
       "discard": {
+        "cancel": "Doorgaan met bewerken",
         "confirm": "Wijzigingen negeren",
         "description": "Uw niet-opgeslagen wijzigingen verwijderen?",
-        "title": "Wijzigingen negeren",
-        "cancel": "Continue Editing",
-        "message": "Are you sure you want to discard all changes? Any unsaved changes will be lost."
+        "message": "Weet u zeker dat u alle wijzigingen wilt negeren? Niet-opgeslagen wijzigingen gaan verloren.",
+        "title": "Wijzigingen negeren"
       },
       "leave": {
         "confirm": "Verlaat pagina",
@@ -135,10 +208,10 @@
         "title": "Niet-opgeslagen wijzigingen"
       },
       "unsaved": {
-        "cancel": "Stay on Page",
-        "confirm": "Leave Page",
-        "message": "You have unsaved changes. Are you sure you want to leave this page? All changes will be lost.",
-        "title": "Unsaved Changes"
+        "cancel": "Op pagina blijven",
+        "confirm": "Pagina verlaten",
+        "message": "U heeft niet-opgeslagen wijzigingen. Weet u zeker dat u deze pagina wilt verlaten? Alle wijzigingen gaan verloren.",
+        "title": "Niet-opgeslagen wijzigingen"
       }
     },
     "invoices": {
@@ -146,17 +219,17 @@
         "amount": "Hoeveelheid",
         "createdAt": "Gemaakt",
         "dueDate": "Deadline",
+        "invoiceDate": "Factuurdatum",
         "invoiceNumber": "Factuur #",
-        "status": "Status",
-        "invoiceDate": "Invoice Date",
-        "preview": "Preview"
+        "preview": "Voorbeeld",
+        "status": "Status"
       },
       "empty": "Er zijn geen facturen gevonden voor dit contract.",
       "loading": "Facturen laden...",
-      "title": "Contractfacturen",
-      "noTemplatesAvailable": "No invoice templates are available for preview.",
-      "preview": "Preview",
-      "selectForPreview": "Select an invoice to open a full preview in the drawer."
+      "noTemplatesAvailable": "Er zijn geen factuursjablonen beschikbaar voor voorbeeld.",
+      "preview": "Voorbeeld",
+      "selectForPreview": "Selecteer een factuur om een volledig voorbeeld in de lade te openen.",
+      "title": "Contractfacturen"
     },
     "labels": {
       "client": "Cliënt",
@@ -171,9 +244,15 @@
       "deleteContract": "Contract verwijderen",
       "manageContractLines": "Contractregels beheren",
       "managePricingSchedules": "Beheer prijsschema's",
+      "title": "Snelle acties",
       "viewDocuments": "Documenten bekijken",
-      "viewInvoices": "Facturen bekijken",
-      "title": "Quick Actions"
+      "viewInvoices": "Facturen bekijken"
+    },
+    "systemManaged": {
+      "attributionOnly": "Dit contract is alleen voor toewijzing en regelt geen terugkerend facturatiegedrag.",
+      "configureCustom": "Om aangepast facturatiegedrag te configureren, maakt of bewerkt u een normaal door de gebruiker gemaakt contract.",
+      "createdAutomatically": "Automatisch aangemaakt voor werk zonder contract.",
+      "title": "Door systeem beheerd standaardcontract"
     },
     "tabs": {
       "documents": "Documenten",
@@ -184,935 +263,869 @@
     },
     "validation": {
       "billingFrequencyRequired": "Factureringsfrequentie is vereist.",
+      "billingFrequency": "Factureerfrequentie",
+      "contractName": "Contractnaam",
       "contractNameRequired": "Contractnaam is vereist.",
-      "billingFrequency": "Billing frequency",
-      "contractName": "Contract name",
-      "failedToUpdate": "Failed to update contract",
-      "fixErrors": "Please fix the following errors:"
-    },
-    "alerts": {
-      "saveSuccess": "Contract saved successfully!",
-      "unsavedChanges": "You have unsaved changes. Click \"Save Changes\" to apply them."
-    },
-    "clientAssignment": {
-      "clientContractId": "Client Contract ID: {{id}}",
-      "empty": "This contract is not assigned to a client yet.",
-      "endDate": "End Date",
-      "endDateLabel": "Assignment end date",
-      "loadingStatuses": "Loading statuses...",
-      "notRequired": "Not required",
-      "noticePeriodDays": "Notice Period (Days)",
-      "noticePeriodPlaceholder": "e.g., 30",
-      "noticePrefix": "Notice:",
-      "renewalHandling": "Renewal Handling",
-      "renewalTermMonths": "Renewal Term (Months)",
-      "renewalTermPlaceholder": "e.g., 12",
-      "renewalTicketBoard": "Renewal Ticket Board",
-      "renewalTicketStatus": "Renewal Ticket Status",
-      "required": "Required",
-      "selectBoard": "Select board",
-      "selectBoardFirst": "Select a board first",
-      "selectRenewalMode": "Select renewal mode",
-      "selectStartDate": "Select start date",
-      "selectStatus": "Select status",
-      "startDate": "Start Date",
-      "startDateLabel": "Assignment start date",
-      "startDateLocked": "Start date cannot be changed for active contracts",
-      "title": "Client Assignment",
-      "useTenantRenewalDefaults": "Use tenant renewal defaults",
-      "usingCustomSettings": "Using custom assignment settings",
-      "usingTenantDefaults": "Using tenant defaults"
-    },
-    "clientOwnership": {
-      "assignmentStatus": "Assignment Status",
-      "clientName": "Client Name",
-      "endDate": "End Date",
-      "ownerClient": "Owner Client",
-      "required": "Required",
-      "startDate": "Start Date",
-      "systemManaged": "Ownership is system-managed for this default contract.",
-      "title": "Client Ownership"
-    },
-    "detailsCard": {
-      "actions": {
-        "cancelDescription": "Cancel description edits",
-        "cancelName": "Cancel contract name",
-        "editDescription": "Edit contract description",
-        "editName": "Edit contract name",
-        "saveDescription": "Save description",
-        "saveName": "Save contract name"
-      },
-      "contractNameLabel": "Contract Name *",
-      "contractNamePlaceholder": "Enter contract name",
-      "descriptionLabel": "Description",
-      "descriptionPlaceholder": "Enter contract description",
-      "title": "Contract Details"
-    },
-    "headerCard": {
-      "assignmentLifecycleHint": "Live client status is controlled by the assignment lifecycle below.",
-      "assignmentStatus": "Assignment Status",
-      "billingFrequencyLabel": "Billing Frequency *",
-      "billingFrequencyPlaceholder": "Select billing frequency",
-      "customSettings": "Custom settings",
-      "expiredStatusNote": "Expired contracts cannot be changed to another status",
-      "notice": "Notice",
-      "noticeDay": "{{count}} day",
-      "noticeDays": "{{count}} days",
-      "ongoingNoEndDate": "Ongoing (no end date)",
-      "renewalHeading": "Renewal",
-      "tenantDefaults": "Tenant defaults",
-      "title": "Contract Header"
-    },
-    "systemManaged": {
-      "attributionOnly": "This contract is attribution-only and does not control recurring billing behavior.",
-      "configureCustom": "To configure custom billing behavior, create or edit a normal user-authored contract.",
-      "createdAutomatically": "Created automatically for uncontracted work.",
-      "title": "System-managed default contract"
+      "failedToUpdate": "Contract bijwerken is mislukt",
+      "fixErrors": "Corrigeer de volgende fouten:"
     },
     "documents": {
-      "loading": "Loading documents..."
+      "loading": "Documenten laden..."
     }
   },
   "contractHeader": {
     "badges": {
-      "clientOwned": "Client-owned",
-      "template": "Template"
+      "clientOwned": "Klantgebonden",
+      "template": "Sjabloon"
     },
     "labels": {
-      "billingFrequency": "Billing Frequency",
-      "contractLines": "Contract Lines",
-      "currency": "Currency",
-      "endDate": "End Date",
-      "lastUpdated": "Last Updated",
-      "startDate": "Start Date"
+      "billingFrequency": "Factureerfrequentie",
+      "contractLines": "Contractregels",
+      "currency": "Valuta",
+      "endDate": "Einddatum",
+      "lastUpdated": "Laatst bijgewerkt",
+      "startDate": "Startdatum"
     },
     "po": {
-      "prefix": "PO",
-      "requiredForContract": "Purchase order required for this contract."
+      "prefix": "Inkooporder",
+      "requiredForContract": "Inkooporder vereist voor dit contract."
     },
     "status": {
-      "active": "Active",
-      "draft": "Draft",
-      "expired": "Expired",
-      "terminated": "Terminated"
+      "active": "Actief",
+      "draft": "Concept",
+      "expired": "Verlopen",
+      "terminated": "Beëindigd"
     },
     "values": {
-      "ongoing": "Ongoing"
+      "ongoing": "Lopend"
     }
   },
   "contractOverview": {
     "errors": {
-      "failedToLoadOverview": "Failed to load overview"
+      "failedToLoadOverview": "Overzicht laden is mislukt"
     },
     "frequency": {
-      "annually": "Annually",
-      "biweekly": "Biweekly",
-      "semi_annually": "Semi-Annually",
-      "weekly": "Weekly"
+      "annually": "Jaarlijks",
+      "biweekly": "Tweewekelijks",
+      "semi_annually": "Halfjaarlijks",
+      "weekly": "Wekelijks"
     },
     "lines": {
-      "addContractLines": "Add Contract Lines",
-      "collapseAll": "Collapse all",
-      "expandAll": "Expand all",
-      "includedServices": "Included Services",
-      "noContractLinesDescription": "Add contract lines to define what's included in this contract",
-      "noContractLinesYet": "No contract lines yet",
-      "noServicesConfigured": "No services configured",
-      "serviceCountOne": "{{count}} service",
-      "serviceCountOther": "{{count}} services"
+      "addContractLines": "Contractregels toevoegen",
+      "collapseAll": "Alles samenvouwen",
+      "expandAll": "Alles uitvouwen",
+      "includedServices": "Inbegrepen services",
+      "noContractLinesDescription": "Voeg contractregels toe om te definiëren wat in dit contract is inbegrepen",
+      "noContractLinesYet": "Nog geen contractregels",
+      "noServicesConfigured": "Geen services geconfigureerd",
+      "serviceCountOne": "{{count}} dienst",
+      "serviceCountOther": "{{count}} diensten"
     },
     "stats": {
-      "contractLines": "Contract Lines",
-      "estimatedMonthlyValue": "Est. Monthly Value",
-      "totalServices": "Total Services",
-      "variable": "Variable",
-      "variableSuffix": "+ variable (hourly/usage)",
-      "viewDetails": "View details"
+      "contractLines": "Contractregels",
+      "estimatedMonthlyValue": "Gesch. maandwaarde",
+      "totalServices": "Totaal services",
+      "variable": "Variabel",
+      "variableSuffix": "+ variabel (per uur/verbruik)",
+      "viewDetails": "Details bekijken"
     },
-    "title": "What's Included"
+    "title": "Wat is inbegrepen"
   },
   "contractDialog": {
     "actions": {
-      "createContract": "Create Contract",
-      "saveAsDraft": "Save as Draft",
-      "updateContract": "Update Contract"
+      "createContract": "Contract aanmaken",
+      "saveAsDraft": "Opslaan als concept",
+      "updateContract": "Contract bijwerken"
     },
     "documents": {
-      "loading": "Loading documents..."
+      "loading": "Documenten laden..."
     },
     "form": {
-      "billingFrequencyLabel": "Billing Frequency *",
-      "billingFrequencyPlaceholder": "Select billing frequency",
-      "clientLabel": "Client *",
-      "clientPlaceholder": "Select a client",
-      "contractNameLabel": "Contract Name *",
-      "contractNamePlaceholder": "e.g., Standard MSP Services",
-      "currencyHint": "Currency is based on the client's default currency setting.",
-      "descriptionLabel": "Description (Optional)",
-      "descriptionPlaceholder": "Add any additional notes about this contract...",
-      "endDateHint": "Leave blank for ongoing contracts that don't have a fixed end date.",
-      "endDateLabel": "End Date (Optional)",
-      "noticePeriodLabel": "Notice Period (Days)",
-      "noticePeriodPlaceholder": "e.g., 30",
-      "renewalModePlaceholder": "Select renewal mode",
-      "renewalSettingsDescription": "Configure renewal behavior for this client contract assignment.",
-      "renewalSettingsTitle": "Renewal Settings",
-      "renewalTermLabel": "Renewal Term (Months)",
-      "renewalTermPlaceholder": "e.g., 12",
-      "selectClientFirst": "Select a client first",
-      "startDateLabel": "Start Date *",
-      "useTenantDefaultsDescription": "Apply organization-level renewal mode and notice period settings.",
-      "useTenantDefaultsLabel": "Use Tenant Renewal Defaults"
+      "billingFrequencyLabel": "Factureerfrequentie *",
+      "billingFrequencyPlaceholder": "Selecteer factureerfrequentie",
+      "clientLabel": "Klant *",
+      "clientPlaceholder": "Selecteer een klant",
+      "contractNameLabel": "Contractnaam *",
+      "contractNamePlaceholder": "bijv. Standard MSP Services",
+      "currencyHint": "Valuta is gebaseerd op de standaardvaluta-instelling van de klant.",
+      "descriptionLabel": "Beschrijving (optioneel)",
+      "descriptionPlaceholder": "Voeg eventuele aanvullende notities over dit contract toe...",
+      "endDateHint": "Laat leeg voor lopende contracten die geen vaste einddatum hebben.",
+      "endDateLabel": "Einddatum (optioneel)",
+      "noticePeriodLabel": "Opzegtermijn (dagen)",
+      "noticePeriodPlaceholder": "bijv. 30",
+      "renewalModePlaceholder": "Selecteer verlengingsmodus",
+      "renewalSettingsDescription": "Configureer het verlengingsgedrag voor deze klantcontracttoewijzing.",
+      "renewalSettingsTitle": "Verlengingsinstellingen",
+      "renewalTermLabel": "Verlengingstermijn (maanden)",
+      "renewalTermPlaceholder": "bijv. 12",
+      "selectClientFirst": "Selecteer eerst een klant",
+      "startDateLabel": "Startdatum *",
+      "useTenantDefaultsDescription": "Pas de verlengingsmodus en opzegtermijninstellingen op organisatieniveau toe.",
+      "useTenantDefaultsLabel": "Standaardverlengingswaarden tenant gebruiken"
     },
     "po": {
-      "amountLabel": "PO Amount (Optional)",
+      "amountLabel": "PO-bedrag (optioneel)",
       "amountPlaceholder": "0.00",
-      "comingSoon": "Invoice integration coming soon. Settings will be saved but PO enforcement won't be active until a future release.",
-      "noteLabel": "Note:",
-      "numberLabel": "PO Number *",
-      "numberPlaceholder": "e.g., PO-2024-12345",
-      "requirePurchaseOrder": "Require Purchase Order",
-      "requirePurchaseOrderTooltip": "When enabled, invoices cannot be generated for this contract unless a PO number is provided."
+      "comingSoon": "Factuurintegratie komt binnenkort. Instellingen worden opgeslagen, maar PO-handhaving wordt pas actief in een toekomstige release.",
+      "noteLabel": "Opmerking:",
+      "numberLabel": "PO-nummer *",
+      "numberPlaceholder": "bijv. PO-2024-12345",
+      "requirePurchaseOrder": "Inkooporder verplicht stellen",
+      "requirePurchaseOrderTooltip": "Indien ingeschakeld, kunnen er geen facturen voor dit contract worden gegenereerd tenzij er een PO-nummer is opgegeven."
     },
     "presetDetails": {
-      "defaultBaseRate": "Default Base Rate:",
-      "defaultRatePlaceholder": "Default: ${{rate}}",
-      "defaultRateValue": "Default: ${{rate}}",
-      "enterBaseRate": "Enter base rate",
-      "fixedRateConfiguration": "Fixed Rate Configuration",
-      "fixedServicesReferenceHelp": "These services are included for reference only. The fixed rate above determines the billing amount.",
-      "hourlyRate": "Hourly Rate",
-      "leaveBlankDefaultRate": "Leave blank to use the default rate",
-      "minimumBillableMinutes": "Minimum billable minutes",
-      "noServicesConfigured": "No services configured for this preset",
-      "notSet": "Not set",
-      "overrideBaseRate": "Override Base Rate",
-      "quantity": "Quantity",
-      "quantityShort": "Qty: {{quantity}}",
-      "ratePerUnit": "Rate (per unit)",
-      "roundUpToNearestMinutes": "Round up to nearest (minutes)",
-      "servicesConfiguration": "Services Configuration",
-      "servicesHourlyRates": "Services & Hourly Rates",
-      "servicesIncludedReference": "Services Included (Reference)",
-      "timeBillingConfiguration": "Time Billing Configuration",
-      "unitOfMeasure": "Unit of Measure",
-      "unitOfMeasureHint": "e.g., GB, API call, user"
+      "defaultBaseRate": "Standaard basistarief:",
+      "defaultRatePlaceholder": "Standaard: ${{rate}}",
+      "defaultRateValue": "Standaard: ${{rate}}",
+      "enterBaseRate": "Voer basistarief in",
+      "fixedRateConfiguration": "Vast tarief configuratie",
+      "fixedServicesReferenceHelp": "Deze services zijn alleen ter referentie opgenomen. Het vaste tarief hierboven bepaalt het factuurbedrag.",
+      "hourlyRate": "Uurtarief",
+      "leaveBlankDefaultRate": "Laat leeg om het standaardtarief te gebruiken",
+      "minimumBillableMinutes": "Minimum factureerbare minuten",
+      "noServicesConfigured": "Geen services geconfigureerd voor deze preset",
+      "notSet": "Niet ingesteld",
+      "overrideBaseRate": "Basistarief overschrijven",
+      "quantity": "Hoeveelheid",
+      "quantityShort": "Aantal: {{quantity}}",
+      "ratePerUnit": "Tarief (per eenheid)",
+      "roundUpToNearestMinutes": "Naar boven afronden op dichtstbijzijnde (minuten)",
+      "servicesConfiguration": "Servicesconfiguratie",
+      "servicesHourlyRates": "Services en uurtarieven",
+      "servicesIncludedReference": "Inbegrepen services (referentie)",
+      "timeBillingConfiguration": "Configuratie tijdfacturatie",
+      "unitOfMeasure": "Meeteenheid",
+      "unitOfMeasureHint": "bijv. GB, API-aanroep, gebruiker"
     },
     "presets": {
-      "allTypes": "All types",
-      "empty": "No contract line presets available. You can add them later.",
-      "heading": "Contract Line Presets (Optional)",
-      "headingTooltip": "Select contract line presets to copy into this contract. You can add more later.",
-      "loading": "Loading contract line presets...",
-      "noMatches": "No contract line presets match your search.",
-      "resetFilters": "Reset",
-      "searchPlaceholder": "Search contract line presets...",
-      "selectedPlural": "{{count}} contract line presets selected",
-      "selectedSingle": "{{count}} contract line preset selected",
-      "serviceCountPlural": "{{count}} services",
-      "serviceCountSingle": "{{count}} service",
-      "typePlaceholder": "Select type"
+      "allTypes": "Alle typen",
+      "empty": "Geen contractregelpresets beschikbaar. U kunt ze later toevoegen.",
+      "heading": "Contractregelpresets (optioneel)",
+      "headingTooltip": "Selecteer contractregelpresets om naar dit contract te kopiëren. U kunt er later meer toevoegen.",
+      "loading": "Contractregelpresets laden...",
+      "noMatches": "Geen contractregelpresets komen overeen met uw zoekopdracht.",
+      "resetFilters": "Resetten",
+      "searchPlaceholder": "Contractregelpresets zoeken...",
+      "selectedPlural": "{{count}} contractregelpresets geselecteerd",
+      "selectedSingle": "{{count}} contractregelpreset geselecteerd",
+      "serviceCountPlural": "{{count}} diensten",
+      "serviceCountSingle": "{{count}} dienst",
+      "typePlaceholder": "Selecteer type"
     },
     "title": {
-      "create": "Create Contract",
-      "edit": "Edit Contract"
+      "create": "Contract aanmaken",
+      "edit": "Contract bewerken"
     },
     "validation": {
-      "billingFrequency": "Billing frequency",
-      "client": "Client",
-      "contractName": "Contract name",
-      "failedToSave": "Failed to save contract",
-      "noticePeriodInvalid": "Notice period days must be a non-negative whole number",
-      "poNumberRequired": "PO number (required when PO is enabled)",
-      "renewalTermInvalid": "Renewal term months must be a positive whole number for auto-renew contracts",
-      "requiredFields": "Please fill in the required fields:",
-      "startDate": "Start date"
+      "billingFrequency": "Factureerfrequentie",
+      "client": "Klant",
+      "contractName": "Contractnaam",
+      "failedToSave": "Contract opslaan is mislukt",
+      "noticePeriodInvalid": "Opzegtermijn in dagen moet een niet-negatief geheel getal zijn",
+      "poNumberRequired": "PO-nummer (vereist wanneer PO is ingeschakeld)",
+      "renewalTermInvalid": "Verlengingstermijn in maanden moet een positief geheel getal zijn voor contracten met automatische verlenging",
+      "requiredFields": "Vul de vereiste velden in:",
+      "startDate": "Startdatum"
     }
   },
   "contractForm": {
     "actions": {
-      "saveChanges": "Save Changes",
-      "saving": "Saving..."
+      "saveChanges": "Wijzigingen opslaan",
+      "saving": "Bezig met opslaan..."
     },
     "errors": {
-      "failedToUpdateContract": "Failed to update contract"
+      "failedToUpdateContract": "Contract bijwerken is mislukt"
     },
     "fields": {
-      "billingFrequency": "Billing Frequency",
-      "billingFrequencyPlaceholder": "Select billing frequency",
-      "contractName": "Contract Name",
-      "contractNamePlaceholder": "Enter contract name",
-      "currency": "Currency",
-      "currencyPlaceholder": "Select currency",
-      "description": "Description",
-      "descriptionPlaceholder": "Enter contract description",
+      "billingFrequency": "Factureerfrequentie",
+      "billingFrequencyPlaceholder": "Selecteer factureerfrequentie",
+      "contractName": "Contractnaam",
+      "contractNamePlaceholder": "Voer contractnaam in",
+      "currency": "Valuta",
+      "currencyPlaceholder": "Selecteer valuta",
+      "description": "Beschrijving",
+      "descriptionPlaceholder": "Voer contractbeschrijving in",
       "status": "Status"
     },
-    "heading": "Contract Details",
+    "heading": "Contractdetails",
     "status": {
-      "active": "Active",
-      "draft": "Draft",
-      "expired": "Expired",
-      "expiredHelper": "Expired contracts cannot be changed to another status",
-      "terminated": "Terminated"
+      "active": "Actief",
+      "draft": "Concept",
+      "expired": "Verlopen",
+      "expiredHelper": "Verlopen contracten kunnen niet naar een andere status worden gewijzigd",
+      "terminated": "Beëindigd"
     },
     "validation": {
-      "billingFrequency": "Billing frequency",
-      "contractName": "Contract name",
-      "requiredFields": "Please fill in the required fields:"
+      "billingFrequency": "Factureerfrequentie",
+      "contractName": "Contractnaam",
+      "requiredFields": "Vul de vereiste velden in:"
     }
   },
   "contractLines": {
     "actions": {
-      "addFromPresets": "Add from Presets",
-      "collapseLine": "Collapse contract line",
-      "createCustom": "Create Custom",
-      "expandLine": "Expand contract line"
+      "addFromPresets": "Toevoegen uit presets",
+      "collapseLine": "Contractregel samenvouwen",
+      "createCustom": "Aangepast aanmaken",
+      "expandLine": "Contractregel uitvouwen"
     },
     "bucket": {
-      "billingPeriod": "Billing Period: {{period}}",
-      "defaultUnit": "unit",
-      "defaultUnits": "units",
-      "enableTracking": "Enable bucket usage tracking",
-      "hour": "hour",
-      "hoursValue": "{{hours}} hours",
-      "included": "Included: {{value}}",
-      "overageRate": "Overage Rate: {{rate}} per {{unit}}",
-      "rolloverEnabled": "Rollover: Enabled",
-      "title": "Bucket Configuration",
+      "billingPeriod": "Factureerperiode: {{period}}",
+      "defaultUnit": "eenheid",
+      "defaultUnits": "eenheden",
+      "enableTracking": "Bundelgebruik-tracking inschakelen",
+      "hour": "uur",
+      "hoursValue": "{{hours}} uren",
+      "included": "Inbegrepen: {{value}}",
+      "overageRate": "Overschrijdingstarief: {{rate}} per {{unit}}",
+      "rolloverEnabled": "Overloop: ingeschakeld",
+      "title": "Bundelconfiguratie",
       "unitsValue": "{{count}} {{units}}"
     },
     "columns": {
-      "actions": "Actions",
-      "frequency": "Frequency",
-      "name": "Name",
-      "rate": "Rate",
+      "actions": "Acties",
+      "frequency": "Frequentie",
+      "name": "Naam",
+      "rate": "Tarief",
       "services": "Services",
       "type": "Type"
     },
     "configuration": {
-      "description": "Settings that apply to this contract line",
-      "fixedInfo": "Fixed contract lines bill a flat recurring fee regardless of individual service rates.",
-      "fixedInfoDetails": "For fixed fee lines, the service rate and quantity are used only for tax allocation purposes. They determine how the fixed fee is proportionally attributed across services for tax calculations. The actual billed amount is the contract line's base rate shown above.",
-      "fixedInfoHeading": "About service rates below:",
-      "minimumBillableTime": "Minimum Billable Time (minutes)",
-      "minutesValue": "{{count}} minutes",
-      "roundUpToNearest": "Round Up To Nearest (minutes)",
-      "title": "Contract Line Configuration",
-      "usageInfo": "Usage-based contract lines are configured per service with unit rates."
+      "description": "Instellingen die van toepassing zijn op deze contractregel",
+      "fixedInfo": "Vaste contractregels factureren een vast terugkerend tarief, ongeacht individuele servicetarieven.",
+      "fixedInfoDetails": "Voor regels met een vaste vergoeding worden het servicetarief en de hoeveelheid alleen gebruikt voor belastingtoewijzing. Ze bepalen hoe de vaste vergoeding proportioneel over services wordt verdeeld voor belastingberekeningen. Het werkelijk gefactureerde bedrag is het basistarief van de contractregel dat hierboven wordt weergegeven.",
+      "fixedInfoHeading": "Over onderstaande servicetarieven:",
+      "minimumBillableTime": "Minimum factureerbare tijd (minuten)",
+      "minutesValue": "{{count}} minuten",
+      "roundUpToNearest": "Naar boven afronden op dichtstbijzijnde (minuten)",
+      "title": "Contractregelconfiguratie",
+      "usageInfo": "Verbruiksgebaseerde contractregels worden per service geconfigureerd met tarieven per eenheid."
     },
-    "customRate": "Custom",
+    "customRate": "Aangepast",
     "description": {
-      "default": "Manage the contract lines and services for this contract",
-      "readOnly": "This system-managed default contract is attribution-only. Contract line authoring is disabled."
+      "default": "Beheer de contractregels en services voor dit contract",
+      "readOnly": "Dit door het systeem beheerde standaardcontract is alleen voor toewijzing. Het maken van contractregels is uitgeschakeld."
     },
     "dialogs": {
-      "confirmRemove": "Remove contract line \"{{name}}\"?"
+      "confirmRemove": "Contractregel \"{{name}}\" verwijderen?"
     },
     "empty": {
-      "noneAdded": "No contract lines added yet.",
-      "selectAbove": "Select a contract line above to get started."
+      "noneAdded": "Nog geen contractregels toegevoegd.",
+      "selectAbove": "Selecteer hierboven een contractregel om te beginnen."
     },
     "errors": {
-      "cannotEditWithInvoices": "Cannot edit contract line: This contract has associated invoices. Contract lines cannot be edited once invoices have been generated.",
-      "failedToCheckEditable": "Failed to check if contract can be edited",
-      "failedToLoad": "Failed to load contract lines",
-      "failedToRefresh": "Failed to refresh contract lines",
-      "failedToRemove": "Failed to remove contract line",
-      "failedToUpdate": "Failed to update contract line"
+      "cannotEditWithInvoices": "Kan contractregel niet bewerken: dit contract heeft bijbehorende facturen. Contractregels kunnen niet worden bewerkt zodra facturen zijn gegenereerd.",
+      "failedToCheckEditable": "Controleren of contract kan worden bewerkt is mislukt",
+      "failedToLoad": "Contractregels laden is mislukt",
+      "failedToRefresh": "Contractregels vernieuwen is mislukt",
+      "failedToRemove": "Contractregel verwijderen is mislukt",
+      "failedToUpdate": "Contractregel bijwerken is mislukt"
     },
     "loading": {
-      "contractLines": "Loading contract lines",
-      "inline": "Loading..."
+      "contractLines": "Contractregels laden",
+      "inline": "Bezig met laden..."
     },
-    "serviceCountPlural": "{{count}} services",
-    "serviceCountSingle": "{{count}} service",
+    "location": {
+      "addLocation": "+ Locatie toevoegen",
+      "fallback": "Locatie",
+      "label": "Locatie",
+      "lineCountPlural": "{{count}} regels",
+      "lineCountSingle": "{{count}} regel",
+      "none": "Geen locatie toegewezen",
+      "pendingEmptyHint": "Nog geen contractregels voor deze locatie. Voeg een regel toe en wijs deze vervolgens via het bewerkingspaneel aan deze locatie toe.",
+      "placeholder": "Selecteer een locatie",
+      "removePendingGroup": "Lege locatiegroep verwijderen",
+      "unassigned": "Geen locatie toegewezen",
+      "unnamed": "Locatie"
+    },
+    "serviceCountPlural": "{{count}} diensten",
+    "serviceCountSingle": "{{count}} dienst",
     "services": {
-      "empty": "No services configured for this contract line.",
-      "hourlyRate": "Hourly Rate",
-      "quantity": "Quantity",
-      "quantityShort": "Qty: {{quantity}}",
-      "quantityTaxAllocation": "Quantity (for tax allocation)",
-      "rateTaxAllocation": "Rate (for tax allocation)",
+      "empty": "Geen services geconfigureerd voor deze contractregel.",
+      "hourlyRate": "Uurtarief",
+      "quantity": "Hoeveelheid",
+      "quantityShort": "Aantal: {{quantity}}",
+      "quantityTaxAllocation": "Hoeveelheid (voor belastingtoewijzing)",
+      "rateTaxAllocation": "Tarief (voor belastingtoewijzing)",
       "title": "Services ({{count}})",
-      "typeLabel": "{{type}} Service",
-      "unitOfMeasure": "Unit of Measure",
-      "unitPlaceholder": "unit",
-      "unitRate": "Unit Rate"
+      "typeLabel": "{{type}}-service",
+      "unitOfMeasure": "Meeteenheid",
+      "unitPlaceholder": "eenheid",
+      "unitRate": "Tarief per eenheid"
     },
-    "title": "Contract Lines"
+    "title": "Contractregels"
   },
   "contractLineEdit": {
     "actions": {
-      "cancel": "Cancel",
-      "saveChanges": "Save Changes",
-      "saving": "Saving..."
+      "cancel": "Annuleren",
+      "saveChanges": "Wijzigingen opslaan",
+      "saving": "Bezig met opslaan..."
     },
     "errors": {
-      "failedToSaveChanges": "Failed to save changes"
+      "failedToSaveChanges": "Wijzigingen opslaan is mislukt"
     },
     "fields": {
-      "billingTimingQuestion": "When should this line be billed?",
-      "rate": "Rate"
+      "billingTimingQuestion": "Wanneer moet deze regel worden gefactureerd?",
+      "rate": "Tarief"
     },
     "sections": {
-      "billingTiming": "Billing Timing",
-      "pricing": "Pricing"
+      "billingTiming": "Facturatietiming",
+      "pricing": "Prijzen"
     },
     "timingDescriptions": {
-      "advance": "Charges will be billed before the service is provided",
-      "arrears": "Charges will be billed after the service is provided"
+      "advance": "Kosten worden gefactureerd voordat de service wordt geleverd",
+      "arrears": "Kosten worden gefactureerd nadat de service is geleverd"
     },
     "timingOptions": {
-      "advance": "In Advance (at start of billing period)",
-      "arrears": "In Arrears (at end of billing period)"
+      "advance": "Vooraf (aan het begin van de factureerperiode)",
+      "arrears": "Achteraf (aan het einde van de factureerperiode)"
     },
-    "title": "Edit Contract Line: {{name}}",
+    "title": "Contractregel bewerken: {{name}}",
     "validation": {
-      "validRateRequired": "Please enter a valid rate (must be a non-negative number)"
+      "validRateRequired": "Voer een geldig tarief in (moet een niet-negatief getal zijn)"
     },
     "values": {
-      "unnamedLine": "Unnamed line"
+      "unnamedLine": "Naamloze regel"
     }
   },
   "contractLineRate": {
     "actions": {
-      "cancel": "Cancel",
-      "saveRate": "Save Rate"
+      "cancel": "Annuleren",
+      "saveRate": "Tarief opslaan"
     },
     "fields": {
-      "rate": "Rate"
+      "rate": "Tarief"
     },
-    "title": "Set Custom Rate for {{name}}",
+    "title": "Aangepast tarief voor {{name}} instellen",
     "validation": {
-      "validRateRequired": "Please enter a valid rate (must be a non-negative number)"
+      "validRateRequired": "Voer een geldig tarief in (moet een niet-negatief getal zijn)"
     }
   },
   "addLines": {
     "actions": {
-      "addPlural": "Add ({{count}}) Presets",
-      "addSingle": "Add ({{count}}) Preset",
-      "adding": "Adding..."
+      "addPlural": "({{count}}) Presets toevoegen",
+      "addSingle": "({{count}}) Preset toevoegen",
+      "adding": "Bezig met toevoegen..."
     },
     "empty": {
-      "noMatches": "No presets match your search.",
-      "noneAvailable": "No contract line presets available."
+      "noMatches": "Geen presets komen overeen met uw zoekopdracht.",
+      "noneAvailable": "Geen contractregelpresets beschikbaar."
     },
     "errors": {
-      "failedToAddPresets": "Failed to add selected presets.",
-      "failedToLoadPresetDetails": "Failed to load preset details.",
-      "failedToLoadPresets": "Failed to load contract line presets."
+      "failedToAddPresets": "Geselecteerde presets toevoegen is mislukt.",
+      "failedToLoadPresetDetails": "Presetdetails laden is mislukt.",
+      "failedToLoadPresets": "Contractregelpresets laden is mislukt."
     },
     "filters": {
-      "allTypes": "All types",
-      "reset": "Reset",
-      "searchPlaceholder": "Search presets...",
-      "typePlaceholder": "Select type"
+      "allTypes": "Alle typen",
+      "reset": "Resetten",
+      "searchPlaceholder": "Presets zoeken...",
+      "typePlaceholder": "Selecteer type"
     },
     "fixedConfig": {
-      "defaultBaseRate": "Default Base Rate:",
-      "defaultRatePlaceholder": "Default: ${{rate}}",
-      "enterBaseRate": "Enter base rate",
-      "leaveBlankDefault": "Leave blank to use the default rate",
-      "notSet": "Not set",
-      "overrideBaseRate": "Override Base Rate",
-      "title": "Fixed Rate Configuration"
+      "defaultBaseRate": "Standaard basistarief:",
+      "defaultRatePlaceholder": "Standaard: ${{rate}}",
+      "enterBaseRate": "Voer basistarief in",
+      "leaveBlankDefault": "Laat leeg om het standaardtarief te gebruiken",
+      "notSet": "Niet ingesteld",
+      "overrideBaseRate": "Basistarief overschrijven",
+      "title": "Vast tarief configuratie"
     },
     "hourlyConfig": {
-      "defaultRate": "Default: ${{rate}}",
-      "hourlyRate": "Hourly Rate",
-      "minimumBillableMinutes": "Minimum billable minutes",
-      "roundUpToNearest": "Round up to nearest (minutes)",
-      "servicesAndRates": "Services & Hourly Rates",
-      "title": "Time Billing Configuration"
+      "defaultRate": "Standaard: ${{rate}}",
+      "hourlyRate": "Uurtarief",
+      "minimumBillableMinutes": "Minimum factureerbare minuten",
+      "roundUpToNearest": "Naar boven afronden op dichtstbijzijnde (minuten)",
+      "servicesAndRates": "Services en uurtarieven",
+      "title": "Configuratie tijdfacturatie"
     },
-    "loading": "Loading contract line presets...",
-    "selectPresetsTitle": "Select Contract Line Presets to Add",
+    "loading": "Contractregelpresets laden...",
+    "selectPresetsTitle": "Selecteer toe te voegen contractregelpresets",
     "selection": {
-      "deselectPreset": "Deselect preset",
-      "selectPreset": "Select preset",
-      "selectedPlural": "{{count}} presets selected",
-      "selectedSingle": "{{count}} preset selected"
+      "deselectPreset": "Preset deselecteren",
+      "selectPreset": "Selecteer preset",
+      "selectedPlural": "{{count}} presets geselecteerd",
+      "selectedSingle": "{{count}} preset geselecteerd"
     },
-    "serviceCountPlural": "{{count}} services",
-    "serviceCountSingle": "{{count}} service",
+    "serviceCountPlural": "{{count}} diensten",
+    "serviceCountSingle": "{{count}} dienst",
     "services": {
-      "configuration": "Services Configuration",
-      "empty": "No services configured for this preset",
-      "fixedReferenceHelp": "These services are included for reference only. The fixed rate above determines the billing amount.",
-      "includedReference": "Services Included (Reference)",
-      "quantityShort": "Qty: {{quantity}}",
-      "unknownService": "Unknown Service"
+      "configuration": "Servicesconfiguratie",
+      "empty": "Geen services geconfigureerd voor deze preset",
+      "fixedReferenceHelp": "Deze services zijn alleen ter referentie opgenomen. Het vaste tarief hierboven bepaalt het factuurbedrag.",
+      "includedReference": "Inbegrepen services (referentie)",
+      "quantityShort": "Aantal: {{quantity}}",
+      "unknownService": "Onbekende service"
     },
-    "title": "Add Contract Lines from Presets",
+    "title": "Contractregels uit presets toevoegen",
     "usageConfig": {
-      "defaultRate": "Default: ${{rate}}",
-      "quantity": "Quantity",
-      "ratePerUnit": "Rate (per unit)",
-      "unitHint": "e.g., GB, API call, user",
-      "unitOfMeasure": "Unit of Measure",
-      "unitPlaceholder": "unit"
+      "defaultRate": "Standaard: ${{rate}}",
+      "quantity": "Hoeveelheid",
+      "ratePerUnit": "Tarief (per eenheid)",
+      "unitHint": "bijv. GB, API-aanroep, gebruiker",
+      "unitOfMeasure": "Meeteenheid",
+      "unitPlaceholder": "eenheid"
     }
   },
   "createCustomLine": {
-    "addBucketOfConsumption": "Add bucket of consumption",
-    "addBucketOfHours": "Add bucket of hours",
-    "addHourlyService": "Add Hourly Service",
-    "addItem": "Add Item",
-    "addUsageService": "Add Usage-Based Service",
-    "adjustForPartialPeriods": "Adjust for Partial Periods",
-    "adjustForPartialPeriodsHelp": "When enabled, the recurring fee scales to the covered portion of a service period when the contract starts or ends inside that period.",
-    "basicsDescription": "Create a custom contract line directly for this contract.",
-    "basicsTitle": "Contract Line Basics",
-    "billingFrequencyLabel": "Billing Frequency *",
-    "billingFrequencyPlaceholder": "Select billing frequency",
+    "addBucketOfConsumption": "Verbruiksbundel toevoegen",
+    "addBucketOfHours": "Urenbundel toevoegen",
+    "addHourlyService": "Uurservice toevoegen",
+    "addItem": "Item toevoegen",
+    "addUsageService": "Verbruiksgebaseerde service toevoegen",
+    "adjustForPartialPeriods": "Aanpassen voor gedeeltelijke perioden",
+    "adjustForPartialPeriodsHelp": "Indien ingeschakeld, schaalt het terugkerende tarief mee met het gedekte deel van een serviceperiode wanneer het contract binnen die periode begint of eindigt.",
+    "basicsDescription": "Maak direct een aangepaste contractregel voor dit contract aan.",
+    "basicsTitle": "Contractregelbasis",
+    "billingFrequencyLabel": "Factureerfrequentie *",
+    "billingFrequencyPlaceholder": "Selecteer factureerfrequentie",
     "billingModel": {
-      "fixedDescription": "Charge a flat amount every billing period.",
-      "fixedTitle": "Fixed Fee",
-      "hourlyDescription": "Bill based on approved time entries.",
-      "hourlyTitle": "Hourly",
-      "usageDescription": "Invoice for units consumed.",
-      "usageTitle": "Usage-Based"
+      "fixedDescription": "Breng een vast bedrag in rekening per factureerperiode.",
+      "fixedTitle": "Vaste vergoeding",
+      "hourlyDescription": "Factureren op basis van goedgekeurde tijdregistraties.",
+      "hourlyTitle": "Per uur",
+      "usageDescription": "Factureer voor verbruikte eenheden.",
+      "usageTitle": "Op verbruik"
     },
     "billingTiming": {
-      "advance": "Advance (bill at start of period)",
-      "arrears": "Arrears (bill at end of period)"
+      "advance": "Vooraf (factureren aan het begin van de periode)",
+      "arrears": "Achteraf (factureren aan het einde van de periode)"
     },
-    "billingTimingHelp": "Advance billing is typical for fixed fees; arrears for time/usage-based services.",
-    "chooseBillingModel": "Choose a Billing Model *",
-    "chooseBillingModelDescription": "Select the billing behavior that fits this offering.",
-    "contractLineNameLabel": "Contract Line Name *",
-    "contractLineNamePlaceholder": "e.g. Managed Support - Gold",
-    "create": "Create Contract Line",
-    "creating": "Creating...",
-    "defaultUnit": "unit",
-    "defaultUnits": "units",
-    "enterHourlyRate": "Enter hourly rate",
-    "enterUnitRate": "Enter unit rate",
-    "fixedServicesAlertBaseRate": "The contract line's base rate (set below) is the billed amount.",
-    "fixedServicesAlertHeading": "Fixed Fee Services",
-    "fixedServicesAlertProducts": "You can also attach products to this contract line; product quantities are billed as units, while fixed-fee service quantities are used for tax allocation only.",
-    "fixedServicesDescription": "Set up services that are billed at a fixed recurring rate.",
-    "fixedServicesTitle": "Fixed Fee Services",
-    "hourlyRateDisplay": "{{rate}}/hour",
-    "hourlyRateLabel": "Hourly Rate",
-    "hourlyServicesAlertDescription": "These services are billed based on actual time tracked.",
-    "hourlyServicesAlertHeading": "Hourly Services",
-    "hourlyServicesDescription": "Configure services that are billed based on time tracked.",
-    "hourlyServicesLabel": "Hourly Services",
-    "hourlyServicesTitle": "Hourly Services",
+    "billingTimingHelp": "Facturatie vooraf is gebruikelijk voor vaste tarieven; achteraf voor tijd-/verbruiksgebaseerde services.",
+    "chooseBillingModel": "Kies een factureermodel *",
+    "chooseBillingModelDescription": "Selecteer het facturatiegedrag dat bij dit aanbod past.",
+    "contractLineNameLabel": "Contractregelnaam *",
+    "contractLineNamePlaceholder": "bijv. Managed Support - Gold",
+    "create": "Contractregel aanmaken",
+    "creating": "Bezig met aanmaken...",
+    "defaultUnit": "eenheid",
+    "defaultUnits": "eenheden",
+    "enterHourlyRate": "Voer uurtarief in",
+    "enterUnitRate": "Voer tarief per eenheid in",
+    "fixedServicesAlertBaseRate": "Het basistarief van de contractregel (hieronder ingesteld) is het gefactureerde bedrag.",
+    "fixedServicesAlertHeading": "Vaste-vergoedingsservices",
+    "fixedServicesAlertProducts": "U kunt ook producten aan deze contractregel koppelen; producthoeveelheden worden als eenheden gefactureerd, terwijl servicehoeveelheden met vaste vergoeding alleen worden gebruikt voor belastingtoewijzing.",
+    "fixedServicesDescription": "Configureer services die tegen een vast terugkerend tarief worden gefactureerd.",
+    "fixedServicesTitle": "Vaste-vergoedingsservices",
+    "hourlyRateDisplay": "{{rate}}/uur",
+    "hourlyRateLabel": "Uurtarief",
+    "hourlyServicesAlertDescription": "Deze services worden gefactureerd op basis van werkelijk geregistreerde tijd.",
+    "hourlyServicesAlertHeading": "Uurservices",
+    "hourlyServicesDescription": "Configureer services die worden gefactureerd op basis van geregistreerde tijd.",
+    "hourlyServicesLabel": "Uurservices",
+    "hourlyServicesTitle": "Uurservices",
     "itemLabel": "Item {{index}}",
     "moneyPlaceholder": "0.00",
-    "minimumBillableTimeLabel": "Minimum Billable Time (minutes)",
-    "noFixedItems": "No fixed fee items added yet. Click \"Add Item\" above to get started.",
-    "noHourlyServices": "No hourly services added yet. Click \"Add Hourly Service\" above to get started.",
-    "noUsageServices": "No usage-based services added yet. Click \"Add Usage-Based Service\" above to get started.",
-    "quantityLabel": "Quantity",
-    "ratePerUnitLabel": "Rate per Unit",
-    "recurringBaseRateHelp": "Recurring fee for all fixed services.",
-    "recurringBaseRateLabel": "Recurring Base Rate",
-    "roundUpToNearestLabel": "Round Up To Nearest (minutes)",
-    "selectItemPlaceholder": "Select an item",
-    "selectServicePlaceholder": "Select a service",
+    "minimumBillableTimeLabel": "Minimum factureerbare tijd (minuten)",
+    "noFixedItems": "Nog geen items met vaste vergoeding toegevoegd. Klik hierboven op \"Item toevoegen\" om te beginnen.",
+    "noHourlyServices": "Nog geen uurservices toegevoegd. Klik hierboven op \"Uurservice toevoegen\" om te beginnen.",
+    "noUsageServices": "Nog geen verbruiksgebaseerde services toegevoegd. Klik hierboven op \"Verbruiksgebaseerde service toevoegen\" om te beginnen.",
+    "quantityLabel": "Hoeveelheid",
+    "ratePerUnitLabel": "Tarief per eenheid",
+    "recurringBaseRateHelp": "Terugkerend tarief voor alle vaste services.",
+    "recurringBaseRateLabel": "Terugkerend basistarief",
+    "roundUpToNearestLabel": "Naar boven afronden op dichtstbijzijnde (minuten)",
+    "selectItemPlaceholder": "Selecteer een item",
+    "selectServicePlaceholder": "Selecteer een service",
     "serviceLabel": "Service {{index}}",
-    "servicesAndProductsLabel": "Services & Products",
-    "title": "Create Custom Contract Line",
-    "unitOfMeasureLabel": "Unit of Measure",
-    "unitOfMeasurePlaceholder": "e.g., GB, API call, user",
+    "servicesAndProductsLabel": "Services en producten",
+    "title": "Aangepaste contractregel aanmaken",
+    "unitOfMeasureLabel": "Meeteenheid",
+    "unitOfMeasurePlaceholder": "bijv. GB, API-aanroep, gebruiker",
     "unitRateDisplay": "{{rate}}/{{unit}}",
-    "usageServicesAlertDescription": "These services are billed based on actual consumption.",
-    "usageServicesAlertHeading": "Usage-Based Services",
-    "usageServicesDescription": "Configure services that are billed based on usage or consumption.",
-    "usageServicesLabel": "Usage-Based Services",
-    "usageServicesTitle": "Usage-Based Services",
+    "usageServicesAlertDescription": "Deze services worden gefactureerd op basis van werkelijk verbruik.",
+    "usageServicesAlertHeading": "Verbruiksgebaseerde services",
+    "usageServicesDescription": "Configureer services die worden gefactureerd op basis van gebruik of verbruik.",
+    "usageServicesLabel": "Verbruiksgebaseerde services",
+    "usageServicesTitle": "Verbruiksgebaseerde services",
     "validation": {
-      "billingFrequencyRequired": "Billing frequency is required",
-      "contractLineNameRequired": "Contract Line Name is required",
-      "contractLineTypeRequired": "Contract Line Type is required",
-      "failedToCreate": "Failed to create contract line",
-      "fixedServiceRequired": "At least one fixed service or product is required",
-      "fixedServiceSelectRequired": "Item {{index}}: Please select a service or product",
-      "hourlyRateRequired": "Service {{index}}: Hourly rate is required",
-      "hourlyServiceRequired": "At least one hourly service is required",
-      "hourlyServiceSelectRequired": "Service {{index}}: Please select a service",
-      "unitOfMeasureRequired": "Service {{index}}: Unit of measure is required",
-      "unitRateRequired": "Service {{index}}: Unit rate is required",
-      "usageServiceRequired": "At least one usage-based service is required",
-      "usageServiceSelectRequired": "Service {{index}}: Please select a service"
+      "billingFrequencyRequired": "Factureerfrequentie is verplicht",
+      "contractLineNameRequired": "Contractregelnaam is verplicht",
+      "contractLineTypeRequired": "Contractregeltype is verplicht",
+      "failedToCreate": "Contractregel aanmaken is mislukt",
+      "fixedServiceRequired": "Minstens één vaste service of product is vereist",
+      "fixedServiceSelectRequired": "Item {{index}}: selecteer een service of product",
+      "hourlyRateRequired": "Service {{index}}: uurtarief is verplicht",
+      "hourlyServiceRequired": "Minstens één uurservice is vereist",
+      "hourlyServiceSelectRequired": "Service {{index}}: selecteer een service",
+      "unitOfMeasureRequired": "Service {{index}}: meeteenheid is verplicht",
+      "unitRateRequired": "Service {{index}}: tarief per eenheid is verplicht",
+      "usageServiceRequired": "Minstens één verbruiksgebaseerde service is vereist",
+      "usageServiceSelectRequired": "Service {{index}}: selecteer een service"
     }
   },
   "pricingSchedules": {
     "list": {
       "actions": {
-        "addSchedule": "Add Schedule",
-        "deleteSchedule": "Delete Schedule",
-        "editSchedule": "Edit Schedule"
+        "addSchedule": "Schema toevoegen",
+        "deleteSchedule": "Schema verwijderen",
+        "editSchedule": "Schema bewerken"
       },
       "columns": {
-        "actions": "Actions",
-        "customRate": "Custom Rate",
-        "effectiveDate": "Effective Date",
-        "endDate": "End Date",
-        "notes": "Notes"
+        "actions": "Acties",
+        "customRate": "Aangepast tarief",
+        "effectiveDate": "Ingangsdatum",
+        "endDate": "Einddatum",
+        "notes": "Notities"
       },
       "dialogs": {
-        "confirmDeleteSchedule": "Are you sure you want to delete this pricing schedule?"
+        "confirmDeleteSchedule": "Weet u zeker dat u dit prijsschema wilt verwijderen?"
       },
       "empty": {
-        "description": "Add pricing schedules to define time-based rate changes for this contract",
-        "noPricingSchedules": "No pricing schedules yet"
+        "description": "Voeg prijsschema's toe om tijdgebonden tariefwijzigingen voor dit contract te definiëren",
+        "noPricingSchedules": "Nog geen prijsschema's"
       },
       "errors": {
-        "failedToDeletePricingSchedule": "Failed to delete pricing schedule",
-        "failedToLoadPricingSchedules": "Failed to load pricing schedules"
+        "failedToDeletePricingSchedule": "Prijsschema verwijderen is mislukt",
+        "failedToLoadPricingSchedules": "Prijsschema's laden is mislukt"
       },
-      "loading": "Loading pricing schedules",
-      "readOnlyNotice": "This system-managed default contract is attribution-only. Pricing schedule authoring is disabled.",
+      "loading": "Prijsschema's laden",
+      "readOnlyNotice": "Dit door het systeem beheerde standaardcontract is alleen voor toewijzing. Het maken van prijsschema's is uitgeschakeld.",
       "timeline": {
-        "title": "Pricing Timeline"
+        "title": "Prijstijdlijn"
       },
-      "title": "Pricing Schedules",
+      "title": "Prijsschema's",
       "values": {
-        "defaultRate": "Default rate",
-        "ongoing": "Ongoing",
-        "useDefaultRate": "Use default rate"
+        "defaultRate": "Standaardtarief",
+        "ongoing": "Lopend",
+        "useDefaultRate": "Standaardtarief gebruiken"
       }
     },
     "dialog": {
       "actions": {
-        "addSchedule": "Add Schedule",
-        "cancel": "Cancel",
-        "saving": "Saving...",
-        "updateSchedule": "Update Schedule"
+        "addSchedule": "Schema toevoegen",
+        "cancel": "Annuleren",
+        "saving": "Bezig met opslaan...",
+        "updateSchedule": "Schema bijwerken"
       },
       "durationUnits": {
-        "days": "Days",
-        "months": "Months",
-        "weeks": "Weeks",
-        "years": "Years"
+        "days": "Dagen",
+        "months": "Maanden",
+        "weeks": "Weken",
+        "years": "Jaren"
       },
       "errors": {
-        "failedToSavePricingSchedule": "Failed to save pricing schedule"
+        "failedToSavePricingSchedule": "Prijsschema opslaan is mislukt"
       },
       "fields": {
-        "customRate": "Custom Rate",
+        "customRate": "Aangepast tarief",
         "customRatePlaceholder": "0.00",
-        "duration": "Duration",
-        "durationPlaceholder": "e.g., 6",
-        "effectiveDate": "Effective Date",
-        "endDate": "End Date",
-        "hasEndDate": "Has end date",
-        "notes": "Notes",
-        "notesPlaceholder": "Add notes about this pricing change (e.g., 'Annual rate increase')",
-        "unit": "Unit",
-        "useDefaultRate": "Use default rate",
-        "useDuration": "Use duration"
+        "duration": "Duur",
+        "durationPlaceholder": "bijv. 6",
+        "effectiveDate": "Ingangsdatum",
+        "endDate": "Einddatum",
+        "hasEndDate": "Heeft einddatum",
+        "notes": "Notities",
+        "notesPlaceholder": "Voeg notities toe over deze prijswijziging (bijv. 'Jaarlijkse tariefverhoging')",
+        "unit": "Eenheid",
+        "useDefaultRate": "Standaardtarief gebruiken",
+        "useDuration": "Duur gebruiken"
       },
       "title": {
-        "addPricingSchedule": "Add Pricing Schedule",
-        "editPricingSchedule": "Edit Pricing Schedule"
+        "addPricingSchedule": "Prijsschema toevoegen",
+        "editPricingSchedule": "Prijsschema bewerken"
       },
       "validation": {
-        "customRatePositive": "Custom rate must be a positive number",
-        "customRateRequired": "Custom rate is required when not using default rate",
-        "durationPositive": "Duration must be a positive number",
-        "durationRequired": "Duration value is required when using duration",
-        "effectiveDateRequired": "Effective date is required",
-        "endDateAfterEffectiveDate": "End date must be after effective date",
-        "endDateRequiredWhenEnabled": "End date is required when \"Has end date\" is enabled"
+        "customRatePositive": "Aangepast tarief moet een positief getal zijn",
+        "customRateRequired": "Aangepast tarief is vereist wanneer het standaardtarief niet wordt gebruikt",
+        "durationPositive": "Duur moet een positief getal zijn",
+        "durationRequired": "Duurwaarde is vereist wanneer duur wordt gebruikt",
+        "effectiveDateRequired": "Ingangsdatum is verplicht",
+        "endDateAfterEffectiveDate": "Einddatum moet na de ingangsdatum liggen",
+        "endDateRequiredWhenEnabled": "Einddatum is verplicht wanneer \"Heeft einddatum\" is ingeschakeld"
       }
     }
   },
   "contractsList": {
     "actions": {
-      "deleting": "Deleting…",
-      "createContract": "Create Contract",
-      "createTemplate": "Create Template",
-      "openMenu": "Open menu",
-      "quickAdd": "Quick Add",
-      "resume": "Resume",
-      "restore": "Restore",
-      "setToActive": "Set to Active",
-      "terminate": "Terminate"
+      "deleting": "Bezig met verwijderen…",
+      "createContract": "Contract aanmaken",
+      "createTemplate": "Sjabloon aanmaken",
+      "openMenu": "Menu openen",
+      "quickAdd": "Snel toevoegen",
+      "resume": "Hervatten",
+      "restore": "Herstellen",
+      "setToActive": "Op Actief zetten",
+      "terminate": "Beëindigen"
     },
     "columns": {
-      "actions": "Actions",
-      "client": "Client",
-      "contractName": "Contract Name",
-      "created": "Created",
-      "description": "Description",
-      "endDate": "End Date",
-      "lastModified": "Last Modified",
-      "sourceTemplate": "Source Template",
-      "startDate": "Start Date",
+      "actions": "Acties",
+      "client": "Klant",
+      "contractName": "Contractnaam",
+      "created": "Aangemaakt",
+      "description": "Beschrijving",
+      "endDate": "Einddatum",
+      "lastModified": "Laatst gewijzigd",
+      "sourceTemplate": "Bronsjabloon",
+      "startDate": "Startdatum",
       "status": "Status"
     },
     "dialogs": {
       "deleteClient": {
-        "clientSuffix": " for {{clientName}}",
-        "message": "Are you sure you want to permanently delete the client contract \"{{contractName}}\"{{clientSuffix}}? This action cannot be undone.",
-        "title": "Delete client contract?"
+        "clientSuffix": " voor {{clientName}}",
+        "message": "Weet u zeker dat u het klantcontract \"{{contractName}}\"{{clientSuffix}} permanent wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+        "title": "Klantcontract verwijderen?"
       },
       "deleteTemplate": {
-        "message": "Are you sure you want to permanently delete the template \"{{contractName}}\"? This action cannot be undone.",
-        "title": "Delete contract template?"
+        "message": "Weet u zeker dat u het sjabloon \"{{contractName}}\" permanent wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+        "title": "Contractsjabloon verwijderen?"
       },
       "discardDraft": {
-        "message": "This will permanently delete the draft \"{{contractName}}\" for {{clientName}}.\nThis action cannot be undone.",
-        "title": "Discard Draft Contract?"
+        "message": "Hiermee wordt het concept \"{{contractName}}\" voor {{clientName}} permanent verwijderd.\nDeze actie kan niet ongedaan worden gemaakt.",
+        "title": "Conceptcontract verwijderen?"
       }
     },
     "drafts": {
-      "badgeCount": "{{count}} draft contracts"
+      "badgeCount": "{{count}} conceptcontracten"
     },
     "empty": {
       "dash": "—",
-      "noClientContracts": "No client contracts match your search.",
-      "noDescription": "No description",
-      "noDraftMatches": "No draft contracts match your search.",
-      "noDrafts": "No draft contracts. Start creating a new contract to save as draft.",
-      "noTemplates": "No templates match your search.",
-      "unknownClient": "Unknown client",
-      "untitledContract": "Untitled contract",
-      "untitledDraft": "Untitled draft",
-      "untitledTemplate": "Untitled template"
+      "noClientContracts": "Geen klantcontracten komen overeen met uw zoekopdracht.",
+      "noDescription": "Geen beschrijving",
+      "noDraftMatches": "Geen conceptcontracten komen overeen met uw zoekopdracht.",
+      "noDrafts": "Geen conceptcontracten. Begin met het aanmaken van een nieuw contract om op te slaan als concept.",
+      "noTemplates": "Geen sjablonen komen overeen met uw zoekopdracht.",
+      "unknownClient": "Onbekende klant",
+      "untitledContract": "Naamloos contract",
+      "untitledDraft": "Naamloos concept",
+      "untitledTemplate": "Naamloos sjabloon"
     },
     "errors": {
-      "failedToFetch": "Failed to fetch contracts"
+      "failedToFetch": "Contracten ophalen is mislukt"
     },
     "heading": {
-      "description": "Templates are reusable definitions. Client contracts are client-owned instances.",
-      "title": "Contracts"
+      "description": "Sjablonen zijn herbruikbare definities. Klantcontracten zijn klantgebonden instanties.",
+      "title": "Contracten"
     },
     "loading": {
-      "contracts": "Loading contracts..."
+      "contracts": "Contracten laden..."
     },
     "search": {
-      "clientContractsAriaLabel": "Search client contracts",
-      "clientContractsPlaceholder": "Search by client or contract...",
-      "draftsAriaLabel": "Search draft contracts",
-      "draftsPlaceholder": "Search drafts...",
-      "templatesAriaLabel": "Search contract templates",
-      "templatesPlaceholder": "Search templates..."
+      "clientContractsAriaLabel": "Klantcontracten zoeken",
+      "clientContractsPlaceholder": "Zoeken op klant of contract...",
+      "draftsAriaLabel": "Conceptcontracten zoeken",
+      "draftsPlaceholder": "Concepten zoeken...",
+      "templatesAriaLabel": "Contractsjablonen zoeken",
+      "templatesPlaceholder": "Sjablonen zoeken..."
     },
     "status": {
-      "archived": "Archived",
-      "published": "Published"
+      "archived": "Gearchiveerd",
+      "published": "Gepubliceerd"
     },
     "toasts": {
-      "draftDiscarded": "Draft discarded",
-      "failedToActivateContract": "Failed to activate contract",
-      "failedToDeleteContract": "Failed to delete contract",
-      "failedToDiscardDraft": "Failed to discard draft",
-      "failedToRestoreContract": "Failed to restore contract",
-      "failedToResumeDraft": "Failed to resume draft",
-      "failedToTerminateContract": "Failed to terminate contract"
+      "draftDiscarded": "Concept verwijderd",
+      "failedToActivateContract": "Contract activeren is mislukt",
+      "failedToDeleteContract": "Contract verwijderen is mislukt",
+      "failedToDiscardDraft": "Concept verwijderen is mislukt",
+      "failedToRestoreContract": "Contract herstellen is mislukt",
+      "failedToResumeDraft": "Concept hervatten is mislukt",
+      "failedToTerminateContract": "Contract beëindigen is mislukt"
     }
   },
   "clientContracts": {
     "actions": {
-      "viewDetails": "View details"
+      "viewDetails": "Details bekijken"
     },
     "columns": {
-      "actions": "Actions",
-      "billingFrequency": "Billing Frequency",
-      "client": "Client",
-      "contractName": "Contract Name",
-      "endDate": "End Date",
-      "poIndicator": "PO",
-      "sourceTemplate": "Source Template",
-      "startDate": "Start Date",
+      "actions": "Acties",
+      "billingFrequency": "Factureerfrequentie",
+      "client": "Klant",
+      "contractName": "Contractnaam",
+      "endDate": "Einddatum",
+      "poIndicator": "Inkooporder",
+      "sourceTemplate": "Bronsjabloon",
+      "startDate": "Startdatum",
       "status": "Status"
     },
     "dialogs": {
       "terminate": {
-        "clientSuffix": " for {{clientName}}",
-        "message": "Are you sure you want to terminate \"{{contractName}}\"{{clientSuffix}}?",
-        "title": "Terminate client contract?"
+        "clientSuffix": " voor {{clientName}}",
+        "message": "Weet u zeker dat u \"{{contractName}}\"{{clientSuffix}} wilt beëindigen?",
+        "title": "Klantcontract beëindigen?"
       }
     },
     "empty": {
-      "noMatches": "No client contracts match your search."
+      "noMatches": "Geen klantcontracten komen overeen met uw zoekopdracht."
     },
     "errors": {
-      "failedToFetch": "Failed to fetch client contracts"
+      "failedToFetch": "Klantcontracten ophalen is mislukt"
     },
-    "loading": "Loading client contracts...",
+    "loading": "Klantcontracten laden...",
     "po": {
-      "notRequired": "Not required",
-      "required": "Required"
+      "notRequired": "Niet vereist",
+      "required": "Verplicht"
     },
     "search": {
-      "ariaLabel": "Search client contracts",
-      "placeholder": "Search by client or contract..."
+      "ariaLabel": "Klantcontracten zoeken",
+      "placeholder": "Zoeken op klant of contract..."
     },
     "tabs": {
-      "contracts": "Contracts",
-      "upcomingRenewals": "Upcoming Renewals ({{count}})"
+      "contracts": "Contracten",
+      "upcomingRenewals": "Aankomende verlengingen ({{count}})"
     },
     "toasts": {
-      "failedToActivate": "Failed to activate contract",
-      "failedToDelete": "Failed to delete contract",
-      "failedToMarkNonRenewing": "Failed to mark renewal as non-renewing",
-      "failedToMarkRenewing": "Failed to mark renewal as renewing",
-      "failedToRestore": "Failed to restore contract",
-      "failedToResumeDraft": "Failed to resume draft",
-      "failedToTerminate": "Failed to terminate contract"
+      "failedToActivate": "Contract activeren is mislukt",
+      "failedToDelete": "Contract verwijderen is mislukt",
+      "failedToMarkNonRenewing": "Verlenging markeren als niet-verlengend is mislukt",
+      "failedToMarkRenewing": "Verlenging markeren als verlengend is mislukt",
+      "failedToRestore": "Contract herstellen is mislukt",
+      "failedToResumeDraft": "Concept hervatten is mislukt",
+      "failedToTerminate": "Contract beëindigen is mislukt"
     },
     "upcoming": {
       "actions": {
-        "markNonRenewing": "Mark non-renewing",
-        "markRenewing": "Mark renewing",
-        "openMenu": "Open renewal actions"
+        "markNonRenewing": "Markeren als niet-verlengend",
+        "markRenewing": "Markeren als verlengend",
+        "openMenu": "Verlengingsacties openen"
       },
       "columns": {
-        "actions": "Actions",
-        "client": "Client",
+        "actions": "Acties",
+        "client": "Klant",
         "contract": "Contract",
-        "daysUntilDue": "Days Until Due",
-        "decisionDue": "Decision Due",
+        "daysUntilDue": "Dagen tot vervaldatum",
+        "decisionDue": "Beslissing verschuldigd",
         "status": "Status",
         "type": "Type"
       },
-      "description": "Contracts with renewal decisions due within the selected window.",
-      "empty": "No upcoming renewals for the selected window.",
-      "filterAriaLabel": "Filter upcoming renewals",
-      "filterPlaceholder": "Filter upcoming renewals...",
+      "description": "Contracten met verlengingsbeslissingen die binnen het geselecteerde venster moeten worden genomen.",
+      "empty": "Geen aankomende verlengingen voor het geselecteerde venster.",
+      "filterAriaLabel": "Aankomende verlengingen filteren",
+      "filterPlaceholder": "Aankomende verlengingen filteren...",
       "status": {
-        "completed": "Completed",
-        "nonRenewing": "Non-renewing",
-        "pending": "Pending",
-        "renewing": "Renewing",
-        "snoozed": "Snoozed"
+        "completed": "Voltooid",
+        "nonRenewing": "Niet-verlengend",
+        "pending": "In behandeling",
+        "renewing": "Verlengend",
+        "snoozed": "Uitgesteld"
       },
-      "title": "Upcoming Renewals",
+      "title": "Aankomende verlengingen",
       "type": {
         "evergreen": "Evergreen",
-        "fixedTerm": "Fixed-term"
+        "fixedTerm": "Bepaalde tijd"
       },
       "window": {
-        "all": "All",
-        "next30": "Next 30 days",
-        "next60": "Next 60 days",
-        "next90": "Next 90 days"
+        "all": "Alle",
+        "next30": "Volgende 30 dagen",
+        "next60": "Volgende 60 dagen",
+        "next90": "Volgende 90 dagen"
       },
-      "windowPlaceholder": "Select renewal window"
+      "windowPlaceholder": "Selecteer verlengingsvenster"
     }
   },
   "templatesTab": {
     "actions": {
-      "createTemplate": "Create Template",
-      "delete": "Delete",
-      "edit": "Edit"
+      "createTemplate": "Sjabloon aanmaken",
+      "delete": "Verwijderen",
+      "edit": "Bewerken"
     },
     "columns": {
-      "actions": "Actions",
-      "description": "Description",
+      "actions": "Acties",
+      "description": "Beschrijving",
       "status": "Status",
-      "templateName": "Template Name"
+      "templateName": "Sjabloonnaam"
     },
     "empty": {
-      "createFirstTemplate": "Create your first template to get started.",
-      "noSearchMatches": "No templates match your search",
-      "noTemplates": "No templates yet",
-      "tryDifferentSearch": "Try a different search term."
+      "createFirstTemplate": "Maak uw eerste sjabloon aan om te beginnen.",
+      "noSearchMatches": "Geen sjablonen komen overeen met uw zoekopdracht",
+      "noTemplates": "Nog geen sjablonen",
+      "tryDifferentSearch": "Probeer een andere zoekterm."
     },
     "errors": {
-      "failedToDeleteContract": "Failed to delete contract",
-      "failedToFetchTemplates": "Failed to fetch templates"
+      "failedToDeleteContract": "Contract verwijderen is mislukt",
+      "failedToFetchTemplates": "Sjablonen ophalen is mislukt"
     },
-    "loading": "Loading templates...",
+    "loading": "Sjablonen laden...",
     "search": {
-      "ariaLabel": "Search contract templates",
-      "placeholder": "Search templates..."
+      "ariaLabel": "Contractsjablonen zoeken",
+      "placeholder": "Sjablonen zoeken..."
     },
     "status": {
-      "active": "Active",
-      "archived": "Archived",
-      "draft": "Draft",
-      "expired": "Expired",
-      "published": "Published",
-      "terminated": "Terminated"
+      "active": "Actief",
+      "archived": "Gearchiveerd",
+      "draft": "Concept",
+      "expired": "Verlopen",
+      "published": "Gepubliceerd",
+      "terminated": "Beëindigd"
     },
     "values": {
-      "noDescription": "No description"
+      "noDescription": "Geen beschrijving"
     }
   },
   "detailSwitcher": {
     "errors": {
-      "contractNotFound": "Contract not found",
-      "failedToLoadContractDetails": "Failed to load contract details",
-      "missingContractIdentifier": "Missing contract identifier",
-      "noContractSelected": "No contract selected.",
-      "unableToLoadContractDetails": "Unable to load contract details"
+      "contractNotFound": "Contract niet gevonden",
+      "failedToLoadContractDetails": "Contractdetails laden is mislukt",
+      "missingContractIdentifier": "Ontbrekende contractidentificatie",
+      "noContractSelected": "Geen contract geselecteerd.",
+      "unableToLoadContractDetails": "Contractdetails kunnen niet worden geladen"
     },
     "loading": {
-      "contract": "Loading contract..."
+      "contract": "Contract laden..."
     }
   },
   "templateDetail": {
-    "backToTemplates": "Back to Templates",
-    "backToTemplatesArrow": "← Back to Templates",
+    "backToTemplates": "Terug naar sjablonen",
+    "backToTemplatesArrow": "← Terug naar sjablonen",
     "composition": {
-      "addContractLinesBeforeManaging": "Add contract lines to this template before managing services.",
-      "additionalPlans": "Additional Plans",
-      "bucketSummary": "Bucket: {{minutes}} min • Overage ${{overage}}",
-      "closeManager": "Close Manager",
-      "editRate": "Edit Rate",
-      "fixedFeeBundles": "Fixed Fee Bundles",
-      "fixedFeeRate": "Fixed Fee Rate:",
-      "hourlyPlans": "Hourly Plans",
-      "manageServices": "Manage Services",
-      "manageTemplateServices": "Manage Template Services",
-      "minimumTimeLabel": "Minimum Time:",
+      "addContractLinesBeforeManaging": "Voeg contractregels toe aan dit sjabloon voordat u services beheert.",
+      "additionalPlans": "Aanvullende plannen",
+      "bucketSummary": "Bundel: {{minutes}} min • Overschrijding ${{overage}}",
+      "closeManager": "Beheerder sluiten",
+      "editRate": "Tarief bewerken",
+      "fixedFeeBundles": "Vaste-vergoedingsbundels",
+      "fixedFeeRate": "Vaste-vergoedingstarief:",
+      "hourlyPlans": "Uurplannen",
+      "manageServices": "Services beheren",
+      "manageTemplateServices": "Sjabloonservices beheren",
+      "minimumTimeLabel": "Minimale tijd:",
       "minutesValue": "{{count}} min",
-      "noFixedFeeLines": "No fixed fee contract lines configured yet.",
-      "noHourlyLines": "No hourly contract lines configured yet.",
-      "noServicesAssigned": "No services assigned to this contract line.",
-      "noUsageLines": "No usage-based contract lines configured yet.",
-      "notSet": "Not set",
-      "quantityLabel": "Quantity:",
-      "roundUpLabel": "Round Up:",
-      "serviceCountPlural": "{{count}} services",
-      "serviceCountSingle": "{{count}} service",
+      "noFixedFeeLines": "Nog geen contractregels met vaste vergoeding geconfigureerd.",
+      "noHourlyLines": "Nog geen uurcontractregels geconfigureerd.",
+      "noServicesAssigned": "Geen services toegewezen aan deze contractregel.",
+      "noUsageLines": "Nog geen verbruiksgebaseerde contractregels geconfigureerd.",
+      "notSet": "Niet ingesteld",
+      "quantityLabel": "Hoeveelheid:",
+      "roundUpLabel": "Naar boven afronden:",
+      "serviceCountPlural": "{{count}} diensten",
+      "serviceCountSingle": "{{count}} dienst",
       "serviceFallback": "Service",
-      "title": "Template Composition",
-      "unitLabel": "Unit:",
-      "usageBasedPlans": "Usage-Based Plans"
+      "title": "Sjabloonsamenstelling",
+      "unitLabel": "Eenheid:",
+      "usageBasedPlans": "Verbruiksplannen"
     },
-    "editBasicsTitle": "Edit Template Basics",
-    "editGuidanceTitle": "Edit Template Guidance",
-    "failedToLoadTemplate": "Failed to load contract template",
+    "editBasicsTitle": "Sjabloonbasis bewerken",
+    "editGuidanceTitle": "Sjabloonrichtlijnen bewerken",
+    "failedToLoadTemplate": "Contractsjabloon laden is mislukt",
     "form": {
-      "currencyPlaceholder": "Select currency",
-      "internalNotesLabel": "Internal Notes",
-      "internalNotesPlaceholder": "Describe where this template applies, onboarding tips, or approval requirements.",
-      "recommendedBillingFrequencyLabel": "Recommended Billing Frequency *",
-      "recommendedBillingFrequencyPlaceholder": "Select billing cadence",
-      "templateNameLabel": "Template Name *",
-      "templateNamePlaceholder": "Managed Services Starter, Premium Support Bundle, etc."
+      "currencyPlaceholder": "Selecteer valuta",
+      "internalNotesLabel": "Interne notities",
+      "internalNotesPlaceholder": "Beschrijf waar dit sjabloon van toepassing is, onboardingtips of goedkeuringsvereisten.",
+      "recommendedBillingFrequencyLabel": "Aanbevolen factureerfrequentie *",
+      "recommendedBillingFrequencyPlaceholder": "Selecteer facturatiecadans",
+      "templateNameLabel": "Sjabloonnaam *",
+      "templateNamePlaceholder": "Managed Services Starter, Premium Support Bundle, enz."
     },
     "guidance": {
-      "noCadenceProvided": "No recommended cadence provided.",
-      "recommendedCadenceLabel": "Recommended Cadence",
-      "recommendedCadencePlaceholder": "Select a cadence",
-      "tagsHint": "Tags help teams find relevant templates quickly.",
-      "tagsLabel": "Tags",
-      "tagsPlaceholder": "Comma separated (e.g., onboarding, finance)",
-      "title": "Template Guidance",
-      "usageNotesLabel": "Usage Notes",
-      "usageNotesPlaceholder": "Add guidance to help others understand how to use this template."
+      "noCadenceProvided": "Geen aanbevolen cadans opgegeven.",
+      "recommendedCadenceLabel": "Aanbevolen cadans",
+      "recommendedCadencePlaceholder": "Selecteer een cadans",
+      "tagsHint": "Tags helpen teams om snel relevante sjablonen te vinden.",
+      "tagsLabel": "Labels",
+      "tagsPlaceholder": "Gescheiden door komma's (bijv. onboarding, finance)",
+      "title": "Sjabloonrichtlijnen",
+      "usageNotesLabel": "Verbruiksnotities",
+      "usageNotesPlaceholder": "Voeg richtlijnen toe om anderen te helpen begrijpen hoe dit sjabloon te gebruiken."
     },
-    "loadingTemplate": "Loading template...",
+    "loadingTemplate": "Sjabloon laden...",
     "servicesLabel": "Services",
-    "templateBadge": "Template",
-    "templateNotFound": "Contract template not found",
-    "templateSnapshotTitle": "Template Snapshot",
+    "templateBadge": "Sjabloon",
+    "templateNotFound": "Contractsjabloon niet gevonden",
+    "templateSnapshotTitle": "Sjabloonmomentopname",
     "validation": {
-      "billingFrequencyRequired": "Billing frequency is required",
-      "failedToUpdateBasics": "Failed to update template basics",
-      "failedToUpdateGuidance": "Failed to update template guidance",
-      "templateNameRequired": "Template name is required"
+      "billingFrequencyRequired": "Factureerfrequentie is verplicht",
+      "failedToUpdateBasics": "Sjabloonbasis bijwerken is mislukt",
+      "failedToUpdateGuidance": "Sjabloonrichtlijnen bijwerken is mislukt",
+      "templateNameRequired": "Sjabloonnaam is verplicht"
     },
     "clientAssignments": {
       "title": "Klantopdrachten",
@@ -1147,158 +1160,158 @@
   },
   "quickStart": {
     "actions": {
-      "createFirstContract": "Create Your First Contract",
-      "dismiss": "Dismiss",
-      "minimize": "Minimize",
-      "showGuide": "Show Guide"
+      "createFirstContract": "Maak uw eerste contract aan",
+      "dismiss": "Sluiten",
+      "minimize": "Minimaliseren",
+      "showGuide": "Gids tonen"
     },
     "badge": {
-      "new": "New"
+      "new": "Nieuw"
     },
     "bestPractices": {
       "items": {
-        "clearNames": "Use clear, descriptive contract names (e.g., \"Acme Corp - MSP Services Q4 2024\")",
-        "endDates": "Set end dates for fixed-term contracts to track renewal dates",
-        "partialPeriodAdjustment": "Use partial-period adjustment when contract dates cover only part of a service period",
-        "poNumbers": "Add PO numbers when required by client procurement policies"
+        "clearNames": "Gebruik duidelijke, beschrijvende contractnamen (bijv. \"Acme Corp - MSP Services Q4 2024\")",
+        "endDates": "Stel einddatums in voor fixed-term-contracten om verlengingsdatums te volgen",
+        "partialPeriodAdjustment": "Gebruik aanpassing voor gedeeltelijke periode wanneer contractdatums slechts een deel van een serviceperiode bestrijken",
+        "poNumbers": "Voeg PO-nummers toe wanneer dit door het inkoopbeleid van de klant wordt vereist"
       },
-      "title": "Best Practices"
+      "title": "Best practices"
     },
     "billingModels": {
       "bucketHours": {
-        "description": "Prepaid hours + overage",
-        "label": "Bucket Hours:"
+        "description": "Vooruitbetaalde uren + overschrijding",
+        "label": "Bundeluren:"
       },
       "fixedFee": {
-        "description": "Same price every month",
-        "label": "Fixed Fee:"
+        "description": "Elke maand dezelfde prijs",
+        "label": "Vaste vergoeding:"
       },
       "hourly": {
-        "description": "Bill by time tracked",
-        "label": "Hourly:"
+        "description": "Factureren op geregistreerde tijd",
+        "label": "Per uur:"
       },
       "usageBased": {
-        "description": "Bill by consumption/usage",
-        "label": "Usage-Based:"
+        "description": "Factureren op verbruik",
+        "label": "Op verbruik:"
       }
     },
     "steps": {
       "configureBilling": {
-        "description": "Choose your billing model(s). You can combine multiple types:",
-        "title": "Configure Billing"
+        "description": "Kies uw factureermodel(len). U kunt meerdere typen combineren:",
+        "title": "Facturatie configureren"
       },
       "createContract": {
-        "description": "Click \"New Contract\" to start the wizard. Choose a client and name your contract.",
-        "requiredFields": "Required: Client, Contract Name, Start Date",
-        "title": "Create a Contract"
+        "description": "Klik op \"Nieuw contract\" om de wizard te starten. Kies een klant en geef uw contract een naam.",
+        "requiredFields": "Verplicht: klant, contractnaam, startdatum",
+        "title": "Contract aanmaken"
       },
       "reviewCreate": {
-        "description": "Double-check everything before creating. You can always edit later.",
-        "tip": "Tip: At least one service line is required",
-        "title": "Review & Create"
+        "description": "Controleer alles nogmaals voordat u aanmaakt. U kunt later altijd bewerken.",
+        "tip": "Tip: minstens één serviceregel is vereist",
+        "title": "Controleren en aanmaken"
       }
     },
-    "subtitle": "Learn how to create and manage contracts",
-    "title": "Quick Start Guide"
+    "subtitle": "Leer hoe u contracten kunt aanmaken en beheren",
+    "title": "Snelstartgids"
   },
   "servicePicker": {
-    "emptyMessage": "No service found.",
-    "placeholder": "Select service...",
-    "searchPlaceholder": "Search services...",
+    "emptyMessage": "Geen service gevonden.",
+    "placeholder": "Selecteer service...",
+    "searchPlaceholder": "Services zoeken...",
     "catalog": {
       "badges": {
         "product": "Product",
         "service": "Service"
       },
       "custom": {
-        "addAsCustomItem": "Add “{{name}}” as custom item",
-        "badge": "Custom",
-        "typeNameHint": "Type a name to add a custom item"
+        "addAsCustomItem": "“{{name}}” als aangepast item toevoegen",
+        "badge": "Aangepast",
+        "typeNameHint": "Typ een naam om een aangepast item toe te voegen"
       },
-      "emptyMessage": "No matching items.",
-      "placeholder": "Select item...",
-      "searchPlaceholder": "Search items..."
+      "emptyMessage": "Geen overeenkomende items.",
+      "placeholder": "Selecteer item...",
+      "searchPlaceholder": "Items zoeken..."
     }
   },
   "bucketOverlay": {
-    "includedLabel": "Included {{units}}",
-    "includedPlaceholderHours": "e.g., 40",
-    "includedPlaceholderUnits": "e.g., 1000",
-    "includedTooltip": "Amount of {{units}} included each billing period before overages apply.",
-    "overageRateLabel": "Overage Rate",
-    "overageRateTooltip": "Charge applied for each {{unit}} beyond the included amount.",
-    "rolloverDescription": "If enabled, any unused balance carries into the next period.",
-    "rolloverLabel": "Allow unused {{units}} to roll over",
+    "includedLabel": "Inbegrepen {{units}}",
+    "includedPlaceholderHours": "bijv. 40",
+    "includedPlaceholderUnits": "bijv. 1000",
+    "includedTooltip": "Aantal {{units}} inbegrepen per factureerperiode voordat overschrijdingen gelden.",
+    "overageRateLabel": "Overschrijdingstarief",
+    "overageRateTooltip": "Tarief dat wordt toegepast voor elke {{unit}} boven het inbegrepen aantal.",
+    "rolloverDescription": "Indien ingeschakeld, wordt elk ongebruikt saldo overgedragen naar de volgende periode.",
+    "rolloverLabel": "Ongebruikte {{units}} laten overlopen",
     "units": {
-      "hour": "hour",
-      "hours": "hours",
-      "units": "units"
+      "hour": "uur",
+      "hours": "uren",
+      "units": "eenheden"
     }
   },
   "frequencyOverride": {
-    "confirmation": "This contract line will be billed {{lineFrequency}} instead of {{contractFrequency}}.",
-    "description": "Optional: Override the contract's billing frequency ({{frequency}}) for this specific contract line.",
-    "label": "Billing Frequency Override",
-    "optionAlreadySetForContract": "{{label}} (already set for contract)",
-    "placeholder": "Use contract billing frequency ({{frequency}})"
+    "confirmation": "Deze contractregel wordt {{lineFrequency}} gefactureerd in plaats van {{contractFrequency}}.",
+    "description": "Optioneel: overschrijf de factureerfrequentie van het contract ({{frequency}}) voor deze specifieke contractregel.",
+    "label": "Factureerfrequentie override",
+    "optionAlreadySetForContract": "{{label}} (al ingesteld voor contract)",
+    "placeholder": "Factureerfrequentie van contract gebruiken ({{frequency}})"
   },
   "wizard": {
     "dialogs": {
       "unsavedChanges": {
-        "cancel": "Stay",
-        "confirm": "Discard Changes",
-        "message": "You have unsaved changes. If you close this dialog now, your changes will be discarded.",
-        "title": "Discard changes?"
+        "cancel": "Blijven",
+        "confirm": "Wijzigingen negeren",
+        "message": "U heeft niet-opgeslagen wijzigingen. Als u dit dialoogvenster nu sluit, worden uw wijzigingen verwijderd.",
+        "title": "Wijzigingen negeren?"
       }
     },
     "errors": {
-      "failedToCreateContract": "Failed to create contract",
-      "failedToLoadTemplateDetails": "Failed to load template details",
-      "failedToLoadTemplates": "Failed to load templates",
-      "failedToSaveDraft": "Failed to save draft"
+      "failedToCreateContract": "Contract aanmaken is mislukt",
+      "failedToLoadTemplateDetails": "Sjabloondetails laden is mislukt",
+      "failedToLoadTemplates": "Sjablonen laden is mislukt",
+      "failedToSaveDraft": "Concept opslaan is mislukt"
     },
     "steps": {
-      "contractBasics": "Contract Basics",
-      "fixedFeeServices": "Fixed Fee Services",
-      "hourlyServices": "Hourly Services",
-      "products": "Products",
-      "reviewCreate": "Review & Create",
-      "usageBasedServices": "Usage-Based Services"
+      "contractBasics": "Contractbasis",
+      "fixedFeeServices": "Vaste-vergoedingsservices",
+      "hourlyServices": "Uurservices",
+      "products": "Producten",
+      "reviewCreate": "Controleren en aanmaken",
+      "usageBasedServices": "Verbruiksgebaseerde services"
     },
     "title": {
-      "createNewContract": "Create New Contract",
-      "editContract": "Edit Contract"
+      "createNewContract": "Nieuw contract aanmaken",
+      "editContract": "Contract bewerken"
     },
     "validation": {
-      "addAtLeastOneService": "Add at least one service before creating the contract",
-      "baseRateRequiredWhenFixedServices": "Base rate is required when fixed services are included",
-      "billingFrequencyRequired": "Billing frequency is required",
-      "clientRequired": "Client is required",
-      "contractNameRequired": "Contract name is required",
-      "noticePeriodRange": "Notice period must be between {{min}} and {{max}} days",
-      "noticePeriodWholeNumber": "Notice period must be a whole number of days",
+      "addAtLeastOneService": "Voeg minstens één service toe voordat u het contract aanmaakt",
+      "baseRateRequiredWhenFixedServices": "Basistarief is vereist wanneer vaste services zijn opgenomen",
+      "billingFrequencyRequired": "Factureerfrequentie is verplicht",
+      "clientRequired": "Klant is verplicht",
+      "contractNameRequired": "Contractnaam is verplicht",
+      "noticePeriodRange": "Opzegtermijn moet tussen {{min}} en {{max}} dagen liggen",
+      "noticePeriodWholeNumber": "Opzegtermijn moet een geheel aantal dagen zijn",
       "recurring": {
         "frequency": {
-          "annually": "annually",
-          "biweekly": "biweekly",
-          "monthly": "monthly",
-          "quarterly": "quarterly",
-          "semi-annually": "semi-annually",
-          "weekly": "weekly"
+          "annually": "jaarlijks",
+          "biweekly": "tweewekelijks",
+          "monthly": "maandelijks",
+          "quarterly": "driemaandelijks",
+          "semi-annually": "halfjaarlijks",
+          "weekly": "wekelijks"
         },
         "lineType": {
-          "fixed": "Fixed",
-          "hourly": "Hourly",
+          "fixed": "Vast",
+          "hourly": "Per uur",
           "product": "Product",
-          "usage": "Usage"
+          "usage": "Verbruik"
         }
       },
-      "renewalModeRequiredWithEndDate": "Renewal mode is required when an end date is set",
-      "renewalTermPositiveWhole": "Renewal term months must be a positive whole number",
-      "selectClientBeforeDraft": "Select a client before saving as draft",
-      "selectProductForEachLine": "Please select a product for each product line",
-      "startDateRequired": "Start date is required",
-      "unsupportedRecurringAuthoringCombination": "Unsupported recurring authoring combination for {{lineType}} services: contract anniversary cadence currently supports {{supportedFrequencies}} billing frequencies. {{billingFrequency}} is not supported yet. Use one of the supported frequencies or invoice on the client billing schedule instead."
+      "renewalModeRequiredWithEndDate": "Verlengingsmodus is verplicht wanneer een einddatum is ingesteld",
+      "renewalTermPositiveWhole": "Verlengingstermijn in maanden moet een positief geheel getal zijn",
+      "selectClientBeforeDraft": "Selecteer een klant voordat u opslaat als concept",
+      "selectProductForEachLine": "Selecteer een product voor elke productregel",
+      "startDateRequired": "Startdatum is verplicht",
+      "unsupportedRecurringAuthoringCombination": "Niet-ondersteunde combinatie voor terugkerend maken voor {{lineType}}-services: contractverjaardagscadans ondersteunt momenteel {{supportedFrequencies}} factureerfrequenties. {{billingFrequency}} wordt nog niet ondersteund. Gebruik een van de ondersteunde frequenties of factureer in plaats daarvan op het klantfactureerschema."
     },
     "nav": {
       "back": "Terug",
@@ -1312,681 +1325,681 @@
   },
   "wizardBasics": {
     "additionalDescription": {
-      "hint": "Internal notes or contract details.",
-      "label": "Description (Optional)",
-      "placeholder": "Add any additional notes about this contract..."
+      "hint": "Interne notities of contractdetails.",
+      "label": "Beschrijving (optioneel)",
+      "placeholder": "Voeg eventuele aanvullende notities over dit contract toe..."
     },
     "billingFrequency": {
-      "hint": "How often should this contract be billed?",
-      "label": "Billing Frequency",
-      "placeholder": "Select billing frequency"
+      "hint": "Hoe vaak moet dit contract worden gefactureerd?",
+      "label": "Factureerfrequentie",
+      "placeholder": "Selecteer factureerfrequentie"
     },
     "cadenceOwner": {
-      "description": "Sets the default cadence owner applied to recurring lines created in this wizard.",
-      "label": "Recurring Cadence Default",
+      "description": "Bepaalt de standaard cadanseigenaar die wordt toegepast op terugkerende regels die in deze wizard worden aangemaakt.",
+      "label": "Standaard terugkerende cadans",
       "options": {
         "client": {
-          "description": "Use the client billing calendar so recurring lines stay aligned with the client’s normal invoice cadence.",
-          "label": "Invoice on client billing schedule"
+          "description": "Gebruik de factureerkalender van de klant zodat terugkerende regels afgestemd blijven op de normale factuurcadans van de klant.",
+          "label": "Factureren op klantfactureerschema"
         },
         "contract": {
-          "description": "Use contract-anniversary service periods for recurring lines that should follow the contract timeline.",
-          "label": "Invoice on contract anniversary"
+          "description": "Gebruik serviceperioden op basis van contractverjaardag voor terugkerende regels die de contracttijdlijn moeten volgen.",
+          "label": "Factureren op contractverjaardag"
         }
       }
     },
     "client": {
-      "chooseClientHint": "Choose the client this contract is for.",
-      "clientLabel": "Client",
-      "loadingClients": "Loading clients…",
-      "selectClient": "Select a client"
+      "chooseClientHint": "Kies de klant voor wie dit contract is bedoeld.",
+      "clientLabel": "Klant",
+      "loadingClients": "Klanten laden…",
+      "selectClient": "Selecteer een klant"
     },
     "contractName": {
-      "hint": "Give this contract a descriptive name.",
-      "label": "Contract Name",
-      "placeholder": "e.g., Standard MSP Services, Premium Support Package"
+      "hint": "Geef dit contract een beschrijvende naam.",
+      "label": "Contractnaam",
+      "placeholder": "bijv. Standard MSP Services, Premium Support Package"
     },
     "currency": {
-      "hint": "Currency for this contract. Defaults to the client's preferred currency.",
-      "label": "Currency",
-      "placeholder": "Select currency"
+      "hint": "Valuta voor dit contract. Standaard de voorkeursvaluta van de klant.",
+      "label": "Valuta",
+      "placeholder": "Selecteer valuta"
     },
     "dates": {
-      "endDateAfterStartValidation": "End date must be after start date",
-      "endDateLabel": "End Date (Optional)",
-      "endDateOngoingHint": "Leave blank for an ongoing contract.",
-      "endDateTooltip": "Leave blank for ongoing contracts that don't have a fixed end date. You can always set an end date later when the contract is terminated or expires.",
-      "startDateHint": "When does this contract become active?",
-      "startDateLabel": "Start Date"
+      "endDateAfterStartValidation": "Einddatum moet na de startdatum liggen",
+      "endDateLabel": "Einddatum (optioneel)",
+      "endDateOngoingHint": "Laat leeg voor een lopend contract.",
+      "endDateTooltip": "Laat leeg voor lopende contracten die geen vaste einddatum hebben. U kunt later altijd een einddatum instellen wanneer het contract wordt beëindigd of verloopt.",
+      "startDateHint": "Wanneer wordt dit contract actief?",
+      "startDateLabel": "Startdatum"
     },
-    "description": "Choose a template (optional), select the client, and set foundational contract details. Service details load in the next steps.",
-    "heading": "Contract Basics",
+    "description": "Kies een sjabloon (optioneel), selecteer de klant en stel de basiscontractdetails in. Servicedetails worden in de volgende stappen geladen.",
+    "heading": "Contractbasis",
     "po": {
-      "amountHint": "Total authorized amount on the purchase order.",
-      "amountLabel": "PO Amount",
-      "noteLabel": "Note:",
-      "noteText": "PO enforcement will apply when invoice automation is enabled. Configure now to stay ahead.",
-      "numberHint": "Client's purchase order reference number.",
-      "numberLabel": "PO Number",
-      "numberPlaceholder": "e.g., PO-2024-12345",
-      "requireForInvoicing": "Require Purchase Order for invoicing",
-      "requireHint": "Block invoice generation if PO is not provided.",
-      "requireTooltip": "When enabled, invoices cannot be generated for this contract unless a PO number is provided.",
-      "title": "Purchase Order (Optional)"
+      "amountHint": "Totaal geautoriseerd bedrag op de inkooporder.",
+      "amountLabel": "PO-bedrag",
+      "noteLabel": "Opmerking:",
+      "noteText": "PO-handhaving is van toepassing wanneer factuurautomatisering is ingeschakeld. Configureer nu om voor te blijven.",
+      "numberHint": "Referentienummer inkooporder van de klant.",
+      "numberLabel": "PO-nummer",
+      "numberPlaceholder": "bijv. PO-2024-12345",
+      "requireForInvoicing": "Inkooporder verplicht stellen voor facturatie",
+      "requireHint": "Blokkeer factuurgeneratie als er geen PO is opgegeven.",
+      "requireTooltip": "Indien ingeschakeld, kunnen er geen facturen voor dit contract worden gegenereerd tenzij er een PO-nummer is opgegeven.",
+      "title": "Inkooporder (optioneel)"
     },
     "renewal": {
       "evergreen": {
-        "description": "This contract is ongoing. Configure annual review cadence and notice timing.",
-        "title": "Evergreen Review Settings"
+        "description": "Dit contract loopt door. Configureer de jaarlijkse beoordelingscadans en opzegtermijn.",
+        "title": "Evergreen-beoordelingsinstellingen"
       },
       "fixedTerm": {
-        "description": "This contract has a fixed end date. Configure renewal behavior and notice timing.",
-        "title": "Renewal Settings"
+        "description": "Dit contract heeft een vaste einddatum. Configureer verlengingsgedrag en opzegtermijn.",
+        "title": "Verlengingsinstellingen"
       },
-      "modeLabel": "Renewal Mode",
+      "modeLabel": "Verlengingsmodus",
       "modeOptions": {
-        "auto": "Auto Renew",
-        "manual": "Manual Renewal",
-        "none": "No Renewal"
+        "auto": "Automatisch verlengen",
+        "manual": "Handmatige verlenging",
+        "none": "Geen verlenging"
       },
-      "modePlaceholder": "Select renewal mode",
-      "noticePeriodLabel": "Notice Period (Days)",
-      "noticePeriodPlaceholder": "e.g., 30",
-      "termLabel": "Renewal Term (Months)",
-      "termPlaceholder": "e.g., 12",
-      "useTenantDefaultsDescription": "Apply organization-level renewal settings unless explicitly overridden.",
-      "useTenantDefaultsLabel": "Use Tenant Renewal Defaults"
+      "modePlaceholder": "Selecteer verlengingsmodus",
+      "noticePeriodLabel": "Opzegtermijn (dagen)",
+      "noticePeriodPlaceholder": "bijv. 30",
+      "termLabel": "Verlengingstermijn (maanden)",
+      "termPlaceholder": "bijv. 12",
+      "useTenantDefaultsDescription": "Pas verlengingsinstellingen op organisatieniveau toe tenzij expliciet overschreven.",
+      "useTenantDefaultsLabel": "Standaardverlengingswaarden tenant gebruiken"
     },
     "summary": {
       "labels": {
-        "billingFrequency": "Billing Frequency:",
-        "client": "Client:",
+        "billingFrequency": "Factureerfrequentie:",
+        "client": "Klant:",
         "contract": "Contract:",
-        "currency": "Currency:",
-        "noticePeriod": "Notice Period:",
-        "period": "Period:",
-        "poAmount": "PO Amount:",
-        "poNumber": "PO Number:",
-        "poRequired": "PO Required:",
-        "renewalMode": "Renewal Mode:",
-        "renewalTerm": "Renewal Term:"
+        "currency": "Valuta:",
+        "noticePeriod": "Opzegtermijn:",
+        "period": "Periode:",
+        "poAmount": "PO-bedrag:",
+        "poNumber": "PO-nummer:",
+        "poRequired": "PO vereist:",
+        "renewalMode": "Verlengingsmodus:",
+        "renewalTerm": "Verlengingstermijn:"
       },
-      "title": "Contract Summary",
+      "title": "Contractsamenvatting",
       "values": {
-        "notSelected": "Not selected",
-        "noticePeriodDays_one": "{{count}} day",
-        "noticePeriodDays_other": "{{count}} days",
-        "ongoing": "Ongoing",
-        "renewalTermMonths_one": "{{count}} month",
-        "renewalTermMonths_other": "{{count}} months"
+        "notSelected": "Niet geselecteerd",
+        "noticePeriodDays_one": "{{count}} dag",
+        "noticePeriodDays_other": "{{count}} dagen",
+        "ongoing": "Lopend",
+        "renewalTermMonths_one": "{{count}} maand",
+        "renewalTermMonths_other": "{{count}} maanden"
       }
     },
     "template": {
-      "loadingTemplateDetails": "Loading template details…",
-      "loadingTemplates": "Loading templates…",
-      "prefillHint": "Prefill services, notes, and billing cadence from an existing template. You can still adjust everything before publishing.",
+      "loadingTemplateDetails": "Sjabloondetails laden…",
+      "loadingTemplates": "Sjablonen laden…",
+      "prefillHint": "Vul services, notities en facturatiecadans vooraf in op basis van een bestaand sjabloon. U kunt alles nog aanpassen voordat u publiceert.",
       "preview": {
-        "billingCadenceLabel": "Billing cadence:",
-        "notSpecified": "Not specified",
-        "templateLabel": "Template:"
+        "billingCadenceLabel": "Facturatiecadans:",
+        "notSpecified": "Niet gespecificeerd",
+        "templateLabel": "Sjabloon:"
       },
-      "selectTemplateOptional": "Select a template (optional)",
-      "startFromTemplate": "Start From Template"
+      "selectTemplateOptional": "Selecteer een sjabloon (optioneel)",
+      "startFromTemplate": "Starten vanaf sjabloon"
     }
   },
   "wizardFixed": {
-    "alternateFrequencyLabel": "Alternate Billing Frequency (Optional)",
+    "alternateFrequencyLabel": "Alternatieve factureerfrequentie (optioneel)",
     "baseRate": {
-      "hint": "Total recurring fee for all fixed services combined.",
-      "label": "Recurring Base Rate",
+      "hint": "Totaal terugkerend tarief voor alle vaste services samen.",
+      "label": "Terugkerend basistarief",
       "placeholder": "0.00"
     },
-    "description": "Configure services that are billed at a fixed rate each billing cycle. You can still track time, but billing is based on this flat amount.",
-    "emptyState": "No fixed fee services added yet. Click “Add Service” above or “Skip” to move on.",
+    "description": "Configureer services die per factureercyclus tegen een vast tarief worden gefactureerd. U kunt nog steeds tijd registreren, maar de facturatie is gebaseerd op dit vaste bedrag.",
+    "emptyState": "Nog geen services met vaste vergoeding toegevoegd. Klik hierboven op “Service toevoegen” of op “Overslaan” om verder te gaan.",
     "explainer": {
-      "description": "These services have a set recurring price. You'll still track time entries for these services, but billing is based on the fixed rate, not hours worked.",
-      "title": "What are Fixed Fee Services?"
+      "description": "Deze services hebben een vaste terugkerende prijs. U registreert nog steeds tijd voor deze services, maar de facturatie is gebaseerd op het vaste tarief, niet op de gewerkte uren.",
+      "title": "Wat zijn services met een vaste vergoeding?"
     },
-    "heading": "Fixed Fee Services",
+    "heading": "Vaste-vergoedingsservices",
     "preview": {
       "labels": {
-        "billingTiming": "Billing Timing:",
-        "cadenceOwner": "Cadence Owner:",
-        "invoiceWindow": "Invoice window:",
-        "recurringRate": "Recurring Rate:",
+        "billingTiming": "Facturatietiming:",
+        "cadenceOwner": "Cadanseigenaar:",
+        "invoiceWindow": "Factuurvenster:",
+        "recurringRate": "Terugkerend tarief:",
         "service": "Service:",
         "services": "Services:"
       },
-      "title": "Recurring Preview Before Save"
+      "title": "Terugkerend voorbeeld vóór opslaan"
     },
     "proration": {
-      "label": "Adjust for Partial Periods",
-      "tooltip": "Adjust the recurring fee when contract dates cover only part of a service period."
+      "label": "Aanpassen voor gedeeltelijke perioden",
+      "tooltip": "Pas het terugkerende tarief aan wanneer contractdatums slechts een deel van een serviceperiode bestrijken."
     },
     "services": {
-      "addService": "Add Service",
+      "addService": "Service toevoegen",
       "label": "Services",
-      "quantityLabel": "Quantity",
-      "selectServicePlaceholder": "Select a service",
+      "quantityLabel": "Hoeveelheid",
+      "selectServicePlaceholder": "Selecteer een service",
       "serviceItemLabel": "Service {{index}}"
     }
   },
   "wizardProducts": {
     "actions": {
-      "addProduct": "Add Product"
+      "addProduct": "Product toevoegen"
     },
-    "description": "Attach products that will be billed each cycle. Products use the catalog price for the contract currency unless you enter an override.",
-    "emptyState": "No products attached yet. Add a product if you want it to bill every cycle.",
-    "heading": "Products",
+    "description": "Koppel producten die elke cyclus worden gefactureerd. Producten gebruiken de catalogusprijs voor de contractvaluta tenzij u een override invoert.",
+    "emptyState": "Nog geen producten gekoppeld. Voeg een product toe als u wilt dat het elke cyclus wordt gefactureerd.",
+    "heading": "Producten",
     "labels": {
-      "defaultCatalogPrice": "Default catalog price:",
-      "overrideUnitPriceOptional": "Override unit price (optional)",
+      "defaultCatalogPrice": "Standaard catalogusprijs:",
+      "overrideUnitPriceOptional": "Prijs per eenheid overschrijven (optioneel)",
       "productItem": "Product {{index}}",
-      "products": "Products",
-      "quantity": "Quantity",
-      "selectProductPlaceholder": "Select a product"
+      "products": "Producten",
+      "quantity": "Hoeveelheid",
+      "selectProductPlaceholder": "Selecteer een product"
     },
     "validation": {
-      "noDefaultPriceEnterUnitPrice": "No default price set. Enter a unit price.",
-      "productMissingPrice": "This product has no default price and no override. It cannot be billed until you enter a unit price."
+      "noDefaultPriceEnterUnitPrice": "Geen standaardprijs ingesteld. Voer een prijs per eenheid in.",
+      "productMissingPrice": "Dit product heeft geen standaardprijs en geen override. Het kan niet worden gefactureerd totdat u een prijs per eenheid invoert."
     }
   },
   "wizardHourly": {
     "actions": {
-      "addHourlyService": "Add Hourly Service"
+      "addHourlyService": "Uurservice toevoegen"
     },
-    "alternateFrequencyLabel": "Alternate Billing Frequency (Optional)",
-    "description": "Configure services that are billed based on time tracked. Perfect for T&M (Time & Materials) work.",
-    "emptyState": "No hourly services added yet. Click “Add Hourly Service” above or “Skip” if you don’t need time & materials billing.",
+    "alternateFrequencyLabel": "Alternatieve factureerfrequentie (optioneel)",
+    "description": "Configureer services die worden gefactureerd op basis van geregistreerde tijd. Perfect voor T&M-werk (Time & Materials).",
+    "emptyState": "Nog geen uurservices toegevoegd. Klik hierboven op “Uurservice toevoegen” of op “Overslaan” als u geen T&M-facturatie nodig heeft.",
     "explainer": {
-      "description": "These services are billed based on actual time tracked. Each time entry will be multiplied by the hourly rate to calculate the invoice amount.",
-      "title": "What are Hourly Services?"
+      "description": "Deze services worden gefactureerd op basis van werkelijk geregistreerde tijd. Elke tijdregistratie wordt vermenigvuldigd met het uurtarief om het factuurbedrag te berekenen.",
+      "title": "Wat zijn uurservices?"
     },
-    "heading": "Hourly Services",
+    "heading": "Uurservices",
     "labels": {
-      "enterHourlyRate": "Enter the hourly rate",
-      "hourlyRate": "Hourly Rate",
-      "hourlyRatePerHour": "{{rate}}/hour",
+      "enterHourlyRate": "Voer het uurtarief in",
+      "hourlyRate": "Uurtarief",
+      "hourlyRatePerHour": "{{rate}}/uur",
       "hourlyRatePlaceholder": "0.00",
-      "hourlyServices": "Hourly Services",
-      "selectServicePlaceholder": "Select a service",
+      "hourlyServices": "Uurservices",
+      "selectServicePlaceholder": "Selecteer een service",
       "serviceItem": "Service {{index}}",
-      "setBucketOfHours": "Set bucket of hours"
+      "setBucketOfHours": "Urenbundel instellen"
     },
     "minimumBillableTime": {
-      "hint": "e.g., 15 minutes - any time entry less than this will be rounded up",
-      "label": "Minimum Billable Time (minutes)",
+      "hint": "bijv. 15 minuten - elke tijdregistratie korter dan dit wordt naar boven afgerond",
+      "label": "Minimum factureerbare tijd (minuten)",
       "placeholder": "15"
     },
     "roundUpToNearest": {
-      "hint": "e.g., 15 minutes - time entries will be rounded up to the nearest interval",
-      "label": "Round Up To Nearest (minutes)",
+      "hint": "bijv. 15 minuten - tijdregistraties worden naar boven afgerond op het dichtstbijzijnde interval",
+      "label": "Naar boven afronden op dichtstbijzijnde (minuten)",
       "placeholder": "15"
     },
     "summary": {
       "labels": {
-        "minimumTime": "Minimum Time:",
-        "roundUp": "Round Up:",
+        "minimumTime": "Minimale tijd:",
+        "roundUp": "Naar boven afronden:",
         "services": "Services:"
       },
-      "title": "Hourly Services Summary",
+      "title": "Samenvatting uurservices",
       "values": {
-        "everyMinutes": "Every {{count}} minutes",
-        "minutes": "{{count}} minutes"
+        "everyMinutes": "Elke {{count}} minuten",
+        "minutes": "{{count}} minuten"
       }
     }
   },
   "wizardUsage": {
     "actions": {
-      "addUsageBasedService": "Add Usage-Based Service"
+      "addUsageBasedService": "Verbruiksgebaseerde service toevoegen"
     },
-    "alternateFrequencyLabel": "Alternate Billing Frequency (Optional)",
-    "description": "Configure services that are billed based on usage or consumption. Perfect for metered services like data transfer, API calls, or storage.",
-    "emptyState": "No usage-based services added yet. Click “Add Usage-Based Service” above or “Skip” if you don’t need consumption billing.",
+    "alternateFrequencyLabel": "Alternatieve factureerfrequentie (optioneel)",
+    "description": "Configureer services die worden gefactureerd op basis van gebruik of verbruik. Perfect voor gemeten services zoals dataoverdracht, API-aanroepen of opslag.",
+    "emptyState": "Nog geen verbruiksgebaseerde services toegevoegd. Klik hierboven op “Verbruiksgebaseerde service toevoegen” of op “Overslaan” als u geen verbruiksfacturatie nodig heeft.",
     "explainer": {
-      "description": "These services are billed based on actual consumption or usage metrics. Each unit consumed will be multiplied by the unit rate to calculate the invoice amount.",
-      "title": "What are Usage-Based Services?"
+      "description": "Deze services worden gefactureerd op basis van werkelijk verbruik of gebruiksmetingen. Elke verbruikte eenheid wordt vermenigvuldigd met het tarief per eenheid om het factuurbedrag te berekenen.",
+      "title": "Wat zijn verbruiksgebaseerde services?"
     },
-    "heading": "Usage-Based Services",
+    "heading": "Verbruiksgebaseerde services",
     "labels": {
-      "enterUnitRate": "Enter the unit rate",
-      "ratePerUnit": "Rate per Unit",
+      "enterUnitRate": "Voer het tarief per eenheid in",
+      "ratePerUnit": "Tarief per eenheid",
       "ratePerUnitPlaceholder": "0.00",
       "ratePerUnitValue": "{{rate}}/{{unit}}",
-      "selectServicePlaceholder": "Select a service",
+      "selectServicePlaceholder": "Selecteer een service",
       "serviceItem": "Service {{index}}",
       "services": "Services",
-      "setBucketAllocation": "Set bucket allocation",
-      "unitOfMeasure": "Unit of Measure",
-      "unitOfMeasureHint": "Choose the unit this service bills on.",
-      "unitOfMeasurePlaceholder": "e.g., GB, API call, user"
+      "setBucketAllocation": "Bundeltoewijzing instellen",
+      "unitOfMeasure": "Meeteenheid",
+      "unitOfMeasureHint": "Kies de eenheid waarop deze service wordt gefactureerd.",
+      "unitOfMeasurePlaceholder": "bijv. GB, API-aanroep, gebruiker"
     },
     "summary": {
       "labels": {
         "services": "Services:"
       },
-      "title": "Usage-Based Summary"
+      "title": "Samenvatting verbruik"
     },
     "values": {
-      "defaultUnit": "unit"
+      "defaultUnit": "eenheid"
     }
   },
   "wizardReview": {
-    "heading": "Review Contract",
-    "description": "Review all contract details before creating. You can still edit after creation if needed.",
+    "heading": "Contract controleren",
+    "description": "Controleer alle contractdetails voordat u aanmaakt. U kunt na het aanmaken nog bewerken indien nodig.",
     "sections": {
-      "contractBasics": "Contract Basics",
-      "fixedFeeServices": "Fixed Fee Services",
-      "products": "Products",
-      "hourlyServices": "Hourly Services",
-      "usageBasedServices": "Usage-Based Services"
+      "contractBasics": "Contractbasis",
+      "fixedFeeServices": "Vaste-vergoedingsservices",
+      "products": "Producten",
+      "hourlyServices": "Uurservices",
+      "usageBasedServices": "Verbruiksgebaseerde services"
     },
     "fields": {
-      "client": "Client",
-      "contractName": "Contract Name",
-      "billingFrequency": "Billing Frequency",
-      "currency": "Currency",
-      "startDate": "Start Date",
-      "endDate": "End Date",
-      "renewalMode": "Renewal Mode",
-      "noticePeriod": "Notice Period",
-      "renewalTerm": "Renewal Term"
+      "client": "Klant",
+      "contractName": "Contractnaam",
+      "billingFrequency": "Factureerfrequentie",
+      "currency": "Valuta",
+      "startDate": "Startdatum",
+      "endDate": "Einddatum",
+      "renewalMode": "Verlengingsmodus",
+      "noticePeriod": "Opzegtermijn",
+      "renewalTerm": "Verlengingstermijn"
     },
     "fallback": {
-      "notSelected": "Not selected",
-      "notSpecified": "Not specified",
-      "ongoing": "Ongoing",
-      "notApplicable": "N/A"
+      "notSelected": "Niet geselecteerd",
+      "notSpecified": "Niet gespecificeerd",
+      "ongoing": "Lopend",
+      "notApplicable": "N.v.t."
     },
     "renewalMode": {
-      "none": "No Renewal",
-      "manual": "Manual Renewal",
-      "auto": "Auto Renew"
+      "none": "Geen verlenging",
+      "manual": "Handmatige verlenging",
+      "auto": "Automatisch verlengen"
     },
     "noticePeriod": {
-      "one": "{{count}} day",
-      "other": "{{count}} days"
+      "one": "{{count}} dag",
+      "other": "{{count}} dagen"
     },
     "renewalTerm": {
-      "one": "{{count}} month",
-      "other": "{{count}} months"
+      "one": "{{count}} maand",
+      "other": "{{count}} maanden"
     },
     "common": {
-      "yes": "Yes",
-      "no": "No",
-      "enabled": "Enabled",
-      "disabled": "Disabled",
-      "bucketLabel": "Bucket:",
-      "billingFrequencyOverrideLabel": "Billing Frequency Override:",
-      "serviceQuantityRow": "{{serviceName}} (Qty: {{quantity}})",
-      "unitSingular": "unit",
-      "unitsFallback": "units",
-      "hourSingular": "hour"
+      "yes": "Ja",
+      "no": "Nee",
+      "enabled": "Ingeschakeld",
+      "disabled": "Uitgeschakeld",
+      "bucketLabel": "Bundel:",
+      "billingFrequencyOverrideLabel": "Factureerfrequentie override:",
+      "serviceQuantityRow": "{{serviceName}} (aantal: {{quantity}})",
+      "unitSingular": "eenheid",
+      "unitsFallback": "eenheden",
+      "hourSingular": "uur"
     },
     "po": {
-      "title": "Purchase Order Requirements",
-      "requiredLabel": "PO Required:",
-      "numberLabel": "PO Number:",
-      "amountLabel": "PO Amount:"
+      "title": "Inkoopordervereisten",
+      "requiredLabel": "PO vereist:",
+      "numberLabel": "PO-nummer:",
+      "amountLabel": "PO-bedrag:"
     },
     "bucket": {
-      "includedHours": "{{formattedValue}} hours",
+      "includedHours": "{{formattedValue}} uren",
       "includedUnits": "{{formattedValue}} {{unitLabel}}",
-      "overageLabel": "{{rate}}/{{unit}} overage",
-      "rolloverEnabled": "rollover enabled",
-      "rolloverDisabled": "no rollover",
+      "overageLabel": "{{rate}}/{{unit}} overschrijding",
+      "rolloverEnabled": "overloop ingeschakeld",
+      "rolloverDisabled": "geen overloop",
       "summaryWithOverage": "{{included}}, {{overage}}, {{rollover}}",
       "summaryWithoutOverage": "{{included}}, {{rollover}}"
     },
     "fixed": {
       "badgeCount": {
-        "one": "{{count}} service",
-        "other": "{{count}} services"
+        "one": "{{count}} dienst",
+        "other": "{{count}} diensten"
       },
-      "monthlyBaseRate": "Monthly Base Rate:",
-      "partialPeriodAdjustment": "Partial-Period Adjustment:"
+      "monthlyBaseRate": "Maandelijks basistarief:",
+      "partialPeriodAdjustment": "Aanpassing gedeeltelijke periode:"
     },
     "recurring": {
       "cadenceOwner": {
-        "label": "Cadence owner:",
-        "contractAnniversary": "Contract anniversary",
-        "clientBillingSchedule": "Client billing schedule"
+        "label": "Cadanseigenaar:",
+        "contractAnniversary": "Contractverjaardag",
+        "clientBillingSchedule": "Factureerschema klant"
       },
       "firstInvoice": {
         "contract": {
-          "advance": "First invoice: bill on the contract anniversary window that opens the first covered service period.",
-          "arrears": "First invoice: bill on the next contract anniversary window after the first covered service period closes."
+          "advance": "Eerste factuur: factureren op het contractverjaardagsvenster dat de eerste gedekte serviceperiode opent.",
+          "arrears": "Eerste factuur: factureren op het volgende contractverjaardagsvenster nadat de eerste gedekte serviceperiode is gesloten."
         },
         "client": {
-          "advance": "First invoice: bill on the first client billing schedule window covering the service period.",
-          "arrears": "First invoice: bill on the next client billing schedule window after the first covered service period closes."
+          "advance": "Eerste factuur: factureren op het eerste venster van het klantfactureerschema dat de serviceperiode dekt.",
+          "arrears": "Eerste factuur: factureren op het volgende venster van het klantfactureerschema nadat de eerste gedekte serviceperiode is gesloten."
         }
       },
       "partialPeriod": {
-        "enabled": "Partial periods adjust the recurring fee to the covered portion of the service period.",
-        "disabled": "Partial periods keep the full recurring fee even when contract dates land inside a service period."
+        "enabled": "Gedeeltelijke perioden passen het terugkerende tarief aan op het gedekte deel van de serviceperiode.",
+        "disabled": "Gedeeltelijke perioden behouden het volledige terugkerende tarief, ook wanneer contractdatums binnen een serviceperiode vallen."
       },
       "materialized": {
-        "heading": "Illustrative future materialized periods",
+        "heading": "Illustratieve toekomstige gematerialiseerde perioden",
         "serviceLabel": "Service:",
-        "invoiceWindowLabel": "Invoice window:",
+        "invoiceWindowLabel": "Factuurvenster:",
         "summary": {
-          "contract": "If you save this recurring line, future periods would materialize on an anniversary-style preview anchored to the 8th before invoice generation.",
-          "client": "If you save this recurring line, future periods would materialize on the client billing schedule preview before invoice generation."
+          "contract": "Als u deze terugkerende regel opslaat, worden toekomstige perioden gematerialiseerd in een verjaardagsvoorbeeld verankerd op de 8e voordat de factuur wordt gegenereerd.",
+          "client": "Als u deze terugkerende regel opslaat, worden toekomstige perioden gematerialiseerd in het voorbeeld van het klantfactureerschema voordat de factuur wordt gegenereerd."
         }
       }
     },
     "products": {
       "badgeCount": {
         "one": "{{count}} product",
-        "other": "{{count}} products"
+        "other": "{{count}} producten"
       },
-      "overrideRate": "- override {{rate}}/{{currencyCode}}"
+      "overrideRate": "– overschrijven {{rate}}/{{currencyCode}}"
     },
     "hourly": {
       "badgeCount": {
-        "one": "{{count}} service",
-        "other": "{{count}} services"
+        "one": "{{count}} dienst",
+        "other": "{{count}} diensten"
       },
-      "servicesAndRates": "Services and Rates",
-      "serviceRateRow": "{{serviceName}} - {{rate}}/hour",
-      "minimumTimeLabel": "Minimum Time:",
-      "roundUpLabel": "Round Up:",
-      "minutesValue": "{{count}} minutes"
+      "servicesAndRates": "Services en tarieven",
+      "serviceRateRow": "{{serviceName}} - {{rate}}/uur",
+      "minimumTimeLabel": "Minimale tijd:",
+      "roundUpLabel": "Naar boven afronden:",
+      "minutesValue": "{{count}} minuten"
     },
     "usage": {
       "badgeCount": {
-        "one": "{{count}} service",
-        "other": "{{count}} services"
+        "one": "{{count}} dienst",
+        "other": "{{count}} diensten"
       },
       "serviceRateRow": "{{serviceName}} - {{rate}}/{{unit}}"
     },
     "total": {
-      "title": "Estimated Monthly Total",
-      "description": "Fixed charges only. Hourly and usage services bill separately based on actual usage.",
-      "perMonth": "per month"
+      "title": "Geschat maandtotaal",
+      "description": "Alleen vaste kosten. Uur- en verbruiksservices factureren apart op basis van het werkelijke verbruik.",
+      "perMonth": "per maand"
     },
     "finalChecklist": {
-      "title": "Before you finish:",
-      "itemRates": "Double-check all rates, quantities, and buckets",
-      "itemPo": "Confirm PO requirements (if any)",
-      "itemDates": "Verify the start and end dates",
-      "itemEditLater": "Remember: you can edit the contract later if needed"
+      "title": "Voor u afrondt:",
+      "itemRates": "Controleer alle tarieven, hoeveelheden en bundels nogmaals",
+      "itemPo": "Bevestig PO-vereisten (indien van toepassing)",
+      "itemDates": "Verifieer de start- en einddatums",
+      "itemEditLater": "Onthoud: u kunt het contract later bewerken indien nodig"
     }
   },
   "templateWizard": {
     "title": {
-      "createContractTemplate": "Create Contract Template"
+      "createContractTemplate": "Contractsjabloon aanmaken"
     },
     "steps": {
-      "templateBasics": "Template Basics",
-      "fixedFeeBlocks": "Fixed Fee Blocks",
-      "products": "Products",
-      "hourlyBlocks": "Hourly Blocks",
-      "usageBasedBlocks": "Usage-Based Blocks",
-      "reviewPublish": "Review & Publish"
+      "templateBasics": "Sjabloonbasis",
+      "fixedFeeBlocks": "Vaste-vergoedingsblokken",
+      "products": "Producten",
+      "hourlyBlocks": "Uurblokken",
+      "usageBasedBlocks": "Verbruiksblokken",
+      "reviewPublish": "Controleren en publiceren"
     },
     "actions": {
-      "continue": "Continue",
-      "publishTemplate": "Publish Template"
+      "continue": "Doorgaan",
+      "publishTemplate": "Sjabloon publiceren"
     },
     "errors": {
-      "failedToCreateTemplate": "Failed to create template"
+      "failedToCreateTemplate": "Sjabloon aanmaken is mislukt"
     },
     "validation": {
-      "templateNameRequired": "Template name is required",
-      "billingFrequencyRequired": "Billing frequency is required",
-      "duplicateNameExists": "A template with this name already exists",
-      "templateNameAlreadyInUse": "Template name is already in use",
-      "atLeastOneServiceRequired": "At least one service is required",
-      "unsupportedRecurringAuthoringCombination": "Unsupported recurring authoring combination for {{lineType}} services: contract anniversary cadence currently supports {{supportedFrequencies}} billing frequencies. {{billingFrequency}} is not supported yet. Use one of the supported frequencies or invoice on the client billing schedule instead.",
+      "templateNameRequired": "Sjabloonnaam is verplicht",
+      "billingFrequencyRequired": "Factureerfrequentie is verplicht",
+      "duplicateNameExists": "Er bestaat al een sjabloon met deze naam",
+      "templateNameAlreadyInUse": "Sjabloonnaam is al in gebruik",
+      "atLeastOneServiceRequired": "Minstens één service is vereist",
+      "unsupportedRecurringAuthoringCombination": "Niet-ondersteunde combinatie voor terugkerend maken voor {{lineType}}-services: contractverjaardagscadans ondersteunt momenteel {{supportedFrequencies}} factureerfrequenties. {{billingFrequency}} wordt nog niet ondersteund. Gebruik een van de ondersteunde frequenties of factureer in plaats daarvan op het klantfactureerschema.",
       "recurring": {
         "frequency": {
-          "monthly": "monthly",
-          "quarterly": "quarterly",
-          "semi-annually": "semi-annually",
-          "annually": "annually",
-          "weekly": "weekly",
-          "biweekly": "biweekly"
+          "monthly": "maandelijks",
+          "quarterly": "driemaandelijks",
+          "semi-annually": "halfjaarlijks",
+          "annually": "jaarlijks",
+          "weekly": "wekelijks",
+          "biweekly": "tweewekelijks"
         },
         "lineType": {
-          "fixed": "Fixed",
+          "fixed": "Vast",
           "product": "Product",
-          "hourly": "Hourly",
-          "usage": "Usage"
+          "hourly": "Per uur",
+          "usage": "Verbruik"
         }
       }
     }
   },
   "templateBasics": {
-    "heading": "Template Basics",
-    "description": "Name this contract template and capture high-level guidance. Pricing and client specifics will be finalized when the template is applied to a client.",
+    "heading": "Sjabloonbasis",
+    "description": "Geef dit contractsjabloon een naam en leg de richtlijnen op hoofdlijnen vast. Prijzen en klantspecifieke details worden definitief gemaakt wanneer het sjabloon op een klant wordt toegepast.",
     "fields": {
-      "templateName": "Template Name *",
-      "internalNotes": "Internal Notes",
-      "recommendedBillingFrequency": "Recommended Billing Frequency *"
+      "templateName": "Sjabloonnaam *",
+      "internalNotes": "Interne notities",
+      "recommendedBillingFrequency": "Aanbevolen factureerfrequentie *"
     },
     "placeholders": {
-      "templateName": "Managed Services Starter, Premium Support Bundle, etc.",
-      "internalNotes": "Describe where this template applies, onboarding tips, or approval requirements.",
-      "billingFrequency": "Select billing cadence"
+      "templateName": "Managed Services Starter, Premium Support Bundle, enz.",
+      "internalNotes": "Beschrijf waar dit sjabloon van toepassing is, onboardingtips of goedkeuringsvereisten.",
+      "billingFrequency": "Selecteer facturatiecadans"
     },
     "help": {
-      "templateName": "Use a descriptive name so teams can quickly identify the right template.",
-      "internalNotes": "These notes stay with the template to provide context when teammates use it.",
-      "billingFrequency": "Sets the default cadence when the template is applied. It can still be adjusted per client."
+      "templateName": "Gebruik een beschrijvende naam zodat teams snel het juiste sjabloon kunnen identificeren.",
+      "internalNotes": "Deze notities blijven bij het sjabloon om context te bieden wanneer teamleden het gebruiken.",
+      "billingFrequency": "Bepaalt de standaardcadans wanneer het sjabloon wordt toegepast. Deze kan per klant nog worden aangepast."
     }
   },
   "templateFixed": {
-    "heading": "Fixed Fee Services",
-    "description": "Configure services that are billed at a fixed rate each billing cycle. You can still track time, but billing is based on this flat amount.",
+    "heading": "Vaste-vergoedingsservices",
+    "description": "Configureer services die per factureercyclus tegen een vast tarief worden gefactureerd. U kunt nog steeds tijd registreren, maar de facturatie is gebaseerd op dit vaste bedrag.",
     "info": {
-      "title": "What are Fixed Fee Services?",
-      "description": "These services have a set recurring price. You'll still track time entries for these services, but billing is based on the fixed rate, not hours worked."
+      "title": "Wat zijn services met een vaste vergoeding?",
+      "description": "Deze services hebben een vaste terugkerende prijs. U registreert nog steeds tijd voor deze services, maar de facturatie is gebaseerd op het vaste tarief, niet op de gewerkte uren."
     },
     "cadenceOwner": {
-      "label": "Cadence Owner",
-      "help": "Choose which schedule should define recurring service periods for contracts created from this template.",
+      "label": "Cadanseigenaar",
+      "help": "Kies welk schema de terugkerende serviceperioden moet bepalen voor contracten die op basis van dit sjabloon worden aangemaakt.",
       "client": {
-        "label": "Invoice on client billing schedule",
-        "description": "Use the client billing calendar so contracts created from this template stay aligned with the client billing cadence."
+        "label": "Factureren op klantfactureerschema",
+        "description": "Gebruik de factureerkalender van de klant zodat contracten die op basis van dit sjabloon worden aangemaakt, afgestemd blijven op de facturatiecadans van de klant."
       },
       "contract": {
-        "label": "Invoice on contract anniversary",
-        "description": "Use this contract line anniversary schedule. Contract cadence currently supports monthly, quarterly, semi-annual, and annual recurring billing."
+        "label": "Factureren op contractverjaardag",
+        "description": "Gebruik dit verjaardagsschema voor contractregels. Contractcadans ondersteunt momenteel maandelijkse, driemaandelijkse, halfjaarlijkse en jaarlijkse terugkerende facturatie."
       }
     },
     "billingTiming": {
-      "arrears": "Arrears - invoice after the period closes",
-      "advance": "Advance - invoice at the start of the period"
+      "arrears": "Achteraf - factureren nadat de periode is afgesloten",
+      "advance": "Vooraf - factureren aan het begin van de periode"
     },
     "fields": {
-      "billingTiming": "Billing Timing",
-      "adjustPartialPeriods": "Adjust for Partial Periods",
+      "billingTiming": "Facturatietiming",
+      "adjustPartialPeriods": "Aanpassen voor gedeeltelijke perioden",
       "services": "Services",
       "serviceNumber": "Service {{index}}",
-      "quantityOptional": "Quantity (Optional)"
+      "quantityOptional": "Hoeveelheid (optioneel)"
     },
     "placeholders": {
-      "billingTiming": "Select billing timing",
-      "selectService": "Select a service"
+      "billingTiming": "Selecteer facturatietiming",
+      "selectService": "Selecteer een service"
     },
     "help": {
-      "adjustPartialPeriods": "Use this when contracts created from the template should scale the recurring fee if service starts or ends inside a period.",
-      "quantity": "Suggested quantity when creating contracts"
+      "adjustPartialPeriods": "Gebruik dit wanneer contracten die op basis van het sjabloon worden aangemaakt, het terugkerende tarief moeten schalen als de service binnen een periode begint of eindigt.",
+      "quantity": "Voorgestelde hoeveelheid bij het aanmaken van contracten"
     },
     "preview": {
-      "unknownService": "Unknown Service",
-      "cadenceOwnerLabel": "Cadence Owner:",
-      "billingTimingLabel": "Billing Timing:",
+      "unknownService": "Onbekende service",
+      "cadenceOwnerLabel": "Cadanseigenaar:",
+      "billingTimingLabel": "Facturatietiming:",
       "serviceLabel": "Service:",
-      "invoiceWindowLabel": "Invoice window:"
+      "invoiceWindowLabel": "Factuurvenster:"
     },
     "actions": {
-      "addService": "Add Service"
+      "addService": "Service toevoegen"
     }
   },
   "templateProducts": {
-    "heading": "Products",
-    "description": "Attach products to the template. When a contract is created from this template, products will be billed each cycle using the product catalog price for the contract currency.",
+    "heading": "Producten",
+    "description": "Koppel producten aan het sjabloon. Wanneer een contract op basis van dit sjabloon wordt aangemaakt, worden producten elke cyclus gefactureerd met de catalogusprijs voor de contractvaluta.",
     "fields": {
-      "products": "Products",
+      "products": "Producten",
       "productNumber": "Product {{index}}",
-      "quantityOptional": "Quantity (Optional)"
+      "quantityOptional": "Hoeveelheid (optioneel)"
     },
     "placeholders": {
-      "selectProduct": "Select a product"
+      "selectProduct": "Selecteer een product"
     },
     "help": {
-      "quantity": "Suggested quantity when creating contracts"
+      "quantity": "Voorgestelde hoeveelheid bij het aanmaken van contracten"
     },
     "actions": {
-      "addProduct": "Add Product"
+      "addProduct": "Product toevoegen"
     },
     "preview": {
-      "unknownProduct": "Unknown Product"
+      "unknownProduct": "Onbekend product"
     }
   },
   "templateHourly": {
-    "heading": "Hourly Services",
-    "description": "Select services that are billed based on time tracked. Rates will be determined by the service's pricing in the client's currency when the contract is created.",
+    "heading": "Uurservices",
+    "description": "Selecteer services die worden gefactureerd op basis van geregistreerde tijd. Tarieven worden bepaald door de prijs van de service in de valuta van de klant wanneer het contract wordt aangemaakt.",
     "info": {
-      "title": "What are Hourly Services?",
-      "description": "These services are billed based on actual time tracked. Each time entry is multiplied by the service's hourly rate to calculate the invoice amount."
+      "title": "Wat zijn uurservices?",
+      "description": "Deze services worden gefactureerd op basis van werkelijk geregistreerde tijd. Elke tijdregistratie wordt vermenigvuldigd met het uurtarief van de service om het factuurbedrag te berekenen."
     },
     "rounding": {
-      "heading": "Time Rounding Settings",
-      "minimumBillableTime": "Minimum Billable Time (minutes)",
-      "minimumBillableTimeHelp": "Example: 15 minutes. Any time entry below this threshold is rounded up.",
-      "roundUpToNearest": "Round Up To Nearest (minutes)",
-      "roundUpToNearestHelp": "Example: 15 minutes. Time entries are rounded up to the nearest interval.",
+      "heading": "Instellingen tijdafronding",
+      "minimumBillableTime": "Minimum factureerbare tijd (minuten)",
+      "minimumBillableTimeHelp": "Voorbeeld: 15 minuten. Elke tijdregistratie onder deze drempel wordt naar boven afgerond.",
+      "roundUpToNearest": "Naar boven afronden op dichtstbijzijnde (minuten)",
+      "roundUpToNearestHelp": "Voorbeeld: 15 minuten. Tijdregistraties worden naar boven afgerond op het dichtstbijzijnde interval.",
       "defaultIntervalPlaceholder": "15"
     },
     "fields": {
       "services": "Services",
       "serviceNumber": "Service {{index}}",
-      "setBucketOfHours": "Set bucket of hours"
+      "setBucketOfHours": "Urenbundel instellen"
     },
     "placeholders": {
-      "selectService": "Select a service"
+      "selectService": "Selecteer een service"
     },
     "preview": {
-      "unknownService": "Unknown Service"
+      "unknownService": "Onbekende service"
     },
     "actions": {
-      "addService": "Add Service"
+      "addService": "Service toevoegen"
     }
   },
   "templateUsage": {
-    "heading": "Usage-Based Services",
-    "description": "Select services that are billed based on usage or consumption. Rates will be determined by the service's pricing in the client's currency when the contract is created.",
+    "heading": "Verbruiksgebaseerde services",
+    "description": "Selecteer services die worden gefactureerd op basis van gebruik of verbruik. Tarieven worden bepaald door de prijs van de service in de valuta van de klant wanneer het contract wordt aangemaakt.",
     "info": {
-      "title": "What are Usage-Based Services?",
-      "description": "These services are billed based on actual consumption or usage metrics. Each unit consumed is multiplied by the service's unit rate to calculate the invoice amount."
+      "title": "Wat zijn verbruiksgebaseerde services?",
+      "description": "Deze services worden gefactureerd op basis van werkelijk verbruik of gebruiksmetingen. Elke verbruikte eenheid wordt vermenigvuldigd met het tarief per eenheid van de service om het factuurbedrag te berekenen."
     },
     "fields": {
       "services": "Services",
       "serviceNumber": "Service {{index}}",
-      "unitOfMeasureOptional": "Unit of Measure (Optional)",
-      "setBucketAllocation": "Set bucket allocation"
+      "unitOfMeasureOptional": "Meeteenheid (optioneel)",
+      "setBucketAllocation": "Bundeltoewijzing instellen"
     },
     "placeholders": {
-      "selectService": "Select a service",
-      "unitOfMeasure": "e.g., GB, API call, user"
+      "selectService": "Selecteer een service",
+      "unitOfMeasure": "bijv. GB, API-aanroep, gebruiker"
     },
     "help": {
-      "unitOfMeasure": "Override the default unit of measure for this service."
+      "unitOfMeasure": "Overschrijf de standaardmeeteenheid voor deze service."
     },
     "preview": {
-      "unknownService": "Unknown Service"
+      "unknownService": "Onbekende service"
     },
     "actions": {
-      "addService": "Add Service"
+      "addService": "Service toevoegen"
     }
   },
   "templateReview": {
-    "heading": "Review Template",
-    "description": "Confirm the template contents. Rates are determined by each service's pricing in the client's currency when a contract is created from this template.",
+    "heading": "Sjabloon controleren",
+    "description": "Bevestig de inhoud van het sjabloon. Tarieven worden bepaald door de prijs van elke service in de valuta van de klant wanneer een contract op basis van dit sjabloon wordt aangemaakt.",
     "sections": {
-      "basics": "Template Basics",
-      "fixedFeeServices": "Fixed Fee Services",
-      "products": "Products",
-      "hourlyServices": "Hourly Services",
-      "usageBasedServices": "Usage-Based Services"
+      "basics": "Sjabloonbasis",
+      "fixedFeeServices": "Vaste-vergoedingsservices",
+      "products": "Producten",
+      "hourlyServices": "Uurservices",
+      "usageBasedServices": "Verbruiksgebaseerde services"
     },
     "fields": {
-      "templateName": "Template Name",
-      "billingFrequency": "Billing Frequency",
-      "internalNotes": "Internal Notes"
+      "templateName": "Sjabloonnaam",
+      "billingFrequency": "Factureerfrequentie",
+      "internalNotes": "Interne notities"
     },
     "fallback": {
       "none": "—",
-      "noNotes": "No notes added.",
-      "unnamedService": "Unnamed Service",
-      "unnamedProduct": "Unnamed Product"
+      "noNotes": "Geen notities toegevoegd.",
+      "unnamedService": "Naamloze service",
+      "unnamedProduct": "Naamloos product"
     },
     "empty": {
-      "fixed": "No fixed fee services selected.",
-      "products": "No products selected.",
-      "hourly": "No hourly services selected.",
-      "usage": "No usage-based services selected."
+      "fixed": "Geen services met vaste vergoeding geselecteerd.",
+      "products": "Geen producten geselecteerd.",
+      "hourly": "Geen uurservices geselecteerd.",
+      "usage": "Geen verbruiksgebaseerde services geselecteerd."
     },
     "common": {
-      "quantity": "Quantity:",
-      "bucket": "Bucket:",
-      "enabled": "Enabled",
-      "disabled": "Disabled"
+      "quantity": "Hoeveelheid:",
+      "bucket": "Bundel:",
+      "enabled": "Ingeschakeld",
+      "disabled": "Uitgeschakeld"
     },
     "fixed": {
-      "cadenceOwnerLabel": "Cadence owner:",
+      "cadenceOwnerLabel": "Cadanseigenaar:",
       "cadenceOwner": {
-        "contract": "Contract anniversary",
-        "client": "Client billing schedule"
+        "contract": "Contractverjaardag",
+        "client": "Factureerschema klant"
       },
-      "billingTimingLabel": "Billing timing:",
+      "billingTimingLabel": "Facturatietiming:",
       "billingTiming": {
-        "advance": "Advance",
-        "arrears": "Arrears"
+        "advance": "Vooraf",
+        "arrears": "Achteraf"
       },
-      "partialPeriodLabel": "Partial-period adjustment:",
+      "partialPeriodLabel": "Aanpassing gedeeltelijke periode:",
       "serviceLabel": "Service:",
-      "invoiceWindowLabel": "Invoice window:"
+      "invoiceWindowLabel": "Factuurvenster:"
     },
     "hourly": {
-      "minimumBillableTimeLabel": "Minimum billable time:",
-      "roundUpLabel": "Round up:",
-      "minutes": "{{count}} minutes"
+      "minimumBillableTimeLabel": "Minimum factureerbare tijd:",
+      "roundUpLabel": "Naar boven afronden:",
+      "minutes": "{{count}} minuten"
     },
     "usage": {
-      "unitLabel": "Unit:"
+      "unitLabel": "Eenheid:"
     },
     "bucket": {
-      "hoursIncluded": "{{value}} hours included",
-      "unitsIncluded": "{{value}} {{unit}} included",
-      "unitsFallback": "units",
-      "overage": "Overage ${{amount}}/{{unit}}",
-      "hourSingular": "hour",
-      "unitSingular": "unit",
-      "rolloverEnabled": "Rollover enabled",
-      "period": "Period: {{period}}"
+      "hoursIncluded": "{{value}} uren inbegrepen",
+      "unitsIncluded": "{{value}} {{unit}} inbegrepen",
+      "unitsFallback": "eenheden",
+      "overage": "Overschrijding ${{amount}}/{{unit}}",
+      "hourSingular": "uur",
+      "unitSingular": "eenheid",
+      "rolloverEnabled": "Overloop ingeschakeld",
+      "period": "Periode: {{period}}"
     }
   },
   "templatePreview": {
     "serviceType": {
-      "fixedFee": "Fixed Fee",
-      "products": "Products",
-      "hourly": "Hourly",
-      "usageBased": "Usage-Based"
+      "fixedFee": "Vaste vergoeding",
+      "products": "Producten",
+      "hourly": "Per uur",
+      "usageBased": "Op verbruik"
     },
-    "selectedHeading": "Selected {{type}} Services ({{count}})",
+    "selectedHeading": "Geselecteerde {{type}}-services ({{count}})",
     "labels": {
-      "qty": "Qty:"
+      "qty": "Aantal:"
     },
     "removeDialog": {
-      "title": "Remove Contract Line Preset",
-      "message": "Are you sure you want to remove \"{{serviceName}}\" from \"{{presetName}}\"? This will remove all other services associated with this contract line preset as well.",
-      "confirm": "Remove All",
-      "cancel": "Cancel"
+      "title": "Contractregelpreset verwijderen",
+      "message": "Weet u zeker dat u \"{{serviceName}}\" uit \"{{presetName}}\" wilt verwijderen? Hiermee worden ook alle andere services verwijderd die aan deze contractregelpreset zijn gekoppeld.",
+      "confirm": "Alles verwijderen",
+      "cancel": "Annuleren"
     }
   },
   "recurringPreview": {

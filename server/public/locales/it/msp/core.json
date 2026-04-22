@@ -3,6 +3,7 @@
     "home": "Home",
     "userActivities": "Attività utenti",
     "tickets": "Ticket",
+    "serviceRequests": "Richieste di servizio",
     "surveys": "Sondaggi",
     "projects": "Progetti",
     "projectsAll": "Tutti i progetti",
@@ -21,11 +22,15 @@
       "sections": {
         "contracts": "Contratti",
         "invoicing": "Fatturazione",
+        "quotes": "Preventivi",
         "pricing": "Prezzi",
         "trackingReports": "Monitoraggio e report"
       },
       "contractTemplates": "Modelli di contratto",
       "clientContracts": "Contratti cliente",
+      "quotes": "Preventivi",
+      "quoteBusinessTemplates": "Modelli di preventivo",
+      "quoteLayouts": "Layout dei preventivi",
       "contractLinePresets": "Preimpostazioni righe contratto",
       "invoicing": "Fatturazione",
       "invoiceLayouts": "Layout fattura",
@@ -46,7 +51,7 @@
     "workflowEditor": "Editor dei flussi di lavoro",
     "runs": "Esecuzioni",
     "events": "Eventi",
-    "deadLetter": "Dead Letter",
+    "deadLetter": "Dead letter",
     "systemMonitor": "Monitor di sistema",
     "systemMonitoring": "Monitoraggio del sistema",
     "jobMonitoring": "Monitoraggio job",
@@ -88,7 +93,7 @@
       "billing": "Fatturazione",
       "secrets": "Segreti",
       "importExport": "Importa/Esporta",
-      "email": "Email",
+      "email": "E-mail",
       "integrations": "Integrazioni",
       "extensions": "Estensioni",
       "experimentalFeatures": "Funzionalità sperimentali",
@@ -220,5 +225,12 @@
   "rightSidebar": {
     "title": "Chat",
     "enterpriseOnly": "La funzionalità chat è disponibile solo nell'edizione Enterprise."
+  },
+  "notifications": {
+    "messages": {
+      "error": {
+        "loadFailed": "Impossibile caricare le notifiche"
+      }
+    }
   }
 }

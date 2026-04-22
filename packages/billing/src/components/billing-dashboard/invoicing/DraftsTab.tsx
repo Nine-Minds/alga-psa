@@ -23,10 +23,10 @@ import { getInvoiceTemplates } from '@alga-psa/billing/actions/invoiceTemplates'
 import { finalizeInvoice, hardDeleteInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import { downloadInvoicePDF } from '@alga-psa/billing/actions/invoiceGeneration';
 import { toPlainDate } from '@alga-psa/core';
-import { formatCurrency } from '@alga-psa/core';
 import InvoicePreviewPanel from './InvoicePreviewPanel';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface DraftsTabProps {
   onRefreshNeeded: () => void;
@@ -37,6 +37,8 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
   onRefreshNeeded,
   refreshTrigger
 }) => {
+  const { t } = useTranslation('msp/invoicing');
+  const { formatCurrency, formatDate } = useFormatters();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -125,7 +127,9 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
       }
     } catch (err) {
       console.error('Error fetching draft invoices data:', err);
-      setError('Failed to load draft invoices. Please try again.');
+      setError(t('draftsTab.errors.loadFailed', {
+        defaultValue: 'Failed to load draft invoices. Please try again.',
+      }));
     } finally {
       if (!options.silent) {
         setIsLoading(false);
@@ -201,7 +205,9 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
       }
     } catch (err) {
       console.error('Failed to finalize invoice:', err);
-      setError('Failed to finalize invoice. Please try again.');
+      setError(t('draftsTab.errors.finalizeFailed', {
+        defaultValue: 'Failed to finalize invoice. Please try again.',
+      }));
     }
   };
 
@@ -231,7 +237,9 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
       updateUrlParams({ invoiceId: null, templateId: null });
     } catch (err) {
       console.error('Failed to finalize selected invoices:', err);
-      setError('Failed to finalize selected invoices. Please try again.');
+      setError(t('draftsTab.errors.bulkFinalizeFailed', {
+        defaultValue: 'Failed to finalize selected invoices. Please try again.',
+      }));
     }
   };
 
@@ -257,7 +265,9 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
       window.URL.revokeObjectURL(blobUrl);
     } catch (err) {
       console.error('Failed to generate PDF:', err);
-      setError('Failed to generate PDF. Please try again.');
+      setError(t('draftsTab.errors.pdfFailed', {
+        defaultValue: 'Failed to generate PDF. Please try again.',
+      }));
     }
   };
 
@@ -285,50 +295,53 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
       ),
     },
     {
-      title: 'Invoice Number',
+      title: t('draftsTab.columns.invoiceNumber', { defaultValue: 'Invoice Number' }),
       dataIndex: 'invoice_number',
     },
     {
-      title: 'Client',
+      title: t('draftsTab.columns.client', { defaultValue: 'Client' }),
       dataIndex: ['client', 'name'],
     },
     {
-      title: 'Amount',
+      title: t('draftsTab.columns.amount', { defaultValue: 'Amount' }),
       dataIndex: 'total_amount',
-      render: (value, record) => new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: record.currencyCode || 'USD',
-        minimumFractionDigits: 2
-      }).format(Number(value) / 100),
+      render: (value, record) => formatCurrency(Number(value) / 100, record.currencyCode || 'USD', {
+        minimumFractionDigits: 2,
+      }),
     },
     {
-      title: 'Invoice Date',
+      title: t('draftsTab.columns.invoiceDate', { defaultValue: 'Invoice Date' }),
       dataIndex: 'invoice_date',
-      render: (value) => toPlainDate(value).toLocaleString(),
+      render: (value) => formatDate(toPlainDate(value).toString()),
     },
     {
-      title: 'Due Date',
+      title: t('draftsTab.columns.dueDate', { defaultValue: 'Due Date' }),
       dataIndex: 'due_date',
-      render: (value) => value ? toPlainDate(value).toLocaleString() : '',
+      render: (value) => value ? formatDate(toPlainDate(value).toString()) : '',
     },
     {
-      title: 'Status',
+      title: t('draftsTab.columns.status', { defaultValue: 'Status' }),
       dataIndex: 'status',
       render: () => (
         <Badge variant="warning">
-          Draft
+          {t('draftsTab.status.draft', { defaultValue: 'Draft' })}
         </Badge>
       ),
     },
     {
-      title: 'Actions',
+      title: t('draftsTab.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'invoice_id',
       width: '5%',
       render: (_, record) => (
         <div onClick={(e) => e.stopPropagation()}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button id={`draft-row-actions-${record.invoice_id}`} variant="ghost" className="h-8 w-8 p-0" aria-label="Invoice actions">
+              <Button
+                id={`draft-row-actions-${record.invoice_id}`}
+                variant="ghost"
+                className="h-8 w-8 p-0"
+                aria-label={t('common.actions.openMenu', { defaultValue: 'Open menu' })}
+              >
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -339,7 +352,7 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
                 id={`finalize-draft-${record.invoice_id}-menu-item`}
               >
                 <CheckCircle className="h-4 w-4" />
-                Finalize
+                {t('draftsTab.actions.finalize', { defaultValue: 'Finalize' })}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={async () => {
@@ -356,14 +369,16 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
                     window.URL.revokeObjectURL(blobUrl);
                   } catch (err) {
                     console.error('Failed to generate PDF:', err);
-                    setError('Failed to generate PDF. Please try again.');
+                    setError(t('draftsTab.errors.pdfFailed', {
+                      defaultValue: 'Failed to generate PDF. Please try again.',
+                    }));
                   }
                 }}
                 className="flex items-center gap-2"
                 id={`download-draft-${record.invoice_id}-menu-item`}
               >
                 <Download className="h-4 w-4" />
-                Download PDF
+                {t('draftsTab.actions.downloadPdf', { defaultValue: 'Download PDF' })}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => openReverseDialog([record.invoice_id])}
@@ -371,7 +386,7 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
                 id={`reverse-draft-${record.invoice_id}-menu-item`}
               >
                 <RotateCcw className="h-4 w-4" />
-                Reverse Draft
+                {t('draftsTab.actions.reverseDraft', { defaultValue: 'Reverse Draft' })}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -388,11 +403,11 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
             <Input
               type="text"
-              placeholder="Search invoices..."
+              placeholder={t('draftsTab.searchPlaceholder', { defaultValue: 'Search invoices...' })}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
-              aria-label="Search draft invoices"
+              aria-label={t('draftsTab.searchPlaceholder', { defaultValue: 'Search invoices...' })}
             />
           </div>
         </div>
@@ -404,18 +419,21 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
               disabled={selectedInvoices.size === 0}
               className="flex items-center gap-2"
             >
-              Actions ({selectedInvoices.size})
+              {t('draftsTab.bulkActions', {
+                count: selectedInvoices.size,
+                defaultValue: `Actions (${selectedInvoices.size})`,
+              })}
               <MoreVertical className="w-4 h-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={handleBulkFinalize} className="flex items-center gap-2" id="finalize-selected-drafts-menu-item">
               <CheckCircle className="h-4 w-4" />
-              Finalize Selected
+              {t('draftsTab.actions.finalizeSelected', { defaultValue: 'Finalize Selected' })}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleBulkReverse} className="flex items-center gap-2 text-red-600 focus:text-red-600" id="reverse-selected-drafts-menu-item">
               <RotateCcw className="h-4 w-4" />
-              Reverse Selected
+              {t('draftsTab.actions.reverseSelected', { defaultValue: 'Reverse Selected' })}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -430,23 +448,32 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
       {isLoading ? (
         <Card>
           <div className="p-12 flex items-center justify-center">
-            <LoadingIndicator text="Loading draft invoices..." spinnerProps={{ size: 'md' }} layout="stacked" textClassName="text-muted-foreground" />
+            <LoadingIndicator
+              text={t('draftsTab.loading', { defaultValue: 'Loading draft invoices...' })}
+              spinnerProps={{ size: 'md' }}
+              layout="stacked"
+              textClassName="text-muted-foreground"
+            />
           </div>
         </Card>
       ) : filteredInvoices.length === 0 ? (
         <Card>
           <div className="p-12 text-center">
             <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-semibold text-[rgb(var(--color-text-900))] mb-2">No Draft Invoices</h3>
+            <h3 className="text-lg font-semibold text-[rgb(var(--color-text-900))] mb-2">
+              {t('draftsTab.empty.title', { defaultValue: 'No Draft Invoices' })}
+            </h3>
             <p className="text-muted-foreground mb-4">
-              Draft invoices will appear here once you create invoices that have not been finalized.
+              {t('draftsTab.empty.description', {
+                defaultValue: 'Draft invoices will appear here once you create invoices that have not been finalized.',
+              })}
             </p>
             <Button
               id="drafts-view-generate"
               onClick={() => router.push('/msp/billing?tab=invoicing&subtab=generate')}
               className="flex items-center gap-2"
             >
-              Generate Invoices
+              {t('draftsTab.actions.generateInvoices', { defaultValue: 'Generate Invoices' })}
               <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
@@ -536,19 +563,33 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
             onRefreshNeeded();
           } catch (err) {
             console.error('Failed to reverse draft invoice(s):', err);
-            setError(err instanceof Error ? err.message : 'Failed to reverse draft invoice(s). Please try again.');
+            setError(
+              err instanceof Error
+                ? err.message
+                : t('draftsTab.errors.reverseFailed', {
+                  defaultValue: 'Failed to reverse draft invoice(s). Please try again.',
+                }),
+            );
           } finally {
             setIsReverseConfirming(false);
           }
         }}
-        title={reverseDialogState.invoiceIds.length > 1 ? 'Reverse Draft Invoices' : 'Reverse Draft Invoice'}
-        message={
-          reverseDialogState.invoiceIds.length > 1
-            ? `Reversing ${reverseDialogState.invoiceIds.length} draft invoices will delete them and release any linked time entries or usage records. This action cannot be undone.`
-            : 'Reversing this draft invoice will delete it and release any linked time entries or usage records. This action cannot be undone.'
-        }
-        confirmLabel="Reverse Draft"
-        cancelLabel="Cancel"
+        title={t('draftsTab.reverseDialog.title', {
+          count: reverseDialogState.invoiceIds.length,
+          defaultValue:
+            reverseDialogState.invoiceIds.length > 1
+              ? 'Reverse Draft Invoices'
+              : 'Reverse Draft Invoice',
+        })}
+        message={t('draftsTab.reverseDialog.message', {
+          count: reverseDialogState.invoiceIds.length,
+          defaultValue:
+            reverseDialogState.invoiceIds.length > 1
+              ? `Reversing ${reverseDialogState.invoiceIds.length} draft invoices will delete them and release any linked time entries or usage records. This action cannot be undone.`
+              : 'Reversing this draft invoice will delete it and release any linked time entries or usage records. This action cannot be undone.',
+        })}
+        confirmLabel={t('draftsTab.reverseDialog.confirm', { defaultValue: 'Reverse Draft' })}
+        cancelLabel={t('draftsTab.reverseDialog.cancel', { defaultValue: 'Cancel' })}
         isConfirming={isReverseConfirming}
       />
     </div>

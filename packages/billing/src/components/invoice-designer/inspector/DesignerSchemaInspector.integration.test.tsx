@@ -362,4 +362,58 @@ describe('DesignerSchemaInspector (schema-driven integration)', () => {
 
     expect((useInvoiceDesignerStore.getState().nodesById['field-1'].props as any)?.metadata?.label).toBe('PO');
   });
+
+  it('renders reusable icon-enum controls for field alignment and updates justifyContent', () => {
+    act(() => {
+      const store = useInvoiceDesignerStore.getState();
+      store.loadWorkspace({
+        rootId: 'doc-1',
+        nodesById: {
+          'doc-1': { id: 'doc-1', type: 'document', props: { name: 'Document' }, children: ['page-1'] },
+          'page-1': { id: 'page-1', type: 'page', props: { name: 'Page 1' }, children: ['field-1'] },
+          'field-1': {
+            id: 'field-1',
+            type: 'field',
+            props: {
+              name: 'Period Field',
+              metadata: {
+                label: 'Period',
+                bindingKey: 'invoice.recurringServicePeriodLabel',
+                format: 'text',
+              },
+              style: {},
+            },
+            children: [],
+          },
+        },
+        snapToGrid: false,
+        gridSize: 8,
+        showGuides: false,
+        showRulers: false,
+        canvasScale: 1,
+      });
+      store.selectNode('field-1');
+    });
+
+    const Wrapper: React.FC = () => {
+      const nodes = useInvoiceDesignerStore((state) => state.nodes);
+      const selectedNodeId = useInvoiceDesignerStore((state) => state.selectedNodeId);
+      const node = useInvoiceDesignerStore((state) =>
+        selectedNodeId ? (state.nodesById[selectedNodeId] as DesignerNode | undefined) : undefined
+      );
+      const nodesById = useMemo(() => new Map(nodes.map((n) => [n.id, n] as const)), [nodes]);
+      if (!node) return null;
+      return <DesignerSchemaInspector node={node} nodesById={nodesById} />;
+    };
+
+    render(<Wrapper />);
+
+    const defaultButton = screen.getByLabelText('Label / Value Alignment: Space Between');
+    expect(defaultButton.getAttribute('aria-pressed')).toBe('true');
+
+    fireEvent.click(screen.getByLabelText('Label / Value Alignment: Start'));
+
+    const updated = useInvoiceDesignerStore.getState().nodesById['field-1'];
+    expect((updated.props as any)?.style?.justifyContent).toBe('flex-start');
+  });
 });

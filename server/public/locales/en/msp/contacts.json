@@ -370,7 +370,20 @@
       "updateStatusPermissionDenied": "You do not have permission to update user status",
       "userActivated": "User activated successfully",
       "userDeactivated": "User deactivated successfully",
-      "updateUserStatusFailed": "Failed to update user status"
+      "updateUserStatusFailed": "Failed to update user status",
+      "errors": {
+        "permissionDeniedInvite": "You do not have permission to invite users.",
+        "emailNotConfigured": "Email service is disabled or not configured.",
+        "contactNotFound": "Contact not found.",
+        "contactMissingEmail": "Contact does not have an email address. Please add an email address to the contact before sending an invitation.",
+        "contactInvalidEmail": "Contact has an invalid email address. Please update the contact with a valid email address before sending an invitation.",
+        "userExistsForContact": "A user account already exists for this contact. Use password reset instead of sending an invitation.",
+        "noDefaultClient": "No default client configured for this tenant. Please set a default client in General Settings.",
+        "noDefaultLocation": "Default client must have a default location configured to send portal invitations.",
+        "noLocationEmail": "Default client's location must have a contact email configured.",
+        "noBaseUrl": "Base URL is not configured for portal invitations.",
+        "invitationNotFound": "Invitation not found or already used."
+      }
     }
   },
   "quickAddContact": {
@@ -577,5 +590,11 @@
       "unknown": "Unknown error"
     },
     "lastUpdated": "Last updated: {{date}}"
+  },
+  "notes": {
+    "messages": {
+      "saveSuccess": "Notes saved",
+      "saveFailed": "Failed to save notes"
+    }
   }
 }

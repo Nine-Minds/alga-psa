@@ -32,6 +32,7 @@ import {
   generateInvoiceNumber,
   previewInvoiceForSelectionInput,
 } from '@alga-psa/billing/actions/invoiceGeneration';
+import { getDueDate } from '@alga-psa/billing/actions/billingAndTax';
 import { BillingEngine } from '@alga-psa/billing/services';
 import { TaxService } from '@alga-psa/billing/services/taxService';
 import { NumberingService } from '@shared/services/numberingService';
@@ -400,6 +401,8 @@ export class InvoiceService extends BaseService<IInvoice> {
         subtotal: data.subtotal || 0,
         tax: taxCalculation?.tax_amount || 0,
         total_amount: data.total_amount || 0,
+        // `billing_period_start/end` stores the invoice window, not the service period.
+        // This generic create endpoint trusts the caller; rename to `invoice_window_*` is pending.
         billing_period_start: data.billing_period_start,
         billing_period_end: data.billing_period_end,
         is_manual: data.is_manual || false,
@@ -1650,6 +1653,7 @@ export class InvoiceService extends BaseService<IInvoice> {
     const numberingService = new NumberingService({ knex, tenant });
     const invoiceNumber = await numberingService.getNextNumber('INVOICE');
     const currentDate = Temporal.Now.plainDateISO().toString();
+    const computedDueDate = await getDueDate(data.clientId, currentDate);
     const sessionLike = { user: { id: context.userId } } as { user: { id: string } };
 
     let createdInvoice: InvoiceViewModel | null = null;
@@ -1663,7 +1667,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         client_id: data.clientId,
         invoice_number: invoiceNumber,
         invoice_date: currentDate,
-        due_date: currentDate,
+        due_date: computedDueDate,
         status: 'draft',
         subtotal: 0,
         tax: 0,

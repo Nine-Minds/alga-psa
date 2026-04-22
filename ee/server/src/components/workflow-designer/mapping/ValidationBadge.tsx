@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { CheckCircle, AlertTriangle, XCircle, Circle, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { PublishError } from '@alga-psa/workflows/runtime';
 
 export type ValidationStatus = 'valid' | 'warning' | 'error' | 'incomplete';
@@ -89,20 +90,11 @@ const getStatusStyle = (status: ValidationStatus): string => {
   }
 };
 
-/**
- * Get status label
- */
-const getStatusLabel = (status: ValidationStatus): string => {
-  switch (status) {
-    case 'valid':
-      return 'Valid';
-    case 'warning':
-      return 'Warnings';
-    case 'error':
-      return 'Errors';
-    case 'incomplete':
-      return 'Incomplete';
-  }
+const STATUS_LABEL_DEFAULTS: Record<ValidationStatus, string> = {
+  valid: 'Valid',
+  warning: 'Warnings',
+  error: 'Errors',
+  incomplete: 'Incomplete',
 };
 
 /**
@@ -119,10 +111,12 @@ export const ValidationBadge: React.FC<ValidationBadgeProps> = ({
   hasMappings,
   size = 'sm'
 }) => {
+  const { t } = useTranslation('msp/workflows');
   const [expanded, setExpanded] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
 
   const status = getValidationStatus(errors, hasMappings);
+  const statusLabel = t(`validationBadge.status.${status}`, { defaultValue: STATUS_LABEL_DEFAULTS[status] });
   const errorList = errors.filter(e => e.severity === 'error');
   const warningList = errors.filter(e => e.severity === 'warning');
 
@@ -156,7 +150,7 @@ export const ValidationBadge: React.FC<ValidationBadgeProps> = ({
         ) : mappedCount !== undefined && requiredCount !== undefined ? (
           <span>{mappedCount}/{requiredCount}</span>
         ) : (
-          <span>{getStatusLabel(status)}</span>
+          <span>{statusLabel}</span>
         )}
         {errors.length > 0 && (
           expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
@@ -167,11 +161,15 @@ export const ValidationBadge: React.FC<ValidationBadgeProps> = ({
       {showTooltip && !expanded && errors.length === 0 && (
         <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg">
           <div className="text-center">
-            {status === 'valid' && 'All required inputs are mapped'}
-            {status === 'incomplete' && 'Configure input mappings'}
+            {status === 'valid' && t('validationBadge.tooltip.valid', { defaultValue: 'All required inputs are mapped' })}
+            {status === 'incomplete' && t('validationBadge.tooltip.incomplete', { defaultValue: 'Configure input mappings' })}
             {mappedCount !== undefined && requiredCount !== undefined && (
               <div className="mt-1 text-gray-300">
-                {mappedCount} of {requiredCount} required fields mapped
+                {t('validationBadge.tooltip.mappingCount', {
+                  defaultValue: '{{mapped}} of {{required}} required fields mapped',
+                  mapped: mappedCount,
+                  required: requiredCount,
+                })}
               </div>
             )}
           </div>
@@ -181,7 +179,7 @@ export const ValidationBadge: React.FC<ValidationBadgeProps> = ({
               className="mt-2 w-full flex items-center justify-center gap-1 py-1 bg-gray-800 hover:bg-gray-700 rounded text-gray-200"
             >
               <ExternalLink className="w-3 h-3" />
-              Open Mapping Editor
+              {t('validationBadge.openEditor', { defaultValue: 'Open Mapping Editor' })}
             </button>
           )}
           <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45" />
@@ -196,7 +194,10 @@ export const ValidationBadge: React.FC<ValidationBadgeProps> = ({
             <div className="p-2 border-b border-gray-100">
               <div className="flex items-center gap-1 text-xs font-semibold text-destructive mb-1">
                 <XCircle className="w-3 h-3" />
-                Errors ({errorList.length})
+                {t('validationBadge.errorsHeading', {
+                  defaultValue: 'Errors ({{count}})',
+                  count: errorList.length,
+                })}
               </div>
               <ul className="space-y-1">
                 {errorList.slice(0, 5).map((err, i) => (
@@ -213,7 +214,10 @@ export const ValidationBadge: React.FC<ValidationBadgeProps> = ({
                 ))}
                 {errorList.length > 5 && (
                   <li className="text-xs text-gray-500 pl-4">
-                    +{errorList.length - 5} more errors
+                    {t('validationBadge.moreErrors', {
+                      defaultValue: '+{{count}} more errors',
+                      count: errorList.length - 5,
+                    })}
                   </li>
                 )}
               </ul>
@@ -225,7 +229,10 @@ export const ValidationBadge: React.FC<ValidationBadgeProps> = ({
             <div className="p-2 border-b border-gray-100">
               <div className="flex items-center gap-1 text-xs font-semibold text-warning mb-1">
                 <AlertTriangle className="w-3 h-3" />
-                Warnings ({warningList.length})
+                {t('validationBadge.warningsHeading', {
+                  defaultValue: 'Warnings ({{count}})',
+                  count: warningList.length,
+                })}
               </div>
               <ul className="space-y-1">
                 {warningList.slice(0, 3).map((warn, i) => (
@@ -237,7 +244,10 @@ export const ValidationBadge: React.FC<ValidationBadgeProps> = ({
                 ))}
                 {warningList.length > 3 && (
                   <li className="text-xs text-gray-500 pl-4">
-                    +{warningList.length - 3} more warnings
+                    {t('validationBadge.moreWarnings', {
+                      defaultValue: '+{{count}} more warnings',
+                      count: warningList.length - 3,
+                    })}
                   </li>
                 )}
               </ul>
@@ -252,7 +262,7 @@ export const ValidationBadge: React.FC<ValidationBadgeProps> = ({
                 className="w-full flex items-center justify-center gap-1 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-xs rounded"
               >
                 <ExternalLink className="w-3 h-3" />
-                Open Mapping Editor
+                {t('validationBadge.openEditor', { defaultValue: 'Open Mapping Editor' })}
               </button>
             </div>
           )}

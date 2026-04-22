@@ -2,6 +2,32 @@
  * Represents the input data provided to the Wasm template engine.
  * This is a placeholder and should be expanded based on actual invoice data needs.
  */
+export interface WasmInvoiceLineItemLocation {
+  id: string;
+  location_name?: string | null;
+  address_line1?: string | null;
+  address_line2?: string | null;
+  address_line3?: string | null;
+  city?: string | null;
+  state_province?: string | null;
+  postal_code?: string | null;
+  country_code?: string | null;
+  country_name?: string | null;
+  region_code?: string | null;
+  full_address?: string | null;
+}
+
+export interface WasmInvoiceLocationGroup {
+  location_id: string | null;
+  location?: WasmInvoiceLineItemLocation | null;
+  name?: string | null;
+  address?: string | null;
+  items: WasmInvoiceLineItem[];
+  subtotal: number;
+  tax: number;
+  total: number;
+}
+
 export interface WasmInvoiceLineItem {
   id: string;
   description: string;
@@ -23,6 +49,9 @@ export interface WasmInvoiceLineItem {
   }>;
   category?: string; // Optional: For grouping items
   itemType?: 'service' | 'project' | 'product'; // Optional: For conditional rendering
+  location_id?: string | null;
+  /** Resolved location object, when available. */
+  location?: WasmInvoiceLineItemLocation | null;
 }
 
 export interface WasmInvoiceViewModel {
@@ -62,6 +91,11 @@ export interface WasmInvoiceViewModel {
   onetimeSubtotal?: number;
   onetimeTax?: number;
   onetimeTotal?: number;
+  // Pre-computed per-location groupings for templates that want
+  // location "bands" (header + rows + per-location subtotal).
+  groupsByLocation?: WasmInvoiceLocationGroup[];
+  /** True when invoice charges span ≥2 distinct locations. */
+  hasMultipleLocations?: boolean;
   // Add sample structure for side report data
   timeEntries?: Array<{
     id: string;

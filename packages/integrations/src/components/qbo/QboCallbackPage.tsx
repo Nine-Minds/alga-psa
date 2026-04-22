@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
+import { QboCallbackPageContent } from './QboCallbackPageContent';
 
 interface QboCallbackPageProps {
   searchParams: Promise<{
@@ -19,35 +20,10 @@ export default async function QboCallbackPage({ searchParams }: QboCallbackPageP
   const realmId = resolvedSearchParams.realmId;
 
   return (
-    <div className="flex justify-center items-center min-h-[calc(100vh-200px)]"> {/* Basic centering */}
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>QuickBooks Connection Status</CardTitle>
-          <CardDescription>
-            {isSuccess ? 'Connection process completed.' : 'Connection process resulted in an error.'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {isSuccess ? (
-            <Alert variant="success">
-              <AlertDescription>
-                <p className="font-semibold">Successfully connected to QuickBooks Online!</p>
-                {realmId && <p className="text-sm text-muted-foreground mt-1">Realm ID: {realmId}</p>}
-              </AlertDescription>
-            </Alert>
-          ) : (
-            <Alert variant="destructive">
-              <AlertDescription>
-                <p className="font-semibold">Failed to connect to QuickBooks Online.</p>
-                {errorMessage && <p className="text-sm mt-1">Error: {decodeURIComponent(errorMessage)}</p>}
-              </AlertDescription>
-            </Alert>
-          )}
-          <Link href="/msp/settings/integrations/qbo" passHref> {/* Updated href */}
-            <Button id="return-to-qbo-settings-button" className="w-full">Return to QuickBooks Settings</Button>
-          </Link>
-        </CardContent>
-      </Card>
-    </div>
+    <QboCallbackPageContent
+      isSuccess={isSuccess}
+      errorMessage={errorMessage}
+      realmId={realmId}
+    />
   );
 }

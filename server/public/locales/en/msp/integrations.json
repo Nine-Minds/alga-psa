@@ -1,0 +1,1346 @@
+{
+  "integrations": {
+    "accounting": {
+      "dialog": {
+        "cancel": "Cancel",
+        "enterPlaceholder": "Enter {{field}}...",
+        "errors": {
+          "enterExternal": "Please enter {{field}}.",
+          "invalidJson": "Invalid JSON format for metadata.",
+          "saveFailed": "Failed to save mapping.",
+          "selectAlga": "Please select {{field}}.",
+          "selectExternal": "Please select {{field}}."
+        },
+        "manualEntryHelp": "Enter the identifier exactly as it appears in your accounting system.",
+        "metadataLabel": "Metadata (JSON)",
+        "metadataPlaceholder": "Optional metadata as JSON",
+        "realmIdLabel": "Realm ID",
+        "saveMapping": "Save Mapping",
+        "saving": "Saving…",
+        "selectPlaceholder": "Select {{field}}..."
+      },
+      "manager": {
+        "noModules": "No mapping modules configured."
+      },
+      "moduleView": {
+        "actionsColumn": "Actions",
+        "delete": "Delete",
+        "edit": "Edit",
+        "errors": {
+          "deleteFailed": "Failed to delete mapping.",
+          "loadFailed": "Failed to load mappings."
+        },
+        "loading": "Loading mappings…",
+        "noMappings": "No mappings found.",
+        "notAvailable": "N/A",
+        "openMenu": "Open menu"
+      },
+      "setup": {
+        "activeConfiguration": "Active Configuration",
+        "badges": {
+          "enterprise": "Enterprise"
+        },
+        "comingSoon": "Coming Soon",
+        "configure": "Configure Integration",
+        "highlightValues": {
+          "csv": "CSV",
+          "instant": "Instant",
+          "live": "Live",
+          "manual": "Manual",
+          "twoWay": "2-way"
+        },
+        "highlights": {
+          "delivery": "Delivery",
+          "export": "Export",
+          "format": "Format",
+          "sync": "Sync"
+        },
+        "options": {
+          "qbo": {
+            "description": "Connect your realm to sync invoices and manage mappings."
+          },
+          "qboCsv": {
+            "description": "Export invoices to CSV for manual import into QuickBooks and import tax data from reports."
+          },
+          "xero": {
+            "description": "Connect your organisation with tenant-owned OAuth credentials for live accounting exports and mappings."
+          },
+          "xeroCsv": {
+            "description": "Export invoices to CSV for manual import into Xero and import tax data from Xero reports."
+          }
+        },
+        "selected": "{{title}} selected",
+        "unavailable": {
+          "description": "This integration is not yet available. Select QuickBooks CSV or Xero CSV to configure manual exports.",
+          "title": "Configuration unavailable"
+        }
+      },
+      "modules": {
+        "tabs": {
+          "clients": "Clients",
+          "itemsServices": "Items / Services",
+          "taxCodes": "Tax Codes",
+          "paymentTerms": "Payment Terms"
+        }
+      }
+    },
+    "calendar": {
+      "enterprise": {
+        "loading": "Loading calendar settings..."
+      }
+    },
+    "csv": {
+      "export": {
+        "actions": {
+          "exportCsv": "Export CSV",
+          "generating": "Generating..."
+        },
+        "description": "Export invoices as a CSV file for manual import into QuickBooks.",
+        "errors": {
+          "configureMissingMappings": "Configure missing mappings above, then retry the export.",
+          "failed": "Export failed",
+          "missingItemMapping": "Missing item mapping",
+          "missingItemMappingId": "Missing item mapping ({{serviceId}})",
+          "missingItemMappingNamed": "Missing item mapping: {{serviceName}}"
+        },
+        "fields": {
+          "dateRange": "Date Range (optional)",
+          "invoiceStatuses": "Invoice Statuses"
+        },
+        "lockReset": {
+          "actions": {
+            "reset": "Reset export lock"
+          },
+          "description": "Clear export locks to allow re-exporting invoices via CSV.",
+          "dialog": {
+            "cancel": "Cancel",
+            "confirm": "Reset lock",
+            "confirmBatch": "This will allow Alga PSA to export invoices from batch {{batchId}} again. If any of these invoices still exist in QuickBooks, importing the CSV may create duplicates.",
+            "confirmInvoice": "This will allow Alga PSA to export invoice {{invoiceNumber}} again. If this invoice still exists in QuickBooks, importing the CSV may create duplicates.",
+            "resetting": "Resetting…",
+            "title": "Reset export lock?",
+            "warning": "Only proceed if you are sure the invoice was not imported, or you deleted/voided it in QuickBooks."
+          },
+          "errors": {
+            "unable": "Unable to reset export lock"
+          },
+          "fields": {
+            "batchId": "Export batch ID",
+            "batchIdPlaceholder": "e.g. e793a514-34bd-4d7b-b266-9bb15f7087c4",
+            "invoiceNumber": "Invoice number",
+            "invoiceNumberPlaceholder": "e.g. INV-1001"
+          },
+          "modes": {
+            "ariaLabel": "Reset export lock mode",
+            "batch": "Batch",
+            "invoice": "Invoice"
+          },
+          "success": {
+            "batchCleared": "Export locks cleared for this batch. You can export those invoices again.",
+            "invoiceCleared": "Export lock cleared. You can export this invoice again.",
+            "noBatchLocks": "No export locks were found for that batch.",
+            "noInvoiceLock": "No export lock found for that invoice."
+          },
+          "title": "Re-export an invoice",
+          "warnings": {
+            "duplicates": "This may cause duplicates in QuickBooks if the invoice still exists there."
+          }
+        },
+        "success": {
+          "one": "Exported {{count}} invoice to {{filename}}",
+          "other": "Exported {{count}} invoices to {{filename}}"
+        },
+        "title": "CSV Export for QuickBooks"
+      },
+      "preview": {
+        "duplicates": {
+          "description": "The following invoices appear multiple times. Their tax amounts will be summed:",
+          "title": "Duplicate Invoices ({{count}})"
+        },
+        "errors": {
+          "more": "... and {{count}} more errors",
+          "title": "Errors ({{count}})"
+        },
+        "importResults": "Import Results",
+        "importSummary": {
+          "difference": "Difference:",
+          "failedUpdates": "Failed Updates:",
+          "importedTax": "Imported Tax:",
+          "originalTax": "Original Tax:",
+          "successfulUpdates": "Successful Updates:",
+          "title": "Import Summary"
+        },
+        "rowLabel": "Row {{row}}:",
+        "stats": {
+          "matchedInvoices": "Matched Invoices",
+          "totalRows": "Total Rows",
+          "uniqueInvoices": "Unique Invoices",
+          "validRows": "Valid Rows"
+        },
+        "status": {
+          "databaseMatch": "Database Match",
+          "rowData": "Row Data",
+          "structure": "Structure"
+        },
+        "validationPassed": {
+          "one": "Validation passed. Ready to import tax data for {{count}} invoice.",
+          "other": "Validation passed. Ready to import tax data for {{count}} invoices."
+        },
+        "validationResults": "Validation Results",
+        "warnings": {
+          "more": "... and {{count}} more warnings",
+          "title": "Warnings ({{count}})"
+        }
+      },
+      "settings": {
+        "exports": {
+          "description": "Create export batches, download CSV files, import tax reports, and review export history.",
+          "managedTitle": "Managed from Billing",
+          "openButton": "Open Accounting Exports",
+          "path": "Billing → Accounting Exports",
+          "title": "Accounting Exports"
+        },
+        "qbo": {
+          "bullets": {
+            "exportLabel": "Export",
+            "exportText": "Generate CSV files compatible with QuickBooks' invoice import feature",
+            "taxImportLabel": "Tax Import",
+            "taxImportText": "When using external tax calculation, import tax amounts from QuickBooks tax reports"
+          },
+          "description": "Export invoices to CSV for manual import into QuickBooks, and import tax data from QuickBooks reports.",
+          "exports": {
+            "managedPrefix": "Go to",
+            "managedSuffix": "to select invoices, generate QuickBooks CSV exports, import tax reports, and manage batches."
+          },
+          "intro": "This integration provides an alternative to OAuth-based QuickBooks connectivity:",
+          "mappings": {
+            "description": "Map Alga clients, services, tax codes, and payment terms to the identifiers used in your QuickBooks company. These values are used when generating the CSV export.",
+            "title": "QuickBooks CSV Mappings"
+          },
+          "note": "Note: Configure mappings below before exporting. CSV exports and tax imports are managed from Billing → Accounting Exports.",
+          "title": "QuickBooks CSV Integration"
+        }
+      },
+      "taxImport": {
+        "actions": {
+          "importTaxData": "Import Tax Data",
+          "importing": "Importing...",
+          "validate": "Validate",
+          "validating": "Validating..."
+        },
+        "errors": {
+          "importFailed": "Import failed",
+          "readFile": "Failed to read file",
+          "selectFile": "Please select a CSV file",
+          "selectFileAndRange": "Please select a file and date range",
+          "templateDownloadFailed": "Failed to download template",
+          "validationFailed": "Validation failed"
+        },
+        "fields": {
+          "csvFile": "CSV File",
+          "dateRangeHelp": "Only invoices within this date range will be processed.",
+          "dateRangeRequired": "Date Range (required)",
+          "dropZone": "Drag and drop a CSV file here, or click to browse",
+          "fileSize": "({{size}} KB)"
+        },
+        "preview": {
+          "alreadyImported": "{{count}} invoice(s) already have imported tax.",
+          "alreadyImportedSkip": "{{count}} invoice(s) already have imported tax and will be skipped.",
+          "badges": {
+            "databaseMatch": "Database Match",
+            "rowData": "Row Data",
+            "structure": "Structure"
+          },
+          "columns": {
+            "algaInvoice": "Alga Invoice",
+            "contact": "Contact",
+            "status": "Status",
+            "taxAmount": "Tax Amount",
+            "xeroInvoice": "Xero Invoice"
+          },
+          "errorsTitle": "Errors ({{count}})",
+          "matched": "Matched",
+          "matchedInvoices": "Matched Invoices",
+          "notPendingDescription": "These invoices were created with internal tax calculation. To import tax from Xero, invoices must be set up with \"Pending External\" tax source when exported.",
+          "notPendingSkip": "{{count}} invoice(s) don't have pending external tax and will be skipped.",
+          "notPendingTitle": "{{count}} invoice(s) don't use external tax calculation.",
+          "showingFirst20": "Showing first 20 of {{count}} rows",
+          "taxToImport": "Tax to Import",
+          "title": "Validation Results",
+          "totalRows": "Total Rows",
+          "uniqueInvoices": "Unique Invoices",
+          "unmatched": "Unmatched",
+          "validRows": "Valid Rows",
+          "warningsTitle": "Warnings ({{count}})"
+        },
+        "qbo": {
+          "description": "Import tax amounts from a QuickBooks tax report CSV file.",
+          "help": {
+            "csvRequirement": "The CSV must include Invoice Number, Invoice Date, and Tax Amount columns.",
+            "downloadTemplate": "Download template CSV",
+            "steps": {
+              "s1": "In QuickBooks, go to Reports > All Reports",
+              "s2": "Select Sales Tax Liability or Transaction Detail by Account",
+              "s3": "Set the date range to match your exported invoices",
+              "s4": "Click Export and choose Export to Excel or Export to CSV",
+              "s5": "Save the file and upload it here"
+            },
+            "title": "How to export tax data from QuickBooks"
+          },
+          "success": {
+            "one": "Successfully imported tax for {{count}} invoice. Total tax imported: ${{amount}}",
+            "other": "Successfully imported tax for {{count}} invoices. Total tax imported: ${{amount}}"
+          },
+          "title": "Import Tax from QuickBooks CSV"
+        },
+        "result": {
+          "failed": "{{count}} failed.",
+          "one": "Imported tax for {{count}} invoice. Total tax imported: {{amount}}.",
+          "other": "Imported tax for {{count}} invoices. Total tax imported: {{amount}}.",
+          "skipped": "{{count}} skipped."
+        },
+        "unified": {
+          "description": "Import tax amounts from your accounting system's CSV export.",
+          "qbResult": {
+            "one": "Successfully imported tax for {{count}} invoice. Total tax imported: {{amount}}",
+            "other": "Successfully imported tax for {{count}} invoices. Total tax imported: {{amount}}"
+          },
+          "source": {
+            "ariaLabel": "CSV import source",
+            "quickbooks": "QuickBooks",
+            "xero": "Xero"
+          },
+          "title": "Import Tax from CSV",
+          "xeroCsvDescription": "The exported CSV includes Invoice Number, Contact Name, Line Amount, Tax Amount, and tracking categories.",
+          "xeroHelp": {
+            "note": "Note: Only invoices originally exported from Alga PSA (with Source System = AlgaPSA tracking) will be matched.",
+            "s1": "In Xero, go to Sales > Invoices",
+            "s2": "Select the invoice tab you want to export from (e.g., Paid, Awaiting Payment)",
+            "s3": "(Optional) Click Search to filter by Start date, End date, or Date type",
+            "s4": "Click Export",
+            "s5": "Xero downloads a CSV file to your computer",
+            "s6": "Upload that CSV file here"
+          },
+          "xeroResult": {
+            "one": "Imported tax for {{count}} invoice. Total: {{amount}}.",
+            "other": "Imported tax for {{count}} invoices. Total: {{amount}}."
+          }
+        },
+        "xero": {
+          "description": "Import tax amounts from a Xero Invoice Details Report CSV file.",
+          "dropZone": "Drag and drop a Xero Invoice Details Report CSV here, or click to browse",
+          "help": {
+            "csvRequirement": "The report should include columns for Invoice Number, Contact Name, Line Amount, and Tax Amount. Invoices are matched using the Reference field or tracking categories set during export.",
+            "steps": {
+              "s1": "In Xero, go to Reports > All Reports",
+              "s2": "Select Sales (Invoices and Revenue)",
+              "s3": "Run the Invoice Details report",
+              "s4": "Set the date range to match your exported invoices",
+              "s5": "Click Export and choose CSV",
+              "s6": "Upload the exported file here"
+            },
+            "title": "How to export tax data from Xero"
+          },
+          "title": "Import Tax from Xero CSV"
+        }
+      }
+    },
+    "google": {
+      "settings": {
+        "actions": {
+          "refresh": "Refresh",
+          "resetProviders": "Reset Google Providers",
+          "resetting": "Resetting…",
+          "save": "Save",
+          "saving": "Saving…"
+        },
+        "afterSaveNotice": "After saving, go to Inbound Email and Calendar integrations and re-authorize providers. Existing Google providers are not migrated.",
+        "consoleLink": "Google Cloud Console",
+        "description": "Configure tenant-owned Google Cloud credentials for Gmail inbound email and Google Calendar.",
+        "errors": {
+          "loadFailed": "Failed to load Google settings",
+          "resetFailed": "Failed to reset Google providers",
+          "saveFailed": "Failed to save Google settings"
+        },
+        "fields": {
+          "projectIdHelp": "Used for Gmail Pub/Sub provisioning (tenant-owned service account).",
+          "projectIdLabel": "Google Cloud project ID",
+          "projectIdPlaceholder": "my-project-id"
+        },
+        "loading": "Loading…",
+        "oauth": {
+          "calendarClientId": "Calendar OAuth Client ID",
+          "calendarClientSecret": "Calendar OAuth Client Secret",
+          "enterSecret": "Enter client secret",
+          "gmailClientId": "Gmail OAuth Client ID",
+          "gmailClientSecret": "Gmail OAuth Client Secret",
+          "sectionTitle": "OAuth app",
+          "shareApp": "Use the same OAuth app for Gmail + Calendar",
+          "shareAppHelp": "Recommended. You can still authorize separate Google accounts per integration.",
+          "storedSecret": "Stored secret: {{secret}}"
+        },
+        "redirectUrisLabel": "Redirect URIs (copy into Google OAuth client)",
+        "scopes": "Scopes",
+        "scopesCalendar": "Calendar: {{scopes}}",
+        "scopesGmail": "Gmail: {{scopes}}",
+        "serviceAccount": {
+          "alreadyStored": "A service account key is already stored (not shown).",
+          "description": "Paste the service account key JSON for the tenant-owned service account used to provision Pub/Sub.",
+          "title": "Pub/Sub service account (required for Gmail)"
+        },
+        "setupGuide": "Setup guide",
+        "title": "Google",
+        "toasts": {
+          "resetDescription": "All Google providers are now disconnected and require re-authorization.",
+          "resetFailedTitle": "Reset failed",
+          "resetTitle": "Google providers reset",
+          "saveFailedTitle": "Unable to save Google settings",
+          "savedDescription": "Tenant Google configuration updated successfully.",
+          "savedTitle": "Google settings saved",
+          "unknownError": "Unknown error"
+        }
+      }
+    },
+    "microsoft": {
+      "settings": {
+        "actions": {
+          "entraLink": "Microsoft Entra",
+          "newProfile": "New Profile",
+          "openTeamsSetup": "Open Teams Setup",
+          "refresh": "Refresh",
+          "resetProviders": "Reset Microsoft Providers",
+          "resetting": "Resetting…"
+        },
+        "archiveDialog": {
+          "archiving": "Archiving…",
+          "cancel": "Keep Profile",
+          "confirm": "Archive Profile",
+          "message": "Archive {{name}}? Existing historical references stay intact, but the profile will no longer be available for new bindings.",
+          "title": "Archive Microsoft profile?"
+        },
+        "binding": {
+          "bound": "Bound",
+          "boundProfileLabel": "Bound profile",
+          "createFirst": "Create a profile first",
+          "needsAttention": "Needs attention",
+          "saving": "Saving…",
+          "selectProfile": "Select a profile",
+          "unbound": "Unbound"
+        },
+        "bindings": {
+          "summaryBound": "{{consumer}} is bound to {{profile}}.",
+          "summaryNone": "No Microsoft profile is currently bound to {{consumer}}.",
+          "summaryUnavailable": "{{consumer}} is bound to an unavailable profile.",
+          "warningArchived": "{{consumer}} is still bound to an archived profile. Rebind it to an active profile.",
+          "warningNoBinding": "No {{consumer}} binding is configured yet.",
+          "warningNotReady": "{{consumer}} is bound to {{profile}}, but that profile still needs configuration.",
+          "warningProfileMissing": "{{consumer}} is bound to a profile that is no longer available. Rebind it to an active profile."
+        },
+        "bindingsAlertCe": "Explicit bindings are the source of truth for MSP SSO profile selection. Configure login domains separately after choosing the bound profile.",
+        "bindingsAlertEe": "Explicit bindings are the source of truth for MSP SSO, email, calendar, and Teams profile selection.",
+        "consumerBindings": {
+          "descriptionCe": "Bind one Microsoft profile to MSP SSO for sign-in and login-domain usage.",
+          "descriptionEe": "Bind one Microsoft profile per supported consumer. Reassigning one consumer does not change the others.",
+          "title": "Explicit consumer bindings"
+        },
+        "consumers": {
+          "calendar": {
+            "description": "Choose which Microsoft profile Outlook calendar sync should use.",
+            "label": "Calendar",
+            "reconnect": "Existing Microsoft calendar connections may need re-authorization after changing the bound profile."
+          },
+          "email": {
+            "description": "Choose which Microsoft profile Outlook inbound email should use.",
+            "label": "Email",
+            "reconnect": "Existing Outlook email connections may need re-authorization after changing the bound profile."
+          },
+          "mspSso": {
+            "description": "Choose which Microsoft profile backs MSP SSO login domains, Microsoft sign-in, and tenant discovery.",
+            "label": "MSP SSO"
+          },
+          "teams": {
+            "description": "Choose which Microsoft profile Microsoft Teams installation and auth flows should use.",
+            "label": "Teams"
+          }
+        },
+        "descriptionCe": "Manage tenant-owned Microsoft profiles for MSP SSO, Microsoft sign-in, and login-domain discovery.",
+        "descriptionEe": "Manage tenant-owned Microsoft profiles for MSP SSO, Outlook email, calendar sync, and Microsoft Teams.",
+        "dialog": {
+          "cancel": "Cancel",
+          "clientId": "Client ID",
+          "clientSecret": "Client secret",
+          "clientSecretPlaceholder": "Enter client secret",
+          "clientSecretPlaceholderEdit": "Leave blank to keep the current secret",
+          "createProfile": "Create Profile",
+          "createTitle": "Create Microsoft Profile",
+          "descriptionCreate": "Create a tenant-owned Microsoft profile, then bind it explicitly to the Microsoft consumers you want to use.",
+          "descriptionEdit": "Update the selected Microsoft profile. Leave the secret blank to keep the existing value.",
+          "displayName": "Display name",
+          "displayNamePlaceholder": "Acme production tenant",
+          "editTitle": "Edit Microsoft Profile",
+          "saveChanges": "Save Changes",
+          "saving": "Saving…",
+          "setDefault": "Set this profile as the default Microsoft profile",
+          "setDefaultHelp": "Default profiles stay available for profile-management workflows and migration-safe metadata, not consumer routing.",
+          "storedSecretHint": "Stored secret: {{secret}}. Leave this field empty to keep it unchanged.",
+          "tenantId": "Tenant ID"
+        },
+        "empty": {
+          "createButton": "Create Microsoft Profile",
+          "descriptionCe": "Create a named profile first, then bind it explicitly to MSP SSO and login-domain sign-in flows.",
+          "descriptionEe": "Create a named profile first, then bind it explicitly to MSP SSO, Outlook email, calendar sync, and Teams.",
+          "title": "No Microsoft profiles yet"
+        },
+        "errors": {
+          "archive": "Failed to archive Microsoft profile",
+          "loadBindings": "Failed to load Microsoft bindings",
+          "loadStatus": "Failed to load Microsoft settings",
+          "resetProviders": "Failed to reset Microsoft providers",
+          "saveProfile": "Failed to save Microsoft profile",
+          "setDefault": "Failed to set default Microsoft profile",
+          "updateBinding": "Failed to update Microsoft binding"
+        },
+        "guidance": {
+          "applicationIdUri": "Application ID URI",
+          "calendarRedirect": "Calendar sync redirect URI",
+          "calendarTitle": "Calendar Guidance",
+          "clientId": "Client ID",
+          "currentProfileTitle": "Current Profile Values",
+          "emailRedirect": "Inbound email redirect URI",
+          "emailTitle": "Email Guidance",
+          "mspSsoTitle": "MSP SSO Guidance",
+          "notConfigured": "Not configured",
+          "redirectUri": "Redirect URI",
+          "requiresBaseUrl": "Requires base URL and client ID",
+          "scopes": "Scopes",
+          "teamsBotRedirect": "Personal bot redirect URI",
+          "teamsMessageRedirect": "Message extension redirect URI",
+          "teamsScopes": "Teams scopes",
+          "teamsTabRedirect": "Personal tab redirect URI",
+          "teamsTitle": "Teams Guidance",
+          "tenantId": "Tenant ID",
+          "unavailable": "Unavailable"
+        },
+        "profileCard": {
+          "activeBindings": "Active bindings",
+          "archive": "Archive",
+          "clientId": "Client ID",
+          "defaultBadge": "Default",
+          "edit": "Edit",
+          "guidanceSummary": "Microsoft app registration guidance",
+          "noVisibleBindings": "No visible consumer bindings",
+          "readinessTitle": "Profile readiness",
+          "readyCe": "This profile is ready for MSP SSO binding and login-domain sign-in flows.",
+          "readyEe": "This profile is ready for MSP SSO, Outlook email, and calendar bindings.",
+          "readyEeTeams": "This profile is ready for MSP SSO, Outlook email, calendar sync, and Teams bindings.",
+          "setDefault": "Set Default",
+          "storedSecret": "Stored secret",
+          "teamsAppIdUri": "Teams application ID URI",
+          "tenantIdLabel": "Tenant ID:",
+          "updating": "Updating…"
+        },
+        "providerReconnect": {
+          "description": "Use this if you rotate credentials or intentionally rebind Outlook email or calendar to a different Microsoft profile.",
+          "title": "Provider reconnection"
+        },
+        "readiness": {
+          "archived": "Archived profiles cannot be used for new Microsoft bindings.",
+          "clientIdMissing": "Client ID is missing.",
+          "clientSecretMissing": "Client secret has not been configured.",
+          "tenantIdMissing": "Tenant ID is missing."
+        },
+        "statusBadges": {
+          "archived": "Archived",
+          "needsAttention": "Needs Attention",
+          "ready": "Ready"
+        },
+        "title": "Microsoft",
+        "toasts": {
+          "archiveFailedTitle": "Unable to archive Microsoft profile",
+          "archivedDescription": "{{name}} was archived successfully.",
+          "archivedTitle": "Microsoft profile archived",
+          "bindingFailedTitle": "Unable to update {{consumer}} binding",
+          "bindingUpdatedDescription": "{{consumer}} now uses {{profile}}.",
+          "bindingUpdatedTitle": "{{consumer}} binding updated",
+          "defaultUpdatedDescription": "{{name}} is now the default Microsoft profile record.",
+          "defaultUpdatedTitle": "Default Microsoft profile updated",
+          "profileCreated": "Microsoft profile created",
+          "profileCreatedDescription": "The Microsoft profile is ready to be bound to visible Microsoft consumers.",
+          "profileUpdated": "Microsoft profile updated",
+          "profileUpdatedDescription": "The Microsoft profile changes were saved successfully.",
+          "resetDescription": "Existing Outlook email and calendar connections now require re-authorization.",
+          "resetFailedTitle": "Reset failed",
+          "resetTitle": "Microsoft providers reset",
+          "saveFailedTitle": "Unable to save Microsoft profile",
+          "selectedProfile": "the selected profile",
+          "setDefaultFailedTitle": "Unable to set default profile"
+        },
+        "validation": {
+          "clientIdRequired": "Microsoft OAuth Client ID is required",
+          "clientSecretRequired": "Microsoft OAuth Client Secret is required",
+          "displayNameRequired": "Microsoft profile display name is required",
+          "tenantIdRequired": "Microsoft Tenant ID is required"
+        }
+      }
+    },
+    "qbo": {
+      "callback": {
+        "completed": "Connection process completed.",
+        "errorDetail": "Error: {{error}}",
+        "errored": "Connection process resulted in an error.",
+        "failed": "Failed to connect to QuickBooks Online.",
+        "realmId": "Realm ID: {{realmId}}",
+        "returnButton": "Return to QuickBooks Settings",
+        "success": "Successfully connected to QuickBooks Online!",
+        "title": "QuickBooks Connection Status"
+      }
+    },
+    "rmm": {
+      "ninjaOne": {
+        "loading": "Loading NinjaOne integration settings...",
+        "card": {
+          "title": "NinjaOne RMM Integration",
+          "description": "Connect your NinjaOne account to synchronize devices, receive alerts, and enable remote access capabilities.",
+          "skeletonDescription": "Loading NinjaOne integration..."
+        },
+        "status": {
+          "checking": "Checking NinjaOne connection...",
+          "notConnected": {
+            "title": "Not connected to NinjaOne",
+            "description": "Connect your NinjaOne account to sync devices, receive alerts, and enable remote access."
+          },
+          "connected": "Connected to NinjaOne",
+          "connectedWithErrors": "NinjaOne connected with sync errors",
+          "instanceLabel": "Instance:",
+          "organizations": "{{count}} organizations",
+          "devices": "{{count}} devices",
+          "activeAlerts": "{{count}} active alerts",
+          "lastSynced": "Last synced: {{time}}"
+        },
+        "setup": {
+          "title": "Setup Instructions",
+          "steps": {
+            "login": "Log into your NinjaOne dashboard",
+            "navigate": "Navigate to Administration → Apps → API",
+            "addClient": "Click \"+ Add client app\" to create a new API application",
+            "platform": "Set Application Platform to \"Web (PHP, Java, .Net Core, etc.)\"",
+            "name": "Enter a Name (e.g., \"Alga PSA\")",
+            "redirectUri": "Add the redirect URI:",
+            "scopes": "Under \"Scopes\", check \"Monitoring\" and \"Management\"",
+            "grantTypes": "Under \"Allowed grant types\", check \"Authorization code\", \"Client credentials\", and \"Refresh token\"",
+            "addAndCopy": "Click \"Add\" and copy the Client ID and Client Secret below"
+          },
+          "docsPrefix": "For detailed setup instructions, see",
+          "docsSection": "Section 10.15",
+          "docsSuffix": "in the documentation.",
+          "openApiSettings": "Open NinjaOne API Settings"
+        },
+        "credentials": {
+          "title": "API Credentials",
+          "saved": "Credentials saved",
+          "clientIdLabel": "Client ID",
+          "clientIdPlaceholder": "Enter your NinjaOne Client ID",
+          "clientSecretLabel": "Client Secret",
+          "clientSecretPlaceholder": "Enter your NinjaOne Client Secret",
+          "clientSecretUpdatePlaceholder": "Enter new secret to update",
+          "secretMaskedLabel": "Secret",
+          "saving": "Saving...",
+          "save": "Save Credentials"
+        },
+        "region": {
+          "hint": "Select your NinjaOne region, then click ‘Connect to NinjaOne’ to authorize access.",
+          "label": "Region:"
+        },
+        "actions": {
+          "refreshing": "Refreshing...",
+          "refreshStatus": "Refresh Status",
+          "syncing": "Syncing...",
+          "syncOrganizations": "Sync Organizations",
+          "syncingDevices": "Syncing Devices...",
+          "syncDevices": "Sync Devices",
+          "disconnecting": "Disconnecting...",
+          "disconnect": "Disconnect",
+          "connect": "Connect to NinjaOne"
+        },
+        "disconnectModal": {
+          "title": "Disconnect NinjaOne",
+          "description": "Are you sure you want to disconnect NinjaOne? This will stop device synchronization and alert notifications, and remove your stored API credentials. Organization mappings will be preserved.",
+          "cancel": "Cancel",
+          "confirm": "Disconnect"
+        },
+        "toasts": {
+          "connectSuccess": "Successfully connected to NinjaOne.",
+          "connectFailed": "NinjaOne connection failed.",
+          "connectFailedWithDetail": "NinjaOne connection failed: {{detail}}",
+          "disconnectSuccess": "NinjaOne connection successfully disconnected.",
+          "credentialsSaved": "NinjaOne API credentials saved successfully.",
+          "orgSyncSuccess": "Organization sync completed. Processed: {{processed}}, Created: {{created}}, Updated: {{updated}}",
+          "deviceSyncSuccess": "Device sync completed. Processed: {{processed}}, Created: {{created}}, Updated: {{updated}}"
+        },
+        "errors": {
+          "loadStatus": "Failed to load NinjaOne connection status.",
+          "saveCredentials": "Failed to save credentials.",
+          "connect": "Failed to initiate NinjaOne connection.",
+          "disconnect": "Failed to disconnect NinjaOne.",
+          "disconnectUnexpected": "An unexpected error occurred while disconnecting.",
+          "orgSyncFailed": "Organization sync failed.",
+          "deviceSyncFailed": "Device sync failed."
+        }
+      },
+      "setup": {
+        "activeConfiguration": "Active Configuration",
+        "comingSoon": "RMM integration coming soon",
+        "configure": "Configure Integration",
+        "selected": "{{title}} selected",
+        "title": "RMM Integrations"
+      },
+      "tactical": {
+        "actions": {
+          "disconnect": "Disconnect",
+          "disconnecting": "Disconnecting...",
+          "ingestSoftware": "Ingest Software",
+          "ingesting": "Ingesting...",
+          "refresh": "Refresh",
+          "save": "Save",
+          "saving": "Saving...",
+          "syncAlerts": "Sync Alerts",
+          "syncClients": "Sync Clients",
+          "syncDevices": "Sync Devices",
+          "syncing": "Syncing...",
+          "testConnection": "Test Connection",
+          "testing": "Testing..."
+        },
+        "auth": {
+          "apiKey": "API key",
+          "enterApiKey": "Enter API key",
+          "enterPassword": "Enter password",
+          "enterUsername": "Enter username",
+          "knox": "Knox",
+          "knoxOption": "Username/password (Knox token)",
+          "knoxTokenSaved": "Knox token saved: {{value}}",
+          "mode": "Authentication",
+          "password": "Password",
+          "saved": "Saved: {{value}}",
+          "savedEnterToUpdate": "Saved (enter to update)",
+          "totp": "TOTP code",
+          "username": "Username"
+        },
+        "autoSync": "Auto-sync",
+        "client": {
+          "loading": "Loading clients…",
+          "select": "Select client"
+        },
+        "counts": {
+          "activeAlerts": "Active Alerts",
+          "lastSync": "Last Sync",
+          "mappedOrgs": "Mapped Orgs",
+          "never": "Never",
+          "syncedDevices": "Synced Devices"
+        },
+        "description": "Connect Tactical RMM to sync assets and ingest alerts.",
+        "errors": {
+          "backfillAlerts": "Alert backfill failed",
+          "connectionTest": "Connection test failed",
+          "disconnect": "Disconnect failed",
+          "ingestSoftware": "Software ingestion failed",
+          "loadOrgMappings": "Failed to load organization mappings",
+          "loadSettings": "Failed to load Tactical RMM settings",
+          "saveConfig": "Failed to save Tactical RMM configuration",
+          "someAlertsFailed": "Some alerts failed to upsert: {{errors}}",
+          "someDevicesFailed": "Some devices failed to sync: {{errors}}",
+          "someOrgsFailed": "Some organizations failed to sync: {{errors}}",
+          "someSoftwareFailed": "Some software rows failed to ingest: {{errors}}",
+          "syncDevices": "Device sync failed",
+          "syncOrgs": "Organization sync failed",
+          "totpRequired": "TOTP is required. Enter your current code and test again.",
+          "updateMapping": "Failed to update mapping"
+        },
+        "fields": {
+          "instanceUrl": "Instance URL",
+          "instanceUrlHelp": "Use your Tactical base URL (no trailing /api)."
+        },
+        "lastError": "Last error: {{error}}",
+        "loadingSettings": "Loading Tactical RMM settings...",
+        "sections": {
+          "alerts": "Alerts",
+          "alertsDescription": "Optional: backfill historical or active alerts from Tactical into Alga.",
+          "devices": "Devices",
+          "devicesDescription": "Sync Tactical Agents into Alga Assets for mapped organizations.",
+          "orgMapping": "Organization Mapping",
+          "orgMappingDescription": "Assign each Tactical Client to an Alga Client and control auto-sync per org.",
+          "orgMappingEmpty": "No organizations found. Run \"Sync Clients\" first.",
+          "organizations": "Organizations",
+          "organizationsDescription": "Sync Tactical Clients into Alga org mappings, then map them to Alga Clients.",
+          "softwareInventory": "Software Inventory",
+          "softwareInventoryDescription": "Optional: ingest cached software inventory via Tactical /api/software/ (no per-agent refresh calls).",
+          "webhooks": "Webhooks (Alerts)",
+          "webhooksDescription": "Configure a Tactical alert action webhook using the shared secret header below."
+        },
+        "status": {
+          "authPrefix": "Auth:",
+          "connected": "Connected",
+          "disconnected": "Disconnected",
+          "instanceUrlNotSet": "Instance URL not set"
+        },
+        "statusLine": {
+          "configured": "Status: Configured",
+          "notConfigured": "Status: Not configured"
+        },
+        "success": {
+          "alertBackfillCompleted": "Alert backfill completed. Processed: {{processed}}, Created: {{created}}, Updated: {{updated}}, Failed: {{failed}}",
+          "connection": "Connection successful.",
+          "deviceSyncCompleted": "Device sync completed. Processed: {{processed}}, Created: {{created}}, Updated: {{updated}}, Deleted: {{deleted}}, Failed: {{failed}}",
+          "disconnected": "Disconnected.",
+          "orgSyncCompleted": "Organization sync completed. Processed: {{processed}}, Created: {{created}}, Updated: {{updated}}, Failed: {{failed}}",
+          "saved": "Tactical RMM configuration saved.",
+          "softwareIngestionCompleted": "Software ingestion completed. Processed: {{processed}}, Installed/Updated: {{created}}, Assets Updated: {{updated}}, Failed: {{failed}}"
+        },
+        "tacticalIdLabel": "Tactical ID: {{id}}",
+        "title": "Tactical RMM",
+        "toasts": {
+          "alertsSyncedDescription": "Tactical alerts have been backfilled.",
+          "alertsSyncedTitle": "Alerts synced",
+          "backfillFailedTitle": "Backfill failed",
+          "connectedDescription": "Tactical RMM connection verified.",
+          "connectedTitle": "Connected",
+          "connectionFailedTitle": "Connection failed",
+          "devicesSyncedDescription": "Tactical agents have been synced into assets.",
+          "devicesSyncedTitle": "Devices synced",
+          "disconnectFailedTitle": "Disconnect failed",
+          "disconnectedDescription": "Tactical RMM credentials cleared.",
+          "disconnectedTitle": "Disconnected",
+          "ingestionFailedTitle": "Ingestion failed",
+          "orgsSyncedDescription": "Tactical clients have been synced into org mappings.",
+          "orgsSyncedTitle": "Organizations synced",
+          "saveFailedTitle": "Save failed",
+          "savedDescription": "Tactical RMM configuration updated.",
+          "savedTitle": "Saved",
+          "softwareIngestedDescription": "Cached Tactical software inventory has been ingested.",
+          "softwareIngestedTitle": "Software ingested",
+          "syncFailedTitle": "Sync failed",
+          "unknownError": "Unknown error",
+          "updateFailedTitle": "Update failed"
+        },
+        "webhook": {
+          "copiedTitle": "Copied",
+          "copy": "Copy",
+          "headerName": "Header Name",
+          "payloadTemplate": "Payload Template",
+          "secret": "Header Secret",
+          "secretCopied": "Webhook secret copied to clipboard.",
+          "unavailable": "Webhook information unavailable. (Requires settings read permission.)",
+          "url": "Webhook URL",
+          "urlCopied": "Webhook URL copied to clipboard."
+        }
+      },
+      "tanium": {
+        "loading": "Loading Tanium integration settings..."
+      }
+    },
+    "sso": {
+      "msp": {
+        "actions": {
+          "add": "Add",
+          "refresh": "Refresh",
+          "request": "Request",
+          "resetChallenge": "Reset Challenge",
+          "revoke": "Revoke",
+          "saveDomains": "Save Domains",
+          "saving": "Saving…",
+          "verify": "Verify"
+        },
+        "addDomainLabel": "Add login domain",
+        "advisoryNotice": "Advisory mode: domain registration helps route MSP SSO discovery but does not require ownership verification in Community Edition.",
+        "claimStatus": {
+          "advisory": "Advisory",
+          "pending": "Pending",
+          "rejected": "Rejected",
+          "revoked": "Revoked",
+          "verified": "Verified",
+          "verifiedLegacy": "Verified (Legacy)"
+        },
+        "descriptionCe": "Register advisory domains for MSP login SSO discovery. Ownership verification is not enforced in Community Edition, and unmanaged domains fall back to Nine Minds app-level providers.",
+        "descriptionEe": "Manage domain claim lifecycle for MSP login SSO provider discovery. Unclaimed or ineligible domains fall back to Nine Minds app-level providers.",
+        "dnsHost": "Host:",
+        "dnsInstructions": "Add DNS TXT record, then click Verify:",
+        "dnsValue": "Value:",
+        "emptyClaims": "No domain claims configured yet.",
+        "emptyDomains": "No domains configured. Unknown domains will use app-level provider fallback.",
+        "errors": {
+          "conflicts": "Conflicts: {{conflicts}}.",
+          "loadClaims": "Unable to load MSP SSO domain claims.",
+          "loadDomains": "Unable to load MSP SSO login domains.",
+          "refreshChallenge": "Unable to refresh challenge.",
+          "requestClaim": "Unable to request domain claim.",
+          "revokeClaim": "Unable to revoke domain claim.",
+          "saveDomains": "Unable to save MSP SSO login domains.",
+          "verifyClaim": "Unable to verify domain claim."
+        },
+        "fallbackInfo": "Domains without an eligible tenant claim use the Nine Minds app-level SSO provider configuration.",
+        "loading": "Loading…",
+        "removeDomainAria": "Remove domain {{number}}",
+        "requestClaim": "Request Claim",
+        "requestClaimLabel": "Request domain claim",
+        "title": "MSP SSO Login Domains",
+        "toasts": {
+          "claimRequestedDescription": "Pending domain claim created and verification challenge generated.",
+          "claimRequestedTitle": "Domain claim requested",
+          "claimUnchangedDescription": "Existing pending claim and challenge are already active.",
+          "claimUnchangedTitle": "Domain claim unchanged",
+          "refreshFailedTitle": "Unable to refresh challenge",
+          "refreshedDescription": "A new verification challenge is active for this claim.",
+          "refreshedTitle": "Challenge refreshed",
+          "requestClaimFailedTitle": "Unable to request domain claim",
+          "revokeFailedTitle": "Unable to revoke claim",
+          "revokedDescription": "Tenant takeover for this domain is disabled.",
+          "revokedTitle": "Domain claim revoked",
+          "saveDomainsFailedTitle": "Unable to save MSP SSO login domains",
+          "savedDescription": "Domain-based SSO discovery settings are updated.",
+          "savedTitle": "MSP SSO login domains saved",
+          "verifiedDescription": "Domain takeover is now eligible for tenant-scoped provider routing.",
+          "verifiedTitle": "Domain claim verified",
+          "verifyFailedTitle": "Domain verification failed"
+        }
+      }
+    },
+    "teams": {
+      "settings": {
+        "actions": {
+          "activate": "Activate Teams",
+          "addNote": {
+            "description": "Allow internal note quick actions.",
+            "label": "Add note"
+          },
+          "approvalResponse": {
+            "description": "Allow approve and reject quick actions.",
+            "label": "Approval response"
+          },
+          "assignTicket": {
+            "description": "Allow ticket assignment quick actions.",
+            "label": "Assign ticket"
+          },
+          "deactivate": "Deactivate",
+          "logTime": {
+            "description": "Allow time-entry quick actions.",
+            "label": "Log time"
+          },
+          "reload": "Reload",
+          "replyToContact": {
+            "description": "Allow customer-visible reply quick actions.",
+            "label": "Reply to contact"
+          },
+          "saveChanges": "Save changes",
+          "saveDraft": "Save draft",
+          "saving": "Saving...",
+          "teamsActive": "Teams active"
+        },
+        "capabilities": {
+          "activityNotifications": {
+            "description": "Deliver personal Teams activity-feed notifications.",
+            "label": "Activity notifications"
+          },
+          "groupChatBot": {
+            "description": "Allow the bot to respond in Teams group chats. Bot replies (including ticket details) are visible to every member of the chat.",
+            "label": "Group chat bot"
+          },
+          "messageExtension": {
+            "description": "Enable lookup and message-driven PSA actions.",
+            "label": "Message extension"
+          },
+          "personalBot": {
+            "description": "Enable personal-scope bot commands for technicians.",
+            "label": "Personal bot"
+          },
+          "personalTab": {
+            "description": "Launch the PSA personal tab entry point.",
+            "label": "Personal tab"
+          }
+        },
+        "checklist": {
+          "installState": {
+            "active": "Teams is active for this tenant.",
+            "error": "Teams setup has an error that needs remediation.",
+            "label": "Teams install state",
+            "notConfigured": "Save a draft or activate Teams when setup is ready.",
+            "pending": "Draft setup is saved and ready for install or consent."
+          },
+          "needsAction": "Needs action",
+          "profileReady": {
+            "completed": "The selected profile has client ID, tenant ID, and stored secret material.",
+            "label": "Profile ready for Teams install",
+            "pending": "No selected Teams profile is ready yet."
+          },
+          "profileSelected": {
+            "completed": "{{name}} is bound for Teams.",
+            "label": "Microsoft profile selected",
+            "pending": "Select one eligible Microsoft profile before saving or activating Teams."
+          },
+          "ready": "Ready"
+        },
+        "description": "Bind Teams to a Microsoft profile, enable capabilities, and generate the tenant package.",
+        "errors": {
+          "downloadPackage": "Failed to download Teams app package",
+          "generatePackage": "Failed to generate Teams app package",
+          "loadGuidance": "Failed to load Teams setup guidance",
+          "saveSettings": "Failed to save Teams settings"
+        },
+        "guidance": {
+          "applicationIdUri": "Application ID URI",
+          "messageExtension": "Message extension",
+          "personalBot": "Personal bot",
+          "personalTab": "Personal tab",
+          "redirectUris": "Redirect URIs",
+          "requiredScopes": "Required scopes",
+          "teamsAppIdUri": "Teams app ID URI",
+          "unavailable": "Unavailable"
+        },
+        "installStatus": {
+          "active": "Active",
+          "error": "Error",
+          "installPending": "Install Pending",
+          "notConfigured": "Not Configured"
+        },
+        "noEligibleProfiles": "No Microsoft profiles are ready for Teams. Finish Microsoft setup first.",
+        "notifications": {
+          "approvalRequest": {
+            "description": "Notify approvers about pending decisions.",
+            "label": "Approval requests"
+          },
+          "assignment": {
+            "description": "Notify technicians when work is assigned.",
+            "label": "Assignment events"
+          },
+          "customerReply": {
+            "description": "Notify technicians when customers respond.",
+            "label": "Customer replies"
+          },
+          "escalation": {
+            "description": "Notify owners when work escalates.",
+            "label": "Escalations"
+          },
+          "slaRisk": {
+            "description": "Notify technicians when SLA risk thresholds are reached.",
+            "label": "SLA risk"
+          }
+        },
+        "package": {
+          "appId": "App ID",
+          "appIds": "App IDs",
+          "botId": "Bot ID",
+          "deepLinks": "Deep links",
+          "description": "Generate the app manifest and installation links for the selected Microsoft profile.",
+          "downloadManifest": "Download manifest JSON",
+          "downloadZip": "Download app package (.zip)",
+          "downloading": "Downloading...",
+          "fileName": "File name",
+          "generate": "Generate package",
+          "generating": "Generating...",
+          "manifestVersion": "Manifest version",
+          "myWork": "My work",
+          "openBaseUrl": "Open PSA base URL",
+          "openDeeplink": "Open Teams deep link",
+          "packageVersion": "Package version",
+          "projectTaskTemplate": "Project task template",
+          "section": "Package",
+          "ticketTemplate": "Ticket template",
+          "title": "Teams Package",
+          "validDomains": "Valid domains",
+          "webResource": "Web application resource"
+        },
+        "profileLabel": "Microsoft profile",
+        "profileSummary": {
+          "needsRepair": "Selected profile needs repair",
+          "none": "No profile selected"
+        },
+        "section": {
+          "allowedActions": "Allowed actions",
+          "capabilities": "Capabilities",
+          "notifications": "Notifications"
+        },
+        "selectProfile": "Select profile",
+        "statusMessage": {
+          "activated": "Teams setup activated.",
+          "deactivated": "Teams setup deactivated.",
+          "packageDownloaded": "Teams app package downloaded.",
+          "packageGenerated": "Teams app package generated.",
+          "saved": "Teams setup saved."
+        },
+        "title": "Microsoft Teams"
+      }
+    },
+    "xero": {
+      "csv": {
+        "clientSync": {
+          "cancel": "Cancel",
+          "createNew": "Create new clients",
+          "description": "Export clients to Xero Contacts CSV or import contacts from Xero.",
+          "errorRow": "Row {{row}}: {{name}} - {{error}}",
+          "errors": {
+            "export": "Failed to export clients",
+            "import": "Failed to import clients",
+            "processCsv": "Failed to process CSV file"
+          },
+          "errorsTitle": "Errors ({{count}})",
+          "exportButton": "Export Clients to CSV",
+          "exportClients": "Export Clients",
+          "exportDescription": "Export your Alga clients to a CSV file that can be imported into Xero as Contacts.",
+          "exportSuccess": "Exported {{count}} clients to {{filename}}",
+          "importCompleteDescription": "Successfully processed {{count}} contacts.",
+          "importCompleteTitle": "Import Complete",
+          "importContacts": "Import Contacts",
+          "importContactsButton": "Import {{count}} Contacts",
+          "importDescription": "Import contacts from a Xero Contacts CSV export. Existing clients can be matched and updated.",
+          "importing": "Importing contacts...",
+          "matchBy": {
+            "algaClientId": "Alga Client ID (from tracking category)",
+            "contactName": "Contact Name",
+            "emailAddress": "Email Address"
+          },
+          "matchByLabel": "Match contacts by:",
+          "moreErrors": "...and {{count}} more errors",
+          "preview": {
+            "columns": {
+              "action": "Action",
+              "contactName": "Contact Name",
+              "email": "Email",
+              "matchedClient": "Matched Client"
+            },
+            "moreWarnings": "...and {{count}} more",
+            "showing20of": "Showing 20 of {{count}} rows",
+            "toCreate": "To Create",
+            "toSkip": "To Skip",
+            "toUpdate": "To Update",
+            "warnings": "Warnings"
+          },
+          "processing": "Processing {{filename}}...",
+          "result": {
+            "created": "Created",
+            "mappings": "Mappings",
+            "skipped": "Skipped",
+            "updated": "Updated"
+          },
+          "selectCsvFile": "Select CSV File",
+          "startNewImport": "Start New Import",
+          "title": "Client Sync",
+          "updateExisting": "Update existing clients",
+          "workflow": {
+            "s1": "Export clients from Alga to Xero Contacts CSV",
+            "s2": "Import the CSV into Xero (Contacts → Import)",
+            "s3": "After changes in Xero, export contacts from Xero",
+            "s4": "Import the Xero contacts CSV back into Alga to sync updates"
+          },
+          "workflowTitle": "Client Sync Workflow"
+        },
+        "settings": {
+          "dateFormat": "Date Format",
+          "dateFormatHelp": "Match this to your Xero region settings.",
+          "dateFormatOptions": {
+            "dmy": "DD/MM/YYYY (Day/Month/Year)",
+            "mdy": "MM/DD/YYYY (Month/Day/Year)"
+          },
+          "defaultCurrency": "Default Currency",
+          "defaultCurrencyHelp": "Leave blank to use invoice currency.",
+          "errors": {
+            "load": "Failed to load settings",
+            "save": "Failed to save settings"
+          },
+          "exportSettings": {
+            "description": "Configure how invoices are exported to CSV format for Xero.",
+            "title": "CSV Export Settings"
+          },
+          "loading": "Loading Xero CSV settings...",
+          "managedPrefix": "Go to",
+          "managedSuffix": "to select invoices, generate Xero CSV exports, import tax reports, and manage batches.",
+          "mappings": {
+            "description": "Map Alga clients, services, and tax codes to the identifiers used in your Xero organisation. These values are used when generating the CSV export.",
+            "title": "Xero CSV Mappings"
+          },
+          "overview": {
+            "description": "Export invoices to CSV for manual import into Xero, and import tax data from Xero reports.",
+            "exportLabel": "Export",
+            "exportText": "Generate CSV files compatible with Xero's invoice import feature",
+            "intro": "This integration provides an alternative to OAuth-based Xero connectivity:",
+            "note": "Note: Configure mappings below before exporting. CSV exports and tax imports are managed from Billing → Accounting Exports.",
+            "taxImportLabel": "Tax Import",
+            "taxImportText": "When using external tax calculation, import tax amounts from Xero's Invoice Details Report",
+            "title": "Xero CSV Integration"
+          },
+          "savedMessage": "Settings saved successfully",
+          "selectCurrency": "Select currency",
+          "setup": {
+            "acknowledge": "I've completed the setup",
+            "description": "Complete these steps in Xero before using CSV import/export.",
+            "externalInvoiceId": "External Invoice ID",
+            "externalInvoiceIdHelp": "Options will be created automatically when importing",
+            "sourceSystem": "Source System",
+            "sourceSystemHelp": "Add an option called",
+            "step1Description": "In Xero, go to Settings → Tracking Categories and create these two categories:",
+            "step1Title": "Step 1: Create Tracking Categories",
+            "step2Description": "Ensure your Xero organisation has the tax rates you need configured under Settings → Tax Rates.",
+            "step2Title": "Step 2: Configure Tax Rates",
+            "step3Description": "Use the mapping section below to link your Alga services to Xero item codes, and your tax regions to Xero tax rates.",
+            "step3Title": "Step 3: Map Services and Tax Regions",
+            "title": "Xero Setup Required"
+          },
+          "useInvoiceCurrency": "Use invoice currency",
+          "workflow": {
+            "description": "How to export invoices and import tax calculations.",
+            "export": {
+              "s1": "Go to Billing → Accounting Exports",
+              "s2": "Select invoices and choose \"Xero CSV\" as the adapter",
+              "s3": "Download the generated CSV file",
+              "s4": "In Xero: Business → Invoices → Import",
+              "s5": "Upload the CSV and import as Draft invoices",
+              "s6": "Xero will calculate tax based on your tax settings"
+            },
+            "exportInvoices": "Export Invoices",
+            "import": {
+              "s1": "In Xero: Reports → All Reports → Invoice Details",
+              "s2": "Set date range and export as CSV",
+              "s3": "In Alga: Billing → Accounting Exports → Import Tax",
+              "s4": "Upload the Xero report CSV",
+              "s5": "Review matched invoices and confirm import"
+            },
+            "importTax": "Import Tax Calculations",
+            "title": "CSV Workflow",
+            "trackingDescription": "The CSV export includes tracking category columns that link each Xero invoice back to its Alga source. When you import tax from Xero, these tracking categories are used to automatically match invoices - no manual reconciliation needed.",
+            "trackingTitle": "Tracking Categories for Reconciliation"
+          }
+        }
+      },
+      "live": {
+        "defaultOrganisation": "Default Xero Organisation"
+      },
+      "settings": {
+        "actions": {
+          "connect": "Connect Xero",
+          "disconnect": "Disconnect Xero",
+          "disconnecting": "Disconnecting…",
+          "reconnect": "Reconnect Xero",
+          "refresh": "Refresh",
+          "saveCredentials": "Save Xero Credentials",
+          "saving": "Saving…"
+        },
+        "badges": {
+          "connectionExpired": "Connection Expired",
+          "credentialsReady": "Credentials Ready",
+          "credentialsRequired": "Credentials Required",
+          "defaultConnected": "Default Organisation Connected",
+          "noOrganisation": "No Organisation Connected"
+        },
+        "callback": {
+          "accessDenied": "Xero access was denied before the connection completed.",
+          "configMissing": "Xero OAuth could not start because the tenant client ID and client secret were not fully configured.",
+          "connectionsUnmapped": "Xero returned organisations, but none included the identifiers required to save a connection.",
+          "generic": "Xero returned an OAuth error: {{code}}",
+          "invalidState": "The Xero OAuth state was invalid or expired. Start the connect flow again.",
+          "missingParams": "The Xero callback was missing required parameters. Start the connect flow again.",
+          "noConnections": "Xero did not return any organisations for this login. Check your Xero app and organisation access, then try again.",
+          "oauthFailed": "The Xero OAuth callback failed. Try connecting again. If the problem persists, review your redirect URI and scopes."
+        },
+        "clientIdLabel": "Xero Client ID",
+        "clientIdPlaceholder": "Paste your tenant-owned Xero client ID",
+        "clientSecretLabel": "Xero Client Secret",
+        "clientSecretPlaceholder": "Paste your tenant-owned Xero client secret",
+        "connectSuccess": "Xero connected successfully. The first connected organisation is now the default live Xero context.",
+        "connection": {
+          "connectionId": "Connection ID: {{id}}",
+          "defaultOrganisation": "Default organisation",
+          "description": "Start OAuth only after the tenant-owned Xero app is configured. Disconnecting removes stored Xero access tokens but keeps the tenant-owned app credentials in place.",
+          "notConnected": "No live Xero organisation is connected yet. Save credentials, then click Connect Xero.",
+          "title": "Live Xero Connection",
+          "unknown": "unknown"
+        },
+        "credentialsSaved": "Xero credentials saved. You can now start the live Xero OAuth flow.",
+        "csvAvailableMiddle": "in this same Accounting section and manage exports from",
+        "csvAvailablePrefix": "If you prefer a manual workflow, keep using",
+        "csvAvailableTitle": "Xero CSV remains available",
+        "description": "Configure tenant-owned Xero OAuth credentials, connect your default organisation, and keep live Xero available beside the manual Xero CSV workflow.",
+        "disconnectSuccess": "The stored Xero connection was removed. Tenant-owned Xero app credentials were preserved.",
+        "errors": {
+          "disconnect": "Failed to disconnect Xero.",
+          "load": "Failed to load Xero settings.",
+          "saveCredentials": "Failed to save Xero credentials."
+        },
+        "howItWorksDescription": "Save a tenant-owned Xero client ID and client secret here, complete the Xero OAuth flow, and Alga PSA will use the first connected Xero organisation as the default live context.",
+        "howItWorksTitle": "How live Xero works in this release",
+        "loading": "Loading Xero settings…",
+        "mapping": {
+          "alert": "Xero items, revenue accounts, tax rates, and tracking categories are loaded from the default connected organisation so live exports can keep using the first stored Xero connection in v1.",
+          "descriptionPrefix": "Configure live Xero mappings for the default connected organisation. These mappings are scoped to",
+          "placeholderAlert": "The mapping manager becomes available after the first Xero organisation is connected and set as the default live Xero context.",
+          "placeholderDescription": "Connect a live Xero organisation before configuring live Xero item and tax mappings.",
+          "title": "Live Xero Mapping & Configuration"
+        },
+        "noClientId": "No client ID is stored for this tenant yet.",
+        "noClientSecret": "No client secret is stored for this tenant yet.",
+        "redirectUri": "Redirect URI",
+        "requiredScopes": "Required Scopes",
+        "storedClientId": "Stored client ID: {{value}}",
+        "storedClientSecret": "Stored client secret: {{value}}",
+        "tenantOauthDescription": "Paste the Xero app credentials registered for this tenant. Secret values are never returned to the browser after they are saved.",
+        "tenantOauthTitle": "Tenant-Owned OAuth App",
+        "title": "Xero",
+        "xeroCsv": "Xero CSV"
+      }
+    },
+    "stripe": {
+      "title": "Stripe Payments",
+      "description": "Accept credit card payments for your invoices",
+      "connected": {
+        "title": "Stripe Connected",
+        "publishableKey": "Publishable key: {{key}}..."
+      },
+      "empty": {
+        "description": "Connect your Stripe account to accept online payments for invoices"
+      },
+      "actions": {
+        "testConnection": "Test Connection",
+        "disconnect": "Disconnect",
+        "connect": "Connect Stripe",
+        "connecting": "Connecting...",
+        "cancel": "Cancel"
+      },
+      "form": {
+        "secretKeyLabel": "Secret Key",
+        "secretKeyPlaceholder": "sk_live_... or sk_test_...",
+        "publishableKeyLabel": "Publishable Key",
+        "publishableKeyPlaceholder": "pk_live_... or pk_test_...",
+        "findKeyPrefix": "Find this in your",
+        "dashboardLink": "Stripe Dashboard → API Keys"
+      },
+      "webhook": {
+        "heading": "Webhook Configuration",
+        "configuredAutomatically": "Webhooks configured automatically",
+        "receiveNotifications": "Alga PSA will receive payment notifications for:",
+        "failedTitle": "Webhook configuration failed",
+        "failedBody": "Automatic webhook configuration failed. Click retry to attempt configuration again.",
+        "configuring": "Configuring...",
+        "retry": "Retry Configuration"
+      },
+      "disconnectDialog": {
+        "title": "Disconnect Stripe",
+        "message": "Are you sure you want to disconnect Stripe? Payment links will no longer work.",
+        "confirm": "Disconnect",
+        "cancel": "Cancel"
+      },
+      "toasts": {
+        "connectedWithWebhook": "Stripe connected and webhooks configured automatically!",
+        "connectedWebhookFailed": "Stripe connected! Note: Webhook auto-configuration failed - you may need to configure webhooks manually in Stripe Dashboard.",
+        "disconnected": "Stripe disconnected",
+        "connectionSuccess": "Connection successful!",
+        "webhookConfigured": "Webhook configured successfully!"
+      },
+      "errors": {
+        "loadConfig": "Failed to load Stripe configuration",
+        "connect": "Failed to connect Stripe",
+        "disconnect": "Failed to disconnect Stripe",
+        "testConnection": "Connection test failed",
+        "configureWebhook": "Failed to configure webhook",
+        "bothKeysRequired": "Please enter both secret key and publishable key",
+        "secretKeyFormat": "Secret key should start with sk_",
+        "publishableKeyFormat": "Publishable key should start with pk_"
+      }
+    }
+  }
+}

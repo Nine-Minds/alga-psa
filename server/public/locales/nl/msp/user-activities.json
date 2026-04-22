@@ -1,0 +1,419 @@
+{
+  "dashboard": {
+    "title": "Gebruikersactiviteiten",
+    "viewSwitcher": {
+      "cards": "Kaarten",
+      "table": "Tabel"
+    },
+    "sections": {
+      "notifications": "Meldingen",
+      "schedule": "Schema"
+    },
+    "filteredTitle": "Gefilterde activiteiten",
+    "allActivitiesTitle": "Alle activiteiten"
+  },
+  "table": {
+    "title": {
+      "all": "Alle activiteiten"
+    },
+    "columns": {
+      "type": "Type",
+      "title": "Titel",
+      "status": "Status",
+      "priority": "Prioriteit",
+      "dueDate": "Vervaldatum",
+      "actions": "Acties"
+    },
+    "values": {
+      "noDueDate": "Geen vervaldatum",
+      "emDash": "—",
+      "unread": "Ongelezen",
+      "recurringEvent": "Terugkerende gebeurtenis"
+    },
+    "actions": {
+      "refresh": "Vernieuwen",
+      "print": "Afdrukken"
+    },
+    "viewSwitcher": {
+      "flat": "Plat",
+      "grouped": "Gegroepeerd"
+    },
+    "states": {
+      "noActivities": "Geen activiteiten gevonden",
+      "noMatching": "Geen activiteiten die overeenkomen met de filters"
+    },
+    "errors": {
+      "loadFailed": "Activiteiten konden niet worden geladen. Probeer het later opnieuw."
+    },
+    "activityTypes": {
+      "schedule": "Schema",
+      "projectTask": "Projecttaak",
+      "ticket": "Ticket",
+      "timeEntry": "Tijdregistratie",
+      "workflowTask": "Workflow-taak",
+      "notification": "Melding",
+      "unknown": "Onbekend",
+      "activity": "Activiteit"
+    }
+  },
+  "card": {
+    "noDescription": "Geen beschrijving opgegeven",
+    "due": "Vervalt: {{date}}",
+    "recurringEvent": "Terugkerende gebeurtenis",
+    "unread": "Ongelezen",
+    "noMessage": "Geen bericht",
+    "estimatedHours": "Gesch.: {{hours}} u",
+    "duration": "Duur: {{hours}} u",
+    "hasForm": "Heeft formulier",
+    "roles": "Rollen: {{roles}}"
+  },
+  "drawer": {
+    "loading": "Laden...",
+    "errorLoadingTitle": "Fout bij het laden van activiteitsdetails",
+    "errorLoadingMessage": "Activiteitsdetails konden niet worden geladen. Probeer het later opnieuw.",
+    "userNotAuthenticated": "Gebruiker niet geverifieerd",
+    "scheduleEntryNotFound": "Schema-item niet gevonden",
+    "timeEntryNotFound": "Tijdregistratie niet gevonden",
+    "unknownWorkItem": "Onbekend werkitem",
+    "timeEntryDetailsTitle": "Details van tijdregistratie",
+    "errorLoadingTimeEntry": "Fout bij het laden van de tijdregistratie",
+    "workflowTaskTitle": "Workflow-taak",
+    "noAdditionalDetails": "Geen aanvullende details beschikbaar.",
+    "failedToLoadDocument": "Documentinhoud kon niet worden geladen",
+    "notificationNotFound": "Melding niet gevonden",
+    "failedToLoadTicket": "Ticketdetails konden niet worden geladen",
+    "failedToLoadTask": "Taakdetails konden niet worden geladen",
+    "unsupportedTitle": "Niet-ondersteund activiteitstype",
+    "unsupportedDescription": "Dit activiteitstype ({{activityType}}) wordt niet ondersteund in de detailweergave.",
+    "saveDocumentSuccess": "Document succesvol opgeslagen",
+    "saveDocumentError": "Document kon niet worden opgeslagen",
+    "timeEntryUpdatedSuccess": "Tijdregistratie succesvol bijgewerkt",
+    "timeEntryUpdatedError": "Tijdregistratie kon niet worden bijgewerkt",
+    "backToNotification": "Terug naar melding",
+    "documentTitleEdit": "Document bewerken",
+    "documentTitleViewer": "Documentviewer",
+    "actions": {
+      "edit": "Bewerken",
+      "cancel": "Annuleren",
+      "save": "Opslaan",
+      "saving": "Opslaan..."
+    },
+    "menu": {
+      "openMenu": "Menu openen",
+      "goToPage": "Naar pagina",
+      "dismissError": "Taak kon niet worden afgewezen: {{message}}"
+    },
+    "retryLater": "Probeer het later opnieuw."
+  },
+  "groupedView": {
+    "addGroup": "Groep toevoegen",
+    "groupNamePlaceholder": "Groepsnaam",
+    "ariaLabels": {
+      "dragToReorder": "Sleep om de volgorde te wijzigen",
+      "dragToReorderGroup": "Sleep om de groepsvolgorde te wijzigen",
+      "expandGroup": "Groep uitvouwen",
+      "collapseGroup": "Groep samenvouwen",
+      "renameGroup": "Groep hernoemen",
+      "deleteGroup": "Groep verwijderen"
+    },
+    "dropActivitiesHere": "Activiteiten hier neerzetten",
+    "ungroupedHeading": "Niet gegroepeerd",
+    "allInGroups": "Alle activiteiten staan in groepen",
+    "columns": {
+      "title": "Titel",
+      "status": "Status",
+      "priority": "Prioriteit",
+      "dueDate": "Vervaldatum"
+    }
+  },
+  "printable": {
+    "defaultTitle": "Activiteiten",
+    "ungroupedHeading": "Niet gegroepeerd",
+    "empty": "(leeg)"
+  },
+  "sections": {
+    "projects": {
+      "title": "Projecttaken",
+      "actions": {
+        "refresh": "Vernieuwen",
+        "filter": "Filteren",
+        "reset": "Resetten",
+        "viewAll": "Alles weergeven"
+      },
+      "ariaLabels": {
+        "refresh": "Projecttaken vernieuwen",
+        "filter": "Projecttaken filteren"
+      },
+      "states": {
+        "loading": "Projectactiviteiten worden geladen...",
+        "empty": "Geen projectactiviteiten gevonden"
+      },
+      "errors": {
+        "loadFailed": "Projectactiviteiten konden niet worden geladen. Probeer het later opnieuw."
+      },
+      "filterDialog": {
+        "title": "Projecttaken filteren",
+        "description": "Selecteer criteria om projecttaak-activiteiten te filteren.",
+        "fields": {
+          "search": "Zoeken",
+          "searchPlaceholder": "Zoeken op titel, beschrijving",
+          "project": "Project",
+          "projectPlaceholder": "Selecteer project...",
+          "allProjects": "Alle projecten",
+          "phase": "Fase",
+          "phasePlaceholder": "Selecteer fase...",
+          "phaseLoadingPlaceholder": "Fasen worden geladen...",
+          "phaseSelectFirstPlaceholder": "Selecteer eerst een project",
+          "allPhases": "Alle fasen",
+          "priority": "Prioriteit",
+          "priorityPlaceholder": "Selecteer prioriteit...",
+          "allPriorities": "Alle prioriteiten",
+          "dueDateRange": "Bereik vervaldatum",
+          "showClosedTasks": "Gesloten taken weergeven"
+        },
+        "actions": {
+          "reset": "Resetten",
+          "cancel": "Annuleren",
+          "apply": "Filters toepassen"
+        }
+      }
+    },
+    "tickets": {
+      "title": "Tickets",
+      "actions": {
+        "refresh": "Vernieuwen",
+        "filter": "Filteren",
+        "reset": "Resetten",
+        "viewAll": "Alles weergeven"
+      },
+      "ariaLabels": {
+        "refresh": "Tickets vernieuwen",
+        "filter": "Tickets filteren"
+      },
+      "states": {
+        "loading": "Ticket-activiteiten worden geladen...",
+        "empty": "Geen ticket-activiteiten gevonden"
+      },
+      "errors": {
+        "loadFailed": "Ticket-activiteiten konden niet worden geladen. Probeer het later opnieuw."
+      },
+      "filterDialog": {
+        "title": "Tickets filteren",
+        "description": "Selecteer criteria om ticket-activiteiten te filteren.",
+        "fields": {
+          "search": "Zoeken",
+          "searchPlaceholder": "Zoeken op titel, beschrijving, ticketnr.",
+          "client": "Klant",
+          "contact": "Contactpersoon",
+          "status": "Status",
+          "statusPlaceholder": "Selecteer status...",
+          "allStatuses": "Alle statussen",
+          "priority": "Prioriteit",
+          "priorityPlaceholder": "Selecteer prioriteit...",
+          "allPriorities": "Alle prioriteiten",
+          "dueDateRange": "Bereik vervaldatum",
+          "showClosedTickets": "Gesloten tickets weergeven"
+        },
+        "actions": {
+          "reset": "Resetten",
+          "cancel": "Annuleren",
+          "apply": "Filters toepassen"
+        }
+      }
+    },
+    "workflowTasks": {
+      "title": "Workflow-taken",
+      "drawerTitle": "Workflow-taken",
+      "actions": {
+        "refresh": "Vernieuwen",
+        "filter": "Filteren",
+        "reset": "Resetten",
+        "viewAll": "Alles weergeven"
+      },
+      "ariaLabels": {
+        "refresh": "Workflow-taken vernieuwen",
+        "filter": "Workflow-taken filteren"
+      },
+      "states": {
+        "loading": "Workflow-taakactiviteiten worden geladen...",
+        "empty": "Geen workflow-taakactiviteiten gevonden"
+      },
+      "errors": {
+        "loadFailed": "Workflow-taakactiviteiten konden niet worden geladen. Probeer het later opnieuw."
+      },
+      "filterDialog": {
+        "title": "Workflow-taken filteren",
+        "description": "Selecteer criteria om workflow-taakactiviteiten te filteren.",
+        "fields": {
+          "search": "Zoeken",
+          "searchPlaceholder": "Zoeken op titel, beschrijving",
+          "workflowExecution": "Workflow-uitvoering",
+          "workflowExecutionPlaceholder": "Selecteer workflow-uitvoering...",
+          "allExecutions": "Alle uitvoeringen",
+          "priority": "Prioriteit",
+          "priorityPlaceholder": "Selecteer prioriteit...",
+          "allPriorities": "Alle prioriteiten",
+          "priorityHigh": "Hoog",
+          "priorityMedium": "Gemiddeld",
+          "priorityLow": "Laag",
+          "dueDateRange": "Bereik vervaldatum",
+          "showClosedTasks": "Gesloten taken weergeven",
+          "includeHiddenTasks": "Verborgen taken opnemen"
+        },
+        "actions": {
+          "reset": "Resetten",
+          "cancel": "Annuleren",
+          "apply": "Filters toepassen"
+        }
+      },
+      "listDrawer": {
+        "searchPlaceholder": "Taken zoeken...",
+        "filters": "Filters",
+        "refresh": "Vernieuwen",
+        "sortBy": "Sorteren op:",
+        "sortOptions": {
+          "priority": "Prioriteit",
+          "dueDate": "Vervaldatum",
+          "createdAt": "Aanmaakdatum",
+          "title": "Titel"
+        },
+        "ascending": "Oplopend",
+        "descending": "Aflopend",
+        "states": {
+          "loading": "Workflow-taken worden geladen...",
+          "empty": "Geen workflow-taken gevonden"
+        },
+        "errors": {
+          "loadFailed": "Workflow-taken konden niet worden geladen. Probeer het later opnieuw."
+        }
+      }
+    },
+    "schedule": {
+      "title": "Schema",
+      "actions": {
+        "refresh": "Vernieuwen",
+        "filter": "Filteren",
+        "reset": "Resetten",
+        "viewAll": "Alles weergeven"
+      },
+      "states": {
+        "loading": "Schema-activiteiten worden geladen...",
+        "empty": "Geen schema-activiteiten gevonden"
+      },
+      "errors": {
+        "loadFailed": "Schema-activiteiten konden niet worden geladen. Probeer het later opnieuw.",
+        "refreshFailed": "Schema-activiteiten konden niet worden vernieuwd. Probeer het later opnieuw."
+      },
+      "filterDialog": {
+        "title": "Schema-items filteren",
+        "description": "Selecteer criteria om schema-activiteiten te filteren.",
+        "fields": {
+          "search": "Zoeken",
+          "searchPlaceholder": "Zoeken op titel, beschrijving",
+          "dateRange": "Datumbereik",
+          "workItemType": "Gerelateerd werkitemtype",
+          "workItemTypePlaceholder": "Selecteer werkitemtype...",
+          "allTypes": "Alle typen",
+          "ticket": "Ticket",
+          "projectTask": "Projecttaak",
+          "workflowTask": "Workflow-taak",
+          "showClosedEntries": "Gesloten items weergeven",
+          "showRecurringOnly": "Alleen terugkerende weergeven"
+        },
+        "actions": {
+          "reset": "Resetten",
+          "cancel": "Annuleren",
+          "apply": "Filters toepassen"
+        }
+      }
+    },
+    "notifications": {
+      "title": "Meldingen",
+      "actions": {
+        "refresh": "Vernieuwen",
+        "filter": "Filteren",
+        "reset": "Resetten",
+        "viewAll": "Alles weergeven"
+      },
+      "ariaLabels": {
+        "refresh": "Meldingen vernieuwen",
+        "filter": "Meldingen filteren"
+      },
+      "tabs": {
+        "unread": "Ongelezen",
+        "all": "Alle",
+        "read": "Gelezen"
+      },
+      "states": {
+        "loading": "Meldingsactiviteiten worden geladen...",
+        "empty": "Geen meldingsactiviteiten gevonden"
+      },
+      "errors": {
+        "loadFailed": "Meldingsactiviteiten konden niet worden geladen. Probeer het later opnieuw."
+      },
+      "filterDialog": {
+        "title": "Meldingen filteren",
+        "description": "Selecteer criteria om meldingsactiviteiten te filteren.",
+        "fields": {
+          "status": "Status",
+          "unreadOnly": "Alleen ongelezen",
+          "showRead": "Gelezen weergeven",
+          "category": "Categorie",
+          "categoryPlaceholder": "Selecteer categorie...",
+          "allCategories": "Alle categorieën",
+          "categories": {
+            "tickets": "Tickets",
+            "projects": "Projecten",
+            "invoices": "Facturen",
+            "system": "Systeem"
+          },
+          "dateRange": "Datumbereik"
+        },
+        "actions": {
+          "reset": "Resetten",
+          "cancel": "Annuleren",
+          "apply": "Filters toepassen"
+        }
+      }
+    }
+  },
+  "pickers": {
+    "priority": {
+      "loading": "Laden...",
+      "empty": "Geen prioriteiten beschikbaar",
+      "none": "Geen"
+    },
+    "status": {
+      "loading": "Laden...",
+      "empty": "Geen statussen beschikbaar",
+      "closedSuffix": "gesloten"
+    }
+  },
+  "filters": {
+    "labels": {
+      "types": "Typen:",
+      "tickets": "Tickets:",
+      "tasks": "Taken:",
+      "priority": "Prioriteit",
+      "dueDate": "Vervaldatum",
+      "showClosed": "Gesloten weergeven"
+    },
+    "activityTypeOptions": {
+      "schedule": "Schema",
+      "projectTask": "Projecttaken",
+      "ticket": "Tickets",
+      "workflowTask": "Workflow-taken"
+    },
+    "placeholders": {
+      "allBoards": "Alle boards",
+      "allStatuses": "Alle statussen",
+      "allProjects": "Alle projecten",
+      "allPriorities": "Alle prioriteiten",
+      "selectPriority": "Selecteer prioriteit..."
+    },
+    "actions": {
+      "reset": "Resetten"
+    },
+    "statusClosedSuffix": " (gesloten)"
+  }
+}

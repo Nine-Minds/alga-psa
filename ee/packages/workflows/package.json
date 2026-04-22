@@ -26,6 +26,14 @@
       "import": "./src/components/*.tsx",
       "types": "./src/components/*.tsx"
     },
+    "./hooks/*": {
+      "import": "./src/hooks/*.ts",
+      "types": "./src/hooks/*.ts"
+    },
+    "./constants/*": {
+      "import": "./src/constants/*.ts",
+      "types": "./src/constants/*.ts"
+    },
     "./runtime": {
       "import": "./dist/runtime/index.mjs",
       "types": "./src/runtime/index.ts"

@@ -9,6 +9,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -43,6 +44,7 @@ interface PaymentConfigDisplay {
 }
 
 export const StripeConnectionSettings: React.FC = () => {
+  const { t } = useTranslation('msp/integrations');
   const [config, setConfig] = useState<PaymentConfigDisplay | null>(null);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
@@ -68,14 +70,16 @@ export const StripeConnectionSettings: React.FC = () => {
       if (result.success) {
         setConfig(result.data || null);
       } else {
-        toast.error(result.error || 'Failed to load Stripe configuration');
+        console.error('Stripe load config failed:', result.error);
+        toast.error(t('integrations.stripe.errors.loadConfig', { defaultValue: 'Failed to load Stripe configuration' }));
       }
     } catch (error) {
-      toast.error('Failed to load Stripe configuration');
+      console.error('Stripe load config error:', error);
+      toast.error(t('integrations.stripe.errors.loadConfig', { defaultValue: 'Failed to load Stripe configuration' }));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     loadConfig();
@@ -86,17 +90,17 @@ export const StripeConnectionSettings: React.FC = () => {
     e.preventDefault();
 
     if (!secretKey || !publishableKey) {
-      toast.error('Please enter both secret key and publishable key');
+      toast.error(t('integrations.stripe.errors.bothKeysRequired', { defaultValue: 'Please enter both secret key and publishable key' }));
       return;
     }
 
     if (!secretKey.startsWith('sk_')) {
-      toast.error('Secret key should start with sk_');
+      toast.error(t('integrations.stripe.errors.secretKeyFormat', { defaultValue: 'Secret key should start with sk_' }));
       return;
     }
 
     if (!publishableKey.startsWith('pk_')) {
-      toast.error('Publishable key should start with pk_');
+      toast.error(t('integrations.stripe.errors.publishableKeyFormat', { defaultValue: 'Publishable key should start with pk_' }));
       return;
     }
 
@@ -109,19 +113,21 @@ export const StripeConnectionSettings: React.FC = () => {
 
       if (result.success && result.data) {
         if (result.data.webhookConfigured) {
-          toast.success('Stripe connected and webhooks configured automatically!');
+          toast.success(t('integrations.stripe.toasts.connectedWithWebhook', { defaultValue: 'Stripe connected and webhooks configured automatically!' }));
         } else {
-          toast.success('Stripe connected! Note: Webhook auto-configuration failed - you may need to configure webhooks manually in Stripe Dashboard.');
+          toast.success(t('integrations.stripe.toasts.connectedWebhookFailed', { defaultValue: 'Stripe connected! Note: Webhook auto-configuration failed - you may need to configure webhooks manually in Stripe Dashboard.' }));
         }
         setShowConnectForm(false);
         setSecretKey('');
         setPublishableKey('');
         await loadConfig();
       } else {
-        toast.error(result.error || 'Failed to connect Stripe');
+        console.error('Stripe connect failed:', result.error);
+        toast.error(t('integrations.stripe.errors.connect', { defaultValue: 'Failed to connect Stripe' }));
       }
     } catch (error) {
-      toast.error('Failed to connect Stripe');
+      console.error('Stripe connect error:', error);
+      toast.error(t('integrations.stripe.errors.connect', { defaultValue: 'Failed to connect Stripe' }));
     } finally {
       setConnecting(false);
     }
@@ -133,14 +139,16 @@ export const StripeConnectionSettings: React.FC = () => {
     try {
       const result = await disconnectStripeAction();
       if (result.success) {
-        toast.success('Stripe disconnected');
+        toast.success(t('integrations.stripe.toasts.disconnected', { defaultValue: 'Stripe disconnected' }));
         setShowDisconnectDialog(false);
         await loadConfig();
       } else {
-        toast.error(result.error || 'Failed to disconnect Stripe');
+        console.error('Stripe disconnect failed:', result.error);
+        toast.error(t('integrations.stripe.errors.disconnect', { defaultValue: 'Failed to disconnect Stripe' }));
       }
     } catch (error) {
-      toast.error('Failed to disconnect Stripe');
+      console.error('Stripe disconnect error:', error);
+      toast.error(t('integrations.stripe.errors.disconnect', { defaultValue: 'Failed to disconnect Stripe' }));
     } finally {
       setDisconnecting(false);
     }
@@ -152,12 +160,14 @@ export const StripeConnectionSettings: React.FC = () => {
     try {
       const result = await testStripeConnectionAction();
       if (result.success) {
-        toast.success(result.data?.status || 'Connection successful!');
+        toast.success(result.data?.status || t('integrations.stripe.toasts.connectionSuccess', { defaultValue: 'Connection successful!' }));
       } else {
-        toast.error(result.error || 'Connection test failed');
+        console.error('Stripe test failed:', result.error);
+        toast.error(t('integrations.stripe.errors.testConnection', { defaultValue: 'Connection test failed' }));
       }
     } catch (error) {
-      toast.error('Connection test failed');
+      console.error('Stripe test error:', error);
+      toast.error(t('integrations.stripe.errors.testConnection', { defaultValue: 'Connection test failed' }));
     } finally {
       setTesting(false);
     }
@@ -169,13 +179,15 @@ export const StripeConnectionSettings: React.FC = () => {
     try {
       const result = await retryStripeWebhookConfigurationAction();
       if (result.success) {
-        toast.success('Webhook configured successfully!');
+        toast.success(t('integrations.stripe.toasts.webhookConfigured', { defaultValue: 'Webhook configured successfully!' }));
         await loadConfig();
       } else {
-        toast.error(result.error || 'Failed to configure webhook');
+        console.error('Stripe webhook retry failed:', result.error);
+        toast.error(t('integrations.stripe.errors.configureWebhook', { defaultValue: 'Failed to configure webhook' }));
       }
     } catch (error) {
-      toast.error('Failed to configure webhook');
+      console.error('Stripe webhook retry error:', error);
+      toast.error(t('integrations.stripe.errors.configureWebhook', { defaultValue: 'Failed to configure webhook' }));
     } finally {
       setRetryingWebhook(false);
     }
@@ -200,9 +212,9 @@ export const StripeConnectionSettings: React.FC = () => {
               <CreditCard className="h-5 w-5 text-indigo-600" />
             </div>
             <div>
-              <CardTitle>Stripe Payments</CardTitle>
+              <CardTitle>{t('integrations.stripe.title', { defaultValue: 'Stripe Payments' })}</CardTitle>
               <CardDescription>
-                Accept credit card payments for your invoices
+                {t('integrations.stripe.description', { defaultValue: 'Accept credit card payments for your invoices' })}
               </CardDescription>
             </div>
           </div>
@@ -217,9 +229,9 @@ export const StripeConnectionSettings: React.FC = () => {
                     <div className="flex items-center gap-3">
                       <CheckCircle className="h-5 w-5 text-success" />
                       <div>
-                        <p className="font-medium">Stripe Connected</p>
+                        <p className="font-medium">{t('integrations.stripe.connected.title', { defaultValue: 'Stripe Connected' })}</p>
                         <p className="text-sm">
-                          Publishable key: {config.publishable_key?.slice(0, 12)}...
+                          {t('integrations.stripe.connected.publishableKey', { defaultValue: 'Publishable key: {{key}}...', key: config.publishable_key?.slice(0, 12) })}
                         </p>
                       </div>
                     </div>
@@ -234,7 +246,7 @@ export const StripeConnectionSettings: React.FC = () => {
                         {testing ? (
                           <RefreshCw className="h-4 w-4 animate-spin" />
                         ) : (
-                          'Test Connection'
+                          t('integrations.stripe.actions.testConnection', { defaultValue: 'Test Connection' })
                         )}
                       </Button>
                       <Button
@@ -244,7 +256,7 @@ export const StripeConnectionSettings: React.FC = () => {
                         id="disconnect-stripe"
                       >
                         <Unplug className="h-4 w-4 mr-1" />
-                        Disconnect
+                        {t('integrations.stripe.actions.disconnect', { defaultValue: 'Disconnect' })}
                       </Button>
                     </div>
                   </div>
@@ -254,15 +266,15 @@ export const StripeConnectionSettings: React.FC = () => {
               {/* Webhook Status */}
               {config.webhook_status === 'enabled' ? (
                 <div className="space-y-3">
-                  <Label>Webhook Configuration</Label>
+                  <Label>{t('integrations.stripe.webhook.heading', { defaultValue: 'Webhook Configuration' })}</Label>
                   <Alert variant="success" showIcon={false}>
                     <AlertDescription>
                       <div className="flex items-center gap-2 mb-2">
                         <CheckCircle className="h-4 w-4 text-success" />
-                        <span className="font-medium">Webhooks configured automatically</span>
+                        <span className="font-medium">{t('integrations.stripe.webhook.configuredAutomatically', { defaultValue: 'Webhooks configured automatically' })}</span>
                       </div>
                       <p className="text-sm mb-2">
-                        Alga PSA will receive payment notifications for:
+                        {t('integrations.stripe.webhook.receiveNotifications', { defaultValue: 'Alga PSA will receive payment notifications for:' })}
                       </p>
                       <ul className="text-sm list-disc list-inside space-y-1">
                         {config.webhook_events?.map((event) => (
@@ -275,9 +287,9 @@ export const StripeConnectionSettings: React.FC = () => {
               ) : (
                 <Alert variant="warning" showIcon={false}>
                   <AlertDescription>
-                    <p className="font-medium mb-2">Webhook configuration failed</p>
+                    <p className="font-medium mb-2">{t('integrations.stripe.webhook.failedTitle', { defaultValue: 'Webhook configuration failed' })}</p>
                     <p className="text-sm mb-3">
-                      Automatic webhook configuration failed. Click retry to attempt configuration again.
+                      {t('integrations.stripe.webhook.failedBody', { defaultValue: 'Automatic webhook configuration failed. Click retry to attempt configuration again.' })}
                     </p>
                     <Button
                       id="retry-webhook-config"
@@ -289,12 +301,12 @@ export const StripeConnectionSettings: React.FC = () => {
                       {retryingWebhook ? (
                         <>
                           <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                          Configuring...
+                          {t('integrations.stripe.webhook.configuring', { defaultValue: 'Configuring...' })}
                         </>
                       ) : (
                         <>
                           <RefreshCw className="h-4 w-4 mr-2" />
-                          Retry Configuration
+                          {t('integrations.stripe.webhook.retry', { defaultValue: 'Retry Configuration' })}
                         </>
                       )}
                     </Button>
@@ -305,34 +317,34 @@ export const StripeConnectionSettings: React.FC = () => {
           ) : showConnectForm ? (
             <form onSubmit={handleConnect} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="secretKey">Secret Key</Label>
+                <Label htmlFor="secretKey">{t('integrations.stripe.form.secretKeyLabel', { defaultValue: 'Secret Key' })}</Label>
                 <Input
                   id="secretKey"
                   type="password"
-                  placeholder="sk_live_... or sk_test_..."
+                  placeholder={t('integrations.stripe.form.secretKeyPlaceholder', { defaultValue: 'sk_live_... or sk_test_...' })}
                   value={secretKey}
                   onChange={(e) => setSecretKey(e.target.value)}
                   required
                 />
                 <p className="text-sm text-gray-500">
-                  Find this in your{' '}
+                  {t('integrations.stripe.form.findKeyPrefix', { defaultValue: 'Find this in your' })}{' '}
                   <a
                     href="https://dashboard.stripe.com/apikeys"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-indigo-600 hover:underline"
                   >
-                    Stripe Dashboard → API Keys
+                    {t('integrations.stripe.form.dashboardLink', { defaultValue: 'Stripe Dashboard → API Keys' })}
                   </a>
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="publishableKey">Publishable Key</Label>
+                <Label htmlFor="publishableKey">{t('integrations.stripe.form.publishableKeyLabel', { defaultValue: 'Publishable Key' })}</Label>
                 <Input
                   id="publishableKey"
                   type="text"
-                  placeholder="pk_live_... or pk_test_..."
+                  placeholder={t('integrations.stripe.form.publishableKeyPlaceholder', { defaultValue: 'pk_live_... or pk_test_...' })}
                   value={publishableKey}
                   onChange={(e) => setPublishableKey(e.target.value)}
                   required
@@ -344,10 +356,10 @@ export const StripeConnectionSettings: React.FC = () => {
                   {connecting ? (
                     <>
                       <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Connecting...
+                      {t('integrations.stripe.actions.connecting', { defaultValue: 'Connecting...' })}
                     </>
                   ) : (
-                    'Connect Stripe'
+                    t('integrations.stripe.actions.connect', { defaultValue: 'Connect Stripe' })
                   )}
                 </Button>
                 <Button
@@ -356,7 +368,7 @@ export const StripeConnectionSettings: React.FC = () => {
                   variant="outline"
                   onClick={() => setShowConnectForm(false)}
                 >
-                  Cancel
+                  {t('integrations.stripe.actions.cancel', { defaultValue: 'Cancel' })}
                 </Button>
               </div>
             </form>
@@ -364,11 +376,11 @@ export const StripeConnectionSettings: React.FC = () => {
             <div className="text-center py-8">
               <CreditCard className="h-12 w-12 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-500 mb-4">
-                Connect your Stripe account to accept online payments for invoices
+                {t('integrations.stripe.empty.description', { defaultValue: 'Connect your Stripe account to accept online payments for invoices' })}
               </p>
               <Button id="connect-stripe-button" onClick={() => setShowConnectForm(true)}>
                 <CreditCard className="h-4 w-4 mr-2" />
-                Connect Stripe
+                {t('integrations.stripe.actions.connect', { defaultValue: 'Connect Stripe' })}
               </Button>
             </div>
           )}
@@ -380,10 +392,10 @@ export const StripeConnectionSettings: React.FC = () => {
         isOpen={showDisconnectDialog}
         onClose={() => setShowDisconnectDialog(false)}
         onConfirm={handleDisconnect}
-        title="Disconnect Stripe"
-        message="Are you sure you want to disconnect Stripe? Payment links will no longer work."
-        confirmLabel="Disconnect"
-        cancelLabel="Cancel"
+        title={t('integrations.stripe.disconnectDialog.title', { defaultValue: 'Disconnect Stripe' })}
+        message={t('integrations.stripe.disconnectDialog.message', { defaultValue: 'Are you sure you want to disconnect Stripe? Payment links will no longer work.' })}
+        confirmLabel={t('integrations.stripe.disconnectDialog.confirm', { defaultValue: 'Disconnect' })}
+        cancelLabel={t('integrations.stripe.disconnectDialog.cancel', { defaultValue: 'Cancel' })}
         isConfirming={disconnecting}
         id="disconnect-stripe-dialog"
       />

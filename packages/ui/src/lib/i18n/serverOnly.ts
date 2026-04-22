@@ -18,18 +18,27 @@ import { getConnection } from '@alga-psa/db/tenant';
 /**
  * Initialize i18next for server-side rendering
  */
-async function initI18next(locale: SupportedLocale) {
+async function initI18next(locale: SupportedLocale, namespaces: string[] = []) {
   const instance = i18next.createInstance();
+
+  const requestedNamespaces = Array.from(
+    new Set<string>([...(I18N_CONFIG.ns ?? ['common']), ...namespaces])
+  );
 
   await instance
     .use(HttpBackend)
     .init({
       ...I18N_CONFIG,
+      ns: requestedNamespaces,
       lng: locale,
       backend: {
         loadPath: `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/locales/{{lng}}/{{ns}}.json`,
       },
     });
+
+  if (namespaces.length > 0) {
+    await instance.loadNamespaces(namespaces);
+  }
 
   return instance;
 }
@@ -142,7 +151,7 @@ export const getServerTranslation = cache(
     i18n: typeof i18next;
   }> => {
     const resolvedLocale = locale || (await getServerLocale());
-    const i18n = await initI18next(resolvedLocale);
+    const i18n = await initI18next(resolvedLocale, [namespace]);
 
     return {
       t: i18n.getFixedT(resolvedLocale, namespace),

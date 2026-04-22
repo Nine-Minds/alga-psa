@@ -199,6 +199,48 @@ describe('InputMappingEditor structured literals', () => {
     expect(screen.queryByPlaceholderText('[]')).not.toBeInTheDocument();
   });
 
+  it('T138: primitive array editors preserve in-progress spaces while typing multi-word values', () => {
+    const Harness = () => {
+      const [value, setValue] = React.useState<{ tags: string[] }>({ tags: [] });
+
+      return (
+        <>
+          <InputMappingEditor
+            value={value}
+            onChange={(nextValue) => setValue(nextValue as typeof value)}
+            targetFields={[
+              {
+                name: 'tags',
+                type: 'array',
+                constraints: {
+                  itemType: 'string',
+                },
+              },
+            ]}
+            fieldOptions={[]}
+            stepId="step-primitive-array-spaces"
+            positionsHandlers={positionsHandlers}
+          />
+          <div data-testid="saved-tags">{JSON.stringify(value.tags)}</div>
+        </>
+      );
+    };
+
+    render(<Harness />);
+
+    const listEditor = screen.getByPlaceholderText(
+      'Enter one value per line, or comma-separated'
+    ) as HTMLTextAreaElement;
+
+    fireEvent.focus(listEditor);
+    fireEvent.change(listEditor, { target: { value: 'Managed ' } });
+    expect(listEditor.value).toBe('Managed ');
+
+    fireEvent.change(listEditor, { target: { value: 'Managed Services' } });
+    expect(listEditor.value).toBe('Managed Services');
+    expect(screen.getByTestId('saved-tags').textContent).toBe('["Managed Services"]');
+  });
+
   it('T129/T130/T131/T132: fixed mode uses structured enum, boolean, number, and string controls', () => {
     render(
       <InputMappingEditor

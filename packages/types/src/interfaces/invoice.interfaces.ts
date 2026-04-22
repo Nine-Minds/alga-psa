@@ -104,6 +104,7 @@ export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
   discount_percentage?: number;
   applies_to_item_id?: string;
   applies_to_service_id?: string; // Reference a service instead of an item
+  location_id?: string | null;
   client_contract_id?: string; // Reference to the client contract assignment
   contract_name?: string; // Contract name
   is_bundle_header?: boolean; // Whether this item is a contract group header
@@ -335,45 +336,67 @@ export interface InvoiceStatusMetadata {
   isDefaultForAccountingExport?: boolean;
 }
 
-export const INVOICE_STATUS_METADATA: Record<InvoiceStatus, InvoiceStatusMetadata> = {
-  draft: {
-    label: 'Draft',
-    description: 'Work-in-progress invoices that have not been sent to the customer'
-  },
-  sent: {
-    label: 'Sent',
-    description: 'Invoices that have been finalized and sent to the customer',
-    isDefaultForAccountingExport: true
-  },
-  paid: {
-    label: 'Paid',
-    description: 'Fully paid invoices ready for reconciliation',
-    isDefaultForAccountingExport: true
-  },
-  overdue: {
-    label: 'Overdue',
-    description: 'Finalized invoices that are past their due date',
-    isDefaultForAccountingExport: true
-  },
-  cancelled: {
-    label: 'Cancelled',
-    description: 'Invoices that have been voided or cancelled'
-  },
-  pending: {
-    label: 'Pending',
-    description: 'Invoices awaiting approval or additional processing'
-  },
-  prepayment: {
-    label: 'Prepayment',
-    description: 'Advance payment or deposit invoices',
-    isDefaultForAccountingExport: true
-  },
-  partially_applied: {
-    label: 'Partially Applied',
-    description: 'Invoices with partial payments applied',
-    isDefaultForAccountingExport: true
-  }
+export const INVOICE_STATUS_VALUES: ReadonlyArray<InvoiceStatus> = [
+  'draft',
+  'sent',
+  'paid',
+  'overdue',
+  'cancelled',
+  'pending',
+  'prepayment',
+  'partially_applied',
+] as const;
+
+export const INVOICE_STATUS_LABEL_DEFAULTS: Record<InvoiceStatus, string> = {
+  draft: 'Draft',
+  sent: 'Sent',
+  paid: 'Paid',
+  overdue: 'Overdue',
+  cancelled: 'Cancelled',
+  pending: 'Pending',
+  prepayment: 'Prepayment',
+  partially_applied: 'Partially Applied',
 };
+
+export const INVOICE_STATUS_DESCRIPTION_DEFAULTS: Record<InvoiceStatus, string> = {
+  draft: 'Work-in-progress invoices that have not been sent to the customer',
+  sent: 'Invoices that have been finalized and sent to the customer',
+  paid: 'Fully paid invoices ready for reconciliation',
+  overdue: 'Finalized invoices that are past their due date',
+  cancelled: 'Invoices that have been voided or cancelled',
+  pending: 'Invoices awaiting approval or additional processing',
+  prepayment: 'Advance payment or deposit invoices',
+  partially_applied: 'Invoices with partial payments applied',
+};
+
+const INVOICE_STATUS_ACCOUNTING_DEFAULTS: Record<InvoiceStatus, boolean> = {
+  draft: false,
+  sent: true,
+  paid: true,
+  overdue: true,
+  cancelled: false,
+  pending: false,
+  prepayment: true,
+  partially_applied: true,
+};
+
+/**
+ * @deprecated For UI rendering, use the `useInvoiceStatusOptions`, `useFormatInvoiceStatus`,
+ * or `useFormatInvoiceStatusDescription` hooks from `@alga-psa/ui/hooks/useInvoiceEnumOptions`.
+ * This map remains for non-UI callers that need the structural `isDefaultForAccountingExport`
+ * flag and English fallback strings; do not add new UI consumers.
+ */
+export const INVOICE_STATUS_METADATA: Record<InvoiceStatus, InvoiceStatusMetadata> =
+  INVOICE_STATUS_VALUES.reduce((acc, value) => {
+    acc[value] = {
+      label: INVOICE_STATUS_LABEL_DEFAULTS[value],
+      description: INVOICE_STATUS_DESCRIPTION_DEFAULTS[value],
+      ...(INVOICE_STATUS_ACCOUNTING_DEFAULTS[value]
+        ? { isDefaultForAccountingExport: true }
+        : {}),
+    };
+    return acc;
+  }, {} as Record<InvoiceStatus, InvoiceStatusMetadata>);
 
 export const INVOICE_STATUS_DISPLAY_ORDER: InvoiceStatus[] = [
   'sent',
@@ -396,6 +419,46 @@ export interface ICreditAllocation extends TenantEntity {
     invoice_id: string;
     amount: number;
     created_at: ISO8601String;
+}
+
+/**
+ * Shape of a single `client_locations` row as referenced by invoice line
+ * items on the rendered invoice view model. Mirrors `QuoteViewModelLocation`
+ * from `quote.interfaces.ts` exactly; the parallel type alias is retained
+ * so downstream code can refer to it as an invoice-specific concept without
+ * reaching into the quote namespace.
+ */
+export interface InvoiceViewModelLocation {
+  id: string;
+  location_name?: string | null;
+  address_line1?: string | null;
+  address_line2?: string | null;
+  address_line3?: string | null;
+  city?: string | null;
+  state_province?: string | null;
+  postal_code?: string | null;
+  country_code?: string | null;
+  country_name?: string | null;
+  region_code?: string | null;
+  /** Pre-joined full address, handy for single-line template fields. */
+  full_address?: string | null;
+}
+
+/**
+ * Pre-computed per-location line-item grouping for invoice templates that
+ * want location "bands" (one location + address header + rows + per-location
+ * subtotal). Mirrors `QuoteViewModelLocationGroup`.
+ */
+export interface InvoiceViewModelLocationGroup {
+  location_id: string | null;
+  location?: InvoiceViewModelLocation | null;
+  /** Convenience fields duplicated for simpler template binding expressions. */
+  name?: string | null;
+  address?: string | null;
+  items: IInvoiceCharge[];
+  subtotal: number;
+  tax: number;
+  total: number;
 }
 
 export interface InvoiceViewModel {
@@ -441,4 +504,15 @@ export interface InvoiceViewModel {
   recurring_service_period_end?: ISO8601String | null;
   recurring_invoice_window_start?: ISO8601String | null;
   recurring_invoice_window_end?: ISO8601String | null;
+  /**
+   * Pre-computed location groupings for invoice templates and UI surfaces
+   * that want per-location bands. When charges span only one location
+   * (or none), this may be empty.
+   */
+  groups_by_location?: InvoiceViewModelLocationGroup[];
+  /**
+   * True when invoice_charges span ≥2 distinct locations — a convenience
+   * flag for auto-branching between flat and grouped layouts.
+   */
+  has_multiple_locations?: boolean;
 }

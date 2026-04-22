@@ -32,6 +32,7 @@ export type DraftQuoteItem = {
   is_taxable?: boolean;
   tax_region?: string | null;
   tax_rate?: number | null;
+  location_id?: string | null;
 };
 
 export interface DraftQuoteTotals {
@@ -77,6 +78,7 @@ export function createDraftQuoteItemFromQuoteItem(item: IQuoteItem): DraftQuoteI
     is_taxable: item.is_taxable ?? true,
     tax_region: item.tax_region ?? null,
     tax_rate: item.tax_rate ?? null,
+    location_id: item.location_id ?? null,
   };
 }
 
@@ -114,6 +116,7 @@ export function createDraftQuoteItemFromService(item: CatalogPickerItem, quoteCu
     is_taxable: true,
     tax_region: null,
     tax_rate: null,
+    location_id: null,
   };
 }
 
@@ -147,6 +150,7 @@ export function createCustomDraftQuoteItem(input: {
     is_taxable: true,
     tax_region: null,
     tax_rate: null,
+    location_id: null,
   };
 }
 
@@ -182,6 +186,7 @@ export function createDraftDiscountQuoteItem(input: {
     is_taxable: false,
     tax_region: null,
     tax_rate: 0,
+    location_id: null,
   };
 }
 
@@ -248,7 +253,7 @@ export function calculateDraftQuoteTotals(items: DraftQuoteItem[]): DraftQuoteTo
 }
 
 export function formatDraftQuoteMoney(minorUnits: number, currencyCode: string): string {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat(undefined, {
     style: 'currency',
     currency: currencyCode,
   }).format((minorUnits || 0) / 100);

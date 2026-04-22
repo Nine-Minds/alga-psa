@@ -29,12 +29,12 @@
       "hoursAgo": "Hace {{count}}h"
     },
     "duration": {
-      "milliseconds": "{{count}}ms",
-      "seconds": "{{count}}s",
-      "minutesSeconds": "{{minutes}}m {{seconds}}s",
-      "hoursMinutes": "{{hours}}h {{minutes}}m"
+      "milliseconds": "{{count}} ms",
+      "seconds": "{{count}} s",
+      "minutesSeconds": "{{minutes}} min {{seconds}} s",
+      "hoursMinutes": "{{hours}} h {{minutes}} min"
     },
-    "externalId": "ID: {{id}}..."
+    "externalId": "ID: {{id}}…"
   },
   "metrics": {
     "labels": {

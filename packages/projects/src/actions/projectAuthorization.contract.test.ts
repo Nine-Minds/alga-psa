@@ -106,11 +106,15 @@ describe('project authorization kernel contracts', () => {
   });
 
   it('F033: linked ticket payloads in project structural surfaces apply ticket-resource intersection semantics', () => {
-    expect(projectTaskActionsSource).toContain('async function filterAuthorizedTicketIds(');
+    expect(projectTaskActionsSource).toContain('export async function filterAuthorizedTicketIds(');
     expect(projectTaskActionsSource).toContain('async function assertTicketReadAllowedById(');
     expect(projectTaskActionsSource).toContain('resource: { type: \'ticket\', action: \'read\', id: ticket.ticket_id }');
     expect(projectTaskActionsSource).toContain('await assertTicketReadAllowedById(trx, tenant, user as IUserWithRoles, ticketId);');
     expect(projectTaskActionsSource).toContain('const allowedTicketIds = await filterAuthorizedTicketIds(');
     expect(projectTaskActionsSource).toContain('const authorizedTicketLinksArray = ticketLinksArray.filter((link) => allowedTicketIds.has(link.ticket_id));');
+    expect(projectActionsSource).toContain('const allowedTicketIds = await withTransaction(knex, async (trx: Knex.Transaction) =>');
+    expect(projectActionsSource).toContain('ticketLinks.map((link) => link.ticket_id)');
+    expect(projectActionsSource).toContain('const authorizedTicketLinks = ticketLinks.filter((link) => allowedTicketIds.has(link.ticket_id));');
+    expect(projectActionsSource).toContain('ticketLinks: authorizedTicketLinks,');
   });
 });

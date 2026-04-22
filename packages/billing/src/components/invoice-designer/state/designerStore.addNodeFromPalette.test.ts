@@ -85,6 +85,7 @@ describe('designerStore addNodeFromPalette', () => {
     expect(field.props.style).toMatchObject({
       width: 'auto',
       height: 'auto',
+      justifyContent: 'space-between',
     });
     expect(field.props.metadata).toMatchObject({
       fieldBorderStyle: 'none',

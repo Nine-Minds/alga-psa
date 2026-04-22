@@ -9,12 +9,34 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;');
 }
 
+// Debug sentinel strings returned by the conversion helpers when they can't
+// extract anything meaningful from the input. We never want these surfaced to
+// end users (e.g. in email bodies) — treat their presence as "effectively
+// empty" and let callers render their own fallback.
+const DEBUG_SENTINELS = [
+  '[No content]',
+  '[Invalid content format]',
+  '[Invalid content format - not an array]',
+  '[Content could not be converted to markdown]',
+];
+
+function stripDebugSentinels(value: string): string {
+  let result = value;
+  for (const sentinel of DEBUG_SENTINELS) {
+    result = result.split(sentinel).join('');
+  }
+  return result;
+}
+
+function isEffectivelyEmpty(html: string, text: string): boolean {
+  const cleanedHtml = stripDebugSentinels(html).replace(/<[^>]*>/g, '').trim();
+  const cleanedText = stripDebugSentinels(text).trim();
+  return cleanedHtml.length === 0 && cleanedText.length === 0;
+}
+
 export function formatBlockNoteContent(content: unknown): { html: string; text: string } {
   if (content === null || content === undefined) {
-    return {
-      html: '<p>[No content]</p>',
-      text: '[No content]',
-    };
+    return { html: '', text: '' };
   }
 
   const convertSafely = (input: any): { html: string; text: string } => {
@@ -22,13 +44,10 @@ export function formatBlockNoteContent(content: unknown): { html: string; text: 
       const htmlResult = convertBlockNoteToHTML(input);
       const textResult = convertBlockNoteToMarkdown(input);
 
-      if (
-        htmlResult &&
-        htmlResult.trim().length > 0 &&
-        htmlResult !== '<p>[Invalid content format]</p>'
-      ) {
+      if (!isEffectivelyEmpty(htmlResult || '', textResult || '')) {
         return { html: htmlResult, text: textResult };
       }
+      return { html: '', text: '' };
     } catch (error) {
       console.warn('[BlockNoteUtils] Failed to convert BlockNote content, falling back to plain text', {
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -45,7 +64,7 @@ export function formatBlockNoteContent(content: unknown): { html: string; text: 
   if (typeof content === 'string') {
     const trimmed = content.trim();
     if (trimmed.length === 0) {
-      return { html: '<p></p>', text: '' };
+      return { html: '', text: '' };
     }
     try {
       const parsed = JSON.parse(content);

@@ -38,7 +38,7 @@ describe('StatusSettings ticket status retirement', () => {
     render(<StatusSettings initialStatusType="ticket" />);
 
     expect(screen.getByTestId('ticket-statuses-retired-alert')).toHaveTextContent(
-      'Ticket statuses are now managed inside each board.'
+      'ticketing.statuses.retiredAlert'
     );
     expect(screen.queryByText('ticketing.statuses.table.name')).not.toBeInTheDocument();
 

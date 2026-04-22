@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { resolveMicrosoftCredentialsForTenant } from '@ee/lib/integrations/entra/auth/microsoftCredentialResolver';
 import { saveEntraDirectTokenSet } from '@ee/lib/integrations/entra/auth/tokenStore';
+import { ENTRA_DIRECT_SCOPE_STRING } from '@ee/lib/integrations/entra/auth/directScopes';
 
 export const dynamic = 'force-dynamic';
 
@@ -84,7 +85,7 @@ export async function GET(request: NextRequest) {
       code,
       grant_type: 'authorization_code',
       redirect_uri: state.redirectUri,
-      scope: 'https://graph.microsoft.com/User.Read offline_access',
+      scope: ENTRA_DIRECT_SCOPE_STRING,
     });
 
     const tokenResponse = await axios.post(

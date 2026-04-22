@@ -316,7 +316,7 @@ export default function DashboardOnboardingSection({
   className,
   initialDismissedStepIds = EMPTY_DISMISSED_STEP_IDS,
 }: DashboardOnboardingSectionProps) {
-  const { t } = useTranslation('msp/core');
+  const { t } = useTranslation(['msp/dashboard', 'msp/core']);
   const posthog = usePostHog();
   const [dismissedStepIds, setDismissedStepIds] = useState<OnboardingStepId[]>(() =>
     getInitialDismissedStepIds(stepStates, initialDismissedStepIds)
@@ -482,7 +482,7 @@ export default function DashboardOnboardingSection({
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full" style={{ background: 'rgb(var(--color-primary-50))' }}>
               <Sparkles className="h-4 w-4" style={{ color: 'rgb(var(--color-primary-500))' }} />
             </div>
-            {t('dashboard.onboardingWizard')}
+            {t('msp/core:dashboard.onboardingWizard')}
           </Link>
           <ProgressSummaryCard completed={summary.completed} total={summary.total} t={t} />
         </div>

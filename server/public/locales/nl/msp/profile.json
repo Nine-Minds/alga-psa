@@ -3,7 +3,7 @@
     "tabs": {
       "profile": "Profiel",
       "security": "Beveiliging",
-      "sso": "Single Sign-On",
+      "sso": "Single sign-on",
       "apiKeys": "API-sleutels",
       "notifications": "Meldingen",
       "calendar": "Agenda"
@@ -71,7 +71,7 @@
     },
     "loadingStates": {
       "sso": {
-        "title": "Single Sign-On",
+        "title": "Single sign-on",
         "description": "SSO-instellingen laden..."
       },
       "calendar": {
@@ -85,7 +85,7 @@
     "tabs": {
       "roles": "Rollen",
       "sessions": "Sessies",
-      "sso": "Single Sign-On",
+      "sso": "Single sign-on",
       "permissions": "Machtigingen",
       "userRoles": "Gebruikersrollen",
       "policies": "Beleidsregels",

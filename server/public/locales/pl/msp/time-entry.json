@@ -214,7 +214,7 @@
     "table": {
       "date": "Data",
       "workItem": "Przedmiot pracy",
-      "start": "Start",
+      "start": "Początek",
       "end": "Koniec",
       "billable": "Płatne",
       "status": "Status"
@@ -401,5 +401,18 @@
   },
   "timeEntryReadOnly": {
     "viewEntryDetails": "Zobacz szczegóły wpisu"
+  },
+  "messages": {
+    "serviceRequired": "Wybierz usługę przed zapisaniem wpisów czasu",
+    "invalidService": "Nieprawidłowa wybrana usługa",
+    "taxRegionRequired": "Wybierz region podatkowy dla usług opodatkowanych",
+    "invalidTimeEntry": "Sprawdź wartości wpisu czasu",
+    "savingEntry": "Zapisywanie wpisu czasu...",
+    "entrySaved": "Wpis czasu zapisany",
+    "entrySavedSuccess": "Wpis czasu zapisany pomyślnie",
+    "taskUpdated": "Zadanie zaktualizowane pomyślnie",
+    "saveChangesFailed": "Nie udało się zapisać zmian",
+    "changesSaved": "Zmiany zapisane pomyślnie",
+    "workItemDeleted": "Element pracy usunięty pomyślnie"
   }
 }

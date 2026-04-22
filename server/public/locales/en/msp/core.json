@@ -3,6 +3,7 @@
     "home": "Home",
     "userActivities": "User Activities",
     "tickets": "Tickets",
+    "serviceRequests": "Service Requests",
     "surveys": "Surveys",
     "projects": "Projects",
     "projectsAll": "All Projects",
@@ -21,11 +22,15 @@
       "sections": {
         "contracts": "Contracts",
         "invoicing": "Invoicing",
+        "quotes": "Quotes",
         "pricing": "Pricing",
         "trackingReports": "Tracking & Reports"
       },
       "contractTemplates": "Contract Templates",
       "clientContracts": "Client Contracts",
+      "quotes": "Quotes",
+      "quoteBusinessTemplates": "Quote Templates",
+      "quoteLayouts": "Quote Layouts",
       "contractLinePresets": "Contract Line Presets",
       "invoicing": "Invoicing",
       "invoiceLayouts": "Invoice Layouts",
@@ -220,5 +225,12 @@
   "rightSidebar": {
     "title": "Chat",
     "enterpriseOnly": "The chat feature is only available in the Enterprise Edition."
+  },
+  "notifications": {
+    "messages": {
+      "error": {
+        "loadFailed": "Failed to load notifications"
+      }
+    }
   }
 }

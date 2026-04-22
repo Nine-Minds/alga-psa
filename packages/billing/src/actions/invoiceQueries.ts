@@ -561,6 +561,29 @@ export const getInvoiceForRendering = withAuth(async (
   }
 });
 
+export const getEnrichedInvoiceViewModel = withAuth(async (
+  user,
+  { tenant },
+  invoiceId: string
+): Promise<import('@alga-psa/types').WasmInvoiceViewModel | null> => {
+  const { knex } = await createTenantKnex();
+  const dbInvoiceData = await Invoice.getFullInvoiceById(knex, tenant, invoiceId);
+  if (!dbInvoiceData) {
+    return null;
+  }
+
+  const { mapDbInvoiceToWasmViewModel, enrichInvoiceViewModelWithLocations } =
+    await import('@alga-psa/billing/lib/adapters/invoiceAdapters');
+
+  const viewModel = mapDbInvoiceToWasmViewModel(dbInvoiceData);
+  if (!viewModel) {
+    return null;
+  }
+
+  await enrichInvoiceViewModelWithLocations(knex, tenant, viewModel);
+  return viewModel;
+});
+
 export const getResolvedInvoiceTemplateId = withAuth(async (
   user,
   { tenant },

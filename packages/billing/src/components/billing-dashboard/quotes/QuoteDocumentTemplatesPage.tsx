@@ -14,6 +14,7 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import type { ColumnDefinition, IQuoteDocumentTemplate } from '@alga-psa/types';
 import { isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { FileTextIcon, Settings, MoreVertical, CheckCircle2 } from 'lucide-react';
 import {
   getQuoteDocumentTemplates,
@@ -24,6 +25,7 @@ import {
 import QuoteDocumentTemplateEditor from './QuoteDocumentTemplateEditor';
 
 const QuoteDocumentTemplatesPage: React.FC = () => {
+  const { t } = useTranslation('msp/quotes');
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedTemplateId = searchParams?.get('templateId');
@@ -43,15 +45,17 @@ const QuoteDocumentTemplatesPage: React.FC = () => {
       setError(null);
     } catch (loadError) {
       console.error('Error loading quote document templates:', loadError);
-      setError(loadError instanceof Error ? loadError.message : 'Failed to load quote document templates');
+      setError(loadError instanceof Error ? loadError.message : t('templatesPage.errors.load', {
+        defaultValue: 'Failed to load quote document templates',
+      }));
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void fetchTemplates();
   }, [fetchTemplates, selectedTemplateId]);
 
-  const handleNavigateToEditor = (templateId: string | 'new', code?: string) => {
+  const handleNavigateToEditor = useCallback((templateId: string | 'new', code?: string) => {
     const params = new URLSearchParams();
     params.set('tab', 'quote-templates');
     params.set('templateId', templateId);
@@ -59,9 +63,9 @@ const QuoteDocumentTemplatesPage: React.FC = () => {
       params.set('standardCode', code);
     }
     router.push(`/msp/billing?${params.toString()}`);
-  };
+  }, [router]);
 
-  const handleCloneTemplate = async (template: IQuoteDocumentTemplate) => {
+  const handleCloneTemplate = useCallback(async (template: IQuoteDocumentTemplate) => {
     try {
       await saveQuoteDocumentTemplate({
         ...template,
@@ -73,11 +77,13 @@ const QuoteDocumentTemplatesPage: React.FC = () => {
       setError(null);
     } catch (err) {
       console.error('Error cloning template:', err);
-      setError('Failed to clone template');
+      setError(t('templatesPage.errors.clone', {
+        defaultValue: 'Failed to clone template',
+      }));
     }
-  };
+  }, [fetchTemplates, t]);
 
-  const handleCloneAndEdit = async (template: IQuoteDocumentTemplate) => {
+  const handleCloneAndEdit = useCallback(async (template: IQuoteDocumentTemplate) => {
     try {
       const result = await saveQuoteDocumentTemplate({
         ...template,
@@ -88,15 +94,19 @@ const QuoteDocumentTemplatesPage: React.FC = () => {
       if (!isActionPermissionError(result) && result.success && result.template?.template_id) {
         handleNavigateToEditor(result.template.template_id);
       } else {
-        setError('Failed to create editable copy');
+        setError(t('templatesPage.errors.editCopy', {
+          defaultValue: 'Failed to create editable copy',
+        }));
       }
     } catch (err) {
       console.error('Error creating editable copy:', err);
-      setError('Failed to create editable copy');
+      setError(t('templatesPage.errors.editCopy', {
+        defaultValue: 'Failed to create editable copy',
+      }));
     }
-  };
+  }, [handleNavigateToEditor, t]);
 
-  const handleSetDefaultTemplate = async (template: IQuoteDocumentTemplate) => {
+  const handleSetDefaultTemplate = useCallback(async (template: IQuoteDocumentTemplate) => {
     try {
       if (template.isStandard) {
         if (!template.standard_quote_document_template_code) {
@@ -116,11 +126,13 @@ const QuoteDocumentTemplatesPage: React.FC = () => {
       setError(null);
     } catch (err) {
       console.error('Error setting default template:', err);
-      setError('Failed to set default template');
+      setError(t('templatesPage.errors.setDefault', {
+        defaultValue: 'Failed to set default template',
+      }));
     }
-  };
+  }, [fetchTemplates, t]);
 
-  const handleDeleteTemplate = async (templateId: string) => {
+  const handleDeleteTemplate = useCallback(async (templateId: string) => {
     try {
       const result = await deleteQuoteDocumentTemplate(templateId);
       if (isActionPermissionError(result)) {
@@ -128,7 +140,9 @@ const QuoteDocumentTemplatesPage: React.FC = () => {
         return;
       }
       if (!result.success) {
-        setError(result.error || 'Failed to delete template');
+        setError(result.error || t('templatesPage.errors.delete', {
+          defaultValue: 'Failed to delete template',
+        }));
         return;
       }
       setTemplateToDeleteId(null);
@@ -136,18 +150,22 @@ const QuoteDocumentTemplatesPage: React.FC = () => {
       setError(null);
     } catch (err) {
       console.error('Error deleting template:', err);
-      setError('Failed to delete template');
+      setError(t('templatesPage.errors.delete', {
+        defaultValue: 'Failed to delete template',
+      }));
     }
-  };
+  }, [fetchTemplates, t]);
 
   const columns = useMemo((): ColumnDefinition<IQuoteDocumentTemplate>[] => [
     {
-      title: 'Name',
+      title: t('common.columns.name', { defaultValue: 'Name' }),
       dataIndex: 'name',
       render: (value: string | null | undefined, record: IQuoteDocumentTemplate) => (
         <div className="flex items-center gap-2">
           {record.isStandard ? (
-            <><FileTextIcon className="w-4 h-4" /> {value} (Standard)</>
+            <>
+              <FileTextIcon className="w-4 h-4" /> {value} ({t('common.badges.standard', { defaultValue: 'Standard' })})
+            </>
           ) : (
             <div className="flex items-center gap-1">
               <Settings className="w-4 h-4" />
@@ -158,12 +176,14 @@ const QuoteDocumentTemplatesPage: React.FC = () => {
       ),
     },
     {
-      title: 'Source',
+      title: t('common.columns.source', { defaultValue: 'Source' }),
       dataIndex: 'templateSource',
-      render: (value: string | null | undefined, record: IQuoteDocumentTemplate) => record.isStandard ? 'Standard' : (value || 'Custom'),
+      render: (value: string | null | undefined, record: IQuoteDocumentTemplate) => record.isStandard
+        ? t('common.badges.standard', { defaultValue: 'Standard' })
+        : (value || t('templatesPage.labels.custom', { defaultValue: 'Custom' })),
     },
     {
-      title: 'Default',
+      title: t('common.columns.default', { defaultValue: 'Default' }),
       dataIndex: 'isTenantDefault',
       headerClassName: 'text-center align-middle',
       cellClassName: 'text-center align-middle max-w-none',
@@ -175,7 +195,7 @@ const QuoteDocumentTemplatesPage: React.FC = () => {
         ) : null,
     },
     {
-      title: 'Actions',
+      title: t('common.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'template_id',
       width: '10%',
       render: (_: string | null | undefined, record: IQuoteDocumentTemplate) => (
@@ -187,7 +207,7 @@ const QuoteDocumentTemplatesPage: React.FC = () => {
               className="h-8 w-8 p-0"
               onClick={(e) => e.stopPropagation()}
             >
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">{t('templatesPage.actions.openMenu', { defaultValue: 'Open menu' })}</span>
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -203,7 +223,9 @@ const QuoteDocumentTemplatesPage: React.FC = () => {
                 }
               }}
             >
-              {record.isStandard ? 'Edit as Copy' : 'Edit'}
+              {record.isStandard
+                ? t('common.actions.editAsCopy', { defaultValue: 'Edit as Copy' })
+                : t('common.actions.edit', { defaultValue: 'Edit' })}
             </DropdownMenuItem>
             <DropdownMenuItem
               id="clone-quote-template-menu-item"
@@ -212,7 +234,7 @@ const QuoteDocumentTemplatesPage: React.FC = () => {
                 void handleCloneTemplate(record);
               }}
             >
-              Clone
+              {t('common.actions.clone', { defaultValue: 'Clone' })}
             </DropdownMenuItem>
             <DropdownMenuItem
               id="set-default-quote-template-menu-item"
@@ -222,7 +244,7 @@ const QuoteDocumentTemplatesPage: React.FC = () => {
                 void handleSetDefaultTemplate(record);
               }}
             >
-              Set as Default
+              {t('common.actions.setAsDefault', { defaultValue: 'Set as Default' })}
             </DropdownMenuItem>
             <DropdownMenuItem
               id="delete-quote-template-menu-item"
@@ -230,18 +252,21 @@ const QuoteDocumentTemplatesPage: React.FC = () => {
               disabled={record.isStandard}
               onClick={(e) => {
                 e.stopPropagation();
-                if (confirm(`Are you sure you want to delete "${record.name}"?`)) {
+                if (confirm(t('templatesPage.dialogs.deleteConfirm', {
+                  defaultValue: 'Are you sure you want to delete "{{name}}"?',
+                  name: record.name,
+                }))) {
                   void handleDeleteTemplate(record.template_id);
                 }
               }}
             >
-              Delete
+              {t('common.actions.delete', { defaultValue: 'Delete' })}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ),
     },
-  ], []);
+  ], [handleCloneAndEdit, handleCloneTemplate, handleDeleteTemplate, handleNavigateToEditor, handleSetDefaultTemplate, t]);
 
   if (selectedTemplateId || standardCode) {
     return (
@@ -257,24 +282,28 @@ const QuoteDocumentTemplatesPage: React.FC = () => {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-foreground">Quote Layouts</h2>
-          <p className="text-sm text-muted-foreground">Design the layouts used to render quote PDFs and previews.</p>
+          <h2 className="text-xl font-semibold text-foreground">
+            {t('templatesPage.title', { defaultValue: 'Quote Layouts' })}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {t('templatesPage.description', { defaultValue: 'Design the layouts used to render quote PDFs and previews.' })}
+          </p>
         </div>
         <Button id="quote-document-templates-new" onClick={() => handleNavigateToEditor('new')}>
-          New Layout
+          {t('common.actions.newLayout', { defaultValue: 'New Layout' })}
         </Button>
       </div>
 
       {error ? (
         <Alert variant="destructive">
-          <AlertTitle>Quote Layouts</AlertTitle>
+          <AlertTitle>{t('templatesPage.title', { defaultValue: 'Quote Layouts' })}</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
 
       <Card>
         <CardHeader>
-          <CardTitle>Available Layouts</CardTitle>
+          <CardTitle>{t('templatesPage.cards.availableLayouts', { defaultValue: 'Available Layouts' })}</CardTitle>
         </CardHeader>
         <CardContent>
           <DataTable

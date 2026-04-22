@@ -1,0 +1,270 @@
+{
+  "management": {
+    "title": "Service Requests",
+    "description": "Manage draft, published, and archived service request definitions.",
+    "showArchived": "Show archived",
+    "showArchivedWithCount": "Show archived ({{count}})",
+    "createBlank": "Create Blank",
+    "startFromExample": "Start from Example",
+    "loading": "Loading service requests…",
+    "columns": {
+      "name": "Name",
+      "description": "Description",
+      "state": "State",
+      "updated": "Updated",
+      "actions": "Actions"
+    },
+    "actionsFor": "Actions for {{name}}",
+    "actions": {
+      "duplicate": "Duplicate",
+      "archive": "Archive",
+      "unarchive": "Unarchive"
+    },
+    "lifecycleLabels": {
+      "published": "Published",
+      "archived": "Archived",
+      "draftChanges": "Draft Changes",
+      "draft": "Draft"
+    },
+    "templateOption": "{{templateName}} ({{providerDisplayName}})"
+  },
+  "editor": {
+    "backNav": "Back to Service Requests",
+    "loading": "Loading definition editor…",
+    "notFound": "Service request definition not found.",
+    "currentState": "Current state: {{state}}",
+    "saveDraft": "Save Draft",
+    "createDraft": "Create Draft",
+    "publish": "Publish",
+    "publishing": "Publishing…",
+    "basics": {
+      "title": "Basics",
+      "name": "Name",
+      "icon": "Icon",
+      "iconSelected": "Selected: {{label}}",
+      "noIconSelected": "No icon selected",
+      "description": "Description",
+      "category": "Category",
+      "sortOrder": "Sort Order",
+      "save": "Save Basics",
+      "uncategorized": "Uncategorized"
+    },
+    "preview": {
+      "title": "Preview",
+      "badge": "Live preview",
+      "cardSubheading": "Catalog Card",
+      "formSubheading": "Request Form"
+    },
+    "linkage": {
+      "title": "Linkage",
+      "linkedService": "Linked Service",
+      "searchPlaceholder": "Search service catalog",
+      "search": "Search",
+      "clear": "Clear",
+      "select": "Select",
+      "noDescription": "No description",
+      "unset": "-"
+    },
+    "form": {
+      "title": "Form",
+      "authorFields": "Author Fields",
+      "fieldType": "Field Type",
+      "addField": "Add Field",
+      "noFields": "No fields configured.",
+      "preview": "Rendered Form Preview",
+      "label": "Label",
+      "helpText": "Help Text",
+      "required": "Required",
+      "defaultValue": "Default Value",
+      "options": "Options (one per line: value:label)",
+      "moveUp": "Move Up",
+      "moveDown": "Move Down",
+      "remove": "Remove",
+      "selectOption": "Select an option",
+      "checkboxDefaults": {
+        "none": "No default",
+        "checked": "Checked",
+        "unchecked": "Unchecked"
+      },
+      "types": {
+        "short-text": "short-text",
+        "long-text": "long-text",
+        "select": "select",
+        "checkbox": "checkbox",
+        "date": "date",
+        "file-upload": "file-upload"
+      }
+    },
+    "execution": {
+      "title": "Execution",
+      "executionProvider": "Execution Provider",
+      "formBehaviorProvider": "Form Behavior Provider",
+      "visibilityProvider": "Visibility Provider",
+      "providerDisplay": "{{displayName}} ({{executionMode}})",
+      "ticketRouting": {
+        "title": "Ticket Routing Configuration",
+        "board": "Board",
+        "boardPlaceholder": "Select Board",
+        "status": "Status",
+        "statusPlaceholder": "Select Status",
+        "assignedUser": "Assigned User",
+        "assignedUserPlaceholder": "Not assigned",
+        "category": "Category",
+        "categoryPlaceholder": "Select category",
+        "priority": "Priority",
+        "priorityPlaceholder": "Select Priority",
+        "impact": "Impact",
+        "impactPlaceholder": "Select Impact",
+        "urgency": "Urgency",
+        "urgencyPlaceholder": "Select Urgency",
+        "priorityCalculated": "Priority (Calculated)",
+        "selectImpactAndUrgency": "Select impact and urgency",
+        "priorityFormula": "{{label}} (Impact {{impact}} x Urgency {{urgency}})",
+        "titleFieldKey": "Title Field Key",
+        "descriptionPrefix": "Description Prefix",
+        "save": "Save Ticket Routing"
+      },
+      "workflow": {
+        "title": "Workflow Configuration",
+        "workflowId": "Workflow ID",
+        "workflowIdPlaceholder": "workflow-id",
+        "inputMapping": "Workflow Input Mapping (JSON object)",
+        "inputMappingExample": "Example: {\"requestedBy\":\"payload.request_title\",\"ticketReference\":\"ticketId\"}",
+        "save": "Save Workflow Settings"
+      },
+      "advanced": {
+        "title": "Advanced Form Behavior",
+        "config": "Form Behavior Config (JSON object)",
+        "save": "Save Form Behavior Config"
+      },
+      "visibility": {
+        "title": "Visibility Configuration",
+        "config": "Visibility Config (JSON object)",
+        "save": "Save Visibility Config"
+      },
+      "fields": {
+        "executionProvider": "Execution Provider",
+        "executionConfig": "Execution Config",
+        "formBehaviorProvider": "Form Behavior Provider",
+        "visibilityProvider": "Visibility Provider"
+      },
+      "itilImpact": {
+        "1": "1 - High (Critical business function affected)",
+        "2": "2 - Medium-High (Important function affected)",
+        "3": "3 - Medium (Minor function affected)",
+        "4": "4 - Medium-Low (Minimal impact)",
+        "5": "5 - Low (No business impact)"
+      },
+      "itilUrgency": {
+        "1": "1 - High (Work cannot continue)",
+        "2": "2 - Medium-High (Work severely impaired)",
+        "3": "3 - Medium (Work continues with limitations)",
+        "4": "4 - Medium-Low (Minor inconvenience)",
+        "5": "5 - Low (Work continues normally)"
+      }
+    },
+    "publishSection": {
+      "title": "Publish",
+      "currentDraftState": "Current Draft State",
+      "lastPublishedVersion": "Last Published Version",
+      "versionPrefix": "v{{number}}",
+      "neverPublished": "Never published",
+      "publishedAt": "Published At",
+      "draftUpdatedAt": "Draft Updated At",
+      "validationTitle": "Publish Validation",
+      "validationPassed": "Publish validation passed.",
+      "errors": {
+        "nameRequired": "Name is required",
+        "linkedServiceMissing": "Linked service no longer exists",
+        "executionBoardRequired": "Execution: Ticket routing board is required",
+        "executionStatusRequired": "Execution: Ticket routing status is required",
+        "executionPriorityRequired": "Execution: Ticket routing priority is required",
+        "executionItilImpactUrgencyMismatch": "Execution: Ticket routing requires both ITIL impact and urgency when priority is not set",
+        "unknownExecutionProvider": "Unknown execution provider: {{key}}",
+        "unknownFormBehaviorProvider": "Unknown form behavior provider: {{key}}",
+        "unknownVisibilityProvider": "Unknown visibility provider: {{key}}"
+      }
+    },
+    "submissions": {
+      "title": "Submissions",
+      "empty": "No submissions yet for this definition.",
+      "viewDetail": "View Detail",
+      "detailTitle": "Submission Detail",
+      "submissionId": "Submission ID",
+      "requesterUser": "Requester User",
+      "client": "Client",
+      "contact": "Contact",
+      "ticketReference": "Ticket Reference",
+      "workflowReference": "Workflow Reference",
+      "executionError": "Execution Error",
+      "submittedAtStatus": "{{date}} · {{status}}",
+      "loadingTicket": "Loading…",
+      "ticketLoadError": "Failed to load ticket details."
+    }
+  },
+  "icons": {
+    "file-text": "General Request",
+    "user-plus": "New User",
+    "user-minus": "Offboarding",
+    "shield-check": "Security",
+    "key-round": "Access",
+    "laptop": "Laptop",
+    "monitor": "Workstation",
+    "printer": "Printer",
+    "hard-drive": "Storage",
+    "server": "Server",
+    "network": "Network",
+    "wifi": "Wi-Fi",
+    "app-window": "Software",
+    "mail": "Email",
+    "phone": "Phone",
+    "folder-open": "Shared Files",
+    "badge-help": "Help",
+    "clear": "Clear icon"
+  },
+  "messages": {
+    "success": {
+      "definitionDuplicated": "Definition duplicated",
+      "definitionArchived": "Definition archived",
+      "definitionUnarchived": "Definition unarchived",
+      "draftCreated": "Draft created",
+      "draftCreatedFromExample": "Draft created from example: {{name}}",
+      "draftSaved": "Draft saved",
+      "definitionPublished": "Definition published",
+      "basicsUpdated": "Basics updated",
+      "linkedServiceCleared": "Linked service cleared",
+      "linkedService": "Linked {{name}}",
+      "fieldAdded": "Field added",
+      "fieldRemoved": "Field removed",
+      "executionProviderUpdated": "Execution provider updated",
+      "formBehaviorProviderUpdated": "Form behavior provider updated",
+      "visibilityProviderUpdated": "Visibility provider updated",
+      "ticketRoutingUpdated": "Ticket routing configuration updated",
+      "workflowConfigurationUpdated": "Workflow configuration updated",
+      "formBehaviorConfigUpdated": "Form behavior config updated",
+      "visibilityConfigUpdated": "Visibility config updated"
+    },
+    "error": {
+      "loadFailed": "Failed to load service requests",
+      "duplicateFailed": "Failed to duplicate definition",
+      "archiveFailed": "Failed to archive definition",
+      "unarchiveFailed": "Failed to unarchive definition",
+      "createDraftFailed": "Failed to create draft",
+      "createFromExampleFailed": "Failed to create from example",
+      "saveDraftFailed": "Failed to save draft",
+      "publishFailed": "Failed to publish definition",
+      "publishBlockedByValidation": "Can't publish yet — please fix the {{count}} validation issue(s) listed in the Publish Validation section below.",
+      "basicsUpdateFailed": "Failed to update basics",
+      "addFieldFailed": "Failed to add form field",
+      "executionProviderUpdateFailed": "Failed to update execution provider",
+      "formBehaviorProviderUpdateFailed": "Failed to update form behavior provider",
+      "visibilityProviderUpdateFailed": "Failed to update visibility provider",
+      "workflowMappingNotObject": "Workflow input mapping must be a JSON object",
+      "workflowConfigurationInvalid": "Invalid workflow configuration JSON",
+      "formBehaviorNotObject": "Form behavior config must be a JSON object",
+      "formBehaviorInvalid": "Invalid form behavior JSON",
+      "visibilityNotObject": "Visibility config must be a JSON object",
+      "visibilityInvalid": "Invalid visibility JSON"
+    }
+  }
+}

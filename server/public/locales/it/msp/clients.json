@@ -87,6 +87,7 @@
     "bulkDeleteSuccess": "{{count}} {{clientsLabel}} {{verb}} è stato eliminato correttamente.",
     "bulkInactiveFailed": "{{count}} {{clientsLabel}} non può essere contrassegnato come inattivo.",
     "bulkInactiveWithContactsSuccess": "{{clientCount}} {{clientsLabel}} e {{contactCount}} {{contactsLabel}} sono stati contrassegnati come inattivi con successo.",
+    "singleInactiveSuccess": "{{name}} è stato contrassegnato come inattivo con successo.",
     "bulkInactiveSuccess": "{{count}} {{clientsLabel}} {{verb}} è stato contrassegnato come inattivo correttamente.",
     "bulkInactiveShortSuccess": "{{count}} {{clientsLabel}} {{verb}} è stato contrassegnato come inattivo.",
     "bulkInactiveWithContactsShortSuccess": "{{clientCount}} {{clientsLabel}} e {{contactCount}} {{contactsLabel}} sono stati contrassegnati come inattivi.",
@@ -129,7 +130,9 @@
       "bucketUsageRecord": "record di utilizzo del secchio",
       "bucketUsageRecords": "record di utilizzo del bucket"
     },
-    "deleteSelectedPrompt": "Sei sicuro di voler eliminare {{count}} selezionato {{clientsLabel}}? Questa azione non può essere annullata."
+    "deleteSelectedPrompt": "Sei sicuro di voler eliminare {{count}} selezionato {{clientsLabel}}? Questa azione non può essere annullata.",
+    "singleInactiveWithContactsSuccess_one": "{{name}} e {{count}} contatto sono stati disattivati con successo.",
+    "singleInactiveWithContactsSuccess_other": "{{name}} e {{count}} contatti sono stati disattivati con successo."
   },
   "clientDetails": {
     "title": "Dettagli del cliente",
@@ -208,7 +211,12 @@
     "status": {
       "label": "Stato",
       "helper": "Imposta lo stato del cliente come attivo o inattivo"
-    }
+    },
+    "entraSyncStarted": "Sincronizzazione Entra avviata. ID esecuzione: {{runId}}",
+    "inboundDomainAdded": "Dominio email in entrata aggiunto",
+    "inboundDomainAddFailed": "Impossibile aggiungere il dominio",
+    "inboundDomainRemoved": "Dominio email in entrata rimosso",
+    "inboundDomainRemoveFailed": "Impossibile rimuovere il dominio"
   },
   "quickAddClient": {
     "title": "Aggiungi nuovo cliente",
@@ -670,7 +678,7 @@
   "clientLanguagePreference": {
     "title": "Impostazioni della lingua del client",
     "label": "Lingua predefinita per i contatti",
-    "description": "Imposta la lingua predefinita per tutti i contatti in {{clientName}}. I singoli utenti possono ignorarlo nelle loro impostazioni personali.",
+    "description": "Si applica a ogni utente del portale di {{clientName}} salvo che abbia impostato la propria preferenza nel proprio profilo.",
     "selectPlaceholder": "Seleziona una lingua",
     "updating": "Aggiornamento della preferenza della lingua...",
     "loadError": "Impossibile caricare la preferenza della lingua del client:",
@@ -1081,5 +1089,11 @@
     "error": "Errore",
     "saving": "Salvataggio...",
     "success": "Successo"
+  },
+  "notes": {
+    "messages": {
+      "saveSuccess": "Note salvate",
+      "saveFailed": "Impossibile salvare le note"
+    }
   }
 }

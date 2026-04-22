@@ -6,7 +6,7 @@
 
 export const LOCALE_CONFIG = {
   defaultLocale: 'en',
-  supportedLocales: ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl'] as const,
+  supportedLocales: ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt'] as const,
   cookie: {
     name: 'locale',
     maxAge: 60 * 60 * 24 * 365, // 1 year
@@ -37,4 +37,3 @@ export function getBestMatchingLocale(
 
   return LOCALE_CONFIG.defaultLocale as SupportedLocale;
 }
-

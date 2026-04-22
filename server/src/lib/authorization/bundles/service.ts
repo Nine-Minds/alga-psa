@@ -109,10 +109,14 @@ export async function ensureDraftBundleRevision(
         bundle_id: input.bundleId,
       })
       .forUpdate()
-      .first<{ published_revision_id: string | null }>('published_revision_id');
+      .first<{ published_revision_id: string | null; status: 'active' | 'archived' }>('published_revision_id', 'status');
 
     if (!bundle) {
       throw new Error('Bundle not found in tenant scope.');
+    }
+
+    if (bundle.status === 'archived') {
+      throw new Error('Cannot create or retrieve drafts for an archived bundle.');
     }
 
     const existingDraft = await trx('authorization_bundle_revisions')
@@ -340,7 +344,16 @@ export async function listAuthorizationBundles(
         .andOn(knex.raw("a.status = 'active'"));
     })
     .where('b.tenant', input.tenant)
-    .groupBy('b.bundle_id')
+    .groupBy([
+      'b.bundle_id',
+      'b.bundle_key',
+      'b.name',
+      'b.description',
+      'b.is_system',
+      'b.status',
+      'b.published_revision_id',
+      'b.updated_at',
+    ])
     .orderBy('b.updated_at', 'desc')
     .select<
       Array<{
@@ -685,10 +698,14 @@ export async function publishBundleRevision(
         bundle_id: input.bundleId,
       })
       .forUpdate()
-      .first<{ bundle_id: string; published_revision_id: string | null }>('bundle_id', 'published_revision_id');
+      .first<{ bundle_id: string; published_revision_id: string | null; status: 'active' | 'archived' }>('bundle_id', 'published_revision_id', 'status');
 
     if (!bundle) {
       throw new Error('Bundle not found in tenant scope.');
+    }
+
+    if (bundle.status === 'archived') {
+      throw new Error('Cannot publish revisions for an archived bundle.');
     }
 
     const revision = await trx('authorization_bundle_revisions')
@@ -805,7 +822,6 @@ export async function upsertBundleRule(
       effect: 'narrow',
       constraint_key: input.constraintKey ?? null,
       config: input.config ?? {},
-      updated_by: input.actorUserId ?? null,
       updated_at: trx.fn.now(),
     };
 

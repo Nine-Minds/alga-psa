@@ -844,16 +844,16 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
             if (result) {
                 setAdditionalAgents(prev => [...prev, result]);
-                toast.success('Agent added successfully');
+                toast.success(t('messages.agentAdded'));
             } else {
                 setTicket(prevTicket => ({
                     ...prevTicket,
                     assigned_to: userId
                 }));
-                toast.success('Agent assigned successfully');
+                toast.success(t('messages.agentAssigned'));
             }
         } catch (error) {
-            handleError(error, 'Failed to add agent');
+            handleError(error, t('messages.addAgentFailed'));
         }
     };  
     
@@ -861,9 +861,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         try {
             await removeTicketResource(assignmentId);
             setAdditionalAgents(prev => prev.filter(agent => agent.assignment_id !== assignmentId));
-            toast.success('Agent removed successfully');
+            toast.success(t('messages.agentRemoved'));
         } catch (error) {
-            handleError(error, 'Failed to remove agent');
+            handleError(error, t('messages.removeAgentFailed'));
         }
     };
 
@@ -955,14 +955,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 setAdditionalAgents(resources);
             }
 
-            toast.success('Team assigned successfully');
+            toast.success(t('messages.teamAssignSuccess'));
         } catch (error) {
             console.error('Error assigning team:', error);
             // Revert on failure
             setTicket(previousTicket);
             setTeam(previousTeam);
             setAdditionalAgents(previousAgents);
-            toast.error('Failed to assign team');
+            toast.error(t('messages.teamAssignFailed'));
         }
     }, [ticket, team, additionalAgents, teams]);
 
@@ -984,10 +984,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 setAdditionalAgents(resources);
             }
 
-            toast.success('Team removed successfully');
+            toast.success(t('messages.teamRemoveSuccess'));
         } catch (error) {
             console.error('Error removing team assignment:', error);
-            toast.error('Failed to remove team assignment');
+            toast.error(t('messages.teamRemoveFailed'));
         }
     }, [ticket.ticket_id]);
 
@@ -1163,7 +1163,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             setIsEditing(true);
             setCurrentComment(conversation);
         } else {
-            toast.error('You can only edit your own comments');
+            toast.error(t('messages.editOwnCommentOnly'));
         }
     };
 
@@ -1218,7 +1218,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             setIsEditing(false);
             setCurrentComment(null);
         } catch (error) {
-            handleError(error, "Failed to save comment changes");
+            handleError(error, t('messages.saveCommentFailed'));
         }
     };
 const handleClose = () => {
@@ -1299,11 +1299,11 @@ const handleClose = () => {
                 }));
 
 
-                toast.success('Description updated successfully');
+                toast.success(t('messages.descriptionUpdated'));
                 return true;
             }
         } catch (error) {
-            handleError(error, 'Failed to update description');
+            handleError(error, t('messages.updateDescriptionFailed'));
             return false;
         }
     };
@@ -1311,7 +1311,7 @@ const handleClose = () => {
     const handleAddTimeEntry = async () => {
         try {
             if (!ticket.ticket_id) {
-                toast.error('Ticket ID is missing.');
+                toast.error(t('messages.ticketIdMissing'));
                 return;
             }
 
@@ -1331,7 +1331,7 @@ const handleClose = () => {
                 }),
             });
         } catch (error) {
-            handleError(error, 'An error occurred while preparing the time entry. Please try again.');
+            handleError(error, t('messages.prepareTimeEntryFailed'));
         }
     };
 
@@ -1355,7 +1355,7 @@ const handleClose = () => {
             return true;
         } catch (error) {
             console.error('Error updating watch list:', error);
-            toast.error('Failed to update watch list');
+            toast.error(t('messages.watchListUpdateFailed'));
             return false;
         } finally {
             setIsWatchListSaving(false);
@@ -1373,7 +1373,7 @@ const handleClose = () => {
             setAllContactsForWatchList(allContacts || []);
         } catch (error) {
             console.error('Error loading all contacts for watch list:', error);
-            toast.error('Failed to load all contacts');
+            toast.error(t('messages.loadAllContactsFailed'));
         } finally {
             setAllContactsForWatchListLoading(false);
         }
@@ -1403,9 +1403,9 @@ const handleClose = () => {
             }
 
             setIsChangeContactDialogOpen(false);
-            toast.success('Contact updated successfully');
+            toast.success(t('messages.contactUpdated'));
         } catch (error) {
-            handleError(error, 'Failed to update contact');
+            handleError(error, t('messages.updateContactFailed'));
         }
     };
 
@@ -1445,9 +1445,17 @@ const handleClose = () => {
                 ...updateData
             }));
 
-            toast.success(`ITIL ${field.replace('itil_', '').replace('_', ' ')} updated successfully`);
+            if (field === 'itil_impact') {
+                toast.success(t('messages.itilImpactUpdated'));
+            } else if (field === 'itil_urgency') {
+                toast.success(t('messages.itilUrgencyUpdated'));
+            }
         } catch (error) {
-            handleError(error, `Failed to update ITIL ${field.replace('itil_', '').replace('_', ' ')}`);
+            if (field === 'itil_urgency') {
+                handleError(error, t('messages.itilUrgencyUpdateFailed'));
+            } else {
+                handleError(error, t('messages.itilImpactUpdateFailed'));
+            }
         }
     };
 
@@ -1507,9 +1515,9 @@ const handleClose = () => {
             }
 
             setIsChangeClientDialogOpen(false);
-            toast.success('Client updated successfully');
+            toast.success(t('messages.clientUpdated'));
         } catch (error) {
-            handleError(error, 'Failed to update client');
+            handleError(error, t('messages.updateClientFailed'));
         }
     };
     
@@ -1526,9 +1534,9 @@ const handleClose = () => {
                 location: newLocationId ? locations.find(l => l.location_id === newLocationId) : undefined
             }));
 
-            toast.success('Location updated successfully');
+            toast.success(t('messages.locationUpdated'));
         } catch (error) {
-            handleError(error, 'Failed to update location');
+            handleError(error, t('messages.updateLocationFailed'));
         }
     };
 
@@ -1541,7 +1549,7 @@ const handleClose = () => {
             });
             setIsDeleteDialogOpen(true);
         } else {
-            toast.error('You can only delete your own comments');
+            toast.error(t('messages.deleteOwnCommentError'));
         }
     };
 
@@ -1571,25 +1579,21 @@ const handleClose = () => {
                     }
 
                     if (failedCount > 0) {
-                        toast.error(
-                            `Comment deleted, but could not delete ${failedCount} pasted image${failedCount === 1 ? '' : 's'}.`
-                        );
+                        toast.error(t('messages.pastedImageDeleteFailed', { count: failedCount }));
                     } else if (deletedCount > 0) {
-                        toast.success(
-                            `Comment and ${deletedCount} pasted image${deletedCount === 1 ? '' : 's'} deleted successfully.`
-                        );
+                        toast.success(t('messages.commentWithImagesDeleted', { count: deletedCount }));
                     } else {
-                        toast.success('Comment deleted successfully');
+                        toast.success(t('messages.commentDeleteSuccess'));
                     }
                 } catch (imageDeleteError) {
                     console.error('Failed to delete pasted images during comment deletion:', imageDeleteError);
-                    toast.error('Comment deleted, but failed to delete pasted images.');
+                    toast.error(t('messages.pastedImagesDeleteFailed'));
                 }
             } else {
-                toast.success('Comment deleted successfully');
+                toast.success(t('messages.commentDeleteSuccess'));
             }
         } catch (error) {
-            handleError(error, 'Failed to delete comment');
+            handleError(error, t('messages.deleteCommentFailed'));
         } finally {
             resetCommentDeleteState();
         }
@@ -1611,10 +1615,10 @@ const handleClose = () => {
     const handleRemoveChildFromBundle = useCallback(async (childTicketId: string) => {
         try {
             await removeChildFromBundleAction({ childTicketId });
-            toast.success('Removed ticket from bundle');
+            toast.success(t('messages.removedFromBundle'));
             router.refresh();
         } catch (error) {
-            handleError(error, 'Failed to remove ticket from bundle');
+            handleError(error, t('messages.removeFromBundleFailed'));
         }
     }, [router]);
 
@@ -1622,10 +1626,10 @@ const handleClose = () => {
         if (!ticket.ticket_id) return;
         try {
             await unbundleMasterTicketAction({ masterTicketId: ticket.ticket_id });
-            toast.success('Bundle removed');
+            toast.success(t('messages.bundleRemoved'));
             router.refresh();
         } catch (error) {
-            handleError(error, 'Failed to unbundle ticket');
+            handleError(error, t('messages.unbundleFailed'));
         }
     }, [ticket.ticket_id, router]);
 
@@ -1636,7 +1640,7 @@ const handleClose = () => {
             toast.error(getErrorMessage(result));
             return;
         }
-        toast.success('Added ticket to bundle');
+        toast.success(t('messages.addedToBundle'));
         setAddChildTicketNumber('');
         resetChildTicketPickerState();
         router.refresh();
@@ -1667,15 +1671,15 @@ const handleClose = () => {
         try {
             const found = await findTicketByNumberAction({ ticketNumber: normalized });
             if (!found) {
-                toast.error('Ticket not found');
+                toast.error(t('messages.ticketNotFound'));
                 return;
             }
             if (found.ticket_id === ticket.ticket_id) {
-                toast.error('Cannot add the master ticket as a child');
+                toast.error(t('messages.cannotAddMasterAsChild'));
                 return;
             }
             if (found.master_ticket_id) {
-                toast.error('That ticket is already bundled');
+                toast.error(t('messages.ticketAlreadyBundled'));
                 return;
             }
 
@@ -1687,7 +1691,7 @@ const handleClose = () => {
 
             await performAddChildToBundle(found.ticket_id);
         } catch (error) {
-            handleError(error, 'Failed to add ticket to bundle');
+            handleError(error, t('messages.addToBundleFailed'));
         }
     }, [ticket.ticket_id, ticket.client_id, addChildTicketNumber, selectedChildTicket, performAddChildToBundle]);
 
@@ -1799,11 +1803,11 @@ const handleClose = () => {
         if (!ticket.ticket_id) return;
         try {
             await promoteBundleMasterAction({ oldMasterTicketId: ticket.ticket_id, newMasterTicketId: childTicketId });
-            toast.success('Promoted new master');
+            toast.success(t('messages.promotedMaster'));
             router.push(`/msp/tickets/${childTicketId}`);
             router.refresh();
         } catch (error) {
-            handleError(error, 'Failed to promote master');
+            handleError(error, t('messages.promoteMasterFailed'));
         }
     }, [ticket.ticket_id, router]);
 
@@ -1813,10 +1817,10 @@ const handleClose = () => {
             setIsUpdatingBundleSettings(true);
             const nextMode = bundle.mode === 'link_only' ? 'sync_updates' : 'link_only';
             await updateBundleSettingsAction({ masterTicketId: ticket.ticket_id, mode: nextMode });
-            toast.success('Bundle settings updated');
+            toast.success(t('messages.bundleSettingsUpdated'));
             router.refresh();
         } catch (error) {
-            handleError(error, 'Failed to update bundle settings');
+            handleError(error, t('messages.updateBundleSettingsFailed'));
         } finally {
             setIsUpdatingBundleSettings(false);
         }
@@ -1949,7 +1953,7 @@ const handleClose = () => {
                         try {
                             await performAddChildToBundle(pendingChildToAdd.ticket_id);
                         } catch (error) {
-                            handleError(error, 'Failed to add ticket to bundle');
+                            handleError(error, t('messages.addToBundleFailed'));
                         } finally {
                             setIsAddChildMultiClientConfirmOpen(false);
                             setPendingChildToAdd(null);

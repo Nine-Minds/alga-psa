@@ -45,6 +45,9 @@ export const INVOICE_PREVIEW_SAMPLE_SCENARIOS: InvoicePreviewSampleScenario[] = 
       invoiceNumber: 'INV-2026-0147',
       issueDate: '2026-02-06',
       dueDate: '2026-02-20',
+      recurringServicePeriodStart: '2026-01-01',
+      recurringServicePeriodEnd: '2026-03-01',
+      recurringServicePeriodLabel: 'Jan 1, 2026 - Mar 1, 2026',
       customer: {
         name: 'Blue Harbor Dental',
         address: '901 Harbor Ave, Seattle, WA 98104',
@@ -106,6 +109,9 @@ export const INVOICE_PREVIEW_SAMPLE_SCENARIOS: InvoicePreviewSampleScenario[] = 
       invoiceNumber: 'INV-2026-0192',
       issueDate: '2026-02-03',
       dueDate: '2026-02-17',
+      recurringServicePeriodStart: '2026-01-01',
+      recurringServicePeriodEnd: '2026-03-01',
+      recurringServicePeriodLabel: 'Jan 1, 2026 - Mar 1, 2026',
       poNumber: 'PO-8831',
       customer: {
         name: 'Evergreen Animal Hospital',
@@ -179,6 +185,9 @@ export const INVOICE_PREVIEW_SAMPLE_SCENARIOS: InvoicePreviewSampleScenario[] = 
       invoiceNumber: 'INV-2026-0205',
       issueDate: '2026-02-05',
       dueDate: '2026-02-19',
+      recurringServicePeriodStart: '2026-02-01',
+      recurringServicePeriodEnd: '2026-03-01',
+      recurringServicePeriodLabel: 'Feb 1, 2026 - Mar 1, 2026',
       poNumber: 'PO-9942',
       customer: {
         name: 'Summit Physical Therapy',
@@ -227,6 +236,9 @@ export const INVOICE_PREVIEW_SAMPLE_SCENARIOS: InvoicePreviewSampleScenario[] = 
       invoiceNumber: 'INV-2026-0227',
       issueDate: '2026-02-08',
       dueDate: '2026-02-28',
+      recurringServicePeriodStart: '2026-01-01',
+      recurringServicePeriodEnd: '2026-02-01',
+      recurringServicePeriodLabel: 'Jan 1, 2026 - Feb 1, 2026',
       poNumber: null,
       customer: {
         name: 'Helios Logistics Group',

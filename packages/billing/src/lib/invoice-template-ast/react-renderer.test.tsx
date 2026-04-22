@@ -188,6 +188,7 @@ describe('renderEvaluatedTemplateAst', () => {
     expect(rendered.html).toContain('border-bottom:1px solid #cbd5e1');
     expect(rendered.html).toContain('padding:0');
     expect(rendered.html).toContain('border:0');
+    expect(rendered.html).toContain('justify-content:space-between');
   });
 
   it('renders multiline plain fields without single-line inset chrome', async () => {
@@ -730,6 +731,109 @@ describe('renderEvaluatedTemplateAst', () => {
     expect(rendered.css).toContain('--token-bad:');
     expect(rendered.css).not.toContain('--token.bad:');
     expect(rendered.html).toMatch(/class="[^"]*ast-bad-class[^"]*"/);
+  });
+
+  it('renders a repeating stack once per source item with a nested dynamic-table scoped to the current item', async () => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        collections: {
+          groupsByLocation: { id: 'groupsByLocation', kind: 'collection', path: 'groupsByLocation' },
+          // Global `lineItems` on the invoice — must still resolve from the
+          // global binding even when a scope is active, since no scope entry
+          // shadows the name `lineItems`.
+          lineItems: { id: 'lineItems', kind: 'collection', path: 'items' },
+        },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'location-bands',
+            type: 'stack',
+            direction: 'column',
+            repeat: { sourceBinding: { bindingId: 'groupsByLocation' }, itemBinding: 'group' },
+            children: [
+              {
+                id: 'band-header',
+                type: 'text',
+                content: { type: 'path', path: 'name' },
+              },
+              {
+                id: 'band-items',
+                type: 'dynamic-table',
+                repeat: { sourceBinding: { bindingId: 'group.items' }, itemBinding: 'item' },
+                columns: [
+                  { id: 'description', header: 'Description', value: { type: 'path', path: 'description' } },
+                  { id: 'total', header: 'Total', value: { type: 'path', path: 'total' } },
+                ],
+              },
+              {
+                id: 'band-subtotal',
+                type: 'text',
+                content: { type: 'path', path: 'subtotal' },
+              },
+            ],
+          },
+          // A sibling global dynamic-table to confirm the plain `lineItems`
+          // binding continues to resolve from globals (no scope interference).
+          {
+            id: 'global-line-items',
+            type: 'dynamic-table',
+            repeat: { sourceBinding: { bindingId: 'lineItems' }, itemBinding: 'item' },
+            columns: [
+              { id: 'description', header: 'Description', value: { type: 'path', path: 'description' } },
+            ],
+          },
+        ],
+      },
+    };
+
+    const evaluation = evaluateTemplateAst(ast, {
+      items: [
+        { id: 'global-a', description: 'Global Item A', quantity: 1, unitPrice: 100, total: 100 },
+      ],
+      groupsByLocation: [
+        {
+          location_id: 'loc-1',
+          name: 'City Office',
+          subtotal: 300,
+          items: [
+            { id: 'a', description: 'Site fee', quantity: 1, unitPrice: 200, total: 200 },
+            { id: 'b', description: 'Endpoints', quantity: 5, unitPrice: 40, total: 200 },
+          ],
+        },
+        {
+          location_id: 'loc-2',
+          name: 'Water Plant',
+          subtotal: 240,
+          items: [
+            { id: 'c', description: 'Site fee', quantity: 1, unitPrice: 150, total: 150 },
+          ],
+        },
+      ],
+    });
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
+
+    // Band header content appears once per group.
+    expect(rendered.html).toContain('City Office');
+    expect(rendered.html).toContain('Water Plant');
+    // Per-band items resolve via the scope-named `group.items` binding.
+    expect(rendered.html).toContain('Site fee');
+    expect(rendered.html).toContain('Endpoints');
+    // Global lineItems binding still resolves from the top-level source.
+    expect(rendered.html).toContain('Global Item A');
+    // Per-band subtotals render as path values against the current group item.
+    expect(rendered.html).toContain('300');
+    expect(rendered.html).toContain('240');
+    // Two band headers rendered — assert the band container opens twice as
+    // many child text nodes as a single iteration would produce.
+    const bandHeaderMatches = rendered.html.match(/id="band-header"/g) ?? [];
+    expect(bandHeaderMatches.length).toBe(2);
+    const bandItemsMatches = rendered.html.match(/id="band-items"/g) ?? [];
+    expect(bandItemsMatches.length).toBe(2);
   });
 
   it('omits image nodes when source resolves to null or empty-like values', async () => {

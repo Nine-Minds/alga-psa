@@ -27,7 +27,7 @@
       "active": "Actif",
       "inactive": "Inactif",
       "loading": "Chargement...",
-      "na": "N/A",
+      "na": "S/O",
       "none": "Aucun"
     },
     "no": "Non",
@@ -87,6 +87,7 @@
     "bulkDeleteSuccess": "{{count}} {{clientsLabel}} {{verb}} a été supprimé avec succès.",
     "bulkInactiveFailed": "{{count}} {{clientsLabel}} n'a pas pu être marqué comme inactif.",
     "bulkInactiveWithContactsSuccess": "{{clientCount}} {{clientsLabel}} et {{contactCount}} {{contactsLabel}} ont été marqués comme inactifs avec succès.",
+    "singleInactiveSuccess": "{{name}} a été marqué comme inactif avec succès.",
     "bulkInactiveSuccess": "{{count}} {{clientsLabel}} {{verb}} a été marqué comme inactif avec succès.",
     "bulkInactiveShortSuccess": "{{count}} {{clientsLabel}} {{verb}} a été marqué comme inactif.",
     "bulkInactiveWithContactsShortSuccess": "{{clientCount}} {{clientsLabel}} et {{contactCount}} {{contactsLabel}} ont été marqués comme inactifs.",
@@ -129,7 +130,9 @@
       "bucketUsageRecord": "enregistrement d'utilisation du compartiment",
       "bucketUsageRecords": "enregistrements d'utilisation du compartiment"
     },
-    "deleteSelectedPrompt": "Êtes-vous sûr de vouloir supprimer {{count}} sélectionné {{clientsLabel}} ? Cette action ne peut pas être annulée."
+    "deleteSelectedPrompt": "Êtes-vous sûr de vouloir supprimer {{count}} sélectionné {{clientsLabel}} ? Cette action ne peut pas être annulée.",
+    "singleInactiveWithContactsSuccess_one": "{{name}} et {{count}} contact ont été désactivés avec succès.",
+    "singleInactiveWithContactsSuccess_other": "{{name}} et {{count}} contacts ont été désactivés avec succès."
   },
   "clientDetails": {
     "title": "Détails du client",
@@ -208,7 +211,12 @@
     "status": {
       "label": "Statut",
       "helper": "Définir le statut du client comme actif ou inactif"
-    }
+    },
+    "entraSyncStarted": "Synchronisation Entra démarrée. ID d'exécution : {{runId}}",
+    "inboundDomainAdded": "Domaine de courrier entrant ajouté",
+    "inboundDomainAddFailed": "Échec de l'ajout du domaine",
+    "inboundDomainRemoved": "Domaine de courrier entrant supprimé",
+    "inboundDomainRemoveFailed": "Échec de la suppression du domaine"
   },
   "quickAddClient": {
     "title": "Ajouter un nouveau client",
@@ -327,7 +335,7 @@
     "deliveryMethods": {
       "both": "Les deux",
       "email": "E-mail",
-      "mail": "Mail"
+      "mail": "Courrier"
     },
     "paymentMethods": {
       "bankTransfer": "Virement bancaire",
@@ -670,7 +678,7 @@
   "clientLanguagePreference": {
     "title": "Paramètres de langue du client",
     "label": "Langue par défaut pour les contacts",
-    "description": "Définissez la langue par défaut pour tous les contacts dans {{clientName}}. Les utilisateurs individuels peuvent remplacer cela dans leurs paramètres personnels.",
+    "description": "S'applique à chaque utilisateur du portail de {{clientName}}, sauf s'ils ont défini leur propre préférence dans leur profil.",
     "selectPlaceholder": "Sélectionnez une langue",
     "updating": "Mise à jour des préférences linguistiques...",
     "loadError": "Échec du chargement des préférences linguistiques du client :",
@@ -724,7 +732,7 @@
     "createNewRate": "Créer un nouveau taux de taxe",
     "selectAssign": "Sélectionnez le taux de taxe à attribuer",
     "selectChange": "Sélectionnez un nouveau taux par défaut",
-    "description": "Description:",
+    "description": "Description :",
     "region": "Région:",
     "taxPercentage": "Pourcentage d'impôt :",
     "noDefaultRate": "Aucun taux de taxe par défaut attribué.",
@@ -738,7 +746,7 @@
     "createDrawerTitle": "Créer un nouveau taux de taxe",
     "loadingTaxDetails": "Chargement des détails fiscaux...",
     "loadTaxRegionsError": "Échec du chargement des régions fiscales.",
-    "na": "N/A",
+    "na": "S/O",
     "noDefaultAssigned": "Aucun taux de taxe par défaut attribué.",
     "noDescription": "Aucune description",
     "saving": "Enregistrement...",
@@ -1081,5 +1089,11 @@
     "error": "Erreur",
     "saving": "Enregistrement...",
     "success": "Succès"
+  },
+  "notes": {
+    "messages": {
+      "saveSuccess": "Notes enregistrées",
+      "saveFailed": "Échec de l'enregistrement des notes"
+    }
   }
 }
