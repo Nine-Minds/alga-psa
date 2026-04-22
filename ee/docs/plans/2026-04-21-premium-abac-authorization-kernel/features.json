@@ -431,7 +431,7 @@
   {
     "id": "F047",
     "description": "Support premium project narrowing bundles that can restrict project access by assignment, client portfolio, and team scope on the selected v1 project surfaces.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Functional Requirements"

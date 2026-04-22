@@ -42,6 +42,15 @@ import { deleteEntityWithValidation } from '@alga-psa/core';
 import { deleteEntityTags, deleteEntitiesTags } from '@alga-psa/tags/lib/tagCleanup';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  BuiltinAuthorizationKernelProvider,
+  BundleAuthorizationKernelProvider,
+  RequestLocalAuthorizationCache,
+  createAuthorizationKernel,
+  type AuthorizationRecord,
+  type AuthorizationSubject,
+} from 'server/src/lib/authorization/kernel';
+import { resolveBundleNarrowingRulesForEvaluation } from 'server/src/lib/authorization/bundles/service';
 
 const extendedCreateProjectSchema = createProjectSchema.extend({
   assigned_to: z.string().nullable().optional(),
@@ -92,6 +101,70 @@ async function getContactFullNameByContactNameId(params: {
     return row?.full_name ?? null;
 }
 
+function extractRoleIdsFromUser(user: IUserWithRoles): string[] {
+  if (!Array.isArray(user.roles)) {
+    return [];
+  }
+
+  return user.roles
+    .map((role) => {
+      if (typeof role === 'string') {
+        return role;
+      }
+      return typeof role?.role_id === 'string' ? role.role_id : null;
+    })
+    .filter((value): value is string => Boolean(value));
+}
+
+async function resolveAuthorizationSubjectForUser(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles
+): Promise<AuthorizationSubject> {
+  let roleIds = extractRoleIdsFromUser(user);
+  if (roleIds.length === 0) {
+    try {
+      const roleRows = await trx('user_roles')
+        .where({ tenant, user_id: user.user_id })
+        .select<{ role_id: string }[]>('role_id');
+      roleIds = roleRows.map((row) => row.role_id);
+    } catch {
+      roleIds = [];
+    }
+  }
+
+  const [teamRows, managedRows] = await Promise.all([
+    trx('team_members').where({ tenant, user_id: user.user_id }).select<{ team_id: string }[]>('team_id').catch(() => []),
+    trx('users').where({ tenant, reports_to: user.user_id }).select<{ user_id: string }[]>('user_id').catch(() => []),
+  ]);
+
+  return {
+    tenant,
+    userId: user.user_id,
+    userType: user.user_type,
+    roleIds,
+    teamIds: teamRows.map((row) => row.team_id),
+    managedUserIds: managedRows.map((row) => row.user_id),
+    clientId: user.clientId ?? null,
+    portfolioClientIds: user.clientId ? [user.clientId] : [],
+  };
+}
+
+function toProjectAuthorizationRecord(project: Partial<IProject>): AuthorizationRecord {
+  const assignedUserIds =
+    typeof project.assigned_to === 'string' && project.assigned_to.length > 0 ? [project.assigned_to] : [];
+  const assignedTeamId = (project as { assigned_team_id?: string | null }).assigned_team_id;
+  const teamIds = typeof assignedTeamId === 'string' && assignedTeamId.length > 0 ? [assignedTeamId] : [];
+
+  return {
+    id: project.project_id ?? null,
+    ownerUserId: project.assigned_to ?? null,
+    assignedUserIds,
+    clientId: project.client_id ?? null,
+    teamIds,
+  };
+}
+
 export const getAllClientsForProjects = withAuth(async (_user, { tenant }): Promise<IClient[]> => {
   const { knex: db } = await createTenantKnex();
 
@@ -110,7 +183,40 @@ export const getProjects = withAuth(async (user, { tenant }): Promise<IProject[]
         if (denied) return denied;
 
         const projects = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            return await ProjectModel.getAll(trx, tenant, true);
+            const rows = await ProjectModel.getAll(trx, tenant, true);
+            const subject = await resolveAuthorizationSubjectForUser(trx, tenant, user as IUserWithRoles);
+            const authorizationKernel = createAuthorizationKernel({
+              builtinProvider: new BuiltinAuthorizationKernelProvider(),
+              bundleProvider: new BundleAuthorizationKernelProvider({
+                resolveRules: async (input) => {
+                  try {
+                    return await resolveBundleNarrowingRulesForEvaluation(trx, input);
+                  } catch {
+                    return [];
+                  }
+                },
+              }),
+              rbacEvaluator: async () => true,
+            });
+            const requestCache = new RequestLocalAuthorizationCache();
+
+            const decisions = await Promise.all(
+              rows.map((project) =>
+                authorizationKernel.authorizeResource({
+                  subject,
+                  resource: {
+                    type: 'project',
+                    action: 'read',
+                    id: project.project_id,
+                  },
+                  record: toProjectAuthorizationRecord(project),
+                  requestCache,
+                  knex: trx,
+                })
+              )
+            );
+
+            return rows.filter((_, index) => decisions[index]?.allowed);
         });
 
         // Use assigned user data already available from the JOIN in ProjectModel.getAll()
@@ -558,7 +664,42 @@ export const getProject = withAuth(async (user, { tenant }, projectId: string): 
         if (denied) return denied;
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            return await ProjectModel.getById(trx, tenant, projectId);
+            const project = await ProjectModel.getById(trx, tenant, projectId);
+            if (!project) {
+                return null;
+            }
+
+            const subject = await resolveAuthorizationSubjectForUser(trx, tenant, user as IUserWithRoles);
+            const authorizationKernel = createAuthorizationKernel({
+              builtinProvider: new BuiltinAuthorizationKernelProvider(),
+              bundleProvider: new BundleAuthorizationKernelProvider({
+                resolveRules: async (input) => {
+                  try {
+                    return await resolveBundleNarrowingRulesForEvaluation(trx, input);
+                  } catch {
+                    return [];
+                  }
+                },
+              }),
+              rbacEvaluator: async () => true,
+            });
+            const decision = await authorizationKernel.authorizeResource({
+              subject,
+              resource: {
+                type: 'project',
+                action: 'read',
+                id: project.project_id,
+              },
+              record: toProjectAuthorizationRecord(project),
+              requestCache: new RequestLocalAuthorizationCache(),
+              knex: trx,
+            });
+
+            if (!decision.allowed) {
+              return null;
+            }
+
+            return project;
         });
     } catch (error) {
         console.error('Error fetching project:', error);

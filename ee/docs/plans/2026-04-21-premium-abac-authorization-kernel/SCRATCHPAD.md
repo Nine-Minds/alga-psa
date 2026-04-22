@@ -230,3 +230,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd packages/projects && npx tsc --pretty false --noEmit -p tsconfig.json`
   - `cd .. && npx tsc --pretty false --noEmit -p server/tsconfig.json`
   - `cd packages/projects && npx vitest run src/actions/projectPhaseStatusActions.contract.test.ts src/actions/projectPhaseStatusCopyRemove.contract.test.ts --coverage.enabled=false` (known pre-existing contract drift in `projectTaskStatusActions.ts` expectation: missing literal `async function getScopedProjectStatusMappings(`)
+- (2026-04-21) Completed `F047` by enabling premium bundle narrowing on selected project list/detail surfaces:
+  - `packages/projects/src/actions/projectActions.ts` now evaluates `getProjects` and `getProject` through kernel `authorizeResource` with `BundleAuthorizationKernelProvider`.
+  - Added project record normalization for bundle template matching (`assigned_to`, `client_id`, optional `assigned_team_id`) and per-request subject context resolution (roles/teams/managed users/client).
+  - Result: published bundle templates for assignment/client/team scope now narrow project visibility on these migrated read paths.
+- (2026-04-21) Validation runbook for `F047` checkpoint:
+  - `cd packages/projects && npx tsc --pretty false --noEmit -p tsconfig.json`
+  - `cd .. && npx tsc --pretty false --noEmit -p server/tsconfig.json`
