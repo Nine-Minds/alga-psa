@@ -7,6 +7,7 @@ import { createTenantKnex } from '@/lib/db';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import {
   type AuthorizationRecord,
+  type RelationshipTemplateKey,
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
   createAuthorizationKernel,
@@ -579,7 +580,7 @@ function normalizeBundleRules(
     id: rule.ruleId,
     resource: rule.resourceType,
     action: rule.action,
-    templateKey: rule.templateKey,
+    templateKey: rule.templateKey as RelationshipTemplateKey,
     constraintKey: rule.constraintKey ?? null,
     constraints: Array.isArray(rule.config?.constraints)
       ? (rule.config.constraints as BundleNarrowingRule['constraints'])
@@ -705,6 +706,16 @@ export const runAuthorizationBundleSimulationAction = withAuth(
     if (!bundle) {
       throw new Error('Bundle not found in tenant scope.');
     }
+
+    const record = input.syntheticRecord
+      ? {
+          id: null,
+          ownerUserId: input.syntheticRecord.ownerUserId ?? null,
+          clientId: input.syntheticRecord.clientId ?? null,
+          boardId: input.syntheticRecord.boardId ?? null,
+          is_client_visible: input.syntheticRecord.isClientVisible ?? false,
+        }
+      : await loadSimulationRecord(knex, tenant, input.resourceType, input.resourceId || '');
 
     const draftRules = normalizeBundleRules(
       await listBundleRulesForRevision(knex, {
@@ -956,12 +967,3 @@ export const getAuthorizationBundleAuditTrailAction = withAuth(
     return events;
   }
 );
-    const record = input.syntheticRecord
-      ? {
-          id: null,
-          ownerUserId: input.syntheticRecord.ownerUserId ?? null,
-          clientId: input.syntheticRecord.clientId ?? null,
-          boardId: input.syntheticRecord.boardId ?? null,
-          is_client_visible: input.syntheticRecord.isClientVisible ?? false,
-        }
-      : await loadSimulationRecord(knex, tenant, input.resourceType, input.resourceId || '');

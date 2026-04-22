@@ -284,3 +284,18 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd server && npx vitest run --coverage.enabled=false src/test/unit/authorization/kernel.contract.modes.test.ts src/test/unit/api/authorizationKernel.test.ts`
 - (2026-04-21) Completed `T029` by extending `server/src/test/unit/authorization/kernel.engine.test.ts` with explicit reason-chain assertions that include RBAC gate (`rbac_allowed`), builtin relationship path (`relationship_rules_allowed`), and bundle narrowing (`bundle_narrowing_applied`).
 - (2026-04-21) Note on current integration runner state: repeated full integration reruns encountered transient DB pool exhaustion (`KnexTimeoutError` during test DB recreation). Unit-level checkpoints continue to run reliably; heavy integration reruns should be resumed after DB pool reset.
+- (2026-04-21) Completed `T010` with simulator action unit coverage in `server/src/test/unit/authorization/bundleSimulatorAction.test.ts`:
+  - validates real principal + persisted-record simulation paths (`listAuthorizationSimulationPrincipalsAction`, `listAuthorizationSimulationRecordsAction`, `runAuthorizationBundleSimulationAction`)
+  - validates synthetic scenario simulation path (no persisted record lookup) against the same draft-vs-published decision flow
+  - asserts explainability reason chains are emitted for both revisions (for example `rbac:rbac_allowed`, `bundle:bundle_narrowing_applied`, `bundle:bundle_template_denied`)
+- (2026-04-21) Fixed simulator action wiring in `ee/server/src/lib/actions/auth/authorizationBundleActions.ts` by restoring in-action record resolution and removing an orphaned trailing record block that had drifted outside any action scope.
+- (2026-04-21) Validation runbook for `T010` checkpoint:
+  - `cd server && npx vitest run --coverage.enabled=false src/test/unit/authorization/bundleSimulatorAction.test.ts`
+  - `cd .. && npx tsc --pretty false --noEmit -p server/tsconfig.json`
+- (2026-04-21) Completed `T011` with tier/edition guard coverage across EE actions and CE fallback surfaces:
+  - `server/src/test/unit/authorization/bundleSimulatorAction.test.ts` now asserts non-entitled tier gating blocks EE bundle-management actions before service calls.
+  - `server/src/test/unit/authorization/kernel.ceFallback.test.ts` verifies CE fallback behavior: when enterprise kernel factory is unavailable, `getAuthorizationKernel()` still runs builtin authorization decisions.
+  - `server/src/test/unit/authorization/cePolicyManagement.placeholder.test.ts` enforces CE placeholder UI copy includes Premium upgrade guidance while explicitly stating builtin authorization remains active.
+- (2026-04-21) Validation runbook for `T011` checkpoint:
+  - `cd server && npx vitest run --coverage.enabled=false src/test/unit/authorization/bundleSimulatorAction.test.ts src/test/unit/authorization/kernel.ceFallback.test.ts src/test/unit/authorization/cePolicyManagement.placeholder.test.ts`
+  - `cd .. && npx tsc --pretty false --noEmit -p server/tsconfig.json`

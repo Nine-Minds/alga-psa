@@ -87,7 +87,7 @@
   {
     "id": "T010",
     "description": "Simulator: EE admins can evaluate both real principals/records and synthetic scenarios against draft and published bundle revisions and receive explainable decision output.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032",
       "F033"
@@ -96,7 +96,7 @@
   {
     "id": "T011",
     "description": "Tier/edition guard: CE and non-entitled EE tiers cannot use configurable bundle-management actions or UI, while migrated builtin-kernel behavior still runs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F028",
