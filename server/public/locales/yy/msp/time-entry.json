@@ -401,5 +401,18 @@
   },
   "timeEntryReadOnly": {
     "viewEntryDetails": "55555"
+  },
+  "messages": {
+    "serviceRequired": "55555",
+    "invalidService": "55555",
+    "taxRegionRequired": "55555",
+    "invalidTimeEntry": "55555",
+    "savingEntry": "55555",
+    "entrySaved": "55555",
+    "entrySavedSuccess": "55555",
+    "taskUpdated": "55555",
+    "saveChangesFailed": "55555",
+    "changesSaved": "55555",
+    "workItemDeleted": "55555"
   }
 }

@@ -1096,5 +1096,24 @@
       "load": "No se pudo cargar la configuración de numeración.",
       "save": "No se pudo actualizar la configuración."
     }
+  },
+  "payment": {
+    "messages": {
+      "loadConfigFailed": "Error al cargar la configuración de pago",
+      "keysRequired": "Introduzca tanto la clave secreta como la clave publicable",
+      "invalidSecretKey": "La clave secreta debe comenzar con sk_",
+      "invalidPublishableKey": "La clave publicable debe comenzar con pk_",
+      "connectSuccess": "¡Stripe conectado y webhooks configurados automáticamente!",
+      "connectPartialSuccess": "¡Stripe conectado! Nota: la configuración automática del webhook falló — puede que necesite configurar los webhooks manualmente en el panel de Stripe.",
+      "connectFailed": "Error al conectar Stripe",
+      "disconnected": "Stripe desconectado",
+      "disconnectFailed": "Error al desconectar Stripe",
+      "connectionSuccess": "¡Conexión exitosa!",
+      "connectionTestFailed": "Falló la prueba de conexión",
+      "settingsSaved": "Configuración guardada correctamente",
+      "saveSettingsFailed": "Error al guardar la configuración",
+      "webhookConfigured": "¡Webhook configurado correctamente!",
+      "webhookConfigureFailed": "Error al configurar el webhook"
+    }
   }
 }

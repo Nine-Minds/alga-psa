@@ -1,0 +1,58 @@
+{
+  "catalog": {
+    "title": "Services aanvragen",
+    "description": "Blader door gepubliceerde services en dien gestructureerde aanvragen in.",
+    "myRequests": "Mijn aanvragen",
+    "empty": "Er zijn momenteel geen aanvraagservices beschikbaar.",
+    "fallbackCategory": "Service",
+    "noDescription": "Geen beschrijving opgegeven"
+  },
+  "detail": {
+    "version": "Versie {{version}}",
+    "submitted": "Aanvraag ingediend",
+    "requestIdLabel": "Aanvraag-ID: ",
+    "ticketIdLabel": "Ticket-ID: ",
+    "unableToSubmit": "Aanvraag kan niet worden ingediend",
+    "formTitle": "Aanvraagformulier",
+    "noFields": "Geen velden geconfigureerd.",
+    "selectOption": "Selecteer een optie",
+    "datePlaceholder": "Selecteer een datum",
+    "optionLabel": "Optie {{index}}",
+    "submit": "Aanvraag indienen",
+    "initialValuesTitle": "Beginwaarden",
+    "noInitialValues": "Geen statische standaardwaarden geconfigureerd."
+  },
+  "myRequests": {
+    "title": "Mijn aanvragen",
+    "browseServices": "Services doorbladeren",
+    "empty": "U heeft nog geen serviceaanvragen ingediend.",
+    "columns": {
+      "request": "Aanvraag",
+      "submitted": "Ingediend",
+      "status": "Status",
+      "details": "Details"
+    },
+    "view": "Bekijken",
+    "unknownDate": "Onbekend",
+    "statuses": {
+      "pending": "In behandeling",
+      "succeeded": "Geslaagd",
+      "failed": "Mislukt"
+    }
+  },
+  "submissionDetail": {
+    "backToMyRequests": "Terug naar Mijn aanvragen",
+    "requestIdLabel": "Aanvraag-ID:",
+    "statusSection": "Status",
+    "submittedAt": "Ingediend: {{date}}",
+    "executionStatus": "Uitvoeringsstatus: {{status}}",
+    "ticketLabel": "Ticket:",
+    "workflowLabel": "Workflow: {{id}}",
+    "submittedAnswersTitle": "Ingediende antwoorden",
+    "noResponse": "Geen antwoord",
+    "attachmentsTitle": "Bijlagen",
+    "noAttachments": "Geen bijlagen toegevoegd.",
+    "fileIdLabel": "Bestand-ID: {{id}}",
+    "fileTypeLabel": "Type: {{mime}}"
+  }
+}

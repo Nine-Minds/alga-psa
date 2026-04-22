@@ -7,8 +7,8 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@alga-psa/ui/components/Table';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { IService } from '@alga-psa/types';
-import { IServiceRateTier } from '@alga-psa/types';
 import { getServiceRateTiers, updateServiceRateTiers } from '@alga-psa/billing/actions';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Define the rate tier interface
 interface RateTier {
@@ -25,10 +25,13 @@ interface ServiceRateTiersProps {
 }
 
 export function ServiceRateTiers({ service, onUpdate }: ServiceRateTiersProps) {
+  const { t } = useTranslation('msp/service-catalog');
+  const { formatCurrency } = useFormatters();
   const [tiers, setTiers] = useState<RateTier[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const currencyCode = service.prices?.[0]?.currency_code || 'USD';
 
   // Load existing tiers from the database
   useEffect(() => {
@@ -63,7 +66,7 @@ export function ServiceRateTiers({ service, onUpdate }: ServiceRateTiersProps) {
         }
       } catch (err) {
         console.error('Error loading service rate tiers:', err);
-        setError('Failed to load rate tiers');
+        setError(t('rateTiers.errors.load', { defaultValue: 'Failed to load rate tiers' }));
         
         // Set default tier on error
         setTiers([
@@ -81,7 +84,7 @@ export function ServiceRateTiers({ service, onUpdate }: ServiceRateTiersProps) {
     };
 
     fetchTiers();
-  }, [service.service_id, service.default_rate]);
+  }, [service.service_id, service.default_rate, t]);
 
   const addTier = () => {
     // Find the highest max quantity to set as the new min quantity
@@ -123,7 +126,7 @@ export function ServiceRateTiers({ service, onUpdate }: ServiceRateTiersProps) {
   const removeTier = (id: string) => {
     // Don't allow removing the last tier
     if (tiers.length <= 1) {
-      setError("Cannot remove the last tier");
+      setError(t('rateTiers.errors.lastTier', { defaultValue: 'Cannot remove the last tier' }));
       return;
     }
 
@@ -157,7 +160,7 @@ export function ServiceRateTiers({ service, onUpdate }: ServiceRateTiersProps) {
     setTiers(updatedTiers.filter(tier => tier.id !== id));
   };
 
-  const updateTierField = (id: string, field: keyof RateTier, value: any) => {
+  const updateTierField = (id: string, field: keyof RateTier, value: number | null) => {
     const updatedTiers = tiers.map(tier => {
       if (tier.id === id) {
         return { ...tier, [field]: value };
@@ -181,19 +184,25 @@ export function ServiceRateTiers({ service, onUpdate }: ServiceRateTiersProps) {
         const tier = tiers[i];
         
         if (tier.minQuantity <= 0) {
-          setError("Minimum quantity must be greater than 0");
+          setError(t('rateTiers.errors.minPositive', {
+            defaultValue: 'Minimum quantity must be greater than 0',
+          }));
           setIsSaving(false);
           return;
         }
         
         if (tier.maxQuantity !== null && tier.maxQuantity <= tier.minQuantity) {
-          setError("Maximum quantity must be greater than minimum quantity");
+          setError(t('rateTiers.errors.maxGreaterThanMin', {
+            defaultValue: 'Maximum quantity must be greater than minimum quantity',
+          }));
           setIsSaving(false);
           return;
         }
         
         if (tier.rate < 0) {
-          setError("Rate cannot be negative");
+          setError(t('rateTiers.errors.rateNegative', {
+            defaultValue: 'Rate cannot be negative',
+          }));
           setIsSaving(false);
           return;
         }
@@ -210,7 +219,9 @@ export function ServiceRateTiers({ service, onUpdate }: ServiceRateTiersProps) {
             
             if ((thisMin <= otherMax && thisMax >= otherMin) ||
                 (otherMin <= thisMax && otherMax >= thisMin)) {
-              setError("Tier ranges cannot overlap");
+              setError(t('rateTiers.errors.overlap', {
+                defaultValue: 'Tier ranges cannot overlap',
+              }));
               setIsSaving(false);
               return;
             }
@@ -239,35 +250,55 @@ export function ServiceRateTiers({ service, onUpdate }: ServiceRateTiersProps) {
       setError(null);
     } catch (err) {
       console.error('Error saving rate tiers:', err);
-      setError('Failed to save rate tiers');
+      setError(t('rateTiers.errors.save', { defaultValue: 'Failed to save rate tiers' }));
     } finally {
       setIsSaving(false);
     }
   };
 
+  const formatTierRate = (value: number) => formatCurrency(value, currencyCode);
+
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>Rate Tiers & Quantity Discounts</CardTitle>
+        <CardTitle>
+          {t('rateTiers.title', { defaultValue: 'Rate Tiers & Quantity Discounts' })}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <div className="flex justify-center items-center h-40">
-            <p className="text-muted-foreground">Loading rate tiers...</p>
+            <p className="text-muted-foreground">
+              {t('rateTiers.loading', { defaultValue: 'Loading rate tiers...' })}
+            </p>
           </div>
         ) : (
           <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Configure different rates based on quantity ranges. Higher quantities can have discounted rates.
+            {t('rateTiers.description', {
+              defaultValue:
+                'Configure different rates based on quantity ranges. Higher quantities can have discounted rates.',
+            })}
           </p>
           
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Min Quantity</TableHead>
-                <TableHead>Max Quantity</TableHead>
-                <TableHead>Rate (${service.unit_of_measure})</TableHead>
-                <TableHead className="w-[100px]">Actions</TableHead>
+                <TableHead>
+                  {t('rateTiers.table.minQuantity', { defaultValue: 'Min Quantity' })}
+                </TableHead>
+                <TableHead>
+                  {t('rateTiers.table.maxQuantity', { defaultValue: 'Max Quantity' })}
+                </TableHead>
+                <TableHead>
+                  {t('rateTiers.table.rate', {
+                    unit: service.unit_of_measure,
+                    defaultValue: 'Rate ({{unit}})',
+                  })}
+                </TableHead>
+                <TableHead className="w-[100px]">
+                  {t('rateTiers.table.actions', { defaultValue: 'Actions' })}
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -293,20 +324,29 @@ export function ServiceRateTiers({ service, onUpdate }: ServiceRateTiersProps) {
                         updateTierField(tier.id, 'maxQuantity', value);
                       }}
                       min={tier.minQuantity + 1}
-                      placeholder="Unlimited"
+                      placeholder={t('rateTiers.table.unlimited', { defaultValue: 'Unlimited' })}
                       className="w-24"
                     />
                   </TableCell>
                   <TableCell>
-                    <Input
-                      id={`rate-${tier.id}`}
-                      type="number"
-                      value={tier.rate}
-                      onChange={(e) => updateTierField(tier.id, 'rate', parseFloat(e.target.value) || 0)}
-                      min={0}
-                      step={0.01}
-                      className="w-24"
-                    />
+                    <div>
+                      <Input
+                        id={`rate-${tier.id}`}
+                        type="number"
+                        value={tier.rate}
+                        onChange={(e) => updateTierField(tier.id, 'rate', parseFloat(e.target.value) || 0)}
+                        min={0}
+                        step={0.01}
+                        className="w-24"
+                      />
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {t('rateTiers.formattedRate', {
+                          rate: formatTierRate(tier.rate),
+                          unit: service.unit_of_measure,
+                          defaultValue: '{{rate}} per {{unit}}',
+                        })}
+                      </p>
+                    </div>
                   </TableCell>
                   <TableCell>
                     <Button
@@ -333,7 +373,7 @@ export function ServiceRateTiers({ service, onUpdate }: ServiceRateTiersProps) {
               className="flex items-center gap-1"
             >
               <PlusCircle className="h-4 w-4" />
-              Add Tier
+              {t('rateTiers.actions.addTier', { defaultValue: 'Add Tier' })}
             </Button>
           </div>
           
@@ -347,7 +387,9 @@ export function ServiceRateTiers({ service, onUpdate }: ServiceRateTiersProps) {
           onClick={handleSave} 
           disabled={isSaving}
         >
-          {isSaving ? 'Saving...' : 'Save Rate Tiers'}
+          {isSaving
+            ? t('rateTiers.actions.saving', { defaultValue: 'Saving...' })
+            : t('rateTiers.actions.save', { defaultValue: 'Save Rate Tiers' })}
         </Button>
       </CardFooter>
     </Card>

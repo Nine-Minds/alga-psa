@@ -459,5 +459,158 @@
       "update": "Standardeinstellungen aktualisieren",
       "create": "Standardeinstellungen erstellen"
     }
+  },
+  "managed": {
+    "messages": {
+      "loadDomainsFailed": "Verwaltete Domänen konnten nicht geladen werden",
+      "loadOutboundSettingsFailed": "Einstellungen für ausgehende E-Mails konnten nicht geladen werden",
+      "ticketingFromUpdated": "Absenderadresse für Ticketing aktualisiert",
+      "ticketingFromSaveFailed": "Absenderadresse für Ticketing konnte nicht gespeichert werden",
+      "ticketingFromCleared": "Absenderadresse für Ticketing gelöscht",
+      "ticketingFromClearFailed": "Absenderadresse für Ticketing konnte nicht gelöscht werden",
+      "switchProviderFailed": "Anbieter konnte nicht gewechselt werden",
+      "smtpHostRequired": "SMTP-Host ist erforderlich",
+      "fromAddressRequired": "Absenderadresse ist erforderlich",
+      "smtpSaved": "SMTP-Einstellungen gespeichert",
+      "smtpSaveFailed": "SMTP-Einstellungen konnten nicht gespeichert werden",
+      "domainRequired": "Domainnamen eingeben",
+      "domainSubmitted": "Domainanfrage gesendet",
+      "domainRequestFailed": "Domain konnte nicht angefragt werden",
+      "verificationRecheckScheduled": "Erneute Überprüfung geplant",
+      "refreshStatusFailed": "Domainstatus konnte nicht aktualisiert werden",
+      "domainRemovalScheduled": "Domainentfernung geplant",
+      "domainRemovalScheduledWithClear": "Domainentfernung geplant und Ticketing-Absenderadresse gelöscht",
+      "removeDomainFailed": "Domain konnte nicht entfernt werden"
+    },
+    "tabs": {
+      "inboundEmail": "Eingehende E-Mail",
+      "outboundEmail": "Ausgehende E-Mail"
+    },
+    "outbound": {
+      "intro": "Konfigurieren Sie ausgehende E-Mails für Ihre Organisation.",
+      "providerTitle": "Ausgehender Anbieter",
+      "providerDescription": "Wählen Sie, wie ausgehende E-Mails von Ihrer Organisation gesendet werden.",
+      "providerPlaceholder": "Ausgehenden Anbieter auswählen",
+      "providerOptions": {
+        "resend": "Nine Minds verwaltet",
+        "smtp": "SMTP"
+      },
+      "resendDescription": "E-Mails werden über die verwaltete Infrastruktur von Nine Minds gesendet. Fügen Sie unten eine benutzerdefinierte Domain hinzu und verifizieren Sie sie.",
+      "smtpDescription": "E-Mails werden über Ihren eigenen SMTP-Server gesendet.",
+      "smtpLabel": "SMTP",
+      "upgradeNotice": "Verwaltete E-Mail-Domänen sind in Ihrem aktuellen Tarif nicht verfügbar. Upgraden Sie, um die verwaltete ausgehende Infrastruktur von Nine Minds mit benutzerdefinierten Domänen zu nutzen.",
+      "domainsTitle": "Verwaltete Domänen",
+      "domainsDescription": "Fügen Sie eine benutzerdefinierte Domain hinzu und folgen Sie den DNS-Anweisungen zur Überprüfung des Besitzes.",
+      "domainLabel": "Domain",
+      "domainPlaceholder": "beispiel.de",
+      "addDomainButton": "Domain hinzufügen",
+      "smtpConfigTitle": "SMTP-Konfiguration",
+      "smtpConfigDescription": "Geben Sie Ihre SMTP-Serverdetails ein, um ausgehende E-Mails zu senden.",
+      "smtp": {
+        "hostLabel": "SMTP-Host",
+        "hostPlaceholder": "smtp.beispiel.de",
+        "portLabel": "Port",
+        "usernameLabel": "Benutzername",
+        "usernamePlaceholder": "ihre-email@beispiel.de",
+        "passwordLabel": "Passwort",
+        "passwordPlaceholder": "Passwort eingeben",
+        "fromLabel": "Absenderadresse",
+        "fromPlaceholder": "noreply@beispiel.de",
+        "fromHelp": "Die Standardabsenderadresse für ausgehende E-Mails.",
+        "savingButton": "Speichern…",
+        "saveButton": "SMTP-Einstellungen speichern"
+      },
+      "ticketingFrom": {
+        "title": "Absenderadresse für Ticketing",
+        "description": "Wählen Sie die E-Mail-Adresse, die in der Von-Kopfzeile der Ticket-Benachrichtigungen erscheint.",
+        "smtpHint": "Die Adresse sollte eine Domain verwenden, die Ihrem SMTP-Server zugeordnet ist ({{domain}}). Antworten funktionieren am besten mit einem verbundenen Eingangspostfach.",
+        "managedHint": "Die Adresse muss Ihre ausgehende Domain verwenden ({{domain}}). Antworten funktionieren am besten mit einem verbundenen Eingangspostfach.",
+        "domainNotSet": "nicht festgelegt",
+        "outboundRequiredTitle": "Ausgehende Domain erforderlich",
+        "smtpRequiredMessage": "Speichern Sie Ihre SMTP-Konfiguration mit einer Absenderadresse, bevor Sie eine Ticketing-Absenderadresse auswählen.",
+        "managedRequiredMessage": "Fügen Sie eine verwaltete Domain hinzu und verifizieren Sie sie, bevor Sie eine Ticketing-Absenderadresse auswählen.",
+        "connectedInboxLabel": "Verbundenes Postfach",
+        "customOptionLabel": "Andere Adresse auf {{domain}}",
+        "selectPlaceholder": "Absenderadresse auswählen",
+        "connectedInboxHelp": "Wählen Sie ein verbundenes Postfach, damit eingehende Antworten gruppiert bleiben.",
+        "customLabel": "Absenderadresse",
+        "customPlaceholder": "support@{{domain}}",
+        "customSmtpHelp": "Verwenden Sie eine Domain, von der Ihr SMTP-Server senden darf. Eine nicht übereinstimmende Domain kann zu Zustellungsfehlern oder Spamfilterung führen.",
+        "customManagedHelp": "Muss mit {{domain}} übereinstimmen. Wenn dies nicht eines Ihrer Eingangspostfächer ist, funktioniert die Verarbeitung eingehender Tickets möglicherweise nicht.",
+        "warningTitle": "Zur Info",
+        "errorTitle": "Absenderadresse korrigieren",
+        "clearButton": "Absenderadresse löschen",
+        "savingButton": "Speichern…",
+        "saveButton": "Absenderadresse speichern"
+      }
+    },
+    "inbound": {
+      "intro": "Konfigurieren Sie eingehendes E-Mail-Routing und anbieterspezifische Automatisierung."
+    },
+    "dialogs": {
+      "clearTicketingFrom": {
+        "title": "Ticketing-Absenderadresse löschen",
+        "message": "Gespeicherte Ticketing-Absenderadresse löschen? Ticket-Benachrichtigungen verwenden keine benutzerdefinierte Absenderadresse mehr, bis Sie eine neue speichern.",
+        "confirm": "Absenderadresse löschen"
+      },
+      "removeDomain": {
+        "title": "Verwaltete Domain entfernen",
+        "messageWithClear": "{{domain}} entfernen? Dadurch wird auch die gespeicherte Ticketing-Absenderadresse gelöscht, da diese Domain derzeit für ausgehende E-Mails aktiv ist.",
+        "message": "{{domain}} entfernen?",
+        "fallbackDomain": "diese Domain",
+        "confirm": "Domain entfernen"
+      },
+      "cancel": "Abbrechen"
+    },
+    "validation": {
+      "enterFromAddress": "Geben Sie eine Absenderadresse ein",
+      "saveSmtpFirst": "Speichern Sie zuerst Ihre SMTP-Konfiguration mit einer Absenderadresse",
+      "addOutboundFirst": "Fügen Sie eine ausgehende Domain hinzu und verifizieren Sie sie, bevor Sie eine Absenderadresse wählen",
+      "invalidEmail": "Geben Sie eine gültige E-Mail-Adresse ein",
+      "mustMatchDomain": "Die Absenderadresse muss @{{domain}} verwenden",
+      "customAddressThreadWarning": "Die Verwendung einer benutzerdefinierten Adresse kann das korrekte Gruppieren eingehender Antworten verhindern.",
+      "smtpDomainMismatchWarning": "Diese Domain stimmt nicht mit Ihrer SMTP-Absenderdomain überein ({{domain}}). E-Mails können fehlschlagen oder als Spam markiert werden, wenn Ihr SMTP-Server nicht berechtigt ist, von dieser Domain zu senden.",
+      "notConnectedWarning": "Die Verarbeitung eingehender Tickets funktioniert möglicherweise nicht mit dieser Adresse, da sie keines Ihrer verbundenen Postfächer ist."
+    },
+    "domainList": {
+      "loading": "Domänen werden geladen…",
+      "empty": "Noch keine verwalteten Domänen. Fügen Sie eine hinzu, um zu beginnen.",
+      "providerDomainId": "Anbieter-Domain-ID: {{id}}",
+      "providerFallback": "Verwaltet über Resend",
+      "failureReason": "Grund des Fehlers: {{reason}}",
+      "recheckButton": "DNS erneut prüfen",
+      "removeButton": "Domain entfernen",
+      "dnsRecordsHeading": "DNS-Einträge",
+      "dnsRecordsHelp": "Kopieren Sie jeden Eintrag unten in Ihren DNS-Anbieter (GoDaddy, Cloudflare, etc.). Wir können Ihr DNS nicht für Sie ändern.",
+      "dnsEmpty": {
+        "pending": "Wir haben Resend gebeten, die DNS-Einträge für diese Domain zu generieren. Sobald sie erscheinen, kopieren Sie sie in Ihren DNS-Anbieter, da wir ihn nicht automatisch aktualisieren können.",
+        "failed": "Wir benötigen noch DNS-Anweisungen von Resend. Klicken Sie auf DNS erneut prüfen und veröffentlichen Sie die Einträge in Ihrem DNS-Anbieter, sobald sie geladen sind.",
+        "default": "DNS-Anweisungen sind noch nicht verfügbar. Prüfen Sie das DNS erneut und kopieren Sie jeden Eintrag in Ihren DNS-Anbieter, sobald er erscheint."
+      }
+    },
+    "dnsRecords": {
+      "status": {
+        "matched": "Erkannt",
+        "mismatch": "Abweichung",
+        "missing": "Nicht gefunden",
+        "unknown": "Warten auf Prüfung"
+      },
+      "detectedValues": "Erkannte Werte",
+      "defaultEmpty": "Wir bereiten die DNS-Einträge für diese Domain vor. Sobald sie erscheinen, kopieren Sie sie in Ihren DNS-Anbieter, da wir sie nicht für Sie aktualisieren können.",
+      "summary": "{{matched}} von {{total}} erforderlichen DNS-Einträgen stimmen überein",
+      "summaryWithCheckedAt": "{{matched}} von {{total}} erforderlichen DNS-Einträgen stimmen überein • Zuletzt geprüft {{checkedAt}}.",
+      "lastCheckedNoRecords": "Zuletzt geprüft {{checkedAt}}. Noch keine Einträge erkannt.",
+      "copyButton": "Kopieren",
+      "copyAriaLabel": "DNS-Wert kopieren",
+      "copied": "In Zwischenablage kopiert",
+      "copyFailed": "Kopieren fehlgeschlagen",
+      "checkedAt": "Geprüft {{checkedAt}}",
+      "ttlLabel": "TTL:",
+      "priorityLabel": "Priorität:",
+      "missingHelp": "Wir haben diesen Eintrag im DNS noch nicht erkannt. Prüfen Sie, ob er in Ihrem DNS-Anbieter mit dem genauen oben gezeigten Wert existiert.",
+      "mismatchHelp": "Der DNS-Eintrag existiert, aber der Wert stimmt nicht mit dem überein, was Resend erwartet.",
+      "matchedHelp": "Der erkannte Wert stimmt mit dem erwarteten überein.",
+      "unknownHelp": "Wir haben das DNS noch nicht geprüft. Prüfen Sie das DNS erneut, um die Verifizierung auszuführen."
+    }
   }
 }

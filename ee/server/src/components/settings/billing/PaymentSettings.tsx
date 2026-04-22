@@ -9,6 +9,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import toast from 'react-hot-toast';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -155,6 +156,7 @@ interface PaymentConfigDisplay {
 }
 
 export const PaymentSettings: React.FC = () => {
+  const { t } = useTranslation('msp/billing-settings');
   const [config, setConfig] = useState<PaymentConfigDisplay | null>(null);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
@@ -190,10 +192,10 @@ export const PaymentSettings: React.FC = () => {
           setHasChanges(false);
         }
       } else {
-        toast.error(result.error || 'Failed to load payment configuration');
+        toast.error(result.error || t('payment.messages.loadConfigFailed'));
       }
     } catch (error) {
-      toast.error('Failed to load payment configuration');
+      toast.error(t('payment.messages.loadConfigFailed'));
     } finally {
       setLoading(false);
     }
@@ -208,17 +210,17 @@ export const PaymentSettings: React.FC = () => {
     e.preventDefault();
 
     if (!secretKey || !publishableKey) {
-      toast.error('Please enter both secret key and publishable key');
+      toast.error(t('payment.messages.keysRequired'));
       return;
     }
 
     if (!secretKey.startsWith('sk_')) {
-      toast.error('Secret key should start with sk_');
+      toast.error(t('payment.messages.invalidSecretKey'));
       return;
     }
 
     if (!publishableKey.startsWith('pk_')) {
-      toast.error('Publishable key should start with pk_');
+      toast.error(t('payment.messages.invalidPublishableKey'));
       return;
     }
 
@@ -231,19 +233,19 @@ export const PaymentSettings: React.FC = () => {
 
       if (result.success && result.data) {
         if (result.data.webhookConfigured) {
-          toast.success('Stripe connected and webhooks configured automatically!');
+          toast.success(t('payment.messages.connectSuccess'));
         } else {
-          toast.success('Stripe connected! Note: Webhook auto-configuration failed - you may need to configure webhooks manually in Stripe Dashboard.');
+          toast.success(t('payment.messages.connectPartialSuccess'));
         }
         setShowConnectForm(false);
         setSecretKey('');
         setPublishableKey('');
         await loadConfig();
       } else {
-        toast.error(result.error || 'Failed to connect Stripe');
+        toast.error(result.error || t('payment.messages.connectFailed'));
       }
     } catch (error) {
-      toast.error('Failed to connect Stripe');
+      toast.error(t('payment.messages.connectFailed'));
     } finally {
       setConnecting(false);
     }
@@ -255,14 +257,14 @@ export const PaymentSettings: React.FC = () => {
     try {
       const result = await disconnectStripeAction();
       if (result.success) {
-        toast.success('Stripe disconnected');
+        toast.success(t('payment.messages.disconnected'));
         setShowDisconnectDialog(false);
         await loadConfig();
       } else {
-        toast.error(result.error || 'Failed to disconnect Stripe');
+        toast.error(result.error || t('payment.messages.disconnectFailed'));
       }
     } catch (error) {
-      toast.error('Failed to disconnect Stripe');
+      toast.error(t('payment.messages.disconnectFailed'));
     } finally {
       setDisconnecting(false);
     }
@@ -274,12 +276,12 @@ export const PaymentSettings: React.FC = () => {
     try {
       const result = await testStripeConnectionAction();
       if (result.success) {
-        toast.success(result.data?.status || 'Connection successful!');
+        toast.success(result.data?.status || t('payment.messages.connectionSuccess'));
       } else {
-        toast.error(result.error || 'Connection test failed');
+        toast.error(result.error || t('payment.messages.connectionTestFailed'));
       }
     } catch (error) {
-      toast.error('Connection test failed');
+      toast.error(t('payment.messages.connectionTestFailed'));
     } finally {
       setTesting(false);
     }
@@ -309,12 +311,12 @@ export const PaymentSettings: React.FC = () => {
         setConfig((prev) => prev ? { ...prev, settings: result.data! } : null);
         setLocalSettings(result.data);
         setHasChanges(false);
-        toast.success('Settings saved successfully');
+        toast.success(t('payment.messages.settingsSaved'));
       } else {
-        toast.error(result.error || 'Failed to save settings');
+        toast.error(result.error || t('payment.messages.saveSettingsFailed'));
       }
     } catch (error) {
-      toast.error('Failed to save settings');
+      toast.error(t('payment.messages.saveSettingsFailed'));
     } finally {
       setSavingSettings(false);
     }
@@ -326,13 +328,13 @@ export const PaymentSettings: React.FC = () => {
     try {
       const result = await retryStripeWebhookConfigurationAction();
       if (result.success) {
-        toast.success('Webhook configured successfully!');
+        toast.success(t('payment.messages.webhookConfigured'));
         await loadConfig();
       } else {
-        toast.error(result.error || 'Failed to configure webhook');
+        toast.error(result.error || t('payment.messages.webhookConfigureFailed'));
       }
     } catch (error) {
-      toast.error('Failed to configure webhook');
+      toast.error(t('payment.messages.webhookConfigureFailed'));
     } finally {
       setRetryingWebhook(false);
     }

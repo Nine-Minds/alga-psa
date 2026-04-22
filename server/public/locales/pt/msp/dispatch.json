@@ -1,0 +1,152 @@
+{
+  "page": {
+    "title": "Technician Dispatch",
+    "filteredWorkItems": "Showing filtered work items"
+  },
+  "workItems": {
+    "title": "Work Items",
+    "searchPlaceholder": "Search work items...",
+    "filterPlaceholder": "Filter by status...",
+    "status": {
+      "unscheduled": "Unscheduled",
+      "scheduled": "Scheduled"
+    },
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "pageInfo": "Page {{current}} of {{total}}",
+      "showing": "Showing {{count}} of {{total}} items"
+    }
+  },
+  "schedule": {
+    "showInactive": "Show Inactive Users",
+    "prev": "< Prev",
+    "next": "Next >",
+    "today": "Today",
+    "viewDay": "Day",
+    "viewWeek": "Week",
+    "prevAria": "Previous {{mode}}",
+    "nextAria": "Next {{mode}}",
+    "viewWeekTooltip": "View Week",
+    "viewWeekAria": "View week for {{name}}",
+    "viewWeekAriaInactive": "View week for {{name}} (Inactive)",
+    "compareAll": "Compare All",
+    "clearAll": "Clear All",
+    "compare": "Compare",
+    "stopComparing": "Stop Comparing",
+    "compareAria": "Compare {{name}}",
+    "compareAriaInactive": "Compare {{name}} (Inactive)"
+  },
+  "details": {
+    "appointmentRequest": {
+      "title": "Appointment Request Details"
+    },
+    "sections": {
+      "approvalInformation": "Approval Information"
+    },
+    "fields": {
+      "service": "Service",
+      "status": "Status",
+      "client": "Client",
+      "contact": "Contact",
+      "company": "Company",
+      "requester": "Requester",
+      "email": "Email",
+      "phone": "Phone",
+      "requestedDate": "Requested Date",
+      "requestedTime": "Requested Time",
+      "duration": "Duration",
+      "preferredTechnician": "Preferred Technician",
+      "description": "Description",
+      "declineReason": "Decline Reason",
+      "approvedBy": "Approved by:",
+      "approvedAt": "Approved at:"
+    },
+    "messages": {
+      "notAvailable": "N/A",
+      "unsupportedWorkItemType": "Unsupported work item type"
+    },
+    "toasts": {
+      "noUsersAvailable": "No users available in the system",
+      "noUserSession": "No user session found",
+      "failedToLoadTicketData": "Failed to load ticket data",
+      "failedToLoadProjectTaskData": "Failed to load project task data",
+      "failedToLoadAdHocEntryData": "Failed to load ad-hoc entry data",
+      "failedToLoadInteractionData": "Failed to load interaction data",
+      "failedToLoadAppointmentRequestData": "Failed to load appointment request data"
+    },
+    "errors": {
+      "loadUsers": "Failed to load users. Please try refreshing the page.",
+      "loadingContent": "Error loading content",
+      "tryAgain": "Please try again"
+    },
+    "units": {
+      "minutes": "minutes"
+    }
+  },
+  "dashboard": {
+    "filters": {
+      "allOpen": "All Open",
+      "allClosed": "All Closed"
+    },
+    "messages": {
+      "accessDenied": "Access Denied: You do not have permission to view the Technician Dispatch dashboard.",
+      "unknownError": "An unknown error occurred.",
+      "permissionDeniedSchedule": "You don't have permission to schedule for this technician.",
+      "couldNotLoadWorkItemDetails": "Could not load work item details."
+    },
+    "errors": {
+      "searchWorkItems": "Failed to search work items",
+      "loadStatusFilterOptions": "Failed to load status filter options.",
+      "refreshScheduleEntries": "Failed to refresh schedule entries",
+      "refreshData": "Failed to refresh data",
+      "loadPermissions": "Failed to load permissions.",
+      "fetchScheduleEntries": "Failed to fetch schedule entries",
+      "fetchData": "Failed to fetch data",
+      "updateSchedule": "Failed to update schedule",
+      "createScheduleEntry": "Failed to create schedule entry",
+      "deleteScheduleEntry": "Failed to delete schedule entry",
+      "updateTask": "Failed to update task",
+      "updateScheduleEntry": "Failed to update schedule entry",
+      "saveScheduleEntry": "Failed to save schedule entry",
+      "openWorkItemDetails": "Failed to open work item details."
+    },
+    "success": {
+      "taskUpdated": "Task updated successfully",
+      "scheduleEntryUpdated": "Schedule entry updated successfully",
+      "scheduleEntryCreated": "Schedule entry created successfully"
+    }
+  },
+  "events": {
+    "actions": {
+      "viewDetails": "View Details",
+      "delete": "Delete",
+      "deleteScheduleEntry": "Delete schedule entry"
+    },
+    "fallbacks": {
+      "busy": "Busy",
+      "unknown": "Unknown",
+      "unassigned": "Unassigned",
+      "unknownAgent": "Unknown Agent",
+      "untitled": "Untitled",
+      "thisScheduleEntry": "this schedule entry"
+    },
+    "tooltip": {
+      "privateEvent": "Busy\nStart: {{start}}\nEnd: {{end}}",
+      "eventDetails": "{{title}}\nAssigned to: {{assigned}}\nStart: {{start}}\nEnd: {{end}}"
+    },
+    "errors": {
+      "validateDeletion": "Failed to validate deletion. Please try again."
+    }
+  },
+  "badges": {
+    "needsDispatch": "Needs Dispatch",
+    "needsDispatchFor": "Needs dispatch for: {{agents}}"
+  },
+  "time": {
+    "suffixes": {
+      "am": " AM",
+      "pm": " PM"
+    }
+  }
+}

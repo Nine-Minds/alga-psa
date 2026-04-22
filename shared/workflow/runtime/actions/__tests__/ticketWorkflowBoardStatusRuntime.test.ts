@@ -114,6 +114,15 @@ class FakeQueryBuilder {
     return rows.length;
   }
 
+  async insert(data: Record<string, any> | Array<Record<string, any>>): Promise<any> {
+    const rows = Array.isArray(data) ? data : [data];
+    if (!this.tables[this.tableName]) {
+      this.tables[this.tableName] = [];
+    }
+    this.tables[this.tableName].push(...rows);
+    return rows;
+  }
+
   private execute(): TableRow[] {
     const rows = [...(this.tables[this.tableName] ?? [])].filter((row) =>
       Object.entries(this.conditions).every(([column, value]) => row[column] === value)
@@ -346,7 +355,64 @@ describe('ticket workflow runtime board-scoped statuses', () => {
     expect(tables.tickets[0]?.closed_at).toBe('2026-03-14T00:00:00.000Z');
   });
 
-  it("T040: tickets.create returns the selected board's default status when workflow input omits status_id", async () => {
+  it('T040: tickets.create writes real ticket tag mappings while preserving mirrored attributes.tags', async () => {
+    const tables: TableMap = { statuses: [], tag_definitions: [], tag_mappings: [] };
+    setTenantTx(tables);
+    runtimeState.createTicketMock.mockResolvedValue({
+      ticket_id: 'ticket-1',
+      ticket_number: 'T-1',
+      entered_at: '2026-03-14T00:00:00.000Z',
+      status_id: 'status-board-a-open',
+      priority_id: 'priority-1',
+    });
+
+    const action = getAction('tickets.create');
+
+    await action.handler(
+      {
+        client_id: 'client-1',
+        title: 'Workflow ticket',
+        description: 'Created from workflow',
+        board_id: 'board-a',
+        priority_id: 'priority-1',
+        tags: ['Look at the spaces'],
+      },
+      createActionContext()
+    );
+
+    expect(runtimeState.createTicketMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        attributes: expect.objectContaining({
+          tags: ['Look at the spaces'],
+        }),
+      }),
+      'tenant-1',
+      expect.any(Function),
+      {},
+      undefined,
+      undefined,
+      'user-1'
+    );
+
+    expect(tables.tag_definitions).toHaveLength(1);
+    expect(tables.tag_definitions[0]).toMatchObject({
+      tenant: 'tenant-1',
+      tag_text: 'Look at the spaces',
+      tagged_type: 'ticket',
+      text_color: '#2C3E50',
+    });
+
+    expect(tables.tag_mappings).toHaveLength(1);
+    expect(tables.tag_mappings[0]).toMatchObject({
+      tenant: 'tenant-1',
+      tag_id: tables.tag_definitions[0]?.tag_id,
+      tagged_id: 'ticket-1',
+      tagged_type: 'ticket',
+      created_by: 'user-1',
+    });
+  });
+
+  it("T041: tickets.create returns the selected board's default status when workflow input omits status_id", async () => {
     setTenantTx({
       statuses: [
         {

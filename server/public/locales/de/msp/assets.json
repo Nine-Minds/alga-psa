@@ -24,7 +24,7 @@
       "active": "Aktiv",
       "inactive": "Inaktiv",
       "loading": "Laden...",
-      "na": "N/A",
+      "na": "n. z.",
       "none": "Keine"
     },
     "no": "Nein",
@@ -242,7 +242,7 @@
       "upcomingMaintenance": "Bevorstehende Wartung",
       "nextOn": "Weiter am {{date}}",
       "completedMaintenance": "Wartung abgeschlossen",
-      "compliance": "Compliance {{percent}}%",
+      "compliance": "Konformität {{percent}} %",
       "lastMaintenance": "Letzte Wartung",
       "noHistory": "Keine Historie",
       "maintenanceDataPending": "Wartungsdaten werden angezeigt, sobald die Zeitpläne konfiguriert sind.",
@@ -305,7 +305,7 @@
       "virtualized": "Virtualisiert",
       "primaryIp": "Primäre IP",
       "hypervisor": "Hypervisor",
-      "os": "OS",
+      "os": "Betriebssystem",
       "model": "Modell",
       "imei": "IMEI",
       "phoneNumber": "Telefonnummer",
@@ -492,7 +492,7 @@
     "fields": {
       "customLocationOption": "Benutzerdefinierter Standort",
       "osType": "OS Typ",
-      "osVersion": "OS Version",
+      "osVersion": "Betriebssystem-Version",
       "cpuModel": "CPU Modell",
       "cpuCores": "CPU Kerne",
       "ramGb": "RAM (GB)",
@@ -761,7 +761,7 @@
     },
     "fields": {
       "osType": "OS Typ",
-      "osVersion": "OS Version",
+      "osVersion": "Betriebssystem-Version",
       "deviceType": "Gerätetyp",
       "managementIp": "Management-IP",
       "model": "Modell",
@@ -896,7 +896,7 @@
       "uptime": "Betriebszeit",
       "lastSync": "Letzte RMM Synchronisierung",
       "network": "Netzwerk",
-      "networkValue": "LAN IP: {{lan}} | WAN IP: {{wan}}"
+      "networkValue": "LAN-IP: {{lan}} | WAN-IP: {{wan}}"
     },
     "values": {
       "never": "Nie"
@@ -911,7 +911,7 @@
     "title": "Sicherheit und Patching",
     "description": "Sicherheits- und Patchstatus-Panel für Schwachstellen- und Update-Statusanzeigen",
     "fields": {
-      "osVersion": "OS Version",
+      "osVersion": "Betriebssystem-Version",
       "antivirus": "Antivirus",
       "patchStatus": "Patch-Status",
       "firewall": "Firewall"
@@ -1183,6 +1183,14 @@
     "totalItems": "Gesamtzahl der Artikel: {{count}}",
     "values": {
       "unknown": "Unbekannt"
+    }
+  },
+  "alerts": {
+    "messages": {
+      "alertAcknowledged": "Alarm bestätigt",
+      "acknowledgeFailed": "Alarm konnte nicht bestätigt werden",
+      "ticketCreated": "Ticket erfolgreich erstellt",
+      "ticketCreateFailed": "Ticket konnte nicht erstellt werden"
     }
   }
 }

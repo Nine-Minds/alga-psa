@@ -7,6 +7,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { CreditCard, User, Rocket, MinusCircle, Info, ChevronDown, ChevronUp, DollarSign, Calendar, CheckCircle, Shield, ArrowRightLeft, Clock, Zap, Star } from 'lucide-react';
 import { loadStripe, type Stripe } from '@stripe/stripe-js';
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe-js';
@@ -66,6 +67,7 @@ const FEATURE_DISPLAY_NAMES: Record<TIER_FEATURES, string> = {
 };
 
 export default function AccountManagement() {
+  const { t } = useTranslation('msp/account');
   const formatAddOnDescription = useFormatAddOnDescription();
   const [loading, setLoading] = useState(true);
   const [licenseInfo, setLicenseInfo] = useState<ILicenseInfo | null>(null);
@@ -152,7 +154,7 @@ export default function AccountManagement() {
         setCanManageAccount(hasPermission);
 
         if (!hasPermission) {
-          toast.error('You do not have permission to access Account Management');
+          toast.error(t('messages.noPermissionAccount'));
           router.push('/msp');
           return;
         }
@@ -209,7 +211,7 @@ export default function AccountManagement() {
 
       } catch (err) {
         console.error('Error loading account info:', err);
-        toast.error('Failed to load account information');
+        toast.error(t('messages.loadAccountFailed'));
       } finally {
         setLoading(false);
       }
@@ -224,7 +226,7 @@ export default function AccountManagement() {
 
   const handleUpdatePaymentMethod = async () => {
     if (!canManageAccount) {
-      toast.error('You do not have permission to update payment methods');
+      toast.error(t('messages.noPermissionPayment'));
       return;
     }
 
@@ -234,17 +236,17 @@ export default function AccountManagement() {
         // Open Stripe Customer Portal in new tab
         window.open(result.data.portal_url, '_blank', 'noopener,noreferrer');
       } else {
-        toast.error(result.error || 'Failed to open payment portal');
+        toast.error(result.error || t('messages.openPaymentPortalFailed'));
       }
     } catch (error) {
       console.error('Error opening payment portal:', error);
-      toast.error('Failed to update payment method');
+      toast.error(t('messages.updatePaymentFailed'));
     }
   };
 
   const handleCancelSubscription = () => {
     if (!canManageAccount) {
-      toast.error('You do not have permission to cancel subscription');
+      toast.error(t('messages.noPermissionCancel'));
       return;
     }
 
@@ -257,14 +259,14 @@ export default function AccountManagement() {
       // Send feedback email
       const feedbackResult = await sendCancellationFeedbackAction(reasonText, reasonCategory);
       if (!feedbackResult.success) {
-        toast.error(feedbackResult.error || 'Failed to send feedback');
+        toast.error(feedbackResult.error || t('messages.feedbackSendFailed'));
         return;
       }
 
       // Actually cancel the subscription
       const cancelResult = await cancelSubscriptionAction();
       if (!cancelResult.success) {
-        toast.error(cancelResult.error || 'Failed to cancel subscription');
+        toast.error(cancelResult.error || t('messages.cancelSubscriptionFailed'));
         return;
       }
 
@@ -281,7 +283,7 @@ export default function AccountManagement() {
 
   const handleReduceLicenses = () => {
     if (!canManageAccount) {
-      toast.error('You do not have permission to manage licenses');
+      toast.error(t('messages.noPermissionLicenses'));
       return;
     }
 
@@ -365,14 +367,14 @@ export default function AccountManagement() {
     try {
       const preview = await getIntervalSwitchPreviewAction(targetInterval);
       if (!preview.success) {
-        toast.error(preview.error || 'Failed to get pricing preview');
+        toast.error(preview.error || t('messages.pricingPreviewFailed'));
         return;
       }
       setIntervalPreview(preview);
       setShowIntervalSwitch(true);
     } catch (error) {
       console.error('Error fetching interval switch preview:', error);
-      toast.error('Failed to get pricing preview');
+      toast.error(t('messages.pricingPreviewFailed'));
     } finally {
       setLoadingIntervalPreview(false);
     }
@@ -387,7 +389,9 @@ export default function AccountManagement() {
     try {
       const result = await switchBillingIntervalAction(targetInterval);
       if (result.success) {
-        toast.success(`Billing will switch to ${targetInterval === 'year' ? 'annual' : 'monthly'} at the end of the current period.`);
+        toast.success(targetInterval === 'year'
+          ? t('messages.intervalSwitchAnnual')
+          : t('messages.intervalSwitchMonthly'));
         setShowIntervalSwitch(false);
         // Refresh subscription info
         const subResult = await getSubscriptionInfoAction();
@@ -395,11 +399,11 @@ export default function AccountManagement() {
           setSubscriptionInfo(subResult.data);
         }
       } else {
-        toast.error(result.error || 'Failed to switch billing interval');
+        toast.error(result.error || t('messages.intervalSwitchFailed'));
       }
     } catch (error) {
       console.error('Error switching billing interval:', error);
-      toast.error('Failed to switch billing interval');
+      toast.error(t('messages.intervalSwitchFailed'));
     } finally {
       setSwitchingInterval(false);
     }
@@ -435,7 +439,7 @@ export default function AccountManagement() {
 
   const handleSendTrialRequest = async () => {
     if (!trialRequestMessage.trim()) {
-      toast.error('Please enter a message describing why you want to try Premium');
+      toast.error(t('messages.trialRequestMessageRequired'));
       return;
     }
 
@@ -443,15 +447,15 @@ export default function AccountManagement() {
     try {
       const result = await sendPremiumTrialRequestAction(trialRequestMessage.trim());
       if (result.success) {
-        toast.success('Premium trial request sent! We\'ll get back to you shortly.');
+        toast.success(t('messages.trialRequestSent'));
         setTrialRequestSent(true);
         setTrialRequestMessage('');
       } else {
-        toast.error(result.error || 'Failed to send request');
+        toast.error(result.error || t('messages.trialRequestFailed'));
       }
     } catch (error) {
       console.error('Error sending trial request:', error);
-      toast.error('Failed to send request');
+      toast.error(t('messages.trialRequestFailed'));
     } finally {
       setSendingTrialRequest(false);
     }
@@ -462,15 +466,15 @@ export default function AccountManagement() {
     try {
       const result = await startSelfServicePremiumTrialAction();
       if (result.success) {
-        toast.success('Premium trial started! You have 30 days to explore Premium features. Your billing stays the same until you confirm.');
+        toast.success(t('messages.premiumTrialStarted'));
         setShowTrialConfirm(false);
         await refreshTier();
       } else {
-        toast.error(result.error || 'Failed to start Premium trial');
+        toast.error(result.error || t('messages.premiumTrialStartFailed'));
       }
     } catch (error) {
       console.error('Error starting Premium trial:', error);
-      toast.error('Failed to start Premium trial');
+      toast.error(t('messages.premiumTrialStartFailed'));
     } finally {
       setStartingSelfServiceTrial(false);
     }
@@ -481,16 +485,16 @@ export default function AccountManagement() {
     try {
       const result = await startSoloProTrialAction();
       if (result.success) {
-        const trialEndLabel = result.trialEnd ? new Date(result.trialEnd).toLocaleDateString() : 'the end of your trial';
-        toast.success(`Pro trial started! Pro features are unlocked until ${trialEndLabel} while you stay on Solo billing.`);
+        const trialEndLabel = result.trialEnd ? new Date(result.trialEnd).toLocaleDateString() : t('messages.soloProTrialDefaultEnd');
+        toast.success(t('messages.soloProTrialStarted', { end: trialEndLabel }));
         setShowSoloProTrialConfirm(false);
         await refreshTier();
       } else {
-        toast.error(result.error || 'Failed to start Pro trial');
+        toast.error(result.error || t('messages.soloProTrialStartFailed'));
       }
     } catch (error) {
       console.error('Error starting Solo -> Pro trial:', error);
-      toast.error('Failed to start Pro trial');
+      toast.error(t('messages.soloProTrialStartFailed'));
     } finally {
       setStartingSoloProTrial(false);
     }
@@ -501,14 +505,14 @@ export default function AccountManagement() {
     try {
       const preview = await getUpgradePreviewAction('premium');
       if (!preview.success) {
-        toast.error(preview.error || 'Failed to get Premium pricing');
+        toast.error(preview.error || t('messages.premiumPricingFailed'));
         return;
       }
       setConfirmPremiumPreview(preview);
       setShowConfirmPremiumDialog(true);
     } catch (error) {
       console.error('Error fetching Premium pricing:', error);
-      toast.error('Failed to get Premium pricing');
+      toast.error(t('messages.premiumPricingFailed'));
     } finally {
       setLoadingConfirmPreview(false);
     }
@@ -520,17 +524,17 @@ export default function AccountManagement() {
       const result = await confirmPremiumTrialAction('month');
       if (result.success) {
         const effectiveDateStr = result.effectiveDate
-          ? ` Premium billing starts ${new Date(result.effectiveDate).toLocaleDateString()}.`
+          ? t('messages.premiumConfirmedEffective', { date: new Date(result.effectiveDate).toLocaleDateString() })
           : '';
-        toast.success(`Premium confirmed!${effectiveDateStr} You'll stay on Pro pricing until then.`);
+        toast.success(t('messages.premiumConfirmed', { effective: effectiveDateStr }));
         setShowConfirmPremiumDialog(false);
         await refreshTier();
       } else {
-        toast.error(result.error || 'Failed to confirm Premium');
+        toast.error(result.error || t('messages.premiumConfirmFailed'));
       }
     } catch (error) {
       console.error('Error confirming Premium:', error);
-      toast.error('Failed to confirm Premium');
+      toast.error(t('messages.premiumConfirmFailed'));
     } finally {
       setConfirmingPremium(false);
     }
@@ -541,14 +545,14 @@ export default function AccountManagement() {
     try {
       const result = await revertPremiumTrialAction();
       if (result.success) {
-        toast.success('Premium trial ended. You\'re back on Pro.');
+        toast.success(t('messages.premiumTrialReverted'));
         await refreshTier();
       } else {
-        toast.error(result.error || 'Failed to cancel Premium trial');
+        toast.error(result.error || t('messages.premiumTrialRevertFailed'));
       }
     } catch (error) {
       console.error('Error reverting Premium trial:', error);
-      toast.error('Failed to cancel Premium trial');
+      toast.error(t('messages.premiumTrialRevertFailed'));
     } finally {
       setRevertingTrial(false);
     }
@@ -556,7 +560,7 @@ export default function AccountManagement() {
 
   const handleUpgradeClick = async (targetTier: 'pro' | 'premium') => {
     if (!canManageAccount) {
-      toast.error('You do not have permission to manage the subscription');
+      toast.error(t('messages.noPermissionSubscription'));
       return;
     }
 
@@ -573,7 +577,7 @@ export default function AccountManagement() {
     try {
       const preview = await getUpgradePreviewAction(targetTier);
       if (!preview.success) {
-        toast.error(preview.error || 'Failed to get upgrade pricing');
+        toast.error(preview.error || t('messages.upgradePricingFailed'));
         return;
       }
       setUpgradeTargetTier(targetTier);
@@ -581,7 +585,7 @@ export default function AccountManagement() {
       setShowUpgradeConfirm(true);
     } catch (error) {
       console.error('Error fetching upgrade preview:', error);
-      toast.error('Failed to get upgrade pricing');
+      toast.error(t('messages.upgradePricingFailed'));
     } finally {
       setLoadingPreview(false);
     }
@@ -595,7 +599,7 @@ export default function AccountManagement() {
    */
   const handleStartIapUpgrade = async (targetTier: 'pro' | 'premium') => {
     if (hasPendingIapTransition) {
-      toast.error('An upgrade is already pending. Cancel it first if you want to start a new one.');
+      toast.error(t('messages.iapUpgradePending'));
       return;
     }
     setIapUpgradeTargetTier(targetTier);
@@ -604,12 +608,12 @@ export default function AccountManagement() {
       const result = await startIapUpgradeAction(targetTier);
 
       if (!result.success) {
-        toast.error(result.error || 'Failed to start upgrade');
+        toast.error(result.error || t('messages.iapUpgradeStartFailed'));
         return;
       }
 
       if (result.alreadyPending) {
-        toast.error('You already have an upgrade pending.');
+        toast.error(t('messages.iapUpgradeAlreadyPending'));
         // Refresh state so the banner appears.
         const ctx = await getIapBillingContextAction();
         if (ctx.success && ctx.data) setIapContext(ctx.data);
@@ -630,7 +634,7 @@ export default function AccountManagement() {
       }
     } catch (error) {
       console.error('Error starting IAP upgrade:', error);
-      toast.error('Failed to start upgrade');
+      toast.error(t('messages.iapUpgradeStartFailed'));
     } finally {
       setStartingIapUpgrade(false);
     }
@@ -653,17 +657,17 @@ export default function AccountManagement() {
     try {
       const result = await cancelIapTransitionAction();
       if (result.success) {
-        toast.success('Upgrade cancelled. You remain on Apple Solo.');
+        toast.success(t('messages.iapUpgradeCancelled'));
         setShowCancelIapTransitionConfirm(false);
         const ctx = await getIapBillingContextAction();
         if (ctx.success && ctx.data) setIapContext(ctx.data);
         await refreshTier();
       } else {
-        toast.error(result.error || 'Failed to cancel upgrade');
+        toast.error(result.error || t('messages.iapUpgradeCancelFailed'));
       }
     } catch (error) {
       console.error('Error cancelling IAP transition:', error);
-      toast.error('Failed to cancel upgrade');
+      toast.error(t('messages.iapUpgradeCancelFailed'));
     } finally {
       setCancelingIapTransition(false);
     }
@@ -674,15 +678,15 @@ export default function AccountManagement() {
     try {
       const result = await upgradeTierAction(upgradeTargetTier);
       if (result.success) {
-        toast.success(`Upgraded to ${TIER_LABELS[upgradeTargetTier]}! Refreshing your session...`);
+        toast.success(t('messages.upgradeSuccess', { tier: TIER_LABELS[upgradeTargetTier] }));
         setShowUpgradeConfirm(false);
         await refreshTier();
       } else {
-        toast.error(result.error || 'Failed to upgrade plan');
+        toast.error(result.error || t('messages.upgradeFailed'));
       }
     } catch (error) {
       console.error('Error upgrading plan:', error);
-      toast.error('Failed to upgrade plan');
+      toast.error(t('messages.upgradeFailed'));
     } finally {
       setUpgrading(false);
     }
@@ -693,15 +697,15 @@ export default function AccountManagement() {
     try {
       const result = await downgradeTierAction('month');
       if (result.success) {
-        toast.success('Downgraded to Solo! Refreshing your session...');
+        toast.success(t('messages.downgradeSuccess'));
         setShowDowngradeConfirm(false);
         await refreshTier();
       } else {
-        toast.error(result.error || 'Failed to downgrade plan');
+        toast.error(result.error || t('messages.downgradeFailed'));
       }
     } catch (error) {
       console.error('Error downgrading plan:', error);
-      toast.error('Failed to downgrade plan');
+      toast.error(t('messages.downgradeFailed'));
     } finally {
       setDowngrading(false);
     }
@@ -711,7 +715,7 @@ export default function AccountManagement() {
     try {
       const result = await purchaseAddOnAction(ADD_ONS.AI_ASSISTANT);
       if (!result.success || !result.data) {
-        toast.error(result.error || 'Failed to start AI Assistant checkout');
+        toast.error(result.error || t('messages.aiCheckoutFailed'));
         return;
       }
 
@@ -721,7 +725,7 @@ export default function AccountManagement() {
       setShowAiCheckout(true);
     } catch (error) {
       console.error('Error purchasing AI Assistant:', error);
-      toast.error('Failed to start AI Assistant checkout');
+      toast.error(t('messages.aiCheckoutFailed'));
     } finally {
       setPurchasingAi(false);
     }
@@ -732,15 +736,15 @@ export default function AccountManagement() {
     try {
       const result = await cancelAddOnAction(ADD_ONS.AI_ASSISTANT);
       if (result.success) {
-        toast.success('AI Assistant will be removed from your subscription.');
+        toast.success(t('messages.aiRemoved'));
         setShowCancelAiConfirm(false);
         await refreshTier();
       } else {
-        toast.error(result.error || 'Failed to cancel AI Assistant');
+        toast.error(result.error || t('messages.aiCancelFailed'));
       }
     } catch (error) {
       console.error('Error cancelling AI Assistant:', error);
-      toast.error('Failed to cancel AI Assistant');
+      toast.error(t('messages.aiCancelFailed'));
     } finally {
       setCancelingAi(false);
     }

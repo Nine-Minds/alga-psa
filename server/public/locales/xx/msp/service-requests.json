@@ -1,0 +1,270 @@
+{
+  "management": {
+    "title": "11111",
+    "description": "11111",
+    "showArchived": "11111",
+    "showArchivedWithCount": "11111 {{count}} 11111",
+    "createBlank": "11111",
+    "startFromExample": "11111",
+    "loading": "11111",
+    "columns": {
+      "name": "11111",
+      "description": "11111",
+      "state": "11111",
+      "updated": "11111",
+      "actions": "11111"
+    },
+    "actionsFor": "11111 {{name}} 11111",
+    "actions": {
+      "duplicate": "11111",
+      "archive": "11111",
+      "unarchive": "11111"
+    },
+    "lifecycleLabels": {
+      "published": "11111",
+      "archived": "11111",
+      "draftChanges": "11111",
+      "draft": "11111"
+    },
+    "templateOption": "11111 {{templateName}} 11111 {{providerDisplayName}} 11111"
+  },
+  "editor": {
+    "backNav": "11111",
+    "loading": "11111",
+    "notFound": "11111",
+    "currentState": "11111 {{state}} 11111",
+    "saveDraft": "11111",
+    "createDraft": "11111",
+    "publish": "11111",
+    "publishing": "11111",
+    "basics": {
+      "title": "11111",
+      "name": "11111",
+      "icon": "11111",
+      "iconSelected": "11111 {{label}} 11111",
+      "noIconSelected": "11111",
+      "description": "11111",
+      "category": "11111",
+      "sortOrder": "11111",
+      "save": "11111",
+      "uncategorized": "11111"
+    },
+    "preview": {
+      "title": "11111",
+      "badge": "11111",
+      "cardSubheading": "11111",
+      "formSubheading": "11111"
+    },
+    "linkage": {
+      "title": "11111",
+      "linkedService": "11111",
+      "searchPlaceholder": "11111",
+      "search": "11111",
+      "clear": "11111",
+      "select": "11111",
+      "noDescription": "11111",
+      "unset": "11111"
+    },
+    "form": {
+      "title": "11111",
+      "authorFields": "11111",
+      "fieldType": "11111",
+      "addField": "11111",
+      "noFields": "11111",
+      "preview": "11111",
+      "label": "11111",
+      "helpText": "11111",
+      "required": "11111",
+      "defaultValue": "11111",
+      "options": "11111",
+      "moveUp": "11111",
+      "moveDown": "11111",
+      "remove": "11111",
+      "selectOption": "11111",
+      "checkboxDefaults": {
+        "none": "11111",
+        "checked": "11111",
+        "unchecked": "11111"
+      },
+      "types": {
+        "short-text": "11111",
+        "long-text": "11111",
+        "select": "11111",
+        "checkbox": "11111",
+        "date": "11111",
+        "file-upload": "11111"
+      }
+    },
+    "execution": {
+      "title": "11111",
+      "executionProvider": "11111",
+      "formBehaviorProvider": "11111",
+      "visibilityProvider": "11111",
+      "providerDisplay": "11111 {{displayName}} 11111 {{executionMode}} 11111",
+      "ticketRouting": {
+        "title": "11111",
+        "board": "11111",
+        "boardPlaceholder": "11111",
+        "status": "11111",
+        "statusPlaceholder": "11111",
+        "assignedUser": "11111",
+        "assignedUserPlaceholder": "11111",
+        "category": "11111",
+        "categoryPlaceholder": "11111",
+        "priority": "11111",
+        "priorityPlaceholder": "11111",
+        "impact": "11111",
+        "impactPlaceholder": "11111",
+        "urgency": "11111",
+        "urgencyPlaceholder": "11111",
+        "priorityCalculated": "11111",
+        "selectImpactAndUrgency": "11111",
+        "priorityFormula": "11111 {{label}} 11111 {{impact}} 11111 {{urgency}} 11111",
+        "titleFieldKey": "11111",
+        "descriptionPrefix": "11111",
+        "save": "11111"
+      },
+      "workflow": {
+        "title": "11111",
+        "workflowId": "11111",
+        "workflowIdPlaceholder": "11111",
+        "inputMapping": "11111",
+        "inputMappingExample": "11111",
+        "save": "11111"
+      },
+      "advanced": {
+        "title": "11111",
+        "config": "11111",
+        "save": "11111"
+      },
+      "visibility": {
+        "title": "11111",
+        "config": "11111",
+        "save": "11111"
+      },
+      "fields": {
+        "executionProvider": "11111",
+        "executionConfig": "11111",
+        "formBehaviorProvider": "11111",
+        "visibilityProvider": "11111"
+      },
+      "itilImpact": {
+        "1": "11111",
+        "2": "11111",
+        "3": "11111",
+        "4": "11111",
+        "5": "11111"
+      },
+      "itilUrgency": {
+        "1": "11111",
+        "2": "11111",
+        "3": "11111",
+        "4": "11111",
+        "5": "11111"
+      }
+    },
+    "publishSection": {
+      "title": "11111",
+      "currentDraftState": "11111",
+      "lastPublishedVersion": "11111",
+      "versionPrefix": "11111 {{number}} 11111",
+      "neverPublished": "11111",
+      "publishedAt": "11111",
+      "draftUpdatedAt": "11111",
+      "validationTitle": "11111",
+      "validationPassed": "11111",
+      "errors": {
+        "nameRequired": "11111",
+        "linkedServiceMissing": "11111",
+        "executionBoardRequired": "11111",
+        "executionStatusRequired": "11111",
+        "executionPriorityRequired": "11111",
+        "executionItilImpactUrgencyMismatch": "11111",
+        "unknownExecutionProvider": "11111 {{key}} 11111",
+        "unknownFormBehaviorProvider": "11111 {{key}} 11111",
+        "unknownVisibilityProvider": "11111 {{key}} 11111"
+      }
+    },
+    "submissions": {
+      "title": "11111",
+      "empty": "11111",
+      "viewDetail": "11111",
+      "detailTitle": "11111",
+      "submissionId": "11111",
+      "requesterUser": "11111",
+      "client": "11111",
+      "contact": "11111",
+      "ticketReference": "11111",
+      "workflowReference": "11111",
+      "executionError": "11111",
+      "submittedAtStatus": "11111 {{date}} 11111 {{status}} 11111",
+      "loadingTicket": "11111",
+      "ticketLoadError": "11111"
+    }
+  },
+  "icons": {
+    "file-text": "11111",
+    "user-plus": "11111",
+    "user-minus": "11111",
+    "shield-check": "11111",
+    "key-round": "11111",
+    "laptop": "11111",
+    "monitor": "11111",
+    "printer": "11111",
+    "hard-drive": "11111",
+    "server": "11111",
+    "network": "11111",
+    "wifi": "11111",
+    "app-window": "11111",
+    "mail": "11111",
+    "phone": "11111",
+    "folder-open": "11111",
+    "badge-help": "11111",
+    "clear": "11111"
+  },
+  "messages": {
+    "success": {
+      "definitionDuplicated": "11111",
+      "definitionArchived": "11111",
+      "definitionUnarchived": "11111",
+      "draftCreated": "11111",
+      "draftCreatedFromExample": "11111 {{name}} 11111",
+      "draftSaved": "11111",
+      "definitionPublished": "11111",
+      "basicsUpdated": "11111",
+      "linkedServiceCleared": "11111",
+      "linkedService": "11111 {{name}} 11111",
+      "fieldAdded": "11111",
+      "fieldRemoved": "11111",
+      "executionProviderUpdated": "11111",
+      "formBehaviorProviderUpdated": "11111",
+      "visibilityProviderUpdated": "11111",
+      "ticketRoutingUpdated": "11111",
+      "workflowConfigurationUpdated": "11111",
+      "formBehaviorConfigUpdated": "11111",
+      "visibilityConfigUpdated": "11111"
+    },
+    "error": {
+      "loadFailed": "11111",
+      "duplicateFailed": "11111",
+      "archiveFailed": "11111",
+      "unarchiveFailed": "11111",
+      "createDraftFailed": "11111",
+      "createFromExampleFailed": "11111",
+      "saveDraftFailed": "11111",
+      "publishFailed": "11111",
+      "publishBlockedByValidation": "11111 {{count}} 11111",
+      "basicsUpdateFailed": "11111",
+      "addFieldFailed": "11111",
+      "executionProviderUpdateFailed": "11111",
+      "formBehaviorProviderUpdateFailed": "11111",
+      "visibilityProviderUpdateFailed": "11111",
+      "workflowMappingNotObject": "11111",
+      "workflowConfigurationInvalid": "11111",
+      "formBehaviorNotObject": "11111",
+      "formBehaviorInvalid": "11111",
+      "visibilityNotObject": "11111",
+      "visibilityInvalid": "11111"
+    }
+  }
+}

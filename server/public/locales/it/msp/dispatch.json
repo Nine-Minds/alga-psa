@@ -51,7 +51,7 @@
       "contact": "Contatto",
       "company": "Azienda",
       "requester": "Richiedente",
-      "email": "Email",
+      "email": "E-mail",
       "phone": "Telefono",
       "requestedDate": "Data richiesta",
       "requestedTime": "Ora richiesta",
@@ -91,7 +91,7 @@
     },
     "messages": {
       "accessDenied": "Accesso negato: non hai l'autorizzazione per visualizzare la dashboard di smistamento tecnici.",
-      "unknownError": "Si \u00e8 verificato un errore sconosciuto.",
+      "unknownError": "Si è verificato un errore sconosciuto.",
       "permissionDeniedSchedule": "Non hai l'autorizzazione per pianificare per questo tecnico.",
       "couldNotLoadWorkItemDetails": "Impossibile caricare i dettagli dell'elemento di lavoro."
     },

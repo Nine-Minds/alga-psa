@@ -2,6 +2,7 @@ import React from 'react';
 import { Search } from 'lucide-react';
 import type { DroppableProvidedProps } from '@hello-pangea/dnd';
 import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import styles from './WorkflowDesignerPalette.module.css';
 
 export type WorkflowDesignerPaletteItem = {
@@ -45,6 +46,7 @@ export function WorkflowDesignerPalette<TItem extends WorkflowDesignerPaletteIte
   expandedWidth = 280,
   collapsedWidth = 32,
 }: WorkflowDesignerPaletteProps<TItem>): React.ReactElement {
+  const { t } = useTranslation('msp/workflows');
   let paletteIndex = 0;
 
   const outerWidth = isCollapsed ? collapsedWidth : expandedWidth;
@@ -74,8 +76,8 @@ export function WorkflowDesignerPalette<TItem extends WorkflowDesignerPaletteIte
         <CollapseToggleButton
           id="workflow-designer-palette-toggle"
           isCollapsed={isCollapsed}
-          collapsedLabel="Show palette"
-          expandedLabel="Hide palette"
+          collapsedLabel={t('designer.palette.showPalette', { defaultValue: 'Show palette' })}
+          expandedLabel={t('designer.palette.hidePalette', { defaultValue: 'Hide palette' })}
           expandDirection="right"
           className={styles.paletteToggle}
           onClick={onToggleCollapse}
@@ -94,7 +96,7 @@ export function WorkflowDesignerPalette<TItem extends WorkflowDesignerPaletteIte
             <input
               id="workflow-designer-search"
               type="text"
-              placeholder="Search"
+              placeholder={t('designer.palette.searchPlaceholder', { defaultValue: 'Search' })}
               value={search}
               disabled={registryError}
               onChange={(event) => onSearchChange(event.target.value)}
@@ -104,7 +106,7 @@ export function WorkflowDesignerPalette<TItem extends WorkflowDesignerPaletteIte
         </div>
         {draggingFromPalette ? (
           <div className="px-3 py-1.5 bg-primary-50 border-b text-xs text-primary-700">
-            Drop on pipeline to add
+            {t('designer.palette.dragHint', { defaultValue: 'Drop on pipeline to add' })}
           </div>
         ) : null}
         <div
@@ -117,7 +119,7 @@ export function WorkflowDesignerPalette<TItem extends WorkflowDesignerPaletteIte
           {Object.entries(groupedPaletteItems).map(([category, items]) => (
             <div key={category}>
               <div className="text-[10px] font-semibold uppercase text-gray-400 tracking-wider mb-2">
-                {category}
+                {t(`designer.palette.categories.${category}`, { defaultValue: category })}
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {items.map((item) => {

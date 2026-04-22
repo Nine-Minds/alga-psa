@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Play, StopCircle, RotateCcw, Repeat, RefreshCw } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { mapWorkflowServerError } from './workflowServerErrors';
 
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -10,6 +11,7 @@ import { Card } from '@alga-psa/ui/components/Card';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Input } from '@alga-psa/ui/components/Input';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
@@ -30,15 +32,24 @@ import {
   resumeWorkflowRunAction,
   retryWorkflowRunAction
 } from '@alga-psa/workflows/actions';
+import {
+  useFormatWorkflowLogLevel,
+  useFormatWorkflowRunStatus,
+  useFormatWorkflowStepStatus,
+  useWorkflowLogLevelOptions,
+  useWorkflowStepStatusOptions,
+} from '@alga-psa/workflows/hooks/useWorkflowEnumOptions';
 
 import type { WorkflowDefinition, Step, IfBlock, ForEachBlock, TryCatchBlock } from '@alga-psa/workflows/runtime/client';
 import { pathDepth } from '@alga-psa/workflows/authoring';
 import {
-  getWorkflowRunTriggerLabel,
   getWorkflowScheduleStatusBadgeClass,
-  getWorkflowScheduleStatusLabel,
   isTimeTriggeredRun
 } from './workflowRunTriggerPresentation';
+import {
+  useFormatWorkflowRunTrigger,
+  useFormatWorkflowScheduleStatus,
+} from './useWorkflowRunTriggerPresentation';
 
 type WorkflowRunRecord = {
   run_id: string;
@@ -171,23 +182,6 @@ const STATUS_STYLES: Record<string, string> = {
   DEBUG: 'bg-muted text-muted-foreground'
 };
 
-const STEP_STATUS_OPTIONS: SelectOption[] = [
-  { value: 'all', label: 'All statuses' },
-  { value: 'STARTED', label: 'Started' },
-  { value: 'SUCCEEDED', label: 'Succeeded' },
-  { value: 'FAILED', label: 'Failed' },
-  { value: 'RETRY_SCHEDULED', label: 'Retry scheduled' },
-  { value: 'CANCELED', label: 'Canceled' }
-];
-
-const LOG_LEVEL_OPTIONS: SelectOption[] = [
-  { value: 'all', label: 'All levels' },
-  { value: 'DEBUG', label: 'Debug' },
-  { value: 'INFO', label: 'Info' },
-  { value: 'WARN', label: 'Warn' },
-  { value: 'ERROR', label: 'Error' }
-];
-
 const SENSITIVE_KEY_PATTERN = /(secret|token|password|api[_-]?key|authorization)/i;
 const REDACTION_MARKER = '***';
 
@@ -207,11 +201,17 @@ const maskSensitiveValues = (value: unknown): unknown => {
   return value;
 };
 
-const formatDateTime = (value?: string | null) => {
-  if (!value) return '—';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
+const useFormatDateTime = () => {
+  const { formatDate } = useFormatters();
+  return useCallback(
+    (value?: string | null) => {
+      if (!value) return '—';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return formatDate(date, { dateStyle: 'medium', timeStyle: 'short' });
+    },
+    [formatDate]
+  );
 };
 
 const formatDurationMs = (value?: number | null) => {
@@ -309,6 +309,15 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
   canAdmin = false,
   onClose
 }) => {
+  const { t } = useTranslation('msp/workflows');
+  const formatWorkflowRunStatus = useFormatWorkflowRunStatus();
+  const formatWorkflowStepStatus = useFormatWorkflowStepStatus();
+  const formatWorkflowLogLevel = useFormatWorkflowLogLevel();
+  const formatWorkflowRunTrigger = useFormatWorkflowRunTrigger();
+  const formatWorkflowScheduleStatus = useFormatWorkflowScheduleStatus();
+  const formatDateTime = useFormatDateTime();
+  const workflowStepStatusOptions = useWorkflowStepStatusOptions();
+  const workflowLogLevelOptions = useWorkflowLogLevelOptions();
   const [run, setRun] = useState<WorkflowRunRecord | null>(null);
   const [scheduleState, setScheduleState] = useState<WorkflowScheduleStateSummary | null>(null);
   const [steps, setSteps] = useState<WorkflowRunStepRecord[]>([]);
@@ -340,6 +349,17 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
   const [auditLoading, setAuditLoading] = useState(false);
   const auditLimit = 25;
   const selectedStepPathRef = useRef<string | null>(null);
+  const emptyValueLabel = t('runDetails.common.emptyValue', { defaultValue: '—' });
+  const reasonLabel = t('runDetails.dialogs.reasonLabel', { defaultValue: 'Reason' });
+  const noSnapshotLabel = t('runDetails.envelope.noSnapshot', { defaultValue: 'No snapshot available.' });
+  const noActionCallsLabel = t('runDetails.invocations.empty', {
+    defaultValue: 'No action calls recorded for this step.',
+  });
+  const noLogEntriesLabel = t('runDetails.logs.empty', { defaultValue: 'No log entries found.' });
+  const noAuditEntriesLabel = t('runDetails.audit.empty', { defaultValue: 'No audit entries yet.' });
+  const reasonTooShortLabel = t('runDetails.toasts.reasonTooShort', {
+    defaultValue: 'Reason must be at least 3 characters.',
+  });
 
   const fetchDetails = useCallback(async () => {
     setIsLoading(true);
@@ -381,14 +401,14 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
       setWaits(stepData.waits ?? []);
       setDefinition(definitionJson);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to load run details');
+      toast.error(mapWorkflowServerError(t, error, t('runDetails.toasts.loadRunDetailsFailed', { defaultValue: 'Failed to load run details' })));
       if (onClose) {
         onClose();
       }
     } finally {
       setIsLoading(false);
     }
-  }, [runId, onClose]);
+  }, [runId, onClose, t]);
 
   const fetchLogs = useCallback(
     async (cursor = 0, append = false, overrideFilters?: { level: string; search: string }) => {
@@ -405,12 +425,12 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
         setLogs((prev) => (append ? [...prev, ...data.logs] : data.logs));
         setLogCursor(data.nextCursor ?? null);
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to load logs');
+        toast.error(mapWorkflowServerError(t, error, t('runDetails.toasts.loadLogsFailed', { defaultValue: 'Failed to load logs' })));
       } finally {
         setLogLoading(false);
       }
     },
-    [logLimit, runId]
+    [logLimit, runId, t]
   );
 
   const fetchAuditLogs = useCallback(
@@ -431,12 +451,12 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
         setAuditLogs((prev) => (append ? [...prev, ...data.logs] : data.logs));
         setAuditCursor(data.nextCursor ?? null);
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to load audit logs');
+        toast.error(mapWorkflowServerError(t, error, t('runDetails.toasts.loadAuditLogsFailed', { defaultValue: 'Failed to load audit logs' })));
       } finally {
         setAuditLoading(false);
       }
     },
-    [auditLimit, canAdmin, runId]
+    [auditLimit, canAdmin, runId, t]
   );
 
   useEffect(() => {
@@ -537,6 +557,26 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
   }, [waits]);
 
   const stepTypeById = useMemo(() => buildStepTypeMap(definition), [definition]);
+  const stepStatusOptions = useMemo<SelectOption[]>(
+    () => [
+      {
+        value: 'all',
+        label: t('filters.allStatuses', { defaultValue: 'All statuses' }),
+      },
+      ...workflowStepStatusOptions,
+    ],
+    [t, workflowStepStatusOptions]
+  );
+  const logLevelOptions = useMemo<SelectOption[]>(
+    () => [
+      {
+        value: 'all',
+        label: t('filters.allLevels', { defaultValue: 'All levels' }),
+      },
+      ...workflowLogLevelOptions,
+    ],
+    [t, workflowLogLevelOptions]
+  );
 
   const nodeTypeOptions = useMemo(() => {
     const types = new Set<string>();
@@ -547,10 +587,10 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
       }
     });
     return [
-      { value: 'all', label: 'All types' },
+      { value: 'all', label: t('filters.allTypes', { defaultValue: 'All types' }) },
       ...Array.from(types).sort().map((type) => ({ value: type, label: type }))
     ];
-  }, [steps, stepTypeById]);
+  }, [steps, stepTypeById, t]);
 
   const filteredSteps = useMemo(() => {
     return steps.filter((step) => {
@@ -594,13 +634,13 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
       link.download = result.filename;
       link.click();
       window.URL.revokeObjectURL(url);
-      toast.success('Log export ready');
+      toast.success(t('runDetails.toasts.logExportReady', { defaultValue: 'Log export ready' }));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to export logs');
+      toast.error(mapWorkflowServerError(t, error, t('runDetails.toasts.exportLogsFailed', { defaultValue: 'Failed to export logs' })));
     }
   };
 
-  const triggerLabel = getWorkflowRunTriggerLabel(run?.trigger_type ?? null, run?.event_type ?? null);
+  const triggerLabel = formatWorkflowRunTrigger(run?.trigger_type ?? null, run?.event_type ?? null);
   const triggerMetadata = (run?.trigger_metadata_json ?? null) as Record<string, unknown> | null;
   const canResume = canAdmin && run?.status === 'WAITING';
   const canCancel = canAdmin && run?.status && !['SUCCEEDED', 'FAILED', 'CANCELED'].includes(run.status);
@@ -612,32 +652,32 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
   const handleResume = async () => {
     if (!run) return;
     if (actionReason.trim().length < 3) {
-      toast.error('Reason must be at least 3 characters.');
+      toast.error(reasonTooShortLabel);
       return;
     }
     try {
       await resumeWorkflowRunAction({ runId: run.run_id, reason: actionReason.trim(), source: 'ui' });
-      toast.success('Run resumed');
+      toast.success(t('runDetails.toasts.runResumed', { defaultValue: 'Run resumed' }));
       setConfirmAction(null);
       fetchDetails();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to resume run');
+      toast.error(mapWorkflowServerError(t, error, t('runDetails.toasts.resumeRunFailed', { defaultValue: 'Failed to resume run' })));
     }
   };
 
   const handleCancel = async () => {
     if (!run) return;
     if (actionReason.trim().length < 3) {
-      toast.error('Reason must be at least 3 characters.');
+      toast.error(reasonTooShortLabel);
       return;
     }
     try {
       await cancelWorkflowRunAction({ runId: run.run_id, reason: actionReason.trim(), source: 'ui' });
-      toast.success('Run canceled');
+      toast.success(t('runDetails.toasts.runCanceled', { defaultValue: 'Run canceled' }));
       setConfirmAction(null);
       fetchDetails();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to cancel run');
+      toast.error(mapWorkflowServerError(t, error, t('runDetails.toasts.cancelRunFailed', { defaultValue: 'Failed to cancel run' })));
     }
   };
 
@@ -653,39 +693,43 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
       link.download = `workflow-run-${run.run_id}.json`;
       link.click();
       window.URL.revokeObjectURL(url);
-      toast.success('Run export ready');
+      toast.success(t('runDetails.toasts.runExportReady', { defaultValue: 'Run export ready' }));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to export run');
+      toast.error(mapWorkflowServerError(t, error, t('runDetails.toasts.exportRunFailed', { defaultValue: 'Failed to export run' })));
     }
   };
 
   const handleRetry = async () => {
     if (!run) return;
     if (actionReason.trim().length < 3) {
-      toast.error('Reason must be at least 3 characters.');
+      toast.error(reasonTooShortLabel);
       return;
     }
     try {
       await retryWorkflowRunAction({ runId: run.run_id, reason: actionReason.trim(), source: 'ui' });
-      toast.success('Run retry started');
+      toast.success(t('runDetails.toasts.runRetryStarted', { defaultValue: 'Run retry started' }));
       setConfirmAction(null);
       fetchDetails();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to retry run');
+      toast.error(mapWorkflowServerError(t, error, t('runDetails.toasts.retryRunFailed', { defaultValue: 'Failed to retry run' })));
     }
   };
 
   const handleReplay = async () => {
     if (!run) return;
     if (actionReason.trim().length < 3) {
-      toast.error('Reason must be at least 3 characters.');
+      toast.error(reasonTooShortLabel);
       return;
     }
     let parsedPayload: Record<string, unknown> = {};
     try {
       parsedPayload = replayPayload ? JSON.parse(replayPayload) : {};
     } catch (error) {
-      toast.error('Replay payload must be valid JSON.');
+      toast.error(
+        t('runDetails.toasts.replayPayloadInvalid', {
+          defaultValue: 'Replay payload must be valid JSON.',
+        })
+      );
       return;
     }
 
@@ -696,18 +740,18 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
         payload: parsedPayload,
         source: 'ui'
       });
-      toast.success('Run replay started');
+      toast.success(t('runDetails.toasts.runReplayStarted', { defaultValue: 'Run replay started' }));
       setConfirmAction(null);
       fetchDetails();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to replay run');
+      toast.error(mapWorkflowServerError(t, error, t('runDetails.toasts.replayRunFailed', { defaultValue: 'Failed to replay run' })));
     }
   };
 
   const handleRequeue = async () => {
     if (!run) return;
     if (actionReason.trim().length < 3) {
-      toast.error('Reason must be at least 3 characters.');
+      toast.error(reasonTooShortLabel);
       return;
     }
     try {
@@ -716,11 +760,13 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
         reason: actionReason.trim(),
         source: 'ui'
       });
-      toast.success('Event wait requeued');
+      toast.success(t('runDetails.toasts.eventWaitRequeued', { defaultValue: 'Event wait requeued' }));
       setConfirmAction(null);
       fetchDetails();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to requeue event wait');
+      toast.error(mapWorkflowServerError(t, error, t('runDetails.toasts.requeueEventWaitFailed', {
+              defaultValue: 'Failed to requeue event wait',
+            })));
     }
   };
 
@@ -739,9 +785,11 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
       link.download = result.filename;
       link.click();
       window.URL.revokeObjectURL(url);
-      toast.success('Audit export ready');
+      toast.success(t('runDetails.toasts.auditExportReady', { defaultValue: 'Audit export ready' }));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to export audit logs');
+      toast.error(mapWorkflowServerError(t, error, t('runDetails.toasts.exportAuditLogsFailed', {
+              defaultValue: 'Failed to export audit logs',
+            })));
     }
   };
 
@@ -761,57 +809,63 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
       <Card className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="text-sm text-gray-500">Run ID</div>
+            <div className="text-sm text-gray-500">
+              {t('runDetails.header.runIdLabel', { defaultValue: 'Run ID' })}
+            </div>
             <div id="workflow-run-detail-id" className="text-lg font-semibold text-gray-900">
               {runId}
             </div>
             <div className="text-sm text-gray-600">
-              {workflowName ?? run?.workflow_id} · v{run?.workflow_version ?? '—'}
+              {workflowName ?? run?.workflow_id} · v{run?.workflow_version ?? emptyValueLabel}
             </div>
-            <div className="text-xs text-gray-500">Workflow ID: {run?.workflow_id ?? '—'}</div>
+            <div className="text-xs text-gray-500">
+              {t('runDetails.header.workflowIdLabel', { defaultValue: 'Workflow ID:' })} {run?.workflow_id ?? emptyValueLabel}
+            </div>
             {workflowTrigger && (
-              <div className="text-xs text-gray-500">Trigger: {workflowTrigger}</div>
+              <div className="text-xs text-gray-500">
+                {t('runDetails.header.triggerLabel', { defaultValue: 'Trigger:' })} {workflowTrigger}
+              </div>
             )}
           </div>
           <div className="flex items-center gap-2">
             {canResume && (
               <Button id="workflow-run-resume" variant="outline" onClick={() => setConfirmAction('resume')}>
                 <Play className="h-4 w-4 mr-2" />
-                Resume
+                {t('runDetails.actions.resume', { defaultValue: 'Resume' })}
               </Button>
             )}
             {canCancel && (
               <Button id="workflow-run-cancel" variant="outline" onClick={() => setConfirmAction('cancel')}>
                 <StopCircle className="h-4 w-4 mr-2" />
-                Cancel
+                {t('runDetails.actions.cancel', { defaultValue: 'Cancel' })}
               </Button>
             )}
             {run && (
               <Button id="workflow-run-export" variant="outline" onClick={handleExport}>
-                Export
+                {t('runDetails.actions.export', { defaultValue: 'Export' })}
               </Button>
             )}
             {canRetry && (
               <Button id="workflow-run-retry" variant="outline" onClick={() => setConfirmAction('retry')}>
                 <RotateCcw className="h-4 w-4 mr-2" />
-                Retry
+                {t('runDetails.actions.retry', { defaultValue: 'Retry' })}
               </Button>
             )}
             {canReplay && (
               <Button id="workflow-run-replay" variant="outline" onClick={() => setConfirmAction('replay')}>
                 <Repeat className="h-4 w-4 mr-2" />
-                Replay
+                {t('runDetails.actions.replay', { defaultValue: 'Replay' })}
               </Button>
             )}
             {canRequeue && (
               <Button id="workflow-run-requeue" variant="outline" onClick={() => setConfirmAction('requeue')}>
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Requeue Event
+                {t('runDetails.actions.requeueEvent', { defaultValue: 'Requeue Event' })}
               </Button>
             )}
             {onClose && (
               <Button id="workflow-run-close" variant="ghost" onClick={onClose}>
-                Close
+                {t('runDetails.actions.close', { defaultValue: 'Close' })}
               </Button>
             )}
           </div>
@@ -819,66 +873,92 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
           <div>
-            <div className="text-xs text-gray-500">Status</div>
+            <div className="text-xs text-gray-500">
+              {t('runDetails.summary.statusLabel', { defaultValue: 'Status' })}
+            </div>
             <Badge id="workflow-run-detail-status" className={STATUS_STYLES[run?.status ?? ''] ?? 'bg-gray-100 text-gray-600'}>
-              {run?.status ?? '—'}
+              {run?.status ? formatWorkflowRunStatus(run.status) : emptyValueLabel}
             </Badge>
           </div>
           <div>
-            <div className="text-xs text-gray-500">Started</div>
+            <div className="text-xs text-gray-500">
+              {t('runDetails.summary.startedLabel', { defaultValue: 'Started' })}
+            </div>
             <div className="text-gray-800">{formatDateTime(run?.started_at)}</div>
           </div>
           <div>
-            <div className="text-xs text-gray-500">Updated</div>
+            <div className="text-xs text-gray-500">
+              {t('runDetails.summary.updatedLabel', { defaultValue: 'Updated' })}
+            </div>
             <div className="text-gray-800">{formatDateTime(run?.updated_at)}</div>
           </div>
           <div>
-            <div className="text-xs text-gray-500">Completed</div>
+            <div className="text-xs text-gray-500">
+              {t('runDetails.summary.completedLabel', { defaultValue: 'Completed' })}
+            </div>
             <div className="text-gray-800">{formatDateTime(run?.completed_at)}</div>
           </div>
           <div>
-            <div className="text-xs text-gray-500">Trigger</div>
+            <div className="text-xs text-gray-500">
+              {t('runDetails.summary.triggerLabel', { defaultValue: 'Trigger' })}
+            </div>
             <div className="text-gray-800">{triggerLabel}</div>
           </div>
           {isTimeTriggeredRun(run?.trigger_type) && (
             <div>
-              <div className="text-xs text-gray-500">Schedule state</div>
+              <div className="text-xs text-gray-500">
+                {t('runDetails.summary.scheduleStateLabel', { defaultValue: 'Schedule state' })}
+              </div>
               <Badge className={getWorkflowScheduleStatusBadgeClass(scheduleState?.status)}>
-                {getWorkflowScheduleStatusLabel(scheduleState?.status)}
+                {formatWorkflowScheduleStatus(scheduleState?.status)}
               </Badge>
             </div>
           )}
           {isTimeTriggeredRun(run?.trigger_type) && typeof triggerMetadata?.scheduledFor === 'string' && (
             <div>
-              <div className="text-xs text-gray-500">Scheduled for</div>
+              <div className="text-xs text-gray-500">
+                {t('runDetails.summary.scheduledForLabel', { defaultValue: 'Scheduled for' })}
+              </div>
               <div className="text-gray-800">{formatDateTime(String(triggerMetadata.scheduledFor))}</div>
             </div>
           )}
           {run?.trigger_type === 'recurring' && typeof triggerMetadata?.cron === 'string' && (
             <div>
-              <div className="text-xs text-gray-500">Cron</div>
+              <div className="text-xs text-gray-500">
+                {t('runDetails.summary.cronLabel', { defaultValue: 'Cron' })}
+              </div>
               <div className="font-mono text-gray-800">{String(triggerMetadata.cron)}</div>
             </div>
           )}
         </div>
 
         {run?.node_path && (
-          <div className="text-xs text-gray-500">Node path: {run.node_path}</div>
+          <div className="text-xs text-gray-500">
+            {t('runDetails.summary.nodePathLabel', { defaultValue: 'Node path:' })} {run.node_path}
+          </div>
         )}
         {run?.event_type && (
           <div className="text-xs text-gray-500 flex flex-wrap items-center gap-2">
-            <span>Event type:</span>
+            <span>{t('runDetails.summary.eventTypeLabel', { defaultValue: 'Event type:' })}</span>
             <span className="font-mono break-all">{run.event_type}</span>
           </div>
         )}
         {run?.source_payload_schema_ref && (
           <div className="text-xs text-gray-500 flex flex-wrap items-center gap-2">
-            <span>Trigger payload schema:</span>
+            <span>
+              {t('runDetails.summary.triggerPayloadSchemaLabel', {
+                defaultValue: 'Trigger payload schema:',
+              })}
+            </span>
             <span className="font-mono break-all">{run.source_payload_schema_ref}</span>
             {run.trigger_mapping_applied ? (
-              <Badge variant="info" className="text-[10px]">Mapped</Badge>
+              <Badge variant="info" className="text-[10px]">
+                {t('runDetails.summary.mapped', { defaultValue: 'Mapped' })}
+              </Badge>
             ) : (
-              <Badge variant="default-muted" className="text-[10px]">Identity</Badge>
+              <Badge variant="default-muted" className="text-[10px]">
+                {t('runDetails.summary.identity', { defaultValue: 'Identity' })}
+              </Badge>
             )}
           </div>
         )}
@@ -886,9 +966,13 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
           <div className="flex items-start gap-2 text-sm text-destructive">
             <AlertTriangle className="h-4 w-4 mt-0.5" />
             <div>
-              <div>{String((run.error_json as any)?.message ?? 'Run error')}</div>
+              <div>
+                {String((run.error_json as any)?.message
+                  ?? t('runDetails.summary.runErrorFallback', { defaultValue: 'Run error' }))}
+              </div>
               <div className="text-xs text-destructive">
-                {(run.error_json as any)?.category ?? 'Error'} · {formatDateTime((run.error_json as any)?.at ?? null)}
+                {(run.error_json as any)?.category
+                  ?? t('runDetails.summary.errorCategoryFallback', { defaultValue: 'Error' })} · {formatDateTime((run.error_json as any)?.at ?? null)}
               </div>
             </div>
           </div>
@@ -898,17 +982,27 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
       <Card className="p-4">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <div className="text-sm font-semibold text-gray-800">Step Timeline</div>
-            <div className="text-xs text-gray-500">Attempts, durations, and errors per step.</div>
+            <div className="text-sm font-semibold text-gray-800">
+              {t('runDetails.stepTimeline.title', { defaultValue: 'Step Timeline' })}
+            </div>
+            <div className="text-xs text-gray-500">
+              {t('runDetails.stepTimeline.description', {
+                defaultValue: 'Attempts, durations, and errors per step.',
+              })}
+            </div>
           </div>
-          {isLoading && <span className="text-xs text-gray-400">Loading...</span>}
+          {isLoading && (
+            <span className="text-xs text-gray-400">
+              {t('runDetails.stepTimeline.loading', { defaultValue: 'Loading...' })}
+            </span>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-4 mb-4">
           <div className="min-w-[180px]">
             <CustomSelect
               id="workflow-run-step-status-filter"
-              label="Step status"
-              options={STEP_STATUS_OPTIONS}
+              label={t('runDetails.stepTimeline.stepStatusLabel', { defaultValue: 'Step status' })}
+              options={stepStatusOptions}
               value={stepStatusFilter}
               onValueChange={setStepStatusFilter}
             />
@@ -916,7 +1010,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
           <div className="min-w-[220px]">
             <CustomSelect
               id="workflow-run-step-type-filter"
-              label="Node type"
+              label={t('runDetails.stepTimeline.nodeTypeLabel', { defaultValue: 'Node type' })}
               options={nodeTypeOptions}
               value={stepTypeFilter}
               onValueChange={setStepTypeFilter}
@@ -926,20 +1020,22 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
             id="workflow-run-collapse-nested"
             checked={collapseNested}
             onCheckedChange={setCollapseNested}
-            label="Collapse nested blocks"
+            label={t('runDetails.stepTimeline.collapseNestedLabel', {
+              defaultValue: 'Collapse nested blocks',
+            })}
           />
         </div>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Step Path</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Attempt</TableHead>
-              <TableHead>Duration</TableHead>
-              <TableHead>Next Retry</TableHead>
-              <TableHead>Started</TableHead>
-              <TableHead>Error</TableHead>
+              <TableHead>{t('runDetails.stepTimeline.columns.stepPath', { defaultValue: 'Step Path' })}</TableHead>
+              <TableHead>{t('runDetails.stepTimeline.columns.type', { defaultValue: 'Type' })}</TableHead>
+              <TableHead>{t('runDetails.stepTimeline.columns.status', { defaultValue: 'Status' })}</TableHead>
+              <TableHead>{t('runDetails.stepTimeline.columns.attempt', { defaultValue: 'Attempt' })}</TableHead>
+              <TableHead>{t('runDetails.stepTimeline.columns.duration', { defaultValue: 'Duration' })}</TableHead>
+              <TableHead>{t('runDetails.stepTimeline.columns.nextRetry', { defaultValue: 'Next Retry' })}</TableHead>
+              <TableHead>{t('runDetails.stepTimeline.columns.started', { defaultValue: 'Started' })}</TableHead>
+              <TableHead>{t('runDetails.stepTimeline.columns.error', { defaultValue: 'Error' })}</TableHead>
               <TableHead></TableHead>
             </TableRow>
           </TableHeader>
@@ -951,11 +1047,11 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
               >
                 <TableCell className="font-mono text-xs">{step.step_path}</TableCell>
                 <TableCell className="text-xs text-gray-500">
-                  {stepTypeById.get(step.definition_step_id) ?? '—'}
+                  {stepTypeById.get(step.definition_step_id) ?? emptyValueLabel}
                 </TableCell>
                 <TableCell>
                   <Badge className={STATUS_STYLES[step.status] ?? 'bg-gray-100 text-gray-600'}>
-                    {step.status}
+                    {formatWorkflowStepStatus(step.status)}
                   </Badge>
                 </TableCell>
                 <TableCell>{step.attempt}</TableCell>
@@ -965,7 +1061,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
                 </TableCell>
                 <TableCell>{formatDateTime(step.started_at)}</TableCell>
                 <TableCell className="text-xs text-destructive">
-                  {(step.error_json as any)?.message ?? '—'}
+                  {(step.error_json as any)?.message ?? emptyValueLabel}
                 </TableCell>
                 <TableCell>
                   <Button
@@ -974,7 +1070,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
                     size="sm"
                     onClick={() => setSelectedStepPath(step.step_path)}
                   >
-                    View
+                    {t('runDetails.actions.view', { defaultValue: 'View' })}
                   </Button>
                 </TableCell>
               </TableRow>
@@ -982,7 +1078,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
             {!isLoading && filteredSteps.length === 0 && (
               <TableRow>
                 <TableCell colSpan={stepColumnCount} className="text-center text-sm text-gray-500 py-6">
-                  No step history yet.
+                  {t('runDetails.stepTimeline.empty', { defaultValue: 'No step history yet.' })}
                 </TableCell>
               </TableRow>
             )}
@@ -993,46 +1089,66 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
       {selectedStep && (
         <Card className="p-4 space-y-4">
           <div>
-            <div className="text-sm font-semibold text-gray-800">Step Details</div>
+            <div className="text-sm font-semibold text-gray-800">
+              {t('runDetails.stepDetails.title', { defaultValue: 'Step Details' })}
+            </div>
             <div className="text-xs text-gray-500">{selectedStep.step_path}</div>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
             <div>
-              <div className="text-xs text-gray-500">Status</div>
+              <div className="text-xs text-gray-500">
+                {t('runDetails.stepDetails.statusLabel', { defaultValue: 'Status' })}
+              </div>
               <Badge className={STATUS_STYLES[selectedStep.status] ?? 'bg-gray-100 text-gray-600'}>
-                {selectedStep.status}
+                {formatWorkflowStepStatus(selectedStep.status)}
               </Badge>
             </div>
             <div>
-              <div className="text-xs text-gray-500">Attempt</div>
+              <div className="text-xs text-gray-500">
+                {t('runDetails.stepDetails.attemptLabel', { defaultValue: 'Attempt' })}
+              </div>
               <div className="text-gray-800">{selectedStep.attempt}</div>
             </div>
             <div>
-              <div className="text-xs text-gray-500">Started</div>
+              <div className="text-xs text-gray-500">
+                {t('runDetails.stepDetails.startedLabel', { defaultValue: 'Started' })}
+              </div>
               <div className="text-gray-800">{formatDateTime(selectedStep.started_at)}</div>
             </div>
             <div>
-              <div className="text-xs text-gray-500">Completed</div>
+              <div className="text-xs text-gray-500">
+                {t('runDetails.stepDetails.completedLabel', { defaultValue: 'Completed' })}
+              </div>
               <div className="text-gray-800">{formatDateTime(selectedStep.completed_at)}</div>
             </div>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
             <div>
-              <div className="text-xs text-gray-500">Duration</div>
+              <div className="text-xs text-gray-500">
+                {t('runDetails.stepDetails.durationLabel', { defaultValue: 'Duration' })}
+              </div>
               <div className="text-gray-800">{formatDurationMs(selectedStep.duration_ms)}</div>
             </div>
             <div>
-              <div className="text-xs text-gray-500">Node Type</div>
-              <div className="text-gray-800">{stepTypeById.get(selectedStep.definition_step_id) ?? '—'}</div>
+              <div className="text-xs text-gray-500">
+                {t('runDetails.stepDetails.nodeTypeLabel', { defaultValue: 'Node Type' })}
+              </div>
+              <div className="text-gray-800">{stepTypeById.get(selectedStep.definition_step_id) ?? emptyValueLabel}</div>
             </div>
             <div>
-              <div className="text-xs text-gray-500">Definition Step ID</div>
+              <div className="text-xs text-gray-500">
+                {t('runDetails.stepDetails.definitionStepIdLabel', {
+                  defaultValue: 'Definition Step ID',
+                })}
+              </div>
               <div className="font-mono text-xs text-gray-700">{selectedStep.definition_step_id}</div>
             </div>
             <div>
-              <div className="text-xs text-gray-500">Next Retry</div>
+              <div className="text-xs text-gray-500">
+                {t('runDetails.stepDetails.nextRetryLabel', { defaultValue: 'Next Retry' })}
+              </div>
               <div className="text-gray-800">
                 {formatDateTime(retryWaitsByStep.get(selectedStep.step_path)?.timeout_at ?? null)}
               </div>
@@ -1041,19 +1157,25 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
 
           {selectedStepError && (
             <Card className="p-3 border border-destructive/30 bg-destructive/10">
-              <div className="text-xs font-semibold text-destructive">Error</div>
+              <div className="text-xs font-semibold text-destructive">
+                {t('runDetails.stepDetails.errorTitle', { defaultValue: 'Error' })}
+              </div>
               <div className="text-sm text-destructive">
-                {String(selectedStepError.message ?? 'Step error')}
+                {String(selectedStepError.message
+                  ?? t('runDetails.stepDetails.stepErrorFallback', { defaultValue: 'Step error' }))}
               </div>
               <div className="text-xs text-destructive/80">
-                {selectedStepError.category ?? 'Error'} · {formatDateTime(selectedStepError.at ?? null)}
+                {selectedStepError.category
+                  ?? t('runDetails.stepDetails.errorCategoryFallback', { defaultValue: 'Error' })} · {formatDateTime(selectedStepError.at ?? null)}
               </div>
             </Card>
           )}
 
           {stepWaits.length > 0 && (
             <div>
-              <div className="text-sm font-medium text-gray-700">Wait History</div>
+              <div className="text-sm font-medium text-gray-700">
+                {t('runDetails.waitHistory.title', { defaultValue: 'Wait History' })}
+              </div>
               <div className="mt-2 space-y-2">
                 {stepWaits.map((wait) => (
                   <Card key={wait.wait_id} className="p-3">
@@ -1065,22 +1187,35 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
                         <>
                     <div className="flex items-center justify-between">
                       <div className="text-xs font-semibold text-gray-700">
-                        {wait.wait_type.toUpperCase()} · {wait.status}
+                        {wait.wait_type.toUpperCase()} · {formatWorkflowStepStatus(wait.status)}
                       </div>
                       <div className="text-xs text-gray-500">{formatDateTime(wait.created_at)}</div>
                     </div>
                     {!isTimeWait && (
                       <div className="text-xs text-gray-500 mt-1">
-                        Event: {wait.event_name ?? '—'} · Key: {wait.key ?? '—'} · Filters: {eventFilterCount}
+                        {t('runDetails.waitHistory.eventLine', {
+                          defaultValue: 'Event: {{event}} · Key: {{key}} · Filters: {{count}}',
+                          event: wait.event_name ?? emptyValueLabel,
+                          key: wait.key ?? emptyValueLabel,
+                          count: eventFilterCount,
+                        })}
                       </div>
                     )}
                     {isTimeWait && (
                       <div className="text-xs text-gray-500 mt-1">
-                        Mode: {waitPayload?.mode ?? '—'} · Scheduled resume: {formatDateTime(wait.timeout_at ?? waitPayload?.dueAt ?? null)}
+                        {t('runDetails.waitHistory.timeLine', {
+                          defaultValue: 'Mode: {{mode}} · Scheduled resume: {{scheduledResume}}',
+                          mode: waitPayload?.mode ?? emptyValueLabel,
+                          scheduledResume: formatDateTime(wait.timeout_at ?? waitPayload?.dueAt ?? null),
+                        })}
                       </div>
                     )}
                     <div className="text-xs text-gray-500">
-                      Timeout: {formatDateTime(wait.timeout_at)} · Resolved: {formatDateTime(wait.resolved_at)}
+                      {t('runDetails.waitHistory.timeoutLine', {
+                        defaultValue: 'Timeout: {{timeout}} · Resolved: {{resolved}}',
+                        timeout: formatDateTime(wait.timeout_at),
+                        resolved: formatDateTime(wait.resolved_at),
+                      })}
                     </div>
                         </>
                       );
@@ -1092,54 +1227,72 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
           )}
 
           <div>
-            <div className="text-sm font-medium text-gray-700">Envelope Data</div>
-            <div className="text-xs text-gray-500">Payload, vars, meta, and error from the latest snapshot.</div>
+            <div className="text-sm font-medium text-gray-700">
+              {t('runDetails.envelope.title', { defaultValue: 'Envelope Data' })}
+            </div>
+            <div className="text-xs text-gray-500">
+              {t('runDetails.envelope.description', {
+                defaultValue: 'Payload, vars, meta, and error from the latest snapshot.',
+              })}
+            </div>
             {hasRedactions && (
-              <div className="text-xs text-amber-600 mt-1">Redacted values shown as {REDACTION_MARKER}.</div>
+              <div className="text-xs text-amber-600 mt-1">
+                {t('runDetails.envelope.redactedNotice', {
+                  defaultValue: 'Redacted values shown as {{marker}}.',
+                  marker: REDACTION_MARKER,
+                })}
+              </div>
             )}
             <Tabs value={envelopeTab} onValueChange={setEnvelopeTab} className="mt-2">
               <TabsList className="mb-2">
-                <TabsTrigger value="payload">Payload</TabsTrigger>
-                <TabsTrigger value="vars">Vars</TabsTrigger>
-                <TabsTrigger value="meta">Meta</TabsTrigger>
-                <TabsTrigger value="error">Error</TabsTrigger>
-                <TabsTrigger value="raw">Raw</TabsTrigger>
+                <TabsTrigger value="payload">{t('runDetails.envelope.tabs.payload', { defaultValue: 'Payload' })}</TabsTrigger>
+                <TabsTrigger value="vars">{t('runDetails.envelope.tabs.vars', { defaultValue: 'Vars' })}</TabsTrigger>
+                <TabsTrigger value="meta">{t('runDetails.envelope.tabs.meta', { defaultValue: 'Meta' })}</TabsTrigger>
+                <TabsTrigger value="error">{t('runDetails.envelope.tabs.error', { defaultValue: 'Error' })}</TabsTrigger>
+                <TabsTrigger value="raw">{t('runDetails.envelope.tabs.raw', { defaultValue: 'Raw' })}</TabsTrigger>
               </TabsList>
               <TabsContent value="payload">
                 <pre className="max-h-64 overflow-auto rounded-md bg-gray-900 text-gray-100 text-xs p-3">
-                  {redactedSnapshot ? renderJson(envelopePayload) : 'No snapshot available.'}
+                  {redactedSnapshot ? renderJson(envelopePayload) : noSnapshotLabel}
                 </pre>
               </TabsContent>
               <TabsContent value="vars">
                 <pre className="max-h-64 overflow-auto rounded-md bg-gray-900 text-gray-100 text-xs p-3">
-                  {redactedSnapshot ? renderJson(envelopeVars) : 'No snapshot available.'}
+                  {redactedSnapshot ? renderJson(envelopeVars) : noSnapshotLabel}
                 </pre>
               </TabsContent>
               <TabsContent value="meta">
                 <pre className="max-h-64 overflow-auto rounded-md bg-gray-900 text-gray-100 text-xs p-3">
-                  {redactedSnapshot ? renderJson(envelopeMeta) : 'No snapshot available.'}
+                  {redactedSnapshot ? renderJson(envelopeMeta) : noSnapshotLabel}
                 </pre>
               </TabsContent>
               <TabsContent value="error">
                 <pre className="max-h-64 overflow-auto rounded-md bg-gray-900 text-gray-100 text-xs p-3">
-                  {redactedSnapshot ? renderJson(envelopeError) : 'No snapshot available.'}
+                  {redactedSnapshot ? renderJson(envelopeError) : noSnapshotLabel}
                 </pre>
               </TabsContent>
               <TabsContent value="raw">
                 <pre className="max-h-64 overflow-auto rounded-md bg-gray-900 text-gray-100 text-xs p-3">
-                  {redactedSnapshot ? renderJson(redactedSnapshot) : 'No snapshot available.'}
+                  {redactedSnapshot ? renderJson(redactedSnapshot) : noSnapshotLabel}
                 </pre>
               </TabsContent>
             </Tabs>
           </div>
 
           <div>
-            <div className="text-sm font-medium text-gray-700">Action Invocations</div>
+            <div className="text-sm font-medium text-gray-700">
+              {t('runDetails.invocations.title', { defaultValue: 'Action Invocations' })}
+            </div>
             {hasRedactions && (
-              <div className="text-xs text-amber-600 mt-1">Redacted values shown as {REDACTION_MARKER}.</div>
+              <div className="text-xs text-amber-600 mt-1">
+                {t('runDetails.invocations.redactedNotice', {
+                  defaultValue: 'Redacted values shown as {{marker}}.',
+                  marker: REDACTION_MARKER,
+                })}
+              </div>
             )}
             {stepInvocations.length === 0 && (
-              <div className="text-xs text-gray-500 mt-2">No action calls recorded for this step.</div>
+              <div className="text-xs text-gray-500 mt-2">{noActionCallsLabel}</div>
             )}
             {stepInvocations.map((invocation) => {
               const inputSize = jsonSize(invocation.input_json);
@@ -1153,30 +1306,52 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
                       {invocation.action_id}@{invocation.action_version}
                     </div>
                     <Badge className={STATUS_STYLES[invocation.status] ?? 'bg-gray-100 text-gray-600'}>
-                      {invocation.status}
+                      {formatWorkflowStepStatus(invocation.status)}
                     </Badge>
                   </div>
-                  <div className="text-xs text-gray-500">Attempt {invocation.attempt}</div>
                   <div className="text-xs text-gray-500">
-                    Duration: {formatDuration(invocation.started_at, invocation.completed_at)}
+                    {t('runDetails.invocations.attemptLine', {
+                      defaultValue: 'Attempt {{count}}',
+                      count: invocation.attempt,
+                    })}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {t('runDetails.invocations.durationLine', {
+                      defaultValue: 'Duration: {{duration}}',
+                      duration: formatDuration(invocation.started_at, invocation.completed_at),
+                    })}
                   </div>
                   {invocation.error_message && (
                     <div className="text-xs text-destructive mt-1">{invocation.error_message}</div>
                   )}
                   <div className="text-xs text-gray-500 mt-1">
-                    Input size: {formatBytes(inputSize)}{inputPreview.truncated ? ' (truncated)' : ''} · Output size: {formatBytes(outputSize)}{outputPreview.truncated ? ' (truncated)' : ''}
+                    {t('runDetails.invocations.sizeLine', {
+                      defaultValue: 'Input size: {{inputSize}}{{inputSuffix}} · Output size: {{outputSize}}{{outputSuffix}}',
+                      inputSize: formatBytes(inputSize),
+                      inputSuffix: inputPreview.truncated
+                        ? t('runDetails.invocations.truncatedSuffix', { defaultValue: ' (truncated)' })
+                        : '',
+                      outputSize: formatBytes(outputSize),
+                      outputSuffix: outputPreview.truncated
+                        ? t('runDetails.invocations.truncatedSuffix', { defaultValue: ' (truncated)' })
+                        : '',
+                    })}
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
                     <div>
-                      <div className="text-xs font-semibold text-gray-500">Input</div>
+                      <div className="text-xs font-semibold text-gray-500">
+                        {t('runDetails.invocations.inputLabel', { defaultValue: 'Input' })}
+                      </div>
                       <pre className="mt-1 max-h-48 overflow-auto rounded-md bg-gray-900 text-gray-100 text-xs p-2">
-                        {invocation.input_json ? inputPreview.preview : '—'}
+                        {invocation.input_json ? inputPreview.preview : emptyValueLabel}
                       </pre>
                     </div>
                     <div>
-                      <div className="text-xs font-semibold text-gray-500">Output</div>
+                      <div className="text-xs font-semibold text-gray-500">
+                        {t('runDetails.invocations.outputLabel', { defaultValue: 'Output' })}
+                      </div>
                       <pre className="mt-1 max-h-48 overflow-auto rounded-md bg-gray-900 text-gray-100 text-xs p-2">
-                        {invocation.output_json ? outputPreview.preview : '—'}
+                        {invocation.output_json ? outputPreview.preview : emptyValueLabel}
                       </pre>
                     </div>
                   </div>
@@ -1186,26 +1361,34 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
           </div>
 
           <div>
-            <div className="text-sm font-medium text-gray-700">Run Logs</div>
-            <div className="text-xs text-gray-500">Operational log events for this run.</div>
+            <div className="text-sm font-medium text-gray-700">
+              {t('runDetails.logs.title', { defaultValue: 'Run Logs' })}
+            </div>
+            <div className="text-xs text-gray-500">
+              {t('runDetails.logs.description', {
+                defaultValue: 'Operational log events for this run.',
+              })}
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
               <Input
                 id="workflow-run-logs-search"
-                label="Search"
+                label={t('runDetails.logs.searchLabel', { defaultValue: 'Search' })}
                 value={logFilters.search}
                 onChange={(event) => setLogFilters((prev) => ({ ...prev, search: event.target.value }))}
-                placeholder="Search log message"
+                placeholder={t('runDetails.logs.searchPlaceholder', {
+                  defaultValue: 'Search log message',
+                })}
               />
               <CustomSelect
                 id="workflow-run-logs-level"
-                label="Level"
-                options={LOG_LEVEL_OPTIONS}
+                label={t('runDetails.logs.levelLabel', { defaultValue: 'Level' })}
+                options={logLevelOptions}
                 value={logFilters.level}
                 onValueChange={(value) => setLogFilters((prev) => ({ ...prev, level: value }))}
               />
               <div className="flex items-end gap-2">
                 <Button id="workflow-run-logs-apply" onClick={handleApplyLogFilters} disabled={logLoading}>
-                  Apply
+                  {t('runDetails.actions.apply', { defaultValue: 'Apply' })}
                 </Button>
                 <Button
                   id="workflow-run-logs-reset"
@@ -1213,14 +1396,14 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
                   onClick={handleResetLogFilters}
                   disabled={logLoading}
                 >
-                  Reset
+                  {t('runDetails.actions.reset', { defaultValue: 'Reset' })}
                 </Button>
                 <Button
                   id="workflow-run-logs-export"
                   variant="outline"
                   onClick={handleLogExport}
                 >
-                  Export CSV
+                  {t('runDetails.actions.exportCsv', { defaultValue: 'Export CSV' })}
                 </Button>
               </div>
             </div>
@@ -1228,12 +1411,12 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Timestamp</TableHead>
-                    <TableHead>Level</TableHead>
-                    <TableHead>Message</TableHead>
-                    <TableHead>Step</TableHead>
-                    <TableHead>Event</TableHead>
-                    <TableHead>Correlation</TableHead>
+                    <TableHead>{t('runDetails.logs.columns.timestamp', { defaultValue: 'Timestamp' })}</TableHead>
+                    <TableHead>{t('runDetails.logs.columns.level', { defaultValue: 'Level' })}</TableHead>
+                    <TableHead>{t('runDetails.logs.columns.message', { defaultValue: 'Message' })}</TableHead>
+                    <TableHead>{t('runDetails.logs.columns.step', { defaultValue: 'Step' })}</TableHead>
+                    <TableHead>{t('runDetails.logs.columns.event', { defaultValue: 'Event' })}</TableHead>
+                    <TableHead>{t('runDetails.logs.columns.correlation', { defaultValue: 'Correlation' })}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1242,7 +1425,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
                       <TableCell className="text-xs text-gray-500">{formatDateTime(log.created_at)}</TableCell>
                       <TableCell>
                         <Badge className={STATUS_STYLES[log.level] ?? 'bg-gray-100 text-gray-600'}>
-                          {log.level}
+                          {formatWorkflowLogLevel(log.level)}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -1253,15 +1436,15 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
                           </pre>
                         )}
                       </TableCell>
-                      <TableCell className="text-xs text-gray-500">{log.step_path ?? '—'}</TableCell>
-                      <TableCell className="text-xs text-gray-500">{log.event_name ?? '—'}</TableCell>
-                      <TableCell className="text-xs text-gray-500">{log.correlation_key ?? '—'}</TableCell>
+                      <TableCell className="text-xs text-gray-500">{log.step_path ?? emptyValueLabel}</TableCell>
+                      <TableCell className="text-xs text-gray-500">{log.event_name ?? emptyValueLabel}</TableCell>
+                      <TableCell className="text-xs text-gray-500">{log.correlation_key ?? emptyValueLabel}</TableCell>
                     </TableRow>
                   ))}
                   {!logLoading && logs.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center text-sm text-gray-500 py-6">
-                        No log entries found.
+                        {noLogEntriesLabel}
                       </TableCell>
                     </TableRow>
                   )}
@@ -1275,7 +1458,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
                     onClick={() => fetchLogs(logCursor, true, logFilters)}
                     disabled={logLoading}
                   >
-                    Load more
+                    {t('runDetails.actions.loadMore', { defaultValue: 'Load more' })}
                   </Button>
                 </div>
               )}
@@ -1284,25 +1467,31 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
 
           {canAdmin && (
             <div>
-              <div className="text-sm font-medium text-gray-700">Audit Trail</div>
-              <div className="text-xs text-gray-500">Administrative actions for this run.</div>
+              <div className="text-sm font-medium text-gray-700">
+                {t('runDetails.audit.title', { defaultValue: 'Audit Trail' })}
+              </div>
+              <div className="text-xs text-gray-500">
+                {t('runDetails.audit.description', {
+                  defaultValue: 'Administrative actions for this run.',
+                })}
+              </div>
               <div className="flex items-center gap-2 mt-2">
                 <Button
                   id="workflow-run-audit-export"
                   variant="outline"
                   onClick={handleAuditExport}
                 >
-                  Export Audit CSV
+                  {t('runDetails.actions.exportAuditCsv', { defaultValue: 'Export Audit CSV' })}
                 </Button>
               </div>
               <div className="mt-3">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Timestamp</TableHead>
-                      <TableHead>Operation</TableHead>
-                      <TableHead>User</TableHead>
-                      <TableHead>Details</TableHead>
+                      <TableHead>{t('runDetails.audit.columns.timestamp', { defaultValue: 'Timestamp' })}</TableHead>
+                      <TableHead>{t('runDetails.audit.columns.operation', { defaultValue: 'Operation' })}</TableHead>
+                      <TableHead>{t('runDetails.audit.columns.user', { defaultValue: 'User' })}</TableHead>
+                      <TableHead>{t('runDetails.audit.columns.details', { defaultValue: 'Details' })}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1310,20 +1499,22 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
                       <TableRow key={log.audit_id}>
                         <TableCell className="text-xs text-gray-500">{formatDateTime(log.timestamp)}</TableCell>
                         <TableCell className="text-xs text-gray-700">{log.operation}</TableCell>
-                        <TableCell className="text-xs text-gray-500">{log.user_id ?? 'system'}</TableCell>
+                        <TableCell className="text-xs text-gray-500">
+                          {log.user_id ?? t('runDetails.audit.systemUser', { defaultValue: 'system' })}
+                        </TableCell>
                         <TableCell>
                           {log.details ? (
                             <pre className="max-h-24 overflow-auto rounded bg-gray-900 text-gray-100 text-xs p-2">
                               {truncateJsonPreview(log.details, 2000).preview}
                             </pre>
-                          ) : '—'}
+                          ) : emptyValueLabel}
                         </TableCell>
                       </TableRow>
                     ))}
                     {!auditLoading && auditLogs.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={4} className="text-center text-sm text-gray-500 py-6">
-                          No audit entries yet.
+                          {noAuditEntriesLabel}
                         </TableCell>
                       </TableRow>
                     )}
@@ -1337,7 +1528,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
                       onClick={() => fetchAuditLogs(auditCursor, true)}
                       disabled={auditLoading}
                     >
-                      Load more
+                      {t('runDetails.actions.loadMore', { defaultValue: 'Load more' })}
                     </Button>
                   </div>
                 )}
@@ -1350,80 +1541,100 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
       <ConfirmationDialog
         id="workflow-run-resume-confirm"
         isOpen={confirmAction === 'resume'}
-        title="Resume Workflow Run"
+        title={t('runDetails.dialogs.resumeTitle', { defaultValue: 'Resume Workflow Run' })}
         message={(
           <div className="space-y-3">
-            <p>Resume this workflow run now?</p>
+            <p>{t('runDetails.dialogs.resumeMessage', { defaultValue: 'Resume this workflow run now?' })}</p>
             <TextArea
               id="workflow-run-resume-reason"
-              label="Reason"
+              label={reasonLabel}
               value={actionReason}
               onChange={(event) => setActionReason(event.target.value)}
-              placeholder="Provide a reason for resuming"
+              placeholder={t('runDetails.dialogs.resumeReasonPlaceholder', {
+                defaultValue: 'Provide a reason for resuming',
+              })}
             />
           </div>
         )}
-        confirmLabel="Resume"
+        confirmLabel={t('runDetails.actions.resume', { defaultValue: 'Resume' })}
         onConfirm={handleResume}
         onClose={() => setConfirmAction(null)}
       />
       <ConfirmationDialog
         id="workflow-run-cancel-confirm"
         isOpen={confirmAction === 'cancel'}
-        title="Cancel Workflow Run"
+        title={t('runDetails.dialogs.cancelTitle', { defaultValue: 'Cancel Workflow Run' })}
         message={(
           <div className="space-y-3">
-            <p>Cancel this workflow run? This cannot be undone.</p>
+            <p>
+              {t('runDetails.dialogs.cancelMessage', {
+                defaultValue: 'Cancel this workflow run? This cannot be undone.',
+              })}
+            </p>
             <TextArea
               id="workflow-run-cancel-reason"
-              label="Reason"
+              label={reasonLabel}
               value={actionReason}
               onChange={(event) => setActionReason(event.target.value)}
-              placeholder="Provide a reason for canceling"
+              placeholder={t('runDetails.dialogs.cancelReasonPlaceholder', {
+                defaultValue: 'Provide a reason for canceling',
+              })}
             />
           </div>
         )}
-        confirmLabel="Cancel run"
+        confirmLabel={t('runDetails.dialogs.cancelConfirm', { defaultValue: 'Cancel run' })}
         onConfirm={handleCancel}
         onClose={() => setConfirmAction(null)}
       />
       <ConfirmationDialog
         id="workflow-run-retry-confirm"
         isOpen={confirmAction === 'retry'}
-        title="Retry Workflow Run"
+        title={t('runDetails.dialogs.retryTitle', { defaultValue: 'Retry Workflow Run' })}
         message={(
           <div className="space-y-3">
-            <p>Retry this run from the last failed step?</p>
+            <p>
+              {t('runDetails.dialogs.retryMessage', {
+                defaultValue: 'Retry this run from the last failed step?',
+              })}
+            </p>
             <TextArea
               id="workflow-run-retry-reason"
-              label="Reason"
+              label={reasonLabel}
               value={actionReason}
               onChange={(event) => setActionReason(event.target.value)}
-              placeholder="Provide a reason for retrying"
+              placeholder={t('runDetails.dialogs.retryReasonPlaceholder', {
+                defaultValue: 'Provide a reason for retrying',
+              })}
             />
           </div>
         )}
-        confirmLabel="Retry run"
+        confirmLabel={t('runDetails.dialogs.retryConfirm', { defaultValue: 'Retry run' })}
         onConfirm={handleRetry}
         onClose={() => setConfirmAction(null)}
       />
       <ConfirmationDialog
         id="workflow-run-replay-confirm"
         isOpen={confirmAction === 'replay'}
-        title="Replay Workflow Run"
+        title={t('runDetails.dialogs.replayTitle', { defaultValue: 'Replay Workflow Run' })}
         message={(
           <div className="space-y-3">
-            <p>Replay this run with a new payload.</p>
+            <p>
+              {t('runDetails.dialogs.replayMessage', {
+                defaultValue: 'Replay this run with a new payload.',
+              })}
+            </p>
             <TextArea
               id="workflow-run-replay-reason"
-              label="Reason"
+              label={reasonLabel}
               value={actionReason}
               onChange={(event) => setActionReason(event.target.value)}
-              placeholder="Provide a reason for replaying"
+              placeholder={t('runDetails.dialogs.replayReasonPlaceholder', {
+                defaultValue: 'Provide a reason for replaying',
+              })}
             />
             <TextArea
               id="workflow-run-replay-payload"
-              label="Payload (JSON)"
+              label={t('runDetails.dialogs.payloadLabel', { defaultValue: 'Payload (JSON)' })}
               value={replayPayload}
               onChange={(event) => setReplayPayload(event.target.value)}
               placeholder={'{"example": true}'}
@@ -1432,27 +1643,33 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
             />
           </div>
         )}
-        confirmLabel="Replay run"
+        confirmLabel={t('runDetails.dialogs.replayConfirm', { defaultValue: 'Replay run' })}
         onConfirm={handleReplay}
         onClose={() => setConfirmAction(null)}
       />
       <ConfirmationDialog
         id="workflow-run-requeue-confirm"
         isOpen={confirmAction === 'requeue'}
-        title="Requeue Event Wait"
+        title={t('runDetails.dialogs.requeueTitle', { defaultValue: 'Requeue Event Wait' })}
         message={(
           <div className="space-y-3">
-            <p>Requeue the most recent event wait for this run?</p>
+            <p>
+              {t('runDetails.dialogs.requeueMessage', {
+                defaultValue: 'Requeue the most recent event wait for this run?',
+              })}
+            </p>
             <TextArea
               id="workflow-run-requeue-reason"
-              label="Reason"
+              label={reasonLabel}
               value={actionReason}
               onChange={(event) => setActionReason(event.target.value)}
-              placeholder="Provide a reason for requeuing"
+              placeholder={t('runDetails.dialogs.requeueReasonPlaceholder', {
+                defaultValue: 'Provide a reason for requeuing',
+              })}
             />
           </div>
         )}
-        confirmLabel="Requeue wait"
+        confirmLabel={t('runDetails.dialogs.requeueConfirm', { defaultValue: 'Requeue wait' })}
         onConfirm={handleRequeue}
         onClose={() => setConfirmAction(null)}
       />

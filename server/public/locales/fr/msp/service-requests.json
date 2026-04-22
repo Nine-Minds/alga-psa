@@ -1,0 +1,270 @@
+{
+  "management": {
+    "title": "Demandes de service",
+    "description": "Gérez les définitions de demandes de service en brouillon, publiées et archivées.",
+    "showArchived": "Afficher les archivées",
+    "showArchivedWithCount": "Afficher les archivées ({{count}})",
+    "createBlank": "Créer un modèle vierge",
+    "startFromExample": "Commencer à partir d'un exemple",
+    "loading": "Chargement des demandes de service…",
+    "columns": {
+      "name": "Nom",
+      "description": "Description",
+      "state": "État",
+      "updated": "Mise à jour",
+      "actions": "Actions"
+    },
+    "actionsFor": "Actions pour {{name}}",
+    "actions": {
+      "duplicate": "Dupliquer",
+      "archive": "Archiver",
+      "unarchive": "Désarchiver"
+    },
+    "lifecycleLabels": {
+      "published": "Publié",
+      "archived": "Archivé",
+      "draftChanges": "Modifications en brouillon",
+      "draft": "Brouillon"
+    },
+    "templateOption": "{{templateName}} ({{providerDisplayName}})"
+  },
+  "editor": {
+    "backNav": "Retour aux demandes de service",
+    "loading": "Chargement de l'éditeur de définition…",
+    "notFound": "Définition de demande de service introuvable.",
+    "currentState": "État actuel : {{state}}",
+    "saveDraft": "Enregistrer le brouillon",
+    "createDraft": "Créer un brouillon",
+    "publish": "Publier",
+    "publishing": "Publication…",
+    "basics": {
+      "title": "Informations de base",
+      "name": "Nom",
+      "icon": "Icône",
+      "iconSelected": "Sélectionnée : {{label}}",
+      "noIconSelected": "Aucune icône sélectionnée",
+      "description": "Description",
+      "category": "Catégorie",
+      "sortOrder": "Ordre de tri",
+      "save": "Enregistrer les informations de base",
+      "uncategorized": "Non catégorisé"
+    },
+    "preview": {
+      "title": "Aperçu",
+      "badge": "Aperçu en direct",
+      "cardSubheading": "Carte du catalogue",
+      "formSubheading": "Formulaire de demande"
+    },
+    "linkage": {
+      "title": "Liaison",
+      "linkedService": "Service lié",
+      "searchPlaceholder": "Rechercher dans le catalogue de services",
+      "search": "Rechercher",
+      "clear": "Effacer",
+      "select": "Sélectionner",
+      "noDescription": "Aucune description",
+      "unset": "-"
+    },
+    "form": {
+      "title": "Formulaire",
+      "authorFields": "Champs de l'auteur",
+      "fieldType": "Type de champ",
+      "addField": "Ajouter un champ",
+      "noFields": "Aucun champ configuré.",
+      "preview": "Aperçu du formulaire rendu",
+      "label": "Libellé",
+      "helpText": "Texte d'aide",
+      "required": "Obligatoire",
+      "defaultValue": "Valeur par défaut",
+      "options": "Options (une par ligne : valeur:libellé)",
+      "moveUp": "Monter",
+      "moveDown": "Descendre",
+      "remove": "Supprimer",
+      "selectOption": "Sélectionner une option",
+      "checkboxDefaults": {
+        "none": "Aucune valeur par défaut",
+        "checked": "Coché",
+        "unchecked": "Décoché"
+      },
+      "types": {
+        "short-text": "short-text",
+        "long-text": "long-text",
+        "select": "select",
+        "checkbox": "checkbox",
+        "date": "date",
+        "file-upload": "file-upload"
+      }
+    },
+    "execution": {
+      "title": "Exécution",
+      "executionProvider": "Fournisseur d'exécution",
+      "formBehaviorProvider": "Fournisseur de comportement du formulaire",
+      "visibilityProvider": "Fournisseur de visibilité",
+      "providerDisplay": "{{displayName}} ({{executionMode}})",
+      "ticketRouting": {
+        "title": "Configuration du routage des tickets",
+        "board": "Tableau",
+        "boardPlaceholder": "Sélectionner un tableau",
+        "status": "Statut",
+        "statusPlaceholder": "Sélectionner un statut",
+        "assignedUser": "Utilisateur assigné",
+        "assignedUserPlaceholder": "Non assigné",
+        "category": "Catégorie",
+        "categoryPlaceholder": "Sélectionner une catégorie",
+        "priority": "Priorité",
+        "priorityPlaceholder": "Sélectionner une priorité",
+        "impact": "Impact",
+        "impactPlaceholder": "Sélectionner un impact",
+        "urgency": "Urgence",
+        "urgencyPlaceholder": "Sélectionner une urgence",
+        "priorityCalculated": "Priorité (calculée)",
+        "selectImpactAndUrgency": "Sélectionner l'impact et l'urgence",
+        "priorityFormula": "{{label}} (Impact {{impact}} x Urgence {{urgency}})",
+        "titleFieldKey": "Clé du champ de titre",
+        "descriptionPrefix": "Préfixe de description",
+        "save": "Enregistrer le routage des tickets"
+      },
+      "workflow": {
+        "title": "Configuration du workflow",
+        "workflowId": "ID du workflow",
+        "workflowIdPlaceholder": "workflow-id",
+        "inputMapping": "Mappage des entrées du workflow (objet JSON)",
+        "inputMappingExample": "Exemple : {\"requestedBy\":\"payload.request_title\",\"ticketReference\":\"ticketId\"}",
+        "save": "Enregistrer les paramètres du workflow"
+      },
+      "advanced": {
+        "title": "Comportement avancé du formulaire",
+        "config": "Configuration du comportement du formulaire (objet JSON)",
+        "save": "Enregistrer la configuration du comportement du formulaire"
+      },
+      "visibility": {
+        "title": "Configuration de la visibilité",
+        "config": "Configuration de la visibilité (objet JSON)",
+        "save": "Enregistrer la configuration de la visibilité"
+      },
+      "fields": {
+        "executionProvider": "Fournisseur d'exécution",
+        "executionConfig": "Configuration d'exécution",
+        "formBehaviorProvider": "Fournisseur de comportement du formulaire",
+        "visibilityProvider": "Fournisseur de visibilité"
+      },
+      "itilImpact": {
+        "1": "1 - Élevé (Fonction critique de l'entreprise affectée)",
+        "2": "2 - Moyen-Élevé (Fonction importante affectée)",
+        "3": "3 - Moyen (Fonction mineure affectée)",
+        "4": "4 - Moyen-Faible (Impact minimal)",
+        "5": "5 - Faible (Aucun impact sur l'entreprise)"
+      },
+      "itilUrgency": {
+        "1": "1 - Élevée (Le travail ne peut pas continuer)",
+        "2": "2 - Moyenne-Élevée (Travail gravement entravé)",
+        "3": "3 - Moyenne (Travail poursuivi avec des limitations)",
+        "4": "4 - Moyenne-Faible (Désagrément mineur)",
+        "5": "5 - Faible (Travail poursuivi normalement)"
+      }
+    },
+    "publishSection": {
+      "title": "Publication",
+      "currentDraftState": "État actuel du brouillon",
+      "lastPublishedVersion": "Dernière version publiée",
+      "versionPrefix": "v{{number}}",
+      "neverPublished": "Jamais publié",
+      "publishedAt": "Publié le",
+      "draftUpdatedAt": "Brouillon mis à jour le",
+      "validationTitle": "Validation de la publication",
+      "validationPassed": "Validation de la publication réussie.",
+      "errors": {
+        "nameRequired": "Le nom est requis",
+        "linkedServiceMissing": "Le service lié n'existe plus",
+        "executionBoardRequired": "Exécution : Le tableau de routage des tickets est requis",
+        "executionStatusRequired": "Exécution : Le statut de routage des tickets est requis",
+        "executionPriorityRequired": "Exécution : La priorité de routage des tickets est requise",
+        "executionItilImpactUrgencyMismatch": "Exécution : Le routage des tickets nécessite à la fois l'impact et l'urgence ITIL lorsque la priorité n'est pas définie",
+        "unknownExecutionProvider": "Fournisseur d'exécution inconnu : {{key}}",
+        "unknownFormBehaviorProvider": "Fournisseur de comportement de formulaire inconnu : {{key}}",
+        "unknownVisibilityProvider": "Fournisseur de visibilité inconnu : {{key}}"
+      }
+    },
+    "submissions": {
+      "title": "Soumissions",
+      "empty": "Aucune soumission pour cette définition pour le moment.",
+      "viewDetail": "Voir le détail",
+      "detailTitle": "Détail de la soumission",
+      "submissionId": "ID de soumission",
+      "requesterUser": "Utilisateur demandeur",
+      "client": "Client",
+      "contact": "Contact",
+      "ticketReference": "Référence du ticket",
+      "workflowReference": "Référence du workflow",
+      "executionError": "Erreur d'exécution",
+      "submittedAtStatus": "{{date}} · {{status}}",
+      "loadingTicket": "Chargement…",
+      "ticketLoadError": "Échec du chargement des détails du ticket."
+    }
+  },
+  "icons": {
+    "file-text": "Demande générale",
+    "user-plus": "Nouvel utilisateur",
+    "user-minus": "Départ",
+    "shield-check": "Sécurité",
+    "key-round": "Accès",
+    "laptop": "Ordinateur portable",
+    "monitor": "Poste de travail",
+    "printer": "Imprimante",
+    "hard-drive": "Stockage",
+    "server": "Serveur",
+    "network": "Réseau",
+    "wifi": "Wi-Fi",
+    "app-window": "Logiciel",
+    "mail": "E-mail",
+    "phone": "Téléphone",
+    "folder-open": "Fichiers partagés",
+    "badge-help": "Aide",
+    "clear": "Effacer l'icône"
+  },
+  "messages": {
+    "success": {
+      "definitionDuplicated": "Définition dupliquée",
+      "definitionArchived": "Définition archivée",
+      "definitionUnarchived": "Définition désarchivée",
+      "draftCreated": "Brouillon créé",
+      "draftCreatedFromExample": "Brouillon créé à partir de l'exemple : {{name}}",
+      "draftSaved": "Brouillon enregistré",
+      "definitionPublished": "Définition publiée",
+      "basicsUpdated": "Informations de base mises à jour",
+      "linkedServiceCleared": "Service lié effacé",
+      "linkedService": "{{name}} lié",
+      "fieldAdded": "Champ ajouté",
+      "fieldRemoved": "Champ supprimé",
+      "executionProviderUpdated": "Fournisseur d'exécution mis à jour",
+      "formBehaviorProviderUpdated": "Fournisseur de comportement du formulaire mis à jour",
+      "visibilityProviderUpdated": "Fournisseur de visibilité mis à jour",
+      "ticketRoutingUpdated": "Configuration du routage des tickets mise à jour",
+      "workflowConfigurationUpdated": "Configuration du workflow mise à jour",
+      "formBehaviorConfigUpdated": "Configuration du comportement du formulaire mise à jour",
+      "visibilityConfigUpdated": "Configuration de la visibilité mise à jour"
+    },
+    "error": {
+      "loadFailed": "Échec du chargement des demandes de service",
+      "duplicateFailed": "Échec de la duplication de la définition",
+      "archiveFailed": "Échec de l'archivage de la définition",
+      "unarchiveFailed": "Échec du désarchivage de la définition",
+      "createDraftFailed": "Échec de la création du brouillon",
+      "createFromExampleFailed": "Échec de la création à partir de l'exemple",
+      "saveDraftFailed": "Échec de l'enregistrement du brouillon",
+      "publishFailed": "Échec de la publication de la définition",
+      "publishBlockedByValidation": "Publication impossible pour le moment – veuillez corriger les {{count}} problème(s) de validation listé(s) dans la section \"Validation de publication\" ci-dessous.",
+      "basicsUpdateFailed": "Échec de la mise à jour des informations de base",
+      "addFieldFailed": "Échec de l'ajout du champ de formulaire",
+      "executionProviderUpdateFailed": "Échec de la mise à jour du fournisseur d'exécution",
+      "formBehaviorProviderUpdateFailed": "Échec de la mise à jour du fournisseur de comportement du formulaire",
+      "visibilityProviderUpdateFailed": "Échec de la mise à jour du fournisseur de visibilité",
+      "workflowMappingNotObject": "Le mappage des entrées du workflow doit être un objet JSON",
+      "workflowConfigurationInvalid": "Configuration JSON du workflow non valide",
+      "formBehaviorNotObject": "La configuration du comportement du formulaire doit être un objet JSON",
+      "formBehaviorInvalid": "JSON du comportement du formulaire non valide",
+      "visibilityNotObject": "La configuration de la visibilité doit être un objet JSON",
+      "visibilityInvalid": "JSON de visibilité non valide"
+    }
+  }
+}

@@ -6,6 +6,7 @@ import { Badge, BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useRouter } from 'next/navigation';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Simple Spinner component
 function Spinner({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
@@ -25,6 +26,7 @@ function Pagination({
   totalPages: number;
   onPageChange: (page: number) => void
 }) {
+  const { t } = useTranslation('msp/workflows');
   return (
     <div className="flex items-center space-x-2">
       <Button
@@ -34,10 +36,14 @@ function Pagination({
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage <= 1}
       >
-        Previous
+        {t('taskList.pagination.previous', { defaultValue: 'Previous' })}
       </Button>
       <span className="text-sm">
-        Page {currentPage} of {totalPages}
+        {t('taskList.pagination.pageLabel', {
+          defaultValue: 'Page {{current}} of {{total}}',
+          current: currentPage,
+          total: totalPages,
+        })}
       </span>
       <Button
         id="next-page"
@@ -46,7 +52,7 @@ function Pagination({
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage >= totalPages}
       >
-        Next
+        {t('taskList.pagination.next', { defaultValue: 'Next' })}
       </Button>
     </div>
   );
@@ -76,6 +82,8 @@ export function TaskList({
   showPagination = true,
   className = ''
 }: TaskListProps) {
+  const { t } = useTranslation('msp/workflows');
+  const { formatDate } = useFormatters();
   const router = useRouter();
   const [tasks, setTasks] = useState<TaskDetails[]>([]);
   const [loading, setLoading] = useState(true);
@@ -104,7 +112,7 @@ export function TaskList({
       setTasks(result.tasks);
       setTotalPages(result.totalPages);
     } catch (err) {
-      setError('Failed to load tasks. Please try again.');
+      setError(t('taskList.errors.loadFailed', { defaultValue: 'Failed to load tasks. Please try again.' }));
       console.error('Error fetching tasks:', err);
     } finally {
       setLoading(false);
@@ -124,7 +132,10 @@ export function TaskList({
           : task
       ));
     } catch (err) {
-      setError(`Failed to claim task: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setError(t('taskList.errors.claimFailed', {
+        defaultValue: 'Failed to claim task: {{error}}',
+        error: err instanceof Error ? err.message : t('taskList.errors.unknown', { defaultValue: 'Unknown error' }),
+      }));
       console.error('Error claiming task:', err);
     } finally {
       setActionInProgress(null);
@@ -144,7 +155,10 @@ export function TaskList({
           : task
       ));
     } catch (err) {
-      setError(`Failed to unclaim task: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setError(t('taskList.errors.unclaimFailed', {
+        defaultValue: 'Failed to unclaim task: {{error}}',
+        error: err instanceof Error ? err.message : t('taskList.errors.unknown', { defaultValue: 'Unknown error' }),
+      }));
       console.error('Error unclaiming task:', err);
     } finally {
       setActionInProgress(null);
@@ -191,22 +205,17 @@ export function TaskList({
 
   // Format due date
   const formatDueDate = (dueDate?: string) => {
-    if (!dueDate) return 'No due date';
-    
+    if (!dueDate) return t('taskList.noDueDate', { defaultValue: 'No due date' });
+
     const date = new Date(dueDate);
     const now = new Date();
     const isOverdue = date < now;
-    
-    // Format: Mar 7, 2025
-    const formatted = date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-    
+
+    const formatted = formatDate(date, { month: 'short', day: 'numeric', year: 'numeric' });
+
     return (
       <span className={isOverdue ? 'text-destructive font-medium' : ''}>
-        {formatted} {isOverdue && '(Overdue)'}
+        {formatted} {isOverdue && t('taskList.overdueSuffix', { defaultValue: '(Overdue)' })}
       </span>
     );
   };
@@ -257,7 +266,7 @@ export function TaskList({
           }}
           disabled={isActionDisabled}
         >
-          {isThisTaskInProgress ? <Spinner size="sm" /> : 'Claim'}
+          {isThisTaskInProgress ? <Spinner size="sm" /> : t('taskList.actions.claim', { defaultValue: 'Claim' })}
         </Button>
       );
     }
@@ -274,7 +283,7 @@ export function TaskList({
           }}
           disabled={isActionDisabled}
         >
-          {isThisTaskInProgress ? <Spinner size="sm" /> : 'Unclaim'}
+          {isThisTaskInProgress ? <Spinner size="sm" /> : t('taskList.actions.unclaim', { defaultValue: 'Unclaim' })}
         </Button>
       );
     }
@@ -286,7 +295,7 @@ export function TaskList({
   if (!loading && tasks.length === 0) {
     return (
       <div className={`p-4 text-center ${className}`}>
-        <p className="text-gray-500">No tasks found</p>
+        <p className="text-gray-500">{t('taskList.empty', { defaultValue: 'No tasks found' })}</p>
       </div>
     );
   }
@@ -325,7 +334,7 @@ export function TaskList({
                       {renderTaskStatus(task.status)}
                       {task.dueDate && (
                         <div className="text-sm text-gray-500">
-                          Due: {formatDueDate(task.dueDate)}
+                          {t('taskList.duePrefix', { defaultValue: 'Due:' })} {formatDueDate(task.dueDate)}
                         </div>
                       )}
                     </div>

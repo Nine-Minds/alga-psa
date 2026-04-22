@@ -24,7 +24,7 @@
       "active": "Actif",
       "inactive": "Inactif",
       "loading": "Chargement...",
-      "na": "N/A",
+      "na": "S/O",
       "none": "Aucun"
     },
     "no": "Non",
@@ -290,7 +290,7 @@
       "mobileDevice": "Détails de l'appareil mobile",
       "printer": "Détails de l'imprimante",
       "operatingSystem": "Système opérateur",
-      "cpu": "CPU",
+      "cpu": "UC",
       "ram": "RAM",
       "storage": "Stockage",
       "gpu": "GPU",
@@ -305,7 +305,7 @@
       "virtualized": "Virtualisé",
       "primaryIp": "IP principale",
       "hypervisor": "Hyperviseur",
-      "os": "OS",
+      "os": "Système",
       "model": "Modèle",
       "imei": "IMEI",
       "phoneNumber": "Numéro de téléphone",
@@ -380,7 +380,7 @@
       "client": "Client",
       "purchaseDate": "Date d'achat",
       "warrantyEnd": "Fin de garantie",
-      "cpu": "CPU",
+      "cpu": "UC",
       "ram": "RAM",
       "storage": "Stockage",
       "gpu": "GPU",
@@ -491,7 +491,7 @@
     },
     "fields": {
       "customLocationOption": "Emplacement personnalisé",
-      "osType": "OS Type",
+      "osType": "Type de système",
       "osVersion": "Version OS",
       "cpuModel": "CPU Modèle",
       "cpuCores": "CPU Noyaux",
@@ -760,7 +760,7 @@
       "requiredFields": "Veuillez remplir les champs obligatoires :"
     },
     "fields": {
-      "osType": "OS Type",
+      "osType": "Type de système",
       "osVersion": "Version OS",
       "deviceType": "Type d'appareil",
       "managementIp": "IP de gestion",
@@ -868,7 +868,7 @@
     "title": "Spécifications matérielles",
     "description": "Panneau de spécifications matérielles couvrant CPU, la mémoire, le stockage et les métadonnées de l'appareil",
     "fields": {
-      "cpu": "CPU",
+      "cpu": "UC",
       "ram": "RAM",
       "storage": "Stockage",
       "utilization": "Utilisation"
@@ -1183,6 +1183,14 @@
     "totalItems": "Total des articles : {{count}}",
     "values": {
       "unknown": "Inconnu"
+    }
+  },
+  "alerts": {
+    "messages": {
+      "alertAcknowledged": "Alerte accusée de réception",
+      "acknowledgeFailed": "Échec de l'accusé de réception de l'alerte",
+      "ticketCreated": "Ticket créé avec succès",
+      "ticketCreateFailed": "Échec de la création du ticket"
     }
   }
 }

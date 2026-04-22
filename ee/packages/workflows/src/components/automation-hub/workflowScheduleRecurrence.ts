@@ -7,6 +7,33 @@ export type RecurringBuilderState = {
   dayOfMonth: string;
 };
 
+export type LocalizedWeekdayOption = {
+  value: number;
+  shortLabel: string;
+  longLabel: string;
+};
+
+export type RecurringBuilderLocalization = {
+  weekdayOptions?: LocalizedWeekdayOption[];
+  invalidTimeMessage?: string;
+  noWeekdayMessage?: string;
+  invalidDayOfMonthMessage?: string;
+  andWord?: string;
+  defaultTimezoneLabel?: string;
+  formatTimeLabel?: (time: string) => string;
+  formatDailySummary?: (args: { timeLabel: string; timezoneLabel: string }) => string;
+  formatWeeklySummary?: (args: {
+    weekdayLabels: string;
+    timeLabel: string;
+    timezoneLabel: string;
+  }) => string;
+  formatMonthlySummary?: (args: {
+    dayOfMonth: number;
+    timeLabel: string;
+    timezoneLabel: string;
+  }) => string;
+};
+
 export const WEEKDAY_OPTIONS: Array<{ value: number; shortLabel: string; longLabel: string }> = [
   { value: 1, shortLabel: 'Mon', longLabel: 'Monday' },
   { value: 2, shortLabel: 'Tue', longLabel: 'Tuesday' },
@@ -111,28 +138,29 @@ const expandCronDayOfWeek = (value: string): number[] | null => {
   return normalizeWeekdays(Array.from(days));
 };
 
-const joinWithAnd = (values: string[]): string => {
+const joinWithAnd = (values: string[], andWord = 'and'): string => {
   if (values.length === 0) return '';
   if (values.length === 1) return values[0] ?? '';
-  if (values.length === 2) return `${values[0]} and ${values[1]}`;
-  return `${values.slice(0, -1).join(', ')}, and ${values[values.length - 1]}`;
+  if (values.length === 2) return `${values[0]} ${andWord} ${values[1]}`;
+  return `${values.slice(0, -1).join(', ')}, ${andWord} ${values[values.length - 1]}`;
 };
 
 export const getRecurringBuilderValidationMessage = (
-  state: RecurringBuilderState
+  state: RecurringBuilderState,
+  localization: RecurringBuilderLocalization = {}
 ): string | null => {
   if (!parseTime(state.time)) {
-    return 'Choose a valid time.';
+    return localization.invalidTimeMessage ?? 'Choose a valid time.';
   }
 
   if (state.frequency === 'weekly' && normalizeWeekdays(state.weekdays).length === 0) {
-    return 'Choose at least one weekday.';
+    return localization.noWeekdayMessage ?? 'Choose at least one weekday.';
   }
 
   if (state.frequency === 'monthly') {
     const dayOfMonth = parseCronNumber(state.dayOfMonth, 1, 31);
     if (dayOfMonth == null) {
-      return 'Choose a day of month between 1 and 31.';
+      return localization.invalidDayOfMonthMessage ?? 'Choose a day of month between 1 and 31.';
     }
   }
 
@@ -235,25 +263,36 @@ const formatTimeLabel = (time: string): string => {
 
 export const getRecurringBuilderSummary = (
   state: RecurringBuilderState,
-  timezone: string
+  timezone: string,
+  localization: RecurringBuilderLocalization = {}
 ): string | null => {
-  if (getRecurringBuilderValidationMessage(state)) {
+  if (getRecurringBuilderValidationMessage(state, localization)) {
     return null;
   }
 
-  const timeLabel = formatTimeLabel(state.time);
-  const timezoneLabel = timezone.trim() || 'UTC';
+  const timeLabel = localization.formatTimeLabel?.(state.time) ?? formatTimeLabel(state.time);
+  const timezoneLabel = timezone.trim() || localization.defaultTimezoneLabel || 'UTC';
+  const weekdayOptions = localization.weekdayOptions ?? WEEKDAY_OPTIONS;
 
   if (state.frequency === 'daily') {
-    return `Runs every day at ${timeLabel} ${timezoneLabel}`;
+    return localization.formatDailySummary?.({ timeLabel, timezoneLabel })
+      ?? `Runs every day at ${timeLabel} ${timezoneLabel}`;
   }
 
   if (state.frequency === 'weekly') {
     const weekdayLabels = normalizeWeekdays(state.weekdays).map(
-      (weekday) => WEEKDAY_OPTIONS.find((option) => option.value === weekday)?.longLabel ?? String(weekday)
+      (weekday) => weekdayOptions.find((option) => option.value === weekday)?.longLabel ?? String(weekday)
     );
-    return `Runs every ${joinWithAnd(weekdayLabels)} at ${timeLabel} ${timezoneLabel}`;
+    return localization.formatWeeklySummary?.({
+      weekdayLabels: joinWithAnd(weekdayLabels, localization.andWord),
+      timeLabel,
+      timezoneLabel,
+    }) ?? `Runs every ${joinWithAnd(weekdayLabels, localization.andWord)} at ${timeLabel} ${timezoneLabel}`;
   }
 
-  return `Runs on day ${Number(state.dayOfMonth)} of each month at ${timeLabel} ${timezoneLabel}`;
+  return localization.formatMonthlySummary?.({
+    dayOfMonth: Number(state.dayOfMonth),
+    timeLabel,
+    timezoneLabel,
+  }) ?? `Runs on day ${Number(state.dayOfMonth)} of each month at ${timeLabel} ${timezoneLabel}`;
 };

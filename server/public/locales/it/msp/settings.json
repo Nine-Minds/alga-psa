@@ -17,7 +17,7 @@
     "billing": "Fatturazione",
     "secrets": "Segreti",
     "importExport": "Importa/Esporta",
-    "email": "Email",
+    "email": "E-mail",
     "integrations": "Integrazioni",
     "extensions": "Estensioni"
   },
@@ -153,7 +153,7 @@
       "fields": {
         "firstName": "Nome",
         "lastName": "Cognome",
-        "email": "Email",
+        "email": "E-mail",
         "client": "Cliente",
         "clientOptional": "(opzionale)",
         "primaryRole": "Ruolo principale",
@@ -183,7 +183,7 @@
     "table": {
       "firstName": "Nome",
       "lastName": "Cognome",
-      "email": "Email",
+      "email": "E-mail",
       "client": "Cliente",
       "role": "Ruolo",
       "lastLogin": "Ultimo accesso",
@@ -239,7 +239,7 @@
         "placeholder": "Inserisca il cognome"
       },
       "email": {
-        "label": "Email",
+        "label": "E-mail",
         "placeholder": "Inserisca l'email"
       },
       "reportsTo": {
@@ -685,27 +685,6 @@
     }
   },
   "clientPortal": {
-    "language": {
-      "title": "Impostazioni lingua",
-      "description": "Configuri le impostazioni predefinite della lingua per il Suo portale clienti. Queste impostazioni si applicano a tutti gli utenti e clienti, salvo diversa indicazione.",
-      "fields": {
-        "defaultLanguage": "Lingua predefinita",
-        "availableLanguages": "Lingue disponibili"
-      },
-      "help": {
-        "defaultLanguage": "Questa sara la lingua predefinita per tutti gli utenti del portale clienti e le notifiche email, salvo diversa indicazione nelle impostazioni del cliente o nelle preferenze individuali dell'utente",
-        "availableLanguages": "Selezioni le lingue disponibili tra cui gli utenti possono scegliere"
-      },
-      "hierarchy": {
-        "title": "Gerarchia delle preferenze linguistiche",
-        "description": "Questa gerarchia si applica sia all'interfaccia del portale clienti che alle notifiche email inviate agli utenti del portale clienti:",
-        "userPreference": "Preferenza individuale dell'utente (massima priorita)",
-        "clientDefault": "Lingua predefinita del cliente",
-        "orgDefault": "Predefinito dell'organizzazione (configurato qui)",
-        "systemDefault": "Predefinito del sistema (inglese)",
-        "note": "Nota: gli utenti MSP interni ricevono sempre le email in inglese"
-      }
-    },
     "branding": {
       "title": "Branding e aspetto",
       "description": "Personalizzi l'aspetto del Suo portale clienti con il marchio della Sua azienda.",
@@ -781,7 +760,7 @@
       "signIn": {
         "title": "Accedi",
         "description": "Inserisca le Sue credenziali per accedere al Suo account.",
-        "email": "Email",
+        "email": "E-mail",
         "emailPlaceholder": "Inserisca la Sua email",
         "password": "Password",
         "passwordPlaceholder": "Inserisca la Sua password",
@@ -791,21 +770,15 @@
     }
   },
   "mspLanguage": {
-    "title": "Lingua",
-    "description": "Configuri le impostazioni predefinite della lingua per il portale MSP. Queste impostazioni si applicano a tutti gli utenti MSP, salvo diversa indicazione nelle preferenze individuali.",
+    "title": "Lingua dell’organizzazione",
+    "description": "Imposta la lingua predefinita per l'intera organizzazione: personale MSP, utenti del portale cliente e notifiche email. Ogni utente o cliente può sovrascriverla individualmente.",
     "fields": {
       "defaultLanguage": "Lingua predefinita",
       "availableLanguages": "Lingue disponibili"
     },
     "help": {
-      "defaultLanguage": "Questa sara la lingua predefinita per tutti gli utenti del portale MSP, salvo diversa indicazione nelle preferenze personali.",
-      "availableLanguages": "Selezioni le lingue disponibili tra cui gli utenti MSP possono scegliere"
-    },
-    "hierarchy": {
-      "title": "Gerarchia delle preferenze linguistiche",
-      "userPreference": "Preferenza individuale dell'utente (massima priorita)",
-      "orgDefault": "Predefinito dell'organizzazione (configurato qui)",
-      "systemDefault": "Predefinito del sistema (inglese)"
+      "defaultLanguage": "Applicata ovunque, salvo che la preferenza personale di un utente o la lingua configurata per un cliente specifico la sovrascriva.",
+      "availableLanguages": "Seleziona tra quali lingue possono scegliere gli utenti."
     }
   },
   "notifications": {
@@ -1116,7 +1089,7 @@
       },
       "table": {
         "user": "Utente",
-        "email": "Email",
+        "email": "E-mail",
         "roles": "Ruoli",
         "actions": "Azioni"
       },
@@ -1197,7 +1170,7 @@
         "label": "Cognome *"
       },
       "email": {
-        "label": "Email *"
+        "label": "E-mail *"
       },
       "phoneNumber": {
         "label": "Numero di telefono"
@@ -1212,7 +1185,7 @@
     "notifications": {
       "title": "Preferenze di notifica",
       "viewSwitcher": {
-        "email": "Email",
+        "email": "E-mail",
         "internal": "Interne"
       }
     },
@@ -1347,5 +1320,39 @@
     "badge": {
       "inactive": "Inattivo"
     }
+  },
+  "permissions": {
+    "messages": {
+      "adminLocked": "I permessi del ruolo amministratore non possono essere modificati",
+      "permissionsUpdated": "Permessi aggiornati con successo"
+    }
+  },
+  "sla": {
+    "messages": {
+      "scheduleNotFound": "Pianificazione non trovata",
+      "scheduleUpdated": "Pianificazione aggiornata con successo",
+      "scheduleCreated": "Pianificazione creata con successo",
+      "scheduleDeleted": "Pianificazione eliminata con successo",
+      "defaultHoursCreated": "Pianificazione orari di lavoro predefinita creata",
+      "scheduleRequired": "Seleziona prima una pianificazione",
+      "holidayNameRequired": "Il nome della festività è obbligatorio",
+      "holidayDateRequired": "La data della festività è obbligatoria",
+      "holidayAdded": "Festività aggiunta con successo",
+      "holidayDeleted": "Festività eliminata con successo"
+    }
+  },
+  "clientPortalLanguage": {
+    "title": "Lingua del portale cliente",
+    "description": "Sovrascrivi la lingua predefinita solo per gli utenti del portale cliente. Il personale MSP mantiene l'impostazione predefinita dell'organizzazione.",
+    "fields": {
+      "defaultLanguage": "Lingua predefinita"
+    },
+    "help": {
+      "defaultLanguage": "Quando impostata, gli utenti del portale cliente vedono questa lingua, salvo che la loro preferenza individuale o la lingua configurata per il loro cliente la sovrascriva."
+    },
+    "placeholder": "Seleziona una lingua",
+    "inheritOption": "Usa l'impostazione predefinita dell'organizzazione ({{language}})",
+    "unsetHint": "Per rimuovere la sovrascrittura del portale cliente, modifica l'impostazione predefinita dell'organizzazione in Impostazioni → Lingua.",
+    "updated": "Lingua predefinita del portale cliente aggiornata a {{language}}"
   }
 }

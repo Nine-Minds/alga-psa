@@ -165,5 +165,12 @@
       "month": "month",
       "year": "year"
     }
+  },
+  "workflowDesigner": {
+    "enterpriseHeading": "Enterprise Feature",
+    "unavailable": "Workflow designer requires Enterprise Edition. Please upgrade to access this feature."
+  },
+  "runStudio": {
+    "unavailable": "Workflow Run Studio is not available in this edition. (runId: {{runId}})"
   }
 }

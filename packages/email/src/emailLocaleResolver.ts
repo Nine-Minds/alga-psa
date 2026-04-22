@@ -2,35 +2,61 @@
  * Email Locale Resolver
  *
  * Resolves the appropriate locale for email notifications sent to users.
- * This implements the same hierarchy as the client portal i18n system,
- * ensuring emails are sent in the user's preferred language.
  *
- * Hierarchy (for client portal users):
- * 1. User preference (user_preferences table) - only if userId is provided
- * 2. Client preference (clients.properties.defaultLocale) - checked if clientId is provided
- * 3. Tenant client portal default (tenant_settings.settings.clientPortal.defaultLocale)
- * 4. Tenant default (tenant_settings.settings.defaultLocale)
+ * Hierarchy:
+ * 1. User preference (user_preferences table) — only if userId is provided
+ * 2. Client-specific default (clients.properties.defaultLocale) — client-portal users / portal invitations
+ * 3. Client-portal default (settings.clientPortal.defaultLocale) — client-portal users only
+ * 4. Organization default (settings.defaultLocale) — applies to everyone
  * 5. System default ('en')
  *
- * For internal/MSP users, only checks:
- * 1. User preference
- * 2. Tenant default
- * 3. System default
+ * Internal (MSP staff) users skip steps 2 and 3 and resolve directly to the
+ * organization default. Legacy settings.mspPortal.defaultLocale (from the
+ * retired split UI) is consulted only if the org default is unset.
  *
- * Special handling for portal invitations:
- * When sending portal invitations to contacts without user accounts yet,
- * provide the clientId to ensure the client's defaultLocale is respected.
+ * Feature-flag gate: when msp-i18n-enabled is off, internal users are forced
+ * to English regardless of the hierarchy. This matches the UI rollout so MSP
+ * staff don't start receiving non-English emails before the flag is flipped.
+ *
+ * Special handling for portal invitations: when sending invitations to
+ * contacts without user accounts yet, provide the clientId so the client's
+ * defaultLocale is respected.
  */
 
 import { getConnection } from '@alga-psa/db';
 import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from './lib/localeConfig';
 import logger from '@alga-psa/core/logger';
+import { featureFlags } from '@alga-psa/core/server';
 
 export interface EmailRecipient {
   email: string;
   userId?: string;
   userType?: 'client' | 'internal';
   clientId?: string;
+}
+
+/**
+ * Returns true when MSP i18n is enabled for this tenant/user. When disabled,
+ * internal (MSP) users must receive English emails regardless of preferences,
+ * matching the UI rollout gated by I18nWrapper.
+ */
+async function isMspI18nEnabled(
+  tenantId: string,
+  userId?: string
+): Promise<boolean> {
+  try {
+    return await featureFlags.isEnabled('msp-i18n-enabled', {
+      tenantId,
+      userId,
+    });
+  } catch (error) {
+    logger.warn('[EmailLocaleResolver] msp-i18n-enabled evaluation failed; defaulting to disabled', {
+      error: error instanceof Error ? error.message : String(error),
+      tenantId,
+      userId,
+    });
+    return false;
+  }
 }
 
 /**
@@ -79,19 +105,32 @@ export async function resolveEmailLocale(
     let userType = recipient.userType;
     let clientId = recipient.clientId;
 
+    // Resolve userType early so we can feature-flag gate internal users
+    if (recipient.userId && !userType) {
+      const user = await knex('users')
+        .where({
+          user_id: recipient.userId,
+          tenant: tenantId
+        })
+        .first();
+
+      userType = user?.user_type || 'internal';
+    }
+
+    // Internal (MSP) users: force English while msp-i18n-enabled is off
+    if (userType === 'internal') {
+      const enabled = await isMspI18nEnabled(tenantId, recipient.userId);
+      if (!enabled) {
+        logger.debug('[EmailLocaleResolver] msp-i18n-enabled is off; forcing English for internal user', {
+          tenantId,
+          userId: recipient.userId
+        });
+        return LOCALE_CONFIG.defaultLocale as SupportedLocale;
+      }
+    }
+
     // If we have a userId, check user preference and get user details
     if (recipient.userId) {
-      if (!userType) {
-        const user = await knex('users')
-          .where({
-            user_id: recipient.userId,
-            tenant: tenantId
-          })
-          .first();
-
-        userType = user?.user_type || 'internal';
-      }
-
       // 1. Check user preference
       const userPref = await knex('user_preferences')
         .where({
@@ -119,40 +158,35 @@ export async function resolveEmailLocale(
       }
     }
 
-    // For client users (or when clientId is provided without userId), check client and client portal settings
-    // This handles portal invitations sent to contacts who don't have user accounts yet
-    if (userType === 'client' || clientId) {
-      // 2. Check client preference
-      if (clientId) {
-        const client = await knex('clients')
-          .where({
-            client_id: clientId,
-            tenant: tenantId
-          })
-          .first();
+    // 2. Client-specific default (client-portal users / portal invitations)
+    if ((userType === 'client' || clientId) && clientId) {
+      const client = await knex('clients')
+        .where({ client_id: clientId, tenant: tenantId })
+        .first();
 
-        const clientLocale = client?.properties?.defaultLocale;
-        if (clientLocale && isSupportedLocale(clientLocale)) {
-          logger.debug('[EmailLocaleResolver] Using client preference:', { locale: clientLocale, clientId });
-          return clientLocale;
-        }
+      const clientLocale = client?.properties?.defaultLocale;
+      if (clientLocale && isSupportedLocale(clientLocale)) {
+        logger.debug('[EmailLocaleResolver] Using client preference:', { locale: clientLocale, clientId });
+        return clientLocale;
       }
+    }
 
-      // 3. Check tenant client portal default
+    // 3. Client-portal default (client-portal users only)
+    if (userType === 'client' || clientId) {
       const tenantSettings = await knex('tenant_settings')
         .where({ tenant: tenantId })
         .first();
 
       const clientPortalLocale = tenantSettings?.settings?.clientPortal?.defaultLocale;
       if (clientPortalLocale && isSupportedLocale(clientPortalLocale)) {
-        logger.debug('[EmailLocaleResolver] Using tenant client portal default:', { locale: clientPortalLocale });
+        logger.debug('[EmailLocaleResolver] Using client-portal default:', { locale: clientPortalLocale });
         return clientPortalLocale;
       }
     }
 
-    // 4. Check tenant default (for both internal and client users)
+    // 4. Organization default (applies to everyone; legacy MSP fallback inside)
     const defaultLocale = await getTenantDefaultLocale(tenantId, userType || 'client');
-    logger.debug('[EmailLocaleResolver] Using tenant/system default:', { locale: defaultLocale, userType: userType || 'client' });
+    logger.debug('[EmailLocaleResolver] Using org/system default:', { locale: defaultLocale, userType: userType || 'client' });
     return defaultLocale;
 
   } catch (error) {
@@ -163,7 +197,8 @@ export async function resolveEmailLocale(
 }
 
 /**
- * Get tenant default locale based on user type
+ * Get the org-wide default locale with legacy MSP fallback for internal users.
+ * (Client-portal default is handled explicitly at resolveEmailLocale step 3.)
  */
 export async function getTenantDefaultLocale(
   tenantId: string,
@@ -175,24 +210,22 @@ export async function getTenantDefaultLocale(
       .where({ tenant: tenantId })
       .first();
 
-    // For client users, prefer client portal default
-    if (userType === 'client') {
-      const clientPortalLocale = tenantSettings?.settings?.clientPortal?.defaultLocale;
-      if (clientPortalLocale && isSupportedLocale(clientPortalLocale)) {
-        return clientPortalLocale;
-      }
-    }
-
-    // Check tenant-wide default
     const tenantDefaultLocale = tenantSettings?.settings?.defaultLocale;
     if (tenantDefaultLocale && isSupportedLocale(tenantDefaultLocale)) {
       return tenantDefaultLocale;
+    }
+
+    // Legacy MSP-only default (retired split UI)
+    if (userType === 'internal') {
+      const legacyMspLocale = tenantSettings?.settings?.mspPortal?.defaultLocale;
+      if (legacyMspLocale && isSupportedLocale(legacyMspLocale)) {
+        return legacyMspLocale;
+      }
     }
   } catch (error) {
     logger.error('[EmailLocaleResolver] Error getting tenant default locale:', { error, tenantId });
   }
 
-  // System default
   return LOCALE_CONFIG.defaultLocale as SupportedLocale;
 }
 

@@ -305,7 +305,7 @@
       "virtualized": "Virtualizzato",
       "primaryIp": "IP primario",
       "hypervisor": "Hypervisor",
-      "os": "OS",
+      "os": "SO",
       "model": "Modello",
       "imei": "IMEI",
       "phoneNumber": "Numero di telefono",
@@ -1183,6 +1183,14 @@
     "totalItems": "Articoli totali: {{count}}",
     "values": {
       "unknown": "Sconosciuto"
+    }
+  },
+  "alerts": {
+    "messages": {
+      "alertAcknowledged": "Avviso confermato",
+      "acknowledgeFailed": "Impossibile confermare l'avviso",
+      "ticketCreated": "Ticket creato con successo",
+      "ticketCreateFailed": "Impossibile creare il ticket"
     }
   }
 }

@@ -252,6 +252,24 @@ const TEMPLATES = [
       pl: { title: 'Przypisano dodatkowego agenta wsparcia', message: '{{additionalAgentName}} zosta\u0142(a) dodany(a) do pomocy przy Twoim zg\u0142oszeniu #{{ticketId}} "{{ticketTitle}}"' },
     },
   },
+
+  // ── ticket-agent-assigned-client ─────────────────────────────────────
+  // Client-portal in-app notification paired with the client-facing
+  // ticket-agent-assigned-client email. Sent when an individual agent is
+  // assigned to an existing ticket (first assignment, post-creation).
+  {
+    templateName: 'ticket-agent-assigned-client',
+    subtypeName: 'ticket-agent-assigned-client',
+    translations: {
+      en: { title: 'Your Ticket Is Being Worked On', message: '{{assignedToName}} has been assigned to your ticket #{{ticketId}} "{{ticketTitle}}"' },
+      fr: { title: 'Votre ticket est en cours de traitement', message: '{{assignedToName}} a \u00e9t\u00e9 assign\u00e9 \u00e0 votre ticket #{{ticketId}} "{{ticketTitle}}"' },
+      es: { title: 'Su ticket est\u00e1 siendo atendido', message: '{{assignedToName}} ha sido asignado a su ticket #{{ticketId}} "{{ticketTitle}}"' },
+      de: { title: 'Ihr Ticket wird bearbeitet', message: '{{assignedToName}} wurde Ihrem Ticket #{{ticketId}} "{{ticketTitle}}" zugewiesen' },
+      nl: { title: 'Uw ticket wordt behandeld', message: '{{assignedToName}} is toegewezen aan uw ticket #{{ticketId}} "{{ticketTitle}}"' },
+      it: { title: 'Il suo ticket \u00e8 in lavorazione', message: '{{assignedToName}} \u00e8 stato assegnato al suo ticket #{{ticketId}} "{{ticketTitle}}"' },
+      pl: { title: 'Twoje zg\u0142oszenie jest w trakcie obs\u0142ugi', message: '{{assignedToName}} zosta\u0142(a) przypisany(a) do Twojego zg\u0142oszenia #{{ticketId}} "{{ticketTitle}}"' },
+    },
+  },
 ];
 
 module.exports = { TEMPLATES };

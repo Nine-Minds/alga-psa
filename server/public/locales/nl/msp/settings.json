@@ -16,7 +16,7 @@
     "timeEntry": "Tijdregistratie",
     "billing": "Facturatie",
     "secrets": "Geheimen",
-    "importExport": "Import/Export",
+    "importExport": "Importeren/Exporteren",
     "email": "E-mail",
     "integrations": "Integraties",
     "extensions": "Extensies"
@@ -417,7 +417,7 @@
       },
       "statusLabels": {
         "closed": "Gesloten",
-        "open": "Open",
+        "open": "Openen",
         "closedHelp": "Tickets met deze status worden als gesloten gemarkeerd",
         "openHelp": "Tickets met deze status blijven open",
         "defaultHelp": "Standaardstatus voor nieuwe tickets vanuit het klantenportaal"
@@ -685,27 +685,6 @@
     }
   },
   "clientPortal": {
-    "language": {
-      "title": "Taalinstellingen",
-      "description": "Configureer de standaard taalinstellingen voor uw klantenportaal. Deze instellingen gelden voor alle gebruikers en klanten tenzij ze worden overschreven.",
-      "fields": {
-        "defaultLanguage": "Standaardtaal",
-        "availableLanguages": "Beschikbare talen"
-      },
-      "help": {
-        "defaultLanguage": "Dit wordt de standaardtaal voor alle klantenportaalgebruikers en e-mailmeldingen tenzij overschreven door een klantinstelling of individuele gebruikersvoorkeur",
-        "availableLanguages": "Selecteer welke talen beschikbaar zijn voor gebruikers om uit te kiezen"
-      },
-      "hierarchy": {
-        "title": "Taalvoorkeurhiërarchie",
-        "description": "Deze hiërarchie is van toepassing op zowel de klantenportaalinterface als e-mailmeldingen die naar klantenportaalgebruikers worden verzonden:",
-        "userPreference": "Individuele gebruikersvoorkeur (hoogste prioriteit)",
-        "clientDefault": "Standaardtaal van de klant",
-        "orgDefault": "Standaard van de organisatie (hier geconfigureerd)",
-        "systemDefault": "Systeemstandaard (Engels)",
-        "note": "Opmerking: Interne MSP-gebruikers ontvangen e-mails altijd in het Engels"
-      }
-    },
     "branding": {
       "title": "Huisstijl en uiterlijk",
       "description": "Pas het uiterlijk van uw klantenportaal aan met uw bedrijfshuisstijl.",
@@ -744,7 +723,7 @@
       "openTickets": "Open tickets",
       "activeProjects": "Actieve projecten",
       "invoices": "Facturen",
-      "urgent": "{{count}} urgent",
+      "urgent": "{{count}} dringend",
       "nearDeadline": "{{count}} bijna op deadline",
       "dueThisMonth": "Verschuldigd deze maand",
       "recentActivity": "Recente activiteit",
@@ -791,21 +770,15 @@
     }
   },
   "mspLanguage": {
-    "title": "Taal",
-    "description": "Configureer de standaard taalinstellingen voor het MSP-portaal. Deze instellingen gelden voor alle MSP-gebruikers tenzij ze worden overschreven door individuele voorkeuren.",
+    "title": "Organisatietaal",
+    "description": "Stel de standaardtaal voor de hele organisatie in — MSP-personeel, klantportaalgebruikers en e-mailmeldingen. Individuele gebruikers en klanten kunnen dit voor zichzelf overschrijven.",
     "fields": {
       "defaultLanguage": "Standaardtaal",
       "availableLanguages": "Beschikbare talen"
     },
     "help": {
-      "defaultLanguage": "Dit wordt de standaardtaal voor alle MSP-portaalgebruikers tenzij overschreven door hun persoonlijke voorkeur.",
-      "availableLanguages": "Selecteer welke talen beschikbaar zijn voor MSP-gebruikers om uit te kiezen"
-    },
-    "hierarchy": {
-      "title": "Taalvoorkeurhiërarchie",
-      "userPreference": "Individuele gebruikersvoorkeur (hoogste prioriteit)",
-      "orgDefault": "Standaard van de organisatie (hier geconfigureerd)",
-      "systemDefault": "Systeemstandaard (Engels)"
+      "defaultLanguage": "Overal toegepast, tenzij overschreven door de persoonlijke voorkeur van een gebruiker of de ingestelde taal van een specifieke klant.",
+      "availableLanguages": "Selecteer uit welke talen gebruikers kunnen kiezen."
     }
   },
   "notifications": {
@@ -1081,7 +1054,7 @@
     "tabs": {
       "roles": "Rollen",
       "sessions": "Sessies",
-      "sso": "Single Sign-On",
+      "sso": "Single sign-on",
       "permissions": "Machtigingen",
       "userRoles": "Gebruikersrollen",
       "policies": "Beleidsregels",
@@ -1181,7 +1154,7 @@
     "tabs": {
       "profile": "Profiel",
       "security": "Beveiliging",
-      "sso": "Single Sign-On",
+      "sso": "Single sign-on",
       "apiKeys": "API-sleutels",
       "notifications": "Meldingen",
       "calendar": "Agenda"
@@ -1347,5 +1320,39 @@
     "badge": {
       "inactive": "Inactief"
     }
+  },
+  "permissions": {
+    "messages": {
+      "adminLocked": "Machtigingen van de beheerdersrol kunnen niet worden gewijzigd",
+      "permissionsUpdated": "Machtigingen succesvol bijgewerkt"
+    }
+  },
+  "sla": {
+    "messages": {
+      "scheduleNotFound": "Schema niet gevonden",
+      "scheduleUpdated": "Schema succesvol bijgewerkt",
+      "scheduleCreated": "Schema succesvol aangemaakt",
+      "scheduleDeleted": "Schema succesvol verwijderd",
+      "defaultHoursCreated": "Standaard openingstijdenschema aangemaakt",
+      "scheduleRequired": "Selecteer eerst een schema",
+      "holidayNameRequired": "Naam van de feestdag is vereist",
+      "holidayDateRequired": "Datum van de feestdag is vereist",
+      "holidayAdded": "Feestdag succesvol toegevoegd",
+      "holidayDeleted": "Feestdag succesvol verwijderd"
+    }
+  },
+  "clientPortalLanguage": {
+    "title": "Klantportaaltaal",
+    "description": "Overschrijf de standaardtaal alleen voor klantportaalgebruikers. MSP-personeel behoudt de organisatiestandaard.",
+    "fields": {
+      "defaultLanguage": "Standaardtaal"
+    },
+    "help": {
+      "defaultLanguage": "Indien ingesteld, zien klantportaalgebruikers deze taal, tenzij overschreven door hun individuele voorkeur of de taal die voor hun klant is geconfigureerd."
+    },
+    "placeholder": "Selecteer een taal",
+    "inheritOption": "Organisatiestandaard gebruiken ({{language}})",
+    "unsetHint": "Om de klantportaaloverschrijving te verwijderen, wijzig de organisatiestandaard onder Instellingen → Taal.",
+    "updated": "Standaardtaal klantportaal bijgewerkt naar {{language}}"
   }
 }

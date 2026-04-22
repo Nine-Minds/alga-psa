@@ -14,6 +14,7 @@ import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { useActivityDrawer } from './ActivityDrawerProvider';
 import { useActivityCrossFeature } from '@alga-psa/ui/context';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ProjectsSectionProps {
   limit?: number;
@@ -21,6 +22,7 @@ interface ProjectsSectionProps {
 }
 
 export function ProjectsSection({ limit = 5, onViewAll }: ProjectsSectionProps) {
+  const { t } = useTranslation('msp/user-activities');
   const [activities, setActivities] = useState<ProjectTaskActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const { openActivityDrawer } = useActivityDrawer();
@@ -66,7 +68,7 @@ export function ProjectsSection({ limit = 5, onViewAll }: ProjectsSectionProps) 
       setActivities(sortedActivities.slice(0, limit));
     } catch (err) {
       console.error('Error loading project activities:', err);
-      setError('Failed to load project activities. Please try again later.');
+      setError(t('sections.projects.errors.loadFailed', { defaultValue: 'Failed to load project activities. Please try again later.' }));
     } finally {
       setLoading(false);
     }
@@ -142,7 +144,7 @@ export function ProjectsSection({ limit = 5, onViewAll }: ProjectsSectionProps) 
   return (
     <Card id="projects-activities-card">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle>Project Tasks</CardTitle>
+        <CardTitle>{t('sections.projects.title', { defaultValue: 'Project Tasks' })}</CardTitle>
         <div className="flex items-center gap-2">
           <Button
             id="refresh-projects-button"
@@ -150,9 +152,9 @@ export function ProjectsSection({ limit = 5, onViewAll }: ProjectsSectionProps) 
             size="sm"
             onClick={handleRefresh}
             disabled={loading}
-            aria-label="Refresh Project Tasks"
+            aria-label={t('sections.projects.ariaLabels.refresh', { defaultValue: 'Refresh Project Tasks' })}
           >
-            Refresh
+            {t('sections.projects.actions.refresh', { defaultValue: 'Refresh' })}
           </Button>
           {isFiltersActive() ? (
              <Button
@@ -164,7 +166,7 @@ export function ProjectsSection({ limit = 5, onViewAll }: ProjectsSectionProps) 
                className="gap-1"
              >
               <XCircle className="h-4 w-4" />
-              Reset
+              {t('sections.projects.actions.reset', { defaultValue: 'Reset' })}
             </Button>
 
            ) : (
@@ -174,9 +176,9 @@ export function ProjectsSection({ limit = 5, onViewAll }: ProjectsSectionProps) 
                size="sm"
                onClick={() => setIsFilterDialogOpen(true)}
                disabled={filterDataLoading || loading}
-               aria-label="Filter Project Tasks"
+               aria-label={t('sections.projects.ariaLabels.filter', { defaultValue: 'Filter Project Tasks' })}
              >
-               <Filter size={16} className="mr-1" /> Filter
+               <Filter size={16} className="mr-1" /> {t('sections.projects.actions.filter', { defaultValue: 'Filter' })}
              </Button>
            )}
           <Button
@@ -185,14 +187,14 @@ export function ProjectsSection({ limit = 5, onViewAll }: ProjectsSectionProps) 
             size="sm"
             onClick={onViewAll}
           >
-            View All
+            {t('sections.projects.actions.viewAll', { defaultValue: 'View All' })}
           </Button>
         </div>
       </CardHeader>
       <CardContent>
         {loading ? (
           <div className="flex justify-center items-center h-40">
-            <p className="text-gray-500">Loading project activities...</p>
+            <p className="text-gray-500">{t('sections.projects.states.loading', { defaultValue: 'Loading project activities...' })}</p>
           </div>
         ) : error ? (
           <div className="flex justify-center items-center h-40">
@@ -200,7 +202,7 @@ export function ProjectsSection({ limit = 5, onViewAll }: ProjectsSectionProps) 
           </div>
         ) : activities.length === 0 ? (
           <div className="flex justify-center items-center h-40">
-            <p className="text-gray-500">No project activities found</p>
+            <p className="text-gray-500">{t('sections.projects.states.empty', { defaultValue: 'No project activities found' })}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4">

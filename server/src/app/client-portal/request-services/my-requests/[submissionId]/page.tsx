@@ -1,6 +1,8 @@
 import React from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import BackNav from '@alga-psa/ui/components/BackNav';
 import { getMyServiceRequestSubmissionDetailAction } from '../actions';
 import { getSubmissionFieldDisplay } from '../../submissionFieldPresentation';
 
@@ -10,22 +12,26 @@ interface MyRequestDetailPageProps {
   }>;
 }
 
-function formatDateTime(value: Date | string): string {
+function formatDateTime(value: Date | string, unknownLabel: string): string {
   const date = typeof value === 'string' ? new Date(value) : value;
   if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
-    return 'Unknown';
+    return unknownLabel;
   }
   return date.toLocaleString();
 }
 
 export default async function MyRequestDetailPage(props: MyRequestDetailPageProps) {
   const { submissionId } = await props.params;
-  const submission = await getMyServiceRequestSubmissionDetailAction(submissionId);
+  const [submission, { t }] = await Promise.all([
+    getMyServiceRequestSubmissionDetailAction(submissionId),
+    getServerTranslation(undefined, 'client-portal/service-requests'),
+  ]);
 
   if (!submission) {
     notFound();
   }
 
+  const unknownLabel = t('myRequests.unknownDate');
   const fields = Array.isArray((submission.form_schema_snapshot as any)?.fields)
     ? ((submission.form_schema_snapshot as any).fields as any[])
     : [];
@@ -33,28 +39,32 @@ export default async function MyRequestDetailPage(props: MyRequestDetailPageProp
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">{submission.request_name}</h1>
-          <p className="text-sm text-[rgb(var(--color-text-600))]">
-            Request ID: <span className="font-mono">{submission.submission_id}</span>
-          </p>
-        </div>
-        <Link
-          href="/client-portal/request-services/my-requests"
-          className="text-sm text-[rgb(var(--color-primary-600))] hover:underline"
-        >
-          Back to My Requests
-        </Link>
+      <div className="mb-1">
+        <BackNav href="/client-portal/request-services/my-requests">
+          {t('submissionDetail.backToMyRequests')}
+        </BackNav>
+      </div>
+      <div>
+        <h1 className="text-2xl font-semibold">{submission.request_name}</h1>
+        <p className="text-sm text-[rgb(var(--color-text-600))]">
+          {t('submissionDetail.requestIdLabel')}{' '}
+          <span className="font-mono">{submission.submission_id}</span>
+        </p>
       </div>
 
       <section className="rounded border p-4 bg-[rgb(var(--color-background-100))]">
-        <h2 className="text-base font-semibold mb-2">Status</h2>
-        <p className="text-sm">Submitted: {formatDateTime(submission.submitted_at)}</p>
-        <p className="text-sm">Execution status: {submission.execution_status}</p>
+        <h2 className="text-base font-semibold mb-2">{t('submissionDetail.statusSection')}</h2>
+        <p className="text-sm">
+          {t('submissionDetail.submittedAt', {
+            date: formatDateTime(submission.submitted_at, unknownLabel),
+          })}
+        </p>
+        <p className="text-sm">
+          {t('submissionDetail.executionStatus', { status: submission.execution_status })}
+        </p>
         {submission.created_ticket_id && (
           <p className="text-sm">
-            Ticket:{' '}
+            {t('submissionDetail.ticketLabel')}{' '}
             <Link
               href={`/client-portal/tickets/${submission.created_ticket_id}`}
               className="text-[rgb(var(--color-primary-600))] hover:underline"
@@ -64,12 +74,14 @@ export default async function MyRequestDetailPage(props: MyRequestDetailPageProp
           </p>
         )}
         {submission.workflow_execution_id && (
-          <p className="text-sm">Workflow: {submission.workflow_execution_id}</p>
+          <p className="text-sm">
+            {t('submissionDetail.workflowLabel', { id: submission.workflow_execution_id })}
+          </p>
         )}
       </section>
 
       <section className="rounded border p-4 bg-[rgb(var(--color-background-100))]">
-        <h2 className="text-base font-semibold mb-2">Submitted Answers</h2>
+        <h2 className="text-base font-semibold mb-2">{t('submissionDetail.submittedAnswersTitle')}</h2>
         {fields.length === 0 ? (
           <pre className="text-xs bg-white p-2 rounded overflow-auto">
             {JSON.stringify(payload, null, 2)}
@@ -90,7 +102,7 @@ export default async function MyRequestDetailPage(props: MyRequestDetailPageProp
                   <dt className="text-xs font-semibold text-[rgb(var(--color-text-700))]">{label}</dt>
                   <dd className="text-sm">
                     {display.kind === 'missing' ? (
-                      <span className="text-[rgb(var(--color-text-500))]">No response</span>
+                      <span className="text-[rgb(var(--color-text-500))]">{t('submissionDetail.noResponse')}</span>
                     ) : display.kind === 'attachments' ? (
                       <ul className="space-y-1">
                         {(display.attachments ?? []).map((attachment) => (
@@ -119,17 +131,21 @@ export default async function MyRequestDetailPage(props: MyRequestDetailPageProp
       </section>
 
       <section className="rounded border p-4 bg-[rgb(var(--color-background-100))]">
-        <h2 className="text-base font-semibold mb-2">Attachments</h2>
+        <h2 className="text-base font-semibold mb-2">{t('submissionDetail.attachmentsTitle')}</h2>
         {submission.attachments.length === 0 ? (
-          <p className="text-sm text-[rgb(var(--color-text-600))]">No attachments included.</p>
+          <p className="text-sm text-[rgb(var(--color-text-600))]">{t('submissionDetail.noAttachments')}</p>
         ) : (
           <ul className="space-y-2">
             {submission.attachments.map((attachment) => (
               <li key={attachment.submission_attachment_id} className="rounded border bg-white p-2">
                 <p className="text-sm font-medium">{attachment.file_name ?? attachment.file_id}</p>
-                <p className="text-xs text-[rgb(var(--color-text-600))]">File ID: {attachment.file_id}</p>
+                <p className="text-xs text-[rgb(var(--color-text-600))]">
+                  {t('submissionDetail.fileIdLabel', { id: attachment.file_id })}
+                </p>
                 {attachment.mime_type && (
-                  <p className="text-xs text-[rgb(var(--color-text-600))]">Type: {attachment.mime_type}</p>
+                  <p className="text-xs text-[rgb(var(--color-text-600))]">
+                    {t('submissionDetail.fileTypeLabel', { mime: attachment.mime_type })}
+                  </p>
                 )}
               </li>
             ))}

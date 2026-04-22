@@ -11,6 +11,7 @@ import { Card } from "@alga-psa/ui/components/Card";
 import { Badge } from "@alga-psa/ui/components/Badge";
 import { ActivityActionMenu } from "./ActivityActionMenu";
 import { Tooltip } from "@alga-psa/ui/components/Tooltip";
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Repeat } from 'lucide-react';
 
 // Format date to a readable format
@@ -33,6 +34,7 @@ interface ActivityCardProps {
 
 
 export function ActivityCard({ activity, onViewDetails, onActionComplete, renderExtra }: ActivityCardProps) {
+  const { t } = useTranslation('msp/user-activities');
   const { openActivityDrawer } = useActivityDrawer();
   // Color mapping based on activity type
   const typeColorMap: Record<ActivityType, string> = {
@@ -80,7 +82,7 @@ export function ActivityCard({ activity, onViewDetails, onActionComplete, render
         <div className="flex items-center gap-2 truncate">
           <h3 className="font-medium text-gray-900 truncate">{activity.title}</h3>
           {activity.type === ActivityType.SCHEDULE && (activity as ScheduleActivity).isRecurring && (
-            <span title="Recurring Event">
+            <span title={t('card.recurringEvent', { defaultValue: 'Recurring Event' })}>
               <Repeat className="h-4 w-4 text-gray-500 flex-shrink-0" />
             </span>
           )}
@@ -98,15 +100,15 @@ export function ActivityCard({ activity, onViewDetails, onActionComplete, render
       </div>
       
       <div className="mb-3 text-sm text-gray-500 line-clamp-2">
-        {activity.description || 'No description provided'}
+        {activity.description || t('card.noDescription', { defaultValue: 'No description provided' })}
       </div>
-      
+
       <div className="flex items-center justify-between text-xs">
         <div className="flex items-center gap-2">
           <Badge variant="default">{activity.status}</Badge>
           {activity.dueDate && (
             <span className="text-gray-500">
-              Due: {formatDate(activity.dueDate)}
+              {t('card.due', { defaultValue: 'Due: {{date}}', date: formatDate(activity.dueDate) })}
             </span>
           )}
         </div>
@@ -156,9 +158,10 @@ export function ScheduleCard({ activity, onViewDetails, onActionComplete }: { ac
 }
 
 export function ProjectTaskCard({ activity, onViewDetails, onActionComplete }: { activity: Activity; onViewDetails: (activity: Activity) => void; onActionComplete?: () => void }) {
+  const { t } = useTranslation('msp/user-activities');
   const { openActivityDrawer } = useActivityDrawer();
   const projectTask = activity as any; // Type assertion for project-specific fields
-  
+
   return (
     <ActivityCard
       activity={activity}
@@ -171,7 +174,7 @@ export function ProjectTaskCard({ activity, onViewDetails, onActionComplete }: {
               <span className="text-gray-600">{projectTask.projectName}</span>
             )}
             {projectTask.estimatedHours && (
-              <span className="text-gray-600">Est: {projectTask.estimatedHours}h</span>
+              <span className="text-gray-600">{t('card.estimatedHours', { defaultValue: 'Est: {{hours}}h', hours: projectTask.estimatedHours })}</span>
             )}
           </div>
         </div>
@@ -204,9 +207,10 @@ export function TicketCard({ activity, onViewDetails, onActionComplete }: { acti
 }
 
 export function TimeEntryCard({ activity, onViewDetails, onActionComplete }: { activity: Activity; onViewDetails: (activity: Activity) => void; onActionComplete?: () => void }) {
+  const { t } = useTranslation('msp/user-activities');
   const { openActivityDrawer } = useActivityDrawer();
   const timeEntry = activity as any; // Type assertion for time entry-specific fields
-  
+
   return (
     <ActivityCard
       activity={activity}
@@ -216,7 +220,7 @@ export function TimeEntryCard({ activity, onViewDetails, onActionComplete }: { a
         <div className="mt-2 pt-2 border-t border-gray-100">
           <div className="flex items-center gap-2 text-xs">
             <span className="text-gray-600">
-              Duration: {(timeEntry.billableDuration / 60).toFixed(1)}h
+              {t('card.duration', { defaultValue: 'Duration: {{hours}}h', hours: (timeEntry.billableDuration / 60).toFixed(1) })}
             </span>
             {timeEntry.approvalStatus && (
               <Badge variant={timeEntry.approvalStatus === 'approved' ? 'success' : 'default'}>
@@ -231,9 +235,10 @@ export function TimeEntryCard({ activity, onViewDetails, onActionComplete }: { a
 }
 
 export function WorkflowTaskCard({ activity, onViewDetails, onActionComplete }: { activity: Activity; onViewDetails: (activity: Activity) => void; onActionComplete?: () => void }) {
+  const { t } = useTranslation('msp/user-activities');
   const { openActivityDrawer } = useActivityDrawer();
   const workflowTask = activity as any; // Type assertion for workflow task-specific fields
-  
+
   return (
     <ActivityCard
       activity={activity}
@@ -243,11 +248,11 @@ export function WorkflowTaskCard({ activity, onViewDetails, onActionComplete }: 
         <div className="mt-2 pt-2 border-t border-gray-100">
           <div className="flex items-center gap-2 text-xs">
             {workflowTask.formId && (
-              <span className="text-blue-600">Has form</span>
+              <span className="text-blue-600">{t('card.hasForm', { defaultValue: 'Has form' })}</span>
             )}
             {workflowTask.assignedRoles && workflowTask.assignedRoles.length > 0 && (
               <span className="text-gray-600">
-                Roles: {workflowTask.assignedRoles.join(', ')}
+                {t('card.roles', { defaultValue: 'Roles: {{roles}}', roles: workflowTask.assignedRoles.join(', ') })}
               </span>
             )}
           </div>

@@ -36,6 +36,10 @@ export default function ClientPortalConfigEditor({
   const getVisibilitySummary = (): string[] => {
     const summary: string[] = [t('clientPortal.summary.projectInfo', 'Project name, description, dates, and overall progress')];
 
+    if (config.show_budget_hours) {
+      summary.push(t('clientPortal.summary.budgetHours', 'Budget hours: spent vs. budgeted totals and % used'));
+    }
+
     if (config.show_phases) {
       summary.push(t('clientPortal.summary.phaseInfo', 'Phase names, descriptions, and date ranges'));
       if (config.show_phase_completion) {
@@ -85,6 +89,26 @@ export default function ClientPortalConfigEditor({
       </Alert>
 
       <div className="space-y-4 border-l-2 border-gray-200 pl-4">
+        {/* Show Budget Hours Toggle */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <label htmlFor="show-budget-hours" className="text-sm font-medium text-gray-700">
+                {t('clientPortal.showBudgetHours', 'Show Budget Hours')}
+              </label>
+              <p className="text-xs text-gray-500">
+                {t('clientPortal.showBudgetHoursDescription', 'Clients will see the project-level Budget Hours card with spent vs. budgeted hours and % of budget used.')}
+              </p>
+            </div>
+            <Switch
+              id="show-budget-hours"
+              checked={config.show_budget_hours}
+              onCheckedChange={(checked) => updateConfig({ show_budget_hours: checked })}
+              disabled={disabled}
+            />
+          </div>
+        </div>
+
         {/* Show Phases Toggle */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">

@@ -1,0 +1,419 @@
+{
+  "dashboard": {
+    "title": "Actividades de usuario",
+    "viewSwitcher": {
+      "cards": "Tarjetas",
+      "table": "Tabla"
+    },
+    "sections": {
+      "notifications": "Notificaciones",
+      "schedule": "Calendario"
+    },
+    "filteredTitle": "Actividades filtradas",
+    "allActivitiesTitle": "Todas las actividades"
+  },
+  "table": {
+    "title": {
+      "all": "Todas las actividades"
+    },
+    "columns": {
+      "type": "Tipo",
+      "title": "Título",
+      "status": "Estado",
+      "priority": "Prioridad",
+      "dueDate": "Fecha de vencimiento",
+      "actions": "Acciones"
+    },
+    "values": {
+      "noDueDate": "Sin fecha de vencimiento",
+      "emDash": "—",
+      "unread": "No leído",
+      "recurringEvent": "Evento recurrente"
+    },
+    "actions": {
+      "refresh": "Actualizar",
+      "print": "Imprimir"
+    },
+    "viewSwitcher": {
+      "flat": "Plano",
+      "grouped": "Agrupado"
+    },
+    "states": {
+      "noActivities": "No se encontraron actividades",
+      "noMatching": "No hay actividades que coincidan con los filtros"
+    },
+    "errors": {
+      "loadFailed": "No se pudieron cargar las actividades. Inténtelo de nuevo más tarde."
+    },
+    "activityTypes": {
+      "schedule": "Calendario",
+      "projectTask": "Tarea de proyecto",
+      "ticket": "Ticket",
+      "timeEntry": "Entrada de tiempo",
+      "workflowTask": "Tarea de flujo de trabajo",
+      "notification": "Notificación",
+      "unknown": "Desconocido",
+      "activity": "Actividad"
+    }
+  },
+  "card": {
+    "noDescription": "No se proporcionó descripción",
+    "due": "Vence: {{date}}",
+    "recurringEvent": "Evento recurrente",
+    "unread": "No leído",
+    "noMessage": "Sin mensaje",
+    "estimatedHours": "Est.: {{hours}} h",
+    "duration": "Duración: {{hours}} h",
+    "hasForm": "Tiene formulario",
+    "roles": "Roles: {{roles}}"
+  },
+  "drawer": {
+    "loading": "Cargando...",
+    "errorLoadingTitle": "Error al cargar los detalles de la actividad",
+    "errorLoadingMessage": "No se pudieron cargar los detalles de la actividad. Inténtelo de nuevo más tarde.",
+    "userNotAuthenticated": "Usuario no autenticado",
+    "scheduleEntryNotFound": "Entrada de calendario no encontrada",
+    "timeEntryNotFound": "Entrada de tiempo no encontrada",
+    "unknownWorkItem": "Elemento de trabajo desconocido",
+    "timeEntryDetailsTitle": "Detalles de la entrada de tiempo",
+    "errorLoadingTimeEntry": "Error al cargar la entrada de tiempo",
+    "workflowTaskTitle": "Tarea de flujo de trabajo",
+    "noAdditionalDetails": "No hay detalles adicionales disponibles.",
+    "failedToLoadDocument": "No se pudo cargar el contenido del documento",
+    "notificationNotFound": "Notificación no encontrada",
+    "failedToLoadTicket": "No se pudieron cargar los detalles del ticket",
+    "failedToLoadTask": "No se pudieron cargar los detalles de la tarea",
+    "unsupportedTitle": "Tipo de actividad no admitido",
+    "unsupportedDescription": "Este tipo de actividad ({{activityType}}) no es compatible con el visor de detalles.",
+    "saveDocumentSuccess": "Documento guardado correctamente",
+    "saveDocumentError": "No se pudo guardar el documento",
+    "timeEntryUpdatedSuccess": "Entrada de tiempo actualizada correctamente",
+    "timeEntryUpdatedError": "No se pudo actualizar la entrada de tiempo",
+    "backToNotification": "Volver a la notificación",
+    "documentTitleEdit": "Editar documento",
+    "documentTitleViewer": "Visor de documentos",
+    "actions": {
+      "edit": "Editar",
+      "cancel": "Cancelar",
+      "save": "Guardar",
+      "saving": "Guardando..."
+    },
+    "menu": {
+      "openMenu": "Abrir menú",
+      "goToPage": "Ir a la página",
+      "dismissError": "No se pudo descartar la tarea: {{message}}"
+    },
+    "retryLater": "Por favor, inténtelo de nuevo más tarde."
+  },
+  "groupedView": {
+    "addGroup": "Añadir grupo",
+    "groupNamePlaceholder": "Nombre del grupo",
+    "ariaLabels": {
+      "dragToReorder": "Arrastrar para reordenar",
+      "dragToReorderGroup": "Arrastrar para reordenar el grupo",
+      "expandGroup": "Expandir grupo",
+      "collapseGroup": "Contraer grupo",
+      "renameGroup": "Renombrar grupo",
+      "deleteGroup": "Eliminar grupo"
+    },
+    "dropActivitiesHere": "Suelte las actividades aquí",
+    "ungroupedHeading": "Sin agrupar",
+    "allInGroups": "Todas las actividades están en grupos",
+    "columns": {
+      "title": "Título",
+      "status": "Estado",
+      "priority": "Prioridad",
+      "dueDate": "Fecha de vencimiento"
+    }
+  },
+  "printable": {
+    "defaultTitle": "Actividades",
+    "ungroupedHeading": "Sin agrupar",
+    "empty": "(vacío)"
+  },
+  "sections": {
+    "projects": {
+      "title": "Tareas de proyecto",
+      "actions": {
+        "refresh": "Actualizar",
+        "filter": "Filtrar",
+        "reset": "Restablecer",
+        "viewAll": "Ver todas"
+      },
+      "ariaLabels": {
+        "refresh": "Actualizar tareas de proyecto",
+        "filter": "Filtrar tareas de proyecto"
+      },
+      "states": {
+        "loading": "Cargando actividades de proyecto...",
+        "empty": "No se encontraron actividades de proyecto"
+      },
+      "errors": {
+        "loadFailed": "No se pudieron cargar las actividades de proyecto. Inténtelo de nuevo más tarde."
+      },
+      "filterDialog": {
+        "title": "Filtrar tareas de proyecto",
+        "description": "Seleccione criterios para filtrar las actividades de tareas de proyecto.",
+        "fields": {
+          "search": "Buscar",
+          "searchPlaceholder": "Buscar título, descripción",
+          "project": "Proyecto",
+          "projectPlaceholder": "Seleccionar proyecto...",
+          "allProjects": "Todos los proyectos",
+          "phase": "Fase",
+          "phasePlaceholder": "Seleccionar fase...",
+          "phaseLoadingPlaceholder": "Cargando fases...",
+          "phaseSelectFirstPlaceholder": "Seleccione primero un proyecto",
+          "allPhases": "Todas las fases",
+          "priority": "Prioridad",
+          "priorityPlaceholder": "Seleccionar prioridad...",
+          "allPriorities": "Todas las prioridades",
+          "dueDateRange": "Rango de fecha de vencimiento",
+          "showClosedTasks": "Mostrar tareas cerradas"
+        },
+        "actions": {
+          "reset": "Restablecer",
+          "cancel": "Cancelar",
+          "apply": "Aplicar filtros"
+        }
+      }
+    },
+    "tickets": {
+      "title": "Tickets",
+      "actions": {
+        "refresh": "Actualizar",
+        "filter": "Filtrar",
+        "reset": "Restablecer",
+        "viewAll": "Ver todos"
+      },
+      "ariaLabels": {
+        "refresh": "Actualizar tickets",
+        "filter": "Filtrar tickets"
+      },
+      "states": {
+        "loading": "Cargando actividades de tickets...",
+        "empty": "No se encontraron actividades de tickets"
+      },
+      "errors": {
+        "loadFailed": "No se pudieron cargar las actividades de tickets. Inténtelo de nuevo más tarde."
+      },
+      "filterDialog": {
+        "title": "Filtrar tickets",
+        "description": "Seleccione criterios para filtrar las actividades de tickets.",
+        "fields": {
+          "search": "Buscar",
+          "searchPlaceholder": "Buscar título, descripción, n.º de ticket",
+          "client": "Cliente",
+          "contact": "Contacto",
+          "status": "Estado",
+          "statusPlaceholder": "Seleccionar estado...",
+          "allStatuses": "Todos los estados",
+          "priority": "Prioridad",
+          "priorityPlaceholder": "Seleccionar prioridad...",
+          "allPriorities": "Todas las prioridades",
+          "dueDateRange": "Rango de fecha de vencimiento",
+          "showClosedTickets": "Mostrar tickets cerrados"
+        },
+        "actions": {
+          "reset": "Restablecer",
+          "cancel": "Cancelar",
+          "apply": "Aplicar filtros"
+        }
+      }
+    },
+    "workflowTasks": {
+      "title": "Tareas de flujo de trabajo",
+      "drawerTitle": "Tareas de flujo de trabajo",
+      "actions": {
+        "refresh": "Actualizar",
+        "filter": "Filtrar",
+        "reset": "Restablecer",
+        "viewAll": "Ver todas"
+      },
+      "ariaLabels": {
+        "refresh": "Actualizar tareas de flujo de trabajo",
+        "filter": "Filtrar tareas de flujo de trabajo"
+      },
+      "states": {
+        "loading": "Cargando actividades de tareas de flujo de trabajo...",
+        "empty": "No se encontraron actividades de tareas de flujo de trabajo"
+      },
+      "errors": {
+        "loadFailed": "No se pudieron cargar las actividades de tareas de flujo de trabajo. Inténtelo de nuevo más tarde."
+      },
+      "filterDialog": {
+        "title": "Filtrar tareas de flujo de trabajo",
+        "description": "Seleccione criterios para filtrar las actividades de tareas de flujo de trabajo.",
+        "fields": {
+          "search": "Buscar",
+          "searchPlaceholder": "Buscar título, descripción",
+          "workflowExecution": "Ejecución de flujo de trabajo",
+          "workflowExecutionPlaceholder": "Seleccionar ejecución de flujo de trabajo...",
+          "allExecutions": "Todas las ejecuciones",
+          "priority": "Prioridad",
+          "priorityPlaceholder": "Seleccionar prioridad...",
+          "allPriorities": "Todas las prioridades",
+          "priorityHigh": "Alta",
+          "priorityMedium": "Media",
+          "priorityLow": "Baja",
+          "dueDateRange": "Rango de fecha de vencimiento",
+          "showClosedTasks": "Mostrar tareas cerradas",
+          "includeHiddenTasks": "Incluir tareas ocultas"
+        },
+        "actions": {
+          "reset": "Restablecer",
+          "cancel": "Cancelar",
+          "apply": "Aplicar filtros"
+        }
+      },
+      "listDrawer": {
+        "searchPlaceholder": "Buscar tareas...",
+        "filters": "Filtros",
+        "refresh": "Actualizar",
+        "sortBy": "Ordenar por:",
+        "sortOptions": {
+          "priority": "Prioridad",
+          "dueDate": "Fecha de vencimiento",
+          "createdAt": "Fecha de creación",
+          "title": "Título"
+        },
+        "ascending": "Ascendente",
+        "descending": "Descendente",
+        "states": {
+          "loading": "Cargando tareas de flujo de trabajo...",
+          "empty": "No se encontraron tareas de flujo de trabajo"
+        },
+        "errors": {
+          "loadFailed": "No se pudieron cargar las tareas de flujo de trabajo. Inténtelo de nuevo más tarde."
+        }
+      }
+    },
+    "schedule": {
+      "title": "Calendario",
+      "actions": {
+        "refresh": "Actualizar",
+        "filter": "Filtrar",
+        "reset": "Restablecer",
+        "viewAll": "Ver todo"
+      },
+      "states": {
+        "loading": "Cargando actividades del calendario...",
+        "empty": "No se encontraron actividades de calendario"
+      },
+      "errors": {
+        "loadFailed": "No se pudieron cargar las actividades del calendario. Inténtelo de nuevo más tarde.",
+        "refreshFailed": "No se pudieron actualizar las actividades del calendario. Inténtelo de nuevo más tarde."
+      },
+      "filterDialog": {
+        "title": "Filtrar entradas del calendario",
+        "description": "Seleccione criterios para filtrar las actividades del calendario.",
+        "fields": {
+          "search": "Buscar",
+          "searchPlaceholder": "Buscar título, descripción",
+          "dateRange": "Rango de fechas",
+          "workItemType": "Tipo de elemento de trabajo relacionado",
+          "workItemTypePlaceholder": "Seleccionar tipo de elemento de trabajo...",
+          "allTypes": "Todos los tipos",
+          "ticket": "Ticket",
+          "projectTask": "Tarea de proyecto",
+          "workflowTask": "Tarea de flujo de trabajo",
+          "showClosedEntries": "Mostrar entradas cerradas",
+          "showRecurringOnly": "Mostrar solo recurrentes"
+        },
+        "actions": {
+          "reset": "Restablecer",
+          "cancel": "Cancelar",
+          "apply": "Aplicar filtros"
+        }
+      }
+    },
+    "notifications": {
+      "title": "Notificaciones",
+      "actions": {
+        "refresh": "Actualizar",
+        "filter": "Filtrar",
+        "reset": "Restablecer",
+        "viewAll": "Ver todas"
+      },
+      "ariaLabels": {
+        "refresh": "Actualizar notificaciones",
+        "filter": "Filtrar notificaciones"
+      },
+      "tabs": {
+        "unread": "No leídas",
+        "all": "Todas",
+        "read": "Leídas"
+      },
+      "states": {
+        "loading": "Cargando actividades de notificación...",
+        "empty": "No se encontraron actividades de notificación"
+      },
+      "errors": {
+        "loadFailed": "No se pudieron cargar las actividades de notificación. Inténtelo de nuevo más tarde."
+      },
+      "filterDialog": {
+        "title": "Filtrar notificaciones",
+        "description": "Seleccione criterios para filtrar las actividades de notificación.",
+        "fields": {
+          "status": "Estado",
+          "unreadOnly": "Solo no leídas",
+          "showRead": "Mostrar leídas",
+          "category": "Categoría",
+          "categoryPlaceholder": "Seleccionar categoría...",
+          "allCategories": "Todas las categorías",
+          "categories": {
+            "tickets": "Tickets",
+            "projects": "Proyectos",
+            "invoices": "Facturas",
+            "system": "Sistema"
+          },
+          "dateRange": "Rango de fechas"
+        },
+        "actions": {
+          "reset": "Restablecer",
+          "cancel": "Cancelar",
+          "apply": "Aplicar filtros"
+        }
+      }
+    }
+  },
+  "pickers": {
+    "priority": {
+      "loading": "Cargando...",
+      "empty": "No hay prioridades disponibles",
+      "none": "Ninguna"
+    },
+    "status": {
+      "loading": "Cargando...",
+      "empty": "No hay estados disponibles",
+      "closedSuffix": "cerrado"
+    }
+  },
+  "filters": {
+    "labels": {
+      "types": "Tipos:",
+      "tickets": "Tickets:",
+      "tasks": "Tareas:",
+      "priority": "Prioridad",
+      "dueDate": "Fecha de vencimiento",
+      "showClosed": "Mostrar cerradas"
+    },
+    "activityTypeOptions": {
+      "schedule": "Calendario",
+      "projectTask": "Tareas de proyecto",
+      "ticket": "Tickets",
+      "workflowTask": "Tareas de flujo de trabajo"
+    },
+    "placeholders": {
+      "allBoards": "Todos los tableros",
+      "allStatuses": "Todos los estados",
+      "allProjects": "Todos los proyectos",
+      "allPriorities": "Todas las prioridades",
+      "selectPriority": "Seleccionar prioridad..."
+    },
+    "actions": {
+      "reset": "Restablecer"
+    },
+    "statusClosedSuffix": " (cerrado)"
+  }
+}

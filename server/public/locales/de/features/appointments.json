@@ -6,7 +6,7 @@
     "of": "von"
   },
   "steps": {
-    "service": "Service",
+    "service": "Dienst",
     "date": "Datum",
     "time": "Zeit",
     "confirm": "Bestätigen"
@@ -15,7 +15,7 @@
     "title": "Service auswählen",
     "description": "Wählen Sie den Service, bei dem Sie Unterstützung benötigen",
     "selectService": "Wählen Sie einen Service aus",
-    "serviceLabel": "Service",
+    "serviceLabel": "Dienst",
     "ticketLabel": "Mit bestehendem Ticket verknüpfen (Optional)",
     "selectTicket": "Wählen Sie ein Ticket",
     "noTicket": "Kein Ticket",
@@ -45,7 +45,7 @@
     "description": "Fügen Sie zusätzliche Details hinzu und überprüfen Sie Ihre Terminanfrage",
     "descriptionPlaceholder": "Bitte geben Sie zusätzliche Details zu Ihrer Anfrage an...",
     "summaryTitle": "Terminübersicht",
-    "service": "Service",
+    "service": "Dienst",
     "dateTime": "Datum & Uhrzeit",
     "at": "um",
     "duration": "Dauer",
@@ -92,7 +92,7 @@
     "declined": "Abgelehnt"
   },
   "table": {
-    "service": "Service",
+    "service": "Dienst",
     "dateTime": "Datum & Uhrzeit",
     "status": "Status",
     "technician": "Techniker",
@@ -111,7 +111,7 @@
     "statusCancelled": "Dieser Termin wurde storniert",
     "reason": "Grund",
     "reference": "Referenz",
-    "service": "Service",
+    "service": "Dienst",
     "dateTime": "Datum & Uhrzeit",
     "technician": "Zugewiesener Techniker",
     "linkedTicket": "Verknüpftes Ticket",
@@ -127,7 +127,7 @@
   },
   "ticketSection": {
     "title": "Terminanfragen",
-    "service": "Service",
+    "service": "Dienst",
     "publicRequest": "Öffentliche Anfrage",
     "minutes": "Minuten",
     "preferred": "Bevorzugt:",

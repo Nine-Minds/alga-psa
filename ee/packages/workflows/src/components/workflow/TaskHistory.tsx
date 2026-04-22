@@ -3,6 +3,7 @@ import { Card } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { WorkflowTaskStatus, type TaskHistoryEntry } from '@alga-psa/workflows/persistence';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Simple Spinner component
 function Spinner({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
@@ -27,6 +28,8 @@ export function TaskHistory({
   taskId,
   className = ''
 }: TaskHistoryProps) {
+  const { t } = useTranslation('msp/workflows');
+  const { formatDate: formatLocaleDate } = useFormatters();
   const [history, setHistory] = useState<TaskHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -88,7 +91,7 @@ export function TaskHistory({
       
       setHistory(mockHistory);
     } catch (err) {
-      setError('Failed to load task history. Please try again.');
+      setError(t('taskHistory.errors.loadFailed', { defaultValue: 'Failed to load task history. Please try again.' }));
       console.error('Error fetching task history:', err);
     } finally {
       setLoading(false);
@@ -97,7 +100,7 @@ export function TaskHistory({
 
   // Format date
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('en-US', {
+    return formatLocaleDate(new Date(dateString), {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -110,17 +113,17 @@ export function TaskHistory({
   const getActionLabel = (action: string) => {
     switch (action) {
       case 'create':
-        return 'Created';
+        return t('taskHistory.actions.created', { defaultValue: 'Created' });
       case 'claim':
-        return 'Claimed';
+        return t('taskHistory.actions.claimed', { defaultValue: 'Claimed' });
       case 'unclaim':
-        return 'Unclaimed';
+        return t('taskHistory.actions.unclaimed', { defaultValue: 'Unclaimed' });
       case 'complete':
-        return 'Completed';
+        return t('taskHistory.actions.completed', { defaultValue: 'Completed' });
       case 'cancel':
-        return 'Canceled';
+        return t('taskHistory.actions.canceled', { defaultValue: 'Canceled' });
       case 'expire':
-        return 'Expired';
+        return t('taskHistory.actions.expired', { defaultValue: 'Expired' });
       default:
         return action.charAt(0).toUpperCase() + action.slice(1);
     }
@@ -179,7 +182,7 @@ export function TaskHistory({
   if (history.length === 0) {
     return (
       <div className={`p-4 text-center ${className}`}>
-        <p className="text-gray-500">No history available for this task.</p>
+        <p className="text-gray-500">{t('taskHistory.empty', { defaultValue: 'No history available for this task.' })}</p>
       </div>
     );
   }
@@ -196,12 +199,13 @@ export function TaskHistory({
                   {entry.toStatus && getStatusBadge(entry.toStatus)}
                 </div>
                 <p className="text-sm text-gray-500 mt-1">
-                  By: {entry.userId === 'system' ? 'System' : entry.userId}
+                  {t('taskHistory.byPrefix', { defaultValue: 'By:' })}{' '}
+                  {entry.userId === 'system' ? t('taskHistory.system', { defaultValue: 'System' }) : entry.userId}
                 </p>
                 {entry.details && Object.keys(entry.details).length > 0 && (
                   <div className="mt-2 text-sm">
                     <details>
-                      <summary className="cursor-pointer text-blue-600">Details</summary>
+                      <summary className="cursor-pointer text-blue-600">{t('taskHistory.detailsLabel', { defaultValue: 'Details' })}</summary>
                       <pre className="mt-2 bg-gray-50 p-2 rounded text-xs overflow-auto">
                         {JSON.stringify(entry.details, null, 2)}
                       </pre>

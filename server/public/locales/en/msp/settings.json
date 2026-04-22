@@ -685,27 +685,6 @@
     }
   },
   "clientPortal": {
-    "language": {
-      "title": "Language Settings",
-      "description": "Configure the default language settings for your client portal. These settings apply to all users and clients unless overridden.",
-      "fields": {
-        "defaultLanguage": "Default Language",
-        "availableLanguages": "Available Languages"
-      },
-      "help": {
-        "defaultLanguage": "This will be the default language for all client portal users and email notifications unless overridden by client setting or individual user preferences",
-        "availableLanguages": "Select which languages are available for users to choose from"
-      },
-      "hierarchy": {
-        "title": "Language Preference Hierarchy",
-        "description": "This hierarchy applies to both the client portal interface and email notifications sent to client portal users:",
-        "userPreference": "Individual user preference (highest priority)",
-        "clientDefault": "Client default language",
-        "orgDefault": "Organization default (configured here)",
-        "systemDefault": "System default (English)",
-        "note": "Note: Internal MSP users always receive emails in English"
-      }
-    },
     "branding": {
       "title": "Branding & Appearance",
       "description": "Customize the look and feel of your client portal with your company branding.",
@@ -791,21 +770,15 @@
     }
   },
   "mspLanguage": {
-    "title": "Language",
-    "description": "Configure the default language settings for the MSP portal. These settings apply to all MSP users unless overridden by individual preferences.",
+    "title": "Organization Language",
+    "description": "Set the default language for everyone in this workspace — MSP staff, client portal users, and email notifications. Individual users and clients can override this for themselves.",
     "fields": {
       "defaultLanguage": "Default Language",
       "availableLanguages": "Available Languages"
     },
     "help": {
-      "defaultLanguage": "This will be the default language for all MSP portal users unless overridden by their personal preference.",
-      "availableLanguages": "Select which languages are available for MSP users to choose from"
-    },
-    "hierarchy": {
-      "title": "Language Preference Hierarchy",
-      "userPreference": "Individual user preference (highest priority)",
-      "orgDefault": "Organization default (configured here)",
-      "systemDefault": "System default (English)"
+      "defaultLanguage": "Applied everywhere unless overridden by a user's personal preference or a client's configured default.",
+      "availableLanguages": "Select which languages are available for users to choose from."
     }
   },
   "notifications": {
@@ -1347,5 +1320,39 @@
     "badge": {
       "inactive": "Inactive"
     }
+  },
+  "permissions": {
+    "messages": {
+      "adminLocked": "Admin role permissions cannot be modified",
+      "permissionsUpdated": "Permissions updated successfully"
+    }
+  },
+  "sla": {
+    "messages": {
+      "scheduleNotFound": "Schedule not found",
+      "scheduleUpdated": "Schedule updated successfully",
+      "scheduleCreated": "Schedule created successfully",
+      "scheduleDeleted": "Schedule deleted successfully",
+      "defaultHoursCreated": "Default business hours schedule created",
+      "scheduleRequired": "Please select a schedule first",
+      "holidayNameRequired": "Holiday name is required",
+      "holidayDateRequired": "Holiday date is required",
+      "holidayAdded": "Holiday added successfully",
+      "holidayDeleted": "Holiday deleted successfully"
+    }
+  },
+  "clientPortalLanguage": {
+    "title": "Client Portal Language",
+    "description": "Override the default language for client portal users only. MSP staff keep the organization default.",
+    "fields": {
+      "defaultLanguage": "Default Language"
+    },
+    "help": {
+      "defaultLanguage": "When set, client portal users see this language unless their individual preference or their client's default overrides it."
+    },
+    "placeholder": "Select a language",
+    "inheritOption": "Use organization default ({{language}})",
+    "unsetHint": "To remove the client portal override, change the organization default under Settings → Language.",
+    "updated": "Client portal default language updated to {{language}}"
   }
 }

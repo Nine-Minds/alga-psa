@@ -11,6 +11,7 @@ import {
   type ActivityStatusOption,
 } from '@alga-psa/workflows/actions';
 import { cn } from '@alga-psa/ui/lib/utils';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface InlineStatusPickerProps {
   activity: Activity;
@@ -18,6 +19,7 @@ interface InlineStatusPickerProps {
 }
 
 export function InlineStatusPicker({ activity, onStatusChange }: InlineStatusPickerProps) {
+  const { t } = useTranslation('msp/user-activities');
   const [open, setOpen] = useState(false);
   const [options, setOptions] = useState<ActivityStatusOption[]>([]);
   const [loading, setLoading] = useState(false);
@@ -93,9 +95,9 @@ export function InlineStatusPicker({ activity, onStatusChange }: InlineStatusPic
         onClick={(e) => e.stopPropagation()}
       >
         {loading ? (
-          <div className="px-2 py-1.5 text-sm text-muted-foreground">Loading...</div>
+          <div className="px-2 py-1.5 text-sm text-muted-foreground">{t('pickers.status.loading', { defaultValue: 'Loading...' })}</div>
         ) : options.length === 0 ? (
-          <div className="px-2 py-1.5 text-sm text-muted-foreground">No statuses available</div>
+          <div className="px-2 py-1.5 text-sm text-muted-foreground">{t('pickers.status.empty', { defaultValue: 'No statuses available' })}</div>
         ) : (
           <div className="space-y-0.5 max-h-[280px] overflow-y-auto">
             {options.map((opt) => {
@@ -114,7 +116,7 @@ export function InlineStatusPicker({ activity, onStatusChange }: InlineStatusPic
                 >
                   <span className="flex-1 text-left truncate">{opt.name}</span>
                   {opt.isClosed && (
-                    <span className="text-xs text-muted-foreground">closed</span>
+                    <span className="text-xs text-muted-foreground">{t('pickers.status.closedSuffix', { defaultValue: 'closed' })}</span>
                   )}
                   {isSelected && <Check className="h-3.5 w-3.5 text-primary-500" />}
                 </button>

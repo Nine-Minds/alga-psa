@@ -1,0 +1,176 @@
+{
+  "reduceModal": {
+    "title": "Reduce Licenses",
+    "enterpriseOnly": "This feature is only available in the Enterprise Edition."
+  },
+  "purchaseForm": {
+    "title": "License Purchase",
+    "enterpriseOnlyHosted": "License purchasing is available in the Enterprise Edition for hosted deployments.",
+    "communityEditionUnlimited": "Self-hosted Community Edition has unlimited users at no additional cost."
+  },
+  "purchasePage": {
+    "title": "Purchase Licenses",
+    "description": "Add more user licenses to your AlgaPSA account"
+  },
+  "purchaseSuccess": {
+    "metaTitle": "Purchase Success",
+    "scheduledTitle": "Change Scheduled Successfully!",
+    "updatedTitle": "Update Successful!",
+    "scheduledDescription": "Your license change has been scheduled and will take effect at the end of your current billing period.",
+    "updatedDescription": "Your license update has been processed successfully!",
+    "loadingSubscriptionDetails": "Loading subscription details...",
+    "updatingLicenseCount": "Updating license count...",
+    "licenseInformation": "License Information",
+    "youNowHave": "You now have",
+    "totalLicenses": "total licenses",
+    "changeEffective": "Change effective",
+    "whatsNext": "What's next?",
+    "scheduledSteps": {
+      "currentLicenses": "Your current licenses remain active until the end of the billing period",
+      "autoUpdate": "The license count will automatically update on the scheduled date",
+      "emailConfirmation": "You'll receive an email confirmation when the change takes effect"
+    },
+    "updatedSteps": {
+      "activeReady": "Your licenses are now active and ready to use",
+      "createUsers": "You can create new users immediately from User Management",
+      "invoiceProrated": "Your next invoice will include the prorated charges"
+    },
+    "sessionDetails": "Session Details (for support)",
+    "sessionId": "Session ID:",
+    "goToAccountManagement": "Go to Account Management"
+  },
+  "subscriptionForm": {
+    "title": "Manage License Subscription",
+    "errors": {
+      "loadPricing": "Failed to load pricing",
+      "loadLicenseInformation": "Failed to load license information",
+      "prepareUpdate": "Failed to prepare license update",
+      "processUpdate": "Failed to process license update",
+      "missingCheckoutSessionData": "Missing checkout session data"
+    },
+    "checkout": {
+      "title": "Complete Your Purchase",
+      "summary": "You are purchasing {{quantity}} {{licenseLabel}} at {{price}} per license per {{interval}}.",
+      "total": "Total: {{total}}/{{interval}}",
+      "cancel": "Cancel"
+    },
+    "confirmation": {
+      "title": "Confirm License Update",
+      "increaseDescription": "Review the details of your license increase before confirming.",
+      "decreaseDescription": "Review the details of your license decrease. Changes will take effect at the end of your billing period.",
+      "currentMonthlyCost": "Current Monthly Cost",
+      "currentLicenseCount": "Current License Count",
+      "newMonthlyCost": "New Monthly Cost",
+      "newLicenseCount": "New License Count",
+      "monthlyIncrease": "Monthly Increase",
+      "monthlySavings": "Monthly Savings",
+      "paymentMethod": "Payment Method",
+      "changePaymentMethod": "Change",
+      "immediateChargeTitle": "Immediate charge",
+      "immediateChargeDescription": "You will be charged {{amountDue}} now for the prorated amount.",
+      "prorationDescription": "Proration: {{amount}} for the remainder of this billing period",
+      "scheduledTitle": "Scheduled for period end",
+      "scheduledDescription": "License decrease will take effect on {{date}} at the end of your current billing period.",
+      "scheduledKeepAccess": "You'll keep access to all {{count}} licenses until then.",
+      "cancel": "Cancel",
+      "confirmPayNow": "Confirm & Pay Now",
+      "confirmSchedule": "Confirm Schedule"
+    },
+    "usage": {
+      "title": "Current License Usage",
+      "licensesUsed": "licenses used"
+    },
+    "fields": {
+      "totalLicenseCount": "Total License Count"
+    },
+    "help": {
+      "totalLicenseCount": "Enter the new total number of licenses (minimum: {{minimum}}). Currently: {{current}}",
+      "reduceViaAccount": "To reduce licenses, visit Account Management",
+      "quantityWarning": "Warning: You have {{used}} users but are setting the total to {{quantity}}"
+    },
+    "pricing": {
+      "pricePerLicense": "Price per license:",
+      "quantity": "Quantity:",
+      "total": "Total:"
+    },
+    "actions": {
+      "creatingCheckout": "Creating Checkout...",
+      "noChange": "No Change",
+      "updateToTotal": "Update to {{quantity}} Total ({{difference}} {{licenseLabel}})"
+    },
+    "info": {
+      "totalQuantity": "This sets your total subscription quantity (not an addition to current licenses)",
+      "increasingImmediate": "Increasing licenses: Immediate access with prorated charge",
+      "billedMonthly": "Licenses are billed monthly and can be canceled anytime"
+    },
+    "solo": {
+      "title": "Solo includes one user",
+      "description": "The Solo plan is designed for a single user and does not support adding licenses. Upgrade to Pro to add more users to your team.",
+      "upgradeCta": "Upgrade to Pro"
+    }
+  },
+  "removalModal": {
+    "title": "Remove Licenses",
+    "description": "Remove licenses from your account. Changes will take effect at the end of your current billing period.",
+    "stats": {
+      "currentLicenses": "Current Licenses",
+      "activeUsers": "Active Users"
+    },
+    "fields": {
+      "newLicenseCount": "New License Count",
+      "minimum": "Minimum: {{count}} (to accommodate all active users)"
+    },
+    "validation": {
+      "positiveInteger": "License quantity must be a positive integer (minimum 1)",
+      "useAddFlow": "Use the \"Add Licenses\" flow to increase licenses",
+      "deactivateUsers": "You have {{activeUsers}} active users. Please deactivate {{usersToDeactivate}} {{userLabel}} first."
+    },
+    "actions": {
+      "goToUserManagement": "Go to User Management",
+      "reviewRemoval": "Review Removal",
+      "confirmRemoval": "Confirm Removal"
+    },
+    "scheduled": {
+      "title": "Removal will be scheduled",
+      "description": "Your license count will decrease from {{current}} to {{next}} at the end of your current billing period.",
+      "creditDescription": "You'll receive a credit on your next invoice for the unused licenses."
+    },
+    "confirmation": {
+      "description": "Please review and confirm your license removal:",
+      "currentMonthlyCost": "Current Monthly Cost",
+      "currentLicenseCount": "Current License Count",
+      "newMonthlyCost": "New Monthly Cost",
+      "newLicenseCount": "New License Count",
+      "monthlySavings": "Monthly Savings",
+      "creditNotice": "Changes will take effect at the end of your current billing period. You'll receive a prorated credit on your next invoice."
+    },
+    "errors": {
+      "deactivateUsersFirst": "Please deactivate users first",
+      "reduceFailed": "Failed to reduce licenses",
+      "removeFailed": "Failed to remove licenses. Please try again."
+    },
+    "success": {
+      "scheduled": "License removal scheduled! Your license count will change from {{current}} to {{next}} on {{effectiveDate}}."
+    }
+  },
+  "shared": {
+    "licenseSingular": "license",
+    "licensePlural": "licenses",
+    "userSingular": "user",
+    "userPlural": "users",
+    "licenseCount": "{{count}} {{licenseLabel}}",
+    "perInterval": "{{amount}}/{{interval}}",
+    "none": "None",
+    "intervals": {
+      "month": "month",
+      "year": "year"
+    }
+  },
+  "workflowDesigner": {
+    "enterpriseHeading": "Recurso Enterprise",
+    "unavailable": "O designer de fluxos de trabalho requer a edição Enterprise. Faça upgrade para acessar este recurso."
+  },
+  "runStudio": {
+    "unavailable": "Workflow Run Studio não está disponível nesta edição. (runId: {{runId}})"
+  }
+}

@@ -3,22 +3,22 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
-import { Globe, Palette, Eye, EyeOff } from 'lucide-react';
-import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-
+import { Globe, Palette } from 'lucide-react';
+import { LanguageHierarchyTable } from '@alga-psa/ui/components/LanguageHierarchyTable';
 import { LOCALE_CONFIG, filterPseudoLocales, type SupportedLocale } from '@alga-psa/core/i18n/config';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import {
+  getTenantBrandingAction,
+  updateTenantBrandingAction,
   getTenantLocaleSettingsAction,
-  updateTenantDefaultLocaleAction,
+  getTenantClientPortalLocaleAction,
+  updateTenantClientPortalLocaleAction,
 } from '@alga-psa/tenancy/actions';
-import { getTenantBrandingAction, updateTenantBrandingAction } from '@alga-psa/tenancy/actions';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
-import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
-import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
 import ColorPicker from '@alga-psa/ui/components/ColorPicker';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
@@ -31,12 +31,11 @@ import { getPortalDomainStatusAction } from '@alga-psa/tenancy/actions';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
+const UNSET_LOCALE_VALUE = '__inherit__';
+
 const ClientPortalSettings = () => {
   const { t } = useTranslation('msp/settings');
-  const [defaultLocale, setDefaultLocale] = useState<SupportedLocale>(LOCALE_CONFIG.defaultLocale as SupportedLocale);
-  const [enabledLocales, setEnabledLocales] = useState<SupportedLocale[]>([...LOCALE_CONFIG.supportedLocales]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const { enabled: isMspI18nEnabled } = useFeatureFlag('msp-i18n-enabled', { defaultValue: false });
   const [brandingLoading, setBrandingLoading] = useState(true);
   const [brandingSaving, setBrandingSaving] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string>('');
@@ -46,16 +45,35 @@ const ClientPortalSettings = () => {
   const [supportEmail, setSupportEmail] = useState<string>('');
   const [supportPhone, setSupportPhone] = useState<string>('');
   const [tenantId, setTenantId] = useState<string>('');
-  const [showPreview, setShowPreview] = useState<boolean>(false);
   const [previewMode, setPreviewMode] = useState<'dashboard' | 'signin' | null>(null);
   const [previewTheme, setPreviewTheme] = useState<'light' | 'dark'>('light');
   const [hasCustomDomain, setHasCustomDomain] = useState<boolean>(false);
+  const [clientPortalLocale, setClientPortalLocale] = useState<SupportedLocale | null>(null);
+  const [orgDefaultLocale, setOrgDefaultLocale] = useState<SupportedLocale>(
+    LOCALE_CONFIG.defaultLocale as SupportedLocale,
+  );
+  const [localeLoading, setLocaleLoading] = useState<boolean>(true);
+  const [localeSaving, setLocaleSaving] = useState<boolean>(false);
   const { refreshBranding } = useBranding();
-  const { enabled: isMspI18nEnabled } = useFeatureFlag('msp-i18n-enabled', { defaultValue: false });
+
   const visibleLocales = useMemo(
     () => filterPseudoLocales(LOCALE_CONFIG.supportedLocales, !!isMspI18nEnabled),
     [isMspI18nEnabled],
   );
+
+  const languageOptions = useMemo<SelectOption[]>(() => {
+    const inheritLabel = t('clientPortalLanguage.inheritOption', {
+      defaultValue: 'Use organization default ({{language}})',
+      language: LOCALE_CONFIG.localeNames[orgDefaultLocale],
+    });
+    return [
+      { value: UNSET_LOCALE_VALUE, label: inheritLabel },
+      ...visibleLocales.map((locale) => ({
+        value: locale,
+        label: `${LOCALE_CONFIG.localeNames[locale]} (${locale.toUpperCase()})`,
+      })),
+    ];
+  }, [visibleLocales, orgDefaultLocale, t]);
 
   // Check if custom domain is configured
   useEffect(() => {
@@ -79,30 +97,18 @@ const ClientPortalSettings = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Convert locale config to SelectOption format
-  const languageOptions = useMemo((): SelectOption[] => {
-    return visibleLocales.map((locale) => ({
-      value: locale,
-      label: `${LOCALE_CONFIG.localeNames[locale]} (${locale.toUpperCase()})`,
-    }));
-  }, [visibleLocales]);
-
   useEffect(() => {
     const loadTenantSettings = async () => {
       try {
-        const [user, localeSettings, brandingSettings] = await Promise.all([
+        const [user, brandingSettings, orgLocaleSettings, clientPortalLocaleSettings] = await Promise.all([
           getCurrentUser(),
+          getTenantBrandingAction(),
           getTenantLocaleSettingsAction(),
-          getTenantBrandingAction()
+          getTenantClientPortalLocaleAction(),
         ]);
 
         if (user) {
           setTenantId(user.tenant);
-        }
-
-        if (localeSettings) {
-          setDefaultLocale(localeSettings.defaultLocale);
-          setEnabledLocales(localeSettings.enabledLocales);
         }
 
         if (brandingSettings) {
@@ -113,58 +119,54 @@ const ClientPortalSettings = () => {
           setSupportEmail(brandingSettings.supportEmail || '');
           setSupportPhone(brandingSettings.supportPhone || '');
         }
+
+        if (orgLocaleSettings?.defaultLocale) {
+          setOrgDefaultLocale(orgLocaleSettings.defaultLocale);
+        }
+
+        setClientPortalLocale(clientPortalLocaleSettings?.defaultLocale ?? null);
       } catch (error) {
         console.error('Failed to load tenant settings:', error);
       } finally {
-        setLoading(false);
         setBrandingLoading(false);
+        setLocaleLoading(false);
       }
     };
 
     loadTenantSettings();
   }, []);
 
-  const handleDefaultLanguageChange = async (newLocale: string) => {
-    const locale = newLocale as SupportedLocale;
-
-    if (locale === defaultLocale) return;
-
-    setSaving(true);
+  const handleClientPortalLocaleChange = async (next: string) => {
+    if (next === UNSET_LOCALE_VALUE) {
+      // Clearing the override is a future enhancement — for now disallow
+      // "unset" once something has been chosen and guide the admin to set
+      // the org default instead.
+      toast(
+        t('clientPortalLanguage.unsetHint', {
+          defaultValue:
+            'To remove the client portal override, change the organization default under Settings → Language.',
+        }),
+      );
+      return;
+    }
+    if (next === clientPortalLocale) return;
+    const locale = next as SupportedLocale;
+    setLocaleSaving(true);
     try {
-      // Ensure the default locale is in the enabled list
-      const updatedEnabledLocales = enabledLocales.includes(locale)
-        ? enabledLocales
-        : [...enabledLocales, locale];
-
-      await updateTenantDefaultLocaleAction(locale, updatedEnabledLocales);
-      setDefaultLocale(locale);
-      setEnabledLocales(updatedEnabledLocales);
-      toast.success(`Client portal default language updated to ${LOCALE_CONFIG.localeNames[locale]}`);
+      await updateTenantClientPortalLocaleAction(locale);
+      setClientPortalLocale(locale);
+      toast.success(
+        t('clientPortalLanguage.updated', {
+          defaultValue: 'Client portal default language updated to {{language}}',
+          language: LOCALE_CONFIG.localeNames[locale],
+        }),
+      );
     } catch (error) {
-      handleError(error, 'Failed to update tenant language settings');
+      handleError(error, 'Failed to update client portal default language');
     } finally {
-      setSaving(false);
+      setLocaleSaving(false);
     }
   };
-
-  const handleEnabledLanguagesChange = async (selectedLocales: SupportedLocale[]) => {
-    // Ensure default locale is always included
-    if (!selectedLocales.includes(defaultLocale)) {
-      selectedLocales.push(defaultLocale);
-    }
-
-    setSaving(true);
-    try {
-      await updateTenantDefaultLocaleAction(defaultLocale, selectedLocales);
-      setEnabledLocales(selectedLocales);
-      toast.success('Available languages updated');
-    } catch (error) {
-      handleError(error, 'Failed to update available languages');
-    } finally {
-      setSaving(false);
-    }
-  };
-
 
   const saveBrandingSettings = async (updates: Partial<{
     primaryColor: string;
@@ -237,82 +239,43 @@ const ClientPortalSettings = () => {
     <div className="space-y-6">
       <ClientPortalDomainSettings />
 
-      {/* Language Settings Card */}
+      {/* Client Portal Language Card */}
       <Card>
         <CardHeader>
           <CardTitle>
             <div className="flex items-center gap-2">
               <Globe className="h-5 w-5" />
-              {t('clientPortal.language.title')}
+              {t('clientPortalLanguage.title', { defaultValue: 'Client Portal Language' })}
             </div>
           </CardTitle>
           <CardDescription>
-            {t('clientPortal.language.description')}
+            {t('clientPortalLanguage.description', {
+              defaultValue:
+                'Override the default language for client portal users only. MSP staff keep the organization default.',
+            })}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
             <div className="space-y-2">
               <CustomSelect
-                id="tenant-default-language"
-                label={t('clientPortal.language.fields.defaultLanguage')}
+                id="client-portal-default-language"
+                label={t('clientPortalLanguage.fields.defaultLanguage', { defaultValue: 'Default Language' })}
                 options={languageOptions}
-                value={defaultLocale}
-                onValueChange={handleDefaultLanguageChange}
-                disabled={loading || saving}
-                placeholder="Select a language"
-                data-automation-id="tenant-default-language-select"
+                value={clientPortalLocale ?? UNSET_LOCALE_VALUE}
+                onValueChange={handleClientPortalLocaleChange}
+                disabled={localeLoading || localeSaving}
+                placeholder={t('clientPortalLanguage.placeholder', { defaultValue: 'Select a language' })}
+                data-automation-id="client-portal-default-language-select"
               />
               <p className="text-sm text-gray-500">
-                {t('clientPortal.language.help.defaultLanguage')}
+                {t('clientPortalLanguage.help.defaultLanguage', {
+                  defaultValue:
+                    'When set, client portal users see this language unless their individual preference or their client’s default overrides it.',
+                })}
               </p>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t('clientPortal.language.fields.availableLanguages')}
-              </label>
-              <p className="text-sm text-gray-500 mb-2">
-                {t('clientPortal.language.help.availableLanguages')}
-              </p>
-              <div className="space-y-2">
-                {visibleLocales.map((locale) => (
-                  <Checkbox
-                    key={locale}
-                    id={`locale-${locale}`}
-                    label={`${LOCALE_CONFIG.localeNames[locale]} (${locale.toUpperCase()})${locale === defaultLocale ? ' (default)' : ''}`}
-                    checked={enabledLocales.includes(locale)}
-                    disabled={locale === defaultLocale || loading || saving}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        handleEnabledLanguagesChange([...enabledLocales, locale]);
-                      } else {
-                        handleEnabledLanguagesChange(enabledLocales.filter(l => l !== locale));
-                      }
-                    }}
-                    className={locale === defaultLocale ? 'font-medium' : ''}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <Alert variant="info">
-              <AlertDescription>
-                <h4 className="font-medium mb-2">{t('clientPortal.language.hierarchy.title')}</h4>
-                <p className="mb-2">
-                  {t('clientPortal.language.hierarchy.description')}
-                </p>
-                <ol className="space-y-1 list-decimal list-inside">
-                  <li>{t('clientPortal.language.hierarchy.userPreference')}</li>
-                  <li>{t('clientPortal.language.hierarchy.clientDefault')}</li>
-                  <li>{t('clientPortal.language.hierarchy.orgDefault')}</li>
-                  <li>{t('clientPortal.language.hierarchy.systemDefault')}</li>
-                </ol>
-                <p className="mt-2 italic">
-                  {t('clientPortal.language.hierarchy.note')}
-                </p>
-              </AlertDescription>
-            </Alert>
+            <LanguageHierarchyTable />
           </div>
         </CardContent>
       </Card>

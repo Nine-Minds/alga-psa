@@ -1,0 +1,112 @@
+{
+  "navigation": {
+    "heading": "Extensions"
+  },
+  "enterpriseFeature": {
+    "title": "Enterprise Feature",
+    "description": "{{feature}} require Enterprise Edition. Please upgrade to access this feature."
+  },
+  "settings": {
+    "title": "Extension Management",
+    "description": "Install, configure, and manage extensions to extend Alga PSA functionality.",
+    "tabs": {
+      "manage": "Manage",
+      "install": "Install"
+    },
+    "enterpriseOnly": {
+      "title": "Enterprise feature",
+      "description": "Extensions are available in the Enterprise edition of Alga PSA."
+    },
+    "links": {
+      "needLogs": "Need extension logs?",
+      "debugConsole": "Open Service Proxy Demo Debug Console"
+    },
+    "loading": {
+      "extensions": "Loading extensions...",
+      "installer": "Loading installer..."
+    },
+    "featureNames": {
+      "settings": "Extension settings",
+      "details": "Extension details",
+      "permissions": "Extension permissions",
+      "management": "Extensions management",
+      "installer": "Extension installer"
+    }
+  },
+  "communityEdition": {
+    "listUnavailable": "Extensions not available in this edition",
+    "dynamicListUnavailable": "Extensions not available in Community Edition",
+    "dynamicInstallUnavailable": "Extension installation not available in Community Edition"
+  },
+  "page": {
+    "metadata": {
+      "title": "Extensions",
+      "description": "Manage extensions"
+    },
+    "title": "Extensions",
+    "description": "Extensions management is available in Enterprise Edition."
+  },
+  "detail": {
+    "metadataTitle": "Extensions - Enterprise Feature",
+    "extensionId": "Extension ID: {{id}}"
+  },
+  "runtime": {
+    "metadataTitle": "Extension",
+    "loadError": "Failed to load extension runtime info",
+    "notFoundTitle": "Extension not found.",
+    "goToExtensions": "Go to extensions",
+    "bundleUnavailableTitle": "Extension bundle not available.",
+    "bundleUnavailableDescription": "The extension bundle is missing or has not been uploaded.",
+    "goToDetails": "Go to extension details",
+    "runtimeDomainUnavailableTitle": "Extension runtime domain not available.",
+    "runtimeDomainUnavailableDescription": "Reprovision the extension from Settings -> Extensions -> select extension -> Provision."
+  },
+  "detailsPage": {
+    "metadata": {
+      "title": "Extension Details",
+      "description": "View extension details"
+    },
+    "title": "Extension Details",
+    "description": "Extension details are available in Enterprise Edition."
+  },
+  "settingsPage": {
+    "metadata": {
+      "title": "Extension Settings",
+      "description": "Configure extension settings"
+    },
+    "title": "Extension Settings",
+    "description": "Extension settings are available in Enterprise Edition."
+  },
+  "messages": {
+    "loadSettingsFailed": "Falha ao carregar as configurações da extensão.",
+    "refreshSchedulesFailed": "Falha ao atualizar os agendamentos.",
+    "requiredSecretsMissing": "Forneça valores para os segredos obrigatórios antes de salvar.",
+    "enterSecretValues": "Insira os valores dos segredos antes de salvar.",
+    "invalidCustomKey": "Chaves personalizadas só podem conter letras, números, sublinhados, pontos e traços.",
+    "saveSettingsFailed": "Falha ao salvar as configurações da extensão.",
+    "updateSecretsFailed": "Falha ao atualizar os segredos da extensão.",
+    "secretsUpdated": "Segredos da extensão atualizados.",
+    "settingsSaved": "Configurações da extensão salvas com sucesso.",
+    "resetSettingsFailed": "Falha ao redefinir as configurações da extensão.",
+    "settingsReset": "Configurações redefinidas para os valores padrão.",
+    "invalidPayloadJson": "A carga útil deve ser um JSON válido.",
+    "createScheduleFailed": "Falha ao criar o agendamento.",
+    "scheduleCreated": "Agendamento criado.",
+    "updateScheduleFailed": "Falha ao atualizar o agendamento.",
+    "scheduleUpdated": "Agendamento atualizado.",
+    "runScheduleFailed": "Falha ao executar o agendamento.",
+    "scheduleRunEnqueued": "Execução do agendamento enfileirada.",
+    "deleteScheduleFailed": "Falha ao excluir o agendamento.",
+    "scheduleDeleted": "Agendamento excluído.",
+    "toggleFailed": "Falha ao atualizar o estado da extensão",
+    "extensionEnabled": "Extensão ativada",
+    "extensionDisabled": "Extensão desativada",
+    "enableFailed": "Falha ao ativar a extensão",
+    "disableFailed": "Falha ao desativar a extensão",
+    "removeFailed": "Falha ao remover a extensão",
+    "extensionRemoved": "Extensão removida",
+    "reprovisionFailed": "Falha no reprovisionamento",
+    "manifestReadFailed": "Falha ao ler o arquivo de manifesto",
+    "invalidBundleExtension": "O arquivo deve terminar com \".tar.zst\": {{filename}}"
+  }
+}

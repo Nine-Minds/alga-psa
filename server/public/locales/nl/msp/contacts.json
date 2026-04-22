@@ -60,7 +60,7 @@
       "email": "E-mail",
       "phoneNumber": "Telefoonnummer",
       "client": "Klant",
-      "tags": "Tags",
+      "tags": "Labels",
       "actions": "Acties"
     },
     "lastPhoneTypeUsage": {
@@ -95,7 +95,7 @@
       "inboundTicketDestinationOverride": "Overschrijving inkomende ticketbestemming",
       "useClientDestination": "Gebruik klantbestemming",
       "inboundTicketDestinationHelp": "Indien ingesteld, overschrijft dit de klantbestemming voor precies deze afzender. Voorrang: contactoverschrijving -> klantbestemming -> standaard van provider.",
-      "tags": "Tags",
+      "tags": "Labels",
       "notes": "Notities"
     },
     "status": {
@@ -154,7 +154,7 @@
       "email": "E-mail *",
       "defaultPhoneNumber": "Standaard telefoonnummer",
       "client": "Klant",
-      "tags": "Tags",
+      "tags": "Labels",
       "role": "Rol",
       "notes": "Notities",
       "primaryEmailLabel": "Label primaire e-mail",
@@ -465,7 +465,7 @@
       "status": "Status:",
       "notes": "Notities:",
       "notesPlaceholder": "Voeg eventuele extra notities over het contact toe...",
-      "tags": "Tags:",
+      "tags": "Labels:",
       "emailAddresses": "E-mailadressen:"
     },
     "loading": {
@@ -505,7 +505,7 @@
       "createdAt": "Aangemaakt op",
       "updatedAt": "Bijgewerkt op",
       "notes": "Notities:",
-      "tags": "Tags:",
+      "tags": "Labels:",
       "emailAddresses": "E-mailadressen:",
       "defaultEmail": "Standaard"
     },

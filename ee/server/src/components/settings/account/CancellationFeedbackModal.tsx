@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface CancellationFeedbackModalProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ export default function CancellationFeedbackModal({
   onConfirm,
   onLogout,
 }: CancellationFeedbackModalProps) {
+  const { t } = useTranslation('msp/account');
   const [reasonText, setReasonText] = useState('');
   const [reasonCategory, setReasonCategory] = useState('');
   const [loading, setLoading] = useState(false);
@@ -39,19 +41,19 @@ export default function CancellationFeedbackModal({
 
   const handleSubmit = async () => {
     if (!reasonText.trim()) {
-      toast.error('Please provide a reason for cancellation');
+      toast.error(t('messages.feedbackReasonRequired'));
       return;
     }
 
     if (reasonText.length > maxChars) {
-      toast.error(`Feedback must be ${maxChars} characters or less`);
+      toast.error(t('messages.feedbackMaxLength', { max: maxChars }));
       return;
     }
 
     setLoading(true);
     try {
       await onConfirm(reasonText.trim(), reasonCategory || undefined);
-      toast.success('Thank you for your feedback. We have received your cancellation request. You will be logged out shortly.');
+      toast.success(t('messages.feedbackSubmitted'));
       onClose();
       // Reset form
       setReasonText('');
@@ -65,7 +67,7 @@ export default function CancellationFeedbackModal({
       }
     } catch (error) {
       console.error('Error submitting cancellation feedback:', error);
-      toast.error('Failed to submit feedback. Please try again.');
+      toast.error(t('messages.feedbackSubmitFailed'));
     } finally {
       setLoading(false);
     }

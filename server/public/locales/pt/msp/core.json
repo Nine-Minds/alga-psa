@@ -1,0 +1,229 @@
+{
+  "nav": {
+    "home": "Home",
+    "userActivities": "User Activities",
+    "tickets": "Tickets",
+    "serviceRequests": "Solicitações de serviço",
+    "surveys": "Surveys",
+    "projects": "Projects",
+    "projectsAll": "All Projects",
+    "projectsTemplates": "Templates",
+    "clients": "Clients",
+    "contacts": "Contacts",
+    "documents": "Documents",
+    "documentsAll": "All Documents",
+    "knowledgeBase": "Knowledge Base",
+    "assets": "Assets",
+    "timeManagement": "Time Management",
+    "timeEntry": "Time Entry",
+    "approvals": "Approvals",
+    "billing": {
+      "label": "Billing",
+      "sections": {
+        "contracts": "Contracts",
+        "invoicing": "Invoicing",
+        "quotes": "Quotes",
+        "pricing": "Pricing",
+        "trackingReports": "Tracking & Reports"
+      },
+      "contractTemplates": "Contract Templates",
+      "clientContracts": "Client Contracts",
+      "quotes": "Quotes",
+      "quoteBusinessTemplates": "Quote Templates",
+      "quoteLayouts": "Quote Layouts",
+      "contractLinePresets": "Contract Line Presets",
+      "invoicing": "Invoicing",
+      "invoiceLayouts": "Invoice Layouts",
+      "billingCycles": "Billing Cycles",
+      "servicePeriods": "Service Periods",
+      "serviceCatalog": "Service Catalog",
+      "products": "Products",
+      "taxRates": "Tax Rates",
+      "usageTracking": "Usage Tracking",
+      "reports": "Reports",
+      "accountingExports": "Accounting Exports"
+    },
+    "schedule": "Schedule",
+    "technicianDispatch": "Technician Dispatch",
+    "automationHub": "Workflows",
+    "workflows": "Workflows",
+    "controlPanel": "Control Panel",
+    "workflowEditor": "Workflow Editor",
+    "runs": "Runs",
+    "events": "Events",
+    "deadLetter": "Dead Letter",
+    "systemMonitor": "System Monitor",
+    "systemMonitoring": "System Monitoring",
+    "jobMonitoring": "Job Monitoring",
+    "jobs": "Jobs",
+    "emailLogs": "Email Logs",
+    "extensions": "Extensions"
+  },
+  "sidebar": {
+    "backToMain": "Back to Main",
+    "searchPlaceholder": "Search",
+    "settings": "Settings",
+    "support": "Support",
+    "goToDashboard": "Go to dashboard",
+    "logoAlt": "AlgaPSA Logo",
+    "expandSidebar": "Expand sidebar",
+    "collapseSidebar": "Collapse sidebar"
+  },
+  "settings": {
+    "sections": {
+      "organizationAccess": "Organization & Access",
+      "workManagement": "Work Management",
+      "timeBilling": "Time & Billing",
+      "communication": "Communication",
+      "dataIntegration": "Data & Integration",
+      "experimental": "Experimental"
+    },
+    "tabs": {
+      "general": "General",
+      "users": "Users",
+      "teams": "Teams",
+      "language": "Language",
+      "clientPortal": "Client Portal",
+      "ticketing": "Ticketing",
+      "sla": "SLA",
+      "projects": "Projects",
+      "interactions": "Interactions",
+      "notifications": "Notifications",
+      "timeEntry": "Time Entry",
+      "billing": "Billing",
+      "secrets": "Secrets",
+      "importExport": "Import/Export",
+      "email": "Email",
+      "integrations": "Integrations",
+      "extensions": "Extensions",
+      "experimentalFeatures": "Experimental Features",
+      "profile": "Profile",
+      "security": "Security"
+    }
+  },
+  "dashboard": {
+    "onboardingWizard": "Onboarding Wizard"
+  },
+  "header": {
+    "userFallback": "User",
+    "quickAccess": "Quick access to profile & account.",
+    "profile": "Profile",
+    "account": "Account",
+    "signOut": "Sign out",
+    "quickCreate": {
+      "ariaLabel": "Open quick create",
+      "title": "Quick Create",
+      "heading": "Create",
+      "options": {
+        "ticket": {
+          "label": "Ticket",
+          "description": "Create a new support ticket"
+        },
+        "client": {
+          "label": "Client",
+          "description": "Add a new client to your system"
+        },
+        "contact": {
+          "label": "Contact",
+          "description": "Add a new contact person"
+        },
+        "project": {
+          "label": "Project",
+          "description": "Start a new project"
+        },
+        "asset": {
+          "label": "Asset",
+          "description": "Add a new device to your workspace"
+        },
+        "service": {
+          "label": "Service",
+          "description": "Add a new billable service"
+        },
+        "product": {
+          "label": "Product",
+          "description": "Add a new product to your catalog"
+        }
+      }
+    },
+    "jobs": {
+      "ariaLabel": "View background job activity",
+      "title": "Background Jobs",
+      "description": "Track imports, automation runs, and scheduled work.",
+      "active": "Active jobs",
+      "queued": "Queued jobs",
+      "failedLast24h": "Failed last 24h",
+      "openJobCenter": "Open Job Center"
+    },
+    "breadcrumb": {
+      "home": "Home",
+      "dashboard": "Dashboard"
+    },
+    "tenantBadge": {
+      "ariaLabel": "Active tenant {{tenant}}"
+    },
+    "themeToggle": {
+      "ariaLabel": "Theme toggle",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System",
+      "selected": "Selected"
+    }
+  },
+  "dialogs": {
+    "aiInterrupt": {
+      "navigate": {
+        "title": "Leave page and cancel AI response?",
+        "message": "An AI response or tool action is still in progress. Leaving this page now will cancel it.",
+        "confirm": "Leave page",
+        "cancel": "Stay on page"
+      },
+      "closeChat": {
+        "title": "Close chat and cancel AI response?",
+        "message": "An AI response or tool action is still in progress. Closing the chat now will cancel it.",
+        "confirm": "Close chat",
+        "cancel": "Keep chat open"
+      }
+    }
+  },
+  "banners": {
+    "trial": {
+      "premiumConfirmed": "Premium confirmed — starts next billing cycle",
+      "dayLeft": "1 day left",
+      "daysLeft": "{{count}} days left",
+      "premiumTrial": "Premium Trial: {{daysLabel}} — confirm to keep",
+      "stripeTrial": "{{tier}} Trial: {{daysLabel}}"
+    },
+    "paymentFailed": {
+      "message": "Payment failed — Update payment method",
+      "portalError": "Failed to open billing portal"
+    },
+    "platformNotification": {
+      "learnMore": "Learn More",
+      "dismiss": "Dismiss notification"
+    }
+  },
+  "quickCreate": {
+    "success": {
+      "asset": "Asset created successfully",
+      "ticket": "Ticket #{{number}} created successfully",
+      "client": "Client \"{{name}}\" created successfully",
+      "contact": "{{name}} added successfully",
+      "project": "Project \"{{name}}\" created successfully",
+      "service": "Service created successfully",
+      "product": "Product created successfully"
+    },
+    "errors": {
+      "loadClients": "Failed to load clients",
+      "loadServiceTypes": "Failed to load service types"
+    },
+    "dialogTitles": {
+      "contact": "Add New Contact",
+      "project": "Add New Project",
+      "service": "Add New Service"
+    }
+  },
+  "rightSidebar": {
+    "title": "Chat",
+    "enterpriseOnly": "The chat feature is only available in the Enterprise Edition."
+  }
+}

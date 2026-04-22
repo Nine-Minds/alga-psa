@@ -3,6 +3,7 @@
     "home": "11111",
     "userActivities": "11111",
     "tickets": "11111",
+    "serviceRequests": "11111",
     "surveys": "11111",
     "projects": "11111",
     "projectsAll": "11111",
@@ -21,11 +22,15 @@
       "sections": {
         "contracts": "11111",
         "invoicing": "11111",
+        "quotes": "11111",
         "pricing": "11111",
         "trackingReports": "11111"
       },
       "contractTemplates": "11111",
       "clientContracts": "11111",
+      "quotes": "11111",
+      "quoteBusinessTemplates": "11111",
+      "quoteLayouts": "11111",
       "contractLinePresets": "11111",
       "invoicing": "11111",
       "invoiceLayouts": "11111",

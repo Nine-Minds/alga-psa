@@ -259,7 +259,7 @@
           "placeholder": "z. B. 10000 oder leer"
         },
         "rate": {
-          "label": "Rate (%) *",
+          "label": "Satz (%) *",
           "placeholder": "z.B. 10"
         }
       },
@@ -310,7 +310,7 @@
           "placeholder": "z. B. Bundessteuer, Staatssteuer"
         },
         "rate": {
-          "label": "Rate (%) *",
+          "label": "Satz (%) *",
           "placeholder": "z.B. 10"
         },
         "sequence": {
@@ -587,7 +587,7 @@
           "monthly": "Monatlich",
           "perHour": "Pro Stunde",
           "usage": "Verwendung",
-          "rate": "Rate"
+          "rate": "Satz"
         }
       },
       "unitOfMeasure": {
@@ -739,7 +739,7 @@
           "monthly": "Monatlich",
           "perHour": "Pro Stunde",
           "usage": "Verwendung",
-          "rate": "Rate"
+          "rate": "Satz"
         }
       },
       "unitOfMeasure": {
@@ -834,7 +834,7 @@
         "label": "Preise *",
         "help": "Fügen Sie Preise in mehreren Währungen hinzu. Die erste Währung ist der Primärkurs.",
         "rateType": {
-          "rate": "Rate"
+          "rate": "Satz"
         },
         "placeholders": {
           "currency": "Währung",
@@ -995,7 +995,7 @@
       "code": "Code",
       "status": "Status",
       "billingMethod": "Abrechnungsmethode",
-      "rate": "Rate",
+      "rate": "Satz",
       "dateRange": "Datumsbereich",
       "startDate": "Startdatum",
       "endDate": "Enddatum",
@@ -1095,6 +1095,25 @@
     "errors": {
       "load": "Fehler beim Laden der Nummerierungseinstellungen.",
       "save": "Fehler beim Aktualisieren der Einstellungen."
+    }
+  },
+  "payment": {
+    "messages": {
+      "loadConfigFailed": "Zahlungskonfiguration konnte nicht geladen werden",
+      "keysRequired": "Bitte geben Sie sowohl den geheimen Schlüssel als auch den veröffentlichbaren Schlüssel ein",
+      "invalidSecretKey": "Der geheime Schlüssel sollte mit sk_ beginnen",
+      "invalidPublishableKey": "Der veröffentlichbare Schlüssel sollte mit pk_ beginnen",
+      "connectSuccess": "Stripe verbunden und Webhooks automatisch konfiguriert!",
+      "connectPartialSuccess": "Stripe verbunden! Hinweis: Automatische Webhook-Konfiguration fehlgeschlagen — Sie müssen Webhooks möglicherweise manuell im Stripe-Dashboard konfigurieren.",
+      "connectFailed": "Stripe konnte nicht verbunden werden",
+      "disconnected": "Stripe getrennt",
+      "disconnectFailed": "Stripe konnte nicht getrennt werden",
+      "connectionSuccess": "Verbindung erfolgreich!",
+      "connectionTestFailed": "Verbindungstest fehlgeschlagen",
+      "settingsSaved": "Einstellungen erfolgreich gespeichert",
+      "saveSettingsFailed": "Einstellungen konnten nicht gespeichert werden",
+      "webhookConfigured": "Webhook erfolgreich konfiguriert!",
+      "webhookConfigureFailed": "Webhook konnte nicht konfiguriert werden"
     }
   }
 }

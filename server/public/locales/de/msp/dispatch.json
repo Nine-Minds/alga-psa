@@ -1,37 +1,37 @@
 {
   "page": {
     "title": "Techniker-Disposition",
-    "filteredWorkItems": "Gefilterte Arbeitsauftr\u00e4ge anzeigen"
+    "filteredWorkItems": "Gefilterte Arbeitsaufträge anzeigen"
   },
   "workItems": {
-    "title": "Arbeitsauftr\u00e4ge",
-    "searchPlaceholder": "Arbeitsauftr\u00e4ge suchen...",
+    "title": "Arbeitsaufträge",
+    "searchPlaceholder": "Arbeitsaufträge suchen...",
     "filterPlaceholder": "Nach Status filtern...",
     "status": {
       "unscheduled": "Nicht geplant",
       "scheduled": "Geplant"
     },
     "pagination": {
-      "previous": "Zur\u00fcck",
+      "previous": "Zurück",
       "next": "Weiter",
       "pageInfo": "Seite {{current}} von {{total}}",
-      "showing": "Zeige {{count}} von {{total}} Eintr\u00e4gen"
+      "showing": "Zeige {{count}} von {{total}} Einträgen"
     }
   },
   "schedule": {
     "showInactive": "Inaktive Benutzer anzeigen",
-    "prev": "< Zur\u00fcck",
+    "prev": "< Zurück",
     "next": "Weiter >",
     "today": "Heute",
     "viewDay": "Tag",
     "viewWeek": "Woche",
     "prevAria": "Vorheriger {{mode}}",
-    "nextAria": "N\u00e4chster {{mode}}",
+    "nextAria": "Nächster {{mode}}",
     "viewWeekTooltip": "Woche anzeigen",
-    "viewWeekAria": "Woche anzeigen f\u00fcr {{name}}",
-    "viewWeekAriaInactive": "Woche anzeigen f\u00fcr {{name}} (inaktiv)",
+    "viewWeekAria": "Woche anzeigen für {{name}}",
+    "viewWeekAriaInactive": "Woche anzeigen für {{name}} (inaktiv)",
     "compareAll": "Alle vergleichen",
-    "clearAll": "Alle l\u00f6schen",
+    "clearAll": "Alle löschen",
     "compare": "Vergleichen",
     "stopComparing": "Vergleich beenden",
     "compareAria": "{{name}} vergleichen",
@@ -45,7 +45,7 @@
       "approvalInformation": "Genehmigungsinformationen"
     },
     "fields": {
-      "service": "Service",
+      "service": "Dienst",
       "status": "Status",
       "client": "Kunde",
       "contact": "Kontakt",
@@ -53,8 +53,8 @@
       "requester": "Anfragende Person",
       "email": "E-Mail",
       "phone": "Telefon",
-      "requestedDate": "Gew\u00fcnschtes Datum",
-      "requestedTime": "Gew\u00fcnschte Uhrzeit",
+      "requestedDate": "Gewünschtes Datum",
+      "requestedTime": "Gewünschte Uhrzeit",
       "duration": "Dauer",
       "preferredTechnician": "Bevorzugter Techniker",
       "description": "Beschreibung",
@@ -64,10 +64,10 @@
     },
     "messages": {
       "notAvailable": "N/V",
-      "unsupportedWorkItemType": "Nicht unterst\u00fctzter Arbeitsaufgabentyp"
+      "unsupportedWorkItemType": "Nicht unterstützter Arbeitsaufgabentyp"
     },
     "toasts": {
-      "noUsersAvailable": "Keine Benutzer im System verf\u00fcgbar",
+      "noUsersAvailable": "Keine Benutzer im System verfügbar",
       "noUserSession": "Keine Benutzersitzung gefunden",
       "failedToLoadTicketData": "Ticketdaten konnten nicht geladen werden",
       "failedToLoadProjectTaskData": "Projekttaskdaten konnten nicht geladen werden",
@@ -92,24 +92,24 @@
     "messages": {
       "accessDenied": "Zugriff verweigert: Sie haben keine Berechtigung, das Techniker-Dispatch-Dashboard anzuzeigen.",
       "unknownError": "Ein unbekannter Fehler ist aufgetreten.",
-      "permissionDeniedSchedule": "Sie haben keine Berechtigung, f\u00fcr diesen Techniker zu planen.",
+      "permissionDeniedSchedule": "Sie haben keine Berechtigung, für diesen Techniker zu planen.",
       "couldNotLoadWorkItemDetails": "Arbeitsauftragsdetails konnten nicht geladen werden."
     },
     "errors": {
-      "searchWorkItems": "Arbeitsauftr\u00e4ge konnten nicht gesucht werden",
+      "searchWorkItems": "Arbeitsaufträge konnten nicht gesucht werden",
       "loadStatusFilterOptions": "Statusfilteroptionen konnten nicht geladen werden.",
-      "refreshScheduleEntries": "Termineintr\u00e4ge konnten nicht aktualisiert werden",
+      "refreshScheduleEntries": "Termineinträge konnten nicht aktualisiert werden",
       "refreshData": "Daten konnten nicht aktualisiert werden",
       "loadPermissions": "Berechtigungen konnten nicht geladen werden.",
-      "fetchScheduleEntries": "Termineintr\u00e4ge konnten nicht abgerufen werden",
+      "fetchScheduleEntries": "Termineinträge konnten nicht abgerufen werden",
       "fetchData": "Daten konnten nicht abgerufen werden",
       "updateSchedule": "Termin konnte nicht aktualisiert werden",
       "createScheduleEntry": "Termineintrag konnte nicht erstellt werden",
-      "deleteScheduleEntry": "Termineintrag konnte nicht gel\u00f6scht werden",
+      "deleteScheduleEntry": "Termineintrag konnte nicht gelöscht werden",
       "updateTask": "Aufgabe konnte nicht aktualisiert werden",
       "updateScheduleEntry": "Termineintrag konnte nicht aktualisiert werden",
       "saveScheduleEntry": "Termineintrag konnte nicht gespeichert werden",
-      "openWorkItemDetails": "Arbeitsauftragsdetails konnten nicht ge\u00f6ffnet werden."
+      "openWorkItemDetails": "Arbeitsauftragsdetails konnten nicht geöffnet werden."
     },
     "success": {
       "taskUpdated": "Aufgabe erfolgreich aktualisiert",
@@ -120,11 +120,11 @@
   "events": {
     "actions": {
       "viewDetails": "Details anzeigen",
-      "delete": "L\u00f6schen",
-      "deleteScheduleEntry": "Termineintrag l\u00f6schen"
+      "delete": "Löschen",
+      "deleteScheduleEntry": "Termineintrag löschen"
     },
     "fallbacks": {
-      "busy": "Besch\u00e4ftigt",
+      "busy": "Beschäftigt",
       "unknown": "Unbekannt",
       "unassigned": "Nicht zugewiesen",
       "unknownAgent": "Unbekannter Mitarbeiter",
@@ -132,21 +132,21 @@
       "thisScheduleEntry": "diesen Termineintrag"
     },
     "tooltip": {
-      "privateEvent": "Besch\u00e4ftigt\nStart: {{start}}\nEnde: {{end}}",
+      "privateEvent": "Beschäftigt\nStart: {{start}}\nEnde: {{end}}",
       "eventDetails": "{{title}}\nZugewiesen an: {{assigned}}\nStart: {{start}}\nEnde: {{end}}"
     },
     "errors": {
-      "validateDeletion": "L\u00f6schung konnte nicht gepr\u00fcft werden. Bitte versuchen Sie es erneut."
+      "validateDeletion": "Löschung konnte nicht geprüft werden. Bitte versuchen Sie es erneut."
     }
   },
   "badges": {
-    "needsDispatch": "Ben\u00f6tigt Einsatz",
-    "needsDispatchFor": "Ben\u00f6tigt Einsatz f\u00fcr: {{agents}}"
+    "needsDispatch": "Benötigt Einsatz",
+    "needsDispatchFor": "Benötigt Einsatz für: {{agents}}"
   },
   "time": {
     "suffixes": {
-      "am": " AM",
-      "pm": " PM"
+      "am": " vorm.",
+      "pm": " nachm."
     }
   }
 }

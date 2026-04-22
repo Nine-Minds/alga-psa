@@ -2,186 +2,196 @@
   {
     "id": "F001",
     "description": "Create server/public/locales/en/msp/invoicing.json with all keys extracted from 22 invoicing components, organized under semantic groups (automaticInvoices, manualInvoices, draftsTab, finalizedTab, recurringServicePeriods, billingCycles, invoicePreview, templateEditor, templates, externalTax, sendEmail, generateTab, prepayment, contractItems, hub, templateManager, taxBadge, annotations, purchaseOrder, common)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F002",
     "description": "Update ROUTE_NAMESPACES so /msp/billing loads the msp/invoicing namespace alongside any existing billing namespaces",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F003",
     "description": "Wire useTranslation in AutomaticInvoices.tsx -- ready-to-invoice section: heading, sub-headings, select-all explanation, filter placeholder, date range label, search button, parent group column headers (Group, Service Period, Invoice Window, Included)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F004",
     "description": "Wire AutomaticInvoices.tsx parent group cell strings: item/items count, contract/contracts count, line/lines count, combinability badges (Can combine into 1 invoice, Must invoice separately, Contains blocked items, Not ready to invoice), incompatibility reasons (Invoice window differs, Client differs, PO scope differs, Currency differs, Tax treatment differs, Export shape differs)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F005",
     "description": "Wire AutomaticInvoices.tsx child execution row strings: cadence/billing timing/service period labels, assignment context strings (Unresolved time entry, Unresolved usage record, Assigned contract line, Assigned work item, Unresolved work), attribution metadata warning, Pending amount, blocked reason display",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F006",
     "description": "Wire AutomaticInvoices.tsx action buttons and dialogs: Preview Selected, Generate Invoices button with count, Reverse Invoice/Delete Invoice history actions, reverse dialog (warning text, bullet points, cancel/confirm buttons), delete confirmation dialog, PO overage batch/single dialogs, preview dialog (title, description, invoice count summary, line item table headers, subtotal/tax/total footer, Close Preview, Generate Invoice buttons)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F007",
     "description": "Wire AutomaticInvoices.tsx recurring invoice history section: heading, filter placeholder, column headers (Client, Assignment Scope, Cadence Source, Service Period, Invoice Window, Invoice, Actions), cadence source badges (Contract anniversary, Client schedule), Multi-contract invoice badge, Service-period-backed badge, error panel heading and error messages, materialization gap panel (heading, description, service period/invoice window/schedule key labels, Review Service Periods link)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F008",
     "description": "Wire useTranslation in ManualInvoices.tsx -- form headings (Invoice Details, Generate Manual Invoice), descriptions, field labels (Client, Invoice Number, Invoice Number (Optional)), placeholders, automated items table headers (Service, Total), line item section heading (Manual Line Items, Line Items)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F009",
     "description": "Wire ManualInvoices.tsx form controls and validation: Add Charge/Add Discount buttons, Total label, Save Changes/Generate Invoice/Processing button states, prepayment checkbox label and description, credit expiration date label/help text, error messages (Please select a client, invoice number must be unique, no tax rate configured, service not found, cannot modify), ErrorFallback heading and Try again button",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F010",
     "description": "Wire useTranslation in DraftsTab.tsx -- column headers (Invoice Number, Client, Amount, Invoice Date, Due Date, Status, Actions), search placeholder, bulk actions button label, row actions (Finalize, Download PDF, Reverse Draft), empty state (heading, description, Generate Invoices button), loading text, error messages, reverse confirmation dialog (title, message with count interpolation, confirm/cancel labels)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F011",
     "description": "Wire useTranslation in FinalizedTab.tsx -- column headers (Invoice Number, Client, Amount, Finalized Date, Status, Actions), search placeholder, bulk actions (Download PDFs, Send Emails, Unfinalize Selected), row actions (Download PDF, Send Email, Unfinalize), empty state (heading, description, View Drafts button), loading text, error messages",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F012",
     "description": "Wire useTranslation in RecurringServicePeriodsTab.tsx -- page title, description, schedule selector label/placeholder, schedule key label/placeholder, Open Schedule button, error messages, recurring obligation heading and field labels (Client, Cadence source, Billing timing, Charge family, Schedule key), summary stat labels (Generated, Edited, Billed, Exceptions)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F013",
     "description": "Wire RecurringServicePeriodsTab.tsx table and panels: table headers (State, Service Period, Invoice Window, Revision, Reason, Allowed Actions), repair panel (heading, description, Repair button), regeneration preview (heading, description, JSON label, Preview Regeneration button, Conflicts count, no-conflicts success message), schedule option label formatting (Contract anniversary, Client schedule, Advance, Arrears, Unknown client)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F014",
     "description": "Wire useTranslation in BillingCycles.tsx -- page heading, tooltip text, column headers (Client, Contract, Current Billing Cycle, Anchor, Actions), search placeholder, date range label, Search button, View Client Billing link, loading text, error message, No active assignments, Not set, month names (January-December), anchor labels (Weekday N, Rolling, Starts date, Day N)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F015",
     "description": "Wire useTranslation in InvoicePreviewPanel.tsx -- panel heading (Invoice Preview), template selector placeholder, action buttons (Finalize Invoice, Edit Items, Download PDF, Reverse Draft, Send Email, Unfinalize), loading text (Loading Preview...), empty state (Select an invoice to preview), error fallback (Could not display preview), View Source Quote button",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F016",
     "description": "Wire useTranslation in InvoiceTemplateEditor.tsx -- back nav text, heading (Create New Invoice Layout, Edit Layout: name), Template Name label, Visual/Code tab labels, code view readonly alert text, Template AST label, Created/Last Updated timestamps, Cancel/Save Template/Saving buttons, validation error (Template name is required), AST export error",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F017",
     "description": "Wire useTranslation in InvoiceTemplates.tsx -- section heading (Invoice Layouts), column headers (Template Name, Type, Default, Actions), type values (Standard, Custom), action items (Edit, Edit as Copy, Clone, Set as Default, Delete), Open menu sr-only text, Create New Layout button, loading text, error messages (Failed to clone/set default/fetch templates)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F018",
     "description": "Wire useTranslation in ExternalTaxBatchImportDashboard.tsx -- card title (External Tax Import), description, column headers (Invoice, Client, Amount, System, Created, Actions), Import button, summary text (N invoice(s) pending tax import), Refresh/Import All buttons, progress label (Importing taxes...), results summary (N successful, N failed), empty state (All invoices are up to date), help text, adapter names (QuickBooks Online, Xero, Sage), toast messages",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F019",
     "description": "Wire useTranslation in ExternalTaxImportPanel.tsx -- panel title (External Tax Import), Show/Hide History toggle, pending alert (Tax Pending Import, description), import button (Import Tax from adapter), imported alert (Tax Imported from adapter), reconciliation labels (Internal, External, Difference), significant difference warning, history heading (Import History), loading/empty history text, help text, adapter names",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F020",
     "description": "Wire useTranslation in SendInvoiceEmailDialog.tsx -- dialog title (Send Invoice Email), loading text, summary labels (N Invoice(s), N ready to send, N missing email), Recipients heading, recipient source labels (Billing Contact, Billing Email, Client Email, No Email Found), no email configured message, Due label, Additional Message label/placeholder, email preview text, Cancel/Send/Sending button states",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F021",
     "description": "Wire useTranslation in TaxReconciliationView.tsx -- card title (Tax Reconciliation), tooltips (Difference exceeds 1%, Tax amounts match), description, comparison labels (Internal (Alga PSA), External (Accounting)), significant difference alert (heading, description), table headers (Description, Internal Tax, External Tax, Difference), Total label, Line N fallback, loading/no-data states, help text",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F022",
     "description": "Wire useTranslation in GenerateTab.tsx -- Invoice Type label, type option labels (Automatic Invoices, Manual Invoice, Prepayment), type descriptions (3 strings), success dialog message (Invoice generated successfully!), error message (Failed to load data)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F023",
     "description": "Wire useTranslation in PrepaymentInvoices.tsx -- heading (Generate Prepayment Invoice, Generate Credit Memo), descriptions (2 strings), field labels (Type, Client, Amount, Description), type options (Prepayment Invoice, Credit Memo), placeholders (Enter amount, Prepayment for future services, Reason for credit memo), validation errors, submit button states (Generating..., Generate Prepayment Invoice, Generate Credit Memo)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F024",
     "description": "Wire useTranslation in ContractInvoiceItems.tsx -- table headers (Description, Quantity, Rate, Amount), subtotal labels (Contract Subtotal, Other Items Subtotal), section heading (Other Items), Product badge",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F025",
     "description": "Wire useTranslation in InvoicingHub.tsx -- section heading (Invoicing), tab labels (Generate, Drafts, Finalized)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F026",
     "description": "Wire useTranslation in InvoiceTemplateManager.tsx -- headings (Invoice Template Manager, Sample Invoices, Template Preview), Invoice # prefix",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F027",
     "description": "Wire useTranslation in InvoiceTaxSourceBadge.tsx -- badge labels (Tax: Internal, Tax: External, Tax: Pending), tooltip strings for each tax source, adapter name mappings, dynamic tooltip text patterns (Tax calculated by adapter, Awaiting tax calculation from adapter)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F028",
     "description": "Wire useTranslation in InvoiceAnnotations.tsx -- heading (Invoice Annotations), Internal/External labels, placeholder (Add a new annotation), Add Annotation button",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F029",
     "description": "Wire useTranslation in PurchaseOrderSummaryBanner.tsx -- field labels (PO Number, PO Authorized, PO Consumed (Finalized), PO Remaining)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F030",
     "description": "Generate fr/msp/invoicing.json translations for all keys",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F031",
     "description": "Generate es/msp/invoicing.json translations for all keys",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F032",
     "description": "Generate de/msp/invoicing.json translations for all keys",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F033",
     "description": "Generate nl/msp/invoicing.json translations for all keys",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F034",
     "description": "Generate it/msp/invoicing.json translations for all keys (with Italian accent audit)",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F035",
     "description": "Generate pl/msp/invoicing.json translations for all keys",
-    "implemented": false
+    "implemented": true
+  },
+  {
+    "id": "F039",
+    "description": "Generate pt/msp/invoicing.json translations for all keys so repo-wide locale parity validation passes against the existing Portuguese locale pack",
+    "implemented": true
   },
   {
     "id": "F036",
     "description": "Run `node scripts/generate-pseudo-locales.cjs` to regenerate xx/ and yy/ pseudo-locale files from updated English source",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F037",
     "description": "Run `node scripts/validate-translations.cjs` and resolve any key parity, variable, or accent issues across all 9 locales (exit code 0 required)",
-    "implemented": false
+    "implemented": true
+  },
+  {
+    "id": "F038",
+    "description": "Wire remaining AutomaticInvoices.tsx user-facing strings omitted from the original split: needs-approval panel chrome, grouped-preview limitation note, expand/collapse aria labels, ready-table selection hints, parent-group attribution metadata plural copy, unknown cadence/client fallbacks, and PO overage fallback labels",
+    "implemented": true
   }
 ]

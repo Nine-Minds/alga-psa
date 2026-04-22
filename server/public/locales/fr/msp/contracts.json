@@ -125,11 +125,11 @@
       "loadingStatuses": "Chargement des statuts...",
       "notRequired": "Non requis",
       "noticePeriodDays": "Période de préavis (jours)",
-      "noticePeriodPlaceholder": "e.g., 30",
+      "noticePeriodPlaceholder": "p. ex. 30",
       "noticePrefix": "Préavis :",
       "renewalHandling": "Gestion du renouvellement",
       "renewalTermMonths": "Durée de renouvellement (mois)",
-      "renewalTermPlaceholder": "e.g., 12",
+      "renewalTermPlaceholder": "p. ex. 12",
       "renewalTicketBoard": "Tableau de tickets de renouvellement",
       "renewalTicketStatus": "Statut du ticket de renouvellement",
       "required": "Requis",
@@ -287,7 +287,7 @@
       "startDate": "Date de début"
     },
     "po": {
-      "prefix": "PO",
+      "prefix": "BC",
       "requiredForContract": "Bon de commande requis pour ce contrat."
     },
     "status": {
@@ -353,12 +353,12 @@
       "endDateHint": "Laisser vide pour les contrats en cours qui n'ont pas de date de fin fixe.",
       "endDateLabel": "Date de fin (facultatif)",
       "noticePeriodLabel": "Période de préavis (jours)",
-      "noticePeriodPlaceholder": "e.g., 30",
+      "noticePeriodPlaceholder": "p. ex. 30",
       "renewalModePlaceholder": "Sélectionnez le mode de renouvellement",
       "renewalSettingsDescription": "Configurez le comportement de renouvellement pour cette affectation de contrat client.",
       "renewalSettingsTitle": "Paramètres de renouvellement",
       "renewalTermLabel": "Durée de renouvellement (mois)",
-      "renewalTermPlaceholder": "e.g., 12",
+      "renewalTermPlaceholder": "p. ex. 12",
       "selectClientFirst": "Sélectionnez d'abord un client",
       "startDateLabel": "Date de début *",
       "useTenantDefaultsDescription": "Appliquer les paramètres de mode de renouvellement et de période de préavis au niveau de l'organisation.",
@@ -811,7 +811,7 @@
         "customRate": "Tarif personnalisé",
         "customRatePlaceholder": "0.00",
         "duration": "Durée",
-        "durationPlaceholder": "e.g., 6",
+        "durationPlaceholder": "p. ex. 6",
         "effectiveDate": "Date d'effet",
         "endDate": "Date de fin",
         "hasEndDate": "A une date de fin",
@@ -932,7 +932,7 @@
       "client": "Client",
       "contractName": "Nom du contrat",
       "endDate": "Date de fin",
-      "poIndicator": "PO",
+      "poIndicator": "BC",
       "sourceTemplate": "Modèle source",
       "startDate": "Date de début",
       "status": "Statut"
@@ -1235,8 +1235,8 @@
   },
   "bucketOverlay": {
     "includedLabel": "{{units}} inclus",
-    "includedPlaceholderHours": "e.g., 40",
-    "includedPlaceholderUnits": "e.g., 1000",
+    "includedPlaceholderHours": "p. ex. 40",
+    "includedPlaceholderUnits": "p. ex. 1000",
     "includedTooltip": "Quantité de {{units}} incluse à chaque période de facturation avant l'application des dépassements.",
     "overageRateLabel": "Tarif de dépassement",
     "overageRateTooltip": "Frais appliqués pour chaque {{unit}} au-delà de la quantité incluse.",
@@ -1303,7 +1303,7 @@
           "fixed": "Fixe",
           "hourly": "Horaire",
           "product": "Produit",
-          "usage": "Usage"
+          "usage": "Utilisation"
         }
       },
       "renewalModeRequiredWithEndDate": "Le mode de renouvellement est requis lorsqu'une date de fin est définie",
@@ -1404,9 +1404,9 @@
       },
       "modePlaceholder": "Sélectionnez le mode de renouvellement",
       "noticePeriodLabel": "Période de préavis (jours)",
-      "noticePeriodPlaceholder": "e.g., 30",
+      "noticePeriodPlaceholder": "p. ex. 30",
       "termLabel": "Durée de renouvellement (mois)",
-      "termPlaceholder": "e.g., 12",
+      "termPlaceholder": "p. ex. 12",
       "useTenantDefaultsDescription": "Appliquer les paramètres de renouvellement au niveau de l'organisation sauf s'ils sont explicitement remplacés.",
       "useTenantDefaultsLabel": "Utiliser les valeurs par défaut de renouvellement du locataire"
     },
@@ -1609,7 +1609,7 @@
       "notSelected": "Non sélectionné",
       "notSpecified": "Non spécifié",
       "ongoing": "En cours",
-      "notApplicable": "N/A"
+      "notApplicable": "S/O"
     },
     "renewalMode": {
       "none": "Non renouvelable",
@@ -1766,7 +1766,7 @@
           "fixed": "Fixe",
           "product": "Produit",
           "hourly": "Horaire",
-          "usage": "Usage"
+          "usage": "Utilisation"
         }
       }
     }

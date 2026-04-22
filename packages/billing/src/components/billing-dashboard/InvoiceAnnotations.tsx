@@ -3,12 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { IInvoiceAnnotation } from '@alga-psa/types';
 import { addInvoiceAnnotation, getInvoiceAnnotations } from '@alga-psa/billing/actions/invoiceTemplates';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface InvoiceAnnotationsProps {
   invoiceId: string;
 }
 
 const InvoiceAnnotations: React.FC<InvoiceAnnotationsProps> = ({ invoiceId }) => {
+  const { t } = useTranslation('msp/invoicing');
   const [annotations, setAnnotations] = useState<IInvoiceAnnotation[]>([]);
   const [newAnnotation, setNewAnnotation] = useState('');
 
@@ -37,11 +39,13 @@ const InvoiceAnnotations: React.FC<InvoiceAnnotationsProps> = ({ invoiceId }) =>
 
   return (
     <div>
-      <h3>Invoice Annotations</h3>
+      <h3>{t('annotations.title', { defaultValue: 'Invoice Annotations' })}</h3>
       <ul>
         {annotations.map((annotation): React.JSX.Element => (
           <li key={annotation.annotation_id}>
-            {annotation.content} - {annotation.is_internal ? 'Internal' : 'External'}
+            {annotation.content} - {annotation.is_internal
+              ? t('annotations.labels.internal', { defaultValue: 'Internal' })
+              : t('annotations.labels.external', { defaultValue: 'External' })}
           </li>
         ))}
       </ul>
@@ -49,9 +53,11 @@ const InvoiceAnnotations: React.FC<InvoiceAnnotationsProps> = ({ invoiceId }) =>
         <textarea
           value={newAnnotation}
           onChange={(e) => setNewAnnotation(e.target.value)}
-          placeholder="Add a new annotation"
+          placeholder={t('annotations.placeholder', { defaultValue: 'Add a new annotation' })}
         />
-        <button onClick={handleAddAnnotation}>Add Annotation</button>
+        <button onClick={handleAddAnnotation}>
+          {t('annotations.actions.add', { defaultValue: 'Add Annotation' })}
+        </button>
       </div>
     </div>
   );

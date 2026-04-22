@@ -1,0 +1,449 @@
+{
+  "taxRateDetail": {
+    "values": {
+      "dash": "-",
+      "noEndDate": "Sem data de término",
+      "yes": "Sim",
+      "no": "Não",
+      "active": "Ativo",
+      "inactive": "Inativo",
+      "composite": "Composto"
+    },
+    "actions": {
+      "back": "Voltar para Taxas de Imposto"
+    },
+    "subtitle": "{{regionCode}} - {{percentage}}%",
+    "tabs": {
+      "details": "Detalhes",
+      "components": "Componentes",
+      "brackets": "Escalões",
+      "holidays": "Feriados"
+    },
+    "fields": {
+      "regionCode": "Código da região",
+      "taxPercentage": "Porcentagem de imposto",
+      "description": "Descrição",
+      "taxType": "Tipo de imposto",
+      "startDate": "Data de início",
+      "endDate": "Data de término",
+      "isComposite": "É composto",
+      "isActive": "Está ativo"
+    },
+    "precedence": {
+      "title": "Precedência de Cálculo de Imposto",
+      "clientExempt": "O sinalizador de isenção de impostos do cliente é verificado primeiro (se isento, nenhum imposto será aplicado)",
+      "serviceSpecific": "A taxa de imposto específica do serviço será usada se atribuída",
+      "clientDefault": "A taxa de imposto padrão do cliente é usada como alternativa",
+      "regionLookup": "A pesquisa da região fiscal determina a taxa aplicável com base na localização"
+    },
+    "components": {
+      "simpleRateMessage": "Esta é uma taxa de imposto simples, não uma taxa composta. Os componentes fiscais são usados ​​apenas para impostos compostos.",
+      "enableCompositeMessage": "Para usar componentes fiscais, marque esta alíquota como composta ao editá-la."
+    },
+    "brackets": {
+      "intro": "As faixas de impostos progressivas aplicam taxas diferentes a diferentes porções de um valor.",
+      "precedence": "Quando os colchetes são definidos, eles têm precedência sobre a taxa percentual fixa."
+    }
+  },
+  "hourlyConfig": {
+    "fields": {
+      "minimumBillableTime": {
+        "placeholder": "15",
+        "label": "Tempo mínimo faturável (minutos)",
+        "help": "Tempo mínimo para faturar (por exemplo, 15 minutos)",
+        "errorNegative": "O tempo mínimo faturável não pode ser negativo"
+      },
+      "roundUpToNearest": {
+        "placeholder": "15",
+        "label": "Arredondar para o mais próximo (minutos)",
+        "help": "Arredondar entradas de tempo até o incremento mais próximo",
+        "errorNegative": "O valor de arredondamento não pode ser negativo"
+      },
+      "newUserType": {
+        "label": "Tipo de usuário",
+        "placeholder": "Selecione o tipo de usuário"
+      },
+      "newUserTypeRate": {
+        "label": "Tarifa",
+        "placeholder": "Insira a taxa",
+        "errorNegative": "A taxa de tipo de usuário não pode ser negativa"
+      }
+    },
+    "title": "Configuração de taxa horária",
+    "userTypeRates": {
+      "title": "Taxas de tipo de usuário",
+      "headers": {
+        "userType": "Tipo de usuário",
+        "rate": "Tarifa"
+      },
+      "options": {
+        "technician": "Técnico",
+        "engineer": "Engenheiro",
+        "consultant": "Consultor",
+        "project_manager": "Gerente de Projetos",
+        "admin": "Administrador"
+      },
+      "actions": {
+        "addRate": "Adicionar taxa"
+      }
+    }
+  },
+  "usageConfig": {
+    "fields": {
+      "minimumUsage": {
+        "placeholder": "0",
+        "label": "Limite mínimo de uso",
+        "help": "Uso mínimo faturável por período (0 sem mínimo)",
+        "errorNegative": "O uso mínimo não pode ser negativo"
+      },
+      "unitOfMeasure": {
+        "label": "Unidade de medida",
+        "placeholder": "Insira a unidade de medida",
+        "help": "A unidade usada para medir o uso (por exemplo, GB, usuário, dispositivo)",
+        "errorRequired": "A unidade de medida é obrigatória"
+      },
+      "enableTieredPricing": "Habilitar preços diferenciados"
+    },
+    "title": "Configuração baseada no uso",
+    "defaults": {
+      "unitOfMeasure": "Unidade"
+    },
+    "tiers": {
+      "title": "Níveis de preços",
+      "addTier": "Adicionar nível",
+      "empty": "Nenhuma camada configurada. Adicione um nível para definir preços baseados em volume.",
+      "from": "De ({{unit}})",
+      "to": "Para ({{unit}})",
+      "ratePer": "Taxa por {{unit}}",
+      "unlimited": "Ilimitado",
+      "help": "Configure níveis de preços baseados em volume. Cada camada aplica sua taxa ao uso que está dentro de sua faixa.",
+      "errors": {
+        "onlyLastUnlimited": "Apenas o último nível pode ter um limite superior ilimitado",
+        "overlap": "As camadas não podem se sobrepor",
+        "upperGreaterThanLower": "O limite superior do nível precisa ser maior que o limite inferior",
+        "rateNegative": "As taxas de nível não podem ser negativas"
+      }
+    }
+  },
+  "taxRates": {
+    "title": "Taxas de imposto",
+    "loading": "Carregando taxas de imposto",
+    "errors": {
+      "fetchRates": "Falha ao buscar taxas de imposto",
+      "loadRegions": "Falha ao carregar regiões fiscais.",
+      "add": "Falha ao adicionar taxa de imposto",
+      "update": "Falha ao atualizar a taxa de imposto",
+      "validateDeletion": "Falha ao validar a exclusão. Por favor, tente novamente.",
+      "confirmDeletion": "Falha ao confirmar a exclusão da taxa de imposto."
+    },
+    "deleteEntity": {
+      "fallback": "esta taxa de imposto",
+      "withRegion": "{{regionName}} taxa de imposto"
+    },
+    "validation": {
+      "requiredFieldsTitle": "Por favor preencha os campos obrigatórios:",
+      "region": "Região Fiscal",
+      "percentage": "Porcentagem de imposto",
+      "startDate": "Data de início"
+    },
+    "table": {
+      "region": "Região",
+      "taxPercentage": "Porcentagem de imposto",
+      "description": "Descrição",
+      "startDate": "Data de início",
+      "endDate": "Data de término",
+      "actions": "Ações",
+      "notAvailable": "N/A",
+      "composite": "Composto"
+    },
+    "actions": {
+      "openMenu": "Abrir menu",
+      "advancedSettings": "Configurações avançadas",
+      "edit": "Editar",
+      "delete": "Excluir",
+      "addNew": "Adicionar nova taxa de imposto",
+      "add": "Adicionar taxa de imposto",
+      "update": "Atualizar taxa de imposto"
+    },
+    "dialog": {
+      "addTitle": "Adicionar nova taxa de imposto",
+      "editTitle": "Editar taxa de imposto",
+      "description": "Insira os detalhes da taxa de imposto.",
+      "fields": {
+        "region": "Região Fiscal *",
+        "percentage": "Porcentagem de imposto *",
+        "description": "Descrição",
+        "startDate": "Data de início *",
+        "endDate": "Data de término (opcional)"
+      },
+      "placeholders": {
+        "loadingRegions": "Carregando regiões...",
+        "selectRegion": "Selecione a região fiscal",
+        "percentage": "Insira a porcentagem"
+      }
+    }
+  },
+  "serviceForm": {
+    "errors": {
+      "loadServiceTypes": "Falha ao buscar tipos de serviço",
+      "loadTaxData": "Falha ao carregar dados fiscais.",
+      "selectServiceType": "Selecione um tipo de serviço",
+      "serviceTypeNotFound": "Tipo de serviço selecionado não encontrado",
+      "create": "Falha ao criar serviço"
+    },
+    "fields": {
+      "serviceName": {
+        "placeholder": "Nome do serviço"
+      },
+      "serviceType": {
+        "label": "Tipo de serviço",
+        "placeholder": "Selecione o tipo de serviço"
+      },
+      "billingMethod": {
+        "label": "Método de cobrança",
+        "placeholder": "Selecione o método de cobrança"
+      },
+      "defaultRate": {
+        "placeholder": "Taxa padrão"
+      },
+      "unitOfMeasure": {
+        "placeholder": "Unidade de medida"
+      },
+      "description": {
+        "label": "Descrição",
+        "placeholder": "Descrição do serviço"
+      },
+      "taxRate": {
+        "label": "Taxa de imposto",
+        "placeholderLoading": "Carregando dados fiscais...",
+        "placeholder": "Selecione a taxa de imposto (opcional)"
+      }
+    },
+    "options": {
+      "billingMethod": {
+        "fixed": "Preço Fixo",
+        "hourly": "De hora em hora",
+        "usage": "Baseado no uso"
+      }
+    },
+    "taxRateOption": {
+      "fallback": "N/A",
+      "label": "{{description}} - {{percentage}}%"
+    },
+    "actions": {
+      "submit": "Adicionar serviço"
+    }
+  },
+  "serviceSelection": {
+    "title": "Adicionar serviços e produtos ao plano",
+    "searchPlaceholder": "Pesquisar serviços/produtos...",
+    "errors": {
+      "load": "Falha ao carregar serviços",
+      "add": "Falha ao adicionar serviços ao plano"
+    },
+    "states": {
+      "loading": "Carregando serviços...",
+      "empty": "Nenhum serviço encontrado"
+    },
+    "table": {
+      "itemName": "Nome do item",
+      "type": "Tipo",
+      "unit": "Unidade",
+      "rate": "Tarifa",
+      "product": "Produto",
+      "service": "Serviço",
+      "unknown": "Desconhecido"
+    },
+    "selection": {
+      "countOne": "{{count}} serviço selecionado",
+      "countOther": "{{count}} serviços selecionados"
+    },
+    "actions": {
+      "cancel": "Cancelar",
+      "addSelected": "Adicionar serviços selecionados",
+      "adding": "Adicionando..."
+    },
+    "quickAdd": {
+      "label": "Adição rápida:",
+      "allType": "Todos {{type}}"
+    }
+  },
+  "configType": {
+    "placeholder": "Selecione o tipo de configuração",
+    "options": {
+      "Fixed": {
+        "label": "Preço Fixo",
+        "description": "Um serviço de preço fixo com faturamento consistente, independentemente do uso. Ideal para serviços previsíveis."
+      },
+      "Hourly": {
+        "label": "Taxa horária",
+        "description": "Faturamento baseado em tempo com taxas configuráveis. Melhor para cargas de trabalho variáveis ​​cobradas por tempo gasto."
+      },
+      "Usage": {
+        "label": "Baseado no uso",
+        "description": "Faturamento baseado no uso com opções de preços diferenciados. Perfeito para serviços medidos pelo consumo."
+      },
+      "Bucket": {
+        "label": "Pacote de horas",
+        "description": "Horas pré-compradas que podem ser usadas ao longo do tempo. Ideal para clientes que precisam de flexibilidade com um limite de orçamento."
+      }
+    },
+    "warningDialog": {
+      "title": "Alterar tipo de configuração?",
+      "description": "Alterar o tipo de configuração redefinirá quaisquer configurações específicas do tipo. Esta ação não pode ser desfeita.",
+      "cancel": "Cancelar",
+      "confirm": "Tipo de alteração"
+    }
+  },
+  "serviceConfig": {
+    "title": "Configuração de serviço",
+    "serviceLabel": "Serviço",
+    "effectiveModeLabel": "Modo eficaz",
+    "defaultSourceLabel": "Fonte padrão",
+    "modes": {
+      "Fixed": "Preço Fixo",
+      "Hourly": "Taxa horária",
+      "Usage": "Baseado no uso",
+      "Bucket": "Pacote de horas"
+    },
+    "defaultSources": {
+      "catalog default": "padrão do catálogo",
+      "contract override": "substituição de contrato",
+      "none": "nenhum"
+    },
+    "fields": {
+      "configurationType": "Tipo de configuração",
+      "quantity": {
+        "label": "Quantidade",
+        "placeholder": "Insira a quantidade",
+        "help": "Número de unidades deste serviço",
+        "errorNegative": "A quantidade não pode ser negativa"
+      },
+      "customRate": {
+        "label": "Taxa personalizada",
+        "placeholder": "Insira a taxa",
+        "placeholderDefault": "Padrão: {{rate}}",
+        "helpCustom": "Taxa personalizada para este serviço",
+        "helpUseDefault": "Deixe em branco para usar a taxa padrão ({{rate}})",
+        "errorNegative": "A taxa não pode ser negativa"
+      }
+    },
+    "bucketOverlay": {
+      "recommendHours": "Recomendar intervalo de horas",
+      "recommendUsage": "Recomendar balde de consumo"
+    },
+    "actions": {
+      "cancel": "Cancelar",
+      "save": "Salvar configuração",
+      "saving": "Salvando..."
+    }
+  },
+  "fixedConfig": {
+    "title": "Configuração de preço fixo",
+    "fields": {
+      "adjustForPartialPeriods": "Ajuste para períodos parciais",
+      "billingCycleAlignment": {
+        "label": "Alinhamento do Ciclo de Faturamento",
+        "placeholder": "Selecione o alinhamento",
+        "help": "Controla como a cobertura de período parcial é calculada quando a taxa recorrente precisa ser reduzida para menos do que um período de serviço completo."
+      }
+    },
+    "options": {
+      "start": "Início do ciclo de faturamento",
+      "end": "Fim do ciclo de faturamento",
+      "prorated": "Cobertura Proporcional"
+    }
+  },
+  "bucketConfig": {
+    "title": "Configuração do pacote de horas",
+    "fields": {
+      "totalMinutes": {
+        "label": "Total de minutos",
+        "placeholder": "Insira o total de horas",
+        "help": "O número total de minutos incluídos nesta linha de contrato de intervalo",
+        "errorPositive": "O total de minutos precisa ser maior que zero"
+      },
+      "billingPeriod": {
+        "label": "Período de cobrança",
+        "placeholder": "Selecione o período de faturamento",
+        "help": "O período durante o qual as horas do intervalo são alocadas",
+        "mismatchPrefix": "Incompatibilidade:",
+        "mismatch": "O período de faturamento do pacote ({{billingPeriod}}) deve corresponder à frequência de faturamento da linha de contrato ({{contractLineBillingFrequency}})."
+      },
+      "overageRate": {
+        "label": "Taxa excedente",
+        "placeholder": "Insira a taxa excedente",
+        "help": "A taxa por hora cobrada por horas usadas além do limite do bucket",
+        "errorNegative": "A taxa excedente não pode ser negativa"
+      },
+      "allowRollover": "Permitir que as horas não utilizadas passem para o próximo período"
+    }
+  },
+  "rateTiers": {
+    "title": "Níveis de tarifas e descontos por quantidade",
+    "description": "Configure taxas diferentes com base em intervalos de quantidade. Quantidades maiores podem ter taxas de desconto.",
+    "loading": "Carregando níveis de taxas...",
+    "table": {
+      "minQuantity": "Quantidade mínima",
+      "maxQuantity": "Quantidade máxima",
+      "rate": "Taxa ({{unit}})",
+      "actions": "Ações",
+      "unlimited": "Ilimitado"
+    },
+    "formattedRate": "{{rate}} por {{unit}}",
+    "errors": {
+      "load": "Falha ao carregar níveis de taxa",
+      "save": "Falha ao salvar níveis de taxas",
+      "lastTier": "Não é possível remover o último nível",
+      "minPositive": "A quantidade mínima deve ser maior que 0",
+      "maxGreaterThanMin": "A quantidade máxima deve ser maior que a quantidade mínima",
+      "rateNegative": "A taxa não pode ser negativa",
+      "overlap": "Os intervalos de níveis não podem se sobrepor"
+    },
+    "actions": {
+      "addTier": "Adicionar nível",
+      "save": "Salvar níveis de taxas",
+      "saving": "Salvando..."
+    }
+  },
+  "serviceTaxSettings": {
+    "title": "Configurações fiscais",
+    "fields": {
+      "taxRate": {
+        "label": "Taxa de imposto",
+        "placeholderLoading": "Carregando taxas...",
+        "placeholder": "Selecione a taxa de imposto",
+        "help": "Selecione 'Não Tributável' se este serviço não deve ser tributado."
+      }
+    },
+    "options": {
+      "nonTaxable": "Não Tributável"
+    },
+    "optionLabel": "{{taxType}} ({{countryCode}}) - {{percentage}}%",
+    "errors": {
+      "loadTaxRates": "Falha ao carregar taxas de imposto.",
+      "save": "Falha ao salvar as configurações fiscais"
+    },
+    "actions": {
+      "save": "Salvar configurações fiscais",
+      "saving": "Salvando..."
+    }
+  },
+  "serviceDetail": {
+    "loading": "Carregando configuração do serviço...",
+    "errors": {
+      "notFound": "Serviço não encontrado",
+      "load": "Falha ao carregar a configuração do serviço"
+    },
+    "title": "Configuração do serviço: {{serviceName}}",
+    "description": "Configurar detalhes do serviço, preços e configurações de impostos",
+    "sections": {
+      "unitOfMeasure": "Unidade de medida",
+      "baseRate": "Taxa básica"
+    },
+    "baseRate": {
+      "summary": "{{rate}} por {{unit}}",
+      "help": "A taxa básica pode ser substituída pelos níveis baseados em quantidade abaixo."
+    }
+  }
+}

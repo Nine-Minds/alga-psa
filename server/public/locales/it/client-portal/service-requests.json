@@ -1,0 +1,58 @@
+{
+  "catalog": {
+    "title": "Richiedi servizi",
+    "description": "Sfoglia i servizi pubblicati e invia richieste strutturate.",
+    "myRequests": "Le mie richieste",
+    "empty": "Al momento non sono disponibili servizi richiedibili.",
+    "fallbackCategory": "Servizio",
+    "noDescription": "Nessuna descrizione fornita"
+  },
+  "detail": {
+    "version": "Versione {{version}}",
+    "submitted": "Richiesta inviata",
+    "requestIdLabel": "ID richiesta: ",
+    "ticketIdLabel": "ID ticket: ",
+    "unableToSubmit": "Impossibile inviare la richiesta",
+    "formTitle": "Modulo della richiesta",
+    "noFields": "Nessun campo configurato.",
+    "selectOption": "Seleziona un'opzione",
+    "datePlaceholder": "Seleziona una data",
+    "optionLabel": "Opzione {{index}}",
+    "submit": "Invia richiesta",
+    "initialValuesTitle": "Valori iniziali",
+    "noInitialValues": "Nessun valore predefinito statico configurato."
+  },
+  "myRequests": {
+    "title": "Le mie richieste",
+    "browseServices": "Sfoglia servizi",
+    "empty": "Non hai ancora inviato richieste di servizio.",
+    "columns": {
+      "request": "Richiesta",
+      "submitted": "Inviata",
+      "status": "Stato",
+      "details": "Dettagli"
+    },
+    "view": "Visualizza",
+    "unknownDate": "Sconosciuta",
+    "statuses": {
+      "pending": "In attesa",
+      "succeeded": "Completata",
+      "failed": "Fallita"
+    }
+  },
+  "submissionDetail": {
+    "backToMyRequests": "Torna a Le mie richieste",
+    "requestIdLabel": "ID richiesta:",
+    "statusSection": "Stato",
+    "submittedAt": "Inviata: {{date}}",
+    "executionStatus": "Stato di esecuzione: {{status}}",
+    "ticketLabel": "Ticket:",
+    "workflowLabel": "Workflow: {{id}}",
+    "submittedAnswersTitle": "Risposte inviate",
+    "noResponse": "Nessuna risposta",
+    "attachmentsTitle": "Allegati",
+    "noAttachments": "Nessun allegato incluso.",
+    "fileIdLabel": "ID file: {{id}}",
+    "fileTypeLabel": "Tipo: {{mime}}"
+  }
+}

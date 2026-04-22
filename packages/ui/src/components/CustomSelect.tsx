@@ -7,6 +7,7 @@ import { Button } from './Button';
 import { useModality } from './ModalityContext';
 import { FormFieldComponent, AutomationProps } from '../ui-reflection/types';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
+import { useTranslation } from '../lib/i18n/client';
 
 export interface SelectOption {
   value: string;
@@ -87,7 +88,7 @@ const CustomSelect = ({
   options,
   value,
   onValueChange,
-  placeholder = 'Select...',
+  placeholder,
   className = '',
   disabled = false,
   customStyles,
@@ -104,6 +105,8 @@ const CustomSelect = ({
   addNewLabel = 'Add new',
   ...props
 }: CustomSelectProps & AutomationProps) => {
+  const { t } = useTranslation();
+  const resolvedPlaceholder = placeholder ?? t('form.selectPlaceholder', { defaultValue: 'Select...' });
   const { modal: parentModal } = useModality();
   
   // Generate a stable ID for this select instance
@@ -271,7 +274,7 @@ const CustomSelect = ({
             ${className}
             ${customStyles?.trigger || ''}
           `}
-          aria-label={placeholder}
+          aria-label={resolvedPlaceholder}
           suppressHydrationWarning
           onPointerDown={(e) => {
             // Prevent click events from bubbling up to parent dialogs
@@ -281,11 +284,11 @@ const CustomSelect = ({
           }}
         >
           <RadixSelect.Value
-            placeholder={placeholder}
+            placeholder={resolvedPlaceholder}
             className="flex-1 text-left min-w-0 overflow-hidden"
           >
             <span className={`block truncate ${!selectedOption || disabled ? 'text-muted-foreground' : ''}`}>
-              {selectedOption?.label || placeholder}
+              {selectedOption?.label || resolvedPlaceholder}
             </span>
           </RadixSelect.Value>
           <RadixSelect.Icon>
@@ -323,7 +326,7 @@ const CustomSelect = ({
                   `}
                   disabled
                 >
-                  <RadixSelect.ItemText>{placeholder}</RadixSelect.ItemText>
+                  <RadixSelect.ItemText>{resolvedPlaceholder}</RadixSelect.ItemText>
                 </RadixSelect.Item>
               )}
 

@@ -1,0 +1,247 @@
+{
+  "calendar": {
+    "integrations": {
+      "loadError": "Impossible de charger les fournisseurs de calendrier",
+      "header": {
+        "title": "Intégrations de calendrier",
+        "description": "Connectez votre calendrier personnel Google ou Microsoft pour synchroniser les entrées d'horaire qui vous sont attribuées. Les événements que vous créez dans Alga apparaîtront dans votre calendrier externe lorsqu'ils vous seront attribués."
+      },
+      "buttons": {
+        "googleCalendar": "Google Calendar",
+        "outlookCalendar": "Calendrier Outlook",
+        "addGoogleCalendar": "Ajouter Google Calendar",
+        "addOutlookCalendar": "Ajouter le calendrier Outlook"
+      },
+      "proTip": {
+        "label": "Astuce",
+        "body": "Pour importer un événement de votre calendrier externe dans Alga, ajoutez simplement"
+      },
+      "proTipSuffix": "à son titre ou à sa description.",
+      "empty": {
+        "title": "Aucun calendrier connecté",
+        "description": "Connectez un calendrier pour synchroniser automatiquement votre planning et ne manquer aucune affectation."
+      },
+      "providerLabels": {
+        "google": "Google",
+        "microsoft": "Microsoft",
+        "calendar": "Calendrier"
+      },
+      "connectionStatus": {
+        "connected": "Connecté",
+        "error": "Erreur",
+        "disconnected": "Déconnecté",
+        "configuring": "Configuration en cours"
+      },
+      "oauthStatus": {
+        "actionRequired": "Action requise",
+        "complete": "OAuth terminé"
+      },
+      "active": {
+        "active": "Actif",
+        "inactive": "Inactif"
+      },
+      "fields": {
+        "type": "Type :",
+        "calendarId": "ID du calendrier :",
+        "syncDirection": "Sens de synchronisation :",
+        "lastSync": "Dernière synchronisation :"
+      },
+      "providerType": {
+        "google": "Google Calendar",
+        "microsoft": "Microsoft Outlook Calendar"
+      },
+      "syncDirection": {
+        "bidirectional": "Bidirectionnelle",
+        "toExternal": "Alga → Externe",
+        "fromExternal": "Externe → Alga"
+      },
+      "values": {
+        "notSet": "Non défini",
+        "notYetRun": "Pas encore exécuté"
+      },
+      "syncing": {
+        "inProgress": "Synchronisation en cours..."
+      },
+      "actions": {
+        "syncing": "Synchronisation…",
+        "syncNow": "Synchroniser maintenant",
+        "edit": "Modifier",
+        "delete": "Supprimer"
+      },
+      "toasts": {
+        "deleted": {
+          "title": "Fournisseur de calendrier supprimé",
+          "description": "{{name}} a été supprimé avec succès."
+        },
+        "deleteFailed": {
+          "title": "Impossible de supprimer le fournisseur de calendrier",
+          "fallback": "Échec de la suppression du fournisseur de calendrier"
+        },
+        "syncStarted": {
+          "title": "Synchronisation démarrée",
+          "descriptionWithName": "La synchronisation de {{name}} s'exécute en arrière-plan.",
+          "descriptionGeneric": "La synchronisation du calendrier s'exécute en arrière-plan."
+        },
+        "syncStartedFeedback": "Synchronisation démarrée. Revenez bientôt pour voir les résultats.",
+        "syncFailed": {
+          "title": "Échec du démarrage de la synchronisation",
+          "fallback": "Échec du démarrage de la synchronisation."
+        },
+        "syncException": {
+          "title": "Échec de la synchronisation manuelle",
+          "fallback": "Échec de la synchronisation du fournisseur de calendrier"
+        }
+      },
+      "dialogs": {
+        "addTitle": "Ajouter un fournisseur de calendrier {{provider}}",
+        "addDescription": "Connectez votre calendrier personnel pour synchroniser les entrées d'horaire qui vous sont attribuées.",
+        "editTitle": "Modifier le fournisseur de calendrier {{provider}}",
+        "editDescription": "Mettez à jour les paramètres de connexion de votre calendrier personnel.",
+        "delete": {
+          "title": "Supprimer le fournisseur de calendrier",
+          "messageWithName": "La suppression de {{name}} arrêtera la synchronisation future et supprimera les webhooks associés. Cette action est irréversible.",
+          "messageGeneric": "Êtes-vous sûr de vouloir supprimer ce fournisseur de calendrier ?",
+          "confirmLabel": "Supprimer le fournisseur",
+          "cancelLabel": "Conserver le fournisseur"
+        }
+      }
+    },
+    "sync": {
+      "compact": {
+        "syncing": "Synchronisation...",
+        "google": "Google",
+        "outlook": "Outlook"
+      },
+      "tooltip": {
+        "status": "Statut : {{status}}",
+        "lastSync": "Dernière synchronisation : {{value}}",
+        "error": "Erreur : {{message}}"
+      },
+      "status": {
+        "synced": "Synchronisé",
+        "pending": "En attente",
+        "conflict": "Conflit",
+        "error": "Erreur",
+        "unknown": "Inconnu"
+      },
+      "header": {
+        "title": "Statut de synchronisation du calendrier",
+        "refresh": "Actualiser"
+      },
+      "empty": "Aucune intégration de calendrier configurée",
+      "inactive": "Inactif",
+      "fields": {
+        "syncDirection": "Sens de synchronisation :",
+        "lastSync": "Dernière synchronisation :",
+        "externalId": "ID externe :"
+      },
+      "loadError": "Impossible de charger le statut de synchronisation",
+      "conflictAlert": "Conflit détecté : les deux calendriers ont été modifiés. Veuillez résoudre le conflit dans les paramètres du calendrier."
+    },
+    "providers": {
+      "common": {
+        "oauth": {
+          "badge": {
+            "authorized": "Autorisé",
+            "authorizing": "Autorisation en cours",
+            "error": "Erreur d'autorisation",
+            "notAuthorized": "Non autorisé"
+          },
+          "status": "Statut de la connexion",
+          "connecting": "Connexion...",
+          "connected": "Connecté",
+          "connect": "Connecter",
+          "popupBlocked": "Pop-up bloquée. Veuillez autoriser les pop-ups pour ce site.",
+          "callbackFailed": "L'autorisation OAuth a échoué",
+          "initiateFailed": "Impossible d'initier OAuth"
+        },
+        "actions": {
+          "cancel": "Annuler",
+          "saving": "Enregistrement...",
+          "updateProvider": "Mettre à jour le fournisseur",
+          "createProvider": "Créer le fournisseur"
+        },
+        "errors": {
+          "createFailed": "Échec de la création du fournisseur de calendrier",
+          "saveFailed": "Échec de l'enregistrement du fournisseur"
+        },
+        "syncDirections": {
+          "bidirectional": "Bidirectionnelle (recommandée)"
+        }
+      },
+      "google": {
+        "config": {
+          "title": "Configuration Google Calendar",
+          "description": "Connectez votre Google Calendar pour synchroniser les entrées d'horaire"
+        },
+        "fields": {
+          "providerName": "Nom du fournisseur *",
+          "providerNamePlaceholder": "ex. Mon Google Calendar",
+          "calendarId": "ID du calendrier *",
+          "calendarIdPlaceholder": "primary",
+          "calendarIdHint": "Généralement « primary » pour votre calendrier principal",
+          "syncDirection": "Sens de synchronisation *",
+          "enableProvider": "Activer ce fournisseur"
+        },
+        "syncDirections": {
+          "toExternal": "Alga → Google Calendar uniquement",
+          "fromExternal": "Google Calendar → Alga uniquement"
+        },
+        "oauth": {
+          "title": "Autorisation OAuth Google",
+          "description": "Autorisez l'accès à votre Google Calendar"
+        },
+        "configAlert": {
+          "title": "Google n'est pas configuré pour ce tenant.",
+          "body": "Configurez d'abord l'OAuth Google propre au tenant dans <strong>Paramètres → Intégrations → Fournisseurs</strong>.",
+          "openSettings": "Ouvrir les paramètres Google"
+        },
+        "errors": {
+          "notConfigured": "L'intégration Google n'est pas configurée pour ce tenant. Configurez d'abord Google, puis réessayez."
+        },
+        "defaults": {
+          "providerName": "Google Calendar",
+          "calendarId": "primary"
+        }
+      },
+      "microsoft": {
+        "config": {
+          "title": "Configuration Microsoft Outlook Calendar",
+          "description": "Connectez votre Microsoft Outlook Calendar pour synchroniser les entrées d'horaire"
+        },
+        "fields": {
+          "providerName": "Nom du fournisseur *",
+          "providerNamePlaceholder": "ex. Mon calendrier Outlook",
+          "calendarId": "ID du calendrier *",
+          "calendarIdPlaceholder": "calendar",
+          "calendarIdHint": "Généralement « calendar » pour votre calendrier principal",
+          "syncDirection": "Sens de synchronisation *",
+          "enableProvider": "Activer ce fournisseur"
+        },
+        "syncDirections": {
+          "toExternal": "Alga → Outlook Calendar uniquement",
+          "fromExternal": "Outlook Calendar → Alga uniquement"
+        },
+        "oauth": {
+          "title": "Autorisation OAuth Microsoft",
+          "description": "Autorisez l'accès à votre Microsoft Outlook Calendar"
+        },
+        "configAlert": {
+          "title": "Les paramètres du fournisseur Microsoft ne sont pas configurés.",
+          "body": "Configurez d'abord les fournisseurs dans Paramètres → Intégrations → Fournisseurs, puis revenez ici pour connecter Outlook Calendar.",
+          "openSettings": "Ouvrir les paramètres des fournisseurs"
+        },
+        "setupReason": {
+          "unsupported_consumer": "Type de consommateur Microsoft non pris en charge pour le calendrier.",
+          "binding_not_configured": "Le calendrier n'est pas encore lié à un profil Microsoft. Configurez d'abord les fournisseurs, puis revenez ici pour connecter Outlook Calendar.",
+          "profile_missing": "Le profil Microsoft lié au calendrier est absent ou archivé. Sélectionnez un profil actif dans Fournisseurs, puis revenez ici.",
+          "profile_credentials_missing": "Le profil Microsoft lié au calendrier ne dispose pas des identifiants requis. Mettez à jour le profil dans Fournisseurs, puis revenez ici."
+        },
+        "defaults": {
+          "providerName": "Outlook Calendar",
+          "calendarId": "calendar"
+        }
+      }
+    }
+  }
+}

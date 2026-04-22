@@ -1,0 +1,1358 @@
+{
+  "page": {
+    "title": "Admin Settings"
+  },
+  "tabs": {
+    "general": "General",
+    "experimentalFeatures": "Experimental Features",
+    "clientPortal": "Client Portal",
+    "users": "Users",
+    "teams": "Teams",
+    "language": "Language",
+    "ticketing": "Ticketing",
+    "projects": "Projects",
+    "interactions": "Interactions",
+    "notifications": "Notifications",
+    "timeEntry": "Time Entry",
+    "billing": "Billing",
+    "secrets": "Secrets",
+    "importExport": "Import/Export",
+    "email": "Email",
+    "integrations": "Integrations",
+    "extensions": "Extensions"
+  },
+  "unsavedChanges": {
+    "title": "Unsaved Changes",
+    "message": "You have unsaved changes. Are you sure you want to leave? Your changes will be lost."
+  },
+  "general": {
+    "title": "General Settings",
+    "description": "Manage your organization name and default client. The default client is used for configuration purposes and represents your MSP.",
+    "fields": {
+      "organizationName": {
+        "label": "Organization Name"
+      },
+      "defaultTimezone": {
+        "label": "Default Time Zone",
+        "help": "Used for emails and notifications when a user has not set their own timezone."
+      }
+    },
+    "actions": {
+      "saveOrganizationName": "Save Organization Name",
+      "saveDefaultTimezone": "Save Default Time Zone"
+    },
+    "clients": {
+      "title": "Clients",
+      "table": {
+        "name": "Name",
+        "default": "Default",
+        "actions": "Actions"
+      },
+      "placeholder": "Select a client to add",
+      "addClient": "Add Client"
+    },
+    "messages": {
+      "success": {
+        "tenantNameUpdated": "Tenant name updated successfully",
+        "timezoneUpdated": "Default timezone updated successfully",
+        "clientAdded": "Client added successfully",
+        "clientRemoved": "Client removed successfully",
+        "defaultClientUpdated": "Default client updated successfully"
+      },
+      "error": {
+        "loadTenantData": "Failed to load tenant data",
+        "updateTenantName": "Failed to update tenant name",
+        "updateTimezone": "Failed to update timezone",
+        "selectClient": "Please select a client",
+        "clientNotFound": "Client not found",
+        "addClient": "Failed to add client",
+        "removeClient": "Failed to remove client",
+        "setDefaultClient": "Failed to set default client",
+        "loadClients": "Failed to load clients"
+      }
+    }
+  },
+  "experimentalFeatures": {
+    "title": "Experimental Features",
+    "description": "Enable or disable experimental features for your tenant.",
+    "alert": {
+      "title": "Experimental",
+      "description": "Experimental features may change or be removed without notice."
+    },
+    "features": {
+      "aiAssistant": {
+        "name": "AI Assistant",
+        "description": "Enable AI-powered Quick Ask and Chat sidebar.",
+        "restriction": "Only available for whitelisted tenants."
+      },
+      "workflowAutomation": {
+        "name": "Workflow Automation",
+        "description": "Enable experimental workflow automation features in the workflow control panel and editor."
+      }
+    },
+    "actions": {
+      "save": "Save",
+      "saving": "Saving...",
+      "retry": "Retry"
+    },
+    "loading": "Loading experimental features...",
+    "messages": {
+      "success": {
+        "saved": "Experimental feature settings saved. Reload the page to apply changes."
+      },
+      "error": {
+        "loadFailed": "Failed to load experimental feature settings.",
+        "saveFailed": "Failed to save experimental feature settings."
+      }
+    }
+  },
+  "users": {
+    "title": "User Management",
+    "description": {
+      "msp": "Manage MSP users and permissions",
+      "client": "Manage client portal users and their access"
+    },
+    "viewSwitcher": {
+      "msp": "MSP",
+      "clientPortal": "Client Portal"
+    },
+    "license": {
+      "usage": "MSP users: {{used}}{{limit}} licenses used",
+      "noLimit": " (No limit)",
+      "ofLimit": " of {{limit}}",
+      "addLicensePrompt": "To add a new user you must purchase additional licenses",
+      "addLicense": "Add License"
+    },
+    "search": "Search users",
+    "filter": {
+      "all": "All Users",
+      "active": "Active Users",
+      "inactive": "Inactive Users",
+      "selectStatus": "Select Status"
+    },
+    "tabs": {
+      "list": "List",
+      "structure": "Structure",
+      "listDescription": "Manage individual users, roles, and permissions.",
+      "structureDescription": "Visualize and manage the organizational reporting hierarchy."
+    },
+    "actions": {
+      "createNewUser": "Create New User",
+      "createNewClientUser": "Create New Client User",
+      "copyPortalLink": "Copy Portal Login Link",
+      "copying": "Copying...",
+      "createUser": "Create User",
+      "sendInvitation": "Send Portal Invitation",
+      "cancel": "Cancel"
+    },
+    "form": {
+      "title": {
+        "msp": "Create New MSP User",
+        "client": "Create New Client Portal User"
+      },
+      "fields": {
+        "firstName": "First Name",
+        "lastName": "Last Name",
+        "email": "Email",
+        "client": "Client",
+        "clientOptional": "(optional)",
+        "primaryRole": "Primary Role",
+        "selectRole": "Select Role",
+        "reportsTo": "Reports To",
+        "reportsToOptional": "(optional)",
+        "selectManager": "Select manager",
+        "existingContact": "Existing Contact",
+        "existingContactOptional": "(optional)",
+        "selectExistingContact": "Select existing contact (optional)",
+        "selectExistingContactRequired": "Select existing contact",
+        "selectContactToInvite": "Select contact to invite",
+        "password": "Password",
+        "passwordOptional": "(Leave blank to send invitation)",
+        "passwordPlaceholder": {
+          "msp": "Enter password",
+          "client": "Leave blank to send invitation"
+        },
+        "selectClient": "Select Client"
+      },
+      "passwordAlert": {
+        "withPassword": "Setting a password will create the user immediately. They can log in right away.",
+        "withoutPassword": "No password required — we will send a portal invitation for the user to set it."
+      },
+      "requirePasswordChange": "Require password change on first login"
+    },
+    "table": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "Email",
+      "client": "Client",
+      "role": "Role",
+      "lastLogin": "Last Login",
+      "actions": "Actions",
+      "noClient": "No Client",
+      "noRole": "No Role",
+      "never": "Never",
+      "viaMethod": "via {{method}}",
+      "loading": "Loading...",
+      "openMenu": "Open menu",
+      "edit": "Edit",
+      "remove": "Remove"
+    },
+    "loading": "Loading users...",
+    "messages": {
+      "success": {
+        "portalInvitationSent": "Portal invitation sent successfully!",
+        "clientPortalUserCreated": "Client portal user created successfully!",
+        "copiedVanityLink": "Copied vanity portal login link to clipboard",
+        "copiedCanonicalLink": "Copied canonical portal login link to clipboard"
+      },
+      "error": {
+        "fetchUsers": "Failed to fetch users",
+        "fetchRoles": "Failed to fetch roles",
+        "fetchClients": "Failed to fetch clients",
+        "createUser": "Failed to create user",
+        "sendInvitation": "Failed to send invitation",
+        "sendInvitationManual": "Failed to send invitation. You can send it manually from the user list.",
+        "createClientPortalUser": "Failed to create client portal user",
+        "clipboardUnavailable": "Clipboard API is not available in this browser.",
+        "copyPortalLink": "Failed to copy portal login link",
+        "fillRequiredFields": "Please fill in all required fields",
+        "fixValidationErrors": "Please fix the validation errors before continuing",
+        "fixValidationBeforeInvitation": "Please fix the validation errors before sending the invitation",
+        "emailAlreadyInUse": "This email address is already in use. Please use a different email address.",
+        "portalUserExists": "A portal user already exists for this contact or email address.",
+        "portalUserExistsForContact": "A portal user already exists for this contact. Use password reset for the existing user.",
+        "selectAppropriateRole": "Please select an appropriate role for this user type",
+        "contactMissingEmail": "Contact \"{{name}}\" is missing an email address. Please update the contact's email before sending an invitation.",
+        "licenseLimit": "Cannot activate user: License limit reached. Please deactivate another user or upgrade your license."
+      }
+    }
+  },
+  "userDetails": {
+    "title": "User Details",
+    "fields": {
+      "firstName": {
+        "label": "First Name",
+        "placeholder": "Enter first name"
+      },
+      "lastName": {
+        "label": "Last Name",
+        "placeholder": "Enter last name"
+      },
+      "email": {
+        "label": "Email",
+        "placeholder": "Enter email"
+      },
+      "reportsTo": {
+        "label": "Reports To",
+        "placeholder": "Select manager"
+      },
+      "lastLogin": "Last Login",
+      "roles": "Roles",
+      "status": "Status",
+      "statusHelp": "Set user account status",
+      "newPassword": "New Password"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "inactiveTag": "(Inactive)"
+    },
+    "actions": {
+      "addRole": "Add Role",
+      "selectRoleToAdd": "Select role to add",
+      "removeRole": "Remove",
+      "setPassword": "Set Password",
+      "cancel": "Cancel",
+      "saveChanges": "Save Changes"
+    },
+    "dialog": {
+      "setPassword": {
+        "title": "Set User Password (Admin)"
+      }
+    },
+    "messages": {
+      "success": {
+        "passwordChanged": "Password changed successfully",
+        "userUpdated": "User updated successfully"
+      },
+      "error": {
+        "userNotFound": "User not found",
+        "loadFailed": "Failed to load user details. Please try again.",
+        "addRoleFailed": "Failed to add role. Please try again.",
+        "removeRoleFailed": "Failed to remove role. Please try again.",
+        "updateUserNotFound": "Failed to update user. User not found.",
+        "updateFailed": "Failed to update user. Please try again.",
+        "passwordTooShort": "Password must be at least 8 characters long",
+        "passwordChangeFailed": "Failed to change password",
+        "passwordChangeError": "An error occurred while changing password"
+      }
+    }
+  },
+  "teams": {
+    "title": "Team Management",
+    "description": "Create and manage teams, assign team leads, and organize members across your organization",
+    "loading": "Loading teams...",
+    "emptyState": "Please select a team to manage members",
+    "list": {
+      "title": "Teams",
+      "addNewTeam": "Add New Team",
+      "createTeam": "Create Team",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "placeholder": "Enter new team name",
+      "selectManager": "Select a manager"
+    },
+    "details": {
+      "loading": "Loading team details...",
+      "notFound": "No team found",
+      "fields": {
+        "teamLead": "Team Lead",
+        "addMember": "Add Member"
+      },
+      "placeholders": {
+        "teamName": "Enter team name",
+        "selectTeamLead": "Select a team lead",
+        "selectUserToAdd": "Select a user to add"
+      },
+      "alert": {
+        "unsavedChanges": "You have unsaved changes"
+      },
+      "actions": {
+        "discard": "Discard",
+        "saveChanges": "Save Changes",
+        "saveName": "Save name",
+        "cancel": "Cancel",
+        "editName": "Edit name",
+        "remove": "Remove"
+      },
+      "table": {
+        "teamMembers": "Team Members",
+        "member": "Member",
+        "role": "Role"
+      },
+      "badge": {
+        "new": "New",
+        "lead": "Lead"
+      },
+      "memberCount": "{{count}} member",
+      "memberCount_plural": "{{count}} members",
+      "leadName": "Lead: {{name}}"
+    },
+    "messages": {
+      "error": {
+        "loadFailed": "Failed to load teams. Please try again.",
+        "fetchUsers": "Failed to fetch users",
+        "createFailed": "Failed to create team: {{error}}",
+        "deleteFailed": "Failed to delete team"
+      }
+    }
+  },
+  "ticketing": {
+    "title": "Ticket Settings",
+    "tabs": {
+      "display": "Display",
+      "ticketNumbering": "Ticket Numbering",
+      "boards": "Boards",
+      "statuses": "Statuses",
+      "priorities": "Priorities",
+      "categories": "Categories"
+    },
+    "numbering": {
+      "title": "Number Format",
+      "description": "Define the prefix, digit padding, and current sequence",
+      "fields": {
+        "prefix": {
+          "label": "Ticket Number Prefix",
+          "placeholder": "TK-",
+          "help": "Optional prefix for ticket numbers. Leave empty for no prefix or enter a custom prefix (e.g., 'TK-')"
+        },
+        "minimumDigits": {
+          "label": "Minimum Digits",
+          "help": "Minimum number of digits for the sequential number. For example, 6 makes '1' become '000001'"
+        },
+        "initialValue": {
+          "label": "Initial Value",
+          "placeholder": "Enter value",
+          "help": "Set the starting number for the sequence. This can only be set once."
+        },
+        "lastUsedNumber": {
+          "label": "Last Used Number",
+          "help": "The last number that was assigned. The next number will be one higher than this value."
+        },
+        "nextPreview": {
+          "label": "Next Ticket Number Preview",
+          "help": "This is the number that will be assigned to the next ticket"
+        }
+      },
+      "actions": {
+        "saveChanges": "Save Changes",
+        "cancel": "Cancel"
+      },
+      "dialog": {
+        "title": "Update Ticket Number Settings",
+        "message": "Changing these settings will affect how new ticket numbers are generated. This change will not affect existing tickets. Are you sure you want to proceed?",
+        "confirm": "Update Settings"
+      },
+      "loading": "Loading...",
+      "messages": {
+        "error": {
+          "noSettings": "No ticket numbering settings found. Please contact your administrator.",
+          "loadFailed": "Failed to load ticket numbering settings",
+          "updateFailed": "Failed to update settings"
+        },
+        "success": {
+          "updated": "Ticket numbering settings updated successfully"
+        }
+      }
+    },
+    "statuses": {
+      "title": "Ticket Statuses",
+      "alert": "Default Status: When clients create tickets through the client portal, they will automatically be assigned the status marked as default. Only one status can be set as default at a time.",
+      "table": {
+        "name": "Name",
+        "status": "Status",
+        "default": "Default",
+        "order": "Order",
+        "actions": "Actions"
+      },
+      "statusLabels": {
+        "closed": "Closed",
+        "open": "Open",
+        "closedHelp": "Tickets with this status will be marked as closed",
+        "openHelp": "Tickets with this status will remain open",
+        "defaultHelp": "Default status for new tickets from client portal"
+      },
+      "actions": {
+        "addStatus": "Add Status",
+        "importStandard": "Import from Standard Statuses",
+        "edit": "Edit",
+        "delete": "Delete"
+      },
+      "messages": {
+        "success": {
+          "deleted": "Status deleted successfully",
+          "updated": "Status updated successfully"
+        },
+        "error": {
+          "lastClosed": "At least one status must remain marked as closed",
+          "deleteLastClosed": "Cannot delete the last closed status for this type.",
+          "removeDefault": "Cannot remove default status from the last default status"
+        }
+      }
+    },
+    "boards": {
+      "title": "Boards",
+      "alert": "Boards organize tickets into logical groups. Each board can have its own default agent, priority, and SLA policy.",
+      "table": {
+        "name": "Name",
+        "description": "Description",
+        "status": "Status",
+        "default": "Default",
+        "defaultAgent": "Default Agent",
+        "defaultPriority": "Default Priority",
+        "boardManager": "Board Manager",
+        "order": "Order",
+        "itilBoard": "ITIL Board",
+        "actions": "Actions"
+      },
+      "statusLabels": {
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "actions": {
+        "addBoard": "Add Board",
+        "importStandard": "Import from Standard Boards",
+        "edit": "Edit",
+        "delete": "Delete",
+        "cancel": "Cancel",
+        "close": "Close",
+        "create": "Create",
+        "update": "Update",
+        "importSelected": "Import Selected"
+      },
+      "fields": {
+        "boardName": {
+          "label": "Board Name",
+          "placeholder": "Enter board name"
+        },
+        "description": {
+          "label": "Description",
+          "placeholder": "Enter board description"
+        },
+        "displayOrder": {
+          "label": "Display Order",
+          "placeholder": "Enter display order",
+          "help": "Controls the order boards appear in the list"
+        },
+        "inactive": "Mark as inactive",
+        "itilCompliant": "ITIL Compliant",
+        "boardConfiguration": "Board Configuration",
+        "boardManager": {
+          "label": "Board Manager",
+          "placeholder": "Select a board manager",
+          "help": "The user responsible for managing this board"
+        },
+        "defaultAssignedAgent": {
+          "label": "Default Assigned Agent",
+          "placeholder": "Select default agent",
+          "help": "New tickets on this board will be assigned to this agent by default"
+        },
+        "defaultPriority": {
+          "label": "Default Priority",
+          "placeholder": "Select default priority",
+          "help": "New tickets on this board will use this priority by default",
+          "none": "None"
+        },
+        "slaPolicy": {
+          "label": "SLA Policy",
+          "placeholder": "Select SLA policy",
+          "help": "The SLA policy to apply to tickets on this board",
+          "none": "None"
+        }
+      },
+      "dialog": {
+        "addBoard": "Add Board",
+        "editBoard": "Edit Board",
+        "deleteBoardTitle": "Delete Board",
+        "deleteBoardMessage": "This will permanently delete the board.",
+        "cleanupItilTitle": "Clean Up ITIL Board",
+        "cleanupItilMessage": "This will remove the ITIL categories and priority matrix associated with this board.",
+        "deleteOnly": "Delete Only",
+        "deleteAndCleanup": "Delete & Clean Up",
+        "deleteAll": "Delete All",
+        "importTitle": "Import Standard Boards",
+        "importDescription": "Select standard boards to import into your organization:",
+        "importEmpty": "No standard boards available to import.",
+        "conflictsTitle": "Resolve Import Conflicts",
+        "conflictsDescription": "The following items have conflicts that need to be resolved:",
+        "nameConflict": "Name already exists",
+        "orderConflict": "Order {{order}} is already in use",
+        "skipItem": "Skip this item",
+        "importNewName": "Import with different name:",
+        "importWithOrder": "Import with order {{order}}",
+        "importWithResolutions": "Import with Resolutions"
+      },
+      "importTable": {
+        "active": "Active"
+      },
+      "itilInfo": {
+        "title": "ITIL Information",
+        "tooltip": "This board follows ITIL best practices",
+        "categoriesTitle": "ITIL Categories",
+        "priorityMatrixTitle": "Priority Matrix",
+        "impactDescription": "Impact levels define the scope of the issue",
+        "urgencyDescription": "Urgency levels define how quickly the issue needs resolution",
+        "priorityDescription": "Priority is calculated from impact and urgency"
+      },
+      "messages": {
+        "success": {
+          "created": "Board created successfully",
+          "updated": "Board updated successfully",
+          "deleted": "Board deleted successfully",
+          "imported": "Boards imported successfully"
+        },
+        "error": {
+          "fetchFailed": "Failed to load boards",
+          "fetchAvailableFailed": "Failed to fetch available boards for import",
+          "nameRequired": "Board name is required",
+          "saveFailed": "Failed to save board",
+          "lastDefault": "Cannot remove the last default board"
+        }
+      }
+    }
+  },
+  "interactions": {
+    "title": "Interaction Settings",
+    "tabs": {
+      "types": "Interaction Types",
+      "statuses": "Interaction Statuses"
+    },
+    "types": {
+      "title": "Interaction Types",
+      "loading": "Loading interaction types...",
+      "table": {
+        "name": "Name",
+        "order": "Order",
+        "actions": "Actions"
+      },
+      "actions": {
+        "addType": "Add Interaction Type",
+        "importStandard": "Import from Standard Interaction Types",
+        "edit": "Edit",
+        "delete": "Delete",
+        "cancel": "Cancel",
+        "importSelected": "Import Selected"
+      },
+      "dialog": {
+        "import": {
+          "title": "Import Standard Interaction Types",
+          "description": "Select standard interaction types to import into your organization:",
+          "empty": "No standard interaction types available to import."
+        },
+        "conflicts": {
+          "title": "Resolve Import Conflicts",
+          "description": "The following items have conflicts that need to be resolved:",
+          "nameConflict": "Name already exists",
+          "orderConflict": "Order {{order}} is already in use",
+          "skipItem": "Skip this item",
+          "importDifferentName": "Import with different name:",
+          "importDifferentOrder": "Import with order {{order}}",
+          "resolve": "Import with Resolutions"
+        }
+      },
+      "messages": {
+        "success": {
+          "deleted": "Interaction type deleted",
+          "imported": "Imported {{count}} interaction type",
+          "imported_plural": "Imported {{count}} interaction types"
+        },
+        "error": {
+          "fetchFailed": "Failed to fetch interaction types",
+          "validateDeleteFailed": "Failed to validate interaction type deletion",
+          "deleteFailed": "Failed to delete interaction type",
+          "checkConflicts": "Failed to check conflicts",
+          "importFailed": "Failed to import interaction types",
+          "fetchAvailable": "Failed to fetch available interaction types for import"
+        }
+      }
+    },
+    "statuses": {
+      "title": "Interaction Statuses",
+      "alert": "Interaction Statuses: Track the state of customer interactions such as calls, emails, and meetings.",
+      "table": {
+        "name": "Name",
+        "status": "Status",
+        "order": "Order",
+        "actions": "Actions"
+      },
+      "statusLabels": {
+        "closedHelp": "Interactions with this status will be marked as closed",
+        "openHelp": "Interactions with this status will remain open"
+      },
+      "actions": {
+        "addStatus": "Add Status",
+        "importStandard": "Import from Standard",
+        "edit": "Edit",
+        "delete": "Delete"
+      },
+      "messages": {
+        "success": {
+          "updated": "Status updated successfully",
+          "deleted": "Status deleted successfully",
+          "imported": "Successfully imported {{count}} statuses"
+        },
+        "error": {
+          "lastClosed": "At least one status must remain marked as closed",
+          "deleteLastClosed": "Cannot delete the last closed status for this type."
+        }
+      }
+    },
+    "quickAdd": {
+      "dialog": {
+        "createTitle": "Create Interaction Type",
+        "editTitle": "Edit Interaction Type"
+      },
+      "fields": {
+        "name": {
+          "label": "Interaction Type Name:",
+          "placeholder": "e.g., 'Client Onboarding Call', 'Sales Demo', 'Project Review'"
+        },
+        "displayOrder": {
+          "label": "Display Order:",
+          "placeholder": "e.g., 1, 2, 3..."
+        },
+        "icon": {
+          "label": "Choose an Icon:"
+        }
+      },
+      "preview": {
+        "title": "Preview:",
+        "empty": "Enter type name above"
+      },
+      "actions": {
+        "cancel": "Cancel",
+        "create": "Create Type",
+        "update": "Update Type",
+        "creating": "Creating...",
+        "updating": "Updating..."
+      },
+      "messages": {
+        "error": {
+          "nameRequired": "Please enter a name for the interaction type.",
+          "saveFailed": "Failed to {{action}} interaction type. Please try again."
+        }
+      }
+    }
+  },
+  "clientPortal": {
+    "branding": {
+      "title": "Branding & Appearance",
+      "description": "Customize the look and feel of your client portal with your company branding.",
+      "fields": {
+        "companyName": "Company Name",
+        "companyLogo": "Company Logo",
+        "colorPalette": "Color Palette",
+        "primaryColor": "Primary Color",
+        "secondaryColor": "Secondary Color",
+        "supportEmail": "Support Email",
+        "supportPhone": "Support Phone"
+      },
+      "help": {
+        "companyName": "This will be displayed in the client portal header",
+        "companyLogo": "Recommended: PNG or SVG, max 2MB, transparent background",
+        "primaryColor": "Used for buttons, links, and highlights",
+        "secondaryColor": "Used for accents and secondary actions",
+        "supportEmail": "Shown to clients in appointment confirmations and other outbound emails as the address to contact for help.",
+        "supportPhone": "Optional. Shown alongside the support email in client-facing emails."
+      },
+      "preview": "Preview",
+      "previewDarkMode": "Preview dark mode",
+      "actions": {
+        "saveBranding": "Save Branding Settings",
+        "previewDashboard": "Preview Client Dashboard",
+        "hideDashboard": "Hide Client Dashboard",
+        "previewSignIn": "Preview Sign-in Page",
+        "hideSignIn": "Hide Sign-in Page"
+      },
+      "customDomainRequired": "Must have custom domain set up"
+    },
+    "dashboardPreview": {
+      "title": "Your Client Portal",
+      "welcome": "Welcome back!",
+      "subtitle": "Here's an overview of your account activity",
+      "openTickets": "Open Tickets",
+      "activeProjects": "Active Projects",
+      "invoices": "Invoices",
+      "urgent": "{{count}} urgent",
+      "nearDeadline": "{{count}} near deadline",
+      "dueThisMonth": "Due this month",
+      "recentActivity": "Recent Activity",
+      "ticketUpdated": "Ticket #1234 was updated",
+      "hoursAgo": "{{count}} hours ago",
+      "newInvoice": "New invoice generated",
+      "milestoneCompleted": "Project milestone completed",
+      "dayAgo": "1 day ago",
+      "createTicket": "Create Ticket",
+      "viewProjects": "View Projects"
+    },
+    "signInPreview": {
+      "portalTitle": "Client Portal",
+      "welcome": "Welcome to Your Client Portal",
+      "subtitle": "Manage your support tickets and stay connected",
+      "features": {
+        "submitTickets": {
+          "title": "Submit Support Tickets",
+          "description": "Create and manage your support requests"
+        },
+        "trackStatus": {
+          "title": "Track Ticket Status",
+          "description": "Monitor progress in real-time"
+        },
+        "ticketHistory": {
+          "title": "Ticket History",
+          "description": "Access your complete support history"
+        },
+        "documentation": {
+          "title": "Documentation Access",
+          "description": "View shared documents and resources"
+        }
+      },
+      "signIn": {
+        "title": "Sign In",
+        "description": "Please enter your credentials to access your account.",
+        "email": "Email",
+        "emailPlaceholder": "Enter your email",
+        "password": "Password",
+        "passwordPlaceholder": "Enter your password",
+        "forgotPassword": "Forgot your password?",
+        "mspStaffLogin": "MSP Staff? Login here →"
+      }
+    }
+  },
+  "mspLanguage": {
+    "title": "Idioma da organização",
+    "description": "Defina o idioma padrão para toda a organização — equipe MSP, usuários do portal do cliente e notificações por email. Cada usuário ou cliente pode substituí-lo individualmente.",
+    "fields": {
+      "defaultLanguage": "Idioma padrão",
+      "availableLanguages": "Idiomas disponíveis"
+    },
+    "help": {
+      "defaultLanguage": "Aplicado em todo lugar, a menos que substituído pela preferência pessoal de um usuário ou pelo idioma configurado para um cliente específico.",
+      "availableLanguages": "Selecione entre quais idiomas os usuários podem escolher."
+    }
+  },
+  "notifications": {
+    "title": "Notification Settings",
+    "description": {
+      "email": "Configure how your tenant sends email notifications",
+      "internal": "Configure how your tenant sends internal notifications"
+    },
+    "viewSwitcher": {
+      "email": "Email Notifications",
+      "internal": "Internal Notifications"
+    },
+    "emailTabs": {
+      "settings": "Settings",
+      "emailTemplates": "Email Templates",
+      "categories": "Categories",
+      "telemetry": "Telemetry"
+    },
+    "internalTabs": {
+      "categories": "Categories"
+    },
+    "sections": {
+      "globalSettings": {
+        "title": "Global Settings",
+        "description": "Configure global notification settings"
+      },
+      "emailTemplates": {
+        "title": "Email Templates",
+        "description": "Manage email notification templates"
+      },
+      "categories": {
+        "title": "Notification Categories",
+        "description": "Manage notification categories and types"
+      },
+      "internalCategories": {
+        "title": "Internal Notification Categories",
+        "description": "Manage internal notification categories and types"
+      },
+      "telemetry": {
+        "title": "Telemetry & Analytics",
+        "description": "Manage your telemetry and analytics preferences"
+      }
+    }
+  },
+  "timeEntry": {
+    "title": "Time Entry Settings",
+    "description": "Manage your time entry settings and time periods"
+  },
+  "billing": {
+    "title": "Billing Settings",
+    "description": "Manage your billing and subscription"
+  },
+  "secrets": {
+    "title": "Secrets Management",
+    "description": "Manage encrypted secrets for use in workflows. Secrets can be referenced in workflow actions using the $secret syntax.",
+    "list": {
+      "title": "Secrets",
+      "description": "Manage secrets for use in workflows. Secrets are encrypted and can be referenced using { $secret: \"SECRET_NAME\" }",
+      "search": "Search secrets...",
+      "createSecret": "Create Secret",
+      "table": {
+        "name": "Name",
+        "description": "Description",
+        "lastUpdated": "Last Updated",
+        "lastAccessed": "Last Accessed",
+        "actions": "Actions",
+        "never": "Never",
+        "empty": "-"
+      },
+      "tooltips": {
+        "edit": "Edit secret",
+        "delete": "Delete secret"
+      }
+    },
+    "dialog": {
+      "createTitle": "Create Secret",
+      "editTitle": "Edit Secret",
+      "deleteTitle": "Delete Secret",
+      "fields": {
+        "name": {
+          "label": "Name *",
+          "placeholder": "MY_API_KEY",
+          "help": "Use uppercase letters, numbers, and underscores only"
+        },
+        "value": {
+          "label": "Value *",
+          "placeholder": "Enter secret value",
+          "editPlaceholder": "Enter new value to update",
+          "editHelp": "Leave empty to keep the current value"
+        },
+        "description": {
+          "label": "Description",
+          "placeholder": "What is this secret used for?"
+        }
+      },
+      "delete": {
+        "confirmation": "Are you sure you want to delete the secret {{name}}?",
+        "usedByWorkflows": "This secret is used by {{count}} workflow(s)",
+        "usedByWarning": "Deleting it will cause those workflows to fail when they try to access this secret.",
+        "cannotUndo": "This action cannot be undone.",
+        "typeToConfirm": "Type {{name}} to confirm:",
+        "placeholder": "Enter secret name"
+      },
+      "actions": {
+        "cancel": "Cancel",
+        "create": "Create Secret",
+        "update": "Update Secret",
+        "delete": "Delete Secret",
+        "saving": "Saving...",
+        "deleting": "Deleting..."
+      }
+    },
+    "messages": {
+      "success": {
+        "created": "Secret \"{{name}}\" created",
+        "updated": "Secret \"{{name}}\" updated",
+        "deleted": "Secret \"{{name}}\" deleted"
+      },
+      "error": {
+        "loadFailed": "Failed to load secrets",
+        "deleteFailed": "Failed to delete secret",
+        "saveFailed": "Failed to save secret",
+        "nameRequired": "Secret name is required",
+        "valueRequired": "Secret value is required",
+        "noChanges": "No changes to save",
+        "fixValidation": "Please fix the validation errors"
+      }
+    }
+  },
+  "importExport": {
+    "title": "Import & Export Workspace",
+    "description": "Configure imports, exports, and automated data flows from a single control centre.",
+    "history": {
+      "title": "Import & Export History",
+      "description": "Review every import or export job in one place.",
+      "empty": "No import or export jobs found. Generate a preview to create the first job.",
+      "table": {
+        "date": "Date",
+        "source": "Source",
+        "file": "File",
+        "status": "Status",
+        "created": "Created",
+        "duplicates": "Duplicates",
+        "errors": "Errors"
+      }
+    },
+    "tabs": {
+      "assetImport": "Asset Import",
+      "assetExport": "Asset Export",
+      "templatesAutomation": "Templates & Automation"
+    },
+    "import": {
+      "fields": {
+        "importSource": "Import source",
+        "uploadFile": "Upload file",
+        "fieldMapping": "Field mapping",
+        "rememberMapping": "Remember this mapping for future imports"
+      },
+      "placeholders": {
+        "noSources": "No import sources available",
+        "selectSource": "Select an import source",
+        "sourceColumn": "Source column name",
+        "example": "e.g. {{example}}"
+      },
+      "help": {
+        "fieldMapping": "Enter the column names from your file that correspond to each required asset field. Leave optional fields blank to skip them."
+      },
+      "alerts": {
+        "selectSource": "Select an import source to continue.",
+        "chooseFile": "Choose a CSV or XLSX file to continue.",
+        "validationIssues": "Validation issues detected."
+      },
+      "actions": {
+        "generatePreview": "Generate Preview",
+        "preparingPreview": "Preparing Preview…",
+        "proceedWithImport": "Proceed with Import",
+        "startingImport": "Starting Import…",
+        "refresh": "Refresh",
+        "refreshing": "Refreshing…",
+        "cancel": "Cancel",
+        "importSelected": "Import Selected"
+      },
+      "preview": {
+        "title": "Import Preview",
+        "description": "Showing up to the first 10 rows from {{totalRows}} total records.",
+        "stats": {
+          "total": "Total",
+          "valid": "Valid",
+          "duplicates": "Duplicates",
+          "errors": "Errors"
+        },
+        "table": {
+          "row": "Row",
+          "values": "Values",
+          "issues": "Issues"
+        },
+        "empty": "No preview rows available."
+      }
+    },
+    "export": {
+      "comingSoon": "Asset export tooling is coming soon. Planned capabilities include exporting filtered asset lists, audit data, and mapping templates directly to CSV/XLSX."
+    },
+    "templates": {
+      "comingSoon": "Mapping templates and scheduled imports will live here. Save column mappings, share them across the team, and configure recurring jobs."
+    },
+    "jobDetails": {
+      "title": "Import Job Details",
+      "stats": {
+        "totalRows": "Total Rows",
+        "processed": "Processed",
+        "created": "Created",
+        "updated": "Updated",
+        "duplicates": "Duplicates",
+        "errors": "Errors"
+      },
+      "sections": {
+        "summary": "Summary",
+        "records": "Records ({{count}})",
+        "errors": "Errors ({{count}})",
+        "duplicates": "Duplicates ({{count}})"
+      },
+      "fields": {
+        "source": "Source",
+        "originalFileName": "Original file name",
+        "storedFileId": "Stored file ID",
+        "documentId": "Document ID",
+        "documentAssociation": "Document association",
+        "clientAssociation": "Client Association",
+        "associatedClient": "Associated client",
+        "defaultClientContext": "Default client context",
+        "tenantClientFallback": "Tenant client fallback",
+        "externalId": "External ID",
+        "status": "Status",
+        "sampleValues": "Sample Values",
+        "error": "Error",
+        "duplicateMatch": "Duplicate Match"
+      },
+      "empty": {
+        "noRecords": "No processed records yet.",
+        "noErrors": "No validation errors were recorded.",
+        "noDuplicates": "No duplicates were detected for this job.",
+        "noValues": "No values"
+      },
+      "truncated": "Showing the first {{count}} records. Download the job results for full history."
+    }
+  },
+  "email": {
+    "title": "Email Configuration",
+    "description": "Configure email providers, domains, and settings"
+  },
+  "extensions": {
+    "title": "Extension Management",
+    "description": "Install, configure, and manage extensions to extend Alga PSA functionality.",
+    "tabs": {
+      "manage": "Manage",
+      "install": "Install"
+    },
+    "enterpriseOnly": {
+      "title": "Enterprise feature",
+      "description": "Extensions are available in the Enterprise edition of Alga PSA."
+    },
+    "links": {
+      "needLogs": "Need extension logs?",
+      "debugConsole": "Open Service Proxy Demo Debug Console"
+    },
+    "loading": {
+      "extensions": "Loading extensions...",
+      "installer": "Loading installer..."
+    }
+  },
+  "security": {
+    "title": "Security Settings",
+    "tabs": {
+      "roles": "Roles",
+      "sessions": "Sessions",
+      "sso": "Single Sign-On",
+      "permissions": "Permissions",
+      "userRoles": "User Roles",
+      "policies": "Policies",
+      "apiKeys": "API Keys"
+    },
+    "loading": {
+      "roles": "Loading role configuration...",
+      "permissions": "Loading permissions configuration...",
+      "userRoles": "Loading user role configuration...",
+      "policies": "Loading policy configuration...",
+      "apiKeys": "Loading API key configuration...",
+      "sso": "Loading SSO management tools...",
+      "sessions": "Loading active sessions..."
+    },
+    "userRoles": {
+      "title": "Assign Roles to Users",
+      "description": {
+        "msp": "Manage user role assignments for MSP users",
+        "client": "Manage user role assignments for Client Portal users"
+      },
+      "viewSwitcher": {
+        "msp": "MSP",
+        "clientPortal": "Client Portal"
+      },
+      "showInactive": "Show Inactive Users",
+      "fields": {
+        "selectUser": "Select User",
+        "selectRole": "Select Role"
+      },
+      "actions": {
+        "assignRole": "Assign Role"
+      },
+      "table": {
+        "user": "User",
+        "email": "Email",
+        "roles": "Roles",
+        "actions": "Actions"
+      },
+      "noRolesAssigned": "No roles assigned",
+      "removeRole": "Remove {{role}}",
+      "emptyState": {
+        "noUsers": "No {{type}} users found",
+        "inactiveHidden": "(inactive users hidden)"
+      },
+      "inactiveTag": "(Inactive)"
+    },
+    "sessions": {
+      "title": "All User Sessions",
+      "subtitle": "{{sessionCount}} active session across {{userCount}} user",
+      "subtitle_plural": "{{sessionCount}} active sessions across {{userCount}} users",
+      "filters": {
+        "search": "Search",
+        "searchPlaceholder": "Search by name, email, device, or IP...",
+        "user": "User",
+        "allUsers": "All Users",
+        "loginMethod": "Login Method",
+        "allMethods": "All Methods",
+        "userType": "User Type",
+        "allTypes": "All Types",
+        "from": "From",
+        "to": "To",
+        "selectDate": "Select date",
+        "reset": "Reset"
+      },
+      "loginMethods": {
+        "password": "Password",
+        "google": "Google OAuth",
+        "microsoft": "Microsoft OAuth",
+        "keycloak": "Keycloak"
+      },
+      "userTypes": {
+        "internal": "Internal",
+        "client": "Client"
+      },
+      "session": {
+        "yourSession": "Your Session",
+        "unknownDevice": "Unknown Device",
+        "lastActive": "Last active {{time}} ago",
+        "logout": "Logout",
+        "revoke": "Revoke",
+        "revoking": "Revoking..."
+      },
+      "oauthWarning": "Revoking this session will not revoke {{provider}} OAuth access. Revoke access from your {{provider}} account settings.",
+      "confirmLogout": "Are you sure you want to logout from this device?",
+      "messages": {
+        "loggingOut": "Logging out...",
+        "revoked": "Session revoked successfully"
+      },
+      "emptyState": {
+        "loading": "Loading sessions...",
+        "noMatch": "No sessions match your search",
+        "noSessions": "No active sessions found"
+      }
+    }
+  },
+  "profile": {
+    "pageTitle": "Your Profile",
+    "tabs": {
+      "profile": "Profile",
+      "security": "Security",
+      "sso": "Single Sign-On",
+      "apiKeys": "API Keys",
+      "notifications": "Notifications",
+      "calendar": "Calendar"
+    },
+    "basicInfo": {
+      "title": "Basic Information"
+    },
+    "fields": {
+      "firstName": {
+        "label": "First Name *"
+      },
+      "lastName": {
+        "label": "Last Name *"
+      },
+      "email": {
+        "label": "Email *"
+      },
+      "phoneNumber": {
+        "label": "Phone Number"
+      },
+      "timeZone": {
+        "label": "Time Zone"
+      }
+    },
+    "actions": {
+      "saveChanges": "Save Changes"
+    },
+    "notifications": {
+      "title": "Notification Preferences",
+      "viewSwitcher": {
+        "email": "Email",
+        "internal": "Internal"
+      }
+    },
+    "loading": "Loading profile...",
+    "messages": {
+      "success": {
+        "profileUpdated": "Profile updated successfully"
+      },
+      "error": {
+        "userNotFound": "User not found",
+        "fillRequiredFields": "Please fill in all required fields"
+      }
+    },
+    "validation": {
+      "firstNameRequired": "First name is required",
+      "lastNameRequired": "Last name is required"
+    }
+  },
+  "password": {
+    "changePassword": "Change Password",
+    "fields": {
+      "currentPassword": "Current Password",
+      "newPassword": "New Password",
+      "confirmNewPassword": "Confirm New Password"
+    },
+    "messages": {
+      "success": {
+        "changed": "Password changed successfully"
+      },
+      "error": {
+        "mismatch": "New passwords do not match",
+        "tooShort": "Password must be at least 8 characters long",
+        "changeFailed": "An error occurred while changing password"
+      }
+    }
+  },
+  "integrations": {
+    "betaNotice": "Some integrations are still in development. Please work in a sandbox environment when evaluating, and share your feedback to help us improve.",
+    "emptyCategory": "No integrations available in this category.",
+    "rmmEnterpriseNote": "RMM integrations are available in the Enterprise edition.",
+    "categoryHeading": "{{label}} Integrations",
+    "loading": {
+      "payments": "Loading payment settings..."
+    },
+    "categories": {
+      "accounting": {
+        "label": "Accounting",
+        "description": "Select an accounting package to configure synchronization for invoices, payments, and tax data."
+      },
+      "rmm": {
+        "label": "RMM",
+        "description": "Connect remote monitoring and management tools"
+      },
+      "communication": {
+        "label": "Communication",
+        "description": "Connect inbox and collaboration surfaces for ticket processing, operator workflows, and Microsoft Teams access."
+      },
+      "calendar": {
+        "label": "Calendar",
+        "description": "Enterprise-only calendar sync for Google and Outlook keeps dispatch and client appointments aligned."
+      },
+      "providers": {
+        "label": "Providers",
+        "description": {
+          "ee": "Configure shared provider credentials used by email, calendar, MSP SSO, and other integrations.",
+          "oss": "Configure shared provider credentials used by email, MSP SSO, and other integrations."
+        }
+      },
+      "identity": {
+        "label": "Identity",
+        "description": "Connect identity providers for tenant discovery and contact synchronization."
+      },
+      "payments": {
+        "label": "Payments",
+        "description": "Accept online payments for invoices"
+      }
+    },
+    "items": {
+      "accountingSetup": {
+        "name": "Accounting Integrations",
+        "description": "Configure accounting synchronization and exports"
+      },
+      "rmmSetup": {
+        "name": "RMM Integrations",
+        "description": "Select and configure your RMM provider"
+      },
+      "email": {
+        "name": "Inbound Email",
+        "description": "Process incoming emails into tickets",
+        "cardTitle": "Inbound Email Integration",
+        "cardDescription": "Configure email providers to automatically process incoming emails into tickets"
+      },
+      "teams": {
+        "name": "Microsoft Teams",
+        "description": "Configure Teams collaboration surfaces for MSP technicians",
+        "upgradeDescription": "Configure Microsoft Teams collaboration surfaces for MSP technicians. Upgrade to Pro to unlock this feature."
+      },
+      "calendarSync": {
+        "name": "Calendar Sync",
+        "description": "Sync schedule entries with Google or Microsoft calendars"
+      },
+      "google": {
+        "name": "Google",
+        "description": {
+          "ee": "Tenant-owned Google Cloud credentials for Gmail and Calendar",
+          "oss": "Tenant-owned Google Cloud credentials for Gmail and MSP SSO support flows"
+        },
+        "cardTitle": "Provider Credentials",
+        "cardDescription": {
+          "ee": "Configure Google and Microsoft first, then connect provider accounts from the Inbound Email and Calendar integration screens. MSP SSO domain discovery uses these provider credentials with tenant login-domain mappings.",
+          "oss": "Configure Google and Microsoft first, then connect provider accounts from the Inbound Email integration screen. MSP SSO domain discovery uses these provider credentials with tenant login-domain mappings."
+        }
+      },
+      "entra": {
+        "name": "Microsoft Entra",
+        "description": "Discover managed Microsoft tenants and sync users to contacts",
+        "upgradeDescription": "Discover managed Microsoft Entra tenants and sync users to contacts. Upgrade to Premium to unlock this feature."
+      },
+      "stripe": {
+        "name": "Stripe",
+        "description": "Accept credit card payments for invoices via Stripe"
+      }
+    }
+  },
+  "orgChart": {
+    "emptyState": "No users available.",
+    "roles": {
+      "client": "Client User",
+      "internal": "Internal User"
+    },
+    "badge": {
+      "inactive": "Inactive"
+    }
+  },
+  "permissions": {
+    "messages": {
+      "adminLocked": "As permissões do papel de administrador não podem ser modificadas",
+      "permissionsUpdated": "Permissões atualizadas com sucesso"
+    }
+  },
+  "sla": {
+    "messages": {
+      "scheduleNotFound": "Agendamento não encontrado",
+      "scheduleUpdated": "Agendamento atualizado com sucesso",
+      "scheduleCreated": "Agendamento criado com sucesso",
+      "scheduleDeleted": "Agendamento excluído com sucesso",
+      "defaultHoursCreated": "Agendamento de horário comercial padrão criado",
+      "scheduleRequired": "Selecione primeiro um agendamento",
+      "holidayNameRequired": "O nome do feriado é obrigatório",
+      "holidayDateRequired": "A data do feriado é obrigatória",
+      "holidayAdded": "Feriado adicionado com sucesso",
+      "holidayDeleted": "Feriado excluído com sucesso"
+    }
+  },
+  "clientPortalLanguage": {
+    "title": "Idioma do portal do cliente",
+    "description": "Substitua o idioma padrão apenas para usuários do portal do cliente. A equipe MSP mantém o padrão da organização.",
+    "fields": {
+      "defaultLanguage": "Idioma padrão"
+    },
+    "help": {
+      "defaultLanguage": "Quando definido, os usuários do portal do cliente veem este idioma, a menos que a preferência individual ou o idioma configurado para o cliente o substitua."
+    },
+    "placeholder": "Selecione um idioma",
+    "inheritOption": "Usar o padrão da organização ({{language}})",
+    "unsetHint": "Para remover a substituição do portal do cliente, altere o padrão da organização em Configurações → Idioma.",
+    "updated": "Idioma padrão do portal do cliente atualizado para {{language}}"
+  }
+}

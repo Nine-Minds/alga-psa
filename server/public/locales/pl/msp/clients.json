@@ -87,6 +87,7 @@
     "bulkDeleteSuccess": "{{count}} {{clientsLabel}} {{verb}} został pomyślnie usunięty.",
     "bulkInactiveFailed": "{{count}} {{clientsLabel}} nie może zostać oznaczony jako nieaktywny.",
     "bulkInactiveWithContactsSuccess": "{{clientCount}} {{clientsLabel}} i {{contactCount}} {{contactsLabel}} zostały pomyślnie oznaczone jako nieaktywne.",
+    "singleInactiveSuccess": "{{name}} został pomyślnie oznaczony jako nieaktywny.",
     "bulkInactiveSuccess": "{{count}} {{clientsLabel}} {{verb}} został pomyślnie oznaczony jako nieaktywny.",
     "bulkInactiveShortSuccess": "{{count}} {{clientsLabel}} {{verb}} został oznaczony jako nieaktywny.",
     "bulkInactiveWithContactsShortSuccess": "{{clientCount}} {{clientsLabel}} i {{contactCount}} {{contactsLabel}} zostały oznaczone jako nieaktywne.",
@@ -129,7 +130,9 @@
       "bucketUsageRecord": "rekord użycia łyżki",
       "bucketUsageRecords": "zapisy użycia łyżek"
     },
-    "deleteSelectedPrompt": "Czy na pewno chcesz usunąć {{count}} wybrane {{clientsLabel}}? Tej akcji nie można cofnąć."
+    "deleteSelectedPrompt": "Czy na pewno chcesz usunąć {{count}} wybrane {{clientsLabel}}? Tej akcji nie można cofnąć.",
+    "singleInactiveWithContactsSuccess_one": "{{name}} i {{count}} kontakt zostały pomyślnie dezaktywowane.",
+    "singleInactiveWithContactsSuccess_other": "{{name}} i {{count}} kontaktów zostało pomyślnie dezaktywowanych."
   },
   "clientDetails": {
     "title": "Dane Klienta",
@@ -208,7 +211,12 @@
     "status": {
       "label": "Status",
       "helper": "Ustaw status klienta jako aktywny lub nieaktywny"
-    }
+    },
+    "entraSyncStarted": "Rozpoczęto synchronizację Entra. Identyfikator uruchomienia: {{runId}}",
+    "inboundDomainAdded": "Dodano przychodzącą domenę e-mail",
+    "inboundDomainAddFailed": "Nie udało się dodać domeny",
+    "inboundDomainRemoved": "Usunięto przychodzącą domenę e-mail",
+    "inboundDomainRemoveFailed": "Nie udało się usunąć domeny"
   },
   "quickAddClient": {
     "title": "Dodaj nowego klienta",
@@ -335,7 +343,7 @@
       "creditCard": "Karta kredytowa"
     },
     "paymentTermsLabel": "Warunki płatności",
-    "standardTemplateLabel": "(Standard)",
+    "standardTemplateLabel": "(Standardowy)",
     "taxRegionsLoadError": "Nie udało się wczytać regionów podatkowych.",
     "usingDefaultTemplate": "Korzystanie z szablonu domyślnego: {{name}}"
   },
@@ -670,7 +678,7 @@
   "clientLanguagePreference": {
     "title": "Ustawienia języka klienta",
     "label": "Domyślny język kontaktów",
-    "description": "Ustaw domyślny język dla wszystkich kontaktów w {{clientName}}. Użytkownicy indywidualni mogą to zmienić w swoich ustawieniach osobistych.",
+    "description": "Dotyczy każdego użytkownika portalu z {{clientName}}, chyba że ustawił własną preferencję w swoim profilu.",
     "selectPlaceholder": "Wybierz język",
     "updating": "Aktualizuję preferencje językowe...",
     "loadError": "Nie udało się załadować preferencji języka klienta:",

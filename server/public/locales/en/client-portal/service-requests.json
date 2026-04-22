@@ -1,0 +1,58 @@
+{
+  "catalog": {
+    "title": "Request Services",
+    "description": "Browse published services and submit structured requests.",
+    "myRequests": "My Requests",
+    "empty": "No request services are currently available.",
+    "fallbackCategory": "Service",
+    "noDescription": "No description provided"
+  },
+  "detail": {
+    "version": "Version {{version}}",
+    "submitted": "Request submitted",
+    "requestIdLabel": "Request ID: ",
+    "ticketIdLabel": "Ticket ID: ",
+    "unableToSubmit": "Unable to submit request",
+    "formTitle": "Request Form",
+    "noFields": "No fields configured.",
+    "selectOption": "Select an option",
+    "datePlaceholder": "Select date",
+    "optionLabel": "Option {{index}}",
+    "submit": "Submit Request",
+    "initialValuesTitle": "Initial Values",
+    "noInitialValues": "No static defaults configured."
+  },
+  "myRequests": {
+    "title": "My Requests",
+    "browseServices": "Browse Services",
+    "empty": "You have not submitted any service requests yet.",
+    "columns": {
+      "request": "Request",
+      "submitted": "Submitted",
+      "status": "Status",
+      "details": "Details"
+    },
+    "view": "View",
+    "unknownDate": "Unknown",
+    "statuses": {
+      "pending": "Pending",
+      "succeeded": "Succeeded",
+      "failed": "Failed"
+    }
+  },
+  "submissionDetail": {
+    "backToMyRequests": "Back to My Requests",
+    "requestIdLabel": "Request ID:",
+    "statusSection": "Status",
+    "submittedAt": "Submitted: {{date}}",
+    "executionStatus": "Execution status: {{status}}",
+    "ticketLabel": "Ticket:",
+    "workflowLabel": "Workflow: {{id}}",
+    "submittedAnswersTitle": "Submitted Answers",
+    "noResponse": "No response",
+    "attachmentsTitle": "Attachments",
+    "noAttachments": "No attachments included.",
+    "fileIdLabel": "File ID: {{id}}",
+    "fileTypeLabel": "Type: {{mime}}"
+  }
+}

@@ -48,7 +48,7 @@
     "success": "Succès",
     "error": "Erreur",
     "warning": "Avertissement",
-    "info": "Information",
+    "info": "Informations",
     "pending": "En attente",
     "active": "Actif",
     "inactive": "Inactif",
@@ -128,6 +128,43 @@
         "client": "paramètre par défaut de l'entreprise",
         "tenant": "paramètre par défaut du locataire",
         "system": "paramètre par défaut du système"
+      }
+    },
+    "hierarchyTable": {
+      "title": "Hiérarchie des préférences de langue",
+      "description": "Lors de la résolution de la langue à utiliser pour l'interface et les notifications par email, Alga vérifie ces éléments dans l'ordre et s'arrête à la première correspondance.",
+      "columns": {
+        "priority": "Priorité",
+        "source": "Source de la langue",
+        "appliesTo": "S'applique à",
+        "whereSet": "Où le configurer"
+      },
+      "rows": {
+        "userPreference": {
+          "source": "Préférence individuelle de l'utilisateur",
+          "appliesTo": "Tous les utilisateurs",
+          "whereSet": "Profil utilisateur"
+        },
+        "clientUserLanguage": {
+          "source": "Langue spécifique au client",
+          "appliesTo": "Utilisateurs du portail client (par client spécifique)",
+          "whereSet": "Détails du client"
+        },
+        "clientPortalDefault": {
+          "source": "Valeur par défaut du portail client",
+          "appliesTo": "Tous les utilisateurs du portail client",
+          "whereSet": "Paramètres MSP → Portail client"
+        },
+        "organizationDefault": {
+          "source": "Valeur par défaut de l'organisation",
+          "appliesTo": "Tous les utilisateurs (personnel MSP et portail client)",
+          "whereSet": "Paramètres MSP → Langue"
+        },
+        "systemDefault": {
+          "source": "Valeur par défaut du système (anglais)",
+          "appliesTo": "Par défaut",
+          "whereSet": "Défini par le système"
+        }
       }
     }
   },
@@ -691,7 +728,6 @@
       "supportMessage": "Pour toute question, contactez votre technicien."
     }
   },
-  "notifications": {},
   "availability": {
     "settings": {
       "title": "Paramètres de disponibilité",
@@ -935,5 +971,26 @@
     "addOnDescription": {
       "ai_assistant": "Débloquez le chat IA, l'assistance documentaire, l'aide en barre latérale et les outils IA de flux de travail pour votre équipe."
     }
+  },
+  "auth": {
+    "messages": {
+      "handoffMissingToken": "Le jeton de transfert de connexion est manquant ou invalide. Veuillez vous reconnecter.",
+      "handoffFinalizeFailed": "Nous n'avons pas pu finaliser votre connexion. Veuillez réessayer.",
+      "handoffNetworkIssue": "Problème réseau détecté lors de la finalisation de votre connexion. Veuillez réessayer."
+    }
+  },
+  "form": {
+    "selectPlaceholder": "Sélectionner...",
+    "clearSelection": "Effacer la sélection",
+    "fromDate": "Du",
+    "toDate": "Au",
+    "noResults": "Aucun résultat trouvé",
+    "searchPlaceholder": "Rechercher..."
+  },
+  "tagFilter": {
+    "placeholder": "Filtrer par étiquettes...",
+    "filter": "Filtrer",
+    "selectedCount": "{{count}} sélectionné(s)",
+    "clearAll": "Tout effacer"
   }
 }

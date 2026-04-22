@@ -685,27 +685,6 @@
     }
   },
   "clientPortal": {
-    "language": {
-      "title": "Paramètres de langue",
-      "description": "Configurez les paramètres de langue par défaut de votre portail client. Ces paramètres s'appliquent à tous les utilisateurs et clients, sauf s'ils sont remplacés.",
-      "fields": {
-        "defaultLanguage": "Langue par défaut",
-        "availableLanguages": "Langues disponibles"
-      },
-      "help": {
-        "defaultLanguage": "Ce sera la langue par défaut pour tous les utilisateurs du portail client et les notifications par courriel, sauf si elle est remplacée par le paramètre du client ou les préférences individuelles de l'utilisateur",
-        "availableLanguages": "Sélectionnez les langues disponibles parmi lesquelles les utilisateurs peuvent choisir"
-      },
-      "hierarchy": {
-        "title": "Hiérarchie des préférences de langue",
-        "description": "Cette hiérarchie s'applique à la fois à l'interface du portail client et aux notifications par courriel envoyées aux utilisateurs du portail client :",
-        "userPreference": "Préférence individuelle de l'utilisateur (priorité la plus élevée)",
-        "clientDefault": "Langue par défaut du client",
-        "orgDefault": "Langue par défaut de l'organisation (configurée ici)",
-        "systemDefault": "Langue par défaut du système (anglais)",
-        "note": "Remarque : les utilisateurs internes MSP reçoivent toujours les courriels en anglais"
-      }
-    },
     "branding": {
       "title": "Image de marque et apparence",
       "description": "Personnalisez l'apparence de votre portail client avec l'image de marque de votre entreprise.",
@@ -791,21 +770,15 @@
     }
   },
   "mspLanguage": {
-    "title": "Langue",
-    "description": "Configurez les paramètres de langue par défaut du portail MSP. Ces paramètres s'appliquent à tous les utilisateurs MSP, sauf s'ils sont remplacés par les préférences individuelles.",
+    "title": "Langue de l’organisation",
+    "description": "Définissez la langue par défaut pour toute l’organisation — personnel MSP, utilisateurs du portail client et notifications par email. Chaque utilisateur ou client peut ensuite la remplacer individuellement.",
     "fields": {
       "defaultLanguage": "Langue par défaut",
       "availableLanguages": "Langues disponibles"
     },
     "help": {
-      "defaultLanguage": "Ce sera la langue par défaut pour tous les utilisateurs du portail MSP, sauf si elle est remplacée par leur préférence personnelle.",
-      "availableLanguages": "Sélectionnez les langues disponibles parmi lesquelles les utilisateurs MSP peuvent choisir"
-    },
-    "hierarchy": {
-      "title": "Hiérarchie des préférences de langue",
-      "userPreference": "Préférence individuelle de l'utilisateur (priorité la plus élevée)",
-      "orgDefault": "Langue par défaut de l'organisation (configurée ici)",
-      "systemDefault": "Langue par défaut du système (anglais)"
+      "defaultLanguage": "Appliquée partout, sauf si une préférence personnelle d'un utilisateur ou la langue configurée pour un client spécifique la remplace.",
+      "availableLanguages": "Sélectionnez les langues parmi lesquelles les utilisateurs peuvent choisir."
     }
   },
   "notifications": {
@@ -1082,7 +1055,7 @@
       "roles": "Rôles",
       "sessions": "Sessions",
       "sso": "SSO",
-      "permissions": "Permissions",
+      "permissions": "Autorisations",
       "userRoles": "Rôles des utilisateurs",
       "policies": "Politiques",
       "apiKeys": "Clés API"
@@ -1347,5 +1320,39 @@
     "badge": {
       "inactive": "Inactif"
     }
+  },
+  "permissions": {
+    "messages": {
+      "adminLocked": "Les autorisations du rôle administrateur ne peuvent pas être modifiées",
+      "permissionsUpdated": "Autorisations mises à jour avec succès"
+    }
+  },
+  "sla": {
+    "messages": {
+      "scheduleNotFound": "Planning introuvable",
+      "scheduleUpdated": "Planning mis à jour avec succès",
+      "scheduleCreated": "Planning créé avec succès",
+      "scheduleDeleted": "Planning supprimé avec succès",
+      "defaultHoursCreated": "Planning d'heures ouvrées par défaut créé",
+      "scheduleRequired": "Veuillez d'abord sélectionner un planning",
+      "holidayNameRequired": "Le nom du jour férié est requis",
+      "holidayDateRequired": "La date du jour férié est requise",
+      "holidayAdded": "Jour férié ajouté avec succès",
+      "holidayDeleted": "Jour férié supprimé avec succès"
+    }
+  },
+  "clientPortalLanguage": {
+    "title": "Langue du portail client",
+    "description": "Remplacez la langue par défaut uniquement pour les utilisateurs du portail client. Le personnel MSP conserve la langue par défaut de l’organisation.",
+    "fields": {
+      "defaultLanguage": "Langue par défaut"
+    },
+    "help": {
+      "defaultLanguage": "Lorsqu'elle est définie, les utilisateurs du portail client voient cette langue, sauf si leur préférence individuelle ou celle configurée pour leur client la remplace."
+    },
+    "placeholder": "Sélectionnez une langue",
+    "inheritOption": "Utiliser la valeur par défaut de l'organisation ({{language}})",
+    "unsetHint": "Pour supprimer le remplacement du portail client, modifiez la valeur par défaut de l'organisation dans Paramètres → Langue.",
+    "updated": "Langue par défaut du portail client mise à jour sur {{language}}"
   }
 }

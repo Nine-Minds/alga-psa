@@ -7,6 +7,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import type { ExternalEntityMapping } from '@alga-psa/integrations/actions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type {
   AccountingMappingContext,
   AccountingMappingEntityOption,
@@ -44,8 +45,10 @@ export function AccountingMappingDialog({
   existingMapping,
   algaEntities,
   externalEntities,
-  realmLabel = 'Realm ID'
+  realmLabel
 }: AccountingMappingDialogProps) {
+  const { t } = useTranslation('msp/integrations');
+  const resolvedRealmLabel = realmLabel ?? t('integrations.accounting.dialog.realmIdLabel', { defaultValue: 'Realm ID' });
   const dialogId = module.elements?.dialog ?? `${module.id}-mapping-dialog`;
 
   const isEditing = Boolean(existingMapping);
@@ -111,7 +114,7 @@ export function AccountingMappingDialog({
       try {
         parsedMetadata = JSON.parse(metadataInput);
       } catch (parseError) {
-        setError('Invalid JSON format for metadata.');
+        setError(t('integrations.accounting.dialog.errors.invalidJson', { defaultValue: 'Invalid JSON format for metadata.' }));
         setIsSaving(false);
         return;
       }
@@ -119,14 +122,18 @@ export function AccountingMappingDialog({
 
     // Validate Alga entity selection
     if (!selectedAlgaId) {
-      setError(`Please select ${module.labels.dialog.algaField.toLowerCase()}.`);
+      setError(t('integrations.accounting.dialog.errors.selectAlga', { defaultValue: 'Please select {{field}}.', field: module.labels.dialog.algaField.toLowerCase() }));
       setIsSaving(false);
       return;
     }
 
     const trimmedExternalId = selectedExternalId.trim();
     if (!trimmedExternalId) {
-      setError(`Please ${hasExternalOptions ? 'select' : 'enter'} ${module.labels.dialog.externalField.toLowerCase()}.`);
+      setError(
+        hasExternalOptions
+          ? t('integrations.accounting.dialog.errors.selectExternal', { defaultValue: 'Please select {{field}}.', field: module.labels.dialog.externalField.toLowerCase() })
+          : t('integrations.accounting.dialog.errors.enterExternal', { defaultValue: 'Please enter {{field}}.', field: module.labels.dialog.externalField.toLowerCase() })
+      );
       setIsSaving(false);
       return;
     }
@@ -141,7 +148,7 @@ export function AccountingMappingDialog({
       onClose();
     } catch (submitError) {
       const message =
-        submitError instanceof Error ? submitError.message : 'Failed to save mapping.';
+        t('integrations.accounting.dialog.errors.saveFailed', { defaultValue: 'Failed to save mapping.' });
       setError(message);
     } finally {
       setIsSaving(false);
@@ -161,7 +168,7 @@ export function AccountingMappingDialog({
     if (!hasExternalOptions) {
       return (
         <p className="text-xs text-muted-foreground">
-          Enter the identifier exactly as it appears in your accounting system.
+          {t('integrations.accounting.dialog.manualEntryHelp', { defaultValue: 'Enter the identifier exactly as it appears in your accounting system.' })}
         </p>
       );
     }
@@ -173,7 +180,7 @@ export function AccountingMappingDialog({
   const footer = (
     <div className="flex items-center justify-end gap-3">
       <Button id={cancelButtonId} type="button" variant="outline" onClick={onClose}>
-        {module.labels.deleteConfirmation.cancelLabel ?? 'Cancel'}
+        {module.labels.deleteConfirmation.cancelLabel ?? t('integrations.accounting.dialog.cancel', { defaultValue: 'Cancel' })}
       </Button>
       <Button
         id={saveButtonId}
@@ -181,7 +188,9 @@ export function AccountingMappingDialog({
         disabled={isSaving}
         onClick={() => (document.getElementById(formId) as HTMLFormElement | null)?.requestSubmit()}
       >
-        {isSaving ? 'Saving…' : 'Save Mapping'}
+        {isSaving
+          ? t('integrations.accounting.dialog.saving', { defaultValue: 'Saving…' })
+          : t('integrations.accounting.dialog.saveMapping', { defaultValue: 'Save Mapping' })}
       </Button>
     </div>
   );
@@ -199,7 +208,7 @@ export function AccountingMappingDialog({
               options={algaOptions}
               value={selectedAlgaId}
               onValueChange={(value: string) => setSelectedAlgaId(value || '')}
-              placeholder={`Select ${module.labels.dialog.algaField}...`}
+              placeholder={t('integrations.accounting.dialog.selectPlaceholder', { defaultValue: 'Select {{field}}...', field: module.labels.dialog.algaField })}
               required
               className="w-full"
             />
@@ -215,7 +224,7 @@ export function AccountingMappingDialog({
                 options={externalOptions}
                 value={selectedExternalId}
                 onValueChange={(value: string) => setSelectedExternalId(value || '')}
-                placeholder={`Select ${module.labels.dialog.externalField}...`}
+                placeholder={t('integrations.accounting.dialog.selectPlaceholder', { defaultValue: 'Select {{field}}...', field: module.labels.dialog.externalField })}
                 required
                 className="w-full"
               />
@@ -224,7 +233,7 @@ export function AccountingMappingDialog({
                 id={`${module.id}-external-manual-input`}
                 value={selectedExternalId}
                 onChange={(event) => setSelectedExternalId(event.target.value)}
-                placeholder={`Enter ${module.labels.dialog.externalField}...`}
+                placeholder={t('integrations.accounting.dialog.enterPlaceholder', { defaultValue: 'Enter {{field}}...', field: module.labels.dialog.externalField })}
                 className="w-full"
                 required
               />
@@ -235,7 +244,7 @@ export function AccountingMappingDialog({
           {context.realmId || context.realmDisplayValue ? (
             <div className="space-y-2">
               <Label htmlFor={`${module.id}-realm-id`} className="text-sm font-medium text-foreground">
-                {realmLabel}
+                {resolvedRealmLabel}
               </Label>
               <Input
                 id={`${module.id}-realm-id`}
@@ -250,13 +259,13 @@ export function AccountingMappingDialog({
           {module.metadata?.enableJsonEditor ? (
             <div className="space-y-2">
               <Label htmlFor={`${module.id}-metadata`} className="text-sm font-medium text-foreground">
-                Metadata (JSON)
+                {t('integrations.accounting.dialog.metadataLabel', { defaultValue: 'Metadata (JSON)' })}
               </Label>
               <TextArea
                 id={`${module.id}-metadata`}
                 value={metadataInput}
                 onChange={(event) => setMetadataInput(event.target.value)}
-                placeholder="Optional metadata as JSON"
+                placeholder={t('integrations.accounting.dialog.metadataPlaceholder', { defaultValue: 'Optional metadata as JSON' })}
                 className="max-w-none font-mono text-xs leading-5"
               />
             </div>

@@ -1,0 +1,449 @@
+{
+  "taxRates": {
+    "errors": {
+      "loadRegions": "Échec du chargement des régions fiscales.",
+      "validateDeletion": "Échec de la validation de la suppression. Veuillez réessayer.",
+      "fetchRates": "Échec de la récupération des taux de taxe",
+      "add": "Échec de l'ajout du taux de taxe",
+      "update": "Échec de la mise à jour du taux de taxe",
+      "confirmDeletion": "Échec de la confirmation de la suppression du taux de taxe."
+    },
+    "validation": {
+      "requiredFieldsTitle": "Veuillez remplir les champs obligatoires :",
+      "region": "Région fiscale",
+      "percentage": "Pourcentage de taxe",
+      "startDate": "Date de début"
+    },
+    "table": {
+      "description": "Description",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "actions": "Actes",
+      "notAvailable": "S/O",
+      "region": "Région",
+      "taxPercentage": "Pourcentage d'impôt",
+      "composite": "Composite"
+    },
+    "actions": {
+      "openMenu": "Ouvrir le menu",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "advancedSettings": "Paramètres avancés",
+      "addNew": "Ajouter un nouveau taux de taxe",
+      "add": "Ajouter un taux de taxe",
+      "update": "Mettre à jour le taux de taxe"
+    },
+    "dialog": {
+      "fields": {
+        "description": "Description",
+        "startDate": "Date de début *",
+        "endDate": "Date de fin (facultatif)",
+        "region": "Région fiscale *",
+        "percentage": "Pourcentage de taxe *"
+      },
+      "placeholders": {
+        "loadingRegions": "Chargement des régions...",
+        "selectRegion": "Sélectionnez la région fiscale",
+        "percentage": "Entrez le pourcentage"
+      },
+      "addTitle": "Ajouter un nouveau taux de taxe",
+      "editTitle": "Modifier le taux de taxe",
+      "description": "Saisissez les détails du taux de taxe."
+    },
+    "title": "Taux d'imposition",
+    "loading": "Chargement des taux de taxe",
+    "deleteEntity": {
+      "fallback": "ce taux d'imposition",
+      "withRegion": "taux de taxe {{regionName}}"
+    }
+  },
+  "taxRateDetail": {
+    "fields": {
+      "regionCode": "Code de région",
+      "description": "Description",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "taxPercentage": "Pourcentage d'impôt",
+      "taxType": "Type de taxe",
+      "isComposite": "Est composite",
+      "isActive": "Est actif"
+    },
+    "values": {
+      "dash": "-",
+      "noEndDate": "Pas de date de fin",
+      "yes": "Oui",
+      "no": "Non",
+      "active": "Actif",
+      "inactive": "Inactif",
+      "composite": "Composite"
+    },
+    "actions": {
+      "back": "Retour aux taux d'imposition"
+    },
+    "subtitle": "{{regionCode}} - {{percentage}}%",
+    "tabs": {
+      "details": "Détails",
+      "components": "Composants",
+      "brackets": "Paliers",
+      "holidays": "Jours fériés"
+    },
+    "precedence": {
+      "title": "Priorité au calcul des taxes",
+      "clientExempt": "L'indicateur d'exonération de taxe du client est coché en premier (s'il est exonéré, aucune taxe n'est appliquée)",
+      "serviceSpecific": "Le taux de taxe spécifique au service est utilisé s'il est attribué",
+      "clientDefault": "Le taux d'imposition par défaut du client est utilisé comme solution de repli",
+      "regionLookup": "La recherche de région fiscale détermine le taux applicable en fonction de l'emplacement"
+    },
+    "components": {
+      "simpleRateMessage": "Il s’agit d’un taux d’imposition simple et non d’un taux composite. Les composants de taxe ne sont utilisés que pour les taxes composites.",
+      "enableCompositeMessage": "Pour utiliser des composants fiscaux, marquez ce taux comme composite lors de sa modification."
+    },
+    "brackets": {
+      "intro": "Les tranches d’imposition progressives appliquent des taux différents à différentes parties d’un montant.",
+      "precedence": "Lorsque des tranches sont définies, elles priment sur le taux forfaitaire effectif global."
+    }
+  },
+  "serviceForm": {
+    "errors": {
+      "loadServiceTypes": "Échec de la récupération des types de services",
+      "serviceTypeNotFound": "Type de service sélectionné introuvable",
+      "create": "Échec de la création du service",
+      "loadTaxData": "Échec du chargement des données fiscales.",
+      "selectServiceType": "Veuillez sélectionner un type de service"
+    },
+    "fields": {
+      "serviceName": {
+        "placeholder": "Nom du service"
+      },
+      "serviceType": {
+        "label": "Type de service",
+        "placeholder": "Sélectionnez le type de service"
+      },
+      "billingMethod": {
+        "label": "Méthode de facturation",
+        "placeholder": "Sélectionnez la méthode de facturation"
+      },
+      "description": {
+        "label": "Description",
+        "placeholder": "Description des services"
+      },
+      "taxRate": {
+        "label": "Taux d'imposition",
+        "placeholderLoading": "Chargement des données fiscales...",
+        "placeholder": "Sélectionnez le taux de taxe (facultatif)"
+      },
+      "defaultRate": {
+        "placeholder": "Taux de défaut"
+      },
+      "unitOfMeasure": {
+        "placeholder": "Unité de mesure"
+      }
+    },
+    "options": {
+      "billingMethod": {
+        "hourly": "Horaire",
+        "usage": "Basé sur l'utilisation",
+        "fixed": "Prix fixe"
+      }
+    },
+    "taxRateOption": {
+      "fallback": "S/O",
+      "label": "{{description}} - {{percentage}}%"
+    },
+    "actions": {
+      "submit": "Ajouter un service"
+    }
+  },
+  "serviceSelection": {
+    "table": {
+      "type": "Taper",
+      "unit": "Unité",
+      "rate": "Tarif",
+      "product": "Produit",
+      "itemName": "Nom de l'article",
+      "service": "Service",
+      "unknown": "Inconnu"
+    },
+    "actions": {
+      "cancel": "Annuler",
+      "addSelected": "Ajouter les services sélectionnés",
+      "adding": "Ajout..."
+    },
+    "title": "Ajouter des services et des produits au plan",
+    "searchPlaceholder": "Rechercher des services/produits...",
+    "errors": {
+      "load": "Échec du chargement des services",
+      "add": "Échec de l'ajout de services au plan"
+    },
+    "states": {
+      "loading": "Chargement des services...",
+      "empty": "Aucun service trouvé"
+    },
+    "selection": {
+      "countOne": "{{count}} service sélectionné",
+      "countOther": "{{count}} services sélectionnés"
+    },
+    "quickAdd": {
+      "label": "Ajout rapide :",
+      "allType": "Tous {{type}}"
+    }
+  },
+  "configType": {
+    "warningDialog": {
+      "cancel": "Annuler",
+      "title": "Changer le type de configuration ?",
+      "description": "La modification du type de configuration réinitialisera tous les paramètres spécifiques au type. Cette action ne peut pas être annulée.",
+      "confirm": "Changer le type"
+    },
+    "placeholder": "Sélectionnez le type de configuration",
+    "options": {
+      "Fixed": {
+        "label": "Prix fixe",
+        "description": "Un service à prix fixe avec une facturation cohérente quelle que soit l'utilisation. Idéal pour les services prévisibles."
+      },
+      "Hourly": {
+        "label": "Taux horaire",
+        "description": "Facturation basée sur le temps avec des tarifs configurables. Idéal pour les charges de travail variables facturées en fonction du temps passé."
+      },
+      "Usage": {
+        "label": "Basé sur l'utilisation",
+        "description": "Facturation basée sur l'utilisation avec options de tarification échelonnées. Parfait pour les services mesurés par la consommation."
+      },
+      "Bucket": {
+        "label": "Forfait d'heures",
+        "description": "Des heures préachetées pouvant être utilisées dans le temps. Idéal pour les clients qui ont besoin de flexibilité avec un plafond budgétaire."
+      }
+    }
+  },
+  "serviceConfig": {
+    "fields": {
+      "quantity": {
+        "label": "Quantité",
+        "placeholder": "Entrez la quantité",
+        "help": "Nombre d'unités de ce service",
+        "errorNegative": "La quantité ne peut pas être négative"
+      },
+      "customRate": {
+        "label": "Tarif personnalisé",
+        "placeholder": "Entrez le taux",
+        "placeholderDefault": "Par défaut : {{rate}}",
+        "helpCustom": "Tarif personnalisé pour ce service",
+        "helpUseDefault": "Laissez vide pour utiliser le taux par défaut ({{rate}})",
+        "errorNegative": "Le taux ne peut pas être négatif"
+      },
+      "configurationType": "Type de configuration"
+    },
+    "actions": {
+      "cancel": "Annuler",
+      "saving": "Économie...",
+      "save": "Enregistrer la configuration"
+    },
+    "title": "Configuration des services",
+    "serviceLabel": "Service",
+    "effectiveModeLabel": "Mode effectif",
+    "defaultSourceLabel": "Source par défaut",
+    "modes": {
+      "Fixed": "Prix fixe",
+      "Hourly": "Taux horaire",
+      "Usage": "Basé sur l'utilisation",
+      "Bucket": "Forfait d'heures"
+    },
+    "defaultSources": {
+      "catalog default": "catalogue par défaut",
+      "contract override": "dérogation au contrat",
+      "none": "aucun"
+    },
+    "bucketOverlay": {
+      "recommendHours": "Recommander une tranche d'heures",
+      "recommendUsage": "Recommander un seau de consommation"
+    }
+  },
+  "hourlyConfig": {
+    "fields": {
+      "minimumBillableTime": {
+        "placeholder": "15",
+        "label": "Temps facturable minimum (minutes)",
+        "help": "Temps minimum de facturation (par exemple, 15 minutes)",
+        "errorNegative": "Le temps minimum facturable ne peut pas être négatif"
+      },
+      "roundUpToNearest": {
+        "placeholder": "15",
+        "label": "Arrondir au plus proche (minutes)",
+        "help": "Arrondir les entrées de temps à l'incrément le plus proche",
+        "errorNegative": "La valeur arrondie ne peut pas être négative"
+      },
+      "newUserType": {
+        "label": "Type d'utilisateur",
+        "placeholder": "Sélectionnez le type d'utilisateur"
+      },
+      "newUserTypeRate": {
+        "label": "Tarif",
+        "placeholder": "Entrez le taux",
+        "errorNegative": "Le taux de type d'utilisateur ne peut pas être négatif"
+      }
+    },
+    "userTypeRates": {
+      "headers": {
+        "userType": "Type d'utilisateur",
+        "rate": "Tarif"
+      },
+      "title": "Tarifs par type d'utilisateur",
+      "options": {
+        "technician": "Technicien",
+        "engineer": "Ingénieur",
+        "consultant": "Consultante",
+        "project_manager": "Chef de projet",
+        "admin": "Administrateur"
+      },
+      "actions": {
+        "addRate": "Ajouter un tarif"
+      }
+    },
+    "title": "Configuration du taux horaire"
+  },
+  "usageConfig": {
+    "defaults": {
+      "unitOfMeasure": "Unité"
+    },
+    "fields": {
+      "unitOfMeasure": {
+        "errorRequired": "L'unité de mesure est requise",
+        "label": "Unité de mesure",
+        "placeholder": "Entrez l'unité de mesure",
+        "help": "L'unité utilisée pour mesurer l'utilisation (par exemple Go, utilisateur, appareil)"
+      },
+      "minimumUsage": {
+        "placeholder": "0",
+        "label": "Seuil d'utilisation minimum",
+        "help": "Utilisation minimale facturable par période (0 pour aucun minimum)",
+        "errorNegative": "L'utilisation minimale ne peut pas être négative"
+      },
+      "enableTieredPricing": "Activer la tarification échelonnée"
+    },
+    "title": "Configuration basée sur l'utilisation",
+    "tiers": {
+      "title": "Niveaux de tarification",
+      "addTier": "Ajouter un niveau",
+      "empty": "Aucun niveau configuré. Ajoutez un niveau pour définir une tarification basée sur le volume.",
+      "from": "De ({{unit}})",
+      "to": "À ({{unit}})",
+      "ratePer": "Tarif par {{unit}}",
+      "unlimited": "Illimité",
+      "help": "Configurez les niveaux de tarification basés sur le volume. Chaque niveau applique son tarif à l'utilisation qui se situe dans sa plage.",
+      "errors": {
+        "onlyLastUnlimited": "Seul le dernier niveau peut avoir une limite supérieure illimitée",
+        "overlap": "Les niveaux ne peuvent pas se chevaucher",
+        "upperGreaterThanLower": "La limite supérieure du niveau doit être supérieure à la limite inférieure",
+        "rateNegative": "Les tarifs par niveau ne peuvent pas être négatifs"
+      }
+    }
+  },
+  "rateTiers": {
+    "table": {
+      "actions": "Actes",
+      "minQuantity": "Quantité minimale",
+      "maxQuantity": "Quantité maximale",
+      "rate": "Taux ({{unit}})",
+      "unlimited": "Illimité"
+    },
+    "actions": {
+      "saving": "Économie...",
+      "addTier": "Ajouter un niveau",
+      "save": "Niveaux de taux d'économie"
+    },
+    "title": "Niveaux tarifaires et remises sur quantité",
+    "description": "Configurez différents tarifs en fonction des plages de quantités. Des quantités plus élevées peuvent bénéficier de tarifs réduits.",
+    "loading": "Chargement des niveaux de taux...",
+    "formattedRate": "{{rate}} par {{unit}}",
+    "errors": {
+      "load": "Échec du chargement des niveaux de taux",
+      "save": "Échec de l'enregistrement des niveaux de tarifs",
+      "lastTier": "Impossible de supprimer le dernier niveau",
+      "minPositive": "La quantité minimale doit être supérieure à 0",
+      "maxGreaterThanMin": "La quantité maximale doit être supérieure à la quantité minimale",
+      "rateNegative": "Le taux ne peut pas être négatif",
+      "overlap": "Les plages de niveaux ne peuvent pas se chevaucher"
+    }
+  },
+  "serviceTaxSettings": {
+    "fields": {
+      "taxRate": {
+        "label": "Taux d'imposition",
+        "placeholderLoading": "Chargement des tarifs...",
+        "placeholder": "Sélectionnez le taux de taxe",
+        "help": "Sélectionnez « Non taxable » si ce service ne doit pas être taxé."
+      }
+    },
+    "options": {
+      "nonTaxable": "Non imposable"
+    },
+    "errors": {
+      "loadTaxRates": "Échec du chargement des taux de taxe.",
+      "save": "Échec de l'enregistrement des paramètres fiscaux"
+    },
+    "actions": {
+      "saving": "Économie...",
+      "save": "Enregistrer les paramètres fiscaux"
+    },
+    "title": "Paramètres fiscaux",
+    "optionLabel": "{{taxType}} ({{countryCode}}) - {{percentage}}%"
+  },
+  "fixedConfig": {
+    "title": "Configuration à prix fixe",
+    "fields": {
+      "adjustForPartialPeriods": "Ajuster pour les périodes partielles",
+      "billingCycleAlignment": {
+        "label": "Alignement du cycle de facturation",
+        "placeholder": "Sélectionnez l'alignement",
+        "help": "Contrôle la façon dont la couverture d’une période partielle est calculée lorsque les frais récurrents doivent être réduits à une période inférieure à une période de service complète."
+      }
+    },
+    "options": {
+      "start": "Début du cycle de facturation",
+      "end": "Fin du cycle de facturation",
+      "prorated": "Couverture proportionnelle"
+    }
+  },
+  "bucketConfig": {
+    "title": "Configuration du forfait d'heures",
+    "fields": {
+      "totalMinutes": {
+        "label": "Minutes totales",
+        "placeholder": "Entrez le nombre total d'heures",
+        "help": "Le nombre total de minutes incluses dans cette ligne de contrat de regroupement",
+        "errorPositive": "Le total des minutes doit être supérieur à zéro"
+      },
+      "billingPeriod": {
+        "label": "Période de facturation",
+        "placeholder": "Sélectionnez la période de facturation",
+        "help": "La période sur laquelle les heures de tranche sont réparties",
+        "mismatchPrefix": "Inadéquation :",
+        "mismatch": "La période de facturation du forfait ({{billingPeriod}}) doit correspondre à la fréquence de facturation de la ligne de contrat ({{contractLineBillingFrequency}})."
+      },
+      "overageRate": {
+        "label": "Taux de dépassement",
+        "placeholder": "Saisir le taux de dépassement",
+        "help": "Le taux horaire facturé pour les heures utilisées au-delà de la limite du bucket",
+        "errorNegative": "Le taux de dépassement ne peut pas être négatif"
+      },
+      "allowRollover": "Autoriser le report des heures inutilisées à la période suivante"
+    }
+  },
+  "serviceDetail": {
+    "loading": "Chargement de la configuration du service...",
+    "errors": {
+      "notFound": "Service introuvable",
+      "load": "Échec du chargement de la configuration du service"
+    },
+    "title": "Configuration du service : {{serviceName}}",
+    "description": "Configurer les détails du service, les tarifs et les paramètres fiscaux",
+    "sections": {
+      "unitOfMeasure": "Unité de mesure",
+      "baseRate": "Tarif de base"
+    },
+    "baseRate": {
+      "summary": "{{rate}} par {{unit}}",
+      "help": "Le tarif de base peut être remplacé par les niveaux basés sur la quantité ci-dessous."
+    }
+  }
+}

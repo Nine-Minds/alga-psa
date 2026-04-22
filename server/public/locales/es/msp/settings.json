@@ -9,7 +9,7 @@
     "users": "Usuarios",
     "teams": "Equipos",
     "language": "Idioma",
-    "ticketing": "Ticketing",
+    "ticketing": "Gestión de tickets",
     "projects": "Proyectos",
     "interactions": "Interacciones",
     "notifications": "Notificaciones",
@@ -685,27 +685,6 @@
     }
   },
   "clientPortal": {
-    "language": {
-      "title": "Configuración de idioma",
-      "description": "Configure los ajustes de idioma predeterminados para su portal del cliente. Estos ajustes se aplican a todos los usuarios y clientes a menos que se anulen.",
-      "fields": {
-        "defaultLanguage": "Idioma predeterminado",
-        "availableLanguages": "Idiomas disponibles"
-      },
-      "help": {
-        "defaultLanguage": "Este será el idioma predeterminado para todos los usuarios del portal del cliente y las notificaciones por correo electrónico, a menos que se anule por la configuración del cliente o las preferencias individuales del usuario",
-        "availableLanguages": "Seleccione qué idiomas estarán disponibles para que los usuarios elijan"
-      },
-      "hierarchy": {
-        "title": "Jerarquía de preferencia de idioma",
-        "description": "Esta jerarquía se aplica tanto a la interfaz del portal del cliente como a las notificaciones por correo electrónico enviadas a los usuarios del portal del cliente:",
-        "userPreference": "Preferencia individual del usuario (prioridad más alta)",
-        "clientDefault": "Idioma predeterminado del cliente",
-        "orgDefault": "Predeterminado de la organización (configurado aquí)",
-        "systemDefault": "Predeterminado del sistema (inglés)",
-        "note": "Nota: los usuarios internos de MSP siempre reciben correos electrónicos en inglés"
-      }
-    },
     "branding": {
       "title": "Marca y apariencia",
       "description": "Personalice la apariencia de su portal del cliente con la marca de su empresa.",
@@ -791,21 +770,15 @@
     }
   },
   "mspLanguage": {
-    "title": "Idioma",
-    "description": "Configure los ajustes de idioma predeterminados para el portal de MSP. Estos ajustes se aplican a todos los usuarios de MSP a menos que se anulen por preferencias individuales.",
+    "title": "Idioma de la organización",
+    "description": "Establezca el idioma predeterminado para toda la organización: personal MSP, usuarios del portal del cliente y notificaciones por correo electrónico. Cada usuario o cliente puede anularlo individualmente.",
     "fields": {
       "defaultLanguage": "Idioma predeterminado",
       "availableLanguages": "Idiomas disponibles"
     },
     "help": {
-      "defaultLanguage": "Este será el idioma predeterminado para todos los usuarios del portal de MSP a menos que se anule por su preferencia personal.",
-      "availableLanguages": "Seleccione qué idiomas estarán disponibles para que los usuarios de MSP elijan"
-    },
-    "hierarchy": {
-      "title": "Jerarquía de preferencia de idioma",
-      "userPreference": "Preferencia individual del usuario (prioridad más alta)",
-      "orgDefault": "Predeterminado de la organización (configurado aquí)",
-      "systemDefault": "Predeterminado del sistema (inglés)"
+      "defaultLanguage": "Se aplica en todas partes salvo que lo anule la preferencia personal de un usuario o el idioma configurado para un cliente específico.",
+      "availableLanguages": "Seleccione entre qué idiomas pueden elegir los usuarios."
     }
   },
   "notifications": {
@@ -1148,8 +1121,8 @@
       },
       "loginMethods": {
         "password": "Contraseña",
-        "google": "Google OAuth",
-        "microsoft": "Microsoft OAuth",
+        "google": "OAuth de Google",
+        "microsoft": "OAuth de Microsoft",
         "keycloak": "Keycloak"
       },
       "userTypes": {
@@ -1347,5 +1320,39 @@
     "badge": {
       "inactive": "Inactivo"
     }
+  },
+  "permissions": {
+    "messages": {
+      "adminLocked": "Los permisos del rol de administrador no se pueden modificar",
+      "permissionsUpdated": "Permisos actualizados correctamente"
+    }
+  },
+  "sla": {
+    "messages": {
+      "scheduleNotFound": "Horario no encontrado",
+      "scheduleUpdated": "Horario actualizado correctamente",
+      "scheduleCreated": "Horario creado correctamente",
+      "scheduleDeleted": "Horario eliminado correctamente",
+      "defaultHoursCreated": "Horario de atención predeterminado creado",
+      "scheduleRequired": "Seleccione primero un horario",
+      "holidayNameRequired": "El nombre del festivo es obligatorio",
+      "holidayDateRequired": "La fecha del festivo es obligatoria",
+      "holidayAdded": "Festivo añadido correctamente",
+      "holidayDeleted": "Festivo eliminado correctamente"
+    }
+  },
+  "clientPortalLanguage": {
+    "title": "Idioma del portal del cliente",
+    "description": "Anule el idioma predeterminado solo para los usuarios del portal del cliente. El personal MSP mantiene el predeterminado de la organización.",
+    "fields": {
+      "defaultLanguage": "Idioma predeterminado"
+    },
+    "help": {
+      "defaultLanguage": "Cuando se define, los usuarios del portal del cliente ven este idioma, a menos que lo anule su preferencia individual o el idioma configurado para su cliente."
+    },
+    "placeholder": "Seleccione un idioma",
+    "inheritOption": "Usar el predeterminado de la organización ({{language}})",
+    "unsetHint": "Para eliminar la anulación del portal del cliente, cambie el predeterminado de la organización en Configuración → Idioma.",
+    "updated": "Idioma predeterminado del portal del cliente actualizado a {{language}}"
   }
 }

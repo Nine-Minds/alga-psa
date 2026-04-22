@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   TypeCompatibility,
   getTypeCompatibility,
@@ -325,6 +326,7 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
   targetType,
   compact = false,
 }) => {
+  const { t } = useTranslation('msp/workflows');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedSections, setExpandedSections] = useState({
     payload: true,
@@ -353,7 +355,7 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input
             id="source-data-tree-search"
-            placeholder="Search fields..."
+            placeholder={t('sourceDataTree.searchPlaceholder', { defaultValue: 'Search fields...' })}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-8 h-8 text-sm"
@@ -372,7 +374,7 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
           {context.payload.length > 0 && (
             <div>
               <SectionHeader
-                title="Payload"
+                title={t('sourceDataTree.sections.payload', { defaultValue: 'Payload' })}
                 icon={<Package className="w-4 h-4 text-indigo-600" />}
                 count={countFields(context.payload)}
                 expanded={expandedSections.payload}
@@ -400,7 +402,7 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
           {/* Vars section (from previous steps) */}
           <div>
             <SectionHeader
-              title="Step Outputs (vars)"
+              title={t('sourceDataTree.sections.vars', { defaultValue: 'Step Outputs (vars)' })}
               icon={<Variable className="w-4 h-4 text-green-600" />}
               count={context.vars.reduce((acc, v) => acc + countFields(v.fields) + 1, 0)}
               expanded={expandedSections.vars}
@@ -410,7 +412,12 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
               <div className="mt-1 space-y-1">
                 {context.vars.length === 0 ? (
                   <div className="text-xs text-gray-500 px-2 py-2 ml-4">
-                    No vars yet. Use <span className="font-medium">Save output</span> or an <span className="font-medium">Assign</span> step to populate <code className="font-mono">vars.&lt;name&gt;</code>.
+                    {t('sourceDataTree.vars.emptyPrefix', { defaultValue: 'No vars yet. Use' })}{' '}
+                    <span className="font-medium">{t('sourceDataTree.vars.saveOutput', { defaultValue: 'Save output' })}</span>{' '}
+                    {t('sourceDataTree.vars.emptyConjunction', { defaultValue: 'or an' })}{' '}
+                    <span className="font-medium">{t('sourceDataTree.vars.assignStep', { defaultValue: 'Assign' })}</span>{' '}
+                    {t('sourceDataTree.vars.emptySuffix', { defaultValue: 'step to populate' })}{' '}
+                    <code className="font-mono">vars.&lt;name&gt;</code>.
                   </div>
                 ) : (
                   context.vars.map(stepVar => {
@@ -457,7 +464,7 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
           {context.forEach && (
             <div>
               <SectionHeader
-                title="Loop Context"
+                title={t('sourceDataTree.sections.loopContext', { defaultValue: 'Loop Context' })}
                 icon={<List className="w-4 h-4 text-orange-600" />}
                 count={2}
                 expanded={expandedSections.forEach}
@@ -476,7 +483,9 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
                     <span className="text-sm font-medium text-gray-800">
                       {context.forEach.itemVar}
                     </span>
-                    <Badge className="text-xs bg-orange-500/15 text-orange-700">current item</Badge>
+                    <Badge className="text-xs bg-orange-500/15 text-orange-700">
+                      {t('sourceDataTree.loop.currentItem', { defaultValue: 'current item' })}
+                    </Badge>
                   </div>
                   <div
                     onClick={() => !disabled && onSelectField(context.forEach!.indexVar)}
@@ -489,7 +498,9 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
                     <span className="text-sm font-medium text-gray-800">
                       {context.forEach.indexVar}
                     </span>
-                    <Badge variant="info" className="text-xs">loop index</Badge>
+                    <Badge variant="info" className="text-xs">
+                      {t('sourceDataTree.loop.loopIndex', { defaultValue: 'loop index' })}
+                    </Badge>
                   </div>
                 </div>
               )}
@@ -500,7 +511,7 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
           {context.meta.length > 0 && (
             <div>
               <SectionHeader
-                title="Workflow Meta"
+                title={t('sourceDataTree.sections.workflowMeta', { defaultValue: 'Workflow Meta' })}
                 icon={<Tag className="w-4 h-4 text-gray-600" />}
                 count={context.meta.length}
                 expanded={expandedSections.meta}
@@ -529,7 +540,7 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
           {context.error.length > 0 && (
             <div>
               <SectionHeader
-                title="Error Context"
+                title={t('sourceDataTree.sections.errorContext', { defaultValue: 'Error Context' })}
                 icon={<AlertTriangle className="w-4 h-4 text-red-600" />}
                 count={context.error.length}
                 expanded={expandedSections.error}

@@ -20,7 +20,7 @@
     "save": "Opslaan",
     "saving": "Opslaan...",
     "success": "Succes",
-    "update": "Update",
+    "update": "Bijwerken",
     "yes": "Ja",
     "no": "Nee"
   },
@@ -238,7 +238,7 @@
       "closeButton": "Sluiten"
     },
     "status": {
-      "open": "Open"
+      "open": "Openen"
     },
     "buttons": {
       "cancel": "Annuleren",
@@ -271,7 +271,7 @@
       "balanceComparison": "Saldovergelijking"
     },
     "status": {
-      "open": "Open",
+      "open": "Openen",
       "inReview": "Ter beoordeling",
       "resolved": "Opgelost",
       "expired": "Verlopen",

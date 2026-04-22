@@ -37,23 +37,27 @@ const PAYMENT_TERMS: PaymentTermOption[] = [
   { id: 'due_on_receipt', name: 'Due on receipt' }
 ];
 
-export function createCsvMappingModules(): AccountingMappingModule[] {
+type TFn = (key: string, options?: Record<string, unknown>) => string;
+
+export function createCsvMappingModules(t?: TFn): AccountingMappingModule[] {
+  const tab = (key: string, fallback: string) =>
+    t ? t(`integrations.accounting.modules.tabs.${key}`, { defaultValue: fallback }) : fallback;
   return [
-    createCustomerModule(),
-    createServiceModule(),
-    createTaxCodeModule(),
-    createPaymentTermModule()
+    createCustomerModule(tab('clients', 'Clients')),
+    createServiceModule(tab('itemsServices', 'Items / Services')),
+    createTaxCodeModule(tab('taxCodes', 'Tax Codes')),
+    createPaymentTermModule(tab('paymentTerms', 'Payment Terms'))
   ];
 }
 
-function createCustomerModule(): AccountingMappingModule {
+function createCustomerModule(tabLabel: string): AccountingMappingModule {
   return {
     id: 'qbcsv-customer-mappings',
     adapterType: ADAPTER_TYPE,
     algaEntityType: 'client',
     externalEntityType: 'Customer',
     labels: {
-      tab: 'Clients',
+      tab: tabLabel,
       addButton: 'Add Client Mapping',
       algaColumn: 'Alga Client',
       externalColumn: 'QuickBooks Customer',
@@ -111,7 +115,7 @@ function createCustomerModule(): AccountingMappingModule {
   };
 }
 
-function createServiceModule(): AccountingMappingModule {
+function createServiceModule(tabLabel: string): AccountingMappingModule {
   return {
     id: 'qbcsv-service-mappings',
     adapterType: ADAPTER_TYPE,
@@ -119,7 +123,7 @@ function createServiceModule(): AccountingMappingModule {
     externalEntityType: 'Item',
     overridesKey: 'itemMappingOverrides',
     labels: {
-      tab: 'Items / Services',
+      tab: tabLabel,
       addButton: 'Add Item Mapping',
       algaColumn: 'Alga Service',
       externalColumn: 'QuickBooks Item',
@@ -189,14 +193,14 @@ function createServiceModule(): AccountingMappingModule {
   };
 }
 
-function createTaxCodeModule(): AccountingMappingModule {
+function createTaxCodeModule(tabLabel: string): AccountingMappingModule {
   return {
     id: 'qbcsv-tax-code-mappings',
     adapterType: ADAPTER_TYPE,
     algaEntityType: 'tax_code',
     externalEntityType: 'TaxCode',
     labels: {
-      tab: 'Tax Codes',
+      tab: tabLabel,
       addButton: 'Add Tax Code Mapping',
       algaColumn: 'Alga Tax Region',
       externalColumn: 'QuickBooks Tax Code',
@@ -254,14 +258,14 @@ function createTaxCodeModule(): AccountingMappingModule {
   };
 }
 
-function createPaymentTermModule(): AccountingMappingModule {
+function createPaymentTermModule(tabLabel: string): AccountingMappingModule {
   return {
     id: 'qbcsv-term-mappings',
     adapterType: ADAPTER_TYPE,
     algaEntityType: 'payment_term',
     externalEntityType: 'Term',
     labels: {
-      tab: 'Payment Terms',
+      tab: tabLabel,
       addButton: 'Add Term Mapping',
       algaColumn: 'Alga Payment Term',
       externalColumn: 'QuickBooks Term',

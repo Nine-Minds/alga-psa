@@ -1,0 +1,308 @@
+[
+  {
+    "id": "F001",
+    "description": "Create server/public/locales/en/msp/workflows.json with initial scaffold (page, nav, empty sections, actions) and matching files in fr/es/de/nl/it/pl (values copied from English as translation stubs).",
+    "implemented": true,
+    "prdRefs": ["Namespace + route config", "WF-A"]
+  },
+  {
+    "id": "F002",
+    "description": "Add msp/workflows to ROUTE_NAMESPACES for /msp/workflows, /msp/workflows/runs, /msp/workflow-editor, /msp/workflow-control in packages/core/src/lib/i18n/config.ts; confirm prefix matching covers dynamic segments.",
+    "implemented": true,
+    "prdRefs": ["Namespace + route config"]
+  },
+  {
+    "id": "F003",
+    "description": "Create ee/packages/workflows/src/constants/workflowEnums.ts exporting VALUES arrays and LABEL_DEFAULTS records for all 13 enums (workflowRunStatus, workflowRunSort, workflowEventStatus, workflowStepStatus, workflowLogLevel, workflowAiSchemaType, workflowInputSourceMode, workflowReferenceSection, workflowTriggerMode, workflowCanvasView, workflowOnError, workflowWaitMode, workflowWaitTiming).",
+    "implemented": true,
+    "prdRefs": ["Enum migration — explicit scope", "WF-A"]
+  },
+  {
+    "id": "F004",
+    "description": "Create ee/packages/workflows/src/hooks/useWorkflowEnumOptions.ts exporting useXOptions() and useFormatX() hooks for all 13 enums, all reading from the msp/workflows namespace under enums.<enumName>.* keys, each with a defaultValue fallback from LABEL_DEFAULTS.",
+    "implemented": true,
+    "prdRefs": ["Enum migration — explicit scope", "WF-A"]
+  },
+  {
+    "id": "F005",
+    "description": "Add enums.workflowRunStatus.*, enums.workflowRunSort.*, enums.workflowEventStatus.*, enums.workflowStepStatus.*, enums.workflowLogLevel.*, enums.workflowAiSchemaType.*, enums.workflowInputSourceMode.*, enums.workflowReferenceSection.*, enums.workflowTriggerMode.*, enums.workflowCanvasView.*, enums.workflowOnError.*, enums.workflowWaitMode.*, enums.workflowWaitTiming.* keys to en/msp/workflows.json.",
+    "implemented": true,
+    "prdRefs": ["Enum migration — explicit scope", "WF-A"]
+  },
+  {
+    "id": "F006",
+    "description": "Replace inline status/sort option arrays in WorkflowRunList.tsx (lines 86-98) with useWorkflowRunStatusOptions + useWorkflowRunSortOptions hook calls; prepend the 'All statuses' filter row via t('filters.allStatuses').",
+    "implemented": true,
+    "prdRefs": ["WF-B", "Enum migration — explicit scope"]
+  },
+  {
+    "id": "F007",
+    "description": "Replace inline status/level/type option arrays in WorkflowRunDetails.tsx (lines 175-188, 550) with hook calls; 'All statuses', 'All levels', 'All types' become t('filters.*') calls.",
+    "implemented": true,
+    "prdRefs": ["WF-B", "Enum migration — explicit scope"]
+  },
+  {
+    "id": "F008",
+    "description": "Replace inline event-status option array in WorkflowEventList.tsx (lines 73-76) with useWorkflowEventStatusOptions hook call.",
+    "implemented": true,
+    "prdRefs": ["WF-B", "Enum migration — explicit scope"]
+  },
+  {
+    "id": "F009",
+    "description": "Replace the two duplicate AI schema primitive-type arrays in WorkflowAiSchemaSection.tsx (lines 51-64) with useWorkflowAiSchemaTypeOptions hook call.",
+    "implemented": true,
+    "prdRefs": ["WF-D", "Enum migration — explicit scope"]
+  },
+  {
+    "id": "F010",
+    "description": "Replace inline source-mode array in WorkflowActionInputSourceMode.tsx (lines 27-28) with useWorkflowInputSourceModeOptions hook call.",
+    "implemented": true,
+    "prdRefs": ["WF-D", "Enum migration — explicit scope"]
+  },
+  {
+    "id": "F011",
+    "description": "Replace inline reference-section arrays in workflowReferenceSelector.tsx (lines 399-403) with useWorkflowReferenceSectionOptions hook call; each section still only shows when the underlying model array is non-empty.",
+    "implemented": true,
+    "prdRefs": ["WF-D", "Enum migration — explicit scope"]
+  },
+  {
+    "id": "F012",
+    "description": "Replace all inline option arrays in WorkflowDesigner.tsx (trigger mode 3713-3714, canvas view 4724-4725, on-error 6249-6250, wait mode 6550-6551, wait timing 6614-6615) with the corresponding enum option hooks.",
+    "implemented": true,
+    "prdRefs": ["WF-C", "Enum migration — explicit scope"]
+  },
+  {
+    "id": "F013",
+    "description": "Extract all user-visible strings in WorkflowRunList.tsx to t('…') calls under page/table/filters/actions key roots in msp/workflows.json.",
+    "implemented": true,
+    "prdRefs": ["WF-B"]
+  },
+  {
+    "id": "F014",
+    "description": "Extract all user-visible strings in WorkflowRunDetails.tsx (headers, step details, log viewer, retry/cancel buttons, empty states) to t() calls.",
+    "implemented": true,
+    "prdRefs": ["WF-B"]
+  },
+  {
+    "id": "F015",
+    "description": "Extract all user-visible strings in WorkflowRunDialog.tsx (trigger run dialog, input fields, error mapping) to t() calls.",
+    "implemented": true,
+    "prdRefs": ["WF-B"]
+  },
+  {
+    "id": "F016",
+    "description": "Extract all user-visible strings in WorkflowEventList.tsx (filters, columns, empty state) to t() calls.",
+    "implemented": true,
+    "prdRefs": ["WF-B"]
+  },
+  {
+    "id": "F017",
+    "description": "Extract all user-visible strings in WorkflowDeadLetterQueue.tsx (list, resume/discard actions, empty state, confirmation dialogs) to t() calls.",
+    "implemented": true,
+    "prdRefs": ["WF-B"]
+  },
+  {
+    "id": "F018",
+    "description": "Extract all user-visible strings in WorkflowSchedules.tsx (schedule list, create/edit dialog, cron inputs, paused/enabled toggles) to t() calls.",
+    "implemented": true,
+    "prdRefs": ["WF-B"]
+  },
+  {
+    "id": "F019",
+    "description": "Extract all user-visible strings in WorkflowDefinitionAudit.tsx (audit table columns, diff viewer, export action) to t() calls.",
+    "implemented": true,
+    "prdRefs": ["WF-B"]
+  },
+  {
+    "id": "F020",
+    "description": "Extract all user-visible strings in RunStudioShell.tsx (shell header, side nav, breadcrumbs) to t() calls.",
+    "implemented": true,
+    "prdRefs": ["WF-B"]
+  },
+  {
+    "id": "F021",
+    "description": "Extract static chrome strings in WorkflowGraph.tsx (empty state, mini-map labels, zoom/fit controls) to t() calls; node body text driven by workflow data remains unchanged.",
+    "implemented": true,
+    "prdRefs": ["WF-B", "Risks"]
+  },
+  {
+    "id": "F022",
+    "description": "Migrate hardcoded toLocaleDateString/toLocaleString calls in WorkflowRunList/WorkflowRunDetails/WorkflowEventList/WorkflowDefinitionAudit to useFormatters().formatDate (reading locale from i18n context).",
+    "implemented": true,
+    "prdRefs": ["WF-B", "Goals"]
+  },
+  {
+    "id": "F023",
+    "description": "Extract all user-visible strings in WorkflowDesigner.tsx including toolbar, palette toggle, sidebar tabs, validation messages, save/publish/discard dialogs, keyboard-shortcut tooltips, and status pill.",
+    "implemented": true,
+    "prdRefs": ["WF-C"]
+  },
+  {
+    "id": "F024",
+    "description": "Extract all user-visible strings in WorkflowDesignerPalette.tsx (search placeholder, category headers, empty state, drag hints).",
+    "implemented": true,
+    "prdRefs": ["WF-C"]
+  },
+  {
+    "id": "F025",
+    "description": "Extract all user-visible strings in PaletteItemWithTooltip.tsx (tooltip labels, help text, badges).",
+    "implemented": true,
+    "prdRefs": ["WF-C"]
+  },
+  {
+    "id": "F026",
+    "description": "Extract all user-visible strings in ActionSchemaReference.tsx and GroupedActionConfigSection.tsx (section headers, help text, empty states).",
+    "implemented": true,
+    "prdRefs": ["WF-D"]
+  },
+  {
+    "id": "F027",
+    "description": "Extract all user-visible strings in mapping/* components: InputMappingEditor, MappingPanel, SourceDataTree, ValidationBadge, MappingEditorSkeleton, MappingConnectionsOverlay (section headers, drop-target hints, validation messages, empty states).",
+    "implemented": true,
+    "prdRefs": ["WF-D"]
+  },
+  {
+    "id": "F028",
+    "description": "Extract all user-visible strings in expression-editor/ExpressionEditor.tsx, ExpressionEditorField.tsx, ExpressionTextArea.tsx, mapping/ExpressionAutocomplete.tsx (placeholders, validation banner, help text). Vendor Monaco UI remains untranslated.",
+    "implemented": true,
+    "prdRefs": ["WF-D", "Risks"]
+  },
+  {
+    "id": "F029",
+    "description": "Extract all user-visible strings in WorkflowActionInput* files (WorkflowActionInputFieldInfo, WorkflowActionInputFixedPicker, WorkflowActionInputSection, WorkflowActionInputSourceMode, WorkflowActionInputTypeHint).",
+    "implemented": true,
+    "prdRefs": ["WF-D"]
+  },
+  {
+    "id": "F030",
+    "description": "Extract all user-visible strings in WorkflowAiSchemaSection.tsx (section title, add-field button, required toggle label, primitive-type select label).",
+    "implemented": true,
+    "prdRefs": ["WF-D"]
+  },
+  {
+    "id": "F031",
+    "description": "Extract all user-visible strings in WorkflowComposeTextDocumentEditor.tsx and WorkflowComposeTextSection.tsx (toolbar buttons, placeholder, help text).",
+    "implemented": true,
+    "prdRefs": ["WF-D"]
+  },
+  {
+    "id": "F032",
+    "description": "Extract all user-visible strings in WorkflowStepNameField.tsx, WorkflowStepSaveOutputSection.tsx, and WorkflowWaitEditors (duration input labels, until-date labels, advanced expression toggle).",
+    "implemented": true,
+    "prdRefs": ["WF-D"]
+  },
+  {
+    "id": "F033",
+    "description": "Extract all user-visible strings in workflowReferenceSelector.tsx beyond the enum section labels (search placeholder, breadcrumbs, empty states, pin/unpin button labels).",
+    "implemented": true,
+    "prdRefs": ["WF-D"]
+  },
+  {
+    "id": "F034",
+    "description": "Extract all user-visible strings in pipeline/PipelineComponents.tsx (node headers, pipeline toolbar, empty state).",
+    "implemented": true,
+    "prdRefs": ["WF-D"]
+  },
+  {
+    "id": "F035",
+    "description": "Extract all user-visible strings in TaskInbox.tsx (list, filters, counts, empty state).",
+    "implemented": true,
+    "prdRefs": ["WF-E"]
+  },
+  {
+    "id": "F036",
+    "description": "Extract all user-visible strings in TaskList.tsx, TaskDetails.tsx, TaskHistory.tsx (task rows, detail fields, status timeline, comment entries).",
+    "implemented": true,
+    "prdRefs": ["WF-E"]
+  },
+  {
+    "id": "F037",
+    "description": "Extract all user-visible strings in TaskForm.tsx and DynamicForm.tsx (field labels where not driven by schema, validation messages, submit/cancel buttons).",
+    "implemented": true,
+    "prdRefs": ["WF-E"]
+  },
+  {
+    "id": "F038",
+    "description": "Extract all user-visible strings in EmbeddedTaskInbox.tsx (wrapper header, empty state, link to full inbox).",
+    "implemented": true,
+    "prdRefs": ["WF-E"]
+  },
+  {
+    "id": "F039",
+    "description": "Extract all user-visible strings in ActionButton.tsx and ActionButtonGroup.tsx (button labels where provided as string props, fallback copy).",
+    "implemented": true,
+    "prdRefs": ["WF-E"]
+  },
+  {
+    "id": "F040",
+    "description": "Map all server-action error strings returned from workflow-editor / run-studio / dead-letter flows into component-level error maps under errors.* keys (follows translation-guide.md error/validation pattern).",
+    "implemented": true,
+    "prdRefs": ["WF-B", "WF-C", "WF-D"]
+  },
+  {
+    "id": "F041",
+    "description": "Run scripts/generate-pseudo-locales.cjs to regenerate server/public/locales/xx/msp/workflows.json and yy/msp/workflows.json.",
+    "implemented": true,
+    "prdRefs": ["WF-F", "Acceptance criteria"]
+  },
+  {
+    "id": "F042",
+    "description": "Generate fr/es/de/nl/it/pl translations for msp/workflows.json using the AI-translation prompt from translation-guide.md (formal register, preserve {{variables}}, keep SLA/API/UI acronyms in English, Polish plural suffixes only if base keys use them).",
+    "implemented": true,
+    "prdRefs": ["WF-F"]
+  },
+  {
+    "id": "F043",
+    "description": "Run Italian accent audit grep on locales/it/msp/workflows.json and hand-fix any dropped accents (è, à, ù, ì).",
+    "implemented": true,
+    "prdRefs": ["WF-F", "Acceptance criteria"]
+  },
+  {
+    "id": "F044",
+    "description": "Cross-check translated tab/section names in msp/workflows.json against msp/core.json for each language; fix any mismatches (Workflows, Runs, Designer, Dead Letter, etc.).",
+    "implemented": true,
+    "prdRefs": ["WF-F", "Acceptance criteria"]
+  },
+  {
+    "id": "F045",
+    "description": "Run node scripts/validate-translations.cjs; confirm zero missing and zero extra keys across all 9 locales for msp/workflows.json.",
+    "implemented": true,
+    "prdRefs": ["Acceptance criteria"]
+  },
+  {
+    "id": "F046",
+    "description": "Visual QA pass on xx locale across /msp/workflows, /msp/workflows/runs, /msp/workflows/runs/<runId>, /msp/workflow-editor/new, /msp/workflow-editor/<workflowId>, /msp/workflow-control, and task inbox; every user-visible string shows 11111.",
+    "implemented": false,
+    "prdRefs": ["Acceptance criteria", "WF-F"]
+  },
+  {
+    "id": "F047",
+    "description": "Update MSP_i18n_plan.md: mark Batch 2b-9 as DONE, add msp/workflows row with final key count to the namespace tables, update component-wiring count in Executive Summary.",
+    "implemented": true,
+    "prdRefs": ["WF-F"]
+  },
+  {
+    "id": "F048",
+    "description": "Add msp/workflows row and component count to .ai/translation/translation_files_structure.md.",
+    "implemented": true,
+    "prdRefs": ["WF-F"]
+  },
+  {
+    "id": "F049",
+    "description": "Remove stale Batch 2b-9 row from MSP_i18n_plan.md 'Remaining work' list; update the total-files/total-keys summary (27 → 28 files per language; ~12,221 → new total).",
+    "implemented": true,
+    "prdRefs": ["WF-F"]
+  },
+  {
+    "id": "F050",
+    "description": "Update .ai/translation/enum-labels-pattern.md — add a 'Batch 11 — Workflows' entry to the non-billing backlog section noting the 13 workflow enums migrated to the option-hook pattern; flag getActivityStatusOptions as remaining backlog.",
+    "implemented": true,
+    "prdRefs": ["Enum migration — explicit scope", "WF-F"]
+  },
+  {
+    "id": "F051",
+    "description": "Extract hardcoded trigger and schedule-status labels in workflowRunTriggerPresentation.ts to translation-aware workflow formatters so WorkflowRunList/WorkflowRunDialog/WorkflowRunDetails stop rendering English helper strings.",
+    "implemented": true,
+    "prdRefs": ["WF-B", "Sub-batch plan", "Acceptance criteria"]
+  }
+]

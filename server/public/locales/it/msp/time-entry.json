@@ -401,5 +401,18 @@
   },
   "timeEntryReadOnly": {
     "viewEntryDetails": "Visualizza i dettagli della voce"
+  },
+  "messages": {
+    "serviceRequired": "Seleziona un servizio prima di salvare le voci di tempo",
+    "invalidService": "Servizio selezionato non valido",
+    "taxRegionRequired": "Seleziona una regione fiscale per i servizi imponibili",
+    "invalidTimeEntry": "Controlla i valori della voce di tempo",
+    "savingEntry": "Salvataggio voce di tempo...",
+    "entrySaved": "Voce di tempo salvata",
+    "entrySavedSuccess": "Voce di tempo salvata con successo",
+    "taskUpdated": "Attività aggiornata con successo",
+    "saveChangesFailed": "Impossibile salvare le modifiche",
+    "changesSaved": "Modifiche salvate con successo",
+    "workItemDeleted": "Elemento di lavoro eliminato con successo"
   }
 }

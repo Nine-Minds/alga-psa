@@ -12,7 +12,7 @@
 export const CONTRACT_LINE_TYPE_VALUES = ['Fixed', 'Hourly', 'Usage'] as const;
 export type ContractLineType = (typeof CONTRACT_LINE_TYPE_VALUES)[number];
 
-export const BILLING_FREQUENCY_VALUES = ['monthly', 'quarterly', 'annually'] as const;
+export const BILLING_FREQUENCY_VALUES = ['weekly', 'monthly', 'quarterly', 'annually'] as const;
 export type BillingFrequency = (typeof BILLING_FREQUENCY_VALUES)[number];
 
 /**
@@ -31,6 +31,7 @@ export const CONTRACT_LINE_TYPE_LABEL_DEFAULTS: Record<ContractLineType, string>
  * by `useBillingFrequencyOptions` / `useFormatBillingFrequency`.
  */
 export const BILLING_FREQUENCY_LABEL_DEFAULTS: Record<BillingFrequency, string> = {
+  weekly: 'Weekly',
   monthly: 'Monthly',
   quarterly: 'Quarterly',
   annually: 'Annually',

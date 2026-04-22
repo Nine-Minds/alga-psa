@@ -7,6 +7,7 @@ import { Check, ChevronDown } from 'lucide-react';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { updateActivityPriorityById } from '@alga-psa/workflows/actions';
 import { cn } from '@alga-psa/ui/lib/utils';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Module-level cache for priorities — rarely change and re-fetching on every row is wasteful
 const priorityCache: Map<'ticket' | 'project_task', Promise<IPriority[]>> = new Map();
@@ -30,6 +31,7 @@ interface InlinePriorityPickerProps {
 }
 
 export function InlinePriorityPicker({ activity, onPriorityChange }: InlinePriorityPickerProps) {
+  const { t } = useTranslation('msp/user-activities');
   const [open, setOpen] = useState(false);
   const [priorities, setPriorities] = useState<IPriority[]>([]);
   const [loading, setLoading] = useState(false);
@@ -104,7 +106,7 @@ export function InlinePriorityPicker({ activity, onPriorityChange }: InlinePrior
             <div className="w-3 h-3 rounded-full flex-shrink-0 border border-dashed border-muted-foreground" />
           )}
           <span className="text-sm">
-            {activity.priorityName || <span className="text-muted-foreground">None</span>}
+            {activity.priorityName || <span className="text-muted-foreground">{t('pickers.priority.none', { defaultValue: 'None' })}</span>}
           </span>
           <ChevronDown className="h-3 w-3 text-muted-foreground ml-0.5" />
         </button>
@@ -115,9 +117,9 @@ export function InlinePriorityPicker({ activity, onPriorityChange }: InlinePrior
         onClick={(e) => e.stopPropagation()}
       >
         {loading ? (
-          <div className="px-2 py-1.5 text-sm text-muted-foreground">Loading...</div>
+          <div className="px-2 py-1.5 text-sm text-muted-foreground">{t('pickers.priority.loading', { defaultValue: 'Loading...' })}</div>
         ) : priorities.length === 0 ? (
-          <div className="px-2 py-1.5 text-sm text-muted-foreground">No priorities available</div>
+          <div className="px-2 py-1.5 text-sm text-muted-foreground">{t('pickers.priority.empty', { defaultValue: 'No priorities available' })}</div>
         ) : (
           <div className="space-y-0.5">
             {priorities.map((p) => {

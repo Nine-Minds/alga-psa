@@ -25,9 +25,9 @@ import { downloadInvoicePDF } from '@alga-psa/billing/actions/invoiceGeneration'
 import { scheduleInvoiceZipAction } from '@alga-psa/billing/actions/invoiceJobActions';
 import { SendInvoiceEmailDialog } from './SendInvoiceEmailDialog';
 import { toPlainDate } from '@alga-psa/core';
-import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import InvoicePreviewPanel from './InvoicePreviewPanel';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface FinalizedTabProps {
   onRefreshNeeded: () => void;
@@ -38,6 +38,8 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
   onRefreshNeeded,
   refreshTrigger
 }) => {
+  const { t } = useTranslation('msp/invoicing');
+  const { formatCurrency, formatDate } = useFormatters();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -131,7 +133,9 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
       }
     } catch (error) {
       console.error('Error fetching data:', error);
-      setError('Failed to load invoices. Please try again.');
+      setError(t('finalizedTab.errors.loadFailed', {
+        defaultValue: 'Failed to load invoices. Please try again.',
+      }));
     } finally {
       setIsLoading(false);
     }
@@ -210,7 +214,9 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
       window.URL.revokeObjectURL(blobUrl);
     } catch (error) {
       console.error('Failed to generate PDF:', error);
-      setError('Failed to generate PDF. Please try again.');
+      setError(t('finalizedTab.errors.pdfFailed', {
+        defaultValue: 'Failed to generate PDF. Please try again.',
+      }));
     }
   };
 
@@ -230,7 +236,9 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
       updateUrlParams({ invoiceId: null, templateId: null });
     } catch (error) {
       console.error('Failed to unfinalize invoice:', error);
-      setError('Failed to unfinalize invoice. Please try again.');
+      setError(t('finalizedTab.errors.unfinalizeFailed', {
+        defaultValue: 'Failed to unfinalize invoice. Please try again.',
+      }));
     }
   };
 
@@ -241,7 +249,9 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
       setSelectedInvoices(new Set());
     } catch (error) {
       console.error('Failed to generate PDFs:', error);
-      setError('Failed to generate PDFs. Please try again.');
+      setError(t('finalizedTab.errors.bulkPdfFailed', {
+        defaultValue: 'Failed to generate PDFs. Please try again.',
+      }));
     }
   };
 
@@ -267,7 +277,9 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
       onRefreshNeeded();
     } catch (error) {
       console.error('Failed to unfinalize invoices:', error);
-      setError('Failed to unfinalize invoices. Please try again.');
+      setError(t('finalizedTab.errors.bulkUnfinalizeFailed', {
+        defaultValue: 'Failed to unfinalize invoices. Please try again.',
+      }));
     }
   };
 
@@ -295,37 +307,46 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
       ),
     },
     {
-      title: 'Invoice Number',
+      title: t('finalizedTab.columns.invoiceNumber', { defaultValue: 'Invoice Number' }),
       dataIndex: 'invoice_number',
     },
     {
-      title: 'Client',
+      title: t('finalizedTab.columns.client', { defaultValue: 'Client' }),
       dataIndex: ['client', 'name'],
     },
 	    {
-	      title: 'Amount',
+	      title: t('finalizedTab.columns.amount', { defaultValue: 'Amount' }),
 	      dataIndex: 'total_amount',
-	      render: (value, record) => formatCurrencyFromMinorUnits(Number(value), 'en-US', record.currencyCode || 'USD'),
+	      render: (value, record) => formatCurrency(Number(value) / 100, record.currencyCode || 'USD'),
 	    },
     {
-      title: 'Finalized Date',
+      title: t('finalizedTab.columns.finalizedDate', { defaultValue: 'Finalized Date' }),
       dataIndex: 'finalized_at',
-      render: (value) => value ? toPlainDate(value).toLocaleString() : '',
+      render: (value) => value ? formatDate(toPlainDate(value).toString()) : '',
     },
     {
-      title: 'Status',
+      title: t('finalizedTab.columns.status', { defaultValue: 'Status' }),
       dataIndex: 'finalized_at',
-      render: () => <Badge variant="success">Finalized</Badge>,
+      render: () => (
+        <Badge variant="success">
+          {t('finalizedTab.status.finalized', { defaultValue: 'Finalized' })}
+        </Badge>
+      ),
     },
     {
-      title: 'Actions',
+      title: t('finalizedTab.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'invoice_id',
       width: '5%',
       render: (_, record) => (
         <div onClick={(e) => e.stopPropagation()}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button id={`finalized-row-actions-${record.invoice_id}`} variant="ghost" className="h-8 w-8 p-0" aria-label="Invoice actions">
+              <Button
+                id={`finalized-row-actions-${record.invoice_id}`}
+                variant="ghost"
+                className="h-8 w-8 p-0"
+                aria-label={t('common.actions.openMenu', { defaultValue: 'Open menu' })}
+              >
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -335,13 +356,15 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
                   try {
                     await scheduleInvoiceZipAction([record.invoice_id]);
                   } catch (error) {
-                    setError('Failed to generate PDF.');
+                    setError(t('finalizedTab.errors.pdfFailed', {
+                      defaultValue: 'Failed to generate PDF. Please try again.',
+                    }));
                   }
                 }}
                 className="flex items-center gap-2"
               >
                 <Download className="h-4 w-4" />
-                Download PDF
+                {t('finalizedTab.actions.downloadPdf', { defaultValue: 'Download PDF' })}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {
@@ -351,7 +374,7 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
                 className="flex items-center gap-2"
               >
                 <Mail className="h-4 w-4" />
-                Send Email
+                {t('finalizedTab.actions.sendEmail', { defaultValue: 'Send Email' })}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={async () => {
@@ -360,13 +383,15 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
                     await loadData();
                     onRefreshNeeded();
                   } catch (error) {
-                    setError('Failed to unfinalize invoice.');
+                    setError(t('finalizedTab.errors.unfinalizeFailed', {
+                      defaultValue: 'Failed to unfinalize invoice. Please try again.',
+                    }));
                   }
                 }}
                 className="flex items-center gap-2"
               >
                 <RotateCcw className="h-4 w-4" />
-                Unfinalize
+                {t('finalizedTab.actions.unfinalize', { defaultValue: 'Unfinalize' })}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -383,11 +408,11 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
             <Input
               type="text"
-              placeholder="Search invoices..."
+              placeholder={t('finalizedTab.searchPlaceholder', { defaultValue: 'Search invoices...' })}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
-              aria-label="Search invoices"
+              aria-label={t('finalizedTab.searchPlaceholder', { defaultValue: 'Search invoices...' })}
             />
           </div>
         </div>
@@ -399,22 +424,27 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
               disabled={selectedInvoices.size === 0}
               className="flex items-center gap-2"
             >
-              Actions ({selectedInvoices.size})
+              {t('finalizedTab.bulkActions', {
+                count: selectedInvoices.size,
+                defaultValue: `Actions (${selectedInvoices.size})`,
+              })}
               <MoreVertical className="w-4 h-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={handleBulkDownload} className="flex items-center gap-2">
               <Download className="h-4 w-4" />
-              Download PDFs
+              {t('finalizedTab.actions.downloadPdfs', { defaultValue: 'Download PDFs' })}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleBulkEmail} className="flex items-center gap-2">
               <Mail className="h-4 w-4" />
-              Send Emails
+              {t('finalizedTab.actions.sendEmails', { defaultValue: 'Send Emails' })}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleBulkUnfinalize} className="flex items-center gap-2">
               <RotateCcw className="h-4 w-4" />
-              Unfinalize Selected
+              {t('finalizedTab.actions.unfinalizeSelected', {
+                defaultValue: 'Unfinalize Selected',
+              })}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -429,19 +459,28 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
       {isLoading ? (
         <Card>
           <div className="p-12 flex items-center justify-center">
-            <LoadingIndicator text="Loading invoices..." spinnerProps={{ size: 'md' }} layout="stacked" textClassName="text-muted-foreground" />
+            <LoadingIndicator
+              text={t('finalizedTab.loading', { defaultValue: 'Loading invoices...' })}
+              spinnerProps={{ size: 'md' }}
+              layout="stacked"
+              textClassName="text-muted-foreground"
+            />
           </div>
         </Card>
       ) : filteredInvoices.length === 0 ? (
         <Card>
           <div className="p-12 text-center">
             <CheckCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-semibold text-[rgb(var(--color-text-900))] mb-2">No Finalized Invoices</h3>
+            <h3 className="text-lg font-semibold text-[rgb(var(--color-text-900))] mb-2">
+              {t('finalizedTab.empty.title', { defaultValue: 'No Finalized Invoices' })}
+            </h3>
             <p className="text-muted-foreground mb-4">
-              Finalized invoices will appear here once you've approved and finalized your drafts.
+              {t('finalizedTab.empty.description', {
+                defaultValue: "Finalized invoices will appear here once you've approved and finalized your drafts.",
+              })}
             </p>
             <Button id="finalized-empty-view-drafts" onClick={() => router.push('/msp/billing?tab=invoicing&subtab=drafts')} className="flex items-center gap-2">
-              View Drafts
+              {t('finalizedTab.empty.viewDrafts', { defaultValue: 'View Drafts' })}
               <ArrowRight className="h-4 w-4" />
             </Button>
           </div>

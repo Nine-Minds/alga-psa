@@ -1,63 +1,57 @@
 import Link from 'next/link';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { listMyServiceRequestSubmissionsAction } from './actions';
-
-function formatDateTime(value: Date | string): string {
-  const date = typeof value === 'string' ? new Date(value) : value;
-  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
-    return 'Unknown';
-  }
-  return date.toLocaleString();
-}
+import { MyRequestsTable, type MyRequestsTableRow } from './MyRequestsTable';
 
 export default async function MyServiceRequestsPage() {
-  const submissions = await listMyServiceRequestSubmissionsAction();
+  const [submissions, { t }] = await Promise.all([
+    listMyServiceRequestSubmissionsAction(),
+    getServerTranslation(undefined, 'client-portal/service-requests'),
+  ]);
+
+  const rows: MyRequestsTableRow[] = submissions.map((submission) => ({
+    submission_id: submission.submission_id,
+    request_name: submission.request_name,
+    execution_status: submission.execution_status,
+    submitted_at:
+      submission.submitted_at instanceof Date
+        ? submission.submitted_at.toISOString()
+        : String(submission.submitted_at),
+  }));
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">My Requests</h1>
+        <h1 className="text-2xl font-semibold">{t('myRequests.title')}</h1>
         <Link
           href="/client-portal/request-services"
           className="text-sm text-[rgb(var(--color-primary-600))] hover:underline"
         >
-          Browse Services
+          {t('myRequests.browseServices')}
         </Link>
       </div>
 
-      {submissions.length === 0 ? (
+      {rows.length === 0 ? (
         <p className="rounded border p-4 text-sm text-[rgb(var(--color-text-600))]">
-          You have not submitted any service requests yet.
+          {t('myRequests.empty')}
         </p>
       ) : (
-        <div className="rounded border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-[rgb(var(--color-background-100))] text-left">
-              <tr>
-                <th className="px-4 py-2">Request</th>
-                <th className="px-4 py-2">Submitted</th>
-                <th className="px-4 py-2">Status</th>
-                <th className="px-4 py-2">Details</th>
-              </tr>
-            </thead>
-            <tbody>
-              {submissions.map((submission) => (
-                <tr key={submission.submission_id} className="border-t">
-                  <td className="px-4 py-2">{submission.request_name}</td>
-                  <td className="px-4 py-2">{formatDateTime(submission.submitted_at)}</td>
-                  <td className="px-4 py-2">{submission.execution_status}</td>
-                  <td className="px-4 py-2">
-                    <Link
-                      href={`/client-portal/request-services/my-requests/${submission.submission_id}`}
-                      className="text-[rgb(var(--color-primary-600))] hover:underline"
-                    >
-                      View
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <MyRequestsTable
+          rows={rows}
+          labels={{
+            request: t('myRequests.columns.request'),
+            submitted: t('myRequests.columns.submitted'),
+            status: t('myRequests.columns.status'),
+            details: t('myRequests.columns.details'),
+            view: t('myRequests.view'),
+            unknownDate: t('myRequests.unknownDate'),
+            statuses: {
+              pending: t('myRequests.statuses.pending'),
+              succeeded: t('myRequests.statuses.succeeded'),
+              failed: t('myRequests.statuses.failed'),
+            },
+          }}
+        />
       )}
     </div>
   );

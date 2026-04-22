@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Plus, MoreVertical, Clock, Calendar, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 import { Button } from '@alga-psa/ui/components/Button';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -87,6 +88,7 @@ interface HolidayFormData {
 }
 
 export function BusinessHoursSettings() {
+  const { t } = useTranslation('msp/settings');
   // Tenant timezone for defaulting new schedules (browser timezone as fallback)
   const browserTimezone = typeof Intl !== 'undefined'
     ? Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -194,7 +196,7 @@ export function BusinessHoursSettings() {
     try {
       const fullSchedule = await getBusinessHoursScheduleById(schedule.schedule_id);
       if (!fullSchedule) {
-        toast.error('Schedule not found');
+        toast.error(t('sla.messages.scheduleNotFound'));
         return;
       }
 
@@ -276,7 +278,7 @@ export function BusinessHoursSettings() {
           await upsertBusinessHoursEntries(editingScheduleId, scheduleFormData.entries);
         }
 
-        toast.success('Schedule updated successfully');
+        toast.success(t('sla.messages.scheduleUpdated'));
       } else {
         // Create new schedule
         await createBusinessHoursSchedule(
@@ -289,7 +291,7 @@ export function BusinessHoursSettings() {
           scheduleFormData.is_24x7 ? undefined : scheduleFormData.entries
         );
 
-        toast.success('Schedule created successfully');
+        toast.success(t('sla.messages.scheduleCreated'));
       }
 
       handleCloseScheduleDialog();
@@ -308,7 +310,7 @@ export function BusinessHoursSettings() {
 
     try {
       await deleteBusinessHoursSchedule(deleteScheduleDialog.scheduleId);
-      toast.success('Schedule deleted successfully');
+      toast.success(t('sla.messages.scheduleDeleted'));
       setDeleteScheduleDialog({ isOpen: false, scheduleId: '', scheduleName: '' });
 
       // Clear selection if deleted schedule was selected
@@ -327,7 +329,7 @@ export function BusinessHoursSettings() {
     try {
       setLoading(true);
       await createDefaultBusinessHoursSchedule(Intl.DateTimeFormat().resolvedOptions().timeZone);
-      toast.success('Default business hours schedule created');
+      toast.success(t('sla.messages.defaultHoursCreated'));
       await fetchSchedules();
     } catch (err) {
       handleError(err, 'Failed to create default schedule');
@@ -351,7 +353,7 @@ export function BusinessHoursSettings() {
   // Holiday handlers
   const handleOpenHolidayDialog = () => {
     if (!selectedSchedule) {
-      toast.error('Please select a schedule first');
+      toast.error(t('sla.messages.scheduleRequired'));
       return;
     }
     setHolidayFormData({
@@ -370,12 +372,12 @@ export function BusinessHoursSettings() {
     if (!selectedSchedule) return;
 
     if (!holidayFormData.holiday_name.trim()) {
-      toast.error('Holiday name is required');
+      toast.error(t('sla.messages.holidayNameRequired'));
       return;
     }
 
     if (!holidayFormData.holiday_date) {
-      toast.error('Holiday date is required');
+      toast.error(t('sla.messages.holidayDateRequired'));
       return;
     }
 
@@ -389,7 +391,7 @@ export function BusinessHoursSettings() {
         schedule_id: selectedSchedule.schedule_id,
       });
 
-      toast.success('Holiday added successfully');
+      toast.success(t('sla.messages.holidayAdded'));
       handleCloseHolidayDialog();
       await fetchScheduleDetails(selectedSchedule.schedule_id);
     } catch (err) {
@@ -404,7 +406,7 @@ export function BusinessHoursSettings() {
 
     try {
       await deleteHoliday(deleteHolidayDialog.holidayId);
-      toast.success('Holiday deleted successfully');
+      toast.success(t('sla.messages.holidayDeleted'));
       setDeleteHolidayDialog({ isOpen: false, holidayId: '', holidayName: '' });
 
       if (selectedSchedule) {

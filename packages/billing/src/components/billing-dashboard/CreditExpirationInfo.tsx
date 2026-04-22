@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCurrency } from '@alga-psa/core';
 import { ICreditTracking } from '@alga-psa/types';
 import CreditExpirationBadge from '@alga-psa/ui/components/CreditExpirationBadge';
@@ -14,6 +15,7 @@ interface CreditExpirationInfoProps {
 }
 
 const CreditExpirationInfo: React.FC<CreditExpirationInfoProps> = ({ creditApplied, invoiceId }) => {
+  const { t } = useTranslation('msp/credits');
   const [creditDetails, setCreditDetails] = React.useState<ICreditTracking[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -47,7 +49,7 @@ const CreditExpirationInfo: React.FC<CreditExpirationInfoProps> = ({ creditAppli
         setLoading(false);
       } catch (error) {
         console.error('Error fetching credit details:', error);
-        setError('Failed to load credit details');
+        setError(t('expiration.failedToLoad', { defaultValue: 'Failed to load credit details' }));
         setLoading(false);
       }
     };
@@ -67,9 +69,12 @@ const CreditExpirationInfo: React.FC<CreditExpirationInfoProps> = ({ creditAppli
   return (
     <Card className="mt-4">
       <CardHeader>
-        <CardTitle>Applied Credits</CardTitle>
+        <CardTitle>{t('expiration.appliedCredits', { defaultValue: 'Applied Credits' })}</CardTitle>
         <CardDescription>
-          Credits applied to this invoice: {formatCurrency(creditApplied)}
+          {t('expiration.creditsAppliedToInvoice', {
+            amount: formatCurrency(creditApplied),
+            defaultValue: 'Credits applied to this invoice: {{amount}}',
+          })}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -81,21 +86,29 @@ const CreditExpirationInfo: React.FC<CreditExpirationInfoProps> = ({ creditAppli
         ) : error ? (
           <div className="text-red-500">{error}</div>
         ) : creditDetails.length === 0 ? (
-          <div className="text-muted-foreground">No credit details available</div>
+          <div className="text-muted-foreground">
+            {t('expiration.noDetails', { defaultValue: 'No credit details available' })}
+          </div>
         ) : (
           <div className="space-y-4">
             {creditDetails.map((credit) => (
               <div key={credit.credit_id} className="border p-3 rounded-md">
                 <div className="flex justify-between mb-1">
-                  <span className="font-medium">Credit Amount:</span>
+                  <span className="font-medium">
+                    {t('expiration.creditAmount', { defaultValue: 'Credit Amount:' })}
+                  </span>
                   <span>{formatCurrency(credit.amount)}</span>
                 </div>
                 <div className="flex justify-between mb-1">
-                  <span className="font-medium">Created:</span>
+                  <span className="font-medium">
+                    {t('expiration.created', { defaultValue: 'Created:' })}
+                  </span>
                   <span>{new Date(credit.created_at).toLocaleDateString()}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="font-medium">Expiration:</span>
+                  <span className="font-medium">
+                    {t('expiration.expiration', { defaultValue: 'Expiration:' })}
+                  </span>
                   <div className="flex items-center">
                     {credit.expiration_date
                       ? (
@@ -110,14 +123,16 @@ const CreditExpirationInfo: React.FC<CreditExpirationInfoProps> = ({ creditAppli
                           />
                         </>
                       )
-                      : <span>Never</span>
+                      : <span>{t('expiration.never', { defaultValue: 'Never' })}</span>
                     }
                   </div>
                 </div>
               </div>
             ))}
             <div className="mt-2 text-sm text-muted-foreground">
-              Credits are applied in order of expiration date (oldest first)
+              {t('expiration.creditOrderNote', {
+                defaultValue: 'Credits are applied in order of expiration date (oldest first)',
+              })}
             </div>
           </div>
         )}

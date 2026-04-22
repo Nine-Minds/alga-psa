@@ -720,7 +720,7 @@
         "enterRatePlaceholder": "Geben Sie den Tarif ein",
         "metadata": "Diensttyp: {{type}} | Methode: {{method}}",
         "noCurrencyPrice": "Kein {{currency}}-Preis",
-        "rateDetail": "Rate: {{symbol}}{{amount}}"
+        "rateDetail": "Satz: {{symbol}}{{amount}}"
       },
       "unknownService": "Unbekannter Dienst"
     },

@@ -19,7 +19,7 @@
         "label": "Cognome *"
       },
       "email": {
-        "label": "Email *"
+        "label": "E-mail *"
       },
       "phoneNumber": {
         "label": "Numero di telefono"
@@ -34,7 +34,7 @@
     "notifications": {
       "title": "Preferenze di notifica",
       "viewSwitcher": {
-        "email": "Email",
+        "email": "E-mail",
         "internal": "Interne"
       }
     },
@@ -120,7 +120,7 @@
       },
       "table": {
         "user": "Utente",
-        "email": "Email",
+        "email": "E-mail",
         "roles": "Ruoli",
         "actions": "Azioni"
       },

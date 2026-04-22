@@ -17,6 +17,7 @@ import { ExpressionEditor, type ExpressionEditorHandle, type ExpressionContext, 
 import type { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Label } from '@alga-psa/ui/components/Label';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 /**
  * Data context for building schema from SelectOptions
@@ -119,14 +120,16 @@ export const ExpressionEditorField: React.FC<ExpressionEditorFieldProps> = ({
   dataContext,
   singleLine = true,
   height,
-  placeholder = 'Enter expression...',
+  placeholder,
   error,
   description,
   disabled = false,
   className = '',
   showFieldPicker = true,
 }) => {
+  const { t } = useTranslation('msp/workflows');
   const editorRef = useRef<ExpressionEditorHandle>(null);
+  const resolvedPlaceholder = placeholder ?? t('expressionEditor.field.placeholder', { defaultValue: 'Enter expression...' });
 
   // Build expression context from data context
   const expressionContext = useMemo(
@@ -153,7 +156,7 @@ export const ExpressionEditorField: React.FC<ExpressionEditorFieldProps> = ({
               id={`${idPrefix}-picker`}
               options={fieldOptions}
               value=""
-              placeholder="Insert field"
+              placeholder={t('expressionEditor.field.insertFieldPlaceholder', { defaultValue: 'Insert field' })}
               onValueChange={handleInsert}
               allowClear
               className="w-44"
@@ -170,7 +173,7 @@ export const ExpressionEditorField: React.FC<ExpressionEditorFieldProps> = ({
         context={expressionContext}
         singleLine={singleLine}
         height={height}
-        placeholder={placeholder}
+        placeholder={resolvedPlaceholder}
         disabled={disabled}
         hasError={!!error}
         ariaLabel={label}

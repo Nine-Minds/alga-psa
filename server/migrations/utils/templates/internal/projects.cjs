@@ -46,6 +46,11 @@ const TEMPLATES = [
     subtypeName: 'task-comment-added',
     translations: {
       en: { title: 'New Task Comment', message: '{{authorName}} added a comment to task "{{taskName}}"' },
+      fr: { title: 'Nouveau commentaire sur la t\u00e2che', message: '{{authorName}} a ajout\u00e9 un commentaire \u00e0 la t\u00e2che "{{taskName}}"' },
+      es: { title: 'Nuevo comentario en la tarea', message: '{{authorName}} agreg\u00f3 un comentario a la tarea "{{taskName}}"' },
+      de: { title: 'Neuer Kommentar zur Aufgabe', message: '{{authorName}} hat einen Kommentar zur Aufgabe "{{taskName}}" hinzugef\u00fcgt' },
+      nl: { title: 'Nieuwe opmerking bij taak', message: '{{authorName}} heeft een opmerking toegevoegd aan taak "{{taskName}}"' },
+      it: { title: 'Nuovo commento sul task', message: '{{authorName}} ha aggiunto un commento al task "{{taskName}}"' },
       pl: { title: 'Nowy komentarz do zadania', message: '{{authorName}} dodał(a) komentarz do zadania "{{taskName}}"' },
     },
   },

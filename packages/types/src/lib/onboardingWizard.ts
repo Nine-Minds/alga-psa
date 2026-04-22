@@ -6,6 +6,7 @@ export interface WizardData {
   email: string;
   newPassword?: string;
   confirmPassword?: string;
+  locale?: string;
 
   // Team Members
   teamMembers: TeamMember[];

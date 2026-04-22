@@ -18,6 +18,7 @@ import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomS
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { TimePicker } from '@alga-psa/ui/components/TimePicker';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   createWorkflowScheduleAction as createWorkflowScheduleActionDefault,
   getWorkflowScheduleAction as getWorkflowScheduleActionDefault,
@@ -32,6 +33,7 @@ import {
   DEFAULT_RECURRING_BUILDER_STATE,
   getRecurringBuilderSummary,
   getRecurringBuilderValidationMessage,
+  type LocalizedWeekdayOption,
   parseRecurringBuilderFromCron,
   WEEKDAY_OPTIONS,
   type RecurringBuilderState,
@@ -147,6 +149,8 @@ const buildDefaultValueFromSchema = (schema: JsonSchema, root: JsonSchema): unkn
   }
 };
 
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
+
 const setValueAtPath = (root: unknown, path: Array<string | number>, value: unknown): unknown => {
   if (path.length === 0) return value;
   const [head, ...rest] = path;
@@ -162,18 +166,32 @@ const pathToString = (path: Array<string | number>): string =>
     ''
   );
 
-const validateAgainstSchema = (schema: JsonSchema, value: unknown, root: JsonSchema, path = ''): ValidationError[] => {
+const validateAgainstSchema = (
+  schema: JsonSchema,
+  value: unknown,
+  root: JsonSchema,
+  t: TranslateFn,
+  path = ''
+): ValidationError[] => {
   const resolved = resolveSchemaRef(schema, root);
   const type = Array.isArray(resolved.type) ? resolved.type[0] : resolved.type;
   const errors: ValidationError[] = [];
 
   if (resolved.enum && value != null && !resolved.enum.includes(value as any)) {
-    errors.push({ path, message: 'Value must be one of the allowed options.' });
+    errors.push({
+      path,
+      message: t('schedules.dialog.validation.valueMustBeAllowed', {
+        defaultValue: 'Value must be one of the allowed options.',
+      })
+    });
   }
 
   if (type === 'object') {
     if (value == null || typeof value !== 'object' || Array.isArray(value)) {
-      errors.push({ path, message: 'Expected object.' });
+      errors.push({
+        path,
+        message: t('schedules.dialog.validation.expectedObject', { defaultValue: 'Expected object.' })
+      });
       return errors;
     }
 
@@ -183,19 +201,27 @@ const validateAgainstSchema = (schema: JsonSchema, value: unknown, root: JsonSch
 
     for (const key of required) {
       if (objectValue[key] === undefined || objectValue[key] === null || objectValue[key] === '') {
-        errors.push({ path: path ? `${path}.${key}` : key, message: 'Required field missing.' });
+        errors.push({
+          path: path ? `${path}.${key}` : key,
+          message: t('schedules.dialog.validation.requiredFieldMissing', {
+            defaultValue: 'Required field missing.',
+          })
+        });
       }
     }
 
     for (const [key, propSchema] of Object.entries(properties)) {
-      errors.push(...validateAgainstSchema(propSchema, objectValue[key], root, path ? `${path}.${key}` : key));
+      errors.push(...validateAgainstSchema(propSchema, objectValue[key], root, t, path ? `${path}.${key}` : key));
     }
 
     if (resolved.additionalProperties === false) {
       const knownKeys = new Set(Object.keys(properties));
       for (const key of Object.keys(objectValue)) {
         if (!knownKeys.has(key)) {
-          errors.push({ path: path ? `${path}.${key}` : key, message: 'Unknown property.' });
+          errors.push({
+            path: path ? `${path}.${key}` : key,
+            message: t('schedules.dialog.validation.unknownProperty', { defaultValue: 'Unknown property.' })
+          });
         }
       }
     }
@@ -205,24 +231,36 @@ const validateAgainstSchema = (schema: JsonSchema, value: unknown, root: JsonSch
 
   if (type === 'array') {
     if (!Array.isArray(value)) {
-      errors.push({ path, message: 'Expected array.' });
+      errors.push({
+        path,
+        message: t('schedules.dialog.validation.expectedArray', { defaultValue: 'Expected array.' })
+      });
       return errors;
     }
 
     value.forEach((item, index) => {
-      errors.push(...validateAgainstSchema(resolved.items ?? {}, item, root, `${path}[${index}]`));
+      errors.push(...validateAgainstSchema(resolved.items ?? {}, item, root, t, `${path}[${index}]`));
     });
     return errors;
   }
 
   if (type === 'string' && value != null && typeof value !== 'string') {
-    errors.push({ path, message: 'Expected string.' });
+    errors.push({
+      path,
+      message: t('schedules.dialog.validation.expectedString', { defaultValue: 'Expected string.' })
+    });
   }
   if ((type === 'number' || type === 'integer') && value != null && typeof value !== 'number') {
-    errors.push({ path, message: 'Expected number.' });
+    errors.push({
+      path,
+      message: t('schedules.dialog.validation.expectedNumber', { defaultValue: 'Expected number.' })
+    });
   }
   if (type === 'boolean' && value != null && typeof value !== 'boolean') {
-    errors.push({ path, message: 'Expected boolean.' });
+    errors.push({
+      path,
+      message: t('schedules.dialog.validation.expectedBoolean', { defaultValue: 'Expected boolean.' })
+    });
   }
 
   return errors;
@@ -237,20 +275,34 @@ const parseDate = (iso: string | null | undefined): Date | undefined => {
 
 const buildWorkflowEligibilityMessage = (
   workflow: WorkflowOption | null,
-  availableSchemaRefs?: ReadonlySet<string>
+  availableSchemaRefs: ReadonlySet<string> | undefined,
+  t: TranslateFn
 ): string | null => {
-  if (!workflow) return 'Choose a workflow before saving.';
+  if (!workflow) {
+    return t('schedules.dialog.eligibility.chooseWorkflow', {
+      defaultValue: 'Choose a workflow before saving.',
+    });
+  }
   if (!workflow.published_version) {
-    return 'Schedules can only be created for workflows with a published version.';
+    return t('schedules.dialog.eligibility.unpublished', {
+      defaultValue: 'Schedules can only be created for workflows with a published version.',
+    });
   }
   if (String(workflow.payload_schema_mode ?? 'pinned') !== 'pinned') {
-    return 'Schedules are only supported for workflows with a pinned payload schema.';
+    return t('schedules.dialog.eligibility.pinnedOnly', {
+      defaultValue: 'Schedules are only supported for workflows with a pinned payload schema.',
+    });
   }
   if (!workflow.payload_schema_ref) {
-    return 'The selected workflow does not expose a pinned payload schema.';
+    return t('schedules.dialog.eligibility.noPinnedSchema', {
+      defaultValue: 'The selected workflow does not expose a pinned payload schema.',
+    });
   }
   if (availableSchemaRefs && !availableSchemaRefs.has(workflow.payload_schema_ref)) {
-    return `The selected workflow uses an unavailable payload schema ref: ${workflow.payload_schema_ref}.`;
+    return t('schedules.dialog.eligibility.unavailableSchemaRef', {
+      defaultValue: 'The selected workflow uses an unavailable payload schema ref: {{schemaRef}}.',
+      schemaRef: workflow.payload_schema_ref,
+    });
   }
   return null;
 };
@@ -264,6 +316,8 @@ export default function WorkflowScheduleDialog({
   onSaved,
   scheduleActions = defaultScheduleActions
 }: WorkflowScheduleDialogProps) {
+  const { t } = useTranslation('msp/workflows');
+  const { formatDate } = useFormatters();
   const [workflowOptions, setWorkflowOptions] = useState<WorkflowOption[]>([]);
   const [availableSchemaRefs, setAvailableSchemaRefs] = useState<Set<string>>(new Set());
   const [isLoadingWorkflows, setIsLoadingWorkflows] = useState(false);
@@ -291,14 +345,26 @@ export default function WorkflowScheduleDialog({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [serverIssues, setServerIssues] = useState<Array<{ path?: string; message?: string }>>([]);
   const [payloadTouched, setPayloadTouched] = useState(false);
+  const localizedWeekdayOptions = useMemo<LocalizedWeekdayOption[]>(
+    () => WEEKDAY_OPTIONS.map((weekday) => ({
+      ...weekday,
+      shortLabel: t(`schedules.recurrence.weekdays.${weekday.value}.short`, {
+        defaultValue: weekday.shortLabel,
+      }),
+      longLabel: t(`schedules.recurrence.weekdays.${weekday.value}.long`, {
+        defaultValue: weekday.longLabel,
+      }),
+    })),
+    [t]
+  );
 
   const selectedWorkflow = useMemo(
     () => workflowOptions.find((workflow) => workflow.workflow_id === selectedWorkflowId) ?? null,
     [selectedWorkflowId, workflowOptions]
   );
   const workflowEligibilityMessage = useMemo(
-    () => buildWorkflowEligibilityMessage(selectedWorkflow, availableSchemaRefs),
-    [availableSchemaRefs, selectedWorkflow]
+    () => buildWorkflowEligibilityMessage(selectedWorkflow, availableSchemaRefs, t),
+    [availableSchemaRefs, selectedWorkflow, t]
   );
   const hasTenantDefaultBusinessHours = useMemo(
     () => businessHoursOptions.some((schedule) => Boolean(schedule.is_default)),
@@ -310,23 +376,33 @@ export default function WorkflowScheduleDialog({
       {
         value: 'tenant_default',
         label: hasTenantDefaultBusinessHours
-          ? 'Tenant default business hours'
-          : 'Tenant default business hours (not configured)',
+          ? t('schedules.dialog.calendarSource.tenantDefault', {
+            defaultValue: 'Tenant default business hours',
+          })
+          : t('schedules.dialog.calendarSource.tenantDefaultMissing', {
+            defaultValue: 'Tenant default business hours (not configured)',
+          }),
         disabled: !hasTenantDefaultBusinessHours,
         dropdownHint: !hasTenantDefaultBusinessHours
-          ? 'Set a tenant default business-hours schedule first, or choose a specific schedule.'
+          ? t('schedules.dialog.calendarSource.tenantDefaultHint', {
+            defaultValue: 'Set a tenant default business-hours schedule first, or choose a specific schedule.',
+          })
           : undefined
       },
       {
         value: 'specific',
-        label: 'Specific business-hours schedule',
+        label: t('schedules.dialog.calendarSource.specific', {
+          defaultValue: 'Specific business-hours schedule',
+        }),
         disabled: !hasAnyBusinessHoursSchedules,
         dropdownHint: !hasAnyBusinessHoursSchedules
-          ? 'Create a business-hours schedule first.'
+          ? t('schedules.dialog.calendarSource.specificHint', {
+            defaultValue: 'Create a business-hours schedule first.',
+          })
           : undefined
       }
     ],
-    [hasAnyBusinessHoursSchedules, hasTenantDefaultBusinessHours]
+    [hasAnyBusinessHoursSchedules, hasTenantDefaultBusinessHours, t]
   );
 
   useEffect(() => {
@@ -412,7 +488,9 @@ export default function WorkflowScheduleDialog({
         } catch (error) {
           if (cancelled) return;
           console.error('Failed to load workflow schedule', error);
-          setSubmitError(error instanceof Error ? error.message : 'Failed to load schedule.');
+          setSubmitError(error instanceof Error ? error.message : t('schedules.dialog.errors.loadScheduleFailed', {
+            defaultValue: 'Failed to load schedule.',
+          }));
         } finally {
           if (!cancelled) {
             setIsLoadingSchedule(false);
@@ -446,7 +524,7 @@ export default function WorkflowScheduleDialog({
     setPayloadTouched(false);
     setIsLoadingSchedule(false);
     return undefined;
-  }, [initialWorkflowId, isOpen, mode, scheduleActions, scheduleId]);
+  }, [initialWorkflowId, isOpen, mode, scheduleActions, scheduleId, t]);
 
   useEffect(() => {
     if (!isOpen || !selectedWorkflow?.payload_schema_ref || workflowEligibilityMessage) {
@@ -496,12 +574,12 @@ export default function WorkflowScheduleDialog({
       })()
       : formValue;
 
-    setSchemaErrors(validateAgainstSchema(payloadSchema, value ?? {}, payloadSchema));
-  }, [formValue, payloadMode, payloadSchema, payloadText]);
+    setSchemaErrors(validateAgainstSchema(payloadSchema, value ?? {}, payloadSchema, t));
+  }, [formValue, payloadMode, payloadSchema, payloadText, t]);
 
   const workflowPickerOptions = useMemo<SelectOption[]>(
     () => workflowOptions.map((workflow) => {
-      const eligibilityMessage = buildWorkflowEligibilityMessage(workflow, availableSchemaRefs);
+      const eligibilityMessage = buildWorkflowEligibilityMessage(workflow, availableSchemaRefs, t);
       return {
         value: workflow.workflow_id,
         label: (
@@ -511,12 +589,16 @@ export default function WorkflowScheduleDialog({
               {workflow.published_version ? (
                 <Badge variant="info" size="sm">v{workflow.published_version}</Badge>
               ) : (
-                <Badge variant="warning" size="sm">Unpublished</Badge>
+                <Badge variant="warning" size="sm">
+                  {t('schedules.dialog.workflow.badges.unpublished', { defaultValue: 'Unpublished' })}
+                </Badge>
               )}
             </span>
             {String(workflow.payload_schema_mode ?? 'pinned') !== 'pinned' && (
               <span className="flex-shrink-0">
-                <Badge variant="warning" size="sm">Inferred schema</Badge>
+                <Badge variant="warning" size="sm">
+                  {t('schedules.dialog.workflow.badges.inferredSchema', { defaultValue: 'Inferred schema' })}
+                </Badge>
               </span>
             )}
           </div>
@@ -525,7 +607,7 @@ export default function WorkflowScheduleDialog({
         textValue: workflow.name
       };
     }),
-    [availableSchemaRefs, workflowOptions]
+    [availableSchemaRefs, t, workflowOptions]
   );
 
   const parsePayloadForSubmit = (): Record<string, unknown> | null => {
@@ -533,7 +615,9 @@ export default function WorkflowScheduleDialog({
       if (payloadMode === 'json') {
         const parsed = JSON.parse(payloadText || '{}');
         if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-          setJsonError('Schedule payload must be a JSON object.');
+          setJsonError(t('schedules.dialog.validation.payloadMustBeObject', {
+            defaultValue: 'Schedule payload must be a JSON object.',
+          }));
           return null;
         }
         setJsonError(null);
@@ -541,13 +625,17 @@ export default function WorkflowScheduleDialog({
       }
 
       if (!formValue || typeof formValue !== 'object' || Array.isArray(formValue)) {
-        setJsonError('Schedule payload must be a JSON object.');
+        setJsonError(t('schedules.dialog.validation.payloadMustBeObject', {
+          defaultValue: 'Schedule payload must be a JSON object.',
+        }));
         return null;
       }
       setJsonError(null);
       return formValue as Record<string, unknown>;
     } catch (error) {
-      setJsonError(error instanceof Error ? error.message : 'Invalid JSON');
+      setJsonError(error instanceof Error ? error.message : t('schedules.dialog.validation.invalidJson', {
+        defaultValue: 'Invalid JSON',
+      }));
       return null;
     }
   };
@@ -574,8 +662,18 @@ export default function WorkflowScheduleDialog({
   const recurringValidationMessage = useMemo(
     () => triggerType !== 'recurring' || recurringMode === 'advanced'
       ? null
-      : getRecurringBuilderValidationMessage(recurringBuilder),
-    [recurringBuilder, recurringMode, triggerType]
+      : getRecurringBuilderValidationMessage(recurringBuilder, {
+        invalidTimeMessage: t('schedules.recurrence.validation.validTime', {
+          defaultValue: 'Choose a valid time.',
+        }),
+        noWeekdayMessage: t('schedules.recurrence.validation.weekdayRequired', {
+          defaultValue: 'Choose at least one weekday.',
+        }),
+        invalidDayOfMonthMessage: t('schedules.recurrence.validation.dayOfMonthRange', {
+          defaultValue: 'Choose a day of month between 1 and 31.',
+        }),
+      }),
+    [recurringBuilder, recurringMode, t, triggerType]
   );
 
   const effectiveRecurringCron = useMemo(
@@ -590,8 +688,42 @@ export default function WorkflowScheduleDialog({
   const recurringSummary = useMemo(
     () => triggerType !== 'recurring' || recurringMode === 'advanced'
       ? null
-      : getRecurringBuilderSummary(recurringBuilder, timezone),
-    [recurringBuilder, recurringMode, timezone, triggerType]
+      : getRecurringBuilderSummary(recurringBuilder, timezone, {
+        weekdayOptions: localizedWeekdayOptions,
+        andWord: t('schedules.recurrence.andWord', { defaultValue: 'and' }),
+        defaultTimezoneLabel: 'UTC',
+        formatTimeLabel: (time) => {
+          const [hourRaw, minuteRaw] = time.split(':');
+          const hour = Number(hourRaw);
+          const minute = Number(minuteRaw);
+          if (!Number.isInteger(hour) || !Number.isInteger(minute)) {
+            return time;
+          }
+          return formatDate(new Date(Date.UTC(2000, 0, 1, hour, minute)), {
+            hour: 'numeric',
+            minute: '2-digit',
+            timeZone: 'UTC',
+          });
+        },
+        formatDailySummary: ({ timeLabel, timezoneLabel }) => t('schedules.recurrence.summary.daily', {
+          defaultValue: 'Runs every day at {{timeLabel}} {{timezoneLabel}}',
+          timeLabel,
+          timezoneLabel,
+        }),
+        formatWeeklySummary: ({ weekdayLabels, timeLabel, timezoneLabel }) => t('schedules.recurrence.summary.weekly', {
+          defaultValue: 'Runs every {{weekdayLabels}} at {{timeLabel}} {{timezoneLabel}}',
+          weekdayLabels,
+          timeLabel,
+          timezoneLabel,
+        }),
+        formatMonthlySummary: ({ dayOfMonth, timeLabel, timezoneLabel }) => t('schedules.recurrence.summary.monthly', {
+          defaultValue: 'Runs on day {{dayOfMonth}} of each month at {{timeLabel}} {{timezoneLabel}}',
+          dayOfMonth,
+          timeLabel,
+          timezoneLabel,
+        }),
+      }),
+    [formatDate, localizedWeekdayOptions, recurringBuilder, recurringMode, t, timezone, triggerType]
   );
 
   const unsupportedRecurringCron = useMemo(
@@ -625,7 +757,9 @@ export default function WorkflowScheduleDialog({
       setJsonError(null);
       setPayloadMode('form');
     } catch (error) {
-      setJsonError(error instanceof Error ? error.message : 'Invalid JSON');
+      setJsonError(error instanceof Error ? error.message : t('schedules.dialog.validation.invalidJson', {
+        defaultValue: 'Invalid JSON',
+      }));
     }
   };
 
@@ -639,7 +773,9 @@ export default function WorkflowScheduleDialog({
     const resolved = resolveSchemaRef(schema, rootSchema);
     const type = Array.isArray(resolved.type) ? resolved.type[0] : resolved.type;
     const fieldKey = path[path.length - 1];
-    const label = resolved.title ?? (typeof fieldKey === 'string' ? fieldKey : 'Payload');
+    const label = resolved.title ?? (typeof fieldKey === 'string'
+      ? fieldKey
+      : t('schedules.dialog.payload.rootLabel', { defaultValue: 'Payload' }));
     const isRequired = typeof fieldKey === 'string' && requiredSet.has(fieldKey);
     const fieldPath = pathToString(path);
     const fieldErrors = schemaErrors.filter((error) => error.path === fieldPath);
@@ -687,11 +823,13 @@ export default function WorkflowScheduleDialog({
                 updateFormValue((previous) => setValueAtPath(previous, path, next));
               }}
             >
-              Add item
+              {t('schedules.dialog.payload.actions.addItem', { defaultValue: 'Add item' })}
             </Button>
           </div>
           {items.length === 0 && (
-            <div className="text-xs text-[rgb(var(--color-text-500))]">No items yet.</div>
+            <div className="text-xs text-[rgb(var(--color-text-500))]">
+              {t('schedules.dialog.payload.states.noItems', { defaultValue: 'No items yet.' })}
+            </div>
           )}
           {items.map((item, index) => (
             <div key={`${fieldPath}[${index}]`} className="rounded border border-[rgb(var(--color-border-100))] p-2">
@@ -705,7 +843,7 @@ export default function WorkflowScheduleDialog({
                     updateFormValue((previous) => setValueAtPath(previous, path, next));
                   }}
                 >
-                  Remove
+                  {t('schedules.dialog.payload.actions.removeItem', { defaultValue: 'Remove' })}
                 </Button>
               </div>
               {renderField(resolved.items ?? {}, item, [...path, index], new Set())}
@@ -763,7 +901,11 @@ export default function WorkflowScheduleDialog({
               checked={Boolean(value)}
               onCheckedChange={(checked) => updateFormValue((previous) => setValueAtPath(previous, path, checked))}
             />
-            <span className="text-xs text-[rgb(var(--color-text-500))]">{value ? 'True' : 'False'}</span>
+            <span className="text-xs text-[rgb(var(--color-text-500))]">
+              {value
+                ? t('schedules.dialog.payload.boolean.true', { defaultValue: 'True' })
+                : t('schedules.dialog.payload.boolean.false', { defaultValue: 'False' })}
+            </span>
           </div>
           {resolved.description ? (
             <div className="text-xs text-[rgb(var(--color-text-500))]">{resolved.description}</div>
@@ -821,7 +963,9 @@ export default function WorkflowScheduleDialog({
       setFormValue(parsed);
       setJsonError(null);
     } catch (error) {
-      setJsonError(error instanceof Error ? error.message : 'Invalid JSON');
+      setJsonError(error instanceof Error ? error.message : t('schedules.dialog.validation.invalidJson', {
+        defaultValue: 'Invalid JSON',
+      }));
     }
   };
 
@@ -872,7 +1016,9 @@ export default function WorkflowScheduleDialog({
 
       if ((result as { ok?: boolean }).ok === false) {
         const failure = result as { message?: string; issues?: Array<{ path?: Array<string | number>; message?: string }> };
-        setSubmitError(failure.message ?? 'Failed to save schedule.');
+        setSubmitError(failure.message ?? t('schedules.dialog.errors.saveFailed', {
+          defaultValue: 'Failed to save schedule.',
+        }));
         setServerIssues((failure.issues ?? []).map((issue) => ({
           path: Array.isArray(issue.path) ? issue.path.join('.') : undefined,
           message: issue.message
@@ -884,7 +1030,9 @@ export default function WorkflowScheduleDialog({
       onClose();
     } catch (error) {
       console.error('Failed to save schedule', error);
-      setSubmitError(error instanceof Error ? error.message : 'Failed to save schedule.');
+      setSubmitError(error instanceof Error ? error.message : t('schedules.dialog.errors.saveFailed', {
+        defaultValue: 'Failed to save schedule.',
+      }));
     } finally {
       setIsSaving(false);
     }
@@ -895,14 +1043,18 @@ export default function WorkflowScheduleDialog({
   const footer = (
     <div className="flex justify-end gap-2">
       <Button id="schedule-dialog-cancel" variant="outline" onClick={onClose} disabled={isSaving}>
-        Cancel
+        {t('schedules.actions.cancel', { defaultValue: 'Cancel' })}
       </Button>
       <Button
         id="schedule-dialog-save"
         onClick={() => void handleSave()}
         disabled={!canSave || isSaving || dialogBusy}
       >
-        {isSaving ? 'Saving…' : mode === 'edit' ? 'Save Changes' : 'Create Schedule'}
+        {isSaving
+          ? t('schedules.actions.saving', { defaultValue: 'Saving…' })
+          : mode === 'edit'
+            ? t('schedules.actions.saveChanges', { defaultValue: 'Save Changes' })
+            : t('schedules.actions.create', { defaultValue: 'Create Schedule' })}
       </Button>
     </div>
   );
@@ -911,44 +1063,54 @@ export default function WorkflowScheduleDialog({
     <Dialog
       isOpen={isOpen}
       onClose={onClose}
-      title={mode === 'edit' ? 'Edit Schedule' : 'Create Schedule'}
+      title={mode === 'edit'
+        ? t('schedules.dialog.title.edit', { defaultValue: 'Edit Schedule' })
+        : t('schedules.dialog.title.create', { defaultValue: 'Create Schedule' })}
       className="max-w-5xl"
       footer={footer}
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{mode === 'edit' ? 'Edit Schedule' : 'Create Schedule'}</DialogTitle>
+          <DialogTitle>
+            {mode === 'edit'
+              ? t('schedules.dialog.title.edit', { defaultValue: 'Edit Schedule' })
+              : t('schedules.dialog.title.create', { defaultValue: 'Create Schedule' })}
+          </DialogTitle>
           <DialogDescription>
-            Configure timing and static payload data for a workflow schedule.
+            {t('schedules.dialog.description', {
+              defaultValue: 'Configure timing and static payload data for a workflow schedule.',
+            })}
           </DialogDescription>
         </DialogHeader>
 
         {dialogBusy ? (
-          <div className="py-8 text-sm text-[rgb(var(--color-text-500))]">Loading schedule details…</div>
+          <div className="py-8 text-sm text-[rgb(var(--color-text-500))]">
+            {t('schedules.dialog.states.loading', { defaultValue: 'Loading schedule details…' })}
+          </div>
         ) : (
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <CustomSelect
                 id="schedule-dialog-workflow"
-                label="Workflow"
+                label={t('schedules.dialog.fields.workflow', { defaultValue: 'Workflow' })}
                 options={workflowPickerOptions}
                 value={selectedWorkflowId}
                 onValueChange={(value) => {
                   setSelectedWorkflowId(value);
                   setPayloadTouched(false);
                 }}
-                placeholder="Choose a workflow"
+                placeholder={t('schedules.dialog.fields.workflowPlaceholder', { defaultValue: 'Choose a workflow' })}
               />
               <Input
                 id="schedule-dialog-name"
-                label="Schedule name"
+                label={t('schedules.dialog.fields.name', { defaultValue: 'Schedule name' })}
                 value={scheduleName}
                 onChange={(event) => setScheduleName(event.target.value)}
-                placeholder="Month-end AP sync"
+                placeholder={t('schedules.dialog.fields.namePlaceholder', { defaultValue: 'Month-end AP sync' })}
               />
               <CustomSelect
                 id="schedule-dialog-trigger-type"
-                label="Trigger type"
+                label={t('schedules.dialog.fields.triggerType', { defaultValue: 'Trigger type' })}
                 value={triggerType}
                 onValueChange={(value) => {
                   const nextTriggerType = value as 'schedule' | 'recurring';
@@ -963,16 +1125,30 @@ export default function WorkflowScheduleDialog({
                   }
                 }}
                 options={[
-                  { value: 'schedule', label: 'One-time' },
-                  { value: 'recurring', label: 'Recurring' }
+                  {
+                    value: 'schedule',
+                    label: t('schedules.triggerType.schedule', { defaultValue: 'One-time' })
+                  },
+                  {
+                    value: 'recurring',
+                    label: t('schedules.triggerType.recurring', { defaultValue: 'Recurring' })
+                  }
                 ]}
               />
               <div className="space-y-2">
-                <label className="text-sm font-medium text-[rgb(var(--color-text-800))]">Enabled</label>
+                <label className="text-sm font-medium text-[rgb(var(--color-text-800))]">
+                  {t('schedules.dialog.fields.enabled', { defaultValue: 'Enabled' })}
+                </label>
                 <div className="flex h-10 items-center gap-2 rounded-lg border border-[rgb(var(--color-border-200))] px-3">
                   <Switch checked={enabled} onCheckedChange={setEnabled} />
                   <span className="text-sm text-[rgb(var(--color-text-600))]">
-                    {enabled ? 'Schedule will run when valid.' : 'Schedule will stay paused until resumed.'}
+                    {enabled
+                      ? t('schedules.dialog.fields.enabledHelp', {
+                        defaultValue: 'Schedule will run when valid.',
+                      })
+                      : t('schedules.dialog.fields.disabledHelp', {
+                        defaultValue: 'Schedule will stay paused until resumed.',
+                      })}
                   </span>
                 </div>
               </div>
@@ -980,10 +1156,12 @@ export default function WorkflowScheduleDialog({
 
             {triggerType === 'schedule' ? (
               <div>
-                <label className="text-sm font-medium text-[rgb(var(--color-text-700))]">Run at</label>
+                <label className="text-sm font-medium text-[rgb(var(--color-text-700))]">
+                  {t('schedules.dialog.fields.runAt', { defaultValue: 'Run at' })}
+                </label>
                 <DateTimePicker
                   id="schedule-dialog-run-at"
-                  label="Run at"
+                  label={t('schedules.dialog.fields.runAt', { defaultValue: 'Run at' })}
                   value={runAt}
                   onChange={setRunAt}
                 />
@@ -992,9 +1170,13 @@ export default function WorkflowScheduleDialog({
               <div className="space-y-4 rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background-50))] p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">Recurring schedule</div>
+                    <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">
+                      {t('schedules.dialog.recurring.title', { defaultValue: 'Recurring schedule' })}
+                    </div>
                     <div className="text-xs text-[rgb(var(--color-text-500))]">
-                      Choose a common recurrence pattern. Advanced cron is available for custom schedules.
+                      {t('schedules.dialog.recurring.description', {
+                        defaultValue: 'Choose a common recurrence pattern. Advanced cron is available for custom schedules.',
+                      })}
                     </div>
                   </div>
                   <div className="inline-flex rounded-lg border border-[rgb(var(--color-border-200))] bg-white p-1">
@@ -1012,7 +1194,7 @@ export default function WorkflowScheduleDialog({
                         setRecurringMode('builder');
                       }}
                     >
-                      Schedule Builder
+                      {t('schedules.dialog.recurring.builderMode', { defaultValue: 'Schedule Builder' })}
                     </button>
                     <button
                       type="button"
@@ -1028,7 +1210,7 @@ export default function WorkflowScheduleDialog({
                         setRecurringMode('advanced');
                       }}
                     >
-                      Advanced Cron
+                      {t('schedules.dialog.recurring.advancedMode', { defaultValue: 'Advanced Cron' })}
                     </button>
                   </div>
                 </div>
@@ -1036,7 +1218,7 @@ export default function WorkflowScheduleDialog({
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <CustomSelect
                     id="schedule-dialog-day-type-filter"
-                    label="Run on"
+                    label={t('schedules.dialog.fields.runOn', { defaultValue: 'Run on' })}
                     value={dayTypeFilter}
                     onValueChange={(value) => {
                       const nextFilter = value as DayTypeFilter;
@@ -1047,16 +1229,29 @@ export default function WorkflowScheduleDialog({
                       }
                     }}
                     options={[
-                      { value: 'any', label: 'Any day' },
-                      { value: 'business', label: 'Business days only' },
-                      { value: 'non_business', label: 'Non-business days only' }
+                      {
+                        value: 'any',
+                        label: t('schedules.dayType.any', { defaultValue: 'Any day' })
+                      },
+                      {
+                        value: 'business',
+                        label: t('schedules.dialog.fields.businessDaysOnly', {
+                          defaultValue: 'Business days only',
+                        })
+                      },
+                      {
+                        value: 'non_business',
+                        label: t('schedules.dialog.fields.nonBusinessDaysOnly', {
+                          defaultValue: 'Non-business days only',
+                        })
+                      }
                     ]}
                   />
                   {dayTypeFilter !== 'any' ? (
                     <div className="space-y-2">
                       <CustomSelect
                         id="schedule-dialog-calendar-source"
-                        label="Calendar source"
+                        label={t('schedules.dialog.fields.calendarSource', { defaultValue: 'Calendar source' })}
                         value={calendarSource}
                         disabled={!hasTenantDefaultBusinessHours && !hasAnyBusinessHoursSchedules}
                         onValueChange={(value) => {
@@ -1070,7 +1265,9 @@ export default function WorkflowScheduleDialog({
                       />
                       {!hasTenantDefaultBusinessHours && calendarSource === 'tenant_default' ? (
                         <div className="text-xs text-[rgb(var(--color-text-600))]">
-                          No tenant default business-hours schedule is configured yet. Choose a specific business-hours schedule or set a tenant default first.
+                          {t('schedules.dialog.calendarSource.tenantDefaultMissingDescription', {
+                            defaultValue: 'No tenant default business-hours schedule is configured yet. Choose a specific business-hours schedule or set a tenant default first.',
+                          })}
                         </div>
                       ) : null}
                     </div>
@@ -1081,31 +1278,49 @@ export default function WorkflowScheduleDialog({
                   <div className="space-y-3 rounded-lg border border-[rgb(var(--color-border-200))] bg-white p-3">
                     <div className="flex items-start gap-2 text-xs text-[rgb(var(--color-text-600))]">
                       <Info className="mt-0.5 h-4 w-4 text-[rgb(var(--color-primary-500))]" />
-                      <span>Holidays are always treated as non-business days.</span>
+                      <span>
+                        {t('schedules.dialog.calendarSource.holidaysNote', {
+                          defaultValue: 'Holidays are always treated as non-business days.',
+                        })}
+                      </span>
                     </div>
                     {calendarSource === 'specific' ? (
                       hasAnyBusinessHoursSchedules ? (
                         <CustomSelect
                           id="schedule-dialog-business-hours-schedule"
-                          label="Business-hours schedule"
+                          label={t('schedules.dialog.fields.businessHoursSchedule', {
+                            defaultValue: 'Business-hours schedule',
+                          })}
                           value={businessHoursScheduleId}
                           onValueChange={setBusinessHoursScheduleId}
                           options={businessHoursOptions.map((schedule) => ({
                             value: schedule.schedule_id,
-                            label: `${schedule.schedule_name}${schedule.is_default ? ' (Default)' : ''}`
+                            label: `${schedule.schedule_name}${schedule.is_default
+                              ? t('schedules.dialog.businessHours.defaultSuffix', {
+                                defaultValue: ' (Default)',
+                              })
+                              : ''}`
                           }))}
-                          placeholder="Choose a business-hours schedule"
+                          placeholder={t('schedules.dialog.fields.businessHoursSchedulePlaceholder', {
+                            defaultValue: 'Choose a business-hours schedule',
+                          })}
                         />
                       ) : (
                         <div className="text-xs text-[rgb(var(--color-text-500))]">
-                          No business-hours schedules are configured yet.
+                          {t('schedules.dialog.businessHours.noneConfigured', {
+                            defaultValue: 'No business-hours schedules are configured yet.',
+                          })}
                         </div>
                       )
                     ) : (
                       <div className="text-xs text-[rgb(var(--color-text-500))]">
                         {hasTenantDefaultBusinessHours
-                          ? 'Uses the tenant default business-hours schedule.'
-                          : 'No tenant default business-hours schedule is configured yet.'}
+                          ? t('schedules.dialog.businessHours.usingTenantDefault', {
+                            defaultValue: 'Uses the tenant default business-hours schedule.',
+                          })
+                          : t('schedules.dialog.businessHours.noTenantDefault', {
+                            defaultValue: 'No tenant default business-hours schedule is configured yet.',
+                          })}
                       </div>
                     )}
                   </div>
@@ -1116,7 +1331,7 @@ export default function WorkflowScheduleDialog({
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                       <CustomSelect
                         id="schedule-dialog-recurring-frequency"
-                        label="Frequency"
+                        label={t('schedules.dialog.fields.frequency', { defaultValue: 'Frequency' })}
                         value={recurringBuilder.frequency}
                         onValueChange={(value) => {
                           setRecurringBuilder((current) => ({
@@ -1125,16 +1340,27 @@ export default function WorkflowScheduleDialog({
                           }));
                         }}
                         options={[
-                          { value: 'daily', label: 'Daily' },
-                          { value: 'weekly', label: 'Weekly' },
-                          { value: 'monthly', label: 'Monthly' },
+                          {
+                            value: 'daily',
+                            label: t('schedules.recurrence.frequency.daily', { defaultValue: 'Daily' }),
+                          },
+                          {
+                            value: 'weekly',
+                            label: t('schedules.recurrence.frequency.weekly', { defaultValue: 'Weekly' }),
+                          },
+                          {
+                            value: 'monthly',
+                            label: t('schedules.recurrence.frequency.monthly', { defaultValue: 'Monthly' }),
+                          },
                         ]}
                       />
                       <div>
-                        <label className="text-sm font-medium text-[rgb(var(--color-text-700))]">Time</label>
+                        <label className="text-sm font-medium text-[rgb(var(--color-text-700))]">
+                          {t('schedules.dialog.fields.time', { defaultValue: 'Time' })}
+                        </label>
                         <TimePicker
                           id="schedule-dialog-recurring-time"
-                          label="Time"
+                          label={t('schedules.dialog.fields.time', { defaultValue: 'Time' })}
                           value={recurringBuilder.time}
                           onChange={(nextTime) => {
                             setRecurringBuilder((current) => ({
@@ -1147,7 +1373,7 @@ export default function WorkflowScheduleDialog({
                       {recurringBuilder.frequency === 'monthly' ? (
                         <Input
                           id="schedule-dialog-recurring-day-of-month"
-                          label="Day of month"
+                          label={t('schedules.dialog.fields.dayOfMonth', { defaultValue: 'Day of month' })}
                           type="number"
                           value={recurringBuilder.dayOfMonth}
                           onChange={(event) => {
@@ -1163,17 +1389,23 @@ export default function WorkflowScheduleDialog({
                       ) : (
                         <div className="flex items-end text-xs text-[rgb(var(--color-text-500))]">
                           {recurringBuilder.frequency === 'daily'
-                            ? 'Runs every day at the selected time.'
-                            : 'Choose one or more weekdays below.'}
+                            ? t('schedules.dialog.recurring.dailyHelper', {
+                              defaultValue: 'Runs every day at the selected time.',
+                            })
+                            : t('schedules.dialog.recurring.weeklyHelper', {
+                              defaultValue: 'Choose one or more weekdays below.',
+                            })}
                         </div>
                       )}
                     </div>
 
                     {recurringBuilder.frequency === 'weekly' && (
                       <div className="space-y-2">
-                        <div className="text-sm font-medium text-[rgb(var(--color-text-800))]">Weekdays</div>
+                        <div className="text-sm font-medium text-[rgb(var(--color-text-800))]">
+                          {t('schedules.dialog.fields.weekdays', { defaultValue: 'Weekdays' })}
+                        </div>
                         <div className="flex flex-wrap gap-2">
-                          {WEEKDAY_OPTIONS.map((weekday) => {
+                          {localizedWeekdayOptions.map((weekday) => {
                             const isSelected = recurringBuilder.weekdays.includes(weekday.value);
                             return (
                               <button
@@ -1207,7 +1439,10 @@ export default function WorkflowScheduleDialog({
                       <div className="rounded-md border border-[rgb(var(--color-border-200))] bg-white px-3 py-2 text-sm text-[rgb(var(--color-text-700))]">
                         <div>{recurringSummary}</div>
                         <div className="mt-1 text-xs text-[rgb(var(--color-text-500))]">
-                          Cron: {effectiveRecurringCron}
+                          {t('schedules.dialog.recurring.cronPreview', {
+                            defaultValue: 'Cron: {{cron}}',
+                            cron: effectiveRecurringCron,
+                          })}
                         </div>
                       </div>
                     ) : null}
@@ -1217,13 +1452,15 @@ export default function WorkflowScheduleDialog({
                     {unsupportedRecurringCron && (
                       <Alert variant="warning">
                         <AlertDescription>
-                          This schedule uses a custom cron expression. Keep editing it here, or switch back to the builder to replace it with a common pattern.
+                          {t('schedules.dialog.recurring.customCronWarning', {
+                            defaultValue: 'This schedule uses a custom cron expression. Keep editing it here, or switch back to the builder to replace it with a common pattern.',
+                          })}
                         </AlertDescription>
                       </Alert>
                     )}
                     <Input
                       id="schedule-dialog-cron"
-                      label="Cron"
+                      label={t('schedules.dialog.fields.cron', { defaultValue: 'Cron' })}
                       value={cron}
                       onChange={(event) => setCron(event.target.value)}
                       placeholder="0 9 * * 1-5"
@@ -1233,7 +1470,7 @@ export default function WorkflowScheduleDialog({
 
                 <WorkflowScheduleTimezonePicker
                   id="schedule-dialog-timezone"
-                  label="Timezone"
+                  label={t('schedules.dialog.fields.timezone', { defaultValue: 'Timezone' })}
                   value={timezone}
                   onValueChange={setTimezone}
                 />
@@ -1249,9 +1486,13 @@ export default function WorkflowScheduleDialog({
             <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background-50))] p-4">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">Payload</div>
+                  <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">
+                    {t('schedules.dialog.payload.title', { defaultValue: 'Payload' })}
+                  </div>
                   <div className="text-xs text-[rgb(var(--color-text-500))]">
-                    Author static input that will be passed into each scheduled run.
+                    {t('schedules.dialog.payload.description', {
+                      defaultValue: 'Author static input that will be passed into each scheduled run.',
+                    })}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1261,7 +1502,7 @@ export default function WorkflowScheduleDialog({
                     size="sm"
                     onClick={() => handlePayloadModeChange('form')}
                   >
-                    Form Mode
+                    {t('schedules.dialog.payload.mode.form', { defaultValue: 'Form Mode' })}
                   </Button>
                   <Button
                     id="schedule-dialog-mode-json"
@@ -1269,7 +1510,7 @@ export default function WorkflowScheduleDialog({
                     size="sm"
                     onClick={() => handlePayloadModeChange('json')}
                   >
-                    JSON Mode
+                    {t('schedules.dialog.payload.mode.json', { defaultValue: 'JSON Mode' })}
                   </Button>
                 </div>
               </div>
@@ -1299,10 +1540,14 @@ export default function WorkflowScheduleDialog({
                     </div>
                     <div className="space-y-1">
                       <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">
-                        No payload schema is available for this workflow yet.
+                        {t('schedules.dialog.payload.noSchema.title', {
+                          defaultValue: 'No payload schema is available for this workflow yet.',
+                        })}
                       </div>
                       <div className="text-sm text-[rgb(var(--color-text-600))]">
-                        Form fields will appear here once this workflow publishes a pinned payload schema.
+                        {t('schedules.dialog.payload.noSchema.description', {
+                          defaultValue: 'Form fields will appear here once this workflow publishes a pinned payload schema.',
+                        })}
                       </div>
                     </div>
                   </div>
@@ -1311,14 +1556,23 @@ export default function WorkflowScheduleDialog({
 
               {schemaErrors.length > 0 && (
                 <Alert variant="destructive" className="mt-3">
-                  <AlertTitle>Payload validation errors</AlertTitle>
+                  <AlertTitle>
+                    {t('schedules.dialog.validation.title', { defaultValue: 'Payload validation errors' })}
+                  </AlertTitle>
                   <AlertDescription>
                     <div className="space-y-1 text-xs">
                       {schemaErrors.slice(0, 6).map((error, index) => (
-                        <div key={`${error.path}-${index}`}>{error.path || 'payload'}: {error.message}</div>
+                        <div key={`${error.path}-${index}`}>
+                          {error.path || t('schedules.dialog.payload.rootKey', { defaultValue: 'payload' })}: {error.message}
+                        </div>
                       ))}
                       {schemaErrors.length > 6 && (
-                        <div>+{schemaErrors.length - 6} more…</div>
+                        <div>
+                          {t('schedules.dialog.validation.more', {
+                            defaultValue: '+{{count}} more…',
+                            count: schemaErrors.length - 6,
+                          })}
+                        </div>
                       )}
                     </div>
                   </AlertDescription>
@@ -1334,7 +1588,9 @@ export default function WorkflowScheduleDialog({
                     <div className="space-y-1 text-xs">
                       {serverIssues.map((issue, index) => (
                         <div key={`${issue.path ?? 'payload'}-${index}`}>
-                          {(issue.path ?? 'payload')}: {issue.message ?? 'Invalid value'}
+                          {(issue.path ?? t('schedules.dialog.payload.rootKey', { defaultValue: 'payload' }))}: {issue.message ?? t('schedules.dialog.validation.invalidValue', {
+                            defaultValue: 'Invalid value',
+                          })}
                         </div>
                       ))}
                     </div>

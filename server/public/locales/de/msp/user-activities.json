@@ -1,0 +1,419 @@
+{
+  "dashboard": {
+    "title": "Benutzeraktivitäten",
+    "viewSwitcher": {
+      "cards": "Karten",
+      "table": "Tabelle"
+    },
+    "sections": {
+      "notifications": "Benachrichtigungen",
+      "schedule": "Zeitplan"
+    },
+    "filteredTitle": "Gefilterte Aktivitäten",
+    "allActivitiesTitle": "Alle Aktivitäten"
+  },
+  "table": {
+    "title": {
+      "all": "Alle Aktivitäten"
+    },
+    "columns": {
+      "type": "Typ",
+      "title": "Titel",
+      "status": "Status",
+      "priority": "Priorität",
+      "dueDate": "Fälligkeitsdatum",
+      "actions": "Aktionen"
+    },
+    "values": {
+      "noDueDate": "Kein Fälligkeitsdatum",
+      "emDash": "—",
+      "unread": "Ungelesen",
+      "recurringEvent": "Wiederkehrendes Ereignis"
+    },
+    "actions": {
+      "refresh": "Aktualisieren",
+      "print": "Drucken"
+    },
+    "viewSwitcher": {
+      "flat": "Flach",
+      "grouped": "Gruppiert"
+    },
+    "states": {
+      "noActivities": "Keine Aktivitäten gefunden",
+      "noMatching": "Keine Aktivitäten entsprechen den Filtern"
+    },
+    "errors": {
+      "loadFailed": "Aktivitäten konnten nicht geladen werden. Bitte versuchen Sie es später erneut."
+    },
+    "activityTypes": {
+      "schedule": "Zeitplan",
+      "projectTask": "Projektaufgabe",
+      "ticket": "Ticket",
+      "timeEntry": "Zeiteintrag",
+      "workflowTask": "Workflow-Aufgabe",
+      "notification": "Benachrichtigung",
+      "unknown": "Unbekannt",
+      "activity": "Aktivität"
+    }
+  },
+  "card": {
+    "noDescription": "Keine Beschreibung angegeben",
+    "due": "Fällig: {{date}}",
+    "recurringEvent": "Wiederkehrendes Ereignis",
+    "unread": "Ungelesen",
+    "noMessage": "Keine Nachricht",
+    "estimatedHours": "Gesch.: {{hours}} h",
+    "duration": "Dauer: {{hours}} h",
+    "hasForm": "Formular vorhanden",
+    "roles": "Rollen: {{roles}}"
+  },
+  "drawer": {
+    "loading": "Wird geladen...",
+    "errorLoadingTitle": "Fehler beim Laden der Aktivitätsdetails",
+    "errorLoadingMessage": "Aktivitätsdetails konnten nicht geladen werden. Bitte versuchen Sie es später erneut.",
+    "userNotAuthenticated": "Benutzer nicht authentifiziert",
+    "scheduleEntryNotFound": "Zeitplan-Eintrag nicht gefunden",
+    "timeEntryNotFound": "Zeiteintrag nicht gefunden",
+    "unknownWorkItem": "Unbekanntes Arbeitselement",
+    "timeEntryDetailsTitle": "Zeiteintragsdetails",
+    "errorLoadingTimeEntry": "Fehler beim Laden des Zeiteintrags",
+    "workflowTaskTitle": "Workflow-Aufgabe",
+    "noAdditionalDetails": "Keine zusätzlichen Details verfügbar.",
+    "failedToLoadDocument": "Dokumentinhalt konnte nicht geladen werden",
+    "notificationNotFound": "Benachrichtigung nicht gefunden",
+    "failedToLoadTicket": "Ticketdetails konnten nicht geladen werden",
+    "failedToLoadTask": "Aufgabendetails konnten nicht geladen werden",
+    "unsupportedTitle": "Nicht unterstützter Aktivitätstyp",
+    "unsupportedDescription": "Dieser Aktivitätstyp ({{activityType}}) wird im Detailansicht nicht unterstützt.",
+    "saveDocumentSuccess": "Dokument erfolgreich gespeichert",
+    "saveDocumentError": "Dokument konnte nicht gespeichert werden",
+    "timeEntryUpdatedSuccess": "Zeiteintrag erfolgreich aktualisiert",
+    "timeEntryUpdatedError": "Zeiteintrag konnte nicht aktualisiert werden",
+    "backToNotification": "Zurück zur Benachrichtigung",
+    "documentTitleEdit": "Dokument bearbeiten",
+    "documentTitleViewer": "Dokumentanzeige",
+    "actions": {
+      "edit": "Bearbeiten",
+      "cancel": "Abbrechen",
+      "save": "Speichern",
+      "saving": "Wird gespeichert..."
+    },
+    "menu": {
+      "openMenu": "Menü öffnen",
+      "goToPage": "Zur Seite gehen",
+      "dismissError": "Aufgabe konnte nicht verworfen werden: {{message}}"
+    },
+    "retryLater": "Bitte versuchen Sie es später erneut."
+  },
+  "groupedView": {
+    "addGroup": "Gruppe hinzufügen",
+    "groupNamePlaceholder": "Gruppenname",
+    "ariaLabels": {
+      "dragToReorder": "Ziehen, um die Reihenfolge zu ändern",
+      "dragToReorderGroup": "Ziehen, um die Gruppenreihenfolge zu ändern",
+      "expandGroup": "Gruppe erweitern",
+      "collapseGroup": "Gruppe reduzieren",
+      "renameGroup": "Gruppe umbenennen",
+      "deleteGroup": "Gruppe löschen"
+    },
+    "dropActivitiesHere": "Aktivitäten hier ablegen",
+    "ungroupedHeading": "Nicht gruppiert",
+    "allInGroups": "Alle Aktivitäten befinden sich in Gruppen",
+    "columns": {
+      "title": "Titel",
+      "status": "Status",
+      "priority": "Priorität",
+      "dueDate": "Fälligkeitsdatum"
+    }
+  },
+  "printable": {
+    "defaultTitle": "Aktivitäten",
+    "ungroupedHeading": "Nicht gruppiert",
+    "empty": "(leer)"
+  },
+  "sections": {
+    "projects": {
+      "title": "Projektaufgaben",
+      "actions": {
+        "refresh": "Aktualisieren",
+        "filter": "Filtern",
+        "reset": "Zurücksetzen",
+        "viewAll": "Alle anzeigen"
+      },
+      "ariaLabels": {
+        "refresh": "Projektaufgaben aktualisieren",
+        "filter": "Projektaufgaben filtern"
+      },
+      "states": {
+        "loading": "Projektaktivitäten werden geladen...",
+        "empty": "Keine Projektaktivitäten gefunden"
+      },
+      "errors": {
+        "loadFailed": "Projektaktivitäten konnten nicht geladen werden. Bitte versuchen Sie es später erneut."
+      },
+      "filterDialog": {
+        "title": "Projektaufgaben filtern",
+        "description": "Wählen Sie Kriterien aus, um Projektaufgaben-Aktivitäten zu filtern.",
+        "fields": {
+          "search": "Suche",
+          "searchPlaceholder": "Titel, Beschreibung suchen",
+          "project": "Projekt",
+          "projectPlaceholder": "Projekt auswählen...",
+          "allProjects": "Alle Projekte",
+          "phase": "Phase",
+          "phasePlaceholder": "Phase auswählen...",
+          "phaseLoadingPlaceholder": "Phasen werden geladen...",
+          "phaseSelectFirstPlaceholder": "Wählen Sie zuerst ein Projekt",
+          "allPhases": "Alle Phasen",
+          "priority": "Priorität",
+          "priorityPlaceholder": "Priorität auswählen...",
+          "allPriorities": "Alle Prioritäten",
+          "dueDateRange": "Fälligkeitszeitraum",
+          "showClosedTasks": "Geschlossene Aufgaben anzeigen"
+        },
+        "actions": {
+          "reset": "Zurücksetzen",
+          "cancel": "Abbrechen",
+          "apply": "Filter anwenden"
+        }
+      }
+    },
+    "tickets": {
+      "title": "Tickets",
+      "actions": {
+        "refresh": "Aktualisieren",
+        "filter": "Filtern",
+        "reset": "Zurücksetzen",
+        "viewAll": "Alle anzeigen"
+      },
+      "ariaLabels": {
+        "refresh": "Tickets aktualisieren",
+        "filter": "Tickets filtern"
+      },
+      "states": {
+        "loading": "Ticket-Aktivitäten werden geladen...",
+        "empty": "Keine Ticket-Aktivitäten gefunden"
+      },
+      "errors": {
+        "loadFailed": "Ticket-Aktivitäten konnten nicht geladen werden. Bitte versuchen Sie es später erneut."
+      },
+      "filterDialog": {
+        "title": "Tickets filtern",
+        "description": "Wählen Sie Kriterien aus, um Ticket-Aktivitäten zu filtern.",
+        "fields": {
+          "search": "Suche",
+          "searchPlaceholder": "Titel, Beschreibung, Ticket-Nr. suchen",
+          "client": "Kunde",
+          "contact": "Kontakt",
+          "status": "Status",
+          "statusPlaceholder": "Status auswählen...",
+          "allStatuses": "Alle Status",
+          "priority": "Priorität",
+          "priorityPlaceholder": "Priorität auswählen...",
+          "allPriorities": "Alle Prioritäten",
+          "dueDateRange": "Fälligkeitszeitraum",
+          "showClosedTickets": "Geschlossene Tickets anzeigen"
+        },
+        "actions": {
+          "reset": "Zurücksetzen",
+          "cancel": "Abbrechen",
+          "apply": "Filter anwenden"
+        }
+      }
+    },
+    "workflowTasks": {
+      "title": "Workflow-Aufgaben",
+      "drawerTitle": "Workflow-Aufgaben",
+      "actions": {
+        "refresh": "Aktualisieren",
+        "filter": "Filtern",
+        "reset": "Zurücksetzen",
+        "viewAll": "Alle anzeigen"
+      },
+      "ariaLabels": {
+        "refresh": "Workflow-Aufgaben aktualisieren",
+        "filter": "Workflow-Aufgaben filtern"
+      },
+      "states": {
+        "loading": "Workflow-Aufgaben-Aktivitäten werden geladen...",
+        "empty": "Keine Workflow-Aufgaben-Aktivitäten gefunden"
+      },
+      "errors": {
+        "loadFailed": "Workflow-Aufgaben-Aktivitäten konnten nicht geladen werden. Bitte versuchen Sie es später erneut."
+      },
+      "filterDialog": {
+        "title": "Workflow-Aufgaben filtern",
+        "description": "Wählen Sie Kriterien aus, um Workflow-Aufgaben-Aktivitäten zu filtern.",
+        "fields": {
+          "search": "Suche",
+          "searchPlaceholder": "Titel, Beschreibung suchen",
+          "workflowExecution": "Workflow-Ausführung",
+          "workflowExecutionPlaceholder": "Workflow-Ausführung auswählen...",
+          "allExecutions": "Alle Ausführungen",
+          "priority": "Priorität",
+          "priorityPlaceholder": "Priorität auswählen...",
+          "allPriorities": "Alle Prioritäten",
+          "priorityHigh": "Hoch",
+          "priorityMedium": "Mittel",
+          "priorityLow": "Niedrig",
+          "dueDateRange": "Fälligkeitszeitraum",
+          "showClosedTasks": "Geschlossene Aufgaben anzeigen",
+          "includeHiddenTasks": "Ausgeblendete Aufgaben einschließen"
+        },
+        "actions": {
+          "reset": "Zurücksetzen",
+          "cancel": "Abbrechen",
+          "apply": "Filter anwenden"
+        }
+      },
+      "listDrawer": {
+        "searchPlaceholder": "Aufgaben suchen...",
+        "filters": "Filter",
+        "refresh": "Aktualisieren",
+        "sortBy": "Sortieren nach:",
+        "sortOptions": {
+          "priority": "Priorität",
+          "dueDate": "Fälligkeitsdatum",
+          "createdAt": "Erstellungsdatum",
+          "title": "Titel"
+        },
+        "ascending": "Aufsteigend",
+        "descending": "Absteigend",
+        "states": {
+          "loading": "Workflow-Aufgaben werden geladen...",
+          "empty": "Keine Workflow-Aufgaben gefunden"
+        },
+        "errors": {
+          "loadFailed": "Workflow-Aufgaben konnten nicht geladen werden. Bitte versuchen Sie es später erneut."
+        }
+      }
+    },
+    "schedule": {
+      "title": "Zeitplan",
+      "actions": {
+        "refresh": "Aktualisieren",
+        "filter": "Filtern",
+        "reset": "Zurücksetzen",
+        "viewAll": "Alle anzeigen"
+      },
+      "states": {
+        "loading": "Zeitplan-Aktivitäten werden geladen...",
+        "empty": "Keine Zeitplan-Aktivitäten gefunden"
+      },
+      "errors": {
+        "loadFailed": "Zeitplan-Aktivitäten konnten nicht geladen werden. Bitte versuchen Sie es später erneut.",
+        "refreshFailed": "Zeitplan-Aktivitäten konnten nicht aktualisiert werden. Bitte versuchen Sie es später erneut."
+      },
+      "filterDialog": {
+        "title": "Zeitplan-Einträge filtern",
+        "description": "Wählen Sie Kriterien aus, um Zeitplan-Aktivitäten zu filtern.",
+        "fields": {
+          "search": "Suche",
+          "searchPlaceholder": "Titel, Beschreibung suchen",
+          "dateRange": "Datumsbereich",
+          "workItemType": "Zugehöriger Arbeitselementtyp",
+          "workItemTypePlaceholder": "Arbeitselementtyp auswählen...",
+          "allTypes": "Alle Typen",
+          "ticket": "Ticket",
+          "projectTask": "Projektaufgabe",
+          "workflowTask": "Workflow-Aufgabe",
+          "showClosedEntries": "Geschlossene Einträge anzeigen",
+          "showRecurringOnly": "Nur wiederkehrende anzeigen"
+        },
+        "actions": {
+          "reset": "Zurücksetzen",
+          "cancel": "Abbrechen",
+          "apply": "Filter anwenden"
+        }
+      }
+    },
+    "notifications": {
+      "title": "Benachrichtigungen",
+      "actions": {
+        "refresh": "Aktualisieren",
+        "filter": "Filtern",
+        "reset": "Zurücksetzen",
+        "viewAll": "Alle anzeigen"
+      },
+      "ariaLabels": {
+        "refresh": "Benachrichtigungen aktualisieren",
+        "filter": "Benachrichtigungen filtern"
+      },
+      "tabs": {
+        "unread": "Ungelesen",
+        "all": "Alle",
+        "read": "Gelesen"
+      },
+      "states": {
+        "loading": "Benachrichtigungs-Aktivitäten werden geladen...",
+        "empty": "Keine Benachrichtigungs-Aktivitäten gefunden"
+      },
+      "errors": {
+        "loadFailed": "Benachrichtigungs-Aktivitäten konnten nicht geladen werden. Bitte versuchen Sie es später erneut."
+      },
+      "filterDialog": {
+        "title": "Benachrichtigungen filtern",
+        "description": "Wählen Sie Kriterien aus, um Benachrichtigungs-Aktivitäten zu filtern.",
+        "fields": {
+          "status": "Status",
+          "unreadOnly": "Nur ungelesen",
+          "showRead": "Gelesene anzeigen",
+          "category": "Kategorie",
+          "categoryPlaceholder": "Kategorie auswählen...",
+          "allCategories": "Alle Kategorien",
+          "categories": {
+            "tickets": "Tickets",
+            "projects": "Projekte",
+            "invoices": "Rechnungen",
+            "system": "System"
+          },
+          "dateRange": "Datumsbereich"
+        },
+        "actions": {
+          "reset": "Zurücksetzen",
+          "cancel": "Abbrechen",
+          "apply": "Filter anwenden"
+        }
+      }
+    }
+  },
+  "pickers": {
+    "priority": {
+      "loading": "Wird geladen...",
+      "empty": "Keine Prioritäten verfügbar",
+      "none": "Keine"
+    },
+    "status": {
+      "loading": "Wird geladen...",
+      "empty": "Keine Status verfügbar",
+      "closedSuffix": "geschlossen"
+    }
+  },
+  "filters": {
+    "labels": {
+      "types": "Typen:",
+      "tickets": "Tickets:",
+      "tasks": "Aufgaben:",
+      "priority": "Priorität",
+      "dueDate": "Fälligkeitsdatum",
+      "showClosed": "Geschlossene anzeigen"
+    },
+    "activityTypeOptions": {
+      "schedule": "Zeitplan",
+      "projectTask": "Projektaufgaben",
+      "ticket": "Tickets",
+      "workflowTask": "Workflow-Aufgaben"
+    },
+    "placeholders": {
+      "allBoards": "Alle Boards",
+      "allStatuses": "Alle Status",
+      "allProjects": "Alle Projekte",
+      "allPriorities": "Alle Prioritäten",
+      "selectPriority": "Priorität auswählen..."
+    },
+    "actions": {
+      "reset": "Zurücksetzen"
+    },
+    "statusClosedSuffix": " (geschlossen)"
+  }
+}

@@ -1,0 +1,270 @@
+{
+  "management": {
+    "title": "Zgłoszenia serwisowe",
+    "description": "Zarządzaj definicjami zgłoszeń serwisowych w stanie wersji roboczej, opublikowanej i zarchiwizowanej.",
+    "showArchived": "Pokaż zarchiwizowane",
+    "showArchivedWithCount": "Pokaż zarchiwizowane ({{count}})",
+    "createBlank": "Utwórz pusty",
+    "startFromExample": "Zacznij od przykładu",
+    "loading": "Ładowanie zgłoszeń serwisowych…",
+    "columns": {
+      "name": "Nazwa",
+      "description": "Opis",
+      "state": "Stan",
+      "updated": "Zaktualizowano",
+      "actions": "Akcje"
+    },
+    "actionsFor": "Akcje dla {{name}}",
+    "actions": {
+      "duplicate": "Duplikuj",
+      "archive": "Archiwizuj",
+      "unarchive": "Przywróć z archiwum"
+    },
+    "lifecycleLabels": {
+      "published": "Opublikowano",
+      "archived": "Zarchiwizowano",
+      "draftChanges": "Zmiany w wersji roboczej",
+      "draft": "Wersja robocza"
+    },
+    "templateOption": "{{templateName}} ({{providerDisplayName}})"
+  },
+  "editor": {
+    "backNav": "Powrót do zgłoszeń serwisowych",
+    "loading": "Ładowanie edytora definicji…",
+    "notFound": "Nie znaleziono definicji zgłoszenia serwisowego.",
+    "currentState": "Aktualny stan: {{state}}",
+    "saveDraft": "Zapisz wersję roboczą",
+    "createDraft": "Utwórz wersję roboczą",
+    "publish": "Publikuj",
+    "publishing": "Publikowanie…",
+    "basics": {
+      "title": "Podstawy",
+      "name": "Nazwa",
+      "icon": "Ikona",
+      "iconSelected": "Wybrano: {{label}}",
+      "noIconSelected": "Nie wybrano ikony",
+      "description": "Opis",
+      "category": "Kategoria",
+      "sortOrder": "Kolejność sortowania",
+      "save": "Zapisz podstawy",
+      "uncategorized": "Bez kategorii"
+    },
+    "preview": {
+      "title": "Podgląd",
+      "badge": "Podgląd na żywo",
+      "cardSubheading": "Karta w katalogu",
+      "formSubheading": "Formularz zgłoszenia"
+    },
+    "linkage": {
+      "title": "Powiązanie",
+      "linkedService": "Powiązana usługa",
+      "searchPlaceholder": "Przeszukaj katalog usług",
+      "search": "Szukaj",
+      "clear": "Wyczyść",
+      "select": "Wybierz",
+      "noDescription": "Brak opisu",
+      "unset": "-"
+    },
+    "form": {
+      "title": "Formularz",
+      "authorFields": "Pola autora",
+      "fieldType": "Typ pola",
+      "addField": "Dodaj pole",
+      "noFields": "Nie skonfigurowano żadnych pól.",
+      "preview": "Podgląd wyrenderowanego formularza",
+      "label": "Etykieta",
+      "helpText": "Tekst pomocy",
+      "required": "Wymagane",
+      "defaultValue": "Wartość domyślna",
+      "options": "Opcje (jedna w wierszu: wartość:etykieta)",
+      "moveUp": "Przenieś w górę",
+      "moveDown": "Przenieś w dół",
+      "remove": "Usuń",
+      "selectOption": "Wybierz opcję",
+      "checkboxDefaults": {
+        "none": "Brak domyślnej",
+        "checked": "Zaznaczone",
+        "unchecked": "Niezaznaczone"
+      },
+      "types": {
+        "short-text": "short-text",
+        "long-text": "long-text",
+        "select": "select",
+        "checkbox": "checkbox",
+        "date": "date",
+        "file-upload": "file-upload"
+      }
+    },
+    "execution": {
+      "title": "Wykonanie",
+      "executionProvider": "Dostawca wykonania",
+      "formBehaviorProvider": "Dostawca zachowania formularza",
+      "visibilityProvider": "Dostawca widoczności",
+      "providerDisplay": "{{displayName}} ({{executionMode}})",
+      "ticketRouting": {
+        "title": "Konfiguracja routingu zgłoszeń",
+        "board": "Tablica",
+        "boardPlaceholder": "Wybierz tablicę",
+        "status": "Status",
+        "statusPlaceholder": "Wybierz status",
+        "assignedUser": "Przypisany użytkownik",
+        "assignedUserPlaceholder": "Nieprzypisany",
+        "category": "Kategoria",
+        "categoryPlaceholder": "Wybierz kategorię",
+        "priority": "Priorytet",
+        "priorityPlaceholder": "Wybierz priorytet",
+        "impact": "Wpływ",
+        "impactPlaceholder": "Wybierz wpływ",
+        "urgency": "Pilność",
+        "urgencyPlaceholder": "Wybierz pilność",
+        "priorityCalculated": "Priorytet (obliczony)",
+        "selectImpactAndUrgency": "Wybierz wpływ i pilność",
+        "priorityFormula": "{{label}} (Wpływ {{impact}} x Pilność {{urgency}})",
+        "titleFieldKey": "Klucz pola tytułu",
+        "descriptionPrefix": "Prefiks opisu",
+        "save": "Zapisz routing zgłoszeń"
+      },
+      "workflow": {
+        "title": "Konfiguracja workflow",
+        "workflowId": "ID workflow",
+        "workflowIdPlaceholder": "workflow-id",
+        "inputMapping": "Mapowanie wejść workflow (obiekt JSON)",
+        "inputMappingExample": "Przykład: {\"requestedBy\":\"payload.request_title\",\"ticketReference\":\"ticketId\"}",
+        "save": "Zapisz ustawienia workflow"
+      },
+      "advanced": {
+        "title": "Zaawansowane zachowanie formularza",
+        "config": "Konfiguracja zachowania formularza (obiekt JSON)",
+        "save": "Zapisz konfigurację zachowania formularza"
+      },
+      "visibility": {
+        "title": "Konfiguracja widoczności",
+        "config": "Konfiguracja widoczności (obiekt JSON)",
+        "save": "Zapisz konfigurację widoczności"
+      },
+      "fields": {
+        "executionProvider": "Dostawca wykonania",
+        "executionConfig": "Konfiguracja wykonania",
+        "formBehaviorProvider": "Dostawca zachowania formularza",
+        "visibilityProvider": "Dostawca widoczności"
+      },
+      "itilImpact": {
+        "1": "1 - Wysoki (dotyczy krytycznej funkcji biznesowej)",
+        "2": "2 - Średnio-wysoki (dotyczy ważnej funkcji)",
+        "3": "3 - Średni (dotyczy drobnej funkcji)",
+        "4": "4 - Średnio-niski (minimalny wpływ)",
+        "5": "5 - Niski (brak wpływu na biznes)"
+      },
+      "itilUrgency": {
+        "1": "1 - Wysoki (praca nie może być kontynuowana)",
+        "2": "2 - Średnio-wysoki (praca jest poważnie utrudniona)",
+        "3": "3 - Średni (praca trwa z ograniczeniami)",
+        "4": "4 - Średnio-niski (drobna niedogodność)",
+        "5": "5 - Niski (praca przebiega normalnie)"
+      }
+    },
+    "publishSection": {
+      "title": "Publikacja",
+      "currentDraftState": "Aktualny stan wersji roboczej",
+      "lastPublishedVersion": "Ostatnia opublikowana wersja",
+      "versionPrefix": "v{{number}}",
+      "neverPublished": "Nigdy nie opublikowano",
+      "publishedAt": "Opublikowano o",
+      "draftUpdatedAt": "Wersja robocza zaktualizowana",
+      "validationTitle": "Walidacja publikacji",
+      "validationPassed": "Walidacja publikacji zakończona pomyślnie.",
+      "errors": {
+        "nameRequired": "Nazwa jest wymagana",
+        "linkedServiceMissing": "Powiązana usługa już nie istnieje",
+        "executionBoardRequired": "Wykonanie: Tablica kierowania zgłoszeń jest wymagana",
+        "executionStatusRequired": "Wykonanie: Status kierowania zgłoszeń jest wymagany",
+        "executionPriorityRequired": "Wykonanie: Priorytet kierowania zgłoszeń jest wymagany",
+        "executionItilImpactUrgencyMismatch": "Wykonanie: Kierowanie zgłoszeń wymaga zarówno wpływu, jak i pilności ITIL, gdy priorytet nie jest ustawiony",
+        "unknownExecutionProvider": "Nieznany dostawca wykonania: {{key}}",
+        "unknownFormBehaviorProvider": "Nieznany dostawca zachowania formularza: {{key}}",
+        "unknownVisibilityProvider": "Nieznany dostawca widoczności: {{key}}"
+      }
+    },
+    "submissions": {
+      "title": "Przesłane zgłoszenia",
+      "empty": "Brak przesłanych zgłoszeń dla tej definicji.",
+      "viewDetail": "Zobacz szczegóły",
+      "detailTitle": "Szczegóły przesłanego zgłoszenia",
+      "submissionId": "ID przesłanego zgłoszenia",
+      "requesterUser": "Zgłaszający użytkownik",
+      "client": "Klient",
+      "contact": "Kontakt",
+      "ticketReference": "Odniesienie do zgłoszenia",
+      "workflowReference": "Odniesienie do workflow",
+      "executionError": "Błąd wykonania",
+      "submittedAtStatus": "{{date}} · {{status}}",
+      "loadingTicket": "Ładowanie…",
+      "ticketLoadError": "Nie udało się wczytać szczegółów zgłoszenia."
+    }
+  },
+  "icons": {
+    "file-text": "Zgłoszenie ogólne",
+    "user-plus": "Nowy użytkownik",
+    "user-minus": "Zakończenie zatrudnienia",
+    "shield-check": "Bezpieczeństwo",
+    "key-round": "Dostęp",
+    "laptop": "Laptop",
+    "monitor": "Stacja robocza",
+    "printer": "Drukarka",
+    "hard-drive": "Pamięć masowa",
+    "server": "Serwer",
+    "network": "Sieć",
+    "wifi": "Wi-Fi",
+    "app-window": "Oprogramowanie",
+    "mail": "E-mail",
+    "phone": "Telefon",
+    "folder-open": "Udostępnione pliki",
+    "badge-help": "Pomoc",
+    "clear": "Wyczyść ikonę"
+  },
+  "messages": {
+    "success": {
+      "definitionDuplicated": "Definicja zduplikowana",
+      "definitionArchived": "Definicja zarchiwizowana",
+      "definitionUnarchived": "Definicja przywrócona z archiwum",
+      "draftCreated": "Utworzono wersję roboczą",
+      "draftCreatedFromExample": "Utworzono wersję roboczą z przykładu: {{name}}",
+      "draftSaved": "Wersja robocza zapisana",
+      "definitionPublished": "Definicja opublikowana",
+      "basicsUpdated": "Zaktualizowano podstawy",
+      "linkedServiceCleared": "Wyczyszczono powiązaną usługę",
+      "linkedService": "Powiązano {{name}}",
+      "fieldAdded": "Pole dodane",
+      "fieldRemoved": "Pole usunięte",
+      "executionProviderUpdated": "Zaktualizowano dostawcę wykonania",
+      "formBehaviorProviderUpdated": "Zaktualizowano dostawcę zachowania formularza",
+      "visibilityProviderUpdated": "Zaktualizowano dostawcę widoczności",
+      "ticketRoutingUpdated": "Zaktualizowano konfigurację routingu zgłoszeń",
+      "workflowConfigurationUpdated": "Zaktualizowano konfigurację workflow",
+      "formBehaviorConfigUpdated": "Zaktualizowano konfigurację zachowania formularza",
+      "visibilityConfigUpdated": "Zaktualizowano konfigurację widoczności"
+    },
+    "error": {
+      "loadFailed": "Nie udało się wczytać zgłoszeń serwisowych",
+      "duplicateFailed": "Nie udało się zduplikować definicji",
+      "archiveFailed": "Nie udało się zarchiwizować definicji",
+      "unarchiveFailed": "Nie udało się przywrócić definicji z archiwum",
+      "createDraftFailed": "Nie udało się utworzyć wersji roboczej",
+      "createFromExampleFailed": "Nie udało się utworzyć z przykładu",
+      "saveDraftFailed": "Nie udało się zapisać wersji roboczej",
+      "publishFailed": "Nie udało się opublikować definicji",
+      "publishBlockedByValidation": "Nie można jeszcze opublikować – popraw {{count}} problem(y) walidacji wymienion(e) poniżej w sekcji \"Walidacja publikacji\".",
+      "basicsUpdateFailed": "Nie udało się zaktualizować podstaw",
+      "addFieldFailed": "Nie udało się dodać pola formularza",
+      "executionProviderUpdateFailed": "Nie udało się zaktualizować dostawcy wykonania",
+      "formBehaviorProviderUpdateFailed": "Nie udało się zaktualizować dostawcy zachowania formularza",
+      "visibilityProviderUpdateFailed": "Nie udało się zaktualizować dostawcy widoczności",
+      "workflowMappingNotObject": "Mapowanie wejść workflow musi być obiektem JSON",
+      "workflowConfigurationInvalid": "Nieprawidłowy JSON konfiguracji workflow",
+      "formBehaviorNotObject": "Konfiguracja zachowania formularza musi być obiektem JSON",
+      "formBehaviorInvalid": "Nieprawidłowy JSON zachowania formularza",
+      "visibilityNotObject": "Konfiguracja widoczności musi być obiektem JSON",
+      "visibilityInvalid": "Nieprawidłowy JSON widoczności"
+    }
+  }
+}

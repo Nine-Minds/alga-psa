@@ -175,7 +175,7 @@
       "actions": {
         "manage": "Verwalten",
         "upgrade": "Upgrade",
-        "downgrade": "Downgrade"
+        "downgrade": "Herabstufen"
       },
       "manageTitle": "Dienst {{service}} verwalten",
       "genericServiceLabel": "Dienst",
@@ -195,7 +195,7 @@
           "price": "Ab 99 $/Monat"
         },
         "cybersecurity": {
-          "title": "Cybersecurity",
+          "title": "Cybersicherheit",
           "description": "Erweitertes Sicherheitsmonitoring und Bedrohungsprävention. Einschließlich Firewall-Management, Endpunktschutz und regelmäßiger Sicherheitsbewertungen.",
           "price": "Ab 199 $/Monat"
         }
@@ -363,7 +363,7 @@
       "account": "Konto",
       "clientDetails": "Unternehmensdetails",
       "userManagement": "Benutzerverwaltung",
-      "visibilityGroups": "Visibility Groups"
+      "visibilityGroups": "Sichtbarkeitsgruppen"
     },
     "fields": {
       "clientLogo": "Unternehmenslogo",

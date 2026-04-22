@@ -91,7 +91,7 @@ Primary entity table with Citus-compatible composite keys.
 | `quote_id` | UUID | Primary identifier |
 | `quote_number` | TEXT | Human-readable number (Q-0001) |
 | `client_id` | UUID | Associated client |
-| `contact_name_id` | UUID | Primary contact |
+| `contact_id` | UUID | Primary contact |
 | `title` | TEXT | Quote title |
 | `description` | TEXT | Scope of work / description |
 | `status` | TEXT | Current lifecycle status |
@@ -104,7 +104,7 @@ Primary entity table with Citus-compatible composite keys.
 | `total_amount` | BIGINT | Final total (cents) |
 | `currency_code` | TEXT | Currency (defaults to tenant currency) |
 | `po_number` | TEXT | Client PO reference |
-| `notes` | TEXT | Internal notes (not visible to client) |
+| `internal_notes` | TEXT | Internal notes (not visible to client) |
 | `client_notes` | TEXT | Client-facing notes |
 | `terms_and_conditions` | TEXT | T&C text |
 | `version` | INT | Version number (1-based) |
@@ -119,7 +119,6 @@ Primary entity table with Citus-compatible composite keys.
 | `converted_contract_id` | UUID | Link to converted contract |
 | `converted_invoice_id` | UUID | Link to converted invoice |
 | `template_id` | UUID | Document template override |
-| `approval_status` | TEXT | Internal approval state |
 
 Indexes: `(tenant, client_id)`, `(tenant, status)`, `(tenant, quote_number)`, `(tenant, parent_quote_id)`
 
@@ -588,19 +587,28 @@ Runtime flag: defined in `packages/core/src/lib/featureFlagRuntime.ts`
 
 | File | Purpose |
 |------|---------|
-| `server/seeds/dev/migrations/20260320100000_create_quotes_tables.cjs` | Core tables migration |
-| `server/seeds/dev/migrations/20260320101000_add_tax_source_to_quotes.cjs` | Tax source field |
-| `server/seeds/dev/migrations/20260320102000_create_quote_document_templates.cjs` | Document template tables |
+| `server/migrations/20260320100000_create_quotes_tables.cjs` | Core tables migration |
+| `server/migrations/20260320101000_add_tax_source_to_quotes.cjs` | Tax source field |
+| `server/migrations/20260320102000_create_quote_document_templates.cjs` | Document template tables |
+| `server/migrations/20260320103000_create_standard_quote_document_templates.cjs` | Standard document templates |
+| `server/migrations/20260320104000_create_quote_document_template_assignments.cjs` | Template assignment table |
+| `server/migrations/20260320105000_add_quote_approval_permission.cjs` | `quotes:approve` permission |
+| `server/migrations/20260320160000_expand_quote_status_check_for_approval.cjs` | Adds `pending_approval` / `approved` statuses |
+| `server/migrations/20260320170000_allow_quote_number_revisions.cjs` | Quote number reuse across revisions |
+| `server/migrations/20260320180000_add_quote_to_document_associations_entity_type.cjs` | Quote-document associations |
+| `server/migrations/20260409120000_add_cost_to_quote_items.cjs` | Cost tracking on quote items |
+| `server/migrations/20260415120000_add_location_to_quote_items.cjs` | Location tracking on quote items |
+| `server/migrations/20260416120000_add_by_location_standard_quote_template.cjs` | By-location standard template |
 | `server/seeds/dev/13_next_number.cjs` | QUOTE entity type seed |
 
 ### Routes
 
 | Route | Purpose |
 |-------|---------|
-| `/msp/billing?tab=quotes` | Billing dashboard quotes tab |
-| `/msp/billing/quotes/[quoteId]` | Individual quote detail page |
+| `/msp/billing?tab=quotes` | Billing dashboard quotes tab (quote detail rendered in-page, not via a dedicated route) |
 | `/msp/quote-approvals` | Approval dashboard |
 | `/msp/quote-document-templates` | Document template editor |
+| `/client-portal/billing/quotes/[quoteId]` | Client portal quote detail |
 
 ### Tests
 

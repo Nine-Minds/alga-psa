@@ -145,6 +145,43 @@
         "tenant": "domyślne tenanta",
         "system": "domyślne systemu"
       }
+    },
+    "hierarchyTable": {
+      "title": "Hierarchia preferencji językowych",
+      "description": "Przy ustalaniu języka dla interfejsu i powiadomień e-mail Alga sprawdza te elementy w kolejności i zatrzymuje się na pierwszym dopasowaniu.",
+      "columns": {
+        "priority": "Priorytet",
+        "source": "Źródło języka",
+        "appliesTo": "Dotyczy",
+        "whereSet": "Gdzie ustawić"
+      },
+      "rows": {
+        "userPreference": {
+          "source": "Indywidualna preferencja użytkownika",
+          "appliesTo": "Wszyscy użytkownicy",
+          "whereSet": "Profil użytkownika"
+        },
+        "clientUserLanguage": {
+          "source": "Język specyficzny dla klienta",
+          "appliesTo": "Użytkownicy portalu klienta (dla konkretnego klienta)",
+          "whereSet": "Szczegóły klienta"
+        },
+        "clientPortalDefault": {
+          "source": "Domyślna wartość portalu klienta",
+          "appliesTo": "Wszyscy użytkownicy portalu klienta",
+          "whereSet": "Ustawienia MSP → Portal klienta"
+        },
+        "organizationDefault": {
+          "source": "Domyślna wartość organizacji",
+          "appliesTo": "Wszyscy użytkownicy (personel MSP i portal klienta)",
+          "whereSet": "Ustawienia MSP → Język"
+        },
+        "systemDefault": {
+          "source": "Domyślna wartość systemu (angielski)",
+          "appliesTo": "Zastępczy",
+          "whereSet": "Zdefiniowane systemowo"
+        }
+      }
     }
   },
   "yes": "Tak",
@@ -934,5 +971,26 @@
     "addOnDescription": {
       "ai_assistant": "Odblokuj czat AI, pomoc w dokumentach, pomoc w pasku bocznym oraz narzędzia AI dla przepływów pracy Twojego zespołu."
     }
+  },
+  "auth": {
+    "messages": {
+      "handoffMissingToken": "Brak lub nieprawidłowy token przekazania logowania. Zaloguj się ponownie.",
+      "handoffFinalizeFailed": "Nie mogliśmy zakończyć logowania. Spróbuj zalogować się ponownie.",
+      "handoffNetworkIssue": "Wykryto problem z siecią podczas finalizowania logowania. Spróbuj ponownie."
+    }
+  },
+  "form": {
+    "selectPlaceholder": "Wybierz...",
+    "clearSelection": "Wyczyść wybór",
+    "fromDate": "Od",
+    "toDate": "Do",
+    "noResults": "Nie znaleziono wyników",
+    "searchPlaceholder": "Szukaj..."
+  },
+  "tagFilter": {
+    "placeholder": "Filtruj według tagów...",
+    "filter": "Filtruj",
+    "selectedCount": "Wybrano: {{count}}",
+    "clearAll": "Wyczyść wszystko"
   }
 }

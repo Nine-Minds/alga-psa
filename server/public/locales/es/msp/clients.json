@@ -27,7 +27,7 @@
       "active": "Activo",
       "inactive": "Inactivo",
       "loading": "Cargando...",
-      "na": "N/A",
+      "na": "N/D",
       "none": "Ninguno"
     },
     "no": "No",
@@ -87,6 +87,7 @@
     "bulkDeleteSuccess": "{{count}} {{clientsLabel}} {{verb}} se eliminó correctamente.",
     "bulkInactiveFailed": "{{count}} {{clientsLabel}} no se pudo marcar como inactivo.",
     "bulkInactiveWithContactsSuccess": "{{clientCount}} {{clientsLabel}} y {{contactCount}} {{contactsLabel}} se han marcado como inactivos correctamente.",
+    "singleInactiveSuccess": "{{name}} se ha marcado como inactivo correctamente.",
     "bulkInactiveSuccess": "{{count}} {{clientsLabel}} {{verb}} se ha marcado como inactivo correctamente.",
     "bulkInactiveShortSuccess": "{{count}} {{clientsLabel}} {{verb}} se ha marcado como inactivo.",
     "bulkInactiveWithContactsShortSuccess": "{{clientCount}} {{clientsLabel}} y {{contactCount}} {{contactsLabel}} se han marcado como inactivos.",
@@ -129,7 +130,9 @@
       "bucketUsageRecord": "registro de uso de bucket",
       "bucketUsageRecords": "registros de uso de bucket"
     },
-    "deleteSelectedPrompt": "¿Está seguro de que desea eliminar {{count}} seleccionado {{clientsLabel}}? Esta acción no se puede deshacer."
+    "deleteSelectedPrompt": "¿Está seguro de que desea eliminar {{count}} seleccionado {{clientsLabel}}? Esta acción no se puede deshacer.",
+    "singleInactiveWithContactsSuccess_one": "{{name}} y {{count}} contacto han sido desactivados correctamente.",
+    "singleInactiveWithContactsSuccess_other": "{{name}} y {{count}} contactos han sido desactivados correctamente."
   },
   "clientDetails": {
     "title": "Detalles del cliente",
@@ -208,7 +211,12 @@
     "status": {
       "label": "Estado",
       "helper": "Establecer el estado del cliente como activo o inactivo"
-    }
+    },
+    "entraSyncStarted": "Sincronización de Entra iniciada. ID de ejecución: {{runId}}",
+    "inboundDomainAdded": "Dominio de correo entrante añadido",
+    "inboundDomainAddFailed": "Error al añadir el dominio",
+    "inboundDomainRemoved": "Dominio de correo entrante eliminado",
+    "inboundDomainRemoveFailed": "Error al eliminar el dominio"
   },
   "quickAddClient": {
     "title": "Agregar nuevo cliente",
@@ -670,7 +678,7 @@
   "clientLanguagePreference": {
     "title": "Configuración de idioma del cliente",
     "label": "Idioma predeterminado para contactos",
-    "description": "Establezca el idioma predeterminado para todos los contactos en {{clientName}}. Los usuarios individuales pueden anular esto en su configuración personal.",
+    "description": "Se aplica a cada usuario del portal de {{clientName}} a menos que haya establecido su propia preferencia en su perfil.",
     "selectPlaceholder": "Seleccione un idioma",
     "updating": "Actualizando preferencia de idioma...",
     "loadError": "No se pudo cargar la preferencia de idioma del cliente:",
@@ -738,7 +746,7 @@
     "createDrawerTitle": "Crear nueva tasa impositiva",
     "loadingTaxDetails": "Cargando detalles de impuestos...",
     "loadTaxRegionsError": "No se pudieron cargar las regiones fiscales.",
-    "na": "N/A",
+    "na": "N/D",
     "noDefaultAssigned": "No se ha asignado ningún tipo impositivo predeterminado.",
     "noDescription": "Sin descripción",
     "saving": "Guardando...",

@@ -27,6 +27,7 @@ import { ColumnDefinition } from '@alga-psa/types';
 import { IContract } from '@alga-psa/types';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { DateRangePicker, type DateRange } from '@alga-psa/ui/components/DateRangePicker';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const getDefaultStartDate = () => {
   const date = new Date();
@@ -50,22 +51,23 @@ const buildDateRangeFilter = (range: DateRange): BillingCycleDateRange | undefin
   return { from, to };
 };
 
-const MONTH_OPTIONS = [
-  { value: 1, label: 'January' },
-  { value: 2, label: 'February' },
-  { value: 3, label: 'March' },
-  { value: 4, label: 'April' },
-  { value: 5, label: 'May' },
-  { value: 6, label: 'June' },
-  { value: 7, label: 'July' },
-  { value: 8, label: 'August' },
-  { value: 9, label: 'September' },
-  { value: 10, label: 'October' },
-  { value: 11, label: 'November' },
-  { value: 12, label: 'December' },
-] as const;
+const MONTH_KEY_BY_NUMBER = {
+  1: 'january',
+  2: 'february',
+  3: 'march',
+  4: 'april',
+  5: 'may',
+  6: 'june',
+  7: 'july',
+  8: 'august',
+  9: 'september',
+  10: 'october',
+  11: 'november',
+  12: 'december',
+} as const;
 
 const BillingCycles: React.FC = () => {
+  const { t } = useTranslation('msp/invoicing');
   const [billingCycles, setBillingCycles] = useState<{ [clientId: string]: BillingCycleType }>({});
   const [billingSchedules, setBillingSchedules] = useState<{
     [clientId: string]: { billingCycle: BillingCycleType; anchor: { dayOfMonth: number | null; monthOfYear: number | null; dayOfWeek: number | null; referenceDate: string | null } }
@@ -206,7 +208,9 @@ const BillingCycles: React.FC = () => {
       setError(null);
     } catch (error) {
       console.error('Error fetching data:', error);
-      setError('Failed to fetch data. Please try again later.');
+      setError(t('billingCycles.errors.loadFailed', {
+        defaultValue: 'Failed to fetch data. Please try again later.',
+      }));
     } finally {
       setLoading(false);
     }
@@ -214,51 +218,95 @@ const BillingCycles: React.FC = () => {
 
   const formatAnchorSummary = (clientId: string): string => {
     const schedule = billingSchedules[clientId];
-    if (!schedule) return '—';
+    if (!schedule) {
+      return t('billingCycles.values.dash', { defaultValue: '—' });
+    }
     const cycle = schedule.billingCycle;
     const anchor = schedule.anchor;
 
     switch (cycle) {
       case 'weekly':
-        return anchor.dayOfWeek ? `Weekday ${anchor.dayOfWeek}` : 'Rolling';
+        return anchor.dayOfWeek
+          ? t('billingCycles.values.weekday', {
+            day: anchor.dayOfWeek,
+            defaultValue: 'Weekday {{day}}',
+          })
+          : t('billingCycles.values.rolling', { defaultValue: 'Rolling' });
       case 'bi-weekly':
-        return anchor.referenceDate ? `Starts ${anchor.referenceDate}` : 'Rolling';
+        return anchor.referenceDate
+          ? t('billingCycles.values.starts', {
+            date: anchor.referenceDate,
+            defaultValue: 'Starts {{date}}',
+          })
+          : t('billingCycles.values.rolling', { defaultValue: 'Rolling' });
       case 'monthly':
-        return `Day ${anchor.dayOfMonth ?? 1}`;
+        return t('billingCycles.values.day', {
+          day: anchor.dayOfMonth ?? 1,
+          defaultValue: 'Day {{day}}',
+        });
       case 'quarterly':
       case 'semi-annually':
       case 'annually': {
-        const monthLabel = MONTH_OPTIONS.find(m => m.value === (anchor.monthOfYear ?? 1))?.label ?? String(anchor.monthOfYear ?? 1);
-        return `${monthLabel} ${anchor.dayOfMonth ?? 1}`;
+        const monthNumber = anchor.monthOfYear ?? 1;
+        const monthKey = MONTH_KEY_BY_NUMBER[monthNumber as keyof typeof MONTH_KEY_BY_NUMBER];
+        const monthLabel = monthKey
+          ? t(`billingCycles.months.${monthKey}`, {
+            defaultValue: monthKey.charAt(0).toUpperCase() + monthKey.slice(1),
+          })
+          : String(monthNumber);
+        return t('billingCycles.values.monthDay', {
+          month: monthLabel,
+          day: anchor.dayOfMonth ?? 1,
+          defaultValue: '{{month}} {{day}}',
+        });
       }
       default:
-        return '—';
+        return t('billingCycles.values.dash', { defaultValue: '—' });
     }
   };
 
+  const formatBillingCycle = (cycle: BillingCycleType): string =>
+    t(`billingCycles.cycles.${cycle}`, {
+      defaultValue: cycle
+        .split('-')
+        .map((word): string => word.charAt(0).toUpperCase() + word.slice(1))
+        .join('-'),
+    });
+
   const columns: ColumnDefinition<Partial<IClient>>[] = [
     {
-      title: 'Client',
+      title: t('billingCycles.columns.client', { defaultValue: 'Client' }),
       dataIndex: 'client_name',
     },
     {
-      title: 'Contract',
+      title: t('billingCycles.columns.contract', { defaultValue: 'Contract' }),
       dataIndex: 'client_id',
       render: (value: string) => {
         const assignments = clientContracts[value] ?? [];
         if (assignments.length === 0) {
-          return <span className="text-muted-foreground">No active assignments</span>;
+          return (
+            <span className="text-muted-foreground">
+              {t('billingCycles.values.noActiveAssignments', {
+                defaultValue: 'No active assignments',
+              })}
+            </span>
+          );
         }
 
         return (
           <div className="space-y-1">
             {assignments.map((assignment) => {
-              const contractName = contracts[assignment.contractId]?.contract_name ?? 'Unknown';
+              const contractName = contracts[assignment.contractId]?.contract_name ?? t('billingCycles.values.unknown', {
+                defaultValue: 'Unknown',
+              });
               return (
                 <div key={assignment.clientContractId} className="space-y-0.5">
                   <div>{contractName}</div>
                   <div className="text-xs text-muted-foreground">
-                    Assignment {assignment.clientContractId.slice(0, 8)}
+                    {t('billingCycles.values.assignmentId', {
+                      id: assignment.clientContractId.slice(0, 8),
+                      defaultValue: 'Assignment {{id}}',
+                    })}
                   </div>
                 </div>
               );
@@ -268,30 +316,35 @@ const BillingCycles: React.FC = () => {
       },
     },
     {
-      title: 'Current Billing Cycle',
+      title: t('billingCycles.columns.currentBillingCycle', {
+        defaultValue: 'Current Billing Cycle',
+      }),
       dataIndex: 'client_id',
-      render: (value: string, record: Partial<IClient>) => {
+      render: (value: string) => {
         const cycle = billingSchedules[value]?.billingCycle ?? billingCycles[value];
-        if (!cycle) return 'Not set';
+        if (!cycle) {
+          return t('billingCycles.values.notSet', { defaultValue: 'Not set' });
+        }
 
-        // Convert to title case for display
-        return cycle.split('-').map((word):string =>
-          word.charAt(0).toUpperCase() + word.slice(1)
-        ).join('-');
+        return formatBillingCycle(cycle);
       },
     },
     {
-      title: 'Anchor',
+      title: t('billingCycles.columns.anchor', { defaultValue: 'Anchor' }),
       dataIndex: 'client_id',
       render: (value: string) => formatAnchorSummary(value),
     },
     {
-      title: 'Actions',
+      title: t('billingCycles.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'client_id',
       render: (value: string) => (
         <div className="flex items-center gap-2">
           <Button id="billing-cycles-view-client" asChild variant="outline" size="sm">
-            <Link href={`/msp/clients/${value}?tab=Billing`}>View Client Billing</Link>
+            <Link href={`/msp/clients/${value}?tab=Billing`}>
+              {t('billingCycles.actions.viewClientBilling', {
+                defaultValue: 'View Client Billing',
+              })}
+            </Link>
           </Button>
         </div>
       ),
@@ -312,8 +365,14 @@ const BillingCycles: React.FC = () => {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h2 className="text-2xl font-bold">Billing Cycles</h2>
-          <Tooltip content="Configure client billing schedules and preview the invoice windows they create for client-cadence recurring services.">
+          <h2 className="text-2xl font-bold">
+            {t('billingCycles.title', { defaultValue: 'Billing Cycles' })}
+          </h2>
+          <Tooltip
+            content={t('billingCycles.tooltip', {
+              defaultValue: 'Configure client billing schedules and preview the invoice windows they create for client-cadence recurring services.',
+            })}
+          >
             <Info className="h-4 w-4 text-muted-foreground" />
           </Tooltip>
         </div>
@@ -322,15 +381,18 @@ const BillingCycles: React.FC = () => {
       <Card>
         <CardHeader className="flex flex-col gap-4">
           <div className="text-sm text-muted-foreground">
-            Client billing schedules define invoice windows for recurring lines that invoice on the client billing schedule.
-            Contract-anniversary lines can follow their own cadence and are not previewed here.
+            {t('billingCycles.description', {
+              defaultValue: 'Client billing schedules define invoice windows for recurring lines that invoice on the client billing schedule. Contract-anniversary lines can follow their own cadence and are not previewed here.',
+            })}
           </div>
           <div className="flex flex-wrap items-end gap-4">
             <div className="relative flex-1 min-w-[240px] max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Search clients..."
+                placeholder={t('billingCycles.searchPlaceholder', {
+                  defaultValue: 'Search clients...',
+                })}
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
@@ -341,7 +403,9 @@ const BillingCycles: React.FC = () => {
             </div>
             <DateRangePicker
               id="billing-cycle-date-range"
-              label="Billing cycle date range"
+              label={t('billingCycles.dateRange', {
+                defaultValue: 'Billing cycle date range',
+              })}
               value={pendingDateRange}
               onChange={(range) => {
                 setPendingDateRange(range);
@@ -355,7 +419,7 @@ const BillingCycles: React.FC = () => {
                 setCurrentPage(1);
               }}
             >
-              Search
+              {t('billingCycles.search', { defaultValue: 'Search' })}
             </Button>
           </div>
         </CardHeader>
@@ -370,7 +434,9 @@ const BillingCycles: React.FC = () => {
               layout="stacked"
               className="py-10 text-muted-foreground"
               spinnerProps={{ size: 'md' }}
-              text="Loading billing cycles"
+              text={t('billingCycles.loading', {
+                defaultValue: 'Loading billing cycles',
+              })}
             />
           ) : (
             <DataTable

@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useRef, useMemo, useState } from 'react';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useBillingFrequencyOptions, useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -25,7 +26,6 @@ import {
   createCustomDraftQuoteItem,
   createDraftDiscountQuoteItem,
   createDraftQuoteItemFromService,
-  formatDraftQuoteMoney,
   type DraftQuoteItem,
 } from './quoteLineItemDraft';
 
@@ -201,7 +201,10 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
   onAddLocationGroup,
   onRemoveLocationGroup,
 }) => {
-  const { t } = useTranslation('features/billing');
+  const { t } = useTranslation('msp/quotes');
+  const { formatCurrency } = useFormatters();
+  const billingFrequencyOptions = useBillingFrequencyOptions();
+  const formatBillingFrequency = useFormatBillingFrequency();
   const [servicePickerValue, setServicePickerValue] = useState('');
   const [isDiscountOpen, setIsDiscountOpen] = useState(false);
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
@@ -244,6 +247,25 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
   const phaseSections = useMemo(
     (): QuotePhaseSection[] => buildPhaseSections(items),
     [items]
+  );
+
+  const formatBillingMethod = (billingMethod?: DraftQuoteItem['billing_method'] | null): string => {
+    switch (billingMethod) {
+      case 'fixed':
+        return t('quoteLineItems.billingMethods.fixed', { defaultValue: 'Fixed' });
+      case 'hourly':
+        return t('quoteLineItems.billingMethods.hourly', { defaultValue: 'Hourly' });
+      case 'usage':
+        return t('quoteLineItems.billingMethods.usage', { defaultValue: 'Usage Based' });
+      case 'per_unit':
+        return t('quoteLineItems.billingMethods.perUnit', { defaultValue: 'Per Unit' });
+      default:
+        return billingMethod ?? '—';
+    }
+  };
+
+  const formatMoney = (minorUnits: number): string => (
+    formatCurrency((minorUnits || 0) / 100, currencyCode)
   );
 
   const updateItem = (localId: string, patch: Partial<DraftQuoteItem>) => {
@@ -363,13 +385,29 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
   const getDiscountTargetLabel = (item: DraftQuoteItem): string => {
     if (item.applies_to_item_id) {
       const target = items.find((i) => (i.quote_item_id ?? i.local_id) === item.applies_to_item_id);
-      return target ? `on "${target.description}"` : 'on specific item';
+      return target
+        ? t('quoteLineItems.discounts.targets.namedItem', {
+          defaultValue: 'on "{{name}}"',
+          name: target.description,
+        })
+        : t('quoteLineItems.discounts.targets.specificItem', {
+          defaultValue: 'on specific item',
+        });
     }
     if (item.applies_to_service_id) {
       const target = items.find((i) => i.service_id === item.applies_to_service_id);
-      return target ? `on ${target.service_name || 'service'}` : 'on specific service';
+      return target
+        ? t('quoteLineItems.discounts.targets.namedService', {
+          defaultValue: 'on {{name}}',
+          name: target.service_name || t('quoteLineItems.labels.service', { defaultValue: 'service' }),
+        })
+        : t('quoteLineItems.discounts.targets.specificService', {
+          defaultValue: 'on specific service',
+        });
     }
-    return 'on full quote';
+    return t('quoteLineItems.discounts.targets.fullQuote', {
+      defaultValue: 'on full quote',
+    });
   };
 
   const renderItemRows = (sectionItems: DraftQuoteItem[]) => sectionItems.map((item) => {
@@ -399,7 +437,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
           <div className="space-y-2">
             {isDiscount && (
               <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
-                Discount
+                {t('quoteLineItems.discounts.badge', { defaultValue: 'Discount' })}
                 {item.discount_type === 'percentage' ? ` (${item.discount_percentage}%)` : ''}
               </span>
             )}
@@ -413,7 +451,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
                 ? getDiscountTargetLabel(item)
                 : (
                   <>
-                    {item.service_name || 'Custom item'}
+                    {item.service_name || t('quoteLineItems.labels.customItem', { defaultValue: 'Custom item' })}
                     {item.service_sku ? ` • ${item.service_sku}` : ''}
                     {item.unit_of_measure ? ` • ${item.unit_of_measure}` : ''}
                   </>
@@ -422,11 +460,15 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
             </div>
             {!isDiscount && (
               <div className="space-y-1">
-                <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Phase / Section</div>
+                <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {t('quoteLineItems.labels.phaseSection', { defaultValue: 'Phase / Section' })}
+                </div>
                 <Input
                   value={item.phase ?? ''}
                   onChange={(event) => updateItem(item.local_id, { phase: event.target.value.trim() || null })}
-                  placeholder="e.g. Discovery, Rollout, Ongoing"
+                  placeholder={t('quoteLineItems.placeholders.phaseSection', {
+                    defaultValue: 'e.g. Discovery, Rollout, Ongoing',
+                  })}
                   disabled={disabled}
                 />
               </div>
@@ -436,14 +478,16 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
         <td className="px-3 py-3 align-top text-muted-foreground">
           {isDiscount ? (
             <span className="text-xs text-amber-600 dark:text-amber-400">
-              {item.discount_type === 'percentage' ? 'Percentage' : 'Fixed'}
+              {item.discount_type === 'percentage'
+                ? t('quoteLineItems.discounts.types.percentage', { defaultValue: 'Percentage' })
+                : t('quoteLineItems.discounts.types.fixed', { defaultValue: 'Fixed' })}
             </span>
           ) : (
             <>
-              {item.billing_method ? item.billing_method.replace('_', ' ') : '—'}
+              {formatBillingMethod(item.billing_method)}
               {item.is_recurring && item.billing_frequency ? (
                 <div className="mt-2 text-xs text-muted-foreground">
-                  {item.billing_frequency.replace('_', ' ')}
+                  {formatBillingFrequency(item.billing_frequency)}
                 </div>
               ) : null}
             </>
@@ -457,7 +501,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
               <Checkbox
                 id={`quote-line-optional-${item.local_id}`}
                 checked={item.is_optional}
-                label="Optional"
+                label={t('quoteLineItems.labels.optional', { defaultValue: 'Optional' })}
                 disabled={disabled}
                 containerClassName="mb-0"
                 onChange={(event) => updateItem(item.local_id, { is_optional: event.target.checked })}
@@ -465,7 +509,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
               <Checkbox
                 id={`quote-line-recurring-${item.local_id}`}
                 checked={item.is_recurring}
-                label="Recurring"
+                label={t('quoteLineItems.labels.recurring', { defaultValue: 'Recurring' })}
                 disabled={disabled}
                 containerClassName="mb-0"
                 onChange={(event) => updateItem(item.local_id, {
@@ -479,12 +523,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
                   value={item.billing_frequency ?? 'monthly'}
                   onValueChange={(value) => updateItem(item.local_id, { billing_frequency: value })}
                   disabled={disabled}
-                  options={[
-                    { value: 'weekly', label: 'Weekly' },
-                    { value: 'monthly', label: 'Monthly' },
-                    { value: 'quarterly', label: 'Quarterly' },
-                    { value: 'annually', label: 'Annually' },
-                  ]}
+                  options={billingFrequencyOptions}
                 />
               ) : null}
             </div>
@@ -514,7 +553,9 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
           ) : (
             <div className="space-y-1">
               <InlineEditableValue
-                displayValue={item.needs_price ? 'Set price' : formatDraftQuoteMoney(item.unit_price, currencyCode)}
+                displayValue={item.needs_price
+                  ? t('quoteLineItems.labels.setPrice', { defaultValue: 'Set price' })
+                  : formatMoney(item.unit_price)}
                 editValue={(item.unit_price / 100).toFixed(2)}
                 type="number"
                 min="0"
@@ -527,17 +568,26 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
                 }}
               />
               {item.needs_price && (
-                <p className="text-xs text-amber-600 dark:text-amber-400">No price in {currencyCode}</p>
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  {t('quoteLineItems.labels.noPriceInCurrency', {
+                    defaultValue: 'No price in {{currencyCode}}',
+                    currencyCode,
+                  })}
+                </p>
               )}
               {!isDiscount && item.service_item_kind === 'product' && item.cost != null && item.cost !== 0 && (() => {
                 if (item.cost_currency && item.cost_currency !== currencyCode) {
                   return (
                     <Tooltip
-                      content={`Markup can't be calculated because cost is tracked in ${item.cost_currency} and this quote is in ${currencyCode}.`}
+                      content={t('quoteLineItems.markup.unavailableTooltip', {
+                        defaultValue: 'Markup can\'t be calculated because cost is tracked in {{costCurrency}} and this quote is in {{quoteCurrency}}.',
+                        costCurrency: item.cost_currency,
+                        quoteCurrency: currencyCode,
+                      })}
                     >
                       <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                         <Info className="h-3 w-3" aria-hidden="true" />
-                        Markup unavailable
+                        {t('quoteLineItems.markup.unavailable', { defaultValue: 'Markup unavailable' })}
                       </span>
                     </Tooltip>
                   );
@@ -552,7 +602,11 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
                     : 'text-emerald-600 dark:text-emerald-400';
                 return (
                   <p className={`text-xs ${colorClass}`}>
-                    {markup >= 0 ? '+' : ''}{markup.toFixed(1)}% markup
+                    {t('quoteLineItems.markup.badge', {
+                      defaultValue: '{{sign}}{{value}}% markup',
+                      sign: markup >= 0 ? '+' : '',
+                      value: markup.toFixed(1),
+                    })}
                   </p>
                 );
               })()}
@@ -560,7 +614,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
           )}
         </td>
         <td className={`px-3 py-3 align-top font-medium ${isDiscount ? 'text-amber-700 dark:text-amber-400' : 'text-foreground'}`}>
-          {isDiscount ? `- ${formatDraftQuoteMoney(resolvedTotal, currencyCode)}` : formatDraftQuoteMoney(resolvedTotal, currencyCode)}
+          {isDiscount ? `- ${formatMoney(resolvedTotal)}` : formatMoney(resolvedTotal)}
         </td>
         <td className="px-3 py-3 align-top">
           <Button
@@ -570,7 +624,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
             onClick={() => removeItem(item.local_id)}
             disabled={disabled}
           >
-            Remove
+            {t('quoteLineItems.actions.remove', { defaultValue: 'Remove' })}
           </Button>
         </td>
       </tr>
@@ -604,14 +658,14 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
                 <table className="min-w-full divide-y divide-border text-sm">
                   <thead className="bg-background text-left">
                     <tr>
-                      <th className="px-3 py-2 font-medium">Move</th>
-                      <th className="px-3 py-2 font-medium">Item</th>
-                      <th className="px-3 py-2 font-medium">Billing</th>
-                      <th className="px-3 py-2 font-medium">Flags</th>
-                      <th className="px-3 py-2 font-medium">Qty</th>
-                      <th className="px-3 py-2 font-medium">Unit Price</th>
-                      <th className="px-3 py-2 font-medium">Total</th>
-                      <th className="px-3 py-2 font-medium">Actions</th>
+                      <th className="px-3 py-2 font-medium">{t('quoteLineItems.columns.move', { defaultValue: 'Move' })}</th>
+                      <th className="px-3 py-2 font-medium">{t('quoteLineItems.columns.item', { defaultValue: 'Item' })}</th>
+                      <th className="px-3 py-2 font-medium">{t('quoteLineItems.columns.billing', { defaultValue: 'Billing' })}</th>
+                      <th className="px-3 py-2 font-medium">{t('quoteLineItems.columns.flags', { defaultValue: 'Flags' })}</th>
+                      <th className="px-3 py-2 font-medium">{t('quoteLineItems.columns.quantity', { defaultValue: 'Qty' })}</th>
+                      <th className="px-3 py-2 font-medium">{t('quoteLineItems.columns.unitPrice', { defaultValue: 'Unit Price' })}</th>
+                      <th className="px-3 py-2 font-medium">{t('quoteLineItems.columns.total', { defaultValue: 'Total' })}</th>
+                      <th className="px-3 py-2 font-medium">{t('quoteLineItems.columns.actions', { defaultValue: 'Actions' })}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border bg-background">
@@ -635,7 +689,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
         onAddCustom={(description) => handleAddCustomItemForLocation(description, locationId)}
         disabled={disabled}
         currencyCode={currencyCode}
-        placeholder={t('quotes.lineItems.searchPlaceholder', { defaultValue: 'Search or type custom item name...' })}
+        placeholder={t('quoteLineItems.placeholders.servicePicker', { defaultValue: 'Search or type custom item name...' })}
       />
     </div>
   );
@@ -658,7 +712,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
       <div className="flex flex-col gap-3 rounded-t-md bg-muted/40 px-4 py-3 md:flex-row md:items-start md:justify-between">
         <div className="flex-1 space-y-2">
           <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {t('quotes.locations.groupHeading', {
+            {t('quoteLineItems.locations.groupHeading', {
               defaultValue: 'Location {{index}}',
               index: index + 1,
             })}
@@ -677,7 +731,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
                     : item
                 ));
               }}
-              placeholder={t('quotes.locations.pickerPlaceholder', { defaultValue: 'Select a location' })}
+              placeholder={t('quoteLineItems.locations.pickerPlaceholder', { defaultValue: 'Select a location' })}
               disabled={disabled}
               excludeLocationIds={exclude}
               allowClear={false}
@@ -687,7 +741,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
             <LocationAddress location={group.location} showName={false} />
           ) : (
             <p className="text-xs text-muted-foreground">
-              {t('quotes.locations.unassigned', { defaultValue: 'Items without a location are listed here until one is chosen.' })}
+              {t('quoteLineItems.locations.unassigned', { defaultValue: 'Items without a location are listed here until one is chosen.' })}
             </p>
           )}
         </div>
@@ -701,7 +755,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
               onClick={() => onRemoveLocationGroup(group.location_id)}
               disabled={disabled}
             >
-              {t('quotes.locations.removeGroup', { defaultValue: 'Remove location' })}
+              {t('quoteLineItems.locations.removeGroup', { defaultValue: 'Remove location' })}
             </Button>
           </div>
         ) : null}
@@ -714,9 +768,9 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
     return (
       <div className="flex flex-wrap items-center justify-end gap-6 border-t border-border bg-background/70 px-4 py-2 text-sm">
         <span className="text-xs uppercase tracking-wide text-muted-foreground">
-          {t('quotes.locations.subtotal', { defaultValue: 'Location subtotal' })}
+          {t('quoteLineItems.locations.subtotal', { defaultValue: 'Location subtotal' })}
         </span>
-        <span className="font-semibold">{formatDraftQuoteMoney(totals.subtotal - totals.discount_total, currencyCode)}</span>
+        <span className="font-semibold">{formatMoney(totals.subtotal - totals.discount_total)}</span>
       </div>
     );
   };
@@ -724,7 +778,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
   return (
     <section className="space-y-4 rounded-lg border border-border bg-background/40 p-4">
       <div className="space-y-3">
-        <h3 className="text-base font-semibold">Line Items</h3>
+        <h3 className="text-base font-semibold">{t('quoteLineItems.title', { defaultValue: 'Line Items' })}</h3>
         {!showLocationGroups && renderServicePicker(defaultLocation?.location_id ?? null, 'root')}
         <div className="flex flex-wrap items-center gap-2">
           <Button
@@ -735,7 +789,9 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
             onClick={() => setIsDiscountOpen(!isDiscountOpen)}
             disabled={disabled}
           >
-            {isDiscountOpen ? 'Hide Discount' : 'Add Discount'}
+            {isDiscountOpen
+              ? t('quoteLineItems.actions.hideDiscount', { defaultValue: 'Hide Discount' })
+              : t('quoteLineItems.actions.addDiscount', { defaultValue: 'Add Discount' })}
           </Button>
           {onAddLocationGroup ? (
             <Button
@@ -746,13 +802,13 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
               onClick={() => onAddLocationGroup()}
               disabled={disabled || locations.length < 2}
             >
-              {t('quotes.locations.addLocationButton', { defaultValue: '+ Add location' })}
+              {t('quoteLineItems.locations.addLocationButton', { defaultValue: '+ Add location' })}
             </Button>
           ) : null}
         </div>
         {onAddLocationGroup && locations.length < 2 ? (
           <p className="text-xs text-muted-foreground">
-            {t('quotes.locations.needMoreLocations', {
+            {t('quoteLineItems.locations.needMoreLocations', {
               defaultValue: 'This client only has one active location. Add a second location in Client settings to enable multi-site quoting.',
             })}
           </p>
@@ -767,8 +823,14 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
             onValueChange={(value) => setDiscountType(value as 'percentage' | 'fixed')}
             disabled={disabled}
             options={[
-              { value: 'percentage', label: 'Percentage discount' },
-              { value: 'fixed', label: 'Fixed discount' },
+              {
+                value: 'percentage',
+                label: t('quoteLineItems.discounts.percentage', { defaultValue: 'Percentage discount' }),
+              },
+              {
+                value: 'fixed',
+                label: t('quoteLineItems.discounts.fixed', { defaultValue: 'Fixed discount' }),
+              },
             ]}
           />
           <Input
@@ -790,9 +852,18 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
             }}
             disabled={disabled}
             options={[
-              { value: 'quote', label: 'Whole quote' },
-              { value: 'item', label: 'Specific item' },
-              { value: 'service', label: 'Specific service' },
+              {
+                value: 'quote',
+                label: t('quoteLineItems.discounts.fullQuote', { defaultValue: 'Whole quote' }),
+              },
+              {
+                value: 'item',
+                label: t('quoteLineItems.discounts.item', { defaultValue: 'Specific item' }),
+              },
+              {
+                value: 'service',
+                label: t('quoteLineItems.discounts.service', { defaultValue: 'Specific service' }),
+              },
             ]}
           />
           {discountTargetType === 'item' ? (
@@ -801,7 +872,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
               value={discountTargetValue || undefined}
               onValueChange={(value) => setDiscountTargetValue(value)}
               disabled={disabled}
-              placeholder="Select item"
+              placeholder={t('quoteLineItems.placeholders.selectItem', { defaultValue: 'Select item' })}
               options={itemTargetOptions.map((item) => ({
                 value: item.local_id,
                 label: item.description,
@@ -813,23 +884,27 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
               value={discountTargetValue || undefined}
               onValueChange={(value) => setDiscountTargetValue(value)}
               disabled={disabled}
-              placeholder="Select service"
+              placeholder={t('quoteLineItems.placeholders.selectService', { defaultValue: 'Select service' })}
               options={serviceTargetOptions}
             />
           ) : (
             <div className="rounded-md border border-dashed border-amber-300 dark:border-amber-700 px-3 py-2 text-sm text-muted-foreground">
-              Applies to the full quote subtotal
+              {t('quoteLineItems.discounts.fullQuoteSubtotal', {
+                defaultValue: 'Applies to the full quote subtotal',
+              })}
             </div>
           )}
           <Button id="quote-line-add-discount" type="button" onClick={() => { handleAddDiscount(); setIsDiscountOpen(false); }} disabled={disabled}>
-            Add Discount
+            {t('quoteLineItems.actions.addDiscount', { defaultValue: 'Add Discount' })}
           </Button>
         </div>
       )}
 
       {items.length === 0 && !showLocationGroups ? (
         <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-          No line items yet. Use the catalog search above to add your first item.
+          {t('quoteLineItems.empty', {
+            defaultValue: 'No line items yet. Use the catalog search above to add your first item.',
+          })}
         </div>
       ) : showLocationGroups ? (
         <div className="space-y-4">
@@ -840,7 +915,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
                 {renderServicePicker(group.location_id ?? null, `loc-${group.key}`)}
                 {group.items.length === 0 ? (
                   <div className="rounded-md border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
-                    {t('quotes.locations.emptyGroup', { defaultValue: 'No items yet for this location.' })}
+                    {t('quoteLineItems.locations.emptyGroup', { defaultValue: 'No items yet for this location.' })}
                   </div>
                 ) : (
                   renderPhaseSections(buildPhaseSections(group.items), `loc-${group.key}`)

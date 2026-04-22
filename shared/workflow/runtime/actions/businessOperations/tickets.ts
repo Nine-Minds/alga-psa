@@ -16,7 +16,8 @@ import {
   rethrowAsStandardError,
   parseJsonMaybe,
   buildBlockNoteWithMentions,
-  attachDocumentToTicket
+  attachDocumentToTicket,
+  type TenantTxContext,
 } from './shared';
 import { withWorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
 
@@ -351,6 +352,135 @@ const reconcileWorkflowTicketAdditionalUsers = async (
   );
 };
 
+const generateTagColors = (text: string): { backgroundColor: string; textColor: string } => {
+  let hash = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    hash = text.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  const hue = Math.abs(hash) % 360;
+  const saturation = 70;
+  const lightness = 85;
+
+  const hslToHex = (h: number, s: number, l: number): string => {
+    const normalizedLightness = l / 100;
+    const a = (s * Math.min(normalizedLightness, 1 - normalizedLightness)) / 100;
+    const f = (n: number) => {
+      const k = (n + h / 30) % 12;
+      const color = normalizedLightness - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+      return Math.round(255 * color).toString(16).padStart(2, '0');
+    };
+
+    return `#${f(0)}${f(8)}${f(4)}`.toUpperCase();
+  };
+
+  return {
+    backgroundColor: hslToHex(hue, saturation, lightness),
+    textColor: '#2C3E50',
+  };
+};
+
+const normalizeTicketTags = (tags: string[] | undefined): string[] => {
+  if (!Array.isArray(tags)) return [];
+
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+
+  tags.forEach((tag) => {
+    const trimmed = tag.trim();
+    if (!trimmed || seen.has(trimmed)) return;
+    seen.add(trimmed);
+    normalized.push(trimmed);
+  });
+
+  return normalized;
+};
+
+const ensureTicketTagMappings = async (
+  tx: TenantTxContext,
+  ticketId: string,
+  tags: string[] | undefined
+): Promise<void> => {
+  const normalizedTags = normalizeTicketTags(tags);
+  if (normalizedTags.length === 0) {
+    return;
+  }
+
+  for (const tagText of normalizedTags) {
+    const { backgroundColor, textColor } = generateTagColors(tagText);
+
+    let definition = await tx.trx('tag_definitions')
+      .where({
+        tenant: tx.tenantId,
+        tag_text: tagText,
+        tagged_type: 'ticket',
+      })
+      .first();
+
+    if (!definition) {
+      const definitionRow = {
+        tenant: tx.tenantId,
+        tag_id: uuidv4(),
+        tag_text: tagText,
+        tagged_type: 'ticket',
+        board_id: null,
+        background_color: backgroundColor,
+        text_color: textColor,
+      };
+
+      try {
+        await tx.trx('tag_definitions').insert(definitionRow);
+        definition = definitionRow;
+      } catch (error: unknown) {
+        const errorCode =
+          typeof error === 'object' && error !== null && 'code' in error
+            ? String((error as { code?: unknown }).code)
+            : undefined;
+        const errorMessage = error instanceof Error ? error.message : String(error);
+
+        if (errorCode === '23505' || /duplicate|unique/i.test(errorMessage)) {
+          definition = await tx.trx('tag_definitions')
+            .where({
+              tenant: tx.tenantId,
+              tag_text: tagText,
+              tagged_type: 'ticket',
+            })
+            .first();
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    if (!definition?.tag_id) {
+      throw new Error(`Failed to resolve ticket tag definition for "${tagText}"`);
+    }
+
+    try {
+      await tx.trx('tag_mappings').insert({
+        tenant: tx.tenantId,
+        mapping_id: uuidv4(),
+        tag_id: definition.tag_id,
+        tagged_id: ticketId,
+        tagged_type: 'ticket',
+        created_by: tx.actorUserId,
+      });
+    } catch (error: unknown) {
+      const errorCode =
+        typeof error === 'object' && error !== null && 'code' in error
+          ? String((error as { code?: unknown }).code)
+          : undefined;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      if (errorCode === '23505' || /duplicate|unique/i.test(errorMessage)) {
+        continue;
+      }
+
+      throw error;
+    }
+  }
+};
+
 export function registerTicketActions(): void {
   const registry = getActionRegistryV2();
 
@@ -399,7 +529,7 @@ export function registerTicketActions(): void {
         'ticket-subcategory',
         ['board_id', 'category_id']
       ),
-      tags: z.array(z.string()).optional().describe('Optional tags (stored in ticket attributes)'),
+      tags: z.array(z.string()).optional().describe('Optional tags (applied to ticket tags and mirrored into ticket attributes)'),
       custom_fields: z.record(z.unknown()).optional().describe('Optional custom fields (stored in ticket attributes)'),
       attributes: z.record(z.unknown()).optional().describe('Additional attributes (merged into ticket.attributes)'),
       initial_comment: z.object({
@@ -444,7 +574,8 @@ export function registerTicketActions(): void {
       const mergedAttributes: Record<string, any> = {
         ...(input.attributes ?? {})
       };
-      if (input.tags?.length) mergedAttributes.tags = input.tags;
+      const normalizedTags = normalizeTicketTags(input.tags);
+      if (normalizedTags.length) mergedAttributes.tags = normalizedTags;
       if (input.custom_fields) mergedAttributes.custom_fields = input.custom_fields;
 
       if (input.status_id) {
@@ -501,6 +632,8 @@ export function registerTicketActions(): void {
       } catch (error) {
         rethrowAsStandardError(ctx, error);
       }
+
+      await ensureTicketTagMappings(tx, created.ticket_id, normalizedTags);
 
       await reconcileWorkflowTicketAdditionalUsers(
         tx,

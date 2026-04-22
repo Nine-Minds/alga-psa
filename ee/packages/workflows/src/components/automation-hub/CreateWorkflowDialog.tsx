@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Calendar, Zap, MousePointer, Check } from 'lucide-react';
 
 export type WorkflowTriggerType = 'event' | 'scheduled' | 'manual';
@@ -21,44 +22,51 @@ interface TriggerTypeOption {
   description: string;
 }
 
-const TRIGGER_OPTIONS: TriggerTypeOption[] = [
-  {
-    type: 'event',
-    icon: <Zap className="w-6 h-6" />,
-    title: 'Event-based',
-    description: 'Triggered automatically when specific events occur (e.g., ticket created, invoice paid).'
-  },
-  {
-    type: 'scheduled',
-    icon: <Calendar className="w-6 h-6" />,
-    title: 'Scheduled',
-    description: 'Runs on a recurring schedule using cron expressions (e.g., daily, weekly).'
-  },
-  {
-    type: 'manual',
-    icon: <MousePointer className="w-6 h-6" />,
-    title: 'Manual',
-    description: 'Started on-demand by users or via API calls. No automatic triggers.'
-  }
-];
-
 export default function CreateWorkflowDialog({
   isOpen,
   onClose,
   onCreate
 }: CreateWorkflowDialogProps) {
+  const { t } = useTranslation('msp/workflows');
   const [workflowName, setWorkflowName] = useState('');
   const [selectedType, setSelectedType] = useState<WorkflowTriggerType>('manual');
   const [nameError, setNameError] = useState<string | null>(null);
 
+  const TRIGGER_OPTIONS: TriggerTypeOption[] = [
+    {
+      type: 'event',
+      icon: <Zap className="w-6 h-6" />,
+      title: t('automation.createWorkflow.triggers.event.title', { defaultValue: 'Event-based' }),
+      description: t('automation.createWorkflow.triggers.event.description', {
+        defaultValue: 'Triggered automatically when specific events occur (e.g., ticket created, invoice paid).'
+      })
+    },
+    {
+      type: 'scheduled',
+      icon: <Calendar className="w-6 h-6" />,
+      title: t('automation.createWorkflow.triggers.scheduled.title', { defaultValue: 'Scheduled' }),
+      description: t('automation.createWorkflow.triggers.scheduled.description', {
+        defaultValue: 'Runs on a recurring schedule using cron expressions (e.g., daily, weekly).'
+      })
+    },
+    {
+      type: 'manual',
+      icon: <MousePointer className="w-6 h-6" />,
+      title: t('automation.createWorkflow.triggers.manual.title', { defaultValue: 'Manual' }),
+      description: t('automation.createWorkflow.triggers.manual.description', {
+        defaultValue: 'Started on-demand by users or via API calls. No automatic triggers.'
+      })
+    }
+  ];
+
   const handleCreate = () => {
     const trimmedName = workflowName.trim();
     if (!trimmedName) {
-      setNameError('Workflow name is required');
+      setNameError(t('automation.createWorkflow.validation.nameRequired', { defaultValue: 'Workflow name is required' }));
       return;
     }
     if (trimmedName.length < 3) {
-      setNameError('Name must be at least 3 characters');
+      setNameError(t('automation.createWorkflow.validation.nameTooShort', { defaultValue: 'Name must be at least 3 characters' }));
       return;
     }
     onCreate(trimmedName, selectedType);
@@ -84,13 +92,13 @@ export default function CreateWorkflowDialog({
         variant="outline"
         onClick={handleClose}
       >
-        Cancel
+        {t('automation.createWorkflow.actions.cancel', { defaultValue: 'Cancel' })}
       </Button>
       <Button
         id="confirm-create-workflow"
         onClick={handleCreate}
       >
-        Create Workflow
+        {t('automation.createWorkflow.actions.create', { defaultValue: 'Create Workflow' })}
       </Button>
     </div>
   );
@@ -100,7 +108,7 @@ export default function CreateWorkflowDialog({
       id="create-workflow-dialog"
       isOpen={isOpen}
       onClose={handleClose}
-      title="Create New Workflow"
+      title={t('automation.createWorkflow.dialogTitle', { defaultValue: 'Create New Workflow' })}
       className="max-w-lg"
       draggable={false}
       footer={footer}
@@ -110,10 +118,10 @@ export default function CreateWorkflowDialog({
         <div>
           <Input
             id="new-workflow-name"
-            label="Workflow Name"
+            label={t('automation.createWorkflow.fields.name', { defaultValue: 'Workflow Name' })}
             value={workflowName}
             onChange={handleNameChange}
-            placeholder="e.g., Send Welcome Email"
+            placeholder={t('automation.createWorkflow.fields.namePlaceholder', { defaultValue: 'e.g., Send Welcome Email' })}
             autoFocus
           />
           {nameError && (
@@ -124,7 +132,7 @@ export default function CreateWorkflowDialog({
         {/* Trigger Type Selection */}
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-3">
-            Trigger Type
+            {t('automation.createWorkflow.fields.triggerType', { defaultValue: 'Trigger Type' })}
           </label>
           <div className="space-y-2">
             {TRIGGER_OPTIONS.map((option) => (

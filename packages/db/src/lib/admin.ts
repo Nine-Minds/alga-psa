@@ -12,18 +12,41 @@ import { getSecret } from '@alga-psa/core/secrets';
 
 let adminConnection: Knex | null = null;
 
+/**
+ * Probe that confirms the cached pool can still perform writes. Guards against
+ * StackGres/Patroni failovers and PgBouncer transaction-pooled backends that
+ * were once on the primary and are now attached to a standby — `SELECT 1`
+ * succeeds on a read-only replica and would otherwise mask the problem.
+ */
+async function cachedPoolIsWritable(conn: Knex): Promise<boolean> {
+    const probe = await conn.raw(
+        "SELECT pg_is_in_recovery() AS ro, current_setting('transaction_read_only') AS tro"
+    );
+    const row = probe.rows?.[0];
+    return row?.ro === false && row?.tro === 'off';
+}
+
 export async function getAdminConnection(): Promise<Knex> {
     const connectionId = Math.random().toString(36).substring(7);
 
-    // Return existing connection if available and not destroyed
+    // Return existing connection if available and still write-capable
     if (adminConnection) {
         try {
-            // Test if connection is still valid
-            await adminConnection.raw('SELECT 1');
-            return adminConnection;
+            if (await cachedPoolIsWritable(adminConnection)) {
+                return adminConnection;
+            }
+            logger.warn('[db/admin] Cached admin pool lost write capability; recreating', {
+                connectionId,
+            });
         } catch (error) {
-            adminConnection = null;
+            // Probe failed outright — fall through to recreate
         }
+        try {
+            await adminConnection.destroy();
+        } catch {
+            /* ignore destroy errors; we're replacing the pool anyway */
+        }
+        adminConnection = null;
     }
 
 
@@ -79,4 +102,18 @@ export async function destroyAdminConnection(): Promise<void> {
         await adminConnection.destroy();
         adminConnection = null;
     }
+}
+
+/**
+ * Force-recreate the admin pool. Callers should use this after catching a
+ * "read-only transaction" / "writing to worker nodes" error so the next call
+ * to getAdminConnection() returns a freshly-reconnected pool.
+ */
+export async function refreshAdminConnection(): Promise<Knex> {
+    try {
+        await destroyAdminConnection();
+    } catch {
+        /* ignore; destroyAdminConnection clears the ref regardless */
+    }
+    return await getAdminConnection();
 }

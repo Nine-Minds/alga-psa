@@ -16,6 +16,7 @@ import PaperInvoice from '../billing-dashboard/PaperInvoice';
 import { TemplateRenderer } from '../billing-dashboard/TemplateRenderer';
 import { DesignerShell } from './DesignerShell';
 import TransformsWorkspace from './transforms/TransformsWorkspace';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useInvoiceDesignerStore } from './state/designerStore';
 import {
   createInitialPreviewSessionState,
@@ -49,15 +50,16 @@ const useDebouncedValue = <T,>(value: T, delayMs: number) => {
   return debounced;
 };
 
-const PREVIEW_SOURCE_OPTIONS: { value: PreviewSourceKind; label: string }[] = [
-  { value: 'sample', label: 'Sample' },
-  { value: 'existing', label: 'Existing' },
+const buildPreviewSourceOptions = (t: (key: string, options?: Record<string, unknown>) => string): { value: PreviewSourceKind; label: string }[] => [
+  { value: 'sample', label: t('designer.workspace.preview.source.sample', { defaultValue: 'Sample' }) },
+  { value: 'existing', label: t('designer.workspace.preview.source.existing', { defaultValue: 'Existing' }) },
 ];
 
 export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = ({
   visualWorkspaceTab,
   onVisualWorkspaceTabChange,
 }) => {
+  const { t } = useTranslation('msp/invoicing');
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
   const canvasScale = useInvoiceDesignerStore((state) => state.canvasScale);
   const showGuides = useInvoiceDesignerStore((state) => state.showGuides);
@@ -285,13 +287,13 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
     >
       <TabsList>
         <TabsTrigger value="design" data-automation-id="invoice-designer-design-tab">
-          Design
+          {t('designer.workspace.tabs.design', { defaultValue: 'Design' })}
         </TabsTrigger>
         <TabsTrigger value="transforms" data-automation-id="invoice-designer-transforms-tab">
-          Transforms
+          {t('designer.workspace.tabs.transforms', { defaultValue: 'Transforms' })}
         </TabsTrigger>
         <TabsTrigger value="preview" data-automation-id="invoice-designer-preview-tab">
-          Preview
+          {t('designer.workspace.tabs.preview', { defaultValue: 'Preview' })}
         </TabsTrigger>
       </TabsList>
 
@@ -318,14 +320,14 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
             <ViewSwitcher
               currentView={previewState.sourceKind}
               onChange={(source: PreviewSourceKind) => dispatch({ type: 'set-source', source })}
-              options={PREVIEW_SOURCE_OPTIONS}
+              options={buildPreviewSourceOptions(t)}
             />
           </div>
 
           {previewState.sourceKind === 'sample' ? (
             <div className="space-y-1">
               <label htmlFor="preview-sample-select" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Sample Scenario
+                {t('designer.workspace.preview.sampleScenario', { defaultValue: 'Sample Scenario' })}
               </label>
               <div className="w-fit">
                 <CustomSelect
@@ -336,7 +338,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
                   }))}
                   value={activeSample?.id ?? ''}
                   onValueChange={(value: string) => dispatch({ type: 'set-sample', sampleId: value })}
-                  placeholder="Select scenario..."
+                  placeholder={t('designer.workspace.preview.selectScenarioPlaceholder', { defaultValue: 'Select scenario...' })}
                 />
               </div>
               {activeSample && (
@@ -358,11 +360,11 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
                   dispatch({ type: 'select-existing-invoice', invoiceId: value });
                 }}
                 loadOptions={loadExistingInvoiceOptions}
-                placeholder="Search invoices..."
-                searchPlaceholder="Search by number or client..."
-                emptyMessage="No invoices found."
+                placeholder={t('designer.workspace.preview.searchInvoices', { defaultValue: 'Search invoices...' })}
+                searchPlaceholder={t('designer.workspace.preview.searchInvoicesHint', { defaultValue: 'Search by number or client...' })}
+                emptyMessage={t('designer.workspace.preview.noInvoicesFound', { defaultValue: 'No invoices found.' })}
                 dropdownMode="overlay"
-                label="Select Invoice"
+                label={t('designer.workspace.preview.selectInvoice', { defaultValue: 'Select Invoice' })}
               />
             </div>
           )}
@@ -372,7 +374,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
               className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-2 py-1 text-xs text-slate-500 dark:text-slate-400"
               data-automation-id="invoice-designer-preview-existing-detail-loading"
             >
-              Loading invoice details...
+              {t('designer.workspace.preview.loadingDetails', { defaultValue: 'Loading invoice details...' })}
             </p>
           )}
 
@@ -390,7 +392,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
               className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-2 py-1 text-xs text-slate-500 dark:text-slate-400"
               data-automation-id="invoice-designer-preview-existing-detail-empty"
             >
-              Select an invoice to preview data-bound output.
+              {t('designer.workspace.preview.selectInvoiceHint', { defaultValue: 'Select an invoice to preview data-bound output.' })}
             </p>
           )}
         </div>
@@ -401,14 +403,14 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
-              <span className="font-semibold">Shape</span>
+              <span className="font-semibold">{t('designer.workspace.preview.shape', { defaultValue: 'Shape' })}</span>
               <span
                 className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-background))] px-2 py-0.5 uppercase"
                 data-automation-id="invoice-designer-preview-shape-status"
               >
                 {displayStatuses.shapeStatus}
               </span>
-              <span className="font-semibold">Render</span>
+              <span className="font-semibold">{t('designer.workspace.preview.render', { defaultValue: 'Render' })}</span>
               <span
                 className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-background))] px-2 py-0.5 uppercase"
                 data-automation-id="invoice-designer-preview-render-status"
@@ -424,7 +426,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
               onClick={() => setManualRunNonce((value) => value + 1)}
               data-automation-id="invoice-designer-preview-rerun"
             >
-              Re-run
+              {t('designer.workspace.preview.rerun', { defaultValue: 'Re-run' })}
             </Button>
           </div>
 
@@ -469,13 +471,13 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
         >
           {!previewData && (
             <div className="p-4 text-sm text-slate-500" data-automation-id="invoice-designer-preview-empty-state">
-              Select sample or existing invoice data to generate an authoritative preview.
+              {t('designer.workspace.preview.emptyState', { defaultValue: 'Select sample or existing invoice data to generate an authoritative preview.' })}
             </div>
           )}
 
           {previewData && isPreviewRunning && (
             <div className="p-4 text-sm text-slate-500" data-automation-id="invoice-designer-preview-loading-state">
-              Shaping and rendering preview...
+              {t('designer.workspace.preview.loadingPreview', { defaultValue: 'Shaping and rendering preview...' })}
             </div>
           )}
 
@@ -486,7 +488,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
               data-automation-id="invoice-designer-preview-render-error"
             >
               <AlertDescription className="text-sm">
-                Preview template could not be generated from the current workspace.
+                {t('designer.workspace.preview.templateError', { defaultValue: 'Preview template could not be generated from the current workspace.' })}
               </AlertDescription>
             </Alert>
           )}
@@ -498,7 +500,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
               data-automation-id="invoice-designer-preview-render-error"
             >
               <AlertDescription className="text-sm">
-                {authoritativePreview.render.error ?? 'Preview rendering failed.'}
+                {authoritativePreview.render.error ?? t('designer.workspace.preview.renderError', { defaultValue: 'Preview rendering failed.' })}
               </AlertDescription>
             </Alert>
           )}

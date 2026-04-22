@@ -47,7 +47,25 @@
     "downloadFailed": "Document kon niet worden gedownload",
     "bulkDeleteFailed": "Sommige documenten konden niet worden verwijderd",
     "bulkDeleteSuccess_one": "{{count}} document is succesvol verwijderd",
-    "bulkDeleteSuccess_other": "{{count}} documenten zijn succesvol verwijderd"
+    "bulkDeleteSuccess_other": "{{count}} documenten zijn succesvol verwijderd",
+    "passwordRequired": "Wachtwoord is vereist",
+    "shareLinkCreateFailed": "Kan deellink niet aanmaken",
+    "shareLinkCreated": "Deellink aangemaakt",
+    "linkCopied": "Link gekopieerd naar klembord",
+    "shareLinkRevokeFailed": "Kan deellink niet intrekken",
+    "shareLinkRevoked": "Deellink ingetrokken",
+    "shareLinksLoadFailed": "Kan deellinks niet laden",
+    "folderPathRequired": "Mappad is vereist",
+    "folderAlreadyExists": "Map bestaat al",
+    "defaultsSaveFailed": "Opslaan mislukt",
+    "defaultsRemoved": "Standaardmappen voor {{entity}} verwijderd",
+    "defaultsSaved": "Standaardmappen voor {{entity}} opgeslagen",
+    "suggestedDefaultsAllLoaded": "Alle voorgestelde standaarden zijn al geladen",
+    "suggestedDefaultsLoaded_one": "Standaarden geladen voor {{count}} entiteitstype",
+    "suggestedDefaultsLoaded_other": "Standaarden geladen voor {{count}} entiteitstypes",
+    "suggestedDefaultsLoadFailed": "Voorgestelde standaarden konden niet worden geladen",
+    "entityTypesAllConfigured": "Alle entiteitstypes hebben al standaardmappen geconfigureerd",
+    "defaultFoldersLoadFailed": "Kan standaardmappen niet laden"
   },
   "validation": {
     "nameRequired": "Documentnaam is verplicht"

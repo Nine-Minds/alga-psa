@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { DynamicForm } from './DynamicForm';
 import { submitTaskForm } from '@alga-psa/workflows/actions/workflow-actions/taskInboxActions';
 import { Action } from '@alga-psa/workflows/forms/actionHandlerRegistry';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface TaskFormProps {
   taskId: string;
@@ -28,29 +29,30 @@ export function TaskForm({
   executionId,
   isInDrawer = false
 }: TaskFormProps) {
+  const { t } = useTranslation('msp/workflows');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // Default task actions if none provided
   let taskActions: Action[] = actions || [];
-  
+
   // If no actions were provided, create default ones
   if (taskActions.length === 0) {
     // Always add the submit button
     taskActions.push({
       id: 'submit',
-      label: 'Complete Task',
+      label: t('taskForm.actions.complete', { defaultValue: 'Complete Task' }),
       primary: true,
       variant: 'default' as const,
       disabled: false,
       hidden: false,
       order: 0
     });
-    
+
     // Only add a cancel button if not in a drawer (drawer has its own close button)
     if (!isInDrawer) {
       taskActions.push({
         id: 'cancel',
-        label: 'Cancel',
+        label: t('taskForm.actions.cancel', { defaultValue: 'Cancel' }),
         primary: false,
         variant: 'outline' as const,
         disabled: false,

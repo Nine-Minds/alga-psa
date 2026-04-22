@@ -401,5 +401,18 @@
   },
   "timeEntryReadOnly": {
     "viewEntryDetails": "Bekijk de invoerdetails"
+  },
+  "messages": {
+    "serviceRequired": "Selecteer een dienst voordat u tijdregistraties opslaat",
+    "invalidService": "Ongeldige dienst geselecteerd",
+    "taxRegionRequired": "Selecteer een belastingregio voor belastbare diensten",
+    "invalidTimeEntry": "Controleer de waarden van de tijdregistratie",
+    "savingEntry": "Tijdregistratie opslaan...",
+    "entrySaved": "Tijdregistratie opgeslagen",
+    "entrySavedSuccess": "Tijdregistratie succesvol opgeslagen",
+    "taskUpdated": "Taak succesvol bijgewerkt",
+    "saveChangesFailed": "Kan wijzigingen niet opslaan",
+    "changesSaved": "Wijzigingen succesvol opgeslagen",
+    "workItemDeleted": "Werkitem succesvol verwijderd"
   }
 }

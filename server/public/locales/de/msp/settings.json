@@ -685,27 +685,6 @@
     }
   },
   "clientPortal": {
-    "language": {
-      "title": "Spracheinstellungen",
-      "description": "Konfigurieren Sie die Standardspracheinstellungen für Ihr Kundenportal. Diese Einstellungen gelten für alle Benutzer und Kunden, sofern sie nicht überschrieben werden.",
-      "fields": {
-        "defaultLanguage": "Standardsprache",
-        "availableLanguages": "Verfügbare Sprachen"
-      },
-      "help": {
-        "defaultLanguage": "Dies wird die Standardsprache für alle Kundenportal-Benutzer und E-Mail-Benachrichtigungen, sofern sie nicht durch Kundeneinstellungen oder individuelle Benutzerpräferenzen überschrieben wird",
-        "availableLanguages": "Wählen Sie aus, welche Sprachen den Benutzern zur Auswahl stehen"
-      },
-      "hierarchy": {
-        "title": "Sprachpräferenz-Hierarchie",
-        "description": "Diese Hierarchie gilt sowohl für die Kundenportal-Oberfläche als auch für E-Mail-Benachrichtigungen an Kundenportal-Benutzer:",
-        "userPreference": "Individuelle Benutzerpräferenz (höchste Priorität)",
-        "clientDefault": "Standard-Kundensprache",
-        "orgDefault": "Organisationsstandard (hier konfiguriert)",
-        "systemDefault": "Systemstandard (Englisch)",
-        "note": "Hinweis: Interne MSP-Benutzer erhalten E-Mails immer auf Englisch"
-      }
-    },
     "branding": {
       "title": "Branding & Erscheinungsbild",
       "description": "Passen Sie das Erscheinungsbild Ihres Kundenportals mit Ihrem Unternehmensbranding an.",
@@ -791,21 +770,15 @@
     }
   },
   "mspLanguage": {
-    "title": "Sprache",
-    "description": "Konfigurieren Sie die Standardspracheinstellungen für das MSP-Portal. Diese Einstellungen gelten für alle MSP-Benutzer, sofern sie nicht durch individuelle Präferenzen überschrieben werden.",
+    "title": "Organisationssprache",
+    "description": "Legen Sie die Standardsprache für die gesamte Organisation fest — MSP-Mitarbeiter, Client-Portal-Benutzer und E-Mail-Benachrichtigungen. Einzelne Benutzer oder Kunden können sie für sich selbst überschreiben.",
     "fields": {
       "defaultLanguage": "Standardsprache",
       "availableLanguages": "Verfügbare Sprachen"
     },
     "help": {
-      "defaultLanguage": "Dies wird die Standardsprache für alle MSP-Portal-Benutzer, sofern sie nicht durch deren persönliche Präferenz überschrieben wird.",
-      "availableLanguages": "Wählen Sie aus, welche Sprachen den MSP-Benutzern zur Auswahl stehen"
-    },
-    "hierarchy": {
-      "title": "Sprachpräferenz-Hierarchie",
-      "userPreference": "Individuelle Benutzerpräferenz (höchste Priorität)",
-      "orgDefault": "Organisationsstandard (hier konfiguriert)",
-      "systemDefault": "Systemstandard (Englisch)"
+      "defaultLanguage": "Gilt überall, sofern nicht durch die persönliche Präferenz eines Benutzers oder die konfigurierte Sprache eines Kunden überschrieben.",
+      "availableLanguages": "Wählen Sie aus, welche Sprachen den Benutzern zur Auswahl stehen."
     }
   },
   "notifications": {
@@ -1085,7 +1058,7 @@
       "permissions": "Berechtigungen",
       "userRoles": "Benutzerrollen",
       "policies": "Richtlinien",
-      "apiKeys": "API Keys"
+      "apiKeys": "API-Schlüssel"
     },
     "loading": {
       "roles": "Rollenkonfiguration wird geladen...",
@@ -1182,7 +1155,7 @@
       "profile": "Profil",
       "security": "Sicherheit",
       "sso": "Single Sign-On",
-      "apiKeys": "API Keys",
+      "apiKeys": "API-Schlüssel",
       "notifications": "Benachrichtigungen",
       "calendar": "Kalender"
     },
@@ -1347,5 +1320,39 @@
     "badge": {
       "inactive": "Inaktiv"
     }
+  },
+  "permissions": {
+    "messages": {
+      "adminLocked": "Berechtigungen der Administratorrolle können nicht geändert werden",
+      "permissionsUpdated": "Berechtigungen erfolgreich aktualisiert"
+    }
+  },
+  "sla": {
+    "messages": {
+      "scheduleNotFound": "Zeitplan nicht gefunden",
+      "scheduleUpdated": "Zeitplan erfolgreich aktualisiert",
+      "scheduleCreated": "Zeitplan erfolgreich erstellt",
+      "scheduleDeleted": "Zeitplan erfolgreich gelöscht",
+      "defaultHoursCreated": "Standard-Geschäftszeitenplan erstellt",
+      "scheduleRequired": "Bitte wählen Sie zuerst einen Zeitplan",
+      "holidayNameRequired": "Feiertagsname ist erforderlich",
+      "holidayDateRequired": "Feiertagsdatum ist erforderlich",
+      "holidayAdded": "Feiertag erfolgreich hinzugefügt",
+      "holidayDeleted": "Feiertag erfolgreich gelöscht"
+    }
+  },
+  "clientPortalLanguage": {
+    "title": "Client-Portal-Sprache",
+    "description": "Überschreiben Sie die Standardsprache nur für Client-Portal-Benutzer. MSP-Mitarbeiter behalten den Organisationsstandard.",
+    "fields": {
+      "defaultLanguage": "Standardsprache"
+    },
+    "help": {
+      "defaultLanguage": "Wenn festgelegt, sehen Client-Portal-Benutzer diese Sprache, sofern nicht durch ihre persönliche Präferenz oder die für ihren Kunden konfigurierte Sprache überschrieben."
+    },
+    "placeholder": "Sprache auswählen",
+    "inheritOption": "Organisationsstandard verwenden ({{language}})",
+    "unsetHint": "Um die Client-Portal-Überschreibung zu entfernen, ändern Sie den Organisationsstandard unter Einstellungen → Sprache.",
+    "updated": "Client-Portal-Standardsprache auf {{language}} aktualisiert"
   }
 }

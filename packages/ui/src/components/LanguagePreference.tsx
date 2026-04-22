@@ -53,7 +53,10 @@ export function LanguagePreference({
     [isMspI18nEnabled],
   );
   const fieldLabel = label ?? t('language.preference.label', 'Language Preference');
-  const fieldHelperText = helperText ?? t('language.preference.helper', 'Select your preferred language for the interface and email notifications');
+  const fieldHelperText = helperText ?? t(
+    'language.preference.helper',
+    'Select your preferred language for the interface and email notifications. Overrides the organization and client portal defaults for you.',
+  );
   const effectiveLocale = currentEffectiveLocale || currentLocale;
   const [selectedLocale, setSelectedLocale] = useState<SupportedLocale | 'none'>(
     value === null || value === undefined ? 'none' : value

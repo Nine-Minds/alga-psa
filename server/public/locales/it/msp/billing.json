@@ -11,7 +11,7 @@
     "loading": "Caricamento...",
     "new": "Nuovo",
     "next": "Avanti",
-    "notAvailable": "N/A",
+    "notAvailable": "N/D",
     "openMenu": "Apri il menu",
     "processing": "Elaborazione...",
     "refresh": "Aggiorna",
@@ -599,7 +599,7 @@
       "saveChanges": "Salva modifiche",
       "saveChangesDirty": "Salva modifiche *",
       "saving": "Salvataggio...",
-      "reset": "Reset"
+      "reset": "Ripristina"
     },
     "navigationDialog": {
       "title": "Modifiche non salvate",
@@ -740,7 +740,7 @@
     }
   },
   "templateRendererCore": {
-    "notAvailable": "N/A",
+    "notAvailable": "N/D",
     "unknownValue": "Valore sconosciuto",
     "noDataForList": "Nessun dato per l'elenco: {{name}}",
     "uncategorized": "Senza categoria"

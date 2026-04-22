@@ -26,6 +26,7 @@ import {
   type TemplateFieldDisplayFormat,
   type TemplatePrintSettings,
 } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ComponentPalette } from './palette/ComponentPalette';
 import { DesignCanvas } from './canvas/DesignCanvas';
 import { DesignerToolbar } from './toolbar/DesignerToolbar';
@@ -594,6 +595,7 @@ const resolveDesignerShellPrintSettings = (nodes: DesignerNode[]) => {
 };
 
 export const DesignerShell: React.FC = () => {
+  const { t } = useTranslation('msp/invoicing');
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
   const selectedNodeId = useInvoiceDesignerStore((state) => state.selectedNodeId);
   const selectedNode = useMemo(() => nodes.find((node) => node.id === selectedNodeId) ?? null, [nodes, selectedNodeId]);
@@ -1147,7 +1149,7 @@ export const DesignerShell: React.FC = () => {
         className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-2"
         data-automation-id="designer-container-layout-controls"
       >
-        <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Layout Controls</p>
+        <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('designer.inspector.layoutControls', { defaultValue: 'Layout Controls' })}</p>
         {renderIconButtonGroup('layout-mode', 'Layout', CONTAINER_LAYOUT_MODE_OPTIONS, layoutMode, (value) => {
           setNodeProp(selectedNode.id, 'layout.display', value, true);
         }, 2)}
@@ -1249,7 +1251,7 @@ export const DesignerShell: React.FC = () => {
         className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-2"
         data-automation-id="designer-shared-sizing-controls"
       >
-        <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Sizing Mode</p>
+        <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('designer.inspector.sizingMode', { defaultValue: 'Sizing Mode' })}</p>
         {renderIconButtonGroup(
           'block-width-mode',
           'Width',
@@ -1331,7 +1333,7 @@ export const DesignerShell: React.FC = () => {
         data-automation-id="designer-flex-item-controls"
       >
         <div className="space-y-1">
-          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Flex Item</p>
+          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('designer.inspector.flexItem', { defaultValue: 'Flex Item' })}</p>
           <p className="text-[11px] text-slate-500">
             In this {selectedParentFlexLayout.flexDirection === 'row' ? 'horizontal' : 'vertical'} stack, these settings control how the item shares {mainAxisNoun} with its siblings.
           </p>
@@ -1446,7 +1448,7 @@ export const DesignerShell: React.FC = () => {
         data-automation-id="designer-field-display-controls"
       >
         <div className="space-y-1">
-          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Display Format</p>
+          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('designer.inspector.displayFormat', { defaultValue: 'Display Format' })}</p>
           <p className="text-[11px] text-slate-500">
             {fieldDefinition.description} This only applies to Data Field nodes.
           </p>
@@ -1515,7 +1517,7 @@ export const DesignerShell: React.FC = () => {
 
       return (
         <div className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-2">
-          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Attachments</p>
+          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('designer.inspector.attachments', { defaultValue: 'Attachments' })}</p>
           <div>
             <label className="text-xs text-slate-500 block mb-1">Title</label>
             <Input
@@ -1600,7 +1602,7 @@ export const DesignerShell: React.FC = () => {
         };
 		      return (
 		        <div className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-2">
-		          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Media</p>
+		          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('designer.inspector.media', { defaultValue: 'Media' })}</p>
 	          <div>
             <label className="text-xs text-slate-500 dark:text-slate-400 block mb-1">Source URL</label>
             <Input
@@ -2205,7 +2207,7 @@ export const DesignerShell: React.FC = () => {
         onGridSizeChange={setGridSize}
       />
       <div className="border-b border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-card))] px-4 py-1.5 text-xs text-slate-600 dark:text-slate-400">
-        <span className="font-semibold text-slate-700 dark:text-slate-300">Selected:</span>{' '}
+        <span className="font-semibold text-slate-700 dark:text-slate-300">{t('designer.shell.selectedLabel', { defaultValue: 'Selected:' })}</span>{' '}
         {selectedNode ? (
           <span data-automation-id="designer-selected-context">
             {getNodeName(selectedNode)} <span className="text-slate-500">({selectedNode.type})</span>
@@ -2213,15 +2215,15 @@ export const DesignerShell: React.FC = () => {
         ) : (
           <>
             <span className="text-slate-500" data-automation-id="designer-selected-context">
-              None
+              {t('designer.shell.selectedNone', { defaultValue: 'None' })}
             </span>
             <span className="ml-2 text-slate-400" data-automation-id="designer-no-selection-help">
               <span className="rounded-full border border-slate-300/70 dark:border-slate-600/70 bg-white/70 dark:bg-slate-800/70 px-1.5 py-0.5 text-slate-500 dark:text-slate-400">
-                Click a block on canvas
+                {t('designer.shell.clickBlockHint', { defaultValue: 'Click a block on canvas' })}
               </span>{' '}
-              or use{' '}
+              {t('designer.shell.orUse', { defaultValue: 'or use' })}{' '}
               <span className="rounded-full border border-slate-300/70 dark:border-slate-600/70 bg-white/70 dark:bg-slate-800/70 px-1.5 py-0.5 text-slate-500 dark:text-slate-400">
-                + in the left panel
+                {t('designer.shell.plusInLeftPanelHint', { defaultValue: '+ in the left panel' })}
               </span>
               .
             </span>
@@ -2294,11 +2296,11 @@ export const DesignerShell: React.FC = () => {
             className="w-72 shrink-0 min-h-0 overflow-y-auto border-l border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-card))] p-4 space-y-4"
             data-automation-id="designer-shell-inspector-panel"
           >
-            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200 uppercase tracking-wide">Inspector</h3>
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200 uppercase tracking-wide">{t('designer.inspector.title', { defaultValue: 'Inspector' })}</h3>
 		          {selectedNode ? (
 		            <div className="space-y-3">
               <div>
-                <label htmlFor="selected-name" className="text-xs text-slate-500 block mb-1">Layer Name</label>
+                <label htmlFor="selected-name" className="text-xs text-slate-500 block mb-1">{t('designer.inspector.layerName', { defaultValue: 'Layer Name' })}</label>
                 <Input
                   id="selected-name"
                   value={getNodeName(selectedNode)}
@@ -2310,7 +2312,7 @@ export const DesignerShell: React.FC = () => {
                 className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-1"
                 data-automation-id="designer-selected-node-type-panel"
               >
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Type</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{t('designer.inspector.typeLabel', { defaultValue: 'Type' })}</p>
                 <p className="text-sm text-slate-700 dark:text-slate-300" data-automation-id="designer-selected-node-type">
                   {selectedNodeTypeLabel}
                 </p>
@@ -2320,11 +2322,11 @@ export const DesignerShell: React.FC = () => {
                   className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-1"
                   data-automation-id="designer-selected-field-type-panel"
                 >
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Field Type</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{t('designer.inspector.fieldTypeLabel', { defaultValue: 'Field Type' })}</p>
                   <p className="text-sm text-slate-700 dark:text-slate-300" data-automation-id="designer-selected-field-type">
                     {selectedFieldType.label}
                   </p>
-                  <p className="text-[11px] text-slate-500">{selectedFieldType.bindingKey || 'No binding key set'}</p>
+                  <p className="text-[11px] text-slate-500">{selectedFieldType.bindingKey || t('designer.inspector.noBindingKey', { defaultValue: 'No binding key set' })}</p>
                 </div>
               )}
               <div className="grid grid-cols-2 gap-3 text-xs text-slate-500">
@@ -2382,13 +2384,13 @@ export const DesignerShell: React.FC = () => {
               {selectedPreset && (
                 <div className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 text-xs text-slate-600 dark:text-slate-400 space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">Layout Preset</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">{t('designer.inspector.layoutPreset', { defaultValue: 'Layout Preset' })}</span>
 	                    <button
 	                      type="button"
 	                      className="text-blue-600 hover:underline"
 	                      onClick={() => unsetNodeProp(selectedNode.id, 'layoutPresetId', true)}
 	                    >
-	                      Clear
+	                      {t('designer.inspector.clear', { defaultValue: 'Clear' })}
 	                    </button>
 	                  </div>
 	                  <div className="text-slate-500 text-[11px]">{selectedPreset.label}</div>
@@ -2407,16 +2409,16 @@ export const DesignerShell: React.FC = () => {
                     variant="outline"
                     onClick={fitSelectedSectionToContents}
                   >
-                    Fit Section to Contents
+                    {t('designer.inspector.fitSectionToContents', { defaultValue: 'Fit Section to Contents' })}
                   </Button>
                   {!selectedSectionFitSize && (
-                    <p className="text-[11px] text-slate-500">Section has no child content to fit.</p>
+                    <p className="text-[11px] text-slate-500">{t('designer.inspector.sectionNoChildContent', { defaultValue: 'Section has no child content to fit.' })}</p>
                   )}
                 </div>
               )}
               {renderMetadataInspector()}
               <Button id="designer-inspector-apply" variant="outline" onClick={commitPropertyChanges}>
-                Apply
+                {t('designer.inspector.apply', { defaultValue: 'Apply' })}
               </Button>
             </div>
           ) : (
@@ -2426,14 +2428,14 @@ export const DesignerShell: React.FC = () => {
                 data-automation-id="designer-page-setup-panel"
               >
                 <div className="space-y-1">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Page Setup</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{t('designer.pageSetup.title', { defaultValue: 'Page Setup' })}</p>
                   <p className="text-sm text-slate-600 dark:text-slate-400">
-                    Choose a paper preset and page margin without selecting the hidden page node.
+                    {t('designer.pageSetup.description', { defaultValue: 'Choose a paper preset and page margin without selecting the hidden page node.' })}
                   </p>
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="designer-paper-preset-select" className="text-xs text-slate-500 block">
-                    Paper Preset
+                    {t('designer.pageSetup.paperPreset', { defaultValue: 'Paper Preset' })}
                   </label>
                   <CustomSelect
                     id="designer-paper-preset-select"
@@ -2447,7 +2449,7 @@ export const DesignerShell: React.FC = () => {
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="designer-margin-mm-input" className="text-xs text-slate-500 block">
-                    Margin (mm)
+                    {t('designer.pageSetup.marginMm', { defaultValue: 'Margin (mm)' })}
                   </label>
                   <Input
                     id="designer-margin-mm-input"
@@ -2462,7 +2464,7 @@ export const DesignerShell: React.FC = () => {
                   />
                 </div>
               </div>
-              <p className="text-sm text-slate-500">Select a component to edit its properties.</p>
+              <p className="text-sm text-slate-500">{t('designer.inspector.emptyHelp', { defaultValue: 'Select a component to edit its properties.' })}</p>
             </div>
           )}
         </aside>
@@ -2525,6 +2527,7 @@ const DesignerWorkspace: React.FC<DesignerWorkspaceProps> = ({
   onDragEnd,
   onDragCancel,
 }) => {
+  const { t } = useTranslation('msp/invoicing');
   useDndMonitor({
     onDragStart,
     onDragMove,
@@ -2568,12 +2571,12 @@ const DesignerWorkspace: React.FC<DesignerWorkspaceProps> = ({
               )}
             >
 	            {activeDrag.kind === 'component'
-	              ? getDefinition(activeDrag.componentType)?.label ?? 'Component'
+	              ? t(`designer.blocks.${activeDrag.componentType}.label`, { defaultValue: getDefinition(activeDrag.componentType)?.label ?? 'Component' })
 	              : activeDrag.kind === 'preset'
-	                ? getPresetById(activeDrag.presetId)?.label ?? 'Preset'
+	                ? t(`designer.presets.${activeDrag.presetId}.label`, { defaultValue: getPresetById(activeDrag.presetId)?.label ?? 'Preset' })
 	                : (() => {
                       const draggedNode = nodes.find((node) => node.id === activeDrag.nodeId);
-                      return draggedNode ? getNodeName(draggedNode) : 'Component';
+                      return draggedNode ? getNodeName(draggedNode) : t('designer.dragOverlay.component', { defaultValue: 'Component' });
                     })()}
 	          </div>
 	        )}
@@ -2613,6 +2616,7 @@ const computeBreadcrumbNodes = (nodes: DesignerNode[], selectedNodeId: string | 
 };
 
 const DesignerBreadcrumbs: React.FC<DesignerBreadcrumbsProps> = ({ nodes, selectedNodeId, onSelect }) => {
+  const { t } = useTranslation('msp/invoicing');
   const breadcrumbs = React.useMemo(() => {
     return computeBreadcrumbNodes(nodes, selectedNodeId);
   }, [nodes, selectedNodeId]);
@@ -2620,14 +2624,14 @@ const DesignerBreadcrumbs: React.FC<DesignerBreadcrumbsProps> = ({ nodes, select
   if (breadcrumbs.length === 0) {
     return (
       <div className="border-t border-b border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-card))] px-4 py-2 text-xs text-slate-500 dark:text-slate-400">
-        Select a component on the canvas to view its hierarchy.
+        {t('designer.breadcrumbs.emptyHelp', { defaultValue: 'Select a component on the canvas to view its hierarchy.' })}
       </div>
     );
   }
 
   return (
     <div className="border-t border-b border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-card))] px-4 py-2 text-xs text-slate-600 dark:text-slate-400 flex items-center flex-wrap gap-1">
-      <span className="font-semibold text-slate-700 dark:text-slate-300 mr-1">Hierarchy</span>
+      <span className="font-semibold text-slate-700 dark:text-slate-300 mr-1">{t('designer.breadcrumbs.hierarchy', { defaultValue: 'Hierarchy' })}</span>
       {breadcrumbs.map((node, index) => {
         const isActive = index === breadcrumbs.length - 1;
         return (

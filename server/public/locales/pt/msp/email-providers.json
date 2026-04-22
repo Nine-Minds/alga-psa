@@ -1,0 +1,616 @@
+{
+  "configuration": {
+    "loading": "Loading email providers...",
+    "feedback": {
+      "testingConnection": "Testing connection for {{providerName}}...",
+      "connectionSuccess": "Connected to {{providerName}}.",
+      "connectionError": "Connection test failed",
+      "refreshWatchError": "Failed to refresh watch subscription",
+      "renewalError": "Renewal failed",
+      "initiateOauthError": "Failed to initiate IMAP OAuth",
+      "resyncing": "Resyncing {{providerName}}...",
+      "resyncError": "Failed to resync IMAP provider",
+      "resyncStarted": "Resync started for {{providerName}}.",
+      "enterpriseOnly": "Microsoft 365 inbound email is only available in Enterprise Edition."
+    },
+    "editDrawer": {
+      "title": "Edit Email Provider",
+      "description": "Update configuration for {{providerName}}"
+    },
+    "header": {
+      "title": "Email Provider Configuration",
+      "description": {
+        "enterprise": "Configure Gmail, Microsoft 365, or IMAP providers to receive and process inbound emails as tickets",
+        "standard": "Configure Gmail or IMAP providers to receive and process inbound emails as tickets"
+      },
+      "counts": {
+        "enterprise": "Gmail: {{gmail}} · Microsoft: {{microsoft}} · IMAP: {{imap}}",
+        "standard": "Gmail: {{gmail}} · IMAP: {{imap}}"
+      }
+    },
+    "actions": {
+      "addProvider": "Add Email Provider"
+    },
+    "nav": {
+      "providers": "Providers",
+      "defaults": "Defaults"
+    },
+    "setup": {
+      "title": "Setup Instructions",
+      "microsoft": {
+        "title": "Microsoft 365 Setup",
+        "steps": {
+          "registerApp": "Register an application in Azure AD",
+          "permissions": "Configure API permissions for Mail.Read",
+          "redirectUrl": "Set up the redirect URL in your app registration",
+          "credentials": "Use the Client ID and Client Secret in the form above"
+        }
+      },
+      "gmail": {
+        "title": "Gmail Setup",
+        "enterpriseSteps": {
+          "enterAddress": "Enter your Gmail address and provider name",
+          "connect": "Click \"Connect Gmail\" to authorize access",
+          "preferences": "Configure email processing preferences",
+          "save": "Save to complete setup"
+        },
+        "standardSteps": {
+          "project": "Create a project in Google Cloud Console",
+          "oauth": "Enable Gmail API and create OAuth2 credentials",
+          "pubsub": "Set up Pub/Sub topic for push notifications",
+          "consent": "Configure the OAuth consent screen and add test users"
+        }
+      }
+    }
+  },
+  "list": {
+    "header": {
+      "title": "Email Providers ({{count}})"
+    },
+    "filters": {
+      "searchPlaceholder": "Search providers...",
+      "allProviders": "All Providers"
+    },
+    "actions": {
+      "refresh": "Refresh"
+    }
+  },
+  "selector": {
+    "header": {
+      "title": "Choose Your Email Provider",
+      "description": "Select the email service you want to use for inbound email processing. You can configure multiple email providers per account."
+    },
+    "cards": {
+      "google": {
+        "title": "Gmail",
+        "description": "Google Workspace / Gmail Integration",
+        "features": {
+          "accounts": "✓ Gmail and Google Workspace accounts",
+          "filtering": "✓ Label-based email filtering",
+          "processing": "✓ Real-time email processing",
+          "authentication": "✓ Automatic OAuth authentication"
+        },
+        "action": "Set up Gmail"
+      },
+      "microsoft": {
+        "title": "Microsoft 365",
+        "description": "Microsoft 365 / Outlook Integration",
+        "features": {
+          "accounts": "✓ Microsoft 365 and Outlook accounts",
+          "filtering": "✓ Folder-based email filtering",
+          "processing": "✓ Real-time email processing",
+          "authentication": "✓ Azure AD OAuth integration"
+        },
+        "action": "Set up Microsoft 365"
+      },
+      "imap": {
+        "title": "IMAP",
+        "description": "Custom IMAP Server Integration",
+        "features": {
+          "accounts": "✓ Any IMAP-compliant mailbox",
+          "filtering": "✓ Folder-based email filtering",
+          "authentication": "✓ OAuth2 or password authentication",
+          "listener": "✓ Real-time IDLE listener"
+        },
+        "action": "Set up IMAP"
+      }
+    },
+    "actions": {
+      "cancel": "Cancel"
+    },
+    "help": {
+      "enterprise": "Choose the provider your organization already uses. If you use Google Workspace, pick Gmail; if you use Microsoft 365, pick Microsoft 365. You can change this later by removing and reconfiguring your email provider.",
+      "standard": "Choose the provider your organization already uses. If you use Google Workspace, pick Gmail; otherwise choose IMAP. You can change this later by removing and reconfiguring your email provider."
+    }
+  },
+  "wizard": {
+    "title": {
+      "select": "Choose Email Provider",
+      "setup": "{{provider}} Configuration"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "back": "Back",
+      "close": "Close"
+    }
+  },
+  "providerCard": {
+    "subscription": {
+      "expired": "Expired",
+      "expiresInHours": "Expires in {{count}}h",
+      "expiresInDays": "Expires in {{count}}d"
+    },
+    "badges": {
+      "disabled": "Disabled",
+      "connected": "Connected",
+      "disconnected": "Disconnected",
+      "error": "Error",
+      "configuring": "Configuring",
+      "unknown": "Unknown"
+    },
+    "lastSync": {
+      "never": "Never",
+      "justNow": "Just now",
+      "minutesAgo": "{{count}}m ago",
+      "hoursAgo": "{{count}}h ago",
+      "daysAgo": "{{count}}d ago"
+    },
+    "actions": {
+      "edit": "Edit Configuration",
+      "testing": "Testing…",
+      "testConnection": "Test Connection",
+      "refreshWatch": "Refresh Pub/Sub & Watch",
+      "retryRenewal": "Retry Renewal",
+      "runDiagnostics": "Run Microsoft 365 Diagnostics",
+      "reconnectOauth": "Reconnect OAuth",
+      "resyncing": "Resyncing…",
+      "resyncMailbox": "Resync Mailbox",
+      "delete": "Delete Provider"
+    },
+    "fields": {
+      "status": "Status",
+      "lastSync": "Last Sync",
+      "created": "Created",
+      "subscription": "Subscription",
+      "defaults": "Ticket Defaults",
+      "error": "Error:"
+    },
+    "values": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "disabled": "Disabled",
+      "error": "Error"
+    },
+    "types": {
+      "google": "Gmail",
+      "microsoft": "Microsoft 365",
+      "imap": "IMAP"
+    },
+    "filters": {
+      "folders": "Folders: {{filters}}",
+      "labels": "Labels: {{filters}}"
+    },
+    "warnings": {
+      "inboundDefaults": "Inbound ticket defaults are required and emails won't process until one is selected."
+    },
+    "defaults": {
+      "placeholder": "Select defaults...",
+      "empty": "No defaults available"
+    },
+    "empty": {
+      "title": "No Email Providers Configured",
+      "description": "Add an email provider to start receiving and processing inbound emails as tickets.",
+      "action": "Add Email Provider"
+    }
+  },
+  "forms": {
+    "common": {
+      "actions": {
+        "cancel": "Cancel",
+        "saving": "Saving...",
+        "updateProvider": "Update Provider",
+        "addProvider": "Add Provider",
+        "createProvider": "Create Provider",
+        "manageDefaults": "Manage defaults",
+        "refreshList": "Refresh list",
+        "openProvidersSettings": "Open Providers Settings"
+      },
+      "validation": {
+        "requiredFieldsTitle": "Please fill in the required fields:",
+        "fixHighlightedFields": "Please fix the highlighted fields and try again."
+      },
+      "ticketDefaults": {
+        "title": "Ticket Defaults",
+        "description": "Select defaults to apply to email-created tickets",
+        "label": "Inbound Ticket Defaults",
+        "placeholder": "Select defaults (optional)",
+        "empty": "No defaults available"
+      },
+      "oauth": {
+        "authorizing": "Authorizing...",
+        "authorized": "Authorized",
+        "authorizeAccess": "Authorize Access"
+      }
+    },
+    "microsoft": {
+      "validation": {
+        "providerNameRequired": "Provider name is required",
+        "emailRequired": "Valid email address is required",
+        "redirectRequired": "Valid redirect URI is required",
+        "authorizeRequiresValid": "Please fill in all required fields before authorizing",
+        "oauthInitiateFailed": "Failed to initiate OAuth",
+        "popupBlocked": "Failed to open OAuth popup. Please allow popups for this site.",
+        "closedEarly": "Authorization window closed before completing. Please try again.",
+        "authorizationFailed": "Authorization failed"
+      },
+      "requiredFields": {
+        "providerName": "Provider Name",
+        "emailAddress": "Email Address",
+        "redirectUri": "Redirect URI"
+      },
+      "basic": {
+        "title": "Basic Configuration",
+        "description": "Basic settings for your Microsoft 365 email provider",
+        "providerNameLabel": "Provider Name *",
+        "providerNamePlaceholder": "e.g., Support Email",
+        "emailLabel": "Email Address *",
+        "emailPlaceholder": "support@client.com",
+        "enableProvider": "Enable this provider"
+      },
+      "oauth": {
+        "sectionTitle": "Microsoft OAuth Configuration",
+        "sectionDescription": "Microsoft app credentials are configured in Providers settings and reused here.",
+        "setupLabel": "Microsoft Entra",
+        "notConfigured": "Microsoft provider settings are not configured.",
+        "setupHelp": "Configure Providers first in Settings → Integrations → Providers, then return here to authorize this mailbox.",
+        "redirectUriLabel": "Redirect URI *",
+        "redirectUriPlaceholder": "https://yourapp.com/api/auth/microsoft/callback",
+        "authorizationTitle": "OAuth Authorization",
+        "authorizationDescription": "Complete OAuth flow to grant access to the mailbox"
+      },
+      "advanced": {
+        "title": "Advanced Settings",
+        "description": "Configure advanced email processing options",
+        "folderFiltersLabel": "Folder Filters",
+        "folderFiltersPlaceholder": "Inbox, Support, Custom Folder",
+        "folderFiltersHelp": "Comma-separated list of folders to monitor (default: Inbox)",
+        "maxEmailsPerSync": "Max Emails Per Sync"
+      }
+    },
+    "gmail": {
+      "validation": {
+        "providerNameRequired": "Provider name is required",
+        "gmailAddressRequired": "Valid Gmail address is required",
+        "authorizeRequiresValid": "Please fill in all required fields before authorizing",
+        "googleNotConfigured": "Google integration is not configured for this tenant. Configure Google first, then retry.",
+        "oauthInitiateFailed": "Failed to initiate OAuth",
+        "popupBlocked": "Failed to open OAuth popup. Please allow popups for this site.",
+        "closedEarly": "Authorization window was closed before completing.",
+        "authorizationFailed": "Authorization failed",
+        "popupFailed": "OAuth popup failed"
+      },
+      "messages": {
+        "setupIncomplete": "Provider saved but setup incomplete: {{error}}",
+        "warningsTitle": "Setup completed with warnings:",
+        "settingUp": "Setting up Gmail notifications..."
+      },
+      "requiredFields": {
+        "providerName": "Provider Name",
+        "gmailAddress": "Gmail Address"
+      },
+      "basic": {
+        "title": "Basic Configuration",
+        "description": "Basic settings for your Gmail email provider",
+        "providerNameLabel": "Provider Name *",
+        "providerNamePlaceholder": "e.g., Support Gmail",
+        "mailboxLabel": "Gmail Address *",
+        "mailboxPlaceholder": "support@client.com",
+        "enableProvider": "Enable this provider"
+      },
+      "oauth": {
+        "sectionTitle": "Google OAuth",
+        "sectionDescription": "Uses the tenant-owned Google app configured in Settings → Integrations → Providers.",
+        "setupLabel": "Google Cloud Console",
+        "notConfigured": "Google integration is not configured for this tenant.",
+        "setupHelp": "Configure tenant-owned Google OAuth + Pub/Sub first: Settings → Integrations → Providers.",
+        "openSettings": "Open Google Settings",
+        "requiredTitle": "OAuth Authorization Required",
+        "requiredDescriptionAdd": "You must complete OAuth authorization above before adding the provider to enable Gmail notifications.",
+        "requiredDescriptionUpdate": "You must complete OAuth authorization above before updating the provider to enable Gmail notifications.",
+        "stepTitle": "Step 1: OAuth Authorization",
+        "stepDescription": "Complete OAuth flow to grant access to Gmail",
+        "buttonSuccessSaving": "Successfully authorized! Saving your settings..."
+      },
+      "advanced": {
+        "title": "Advanced Settings",
+        "description": "Configure advanced email processing options",
+        "completeSetupSuffix": " & Complete Setup"
+      },
+      "processing": {
+        "labelFiltersLabel": "Gmail Labels to Monitor",
+        "labelFiltersPlaceholder": "INBOX, Support, Custom Label",
+        "labelFiltersHelp": "Comma-separated list of Gmail labels to monitor (default: INBOX)"
+      }
+    },
+    "imap": {
+      "validation": {
+        "providerNameRequired": "Provider name is required",
+        "mailboxRequired": "Mailbox is required",
+        "mailboxInvalid": "Valid mailbox is required (e.g. user@domain.com, user@localhost, user@test-server, or user)",
+        "hostRequired": "IMAP host is required",
+        "usernameRequired": "IMAP username is required",
+        "oauthInitiateFailed": "Failed to initiate IMAP OAuth"
+      },
+      "basic": {
+        "title": "Basic Settings",
+        "description": "Define the IMAP mailbox connection details.",
+        "providerName": "Provider Name",
+        "mailboxAddress": "Mailbox Address",
+        "host": "IMAP Host",
+        "port": "Port",
+        "useTls": "Use TLS/SSL",
+        "allowStarttls": "Allow STARTTLS Upgrade"
+      },
+      "auth": {
+        "title": "Authentication",
+        "description": "Choose password or OAuth2 authentication.",
+        "typeLabel": "Authentication Type",
+        "passwordOption": "Password",
+        "oauth2Option": "OAuth2 (XOAUTH2)",
+        "username": "Username",
+        "password": "Password / App Password",
+        "passwordHelp": "Passwords are stored securely and will not be displayed. Leave blank to keep the existing password.",
+        "oauthStatus": "OAuth Status",
+        "connected": "Connected",
+        "notConnected": "Not connected",
+        "reconnectOauth": "Reconnect OAuth",
+        "authorizeUrl": "Authorize URL",
+        "tokenUrl": "Token URL",
+        "clientId": "OAuth Client ID",
+        "clientSecret": "OAuth Client Secret",
+        "scopes": "OAuth Scopes",
+        "scopesPlaceholder": "space-delimited scopes"
+      },
+      "processing": {
+        "title": "Processing Settings",
+        "description": "Choose folders and processing behavior.",
+        "folderFilters": "Folder Filters",
+        "folderFiltersPlaceholder": "Inbox, Support, Tickets",
+        "active": "Active"
+      }
+    }
+  },
+  "inboundDefaultsForm": {
+    "feedback": {
+      "loadOptionsError": "Failed to load field options",
+      "loading": "Loading form options..."
+    },
+    "validation": {
+      "nameRequired": "Short name and display name are required",
+      "boardRequired": "Board is required",
+      "statusRequired": "Status is required",
+      "priorityRequired": "Priority is required",
+      "clientRequired": "Company is required"
+    },
+    "fields": {
+      "shortName": {
+        "label": "Short Name *",
+        "placeholder": "email-general",
+        "help": "Unique identifier (e.g., email-general, support-billing)"
+      },
+      "displayName": {
+        "label": "Display Name *",
+        "placeholder": "General Email Support"
+      },
+      "description": {
+        "label": "Description",
+        "placeholder": "Optional description of when these defaults are used"
+      },
+      "active": {
+        "label": "Active"
+      },
+      "board": {
+        "label": "Board *",
+        "placeholder": "Select Board"
+      },
+      "status": {
+        "label": "Status *",
+        "placeholder": "Select status",
+        "selectBoardFirst": "Select board first",
+        "loading": "Loading statuses..."
+      },
+      "priority": {
+        "label": "Priority *",
+        "placeholder": "Select priority"
+      },
+      "client": {
+        "label": "Client *",
+        "placeholder": "Select Client",
+        "help": "Required: used as a catch-all when no client can be matched from the email."
+      },
+      "category": {
+        "label": "Category",
+        "placeholder": "Select category",
+        "placeholderNoBoard": "Select board first",
+        "empty": "No categories found for the selected board."
+      },
+      "location": {
+        "label": "Location",
+        "placeholder": "Select location",
+        "placeholderNoClient": "Select client first (optional)",
+        "help": "Only applied when the catch-all client is used (no match case)."
+      },
+      "enteredBy": {
+        "label": "Entered By",
+        "placeholder": "System (null)",
+        "help": "Used only when we cannot match a contact or client. System tickets will show \"System\" as creator."
+      }
+    },
+    "section": {
+      "ticketDefaults": "Ticket Defaults"
+    },
+    "optionSuffix": {
+      "default": "(Default)"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "updating": "Updating...",
+      "creating": "Creating...",
+      "update": "Update Defaults",
+      "create": "Create Defaults"
+    }
+  },
+  "managed": {
+    "tabs": {
+      "inboundEmail": "E-mail de entrada",
+      "outboundEmail": "E-mail de saída"
+    },
+    "outbound": {
+      "intro": "Configure o e-mail de saída para sua organização.",
+      "providerTitle": "Provedor de saída",
+      "providerDescription": "Escolha como os e-mails de saída são enviados pela sua organização.",
+      "providerPlaceholder": "Selecione o provedor de saída",
+      "providerOptions": {
+        "resend": "Gerenciado pela Nine Minds",
+        "smtp": "SMTP"
+      },
+      "resendDescription": "Os e-mails são enviados pela infraestrutura gerenciada da Nine Minds. Adicione e verifique um domínio personalizado abaixo.",
+      "smtpDescription": "Os e-mails são enviados pelo seu próprio servidor SMTP.",
+      "smtpLabel": "SMTP",
+      "upgradeNotice": "Domínios de e-mail gerenciados não estão disponíveis no seu plano atual. Faça upgrade para usar a infraestrutura de saída gerenciada da Nine Minds com domínios personalizados.",
+      "domainsTitle": "Domínios gerenciados",
+      "domainsDescription": "Adicione um domínio personalizado e siga as instruções de DNS para verificar a propriedade.",
+      "domainLabel": "Domínio",
+      "domainPlaceholder": "exemplo.com",
+      "addDomainButton": "Adicionar domínio",
+      "smtpConfigTitle": "Configuração SMTP",
+      "smtpConfigDescription": "Insira os detalhes do seu servidor SMTP para enviar e-mails de saída.",
+      "smtp": {
+        "hostLabel": "Host SMTP",
+        "hostPlaceholder": "smtp.exemplo.com",
+        "portLabel": "Porta",
+        "usernameLabel": "Nome de usuário",
+        "usernamePlaceholder": "seu-email@exemplo.com",
+        "passwordLabel": "Senha",
+        "passwordPlaceholder": "Insira a senha",
+        "fromLabel": "Endereço do remetente",
+        "fromPlaceholder": "noreply@exemplo.com",
+        "fromHelp": "Endereço do remetente padrão para e-mails de saída.",
+        "savingButton": "Salvando…",
+        "saveButton": "Salvar configurações SMTP"
+      },
+      "ticketingFrom": {
+        "title": "Endereço do remetente de tickets",
+        "description": "Escolha o endereço de e-mail que aparecerá no cabeçalho De das notificações de ticket.",
+        "smtpHint": "O endereço deve usar um domínio associado ao seu servidor SMTP ({{domain}}). As respostas funcionam melhor com uma caixa de entrada conectada.",
+        "managedHint": "O endereço deve usar seu domínio de saída ({{domain}}). As respostas funcionam melhor com uma caixa de entrada conectada.",
+        "domainNotSet": "não definido",
+        "outboundRequiredTitle": "Domínio de saída necessário",
+        "smtpRequiredMessage": "Salve sua configuração SMTP com um endereço de remetente antes de selecionar um endereço de remetente de tickets.",
+        "managedRequiredMessage": "Adicione e verifique um domínio gerenciado antes de selecionar um endereço de remetente de tickets.",
+        "connectedInboxLabel": "Caixa de entrada conectada",
+        "customOptionLabel": "Outro endereço em {{domain}}",
+        "selectPlaceholder": "Selecione o endereço do remetente",
+        "connectedInboxHelp": "Selecione uma caixa de entrada conectada para manter as respostas agrupadas.",
+        "customLabel": "Endereço do remetente",
+        "customPlaceholder": "suporte@{{domain}}",
+        "customSmtpHelp": "Use um domínio que seu servidor SMTP esteja autorizado a enviar. Um domínio incompatível pode causar falhas de entrega ou filtragem de spam.",
+        "customManagedHelp": "Deve corresponder a {{domain}}. Se não for uma de suas caixas de entrada, o processamento de tickets de entrada pode não funcionar.",
+        "warningTitle": "Atenção",
+        "errorTitle": "Corrija o endereço do remetente",
+        "clearButton": "Limpar endereço do remetente",
+        "savingButton": "Salvando…",
+        "saveButton": "Salvar endereço do remetente"
+      }
+    },
+    "inbound": {
+      "intro": "Configure o roteamento de e-mails de entrada e a automação específica do provedor."
+    },
+    "dialogs": {
+      "clearTicketingFrom": {
+        "title": "Limpar endereço do remetente de tickets",
+        "message": "Limpar o endereço do remetente de tickets salvo? As notificações de ticket deixarão de usar um endereço personalizado até que você salve um novo.",
+        "confirm": "Limpar endereço do remetente"
+      },
+      "removeDomain": {
+        "title": "Remover domínio gerenciado",
+        "messageWithClear": "Remover {{domain}}? Isso também limpará o endereço do remetente de tickets salvo porque este domínio está atualmente ativo para e-mail de saída.",
+        "message": "Remover {{domain}}?",
+        "fallbackDomain": "este domínio",
+        "confirm": "Remover domínio"
+      },
+      "cancel": "Cancelar"
+    },
+    "validation": {
+      "enterFromAddress": "Insira um endereço de remetente",
+      "saveSmtpFirst": "Salve primeiro sua configuração SMTP com um endereço de remetente",
+      "addOutboundFirst": "Adicione e verifique um domínio de saída antes de escolher um endereço de remetente",
+      "invalidEmail": "Insira um endereço de e-mail válido",
+      "mustMatchDomain": "O endereço do remetente deve usar @{{domain}}",
+      "customAddressThreadWarning": "O uso de um endereço personalizado pode impedir o agrupamento correto das respostas recebidas.",
+      "smtpDomainMismatchWarning": "Este domínio não corresponde ao domínio do remetente SMTP ({{domain}}). Os e-mails podem falhar na entrega ou serem marcados como spam se seu servidor SMTP não estiver autorizado a enviar deste domínio.",
+      "notConnectedWarning": "O processamento de tickets de entrada pode não funcionar com este endereço porque ele não é uma de suas caixas de entrada conectadas."
+    },
+    "domainList": {
+      "loading": "Carregando domínios…",
+      "empty": "Ainda não há domínios gerenciados. Adicione um para começar.",
+      "providerDomainId": "ID do domínio do provedor: {{id}}",
+      "providerFallback": "Gerenciado via Resend",
+      "failureReason": "Motivo da falha: {{reason}}",
+      "recheckButton": "Verificar DNS novamente",
+      "removeButton": "Remover domínio",
+      "dnsRecordsHeading": "Registros DNS",
+      "dnsRecordsHelp": "Copie cada registro abaixo para seu provedor de DNS (GoDaddy, Cloudflare, etc.). Não podemos alterar seu DNS por você.",
+      "dnsEmpty": {
+        "pending": "Pedimos ao Resend para gerar os registros DNS para este domínio. Assim que aparecerem, copie-os para seu provedor de DNS, pois não podemos atualizá-los automaticamente.",
+        "failed": "Ainda precisamos de instruções DNS do Resend. Clique em Verificar DNS novamente e, quando os registros carregarem, publique-os no seu provedor de DNS.",
+        "default": "As instruções DNS ainda não estão disponíveis. Verifique o DNS novamente e copie cada registro para seu provedor de DNS assim que aparecer."
+      }
+    },
+    "dnsRecords": {
+      "status": {
+        "matched": "Detectado",
+        "mismatch": "Incompatível",
+        "missing": "Não encontrado",
+        "unknown": "Aguardando verificação"
+      },
+      "detectedValues": "Valores detectados",
+      "defaultEmpty": "Estamos preparando os registros DNS para este domínio. Assim que aparecerem, copie-os para seu provedor de DNS, pois não podemos atualizá-los por você.",
+      "summary": "Correspondem {{matched}} de {{total}} registros DNS obrigatórios",
+      "summaryWithCheckedAt": "Correspondem {{matched}} de {{total}} registros DNS obrigatórios • Última verificação {{checkedAt}}.",
+      "lastCheckedNoRecords": "Última verificação {{checkedAt}}. Nenhum registro detectado ainda.",
+      "copyButton": "Copiar",
+      "copyAriaLabel": "Copiar valor DNS",
+      "copied": "Copiado para a área de transferência",
+      "copyFailed": "Falha ao copiar",
+      "checkedAt": "Verificado {{checkedAt}}",
+      "ttlLabel": "TTL:",
+      "priorityLabel": "Prioridade:",
+      "missingHelp": "Ainda não detectamos este registro no DNS. Verifique se ele existe no seu provedor de DNS com o valor exato mostrado acima.",
+      "mismatchHelp": "O registro DNS existe, mas o valor não corresponde ao que o Resend espera.",
+      "matchedHelp": "O valor detectado corresponde ao esperado.",
+      "unknownHelp": "Ainda não verificamos o DNS. Verifique o DNS novamente para executar a verificação."
+    },
+    "messages": {
+      "loadDomainsFailed": "Falha ao carregar domínios gerenciados",
+      "loadOutboundSettingsFailed": "Falha ao carregar as configurações de e-mail de saída",
+      "ticketingFromUpdated": "Endereço do remetente de tickets atualizado",
+      "ticketingFromSaveFailed": "Falha ao salvar o endereço do remetente de tickets",
+      "ticketingFromCleared": "Endereço do remetente de tickets limpo",
+      "ticketingFromClearFailed": "Falha ao limpar o endereço do remetente de tickets",
+      "switchProviderFailed": "Falha ao alterar o provedor",
+      "smtpHostRequired": "O host SMTP é obrigatório",
+      "fromAddressRequired": "O endereço do remetente é obrigatório",
+      "smtpSaved": "Configurações SMTP salvas",
+      "smtpSaveFailed": "Falha ao salvar as configurações SMTP",
+      "domainRequired": "Insira um nome de domínio",
+      "domainSubmitted": "Solicitação de domínio enviada",
+      "domainRequestFailed": "Falha ao solicitar o domínio",
+      "verificationRecheckScheduled": "Nova verificação agendada",
+      "refreshStatusFailed": "Falha ao atualizar o status do domínio",
+      "domainRemovalScheduled": "Remoção do domínio agendada",
+      "domainRemovalScheduledWithClear": "Remoção do domínio agendada e endereço do remetente de tickets limpo",
+      "removeDomainFailed": "Falha ao remover o domínio"
+    }
+  }
+}

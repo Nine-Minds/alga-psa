@@ -48,7 +48,7 @@
     "success": "Erfolg",
     "error": "Fehler",
     "warning": "Warnung",
-    "info": "Information",
+    "info": "Informationen",
     "pending": "Ausstehend",
     "active": "Aktiv",
     "inactive": "Inaktiv",
@@ -128,6 +128,43 @@
         "client": "Unternehmensstandard",
         "tenant": "Mandantenstandard",
         "system": "Systemstandard"
+      }
+    },
+    "hierarchyTable": {
+      "title": "Sprachpräferenz-Hierarchie",
+      "description": "Bei der Bestimmung der Sprache für die Oberfläche und E-Mail-Benachrichtigungen prüft Alga diese in der Reihenfolge und stoppt beim ersten Treffer.",
+      "columns": {
+        "priority": "Priorität",
+        "source": "Sprachquelle",
+        "appliesTo": "Gilt für",
+        "whereSet": "Wo festgelegt"
+      },
+      "rows": {
+        "userPreference": {
+          "source": "Individuelle Benutzerpräferenz",
+          "appliesTo": "Alle Benutzer",
+          "whereSet": "Benutzerprofil"
+        },
+        "clientUserLanguage": {
+          "source": "Kundenspezifische Sprache",
+          "appliesTo": "Client-Portal-Benutzer (pro Kunde)",
+          "whereSet": "Kundendetails"
+        },
+        "clientPortalDefault": {
+          "source": "Client-Portal-Standard",
+          "appliesTo": "Alle Client-Portal-Benutzer",
+          "whereSet": "MSP-Einstellungen → Client-Portal"
+        },
+        "organizationDefault": {
+          "source": "Organisations-Standard",
+          "appliesTo": "Alle Benutzer (MSP-Mitarbeiter und Client-Portal)",
+          "whereSet": "MSP-Einstellungen → Sprache"
+        },
+        "systemDefault": {
+          "source": "Systemstandard (Englisch)",
+          "appliesTo": "Fallback",
+          "whereSet": "Systemdefiniert"
+        }
       }
     }
   },
@@ -761,7 +798,7 @@
     "card": {
       "requesterName": "Anfragender",
       "companyName": "Unternehmen",
-      "service": "Service",
+      "service": "Dienst",
       "requestedDateTime": "Angefragtes Datum & Uhrzeit",
       "duration": "Dauer",
       "preferredTechnician": "Bevorzugter Techniker",
@@ -811,7 +848,6 @@
       "scheduleEntryCreated": "Termineintrag erfolgreich erstellt"
     }
   },
-  "notifications": {},
   "sessionManagement": {
     "title": "Aktive Sitzungen",
     "description": "Verwalten Sie Ihre aktiven Anmeldesitzungen auf allen Geräten (maximal 5 Sitzungen)",
@@ -935,5 +971,26 @@
     "addOnDescription": {
       "ai_assistant": "Schalten Sie KI-Chat, Dokumentenhilfe, Seitenleisten-Assistenz und Workflow-KI-Tools für Ihr Team frei."
     }
+  },
+  "auth": {
+    "messages": {
+      "handoffMissingToken": "Das Anmelde-Übergabe-Token fehlt oder ist ungültig. Bitte erneut anmelden.",
+      "handoffFinalizeFailed": "Wir konnten Ihre Anmeldung nicht abschließen. Bitte erneut versuchen.",
+      "handoffNetworkIssue": "Netzwerkproblem beim Abschließen Ihrer Anmeldung. Bitte erneut versuchen."
+    }
+  },
+  "form": {
+    "selectPlaceholder": "Auswählen...",
+    "clearSelection": "Auswahl löschen",
+    "fromDate": "Von",
+    "toDate": "Bis",
+    "noResults": "Keine Ergebnisse gefunden",
+    "searchPlaceholder": "Suchen..."
+  },
+  "tagFilter": {
+    "placeholder": "Nach Tags filtern...",
+    "filter": "Filter",
+    "selectedCount": "{{count}} ausgewählt",
+    "clearAll": "Alle löschen"
   }
 }

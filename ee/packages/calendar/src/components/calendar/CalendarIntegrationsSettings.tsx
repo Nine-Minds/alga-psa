@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/component
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useToast } from '@alga-psa/ui/hooks/use-toast';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type SyncFeedbackMap = Record<string, { variant: 'success' | 'error'; message: string }>;
 
@@ -28,6 +29,7 @@ type ProviderType = 'google' | 'microsoft';
 export function CalendarIntegrationsSettings() {
   const tenant = useTenant();
   const { toast } = useToast();
+  const { t } = useTranslation('msp/calendar');
   const [providers, setProviders] = useState<CalendarProviderConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,11 +55,11 @@ export function CalendarIntegrationsSettings() {
         setProviders(result.providers);
         setError(null);
       } else {
-        const message = result.error || 'Failed to load calendar providers';
+        const message = result.error || t('calendar.integrations.loadError', { defaultValue: 'Failed to load calendar providers' });
         setError(message);
       }
     } catch (err: any) {
-      const message = err?.message || 'Failed to load calendar providers';
+      const message = err?.message || t('calendar.integrations.loadError', { defaultValue: 'Failed to load calendar providers' });
       setError(message);
     } finally {
       setLoading(false);
@@ -102,26 +104,26 @@ export function CalendarIntegrationsSettings() {
       const result = await deleteCalendarProvider(providerPendingDeletion.id);
       if (result.success) {
         toast({
-          title: 'Calendar provider deleted',
-          description: `${providerPendingDeletion.name} was removed successfully.`,
+          title: t('calendar.integrations.toasts.deleted.title', { defaultValue: 'Calendar provider deleted' }),
+          description: t('calendar.integrations.toasts.deleted.description', { defaultValue: '{{name}} was removed successfully.', name: providerPendingDeletion.name }),
         });
         setIsDeleteDialogOpen(false);
         setProviderPendingDeletion(null);
         await loadProviders();
       } else {
-        const message = result.error || 'Failed to delete calendar provider';
+        const message = result.error || t('calendar.integrations.toasts.deleteFailed.fallback', { defaultValue: 'Failed to delete calendar provider' });
         setError(message);
         toast({
-          title: 'Unable to delete calendar provider',
+          title: t('calendar.integrations.toasts.deleteFailed.title', { defaultValue: 'Unable to delete calendar provider' }),
           description: message,
           variant: 'destructive',
         });
       }
     } catch (err: any) {
-      const message = err?.message || 'Failed to delete calendar provider';
+      const message = err?.message || t('calendar.integrations.toasts.deleteFailed.fallback', { defaultValue: 'Failed to delete calendar provider' });
       setError(message);
       toast({
-        title: 'Unable to delete calendar provider',
+        title: t('calendar.integrations.toasts.deleteFailed.title', { defaultValue: 'Unable to delete calendar provider' }),
         description: message,
         variant: 'destructive',
       });
@@ -143,22 +145,24 @@ export function CalendarIntegrationsSettings() {
       const result = await syncCalendarProvider(providerId);
       if (result.success) {
         toast({
-          title: 'Sync started',
-          description: providerName ? `${providerName} sync is running in the background.` : 'Calendar sync is running in the background.',
+          title: t('calendar.integrations.toasts.syncStarted.title', { defaultValue: 'Sync started' }),
+          description: providerName
+            ? t('calendar.integrations.toasts.syncStarted.descriptionWithName', { defaultValue: '{{name}} sync is running in the background.', name: providerName })
+            : t('calendar.integrations.toasts.syncStarted.descriptionGeneric', { defaultValue: 'Calendar sync is running in the background.' }),
         });
         setSyncFeedback((prev) => ({
           ...prev,
           [providerId]: {
             variant: 'success',
-            message: 'Sync started. Check back shortly for results.',
+            message: t('calendar.integrations.toasts.syncStartedFeedback', { defaultValue: 'Sync started. Check back shortly for results.' }),
           },
         }));
         // Refresh providers after a short delay to pick up status changes
         setTimeout(() => loadProviders(), 3000);
       } else {
-        const message = result.error || 'Failed to start sync.';
+        const message = result.error || t('calendar.integrations.toasts.syncFailed.fallback', { defaultValue: 'Failed to start sync.' });
         toast({
-          title: 'Failed to start sync',
+          title: t('calendar.integrations.toasts.syncFailed.title', { defaultValue: 'Failed to start sync' }),
           description: message,
           variant: 'destructive',
         });
@@ -171,10 +175,10 @@ export function CalendarIntegrationsSettings() {
         }));
       }
     } catch (err: any) {
-      const message = err?.message || 'Failed to sync calendar provider';
+      const message = err?.message || t('calendar.integrations.toasts.syncException.fallback', { defaultValue: 'Failed to sync calendar provider' });
       setError(message);
       toast({
-        title: 'Manual sync failed',
+        title: t('calendar.integrations.toasts.syncException.title', { defaultValue: 'Manual sync failed' }),
         description: message,
         variant: 'destructive',
       });
@@ -191,9 +195,9 @@ export function CalendarIntegrationsSettings() {
   };
 
   const getProviderLabel = (type: ProviderType | null) => {
-    if (type === 'google') return 'Google';
-    if (type === 'microsoft') return 'Microsoft';
-    return 'Calendar';
+    if (type === 'google') return t('calendar.integrations.providerLabels.google', { defaultValue: 'Google' });
+    if (type === 'microsoft') return t('calendar.integrations.providerLabels.microsoft', { defaultValue: 'Microsoft' });
+    return t('calendar.integrations.providerLabels.calendar', { defaultValue: 'Calendar' });
   };
 
   const handleFormSuccess = () => {
@@ -208,28 +212,28 @@ export function CalendarIntegrationsSettings() {
         return (
           <Badge variant="success" className="flex items-center gap-1" id={`calendar-provider-${index}-connection-status-badge`}>
             <CheckCircle className="h-3 w-3" />
-            Connected
+            {t('calendar.integrations.connectionStatus.connected', { defaultValue: 'Connected' })}
           </Badge>
         );
       case 'error':
         return (
           <Badge variant="error" className="flex items-center gap-1" id={`calendar-provider-${index}-connection-status-badge`}>
             <XCircle className="h-3 w-3" />
-            Error
+            {t('calendar.integrations.connectionStatus.error', { defaultValue: 'Error' })}
           </Badge>
         );
       case 'disconnected':
         return (
           <Badge variant="secondary" className="flex items-center gap-1" id={`calendar-provider-${index}-connection-status-badge`}>
             <AlertTriangle className="h-3 w-3" />
-            Disconnected
+            {t('calendar.integrations.connectionStatus.disconnected', { defaultValue: 'Disconnected' })}
           </Badge>
         );
       default:
         return (
           <Badge variant="secondary" className="flex items-center gap-1" id={`calendar-provider-${index}-connection-status-badge`}>
             <Clock className="h-3 w-3" />
-            Configuring
+            {t('calendar.integrations.connectionStatus.configuring', { defaultValue: 'Configuring' })}
           </Badge>
         );
     }
@@ -269,10 +273,9 @@ export function CalendarIntegrationsSettings() {
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between gap-4">
             <div className="space-y-1">
-              <CardTitle id="calendar-integrations-heading" className="text-xl">Calendar Integrations</CardTitle>
+              <CardTitle id="calendar-integrations-heading" className="text-xl">{t('calendar.integrations.header.title', { defaultValue: 'Calendar Integrations' })}</CardTitle>
               <CardDescription className="max-w-2xl text-base">
-                Connect your personal Google or Microsoft calendar to sync your assigned schedule entries. 
-                Events you create in Alga will appear on your external calendar when you're assigned to them.
+                {t('calendar.integrations.header.description', { defaultValue: "Connect your personal Google or Microsoft calendar to sync your assigned schedule entries. Events you create in Alga will appear on your external calendar when you're assigned to them." })}
               </CardDescription>
             </div>
             {providers.length > 0 && (
@@ -284,7 +287,7 @@ export function CalendarIntegrationsSettings() {
                   className="flex items-center gap-2"
                 >
                   <Plus className="h-4 w-4" />
-                  Google Calendar
+                  {t('calendar.integrations.buttons.googleCalendar', { defaultValue: 'Google Calendar' })}
                 </Button>
                 <Button
                   id="add-outlook-calendar-button-header"
@@ -293,7 +296,7 @@ export function CalendarIntegrationsSettings() {
                   className="flex items-center gap-2"
                 >
                   <Plus className="h-4 w-4" />
-                  Outlook Calendar
+                  {t('calendar.integrations.buttons.outlookCalendar', { defaultValue: 'Outlook Calendar' })}
                 </Button>
               </div>
             )}
@@ -311,8 +314,8 @@ export function CalendarIntegrationsSettings() {
               <AlertTriangle className="h-4 w-4 text-[rgb(var(--color-secondary-500))]" />
             </div>
             <div>
-              <span className="font-semibold text-[rgb(var(--color-secondary-700))] block mb-0.5">Pro Tip</span>
-              To import an event from your external calendar into Alga, simply add <code className="px-1.5 py-0.5 rounded bg-[rgb(var(--color-secondary-100))] text-[rgb(var(--color-secondary-900))] font-mono text-xs font-medium">@alga</code> to its title or description.
+              <span className="font-semibold text-[rgb(var(--color-secondary-700))] block mb-0.5">{t('calendar.integrations.proTip.label', { defaultValue: 'Pro Tip' })}</span>
+              {t('calendar.integrations.proTip.body', { defaultValue: 'To import an event from your external calendar into Alga, simply add' })} <code className="px-1.5 py-0.5 rounded bg-[rgb(var(--color-secondary-100))] text-[rgb(var(--color-secondary-900))] font-mono text-xs font-medium">@alga</code> {t('calendar.integrations.proTipSuffix', { defaultValue: 'to its title or description.' })}
             </div>
           </div>
 
@@ -321,9 +324,9 @@ export function CalendarIntegrationsSettings() {
               <div className="bg-background p-4 rounded-full mb-4 shadow-sm">
                 <Settings className="h-8 w-8 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">No calendars connected</h3>
+              <h3 className="text-lg font-semibold mb-2">{t('calendar.integrations.empty.title', { defaultValue: 'No calendars connected' })}</h3>
               <p className="text-muted-foreground max-w-sm mb-8">
-                Connect a calendar to automatically sync your schedule and never miss an assignment.
+                {t('calendar.integrations.empty.description', { defaultValue: 'Connect a calendar to automatically sync your schedule and never miss an assignment.' })}
               </p>
               <div className="flex flex-col sm:flex-row items-center gap-3">
                 <Button
@@ -333,7 +336,7 @@ export function CalendarIntegrationsSettings() {
                   className="flex items-center gap-2 w-full sm:w-auto"
                 >
                   <Plus className="h-4 w-4" />
-                  Add Google Calendar
+                  {t('calendar.integrations.buttons.addGoogleCalendar', { defaultValue: 'Add Google Calendar' })}
                 </Button>
                 <Button
                   id="add-outlook-calendar-button-empty"
@@ -342,7 +345,7 @@ export function CalendarIntegrationsSettings() {
                   className="flex items-center gap-2 w-full sm:w-auto"
                 >
                   <Plus className="h-4 w-4" />
-                  Add Outlook Calendar
+                  {t('calendar.integrations.buttons.addOutlookCalendar', { defaultValue: 'Add Outlook Calendar' })}
                 </Button>
               </div>
             </div>
@@ -372,41 +375,49 @@ export function CalendarIntegrationsSettings() {
                               ) : (
                                 <CheckCircle className="h-3 w-3" />
                               )}
-                              {needsAttention ? 'Action Required' : 'OAuth Complete'}
+                              {needsAttention
+                                ? t('calendar.integrations.oauthStatus.actionRequired', { defaultValue: 'Action Required' })
+                                : t('calendar.integrations.oauthStatus.complete', { defaultValue: 'OAuth Complete' })}
                             </Badge>
                             <Badge
                               variant={provider.active ? 'primary' : 'secondary'}
                               id={`calendar-provider-${index}-active-badge`}
                             >
-                              {provider.active ? 'Active' : 'Inactive'}
+                              {provider.active
+                                ? t('calendar.integrations.active.active', { defaultValue: 'Active' })
+                                : t('calendar.integrations.active.inactive', { defaultValue: 'Inactive' })}
                             </Badge>
                           </div>
 
                           <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2" id={`calendar-provider-${index}-meta`}>
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-foreground">Type:</span>
-                              <span>{provider.provider_type === 'google' ? 'Google Calendar' : 'Microsoft Outlook Calendar'}</span>
+                              <span className="font-medium text-foreground">{t('calendar.integrations.fields.type', { defaultValue: 'Type:' })}</span>
+                              <span>
+                                {provider.provider_type === 'google'
+                                  ? t('calendar.integrations.providerType.google', { defaultValue: 'Google Calendar' })
+                                  : t('calendar.integrations.providerType.microsoft', { defaultValue: 'Microsoft Outlook Calendar' })}
+                              </span>
                             </div>
                             <div className="flex items-center gap-2 min-w-0">
-                              <span className="font-medium text-foreground flex-shrink-0">Calendar ID:</span>
-                              <span className="truncate" title={provider.calendar_id || 'Not set'}>{provider.calendar_id || 'Not set'}</span>
+                              <span className="font-medium text-foreground flex-shrink-0">{t('calendar.integrations.fields.calendarId', { defaultValue: 'Calendar ID:' })}</span>
+                              <span className="truncate" title={provider.calendar_id || t('calendar.integrations.values.notSet', { defaultValue: 'Not set' })}>{provider.calendar_id || t('calendar.integrations.values.notSet', { defaultValue: 'Not set' })}</span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-foreground">Sync Direction:</span>
+                              <span className="font-medium text-foreground">{t('calendar.integrations.fields.syncDirection', { defaultValue: 'Sync Direction:' })}</span>
                               <span>
                                 {provider.sync_direction === 'bidirectional'
-                                  ? 'Bidirectional'
+                                  ? t('calendar.integrations.syncDirection.bidirectional', { defaultValue: 'Bidirectional' })
                                   : provider.sync_direction === 'to_external'
-                                    ? 'Alga → External'
-                                    : 'External → Alga'}
+                                    ? t('calendar.integrations.syncDirection.toExternal', { defaultValue: 'Alga → External' })
+                                    : t('calendar.integrations.syncDirection.fromExternal', { defaultValue: 'External → Alga' })}
                               </span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-foreground">Last Sync:</span>
+                              <span className="font-medium text-foreground">{t('calendar.integrations.fields.lastSync', { defaultValue: 'Last Sync:' })}</span>
                               <span>
                                 {provider.last_sync_at
                                   ? new Date(provider.last_sync_at).toLocaleString()
-                                  : 'Not yet run'}
+                                  : t('calendar.integrations.values.notYetRun', { defaultValue: 'Not yet run' })}
                               </span>
                             </div>
                           </div>
@@ -418,7 +429,7 @@ export function CalendarIntegrationsSettings() {
                               id={`calendar-provider-${index}-syncing-indicator`}
                             >
                               <RefreshCw className="h-3 w-3 animate-spin" />
-                              Sync in progress...
+                              {t('calendar.integrations.syncing.inProgress', { defaultValue: 'Sync in progress...' })}
                             </Badge>
                           )}
 
@@ -457,7 +468,9 @@ export function CalendarIntegrationsSettings() {
                             <RefreshCw
                               className={`h-4 w-4 ${syncingProviderId === provider.id ? 'animate-spin' : ''}`}
                             />
-                            {syncingProviderId === provider.id ? 'Syncing…' : 'Sync Now'}
+                            {syncingProviderId === provider.id
+                              ? t('calendar.integrations.actions.syncing', { defaultValue: 'Syncing…' })
+                              : t('calendar.integrations.actions.syncNow', { defaultValue: 'Sync Now' })}
                           </Button>
                           <Button
                             id={`calendar-provider-${index}-edit-button`}
@@ -467,7 +480,7 @@ export function CalendarIntegrationsSettings() {
                             className="flex items-center gap-2"
                           >
                             <Settings className="h-4 w-4" />
-                            Edit
+                            {t('calendar.integrations.actions.edit', { defaultValue: 'Edit' })}
                           </Button>
                           <Button
                             id={`calendar-provider-${index}-delete-button`}
@@ -477,7 +490,7 @@ export function CalendarIntegrationsSettings() {
                             className="flex items-center gap-2 text-red-600"
                           >
                             <Trash2 className="h-4 w-4" />
-                            Delete
+                            {t('calendar.integrations.actions.delete', { defaultValue: 'Delete' })}
                           </Button>
                         </div>
                       </div>
@@ -494,11 +507,11 @@ export function CalendarIntegrationsSettings() {
         isOpen={showAddDialog}
         onClose={closeAddDialog}
         id="add-calendar-provider-dialog"
-        title={`Add ${getProviderLabel(providerType)} Calendar Provider`}
+        title={t('calendar.integrations.dialogs.addTitle', { defaultValue: 'Add {{provider}} Calendar Provider', provider: getProviderLabel(providerType) })}
         className="max-w-2xl"
       >
         <DialogContent className="max-h-[70vh] overflow-y-auto">
-          <DialogDescription>Connect your personal calendar to sync schedule entries you're assigned to.</DialogDescription>
+          <DialogDescription>{t('calendar.integrations.dialogs.addDescription', { defaultValue: "Connect your personal calendar to sync schedule entries you're assigned to." })}</DialogDescription>
           {providerType === 'google' && (
             <GoogleCalendarProviderForm
               tenant={tenant}
@@ -520,11 +533,11 @@ export function CalendarIntegrationsSettings() {
         isOpen={showEditDialog}
         onClose={closeEditDialog}
         id="edit-calendar-provider-dialog"
-        title={`Edit ${getProviderLabel(providerType)} Calendar Provider`}
+        title={t('calendar.integrations.dialogs.editTitle', { defaultValue: 'Edit {{provider}} Calendar Provider', provider: getProviderLabel(providerType) })}
         className="max-w-2xl"
       >
         <DialogContent className="max-h-[70vh] overflow-y-auto">
-          <DialogDescription>Update your personal calendar connection settings.</DialogDescription>
+          <DialogDescription>{t('calendar.integrations.dialogs.editDescription', { defaultValue: 'Update your personal calendar connection settings.' })}</DialogDescription>
           {selectedProvider && providerType === 'google' && (
             <GoogleCalendarProviderForm
               tenant={tenant}
@@ -551,14 +564,14 @@ export function CalendarIntegrationsSettings() {
           setProviderPendingDeletion(null);
         }}
         onConfirm={handleConfirmDelete}
-        title="Delete Calendar Provider"
+        title={t('calendar.integrations.dialogs.delete.title', { defaultValue: 'Delete Calendar Provider' })}
         message={
           providerPendingDeletion
-            ? `Deleting ${providerPendingDeletion.name} will stop future synchronisation and remove associated webhooks. This action cannot be undone.`
-            : 'Are you sure you want to delete this calendar provider?'
+            ? t('calendar.integrations.dialogs.delete.messageWithName', { defaultValue: 'Deleting {{name}} will stop future synchronisation and remove associated webhooks. This action cannot be undone.', name: providerPendingDeletion.name })
+            : t('calendar.integrations.dialogs.delete.messageGeneric', { defaultValue: 'Are you sure you want to delete this calendar provider?' })
         }
-        confirmLabel="Delete Provider"
-        cancelLabel="Keep Provider"
+        confirmLabel={t('calendar.integrations.dialogs.delete.confirmLabel', { defaultValue: 'Delete Provider' })}
+        cancelLabel={t('calendar.integrations.dialogs.delete.cancelLabel', { defaultValue: 'Keep Provider' })}
         id="delete-calendar-provider-dialog"
         isConfirming={isDeletingProvider}
       />
