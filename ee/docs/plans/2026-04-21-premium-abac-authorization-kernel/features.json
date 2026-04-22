@@ -257,7 +257,7 @@
   {
     "id": "F028",
     "description": "Add a tier-gated EE Bundle Library surface for browsing, searching, cloning, and archiving authorization bundles.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Non-functional Requirements"
@@ -266,7 +266,7 @@
   {
     "id": "F029",
     "description": "Add a tier-gated EE Bundle Editor that authors draft revisions through resource-oriented sections rather than raw rule grids.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Functional Requirements"
@@ -275,7 +275,7 @@
   {
     "id": "F030",
     "description": "Add natural-language summaries for bundle rules, effective bundle descriptions, and revision changes so admins can understand configuration without reading raw JSON.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ]
@@ -283,7 +283,7 @@
   {
     "id": "F031",
     "description": "Add a tier-gated EE Assignment Manager that shows which roles, teams, users, and API keys each bundle currently affects.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Users and Primary Flows"
@@ -292,7 +292,7 @@
   {
     "id": "F032",
     "description": "Add a tier-gated EE Access Simulator that evaluates draft and published bundle behavior against real principals and real existing records.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Users and Primary Flows",
@@ -302,7 +302,7 @@
   {
     "id": "F033",
     "description": "Extend the EE Access Simulator to support synthetic authorization scenarios when no suitable real principal or record exists.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Users and Primary Flows",
@@ -312,7 +312,7 @@
   {
     "id": "F034",
     "description": "Provide upgrade / unavailable states that follow existing EE tier-gating patterns when configurable premium ABAC is not available in CE or in non-entitled EE tiers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Non-functional Requirements"
@@ -321,7 +321,7 @@
   {
     "id": "F035",
     "description": "Permission-gate bundle CRUD, publish, assignment, and simulator actions so authorization management itself is controlled by server-side checks.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Functional Requirements"
@@ -330,7 +330,7 @@
   {
     "id": "F036",
     "description": "Capture audit-relevant metadata for bundle and revision lifecycle events, including who created drafts, who published revisions, and which assignments are active.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Observability"
@@ -339,7 +339,7 @@
   {
     "id": "F037",
     "description": "Migrate ticket authorization for the selected v1 UI/server-action paths onto the shared kernel for list and single-record access evaluation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements",
       "Acceptance Criteria (Definition of Done)"

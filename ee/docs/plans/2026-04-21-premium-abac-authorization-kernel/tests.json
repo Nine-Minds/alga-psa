@@ -22,7 +22,7 @@
   {
     "id": "T003",
     "description": "DB-backed integration: publishing a draft bundle revision makes only the published revision enforceable while preserving the stable bundle identity and existing assignments.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019",
       "F020"

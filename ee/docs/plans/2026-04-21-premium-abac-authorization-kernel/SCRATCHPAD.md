@@ -121,3 +121,58 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-04-21) Additional validation runbook for this checkpoint:
   - `cd server && npx vitest run src/test/unit/authorization/kernel.engine.test.ts src/test/unit/authorization/kernel.relationships.test.ts src/test/unit/authorization/kernel.legacyDirection.test.ts src/test/unit/authorization/bundle.catalog.test.ts src/test/unit/authorization/bundle.provider.test.ts src/test/unit/authorization/starterBundles.test.ts src/test/unit/migrations/authorizationBundleControlPlaneMigration.test.ts`
   - `cd .. && npx tsc --pretty false --noEmit -p server/tsconfig.json`
+- (2026-04-21) Completed `F028` by replacing EE `PolicyManagement` with a tier-gated Authorization Bundle Library surface:
+  - UI: `ee/server/src/components/settings/policy/PolicyManagement.tsx`
+  - Actions: `ee/server/src/lib/actions/auth/authorizationBundleActions.ts`
+  - Service additions for list/create/clone: `server/src/lib/authorization/bundles/service.ts`
+  - Tier feature gate: `TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES` in `packages/types/src/constants/tierFeatures.ts`
+- (2026-04-21) `F028` implementation details:
+  - Browse/search active+archived bundles from `authorization_bundles`.
+  - Clone bundle into new draft-backed custom bundle while copying source revision rules.
+  - Archive active bundles.
+  - Seed starter bundles into tenant scope via one action.
+  - Tier enforcement is server-side (`assertTierAccess`) and client-side (`useTierFeature`) with Premium minimum tier.
+- (2026-04-21) Completed `T003` with DB-backed integration coverage in `server/src/test/integration/authorization/bundleRevisionPublishing.integration.test.ts` validating:
+  - publish moves previous published revision to archived
+  - target draft revision becomes published
+  - stable bundle identity and assignment rows are preserved
+- (2026-04-21) Validation runbook for `F028` + `T003` checkpoint:
+  - `cd packages/types && npx vitest run src/constants/tierFeatures.test.ts --coverage.enabled=false`
+  - `mkdir -p server/coverage/.tmp && cd server && npx vitest run --coverage.enabled=false src/test/integration/authorization/bundleRevisionPublishing.integration.test.ts`
+  - `cd .. && npx tsc --pretty false --noEmit -p server/tsconfig.json`
+- (2026-04-21) Completed `F029` by extending EE policy settings to include a draft-oriented Bundle Editor in resource sections (Tickets, Documents, Time, Projects, Assets, Billing), replacing raw policy text editing:
+  - UI editor surface: `ee/server/src/components/settings/policy/PolicyManagement.tsx`
+  - Draft editor actions: `getAuthorizationBundleDraftEditorAction`, `upsertAuthorizationBundleDraftRuleAction`, `deleteAuthorizationBundleDraftRuleAction` in `ee/server/src/lib/actions/auth/authorizationBundleActions.ts`
+  - Draft helpers in service layer: `ensureDraftBundleRevision`, `listBundleRulesForRevision`, `deleteBundleRule` in `server/src/lib/authorization/bundles/service.ts`
+- (2026-04-21) `F029` rationale: enforce draft-first authoring semantics by materializing/rehydrating a draft revision from the currently published revision when no draft exists, then editing only draft rules grouped by resource family.
+- (2026-04-21) Completed `F030` by adding human-readable summaries for both bundle-level and rule-level understanding:
+  - Rule summaries in editor rows (`Narrow <resource> <action> to ...`) generated in `ee/server/src/components/settings/policy/PolicyManagement.tsx`.
+  - Effective bundle summaries in library rows (status + assignment impact text).
+  - Draft-vs-published revision summary generated server-side in `getAuthorizationBundleDraftEditorAction` (`ee/server/src/lib/actions/auth/authorizationBundleActions.ts`) and rendered in the editor header.
+- (2026-04-21) Completed `F031` by adding an Assignment Manager panel to the EE bundle surface:
+  - New action `listAuthorizationBundleAssignmentsAction` resolves assignment targets across role/team/user/api_key with friendly labels.
+  - UI now has per-bundle `Assignments` toggle showing grouped assignment cards and status.
+  - Files: `ee/server/src/lib/actions/auth/authorizationBundleActions.ts`, `ee/server/src/components/settings/policy/PolicyManagement.tsx`.
+- (2026-04-21) Completed `F032` by adding an EE Access Simulator for real principals + existing records:
+  - Principal lookup action: `listAuthorizationSimulationPrincipalsAction`.
+  - Record lookup action by resource family: `listAuthorizationSimulationRecordsAction`.
+  - Simulation execution: `runAuthorizationBundleSimulationAction` compares draft vs published revision decisions with explainability codes.
+  - UI: simulator panel in `ee/server/src/components/settings/policy/PolicyManagement.tsx`.
+- (2026-04-21) Completed `F033` by extending the simulator with synthetic scenarios:
+  - Added synthetic record input (`ownerUserId`, `clientId`, `boardId`, `isClientVisible`) when no real record is suitable.
+  - Simulation action now supports `syntheticRecord` payloads and runs the same draft-vs-published decision flow.
+- (2026-04-21) Completed `F034` by tightening unavailable/upgrade states for non-entitled contexts:
+  - EE tier-gate surface already blocks with `useTierFeature(TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES)`.
+  - CE placeholder copy updated (`packages/ee/src/components/settings/policy/PolicyManagement.tsx`) to show Premium upgrade path while clarifying builtin authorization remains active.
+- (2026-04-21) Completed `F035` by adding explicit server-side permission/tier gates to bundle management actions:
+  - CRUD + editor + simulator + assignment + publish actions all enforce `assertTierAccess(TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES)` plus RBAC permission checks (`system_settings:read|write`).
+  - Added write-gated actions for publish and assignment status changes in `ee/server/src/lib/actions/auth/authorizationBundleActions.ts`.
+- (2026-04-21) Completed `F036` by exposing an audit-trail read model from persisted bundle metadata:
+  - Added `getAuthorizationBundleAuditTrailAction` returning chronological lifecycle events for bundle creation/archive, draft creation, publish events, and assignment changes.
+  - Uses existing metadata columns (`created_by`, `updated_by`, `published_by`, timestamps, assignment status) as authoritative audit source.
+- (2026-04-21) Completed `F037` for selected server-action paths by moving ticket list/detail authorization to shared kernel checks after RBAC:
+  - `packages/tickets/src/actions/ticketActions.ts` now resolves authorization subject context and calls kernel `authorizeResource` for `getTicketsForList` and `getTicketById`.
+  - List path applies kernel decision filtering to ticket rows; single-ticket path denies when kernel disallows.
+  - Current cut keeps builtin-kernel path for these endpoints; premium ticket bundle overlays are tracked separately in `F039`.
+- (2026-04-21) Validation for `F037` path-level cutover:
+  - `cd packages/tickets && npx vitest run src/actions/ticketActions.ticketOrigin.test.ts src/actions/ticketActions.moveToBoard.test.ts --coverage.enabled=false`

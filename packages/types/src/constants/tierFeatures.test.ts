@@ -20,6 +20,7 @@ describe('tierFeatures', () => {
       expect(TIER_FEATURES.TEAMS_INTEGRATION).toBe('TEAMS_INTEGRATION');
       expect(TIER_FEATURES.ENTRA_SYNC).toBe('ENTRA_SYNC');
       expect(TIER_FEATURES.CIPP).toBe('CIPP');
+      expect(TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES).toBe('ADVANCED_AUTHORIZATION_BUNDLES');
     });
   });
 
@@ -63,6 +64,7 @@ describe('tierFeatures', () => {
         TIER_FEATURES.ENTRA_SYNC,
         TIER_FEATURES.CIPP,
         TIER_FEATURES.TEAMS_INTEGRATION,
+        TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES,
       ]);
     });
   });
@@ -91,6 +93,7 @@ describe('tierFeatures', () => {
     it('pro cannot access Premium-only features', () => {
       expect(tierHasFeature('pro', TIER_FEATURES.ENTRA_SYNC)).toBe(false);
       expect(tierHasFeature('pro', TIER_FEATURES.CIPP)).toBe(false);
+      expect(tierHasFeature('pro', TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES)).toBe(false);
     });
 
     it('premium has access to all features', () => {
@@ -99,6 +102,7 @@ describe('tierFeatures', () => {
       expect(tierHasFeature('premium', TIER_FEATURES.TEAMS_INTEGRATION)).toBe(true);
       expect(tierHasFeature('premium', TIER_FEATURES.ENTRA_SYNC)).toBe(true);
       expect(tierHasFeature('premium', TIER_FEATURES.CIPP)).toBe(true);
+      expect(tierHasFeature('premium', TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES)).toBe(true);
     });
   });
 
@@ -124,6 +128,7 @@ describe('tierFeatures', () => {
     it('keeps ENTRA_SYNC and CIPP at premium', () => {
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.ENTRA_SYNC]).toBe('premium');
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.CIPP]).toBe('premium');
+      expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES]).toBe('premium');
     });
   });
 });

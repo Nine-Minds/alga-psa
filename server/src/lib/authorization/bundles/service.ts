@@ -37,6 +37,384 @@ export interface UpsertBundleRuleInput {
   actorUserId?: string | null;
 }
 
+export interface CreateAuthorizationBundleInput {
+  tenant: string;
+  name: string;
+  description?: string | null;
+  bundleKey?: string | null;
+  isSystem?: boolean;
+  actorUserId?: string | null;
+}
+
+export interface AuthorizationBundleLibraryItem {
+  bundleId: string;
+  bundleKey: string | null;
+  name: string;
+  description: string | null;
+  isSystem: boolean;
+  status: 'active' | 'archived';
+  publishedRevisionId: string | null;
+  assignmentCount: number;
+  updatedAt: string;
+}
+
+export interface BundleRuleRecord {
+  ruleId: string;
+  resourceType: string;
+  action: string;
+  templateKey: string;
+  constraintKey: string | null;
+  config: Record<string, unknown>;
+  position: number;
+}
+
+export async function ensureDraftBundleRevision(
+  knex: Knex | Knex.Transaction,
+  input: {
+    tenant: string;
+    bundleId: string;
+    actorUserId?: string | null;
+  }
+): Promise<{ revisionId: string; created: boolean }> {
+  const existingDraft = await knex('authorization_bundle_revisions')
+    .where({
+      tenant: input.tenant,
+      bundle_id: input.bundleId,
+      lifecycle_state: 'draft',
+    })
+    .orderBy('revision_number', 'desc')
+    .first<{ revision_id: string }>('revision_id');
+
+  if (existingDraft) {
+    return { revisionId: existingDraft.revision_id, created: false };
+  }
+
+  const bundle = await knex('authorization_bundles')
+    .where({
+      tenant: input.tenant,
+      bundle_id: input.bundleId,
+    })
+    .first<{ published_revision_id: string | null }>('published_revision_id');
+
+  if (!bundle) {
+    throw new Error('Bundle not found in tenant scope.');
+  }
+
+  const maxRevisionRow = await knex('authorization_bundle_revisions')
+    .where({
+      tenant: input.tenant,
+      bundle_id: input.bundleId,
+    })
+    .max<{ max_revision_number: string | null }>('revision_number as max_revision_number')
+    .first();
+
+  const nextRevisionNumber = Number(maxRevisionRow?.max_revision_number || 0) + 1;
+
+  const [draftRevision] = await knex('authorization_bundle_revisions')
+    .insert({
+      tenant: input.tenant,
+      bundle_id: input.bundleId,
+      revision_number: nextRevisionNumber,
+      lifecycle_state: 'draft',
+      created_by: input.actorUserId ?? null,
+      updated_by: input.actorUserId ?? null,
+    })
+    .returning<{ revision_id: string }[]>('revision_id');
+
+  if (!bundle.published_revision_id) {
+    return { revisionId: draftRevision.revision_id, created: true };
+  }
+
+  const publishedRules = await knex('authorization_bundle_rules')
+    .where({
+      tenant: input.tenant,
+      revision_id: bundle.published_revision_id,
+    })
+    .orderBy('position', 'asc')
+    .select<
+      Array<{
+        resource_type: string;
+        action: string;
+        template_key: string;
+        constraint_key: string | null;
+        config: Record<string, unknown>;
+        position: number;
+      }>
+    >('resource_type', 'action', 'template_key', 'constraint_key', 'config', 'position');
+
+  if (publishedRules.length > 0) {
+    await knex('authorization_bundle_rules').insert(
+      publishedRules.map((rule) => ({
+        tenant: input.tenant,
+        bundle_id: input.bundleId,
+        revision_id: draftRevision.revision_id,
+        resource_type: rule.resource_type,
+        action: rule.action,
+        template_key: rule.template_key,
+        effect: 'narrow',
+        constraint_key: rule.constraint_key ?? null,
+        config: rule.config ?? {},
+        position: rule.position ?? 0,
+        created_by: input.actorUserId ?? null,
+      }))
+    );
+  }
+
+  return { revisionId: draftRevision.revision_id, created: true };
+}
+
+export async function listBundleRulesForRevision(
+  knex: Knex | Knex.Transaction,
+  input: {
+    tenant: string;
+    revisionId: string;
+  }
+): Promise<BundleRuleRecord[]> {
+  const rows = await knex('authorization_bundle_rules')
+    .where({
+      tenant: input.tenant,
+      revision_id: input.revisionId,
+    })
+    .orderBy('position', 'asc')
+    .select<
+      Array<{
+        rule_id: string;
+        resource_type: string;
+        action: string;
+        template_key: string;
+        constraint_key: string | null;
+        config: Record<string, unknown>;
+        position: number;
+      }>
+    >('rule_id', 'resource_type', 'action', 'template_key', 'constraint_key', 'config', 'position');
+
+  return rows.map((row) => ({
+    ruleId: row.rule_id,
+    resourceType: row.resource_type,
+    action: row.action,
+    templateKey: row.template_key,
+    constraintKey: row.constraint_key ?? null,
+    config: row.config ?? {},
+    position: row.position ?? 0,
+  }));
+}
+
+export async function deleteBundleRule(
+  knex: Knex | Knex.Transaction,
+  input: {
+    tenant: string;
+    ruleId: string;
+  }
+): Promise<void> {
+  await knex('authorization_bundle_rules')
+    .where({
+      tenant: input.tenant,
+      rule_id: input.ruleId,
+    })
+    .del();
+}
+
+export async function createAuthorizationBundle(
+  knex: Knex | Knex.Transaction,
+  input: CreateAuthorizationBundleInput
+): Promise<{ bundleId: string; revisionId: string }> {
+  ensureUuidLike(input.tenant, 'tenant');
+  if (!input.name?.trim()) {
+    throw new Error('Bundle name is required.');
+  }
+
+  const [bundle] = await knex('authorization_bundles')
+    .insert({
+      tenant: input.tenant,
+      bundle_key: input.bundleKey ?? null,
+      name: input.name.trim(),
+      description: input.description ?? null,
+      is_system: input.isSystem ?? false,
+      status: 'active',
+      created_by: input.actorUserId ?? null,
+      updated_by: input.actorUserId ?? null,
+    })
+    .returning<{ bundle_id: string }[]>('bundle_id');
+
+  const [revision] = await knex('authorization_bundle_revisions')
+    .insert({
+      tenant: input.tenant,
+      bundle_id: bundle.bundle_id,
+      revision_number: 1,
+      lifecycle_state: 'draft',
+      created_by: input.actorUserId ?? null,
+      updated_by: input.actorUserId ?? null,
+    })
+    .returning<{ revision_id: string }[]>('revision_id');
+
+  return { bundleId: bundle.bundle_id, revisionId: revision.revision_id };
+}
+
+export async function listAuthorizationBundles(
+  knex: Knex | Knex.Transaction,
+  input: {
+    tenant: string;
+    search?: string;
+    includeArchived?: boolean;
+  }
+): Promise<AuthorizationBundleLibraryItem[]> {
+  const query = knex('authorization_bundles as b')
+    .leftJoin('authorization_bundle_assignments as a', function joinAssignments() {
+      this.on('a.tenant', '=', 'b.tenant')
+        .andOn('a.bundle_id', '=', 'b.bundle_id')
+        .andOn(knex.raw("a.status = 'active'"));
+    })
+    .where('b.tenant', input.tenant)
+    .groupBy('b.bundle_id')
+    .orderBy('b.updated_at', 'desc')
+    .select<
+      Array<{
+        bundle_id: string;
+        bundle_key: string | null;
+        name: string;
+        description: string | null;
+        is_system: boolean;
+        status: 'active' | 'archived';
+        published_revision_id: string | null;
+        assignment_count: string;
+        updated_at: string;
+      }>
+    >([
+      'b.bundle_id',
+      'b.bundle_key',
+      'b.name',
+      'b.description',
+      'b.is_system',
+      'b.status',
+      'b.published_revision_id',
+      'b.updated_at',
+      knex.raw('count(a.assignment_id)::text as assignment_count'),
+    ]);
+
+  if (!input.includeArchived) {
+    query.andWhere('b.status', 'active');
+  }
+
+  if (input.search?.trim()) {
+    query.andWhere((builder) => {
+      builder
+        .whereILike('b.name', `%${input.search?.trim()}%`)
+        .orWhereILike('b.description', `%${input.search?.trim()}%`);
+    });
+  }
+
+  const rows = await query;
+  return rows.map((row) => ({
+    bundleId: row.bundle_id,
+    bundleKey: row.bundle_key,
+    name: row.name,
+    description: row.description,
+    isSystem: row.is_system,
+    status: row.status,
+    publishedRevisionId: row.published_revision_id,
+    assignmentCount: Number(row.assignment_count || 0),
+    updatedAt: row.updated_at,
+  }));
+}
+
+export async function cloneAuthorizationBundle(
+  knex: Knex,
+  input: {
+    tenant: string;
+    sourceBundleId: string;
+    name: string;
+    actorUserId?: string | null;
+  }
+): Promise<{ bundleId: string; revisionId: string }> {
+  ensureUuidLike(input.tenant, 'tenant');
+  ensureUuidLike(input.sourceBundleId, 'sourceBundleId');
+  if (!input.name?.trim()) {
+    throw new Error('Clone name is required.');
+  }
+
+  return knex.transaction(async (trx) => {
+    const sourceBundle = await trx('authorization_bundles')
+      .where({
+        tenant: input.tenant,
+        bundle_id: input.sourceBundleId,
+      })
+      .first<{
+        bundle_id: string;
+        description: string | null;
+        published_revision_id: string | null;
+      }>('bundle_id', 'description', 'published_revision_id');
+
+    if (!sourceBundle) {
+      throw new Error('Source bundle was not found in tenant scope.');
+    }
+
+    const sourceRevision = sourceBundle.published_revision_id
+      ? await trx('authorization_bundle_revisions')
+          .where({
+            tenant: input.tenant,
+            revision_id: sourceBundle.published_revision_id,
+          })
+          .first<{ revision_id: string }>('revision_id')
+      : await trx('authorization_bundle_revisions')
+          .where({
+            tenant: input.tenant,
+            bundle_id: sourceBundle.bundle_id,
+          })
+          .orderBy('revision_number', 'desc')
+          .first<{ revision_id: string }>('revision_id');
+
+    const created = await createAuthorizationBundle(trx, {
+      tenant: input.tenant,
+      name: input.name.trim(),
+      description: sourceBundle.description,
+      actorUserId: input.actorUserId ?? null,
+    });
+
+    if (!sourceRevision) {
+      return created;
+    }
+
+    const sourceRules = await trx('authorization_bundle_rules')
+      .where({
+        tenant: input.tenant,
+        revision_id: sourceRevision.revision_id,
+      })
+      .orderBy('position', 'asc')
+      .select<
+        Array<{
+          resource_type: string;
+          action: string;
+          template_key: string;
+          constraint_key: string | null;
+          config: Record<string, unknown>;
+          position: number;
+        }>
+      >('resource_type', 'action', 'template_key', 'constraint_key', 'config', 'position');
+
+    if (sourceRules.length === 0) {
+      return created;
+    }
+
+    await trx('authorization_bundle_rules').insert(
+      sourceRules.map((rule) => ({
+        tenant: input.tenant,
+        bundle_id: created.bundleId,
+        revision_id: created.revisionId,
+        resource_type: rule.resource_type,
+        action: rule.action,
+        template_key: rule.template_key,
+        effect: 'narrow',
+        constraint_key: rule.constraint_key ?? null,
+        config: rule.config ?? {},
+        position: rule.position ?? 0,
+        created_by: input.actorUserId ?? null,
+      }))
+    );
+
+    return created;
+  });
+}
+
 function ensureUuidLike(value: string, field: string): void {
   if (!value || typeof value !== 'string') {
     throw new Error(`${field} is required`);
