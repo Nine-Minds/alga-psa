@@ -26,6 +26,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-04-22) Migrated Time UI/catalog uses `time_entry` while selected time/delegation kernel calls currently use `timesheet`.
 - (2026-04-22) API list controllers for tickets, projects, and quotes paginate in the service layer first, then narrow in memory, then report filtered-page counts as totals.
 - (2026-04-22) Simulator fidelity is weakened by billing-record mismatch and by simulator kernel construction that does not mirror all builtin resource-specific invariants used in real runtime paths.
+- (2026-04-22) `server` package tests run directly via `cd server && npx vitest run ...`; root `npm run test:local -- ...` currently fails because its `dotenv` invocation expects a different CLI syntax.
 
 ## Commands / Runbooks
 
@@ -71,3 +72,16 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-04-22) Completed `F001`:
   - Added a new `Traceability Mapping` section in `PRD.md` that maps each remediation feature cluster to original-plan feature/test IDs.
   - Purpose: satisfy follow-up-plan auditability and make remediation-to-original linkage explicit in the source-of-truth artifact.
+- (2026-04-22) Completed `F002`:
+  - Updated `getAuthorizationBundleDraftEditorAction` to check `system_settings:write` capability.
+  - Write-capable users keep existing behavior (`ensureDraftBundleRevision`), while read-only users load an existing draft or published revision without creating draft state.
+  - Added explicit summary text for read-only fallback when no active draft exists.
+- (2026-04-22) Completed `F003`:
+  - Hardened `upsertBundleRule` to require a draft revision scoped by `tenant + bundle + revision`.
+  - Rule updates now also require `tenant + bundle + revision + rule` match and fail closed when no matching draft rule exists.
+- (2026-04-22) Completed `F004`:
+  - Hardened `deleteBundleRule` to require `tenant + bundle + revision + rule` match.
+  - Delete now fails closed when the rule is not in the expected draft revision scope.
+- (2026-04-22) Verification for `F002-F004`:
+  - Command: `cd server && npx vitest run src/test/unit/authorization/bundleManagementPermissions.test.ts`
+  - Result: pass.

@@ -257,15 +257,34 @@ export const getAuthorizationBundleDraftEditorAction = withAuth(
       throw new Error('Bundle not found in tenant scope.');
     }
 
-    const draft = await ensureDraftBundleRevision(knex, {
-      tenant,
-      bundleId,
-      actorUserId: user.user_id,
-    });
+    const canWrite = await hasPermission(user as any, 'system_settings', 'write');
+
+    const draftRevisionId = canWrite
+      ? (
+          await ensureDraftBundleRevision(knex, {
+            tenant,
+            bundleId,
+            actorUserId: user.user_id,
+          })
+        ).revisionId
+      : (
+          await knex('authorization_bundle_revisions')
+            .where({
+              tenant,
+              bundle_id: bundleId,
+              lifecycle_state: 'draft',
+            })
+            .orderBy('revision_number', 'desc')
+            .first<{ revision_id: string }>('revision_id')
+        )?.revision_id ?? bundle.published_revision_id;
+
+    if (!draftRevisionId) {
+      throw new Error('Draft or published revision not found for bundle in tenant scope.');
+    }
 
     const rules = await listBundleRulesForRevision(knex, {
       tenant,
-      revisionId: draft.revisionId,
+      revisionId: draftRevisionId,
     });
 
     const publishedRules = bundle.published_revision_id
@@ -308,7 +327,9 @@ export const getAuthorizationBundleDraftEditorAction = withAuth(
     }
 
     const revisionChangeSummary = bundle.published_revision_id
-      ? `Draft has ${rules.length} rule(s): ${addedCount} added, ${removedCount} removed versus published.`
+      ? draftRevisionId === bundle.published_revision_id
+        ? `Published has ${rules.length} rule(s). No active draft revision in tenant scope.`
+        : `Draft has ${rules.length} rule(s): ${addedCount} added, ${removedCount} removed versus published.`
       : `Draft has ${rules.length} rule(s). No published revision yet.`;
 
     return {
@@ -318,7 +339,7 @@ export const getAuthorizationBundleDraftEditorAction = withAuth(
         description: bundle.description,
         publishedRevisionId: bundle.published_revision_id,
       },
-      draftRevisionId: draft.revisionId,
+      draftRevisionId,
       rules,
       availableTemplates: [...AUTHORIZATION_TEMPLATE_CATALOG],
       availableConstraints: [...AUTHORIZATION_CONSTRAINT_CATALOG],
@@ -379,7 +400,7 @@ export const deleteAuthorizationBundleDraftRuleAction = withAuth(
     await assertSecuritySettingsPermission(user, 'write');
 
     const { knex } = await createTenantKnex();
-    await ensureDraftBundleRevision(knex, {
+    const draft = await ensureDraftBundleRevision(knex, {
       tenant,
       bundleId: input.bundleId,
       actorUserId: user.user_id,
@@ -387,6 +408,8 @@ export const deleteAuthorizationBundleDraftRuleAction = withAuth(
 
     await deleteBundleRule(knex, {
       tenant,
+      bundleId: input.bundleId,
+      revisionId: draft.revisionId,
       ruleId: input.ruleId,
     });
   }

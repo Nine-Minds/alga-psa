@@ -203,15 +203,23 @@ export async function deleteBundleRule(
   knex: Knex | Knex.Transaction,
   input: {
     tenant: string;
+    bundleId: string;
+    revisionId: string;
     ruleId: string;
   }
 ): Promise<void> {
-  await knex('authorization_bundle_rules')
+  const deleted = await knex('authorization_bundle_rules')
     .where({
       tenant: input.tenant,
+      bundle_id: input.bundleId,
+      revision_id: input.revisionId,
       rule_id: input.ruleId,
     })
     .del();
+
+  if (deleted === 0) {
+    throw new Error('Rule not found in draft revision for bundle in tenant scope.');
+  }
 }
 
 export async function createAuthorizationBundle(
@@ -602,6 +610,19 @@ export async function upsertBundleRule(
     constraintKey: input.constraintKey ?? null,
   });
 
+  const draftRevision = await knex('authorization_bundle_revisions')
+    .where({
+      tenant: input.tenant,
+      bundle_id: input.bundleId,
+      revision_id: input.revisionId,
+      lifecycle_state: 'draft',
+    })
+    .first<{ revision_id: string }>('revision_id');
+
+  if (!draftRevision) {
+    throw new Error('Draft revision not found for bundle in tenant scope.');
+  }
+
   const payload = {
     tenant: input.tenant,
     bundle_id: input.bundleId,
@@ -618,12 +639,18 @@ export async function upsertBundleRule(
   };
 
   if (input.ruleId) {
-    await knex('authorization_bundle_rules')
+    const updated = await knex('authorization_bundle_rules')
       .where({
         tenant: input.tenant,
+        bundle_id: input.bundleId,
+        revision_id: input.revisionId,
         rule_id: input.ruleId,
       })
       .update(payload);
+
+    if (updated === 0) {
+      throw new Error('Rule not found in draft revision for bundle in tenant scope.');
+    }
     return;
   }
 

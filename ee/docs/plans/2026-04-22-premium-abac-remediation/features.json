@@ -8,19 +8,19 @@
   {
     "id": "F002",
     "description": "Change draft-editor read flows so they do not create draft revisions or any other write-side effects for read-only users.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Problem", "UX / UI Notes", "Functional Requirements", "Security / Permissions"]
   },
   {
     "id": "F003",
     "description": "Scope bundle rule updates to the target tenant, bundle, and active draft revision so published or unrelated rules cannot be mutated through draft actions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Problem", "Functional Requirements", "Security / Permissions"]
   },
   {
     "id": "F004",
     "description": "Scope bundle rule deletes to the target tenant, bundle, and active draft revision so published or unrelated rules cannot be removed through draft actions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Problem", "Functional Requirements", "Security / Permissions"]
   },
   {
