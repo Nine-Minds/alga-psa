@@ -409,7 +409,10 @@
         "error": {
           "noSettings": "Nie znaleziono ustawień numeracji zgłoszeń. Proszę skontaktować się z administratorem.",
           "loadFailed": "Nie udało się załadować ustawień numeracji zgłoszeń",
-          "updateFailed": "Nie udało się zaktualizować ustawień"
+          "updateFailed": "Nie udało się zaktualizować ustawień",
+          "updatePaddingFailed": "Nie udało się zaktualizować długości wypełnienia",
+          "updateLastNumberFailed": "Nie udało się zaktualizować ostatniego numeru",
+          "updateInitialValueFailed": "Nie udało się zaktualizować wartości początkowej"
         },
         "success": {
           "updated": "Ustawienia numeracji zgłoszeń zostały pomyślnie zaktualizowane"

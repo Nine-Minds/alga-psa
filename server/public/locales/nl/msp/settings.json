@@ -409,7 +409,10 @@
         "error": {
           "noSettings": "Geen ticketnummerinstellingen gevonden. Neem contact op met uw beheerder.",
           "loadFailed": "Kan ticketnummerinstellingen niet laden",
-          "updateFailed": "Kan instellingen niet bijwerken"
+          "updateFailed": "Kan instellingen niet bijwerken",
+          "updatePaddingFailed": "Kan opvullingslengte niet bijwerken",
+          "updateLastNumberFailed": "Kan laatste nummer niet bijwerken",
+          "updateInitialValueFailed": "Kan beginwaarde niet bijwerken"
         },
         "success": {
           "updated": "Ticketnummerinstellingen succesvol bijgewerkt"

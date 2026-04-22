@@ -409,7 +409,10 @@
         "error": {
           "noSettings": "Keine Ticketnummerierungseinstellungen gefunden. Bitte kontaktieren Sie Ihren Administrator.",
           "loadFailed": "Ticketnummerierungseinstellungen konnten nicht geladen werden",
-          "updateFailed": "Einstellungen konnten nicht aktualisiert werden"
+          "updateFailed": "Einstellungen konnten nicht aktualisiert werden",
+          "updatePaddingFailed": "Auffüllungslänge konnte nicht aktualisiert werden",
+          "updateLastNumberFailed": "Letzte Nummer konnte nicht aktualisiert werden",
+          "updateInitialValueFailed": "Anfangswert konnte nicht aktualisiert werden"
         },
         "success": {
           "updated": "Ticketnummerierungseinstellungen erfolgreich aktualisiert"

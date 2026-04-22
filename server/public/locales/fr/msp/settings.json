@@ -409,7 +409,10 @@
         "error": {
           "noSettings": "Aucun paramètre de numérotation des tickets trouvé. Veuillez contacter votre administrateur.",
           "loadFailed": "Échec du chargement des paramètres de numérotation des tickets",
-          "updateFailed": "Échec de la mise à jour des paramètres"
+          "updateFailed": "Échec de la mise à jour des paramètres",
+          "updatePaddingFailed": "Échec de la mise à jour de la longueur de remplissage",
+          "updateLastNumberFailed": "Échec de la mise à jour du dernier numéro",
+          "updateInitialValueFailed": "Échec de la mise à jour de la valeur initiale"
         },
         "success": {
           "updated": "Paramètres de numérotation des tickets mis à jour avec succès"

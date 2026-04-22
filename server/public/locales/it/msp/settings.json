@@ -409,7 +409,10 @@
         "error": {
           "noSettings": "Nessuna impostazione di numerazione ticket trovata. Contatti il Suo amministratore.",
           "loadFailed": "Impossibile caricare le impostazioni di numerazione dei ticket",
-          "updateFailed": "Impossibile aggiornare le impostazioni"
+          "updateFailed": "Impossibile aggiornare le impostazioni",
+          "updatePaddingFailed": "Impossibile aggiornare la lunghezza di riempimento",
+          "updateLastNumberFailed": "Impossibile aggiornare l'ultimo numero",
+          "updateInitialValueFailed": "Impossibile aggiornare il valore iniziale"
         },
         "success": {
           "updated": "Impostazioni di numerazione dei ticket aggiornate con successo"

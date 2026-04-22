@@ -409,7 +409,10 @@
         "error": {
           "noSettings": "No se encontró la configuración de numeración de tickets. Comuníquese con su administrador.",
           "loadFailed": "Error al cargar la configuración de numeración de tickets",
-          "updateFailed": "Error al actualizar la configuración"
+          "updateFailed": "Error al actualizar la configuración",
+          "updatePaddingFailed": "No se pudo actualizar la longitud de relleno",
+          "updateLastNumberFailed": "No se pudo actualizar el último número",
+          "updateInitialValueFailed": "No se pudo actualizar el valor inicial"
         },
         "success": {
           "updated": "Configuración de numeración de tickets actualizada correctamente"

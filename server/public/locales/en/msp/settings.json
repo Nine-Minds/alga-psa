@@ -409,7 +409,10 @@
         "error": {
           "noSettings": "No ticket numbering settings found. Please contact your administrator.",
           "loadFailed": "Failed to load ticket numbering settings",
-          "updateFailed": "Failed to update settings"
+          "updateFailed": "Failed to update settings",
+          "updatePaddingFailed": "Failed to update padding length",
+          "updateLastNumberFailed": "Failed to update last number",
+          "updateInitialValueFailed": "Failed to update initial value"
         },
         "success": {
           "updated": "Ticket numbering settings updated successfully"
