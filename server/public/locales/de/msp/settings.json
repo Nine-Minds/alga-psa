@@ -667,7 +667,9 @@
         },
         "error": {
           "lastClosed": "Mindestens ein Status muss als geschlossen markiert bleiben",
-          "deleteLastClosed": "Der letzte geschlossene Status für diesen Typ kann nicht gelöscht werden."
+          "deleteLastClosed": "Der letzte geschlossene Status für diesen Typ kann nicht gelöscht werden.",
+          "skipped": "{{count}} Status übersprungen ({{reason}})",
+          "importFailed": "Status konnten nicht importiert werden"
         }
       }
     },
@@ -1047,6 +1049,16 @@
         "noValues": "Keine Werte"
       },
       "truncated": "Es werden die ersten {{count}} Datensätze angezeigt. Laden Sie die Auftragsergebnisse für den vollständigen Verlauf herunter."
+    },
+    "messages": {
+      "error": {
+        "loadImportData": "Importdaten konnten nicht geladen werden",
+        "createPreview": "Vorschau konnte nicht erstellt werden",
+        "selectPreviewFirst": "Wähle vor dem Import eine Vorschau zur Genehmigung aus.",
+        "startImportJob": "Importauftrag konnte nicht gestartet werden",
+        "loadJobDetails": "Auftragsdetails konnten nicht geladen werden",
+        "refreshHistory": "Importverlauf konnte nicht aktualisiert werden"
+      }
     }
   },
   "email": {

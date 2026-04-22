@@ -667,7 +667,9 @@
         },
         "error": {
           "lastClosed": "Al menos un estado debe permanecer marcado como cerrado",
-          "deleteLastClosed": "No se puede eliminar el último estado cerrado para este tipo."
+          "deleteLastClosed": "No se puede eliminar el último estado cerrado para este tipo.",
+          "skipped": "Se omitieron {{count}} estados ({{reason}})",
+          "importFailed": "No se pudieron importar los estados"
         }
       }
     },
@@ -1047,6 +1049,16 @@
         "noValues": "Sin valores"
       },
       "truncated": "Mostrando los primeros {{count}} registros. Descargue los resultados del trabajo para el historial completo."
+    },
+    "messages": {
+      "error": {
+        "loadImportData": "No se pudieron cargar los datos de importación",
+        "createPreview": "No se pudo crear la vista previa",
+        "selectPreviewFirst": "Selecciona una vista previa para aprobar antes de importar.",
+        "startImportJob": "No se pudo iniciar el trabajo de importación",
+        "loadJobDetails": "No se pudieron cargar los detalles del trabajo",
+        "refreshHistory": "No se pudo actualizar el historial de importación"
+      }
     }
   },
   "email": {

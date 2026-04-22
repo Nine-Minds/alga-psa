@@ -667,7 +667,9 @@
         },
         "error": {
           "lastClosed": "At least one status must remain marked as closed",
-          "deleteLastClosed": "Cannot delete the last closed status for this type."
+          "deleteLastClosed": "Cannot delete the last closed status for this type.",
+          "skipped": "Skipped {{count}} statuses ({{reason}})",
+          "importFailed": "Failed to import statuses"
         }
       }
     },
@@ -1047,6 +1049,16 @@
         "noValues": "No values"
       },
       "truncated": "Showing the first {{count}} records. Download the job results for full history."
+    },
+    "messages": {
+      "error": {
+        "loadImportData": "Failed to load import data",
+        "createPreview": "Failed to create preview",
+        "selectPreviewFirst": "Select a preview to approve before importing.",
+        "startImportJob": "Failed to start import job",
+        "loadJobDetails": "Failed to load job details",
+        "refreshHistory": "Failed to refresh import history"
+      }
     }
   },
   "email": {

@@ -667,7 +667,9 @@
         },
         "error": {
           "lastClosed": "Au moins un statut doit rester marqué comme fermé",
-          "deleteLastClosed": "Impossible de supprimer le dernier statut fermé pour ce type."
+          "deleteLastClosed": "Impossible de supprimer le dernier statut fermé pour ce type.",
+          "skipped": "{{count}} statuts ignorés ({{reason}})",
+          "importFailed": "Échec de l'importation des statuts"
         }
       }
     },
@@ -1047,6 +1049,16 @@
         "noValues": "Aucune valeur"
       },
       "truncated": "Affichage des {{count}} premiers enregistrements. Téléchargez les résultats de la tâche pour l'historique complet."
+    },
+    "messages": {
+      "error": {
+        "loadImportData": "Échec du chargement des données d'importation",
+        "createPreview": "Échec de la création de l'aperçu",
+        "selectPreviewFirst": "Sélectionnez un aperçu à approuver avant d'importer.",
+        "startImportJob": "Échec du démarrage de la tâche d'importation",
+        "loadJobDetails": "Échec du chargement des détails de la tâche",
+        "refreshHistory": "Échec de l'actualisation de l'historique d'importation"
+      }
     }
   },
   "email": {

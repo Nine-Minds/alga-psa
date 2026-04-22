@@ -667,7 +667,9 @@
         },
         "error": {
           "lastClosed": "Ten minste één status moet als gesloten gemarkeerd blijven",
-          "deleteLastClosed": "Kan de laatste gesloten status voor dit type niet verwijderen."
+          "deleteLastClosed": "Kan de laatste gesloten status voor dit type niet verwijderen.",
+          "skipped": "{{count}} statussen overgeslagen ({{reason}})",
+          "importFailed": "Kan statussen niet importeren"
         }
       }
     },
@@ -1047,6 +1049,16 @@
         "noValues": "Geen waarden"
       },
       "truncated": "Toont de eerste {{count}} records. Download de taakresultaten voor de volledige geschiedenis."
+    },
+    "messages": {
+      "error": {
+        "loadImportData": "Kan importgegevens niet laden",
+        "createPreview": "Kan voorbeeld niet maken",
+        "selectPreviewFirst": "Selecteer een voorbeeld om goed te keuren voordat je importeert.",
+        "startImportJob": "Kan importopdracht niet starten",
+        "loadJobDetails": "Kan opdrachtdetails niet laden",
+        "refreshHistory": "Kan importgeschiedenis niet vernieuwen"
+      }
     }
   },
   "email": {

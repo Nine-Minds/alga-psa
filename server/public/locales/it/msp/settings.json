@@ -667,7 +667,9 @@
         },
         "error": {
           "lastClosed": "Almeno uno stato deve rimanere contrassegnato come chiuso",
-          "deleteLastClosed": "Impossibile eliminare l'ultimo stato chiuso per questo tipo."
+          "deleteLastClosed": "Impossibile eliminare l'ultimo stato chiuso per questo tipo.",
+          "skipped": "{{count}} stati saltati ({{reason}})",
+          "importFailed": "Impossibile importare gli stati"
         }
       }
     },
@@ -1047,6 +1049,16 @@
         "noValues": "Nessun valore"
       },
       "truncated": "Visualizzazione dei primi {{count}} record. Scarichi i risultati dell'operazione per la cronologia completa."
+    },
+    "messages": {
+      "error": {
+        "loadImportData": "Impossibile caricare i dati di importazione",
+        "createPreview": "Impossibile creare l'anteprima",
+        "selectPreviewFirst": "Seleziona un'anteprima da approvare prima di importare.",
+        "startImportJob": "Impossibile avviare il processo di importazione",
+        "loadJobDetails": "Impossibile caricare i dettagli del processo",
+        "refreshHistory": "Impossibile aggiornare la cronologia di importazione"
+      }
     }
   },
   "email": {

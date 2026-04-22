@@ -667,7 +667,9 @@
         },
         "error": {
           "lastClosed": "Co najmniej jeden status musi pozostać oznaczony jako zamknięty",
-          "deleteLastClosed": "Nie można usunąć ostatniego zamkniętego statusu dla tego typu."
+          "deleteLastClosed": "Nie można usunąć ostatniego zamkniętego statusu dla tego typu.",
+          "skipped": "Pominięto {{count}} statusów ({{reason}})",
+          "importFailed": "Nie udało się zaimportować statusów"
         }
       }
     },
@@ -1047,6 +1049,16 @@
         "noValues": "Brak wartości"
       },
       "truncated": "Wyświetlanie pierwszych {{count}} rekordów. Pobierz wyniki zadania, aby uzyskać pełną historię."
+    },
+    "messages": {
+      "error": {
+        "loadImportData": "Nie udało się załadować danych importu",
+        "createPreview": "Nie udało się utworzyć podglądu",
+        "selectPreviewFirst": "Wybierz podgląd do zatwierdzenia przed importem.",
+        "startImportJob": "Nie udało się uruchomić zadania importu",
+        "loadJobDetails": "Nie udało się załadować szczegółów zadania",
+        "refreshHistory": "Nie udało się odświeżyć historii importu"
+      }
     }
   },
   "email": {

@@ -667,7 +667,9 @@
         },
         "error": {
           "lastClosed": "At least one status must remain marked as closed",
-          "deleteLastClosed": "Cannot delete the last closed status for this type."
+          "deleteLastClosed": "Cannot delete the last closed status for this type.",
+          "skipped": "{{count}} estados ignorados ({{reason}})",
+          "importFailed": "Falha ao importar os estados"
         }
       }
     },
@@ -1047,6 +1049,16 @@
         "noValues": "No values"
       },
       "truncated": "Showing the first {{count}} records. Download the job results for full history."
+    },
+    "messages": {
+      "error": {
+        "loadImportData": "Falha ao carregar os dados de importação",
+        "createPreview": "Falha ao criar a pré-visualização",
+        "selectPreviewFirst": "Selecione uma pré-visualização para aprovar antes de importar.",
+        "startImportJob": "Falha ao iniciar o trabalho de importação",
+        "loadJobDetails": "Falha ao carregar os detalhes do trabalho",
+        "refreshHistory": "Falha ao atualizar o histórico de importação"
+      }
     }
   },
   "email": {
