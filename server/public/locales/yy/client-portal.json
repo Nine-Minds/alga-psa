@@ -118,7 +118,19 @@
       "accountReady": "55555",
       "accountCreatedSuccess": "55555",
       "welcome": "55555",
-      "createFailed": "55555"
+      "createFailed": "55555",
+      "errors": {
+        "tokenRequired": "55555",
+        "tokenAndPasswordRequired": "55555",
+        "passwordTooShort": "55555",
+        "invalidOrExpiredToken": "55555",
+        "tenantContextRequired": "55555",
+        "resetPasswordFailed": "55555",
+        "createUserFailed": "55555",
+        "setupFailed": "55555",
+        "verificationFailed": "55555",
+        "invitationFailed": "55555"
+      }
     },
     "features": {
       "submitTickets": {

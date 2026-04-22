@@ -674,8 +674,8 @@
           "connectFailedWithDetail": "55555 {{detail}} 55555",
           "disconnectSuccess": "55555",
           "credentialsSaved": "55555",
-          "orgSyncSuccess": "55555 {{processed}} {{created}} {{updated}} 55555",
-          "deviceSyncSuccess": "55555 {{processed}} {{created}} {{updated}} 55555"
+          "orgSyncSuccess": "55555 {{processed}} 55555 {{created}} 55555 {{updated}} 55555",
+          "deviceSyncSuccess": "55555 {{processed}} 55555 {{created}} 55555 {{updated}} 55555"
         },
         "errors": {
           "loadStatus": "55555",

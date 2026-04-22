@@ -674,8 +674,8 @@
           "connectFailedWithDetail": "11111 {{detail}} 11111",
           "disconnectSuccess": "11111",
           "credentialsSaved": "11111",
-          "orgSyncSuccess": "11111 {{processed}} {{created}} {{updated}} 11111",
-          "deviceSyncSuccess": "11111 {{processed}} {{created}} {{updated}} 11111"
+          "orgSyncSuccess": "11111 {{processed}} 11111 {{created}} 11111 {{updated}} 11111",
+          "deviceSyncSuccess": "11111 {{processed}} 11111 {{created}} 11111 {{updated}} 11111"
         },
         "errors": {
           "loadStatus": "11111",
