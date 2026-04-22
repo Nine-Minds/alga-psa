@@ -10,7 +10,26 @@ import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { addContact, getContactsByClient, getAllContacts, getContactsEligibleForInvitation } from '@alga-psa/clients/actions';
 import { sendPortalInvitation, createClientPortalUser } from '@alga-psa/client-portal/actions';
+import type { PortalInvitationErrorCode } from '@alga-psa/portal-shared/types';
 import { getTenantPortalLoginLink } from '@alga-psa/client-portal/actions';
+
+const PORTAL_INVITE_ERROR_KEYS: Partial<Record<PortalInvitationErrorCode, string>> = {
+  PERMISSION_DENIED_INVITE: 'users.messages.error.permissionDeniedInvite',
+  PERMISSION_DENIED_CREATE: 'users.messages.error.permissionDeniedCreate',
+  EMAIL_NOT_CONFIGURED: 'users.messages.error.emailNotConfigured',
+  CONTACT_NOT_FOUND: 'users.messages.error.contactNotFound',
+  CONTACT_MISSING_EMAIL: 'users.messages.error.contactMissingEmailGeneric',
+  CONTACT_INVALID_EMAIL: 'users.messages.error.contactInvalidEmail',
+  USER_EXISTS_FOR_CONTACT: 'users.messages.error.portalUserExistsForContact',
+  PORTAL_USER_ALREADY_EXISTS: 'users.messages.error.portalUserExists',
+  NO_DEFAULT_CLIENT: 'users.messages.error.noDefaultClient',
+  NO_DEFAULT_LOCATION: 'users.messages.error.noDefaultLocation',
+  NO_LOCATION_EMAIL: 'users.messages.error.noLocationEmail',
+  BASE_URL_NOT_CONFIGURED: 'users.messages.error.noBaseUrl',
+  INVITATION_FAILED: 'users.messages.error.sendInvitation',
+  PASSWORD_TOO_SHORT: 'users.messages.error.passwordTooShort',
+  CREATE_USER_FAILED: 'users.messages.error.createClientPortalUser'
+};
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import toast from 'react-hot-toast';
@@ -37,6 +56,19 @@ import { useTier } from '@/context/TierContext';
 
 const UserManagement = (): React.JSX.Element => {
   const { t } = useTranslation('msp/settings');
+
+  const translatePortalInvitationError = (
+    result: { error?: string; errorCode?: PortalInvitationErrorCode },
+    defaultKey: string
+  ): string => {
+    if (result.errorCode) {
+      const key = PORTAL_INVITE_ERROR_KEYS[result.errorCode];
+      if (key) {
+        return t(key, { defaultValue: result.error ?? undefined });
+      }
+    }
+    return result.error || t(defaultKey);
+  };
   const [users, setUsers] = useState<IUser[]>([]);
   const [roles, setRoles] = useState<IRole[]>([]);
   const [clients, setClients] = useState<IClient[]>([]);
@@ -395,7 +427,7 @@ const fetchContacts = async (): Promise<void> => {
               if (invitationResult.success) {
                 toast.success(t('users.messages.success.portalInvitationSent'));
               } else {
-                toast(invitationResult.error || t('users.messages.error.sendInvitation'), { icon: '⚠️', duration: 5000 });
+                toast(translatePortalInvitationError(invitationResult, 'users.messages.error.sendInvitation'), { icon: '⚠️', duration: 5000 });
               }
             } catch (inviteError) {
               toast(t('users.messages.error.sendInvitationManual'), { icon: '⚠️', duration: 5000 });
@@ -421,7 +453,7 @@ const fetchContacts = async (): Promise<void> => {
                 if (invitationResult.success) {
                   toast.success(t('users.messages.success.portalInvitationSent'));
                 } else {
-                  toast(invitationResult.error || t('users.messages.error.sendInvitation'), { icon: '⚠️', duration: 5000 });
+                  toast(translatePortalInvitationError(invitationResult, 'users.messages.error.sendInvitation'), { icon: '⚠️', duration: 5000 });
                 }
               } catch (inviteError) {
                 toast(t('users.messages.error.sendInvitationManual'), { icon: '⚠️', duration: 5000 });
@@ -457,7 +489,9 @@ const fetchContacts = async (): Promise<void> => {
           if (result.success) {
             toast.success(t('users.messages.success.clientPortalUserCreated'));
           } else {
-            reportCreateUserError(result.error || t('users.messages.error.createClientPortalUser'));
+            const message = translatePortalInvitationError(result, 'users.messages.error.createClientPortalUser');
+            toast.error(message);
+            setError(message);
             return;
           }
           await fetchUsers();
