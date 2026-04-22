@@ -213,3 +213,12 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-04-21) Validation runbook for `F044` checkpoint:
   - `cd packages/scheduling && npx tsc --pretty false --noEmit -p tsconfig.json`
   - `cd .. && npx tsc --pretty false --noEmit -p server/tsconfig.json`
+- (2026-04-21) Completed `F045` by kernelizing not-self-approver checks in selected time approval flows:
+  - Added `assertCanApproveSubject(...)` in `packages/scheduling/src/actions/timeEntryDelegationAuth.ts`, which composes delegation checks with kernel `authorizeMutation` for `approve` mutations.
+  - Added a built-in mutation guard (`timesheet_not_self_approver_denied`) and bundle-aware mutation overlay evaluation (`not_self_approver` constraint) so approval gating is centralized in kernel semantics.
+  - Wired approval paths to the new guard:
+    - `packages/scheduling/src/actions/timeSheetActions.ts` (`approveTimeSheet`, `bulkApproveTimeSheets`)
+    - `packages/scheduling/src/actions/timeEntryCrudActions.ts` (`updateTimeEntryApprovalStatus` when transitioning to `APPROVED`)
+- (2026-04-21) Validation runbook for `F045` checkpoint:
+  - `cd packages/scheduling && npx tsc --pretty false --noEmit -p tsconfig.json`
+  - `cd .. && npx tsc --pretty false --noEmit -p server/tsconfig.json`

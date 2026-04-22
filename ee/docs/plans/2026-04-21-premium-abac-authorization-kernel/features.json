@@ -413,7 +413,7 @@
   {
     "id": "F045",
     "description": "Kernelize not-self-approver style time-related approval restrictions where they are part of the selected v1 approval flows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements",
       "Security / Permissions"

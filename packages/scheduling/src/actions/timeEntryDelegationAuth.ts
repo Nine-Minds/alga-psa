@@ -10,11 +10,44 @@ import {
   BundleAuthorizationKernelProvider,
   RequestLocalAuthorizationCache,
   createAuthorizationKernel,
+  type AuthorizationEvaluationInput,
   type AuthorizationSubject,
 } from 'server/src/lib/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from 'server/src/lib/authorization/bundles/service';
 
 export type DelegationScope = 'self' | 'tenant-wide' | 'manager';
+
+function buildTimesheetNotSelfApproverGuard(input: AuthorizationEvaluationInput) {
+  if (
+    input.mutation?.kind === 'approve' &&
+    typeof input.record?.ownerUserId === 'string' &&
+    input.record.ownerUserId === input.subject.userId
+  ) {
+    return {
+      allowed: false,
+      reasons: [
+        {
+          stage: 'mutation' as const,
+          sourceType: 'builtin' as const,
+          code: 'timesheet_not_self_approver_denied',
+          message: 'Approvers cannot approve their own time submissions.',
+        },
+      ],
+    };
+  }
+
+  return {
+    allowed: true,
+    reasons: [
+      {
+        stage: 'mutation' as const,
+        sourceType: 'builtin' as const,
+        code: 'timesheet_not_self_approver_passed',
+        message: 'Not-self-approver guard passed.',
+      },
+    ],
+  };
+}
 
 export async function isManagerOfSubject(
   db: Knex | Knex.Transaction,
@@ -141,4 +174,69 @@ export async function assertCanActOnBehalf(
   }
 
   throw new Error('Permission denied: Cannot access other users time sheets');
+}
+
+export async function assertCanApproveSubject(
+  actor: IUser,
+  tenant: string,
+  subjectUserId: string,
+  db: Knex | Knex.Transaction
+): Promise<DelegationScope> {
+  const scope = await assertCanActOnBehalf(actor, tenant, subjectUserId, db);
+  const managedUserIds = await resolveManagedSubjectUserIds(db, tenant, actor);
+
+  const subject: AuthorizationSubject = {
+    tenant,
+    userId: actor.user_id,
+    userType: actor.user_type,
+    clientId: actor.clientId ?? null,
+    roleIds: [],
+    teamIds: [],
+    managedUserIds,
+    portfolioClientIds: actor.clientId ? [actor.clientId] : [],
+  };
+
+  const approvalKernel = createAuthorizationKernel({
+    builtinProvider: new BuiltinAuthorizationKernelProvider({
+      mutationGuards: [buildTimesheetNotSelfApproverGuard],
+    }),
+    bundleProvider: new BundleAuthorizationKernelProvider({
+      resolveRules: async (input) => {
+        try {
+          return await resolveBundleNarrowingRulesForEvaluation(db, input);
+        } catch {
+          return [];
+        }
+      },
+    }),
+    rbacEvaluator: async () => true,
+  });
+
+  const approvalDecision = await approvalKernel.authorizeMutation({
+    subject,
+    resource: {
+      type: 'timesheet',
+      action: 'approve',
+      id: subjectUserId,
+    },
+    record: {
+      id: subjectUserId,
+      ownerUserId: subjectUserId,
+    },
+    mutation: {
+      kind: 'approve',
+      record: {
+        id: subjectUserId,
+        ownerUserId: subjectUserId,
+      },
+    },
+    requestCache: new RequestLocalAuthorizationCache(),
+    knex: db,
+  });
+
+  if (!approvalDecision.allowed) {
+    throw new Error('Permission denied: Cannot approve your own time submissions');
+  }
+
+  return scope;
 }

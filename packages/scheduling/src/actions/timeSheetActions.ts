@@ -24,7 +24,7 @@ import { WorkItemType } from '@alga-psa/types';
 import { validateArray, validateData } from '@alga-psa/validation';
 import { Temporal } from '@js-temporal/polyfill';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { assertCanActOnBehalf, resolveManagedSubjectUserIds } from './timeEntryDelegationAuth';
+import { assertCanActOnBehalf, assertCanApproveSubject, resolveManagedSubjectUserIds } from './timeEntryDelegationAuth';
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
@@ -260,7 +260,7 @@ export const bulkApproveTimeSheets = withAuth(async (user, { tenant }, timeSheet
           throw new Error(`Time sheet ${id} is not in a submitted state or does not exist`);
         }
 
-        await assertCanActOnBehalf(user, tenant, timeSheet.user_id, trx);
+        await assertCanApproveSubject(user, tenant, timeSheet.user_id, trx);
 
         // Get analytics data before approval
         const entriesInfo = await trx('time_entries')
@@ -521,7 +521,7 @@ export const approveTimeSheet = withAuth(async (user, { tenant }, timeSheetId: s
         throw new Error('Time sheet not found');
       }
 
-      await assertCanActOnBehalf(user, tenant, timeSheet.user_id, trx);
+      await assertCanApproveSubject(user, tenant, timeSheet.user_id, trx);
 
       // Get analytics data
       const entriesInfo = await trx('time_entries')
