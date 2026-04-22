@@ -15,36 +15,53 @@ import type {
   CompleteSetupResult,
   InvitationHistoryItem,
   CreateClientPortalUserParams,
+  PortalInvitationErrorCode,
 } from '../types';
 
-function normalizeCreateClientPortalUserError(error: unknown): string {
+class PortalInvitationError extends Error {
+  constructor(message: string, public readonly errorCode: PortalInvitationErrorCode) {
+    super(message);
+    this.name = 'PortalInvitationError';
+  }
+}
+
+function normalizeCreateClientPortalUserError(
+  error: unknown
+): { message: string; errorCode: PortalInvitationErrorCode } {
   const dbError = error as { code?: string };
   if (dbError?.code === '23505') {
-    return 'A portal user already exists for this contact or email address';
+    return {
+      message: 'A portal user already exists for this contact or email address',
+      errorCode: 'PORTAL_USER_ALREADY_EXISTS'
+    };
   }
 
   if (error instanceof Error) {
     const message = error.message.trim();
     if (message) {
-      return message;
+      return { message, errorCode: 'CREATE_USER_FAILED' };
     }
   }
 
-  return 'Failed to create client portal user';
+  return { message: 'Failed to create client portal user', errorCode: 'CREATE_USER_FAILED' };
 }
 
 export const createClientPortalUser = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext,
   params: CreateClientPortalUserParams
-): Promise<{ success: boolean; userId?: string; message?: string; error?: string }> => {
+): Promise<{ success: boolean; userId?: string; message?: string; error?: string; errorCode?: PortalInvitationErrorCode }> => {
   try {
     const { knex } = await createTenantKnex();
 
     // RBAC: ensure user has permission to create users
     const canCreate = await hasPermission(user, 'user', 'create', knex);
     if (!canCreate) {
-      return { success: false, error: 'Permission denied: Cannot create users' };
+      return {
+        success: false,
+        error: 'Permission denied: Cannot create users',
+        errorCode: 'PERMISSION_DENIED_CREATE'
+      };
     }
 
     if (!tenant) {
@@ -53,7 +70,11 @@ export const createClientPortalUser = withAuth(async (
 
     // Validate input
     if (!params?.password || params.password.length < 8) {
-      return { success: false, error: 'Password must be at least 8 characters long' };
+      return {
+        success: false,
+        error: 'Password must be at least 8 characters long',
+        errorCode: 'PASSWORD_TOO_SHORT'
+      };
     }
 
     // Create user and assign role
@@ -231,7 +252,8 @@ export const createClientPortalUser = withAuth(async (
     return { success: true, userId: result.user_id, message: 'Client portal user created' };
   } catch (error) {
     console.error('Error creating client portal user:', error);
-    return { success: false, error: normalizeCreateClientPortalUserError(error) };
+    const normalized = normalizeCreateClientPortalUserError(error);
+    return { success: false, error: normalized.message, errorCode: normalized.errorCode };
   }
 });
 
@@ -249,7 +271,11 @@ export const sendPortalInvitation = withAuth(async (
     // RBAC: ensure user has permission to invite users
     const canInvite = await hasPermission(user, 'user', 'invite', knex);
     if (!canInvite) {
-      return { success: false, error: 'Permission denied: Cannot invite users' };
+      return {
+        success: false,
+        error: 'Permission denied: Cannot invite users',
+        errorCode: 'PERMISSION_DENIED_INVITE'
+      };
     }
 
     if (!tenant) {
@@ -264,7 +290,11 @@ export const sendPortalInvitation = withAuth(async (
       const systemEmailService = await getSystemEmailService();
       emailConfigured = await systemEmailService.isConfigured();
       if (!emailConfigured) {
-        return { success: false, error: 'Email service is disabled or not configured' };
+        return {
+          success: false,
+          error: 'Email service is disabled or not configured',
+          errorCode: 'EMAIL_NOT_CONFIGURED'
+        };
       }
     }
 
@@ -274,17 +304,25 @@ export const sendPortalInvitation = withAuth(async (
       .first();
 
     if (!contact) {
-      return { success: false, error: 'Contact not found' };
+      return { success: false, error: 'Contact not found', errorCode: 'CONTACT_NOT_FOUND' };
     }
 
     // Validate contact has an email address
     if (!contact.email || contact.email.trim() === '') {
-      return { success: false, error: 'Contact does not have an email address. Please add an email address to the contact before sending an invitation.' };
+      return {
+        success: false,
+        error: 'Contact does not have an email address. Please add an email address to the contact before sending an invitation.',
+        errorCode: 'CONTACT_MISSING_EMAIL'
+      };
     }
 
     // Validate email format using shared validator
     if (!isValidEmail(contact.email.trim())) {
-      return { success: false, error: 'Contact has an invalid email address. Please update the contact with a valid email address before sending an invitation.' };
+      return {
+        success: false,
+        error: 'Contact has an invalid email address. Please update the contact with a valid email address before sending an invitation.',
+        errorCode: 'CONTACT_INVALID_EMAIL'
+      };
     }
 
     // Do not send invitations for contacts that already have a portal user
@@ -293,7 +331,11 @@ export const sendPortalInvitation = withAuth(async (
       .first();
 
     if (existingUserForContact) {
-      return { success: false, error: 'A user account already exists for this contact. Use password reset instead of sending an invitation.' };
+      return {
+        success: false,
+        error: 'A user account already exists for this contact. Use password reset instead of sending an invitation.',
+        errorCode: 'USER_EXISTS_FOR_CONTACT'
+      };
     }
 
     // Use a transaction to ensure atomicity
@@ -318,7 +360,10 @@ export const sendPortalInvitation = withAuth(async (
         .first();
       
       if (!tenantDefaultClient) {
-        throw new Error('No default client configured for this tenant. Please set a default client in General Settings.');
+        throw new PortalInvitationError(
+          'No default client configured for this tenant. Please set a default client in General Settings.',
+          'NO_DEFAULT_CLIENT'
+        );
       }
       
       // Get MSP client's default location for reply-to email
@@ -332,11 +377,17 @@ export const sendPortalInvitation = withAuth(async (
         .first();
       
       if (!mspLocation) {
-        throw new Error('Default client must have a default location configured to send portal invitations');
+        throw new PortalInvitationError(
+          'Default client must have a default location configured to send portal invitations',
+          'NO_DEFAULT_LOCATION'
+        );
       }
-      
+
       if (!mspLocation.email) {
-        throw new Error('Default client\'s location must have a contact email configured');
+        throw new PortalInvitationError(
+          'Default client\'s location must have a contact email configured',
+          'NO_LOCATION_EMAIL'
+        );
       }
       
       // Get the client's client info for the email template
@@ -353,7 +404,10 @@ export const sendPortalInvitation = withAuth(async (
         (process.env.HOST ? `https://${process.env.HOST}` : '');
 
       if (!baseUrl) {
-        throw new Error('Base URL is not configured for portal invitations');
+        throw new PortalInvitationError(
+          'Base URL is not configured for portal invitations',
+          'BASE_URL_NOT_CONFIGURED'
+        );
       }
 
       const setupUrl = new URL(
@@ -388,9 +442,12 @@ export const sendPortalInvitation = withAuth(async (
       };
     }).catch((error) => {
       console.error('Transaction failed:', error);
+      const errorCode: PortalInvitationErrorCode =
+        error instanceof PortalInvitationError ? error.errorCode : 'INVITATION_FAILED';
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to send invitation'
+        error: error instanceof Error ? error.message : 'Failed to send invitation',
+        errorCode
       };
     });
 
@@ -398,7 +455,7 @@ export const sendPortalInvitation = withAuth(async (
 
   } catch (error) {
     console.error('Error sending portal invitation:', error);
-    return { success: false, error: 'Failed to send invitation' };
+    return { success: false, error: 'Failed to send invitation', errorCode: 'INVITATION_FAILED' };
   }
 });
 
@@ -671,19 +728,23 @@ export const revokePortalInvitation = withAuth(async (
   _user: IUserWithRoles,
   _ctx: AuthContext,
   invitationId: string
-): Promise<{ success: boolean; error?: string }> => {
+): Promise<{ success: boolean; error?: string; errorCode?: PortalInvitationErrorCode }> => {
   try {
     const revoked = await PortalInvitationService.revokeInvitation(invitationId);
 
     if (!revoked) {
-      return { success: false, error: 'Invitation not found or already used' };
+      return {
+        success: false,
+        error: 'Invitation not found or already used',
+        errorCode: 'INVITATION_NOT_FOUND'
+      };
     }
 
     return { success: true };
 
   } catch (error) {
     console.error('Error revoking portal invitation:', error);
-    return { success: false, error: 'Failed to revoke invitation' };
+    return { success: false, error: 'Failed to revoke invitation', errorCode: 'REVOKE_FAILED' };
   }
 });
 
