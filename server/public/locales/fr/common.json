@@ -539,6 +539,17 @@
   "fields": {
     "notes": "Notes"
   },
+  "auth": {
+    "messages": {
+      "handoffMissingToken": "Le jeton de transfert de connexion est manquant ou invalide. Veuillez vous reconnecter.",
+      "handoffFinalizeFailed": "Nous n'avons pas pu finaliser votre connexion. Veuillez réessayer.",
+      "handoffNetworkIssue": "Problème réseau détecté lors de la finalisation de votre connexion. Veuillez réessayer."
+    },
+    "checkEmail": {
+      "resendSuccess": "E-mail envoyé ! Veuillez consulter votre boîte de réception.",
+      "resendFailed": "Échec de l'envoi de l'e-mail. Veuillez réessayer."
+    }
+  },
   "tickets": {
     "responseSource": {
       "clientPortal": "Reçu via le Portail Client",
@@ -970,13 +981,6 @@
   "enums": {
     "addOnDescription": {
       "ai_assistant": "Débloquez le chat IA, l'assistance documentaire, l'aide en barre latérale et les outils IA de flux de travail pour votre équipe."
-    }
-  },
-  "auth": {
-    "messages": {
-      "handoffMissingToken": "Le jeton de transfert de connexion est manquant ou invalide. Veuillez vous reconnecter.",
-      "handoffFinalizeFailed": "Nous n'avons pas pu finaliser votre connexion. Veuillez réessayer.",
-      "handoffNetworkIssue": "Problème réseau détecté lors de la finalisation de votre connexion. Veuillez réessayer."
     }
   },
   "form": {

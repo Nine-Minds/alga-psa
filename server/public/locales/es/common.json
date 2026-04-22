@@ -72,6 +72,17 @@
   "fields": {
     "notes": "Notas"
   },
+  "auth": {
+    "messages": {
+      "handoffMissingToken": "El token de transferencia de sesión falta o no es válido. Inicie sesión nuevamente.",
+      "handoffFinalizeFailed": "No pudimos finalizar su inicio de sesión. Intente iniciar sesión de nuevo.",
+      "handoffNetworkIssue": "Se detectó un problema de red al finalizar el inicio de sesión. Inténtelo de nuevo."
+    },
+    "checkEmail": {
+      "resendSuccess": "¡Correo enviado! Revisa tu bandeja de entrada.",
+      "resendFailed": "No se pudo reenviar el correo. Inténtalo de nuevo."
+    }
+  },
   "tickets": {
     "responseSource": {
       "clientPortal": "Recibido vía Portal de Cliente",
@@ -970,13 +981,6 @@
   "enums": {
     "addOnDescription": {
       "ai_assistant": "Desbloquea el chat con IA, la asistencia de documentos, la ayuda en la barra lateral y las herramientas de IA de flujo de trabajo para tu equipo."
-    }
-  },
-  "auth": {
-    "messages": {
-      "handoffMissingToken": "El token de transferencia de sesión falta o no es válido. Inicie sesión nuevamente.",
-      "handoffFinalizeFailed": "No pudimos finalizar su inicio de sesión. Intente iniciar sesión de nuevo.",
-      "handoffNetworkIssue": "Se detectó un problema de red al finalizar el inicio de sesión. Inténtelo de nuevo."
     }
   },
   "form": {

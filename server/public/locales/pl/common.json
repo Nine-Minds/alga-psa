@@ -97,6 +97,17 @@
   "fields": {
     "notes": "Notatki"
   },
+  "auth": {
+    "messages": {
+      "handoffMissingToken": "Brak lub nieprawidłowy token przekazania logowania. Zaloguj się ponownie.",
+      "handoffFinalizeFailed": "Nie mogliśmy zakończyć logowania. Spróbuj zalogować się ponownie.",
+      "handoffNetworkIssue": "Wykryto problem z siecią podczas finalizowania logowania. Spróbuj ponownie."
+    },
+    "checkEmail": {
+      "resendSuccess": "E-mail wysłany! Sprawdź swoją skrzynkę odbiorczą.",
+      "resendFailed": "Nie udało się ponownie wysłać e-maila. Spróbuj ponownie."
+    }
+  },
   "tickets": {
     "responseSource": {
       "clientPortal": "Otrzymano przez Portal Klienta",
@@ -970,13 +981,6 @@
   "enums": {
     "addOnDescription": {
       "ai_assistant": "Odblokuj czat AI, pomoc w dokumentach, pomoc w pasku bocznym oraz narzędzia AI dla przepływów pracy Twojego zespołu."
-    }
-  },
-  "auth": {
-    "messages": {
-      "handoffMissingToken": "Brak lub nieprawidłowy token przekazania logowania. Zaloguj się ponownie.",
-      "handoffFinalizeFailed": "Nie mogliśmy zakończyć logowania. Spróbuj zalogować się ponownie.",
-      "handoffNetworkIssue": "Wykryto problem z siecią podczas finalizowania logowania. Spróbuj ponownie."
     }
   },
   "form": {

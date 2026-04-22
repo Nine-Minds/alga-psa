@@ -539,6 +539,17 @@
   "fields": {
     "notes": "Notities"
   },
+  "auth": {
+    "messages": {
+      "handoffMissingToken": "Het login-overdrachtstoken ontbreekt of is ongeldig. Log opnieuw in.",
+      "handoffFinalizeFailed": "We konden uw inloggen niet voltooien. Probeer opnieuw in te loggen.",
+      "handoffNetworkIssue": "Netwerkprobleem gedetecteerd bij het voltooien van uw inloggen. Probeer het opnieuw."
+    },
+    "checkEmail": {
+      "resendSuccess": "E-mail verzonden! Controleer je inbox.",
+      "resendFailed": "E-mail opnieuw verzenden is mislukt. Probeer het opnieuw."
+    }
+  },
   "tickets": {
     "responseSource": {
       "clientPortal": "Ontvangen via Klantenportaal",
@@ -970,13 +981,6 @@
   "enums": {
     "addOnDescription": {
       "ai_assistant": "Ontgrendel AI-chat, documenthulp, zijbalk-assistentie en workflow-AI-tools voor je team."
-    }
-  },
-  "auth": {
-    "messages": {
-      "handoffMissingToken": "Het login-overdrachtstoken ontbreekt of is ongeldig. Log opnieuw in.",
-      "handoffFinalizeFailed": "We konden uw inloggen niet voltooien. Probeer opnieuw in te loggen.",
-      "handoffNetworkIssue": "Netwerkprobleem gedetecteerd bij het voltooien van uw inloggen. Probeer het opnieuw."
     }
   },
   "form": {
