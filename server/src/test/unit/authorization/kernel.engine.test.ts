@@ -199,4 +199,53 @@ describe('authorization kernel engine', () => {
     expect(mutationDecision.allowed).toBe(false);
     expect(mutationDecision.reasons.some((reason) => reason.code === 'not_self_approver_denied')).toBe(true);
   });
+
+  it('reports explainability across rbac, builtin, and bundle narrowing sources', async () => {
+    const bundleProvider: BundleAuthorizationProvider = {
+      evaluateNarrowing: vi.fn(async () => ({
+        scope: {
+          allowAll: false,
+          denied: false,
+          constraints: [{ field: 'client_id', operator: 'in', value: ['client-1'] }],
+        },
+        reasons: [
+          {
+            stage: 'bundle',
+            sourceType: 'bundle',
+            code: 'bundle_narrowing_applied',
+            message: 'bundle intersection',
+          },
+        ],
+        redactedFields: [],
+        mutationDeniedReason: null,
+      })),
+    };
+
+    const kernel = createAuthorizationKernel({
+      builtinProvider: new BuiltinAuthorizationKernelProvider({
+        relationshipRules: [{ template: 'own' }],
+      }),
+      bundleProvider,
+      rbacEvaluator: vi.fn(async () => true),
+    });
+
+    const reasons = await kernel.explainDecision(
+      baseInput({
+        record: {
+          id: 'ticket-42',
+          ownerUserId: 'user-a',
+          clientId: 'client-1',
+        },
+      })
+    );
+
+    const reasonCodes = reasons.map((reason) => `${reason.stage}:${reason.code}`);
+    expect(reasonCodes).toEqual(
+      expect.arrayContaining([
+        'rbac:rbac_allowed',
+        'builtin:relationship_rules_allowed',
+        'bundle:bundle_narrowing_applied',
+      ])
+    );
+  });
 });

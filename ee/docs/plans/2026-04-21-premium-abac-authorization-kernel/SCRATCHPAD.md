@@ -282,3 +282,5 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - validates that CE mode (builtin only) and EE-overlay mode (builtin + bundle provider) both expose and execute shared kernel entry points (`authorizeResource`, `resolveScope`, `authorizeMutation`, `explainDecision`).
 - (2026-04-21) Additional validation runbook:
   - `cd server && npx vitest run --coverage.enabled=false src/test/unit/authorization/kernel.contract.modes.test.ts src/test/unit/api/authorizationKernel.test.ts`
+- (2026-04-21) Completed `T029` by extending `server/src/test/unit/authorization/kernel.engine.test.ts` with explicit reason-chain assertions that include RBAC gate (`rbac_allowed`), builtin relationship path (`relationship_rules_allowed`), and bundle narrowing (`bundle_narrowing_applied`).
+- (2026-04-21) Note on current integration runner state: repeated full integration reruns encountered transient DB pool exhaustion (`KnexTimeoutError` during test DB recreation). Unit-level checkpoints continue to run reliably; heavy integration reruns should be resumed after DB pool reset.
