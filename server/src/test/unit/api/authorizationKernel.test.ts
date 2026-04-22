@@ -33,6 +33,35 @@ describe('api authorization kernel helper', () => {
       roleIds: ['role-1', 'role-2', 'role-3'],
       teamIds: ['team-1', 'team-2'],
       managedUserIds: ['managed-1'],
+      portfolioClientIds: [],
+    });
+  });
+
+  it('preserves client and portfolio identifiers from snake_case and camelCase payloads', () => {
+    const snakeCase = buildAuthorizationPrincipalSubject({
+      tenant: 'tenant-1',
+      user_id: 'user-1',
+      user_type: 'client',
+      client_id: 'client-snake',
+      portfolio_client_ids: ['portfolio-a', 'portfolio-b'],
+    });
+
+    expect(snakeCase).toMatchObject({
+      clientId: 'client-snake',
+      portfolioClientIds: ['portfolio-a', 'portfolio-b'],
+    });
+
+    const camelCase = buildAuthorizationPrincipalSubject({
+      tenant: 'tenant-1',
+      user_id: 'user-2',
+      user_type: 'client',
+      clientId: 'client-camel',
+      portfolioClientIds: ['portfolio-c'],
+    });
+
+    expect(camelCase).toMatchObject({
+      clientId: 'client-camel',
+      portfolioClientIds: ['portfolio-c'],
     });
   });
 

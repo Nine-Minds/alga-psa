@@ -1,0 +1,86 @@
+[
+  {
+    "id": "T001",
+    "description": "Guard/integration: a read-only user cannot trigger draft creation or any write side effect by opening the bundle draft editor.",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T002",
+    "description": "Guard/integration: bundle rule update fails when the targeted rule does not belong to the bundle's current draft revision for the tenant.",
+    "implemented": true,
+    "featureIds": ["F003", "F019"]
+  },
+  {
+    "id": "T003",
+    "description": "Guard/integration: bundle rule delete fails when the targeted rule does not belong to the bundle's current draft revision for the tenant.",
+    "implemented": true,
+    "featureIds": ["F004", "F019"]
+  },
+  {
+    "id": "T004",
+    "description": "Migration/contract: schema constraints enforce revision-to-bundle consistency strongly enough that a rule cannot reference the wrong bundle/revision combination.",
+    "implemented": true,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T005",
+    "description": "Runtime: a `selected_clients` bundle rule denies records outside its configured client set and allows matching records when the rule is otherwise satisfied.",
+    "implemented": true,
+    "featureIds": ["F006", "F008", "F020"]
+  },
+  {
+    "id": "T006",
+    "description": "Runtime: a `selected_boards` bundle rule denies records outside its configured board set and allows matching records when the rule is otherwise satisfied.",
+    "implemented": true,
+    "featureIds": ["F007", "F008", "F020"]
+  },
+  {
+    "id": "T007",
+    "description": "Action/integration: starter bundle seeding creates bundles with enforceable published revisions rather than inert draft-only revisions.",
+    "implemented": true,
+    "featureIds": ["F009", "F021"]
+  },
+  {
+    "id": "T008",
+    "description": "Regression: premium Time bundle rules apply to the migrated time/delegation evaluation path using the same resource key as the bundle editor/catalog.",
+    "implemented": true,
+    "featureIds": ["F010", "F022"]
+  },
+  {
+    "id": "T009",
+    "description": "Simulator: billing simulation loads the same kind of record as the migrated billing authorization path and produces a decision over the expected record identity.",
+    "implemented": true,
+    "featureIds": ["F011", "F023"]
+  },
+  {
+    "id": "T010",
+    "description": "Simulator: for supported resource families, draft-vs-published simulation includes the same builtin resource-specific narrowing semantics that the runtime path applies, or explicitly rejects unsupported simulation modes.",
+    "implemented": true,
+    "featureIds": ["F012", "F013", "F023"]
+  },
+  {
+    "id": "T011",
+    "description": "Unit: API authorization subject shaping preserves client and portfolio identifiers across both snake_case and camelCase user payloads.",
+    "implemented": true,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T012",
+    "description": "API parity/pagination: migrated ticket list pagination metadata remains coherent under authorization narrowing and does not strand authorized records behind filtered pages.",
+    "implemented": true,
+    "featureIds": ["F015", "F018", "F024"]
+  },
+  {
+    "id": "T013",
+    "description": "API parity/pagination: migrated project list pagination metadata remains coherent under authorization narrowing and does not strand authorized records behind filtered pages.",
+    "implemented": true,
+    "featureIds": ["F016", "F018", "F024"]
+  },
+  {
+    "id": "T014",
+    "description": "API parity/pagination: migrated quote list pagination metadata remains coherent under authorization narrowing and does not strand authorized records behind filtered pages.",
+    "implemented": true,
+    "featureIds": ["F017", "F018", "F024"]
+  }
+]

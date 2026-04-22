@@ -33,6 +33,7 @@ import {
   hasPermission 
 } from '../../auth/rbac';
 import { authorizeApiResourceRead } from './authorizationKernel';
+import { buildAuthorizationAwarePage } from './authorizationAwarePagination';
 import {
   ApiRequest,
   UnauthorizedError,
@@ -105,28 +106,27 @@ export class ApiTicketController extends ApiBaseController {
           delete filters.sort;
           delete filters.order;
 
-          const result = await this.ticketService.list({ page, limit, filters, sort, order }, apiRequest.context);
           const knex = await getConnection(apiRequest.context.tenant);
-
-          const allowedTickets: Record<string, any>[] = [];
-          for (const ticket of result.data as Record<string, any>[]) {
-            const allowed = await authorizeApiResourceRead({
-              knex,
-              tenant: apiRequest.context.tenant,
-              user: apiRequest.context.user,
-              apiKeyId: apiRequest.context.apiKeyId,
-              resource: 'ticket',
-              recordContext: this.buildTicketRecordContext(ticket),
-            });
-
-            if (allowed) {
-              allowedTickets.push(ticket);
-            }
-          }
+          const authorizedPage = await buildAuthorizationAwarePage<Record<string, any>>({
+            page,
+            limit,
+            fetchPage: (sourcePage, sourceLimit) =>
+              this.ticketService.list({ page: sourcePage, limit: sourceLimit, filters, sort, order }, apiRequest.context),
+            authorizeRecord: (ticket) =>
+              authorizeApiResourceRead({
+                knex,
+                tenant: apiRequest.context.tenant,
+                user: apiRequest.context.user,
+                apiKeyId: apiRequest.context.apiKeyId,
+                resource: 'ticket',
+                recordContext: this.buildTicketRecordContext(ticket),
+              }),
+            scanLimit: 100,
+          });
 
           return createPaginatedResponse(
-            allowedTickets,
-            allowedTickets.length,
+            authorizedPage.data,
+            authorizedPage.total,
             page,
             limit,
             { sort, order, filters },

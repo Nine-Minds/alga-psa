@@ -32,6 +32,14 @@ function normalizeIdArrayFromObjects(values: unknown, key: string): string[] {
     .filter((value): value is string => Boolean(value));
 }
 
+function normalizeOptionalString(value: unknown): string | null | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
 export function buildAuthorizationPrincipalSubject(
   user: any,
   apiKeyId?: string
@@ -57,6 +65,13 @@ export function buildAuthorizationPrincipalSubject(
     ])
   );
 
+  const portfolioClientIds = Array.from(
+    new Set([
+      ...normalizeStringArray(user?.portfolio_client_ids),
+      ...normalizeStringArray(user?.portfolioClientIds),
+    ])
+  );
+
   const subject: AuthorizationSubject = {
     tenant: user?.tenant ?? '',
     userId: typeof user?.user_id === 'string' ? user.user_id : '',
@@ -64,10 +79,12 @@ export function buildAuthorizationPrincipalSubject(
     roleIds,
     teamIds,
     managedUserIds,
+    portfolioClientIds,
   };
 
-  if (typeof user?.client_id === 'string' && user.client_id.trim().length > 0) {
-    subject.clientId = user.client_id;
+  const normalizedClientId = normalizeOptionalString(user?.client_id) ?? normalizeOptionalString(user?.clientId);
+  if (normalizedClientId !== undefined) {
+    subject.clientId = normalizedClientId;
   }
 
   if (typeof apiKeyId === 'string' && apiKeyId.trim().length > 0) {

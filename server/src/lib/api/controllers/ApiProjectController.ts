@@ -30,6 +30,7 @@ import {
   hasPermission 
 } from '../../auth/rbac';
 import { authorizeApiResourceRead } from './authorizationKernel';
+import { buildAuthorizationAwarePage } from './authorizationAwarePagination';
 import {
   ApiRequest,
   AuthenticatedApiRequest,
@@ -102,28 +103,31 @@ export class ApiProjectController extends ApiBaseController {
           delete filters.sort;
           delete filters.order;
 
-          const result = await this.projectService.list({ page, limit, filters, sort, order }, apiRequest.context, filters);
           const knex = await getConnection(apiRequest.context.tenant);
-          const allowedProjects: Record<string, any>[] = [];
-
-          for (const project of result.data as Record<string, any>[]) {
-            const allowed = await authorizeApiResourceRead({
-              knex,
-              tenant: apiRequest.context.tenant,
-              user: apiRequest.context.user,
-              apiKeyId: apiRequest.context.apiKeyId,
-              resource: 'project',
-              recordContext: this.buildProjectRecordContext(project),
-            });
-
-            if (allowed) {
-              allowedProjects.push(project);
-            }
-          }
+          const authorizedPage = await buildAuthorizationAwarePage<Record<string, any>>({
+            page,
+            limit,
+            fetchPage: (sourcePage, sourceLimit) =>
+              this.projectService.list(
+                { page: sourcePage, limit: sourceLimit, filters, sort, order },
+                apiRequest.context,
+                filters
+              ),
+            authorizeRecord: (project) =>
+              authorizeApiResourceRead({
+                knex,
+                tenant: apiRequest.context.tenant,
+                user: apiRequest.context.user,
+                apiKeyId: apiRequest.context.apiKeyId,
+                resource: 'project',
+                recordContext: this.buildProjectRecordContext(project),
+              }),
+            scanLimit: 100,
+          });
 
           return createPaginatedResponse(
-            allowedProjects,
-            allowedProjects.length,
+            authorizedPage.data,
+            authorizedPage.total,
             page,
             limit,
             { sort, order, filters },

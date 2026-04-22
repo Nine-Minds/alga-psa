@@ -88,6 +88,8 @@ function pickColumns(row: Row | undefined, columns: string[]): Row | undefined {
 function buildKnexMock(input: {
   principal: Row;
   ticket: Row;
+  quote?: Row;
+  document?: Row;
   bundle: Row;
   principalOptions: Row[];
 }): KnexMock {
@@ -113,6 +115,9 @@ function buildKnexMock(input: {
       },
       async select(...columns: string[]) {
         if (state.table === 'users') {
+          if (state.whereClauses.some((clause) => 'reports_to' in clause)) {
+            return [];
+          }
           return input.principalOptions
             .filter((row) => state.whereClauses.every((clause) => Object.entries(clause).every(([key, value]) => row[key] === value)))
             .map((row) => pickColumns(row, columns) as Row);
@@ -122,10 +127,21 @@ function buildKnexMock(input: {
           return [pickColumns(input.ticket, columns) as Row];
         }
 
+        if (state.table === 'quotes') {
+          return input.quote ? [pickColumns(input.quote, columns) as Row] : [];
+        }
+
+        if (state.table === 'documents') {
+          return input.document ? [pickColumns(input.document, columns) as Row] : [];
+        }
+
         return [];
       },
       async first(...columns: string[]) {
         if (state.table === 'users') {
+          if (state.whereClauses.some((clause) => 'reports_to' in clause)) {
+            return undefined;
+          }
           const row = state.whereClauses.some((clause) => 'user_id' in clause)
             ? input.principal
             : input.principalOptions[0];
@@ -142,6 +158,14 @@ function buildKnexMock(input: {
 
         if (state.table === 'tickets') {
           return pickColumns(input.ticket, columns);
+        }
+
+        if (state.table === 'quotes') {
+          return pickColumns(input.quote, columns);
+        }
+
+        if (state.table === 'documents') {
+          return pickColumns(input.document, columns);
         }
 
         return undefined;
@@ -209,6 +233,8 @@ import {
 describe('runAuthorizationBundleSimulationAction', () => {
   const principalUserId = 'principal-user';
   const ticketId = 'ticket-1';
+  const quoteId = 'quote-1';
+  const documentId = 'document-1';
 
   beforeEach(() => {
     const knex = buildKnexMock({
@@ -231,6 +257,21 @@ describe('runAuthorizationBundleSimulationAction', () => {
         ticket_id: ticketId,
         user_id: principalUserId,
         title: 'Ticket 1',
+        tenant: authContext.tenant,
+      },
+      quote: {
+        quote_id: quoteId,
+        quote_number: 'Q-1001',
+        created_by: principalUserId,
+        client_id: 'client-1',
+        tenant: authContext.tenant,
+      },
+      document: {
+        document_id: documentId,
+        document_name: 'Doc 1',
+        created_by: 'another-user',
+        client_id: 'client-1',
+        is_client_visible: false,
         tenant: authContext.tenant,
       },
       bundle: {
@@ -299,5 +340,87 @@ describe('runAuthorizationBundleSimulationAction', () => {
     expect(result.draft.allowed).toBe(false);
     expect(result.published.reasonCodes).toContain('rbac:rbac_allowed');
     expect(result.draft.reasonCodes).toContain('bundle:bundle_template_denied');
+  });
+
+  it('loads billing simulation records from quotes and honors approve self-approval guard', async () => {
+    const recordOptions = await listAuthorizationSimulationRecordsAction({ resourceType: 'billing' });
+    expect(recordOptions).toEqual([{ id: quoteId, label: 'Q-1001' }]);
+
+    const result = await runAuthorizationBundleSimulationAction({
+      bundleId: 'bundle-1',
+      principalUserId,
+      resourceType: 'billing',
+      action: 'approve',
+      resourceId: quoteId,
+    });
+
+    expect(result.published.allowed).toBe(false);
+    expect(result.draft.allowed).toBe(false);
+    expect(result.published.reasonCodes).toContain('mutation:billing_not_self_approver_denied');
+    expect(result.draft.reasonCodes).toContain('mutation:billing_not_self_approver_denied');
+  });
+
+  it('applies document client-visibility invariant and rejects unsupported simulator actions', async () => {
+    const clientPrincipalId = 'client-principal';
+    const knex = buildKnexMock({
+      principal: {
+        user_id: clientPrincipalId,
+        user_type: 'client',
+        client_id: 'client-1',
+      },
+      principalOptions: [
+        {
+          user_id: clientPrincipalId,
+          first_name: 'Client',
+          last_name: 'Principal',
+          username: 'client-principal',
+          email: 'client@example.com',
+          tenant: authContext.tenant,
+        },
+      ],
+      ticket: {
+        ticket_id: ticketId,
+        user_id: principalUserId,
+        title: 'Ticket 1',
+        tenant: authContext.tenant,
+      },
+      document: {
+        document_id: documentId,
+        document_name: 'Doc 1',
+        created_by: 'another-user',
+        client_id: 'client-1',
+        is_client_visible: false,
+        tenant: authContext.tenant,
+      },
+      bundle: {
+        published_revision_id: revisionContext.publishedRevisionId,
+      },
+    });
+
+    dbMocks.createTenantKnex.mockResolvedValue({
+      knex,
+      tenant: authContext.tenant,
+    });
+
+    const documentDecision = await runAuthorizationBundleSimulationAction({
+      bundleId: 'bundle-1',
+      principalUserId: clientPrincipalId,
+      resourceType: 'document',
+      action: 'read',
+      resourceId: documentId,
+    });
+
+    expect(documentDecision.published.allowed).toBe(false);
+    expect(documentDecision.published.reasonCodes).toContain('builtin:document_client_visibility_denied');
+
+    await expect(
+      runAuthorizationBundleSimulationAction({
+        bundleId: 'bundle-1',
+        principalUserId,
+        resourceType: 'ticket',
+        action: 'delete',
+        resourceId: ticketId,
+      })
+    ).rejects.toThrow('Simulator only supports read/approve actions');
   });
 });

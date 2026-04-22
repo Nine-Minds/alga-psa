@@ -62,85 +62,85 @@
   {
     "id": "F011",
     "description": "Correct simulator billing-record lookup so it uses the same record family as the migrated billing authorization path under review.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Problem", "Functional Requirements"]
   },
   {
     "id": "F012",
     "description": "Improve simulator fidelity so supported resource-family simulations include the relevant builtin resource-specific invariants rather than only RBAC plus bundle overlays.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Problem", "Functional Requirements", "Non-functional Requirements"]
   },
   {
     "id": "F013",
     "description": "If builtin simulator fidelity cannot be fully implemented for some resource families in this follow-up, explicitly constrain simulator support so unsupported scenarios are not presented as trustworthy.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "Open Questions", "Acceptance Criteria (Definition of Done)"]
   },
   {
     "id": "F014",
     "description": "Normalize API authorization subject shaping so client and portfolio identifiers are read consistently from the API user context used in kernel evaluation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Problem", "Functional Requirements"]
   },
   {
     "id": "F015",
     "description": "Remediate migrated API ticket list pagination so authorization narrowing does not produce misleading totals or unreachable authorized records.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Problem", "Functional Requirements", "Rollout / Migration"]
   },
   {
     "id": "F016",
     "description": "Remediate migrated API project list pagination so authorization narrowing does not produce misleading totals or unreachable authorized records.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Problem", "Functional Requirements", "Rollout / Migration"]
   },
   {
     "id": "F017",
     "description": "Remediate migrated API quote list pagination so authorization narrowing does not produce misleading totals or unreachable authorized records.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Problem", "Functional Requirements", "Rollout / Migration"]
   },
   {
     "id": "F018",
     "description": "Preserve fail-closed behavior while fixing API pagination semantics; remediation must not broaden access or leak unauthorized totals.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Security / Permissions", "Non-functional Requirements"]
   },
   {
     "id": "F019",
     "description": "Add regression coverage proving draft-only rule mutations cannot touch published or out-of-scope rules.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Functional Requirements", "Acceptance Criteria (Definition of Done)"]
   },
   {
     "id": "F020",
     "description": "Add regression coverage proving selected-client and selected-board configured rule values are honored by runtime bundle evaluation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Functional Requirements", "Acceptance Criteria (Definition of Done)"]
   },
   {
     "id": "F021",
     "description": "Add regression coverage proving seeded starter bundles create enforceable published revisions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Functional Requirements"]
   },
   {
     "id": "F022",
     "description": "Add regression coverage proving premium Time bundle rules match and narrow the migrated time/delegation paths as intended.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Functional Requirements"]
   },
   {
     "id": "F023",
     "description": "Add regression coverage proving simulator billing lookup and builtin-rule fidelity are aligned with supported runtime behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Functional Requirements", "Non-functional Requirements"]
   },
   {
     "id": "F024",
     "description": "Add regression coverage proving migrated API list pagination semantics remain coherent under authorization narrowing for tickets, projects, and quotes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Functional Requirements", "Acceptance Criteria (Definition of Done)"]
   }
 ]

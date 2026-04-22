@@ -31,6 +31,11 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-04-22) Runtime rule mapping loaded `constraints`/`redactedFields` from rule config but did not load `selectedClientIds` or `selectedBoardIds`, so selected template rules could evaluate against missing IDs.
 - (2026-04-22) `seedStarterAuthorizationBundlesAction` created starter bundle draft revisions/rules but never published them, so seeded bundles were assignable yet inert.
 - (2026-04-22) Time delegation/approval kernelization used resource type `timesheet` for bundle evaluation while the bundle editor/catalog and starter rules target `time_entry`.
+- (2026-04-22) Simulator billing record lookup/listing used `invoices`, but migrated billing API authorization evaluates `billing` over quote records (`quotes`).
+- (2026-04-22) Simulator previously evaluated all actions via `authorizeResource`, so approve-path mutation guards (for billing/time self-approval) were not represented.
+- (2026-04-22) Simulator previously allowed non-read action modes (`create/update/delete`) without mutation context, which could imply unsupported fidelity.
+- (2026-04-22) API authorization subject shaping only mapped `client_id` and ignored camelCase client ID payloads and portfolio client ID arrays.
+- (2026-04-22) Ticket/project/quote API list controllers paginated service results before authorization narrowing, which stranded authorized records and reported filtered-page counts as totals.
 
 ## Commands / Runbooks
 
@@ -121,4 +126,48 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - Updated scheduling authorization regression test bundle-rule fixtures to match `time_entry`.
 - (2026-04-22) Verification for `F010`:
   - Command: `cd server && npx vitest run ../packages/scheduling/tests/timeEntryDelegationAuth.authorization.test.ts`
+  - Result: pass.
+- (2026-04-22) Completed `F011`:
+  - Updated simulator billing record reference data and persisted-record loading from `invoices` to `quotes`.
+  - Updated authorization-record normalization to include `quote_id`.
+- (2026-04-22) Completed `F012`:
+  - Added simulator parity for mutation-guard invariants on `approve` actions by using `authorizeMutation` with not-self-approver guards for `billing` and `time_entry`.
+  - Added simulator-side document client-visibility narrowing for client principals to mirror runtime deny behavior.
+  - Added managed-user lookup to simulation subject shaping for closer runtime parity.
+- (2026-04-22) Completed `F013`:
+  - Added explicit simulator support gating: only `read/approve` actions are allowed in this follow-up; unsupported modes fail closed with clear errors.
+  - Added explicit refusal for ticket simulation with client principals until board-visibility builtin invariants are modeled.
+- (2026-04-22) Verification for `F011-F013` and `F023`:
+  - Command: `cd server && npx vitest run src/test/unit/authorization/bundleSimulatorAction.test.ts`
+  - Result: pass.
+- (2026-04-22) Completed `T009`, `T010` and `F023`:
+  - Extended `bundleSimulatorAction.test.ts` to verify quote-backed billing simulation records and approve self-approval guard behavior.
+  - Added regression coverage for supported-mode fidelity and explicit unsupported-mode rejection semantics.
+- (2026-04-22) Completed `F014`:
+  - Extended API authorization subject normalization to support `client_id`/`clientId` and `portfolio_client_ids`/`portfolioClientIds`.
+  - Subject shaping now preserves client/portfolio scope IDs across API user payload variants.
+- (2026-04-22) Completed `F015`, `F016`, `F017`, `F018`:
+  - Added `authorizationAwarePagination` helper that scans source pages, applies authorization first, and paginates authorized rows afterward.
+  - Updated `ApiTicketController`, `ApiProjectController`, and `ApiQuoteController` list paths to use authorization-aware pagination totals.
+  - Remediation remains fail-closed: only authorized rows contribute to response data/totals.
+- (2026-04-22) Completed `T011`:
+  - Added API authorization subject unit coverage for snake_case and camelCase client/portfolio identifiers.
+- (2026-04-22) Completed `T012`, `T013`, `T014` and `F024`:
+  - Added `authorizationAwarePagination.test.ts` with ticket/project/quote scenarios proving no authorized rows are stranded behind filtered source pages.
+  - Coverage asserts coherent authorized totals after narrowing.
+- (2026-04-22) Verification for `F014-F018`, `T011-T014`:
+  - Command: `cd server && npx vitest run src/test/unit/authorization/bundleSimulatorAction.test.ts src/test/unit/api/authorizationKernel.test.ts src/test/unit/api/authorizationAwarePagination.test.ts`
+  - Result: pass.
+- (2026-04-22) Completed `T001`, `T002`, `T003` and `F019`:
+  - Verified bundle-management permission and draft-revision scoping regressions remain covered in `bundleManagementPermissions.test.ts`.
+- (2026-04-22) Completed `T004`:
+  - Verified migration-level revision/bundle integrity constraints in `authorizationBundleControlPlaneMigration.test.ts`.
+- (2026-04-22) Completed `T005`, `T006` and `F020`:
+  - Verified runtime selected-client and selected-board evaluation coverage in `bundle.provider.test.ts`.
+- (2026-04-22) Completed `T007` and `F021`:
+  - Verified starter-bundle publish-backed enforceability in `starterBundles.test.ts`.
+- (2026-04-22) Completed `T008` and `F022`:
+  - Verified time delegation authorization path alignment to `time_entry` in `timeEntryDelegationAuth.authorization.test.ts`.
+- (2026-04-22) Verification for `T001-T008`, `F019-F022`:
+  - Command: `cd server && npx vitest run src/test/unit/authorization/bundleManagementPermissions.test.ts src/test/unit/migrations/authorizationBundleControlPlaneMigration.test.ts src/test/unit/authorization/bundle.provider.test.ts src/test/unit/authorization/starterBundles.test.ts ../packages/scheduling/tests/timeEntryDelegationAuth.authorization.test.ts`
   - Result: pass.

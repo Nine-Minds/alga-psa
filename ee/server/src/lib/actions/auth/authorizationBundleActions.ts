@@ -7,6 +7,7 @@ import { createTenantKnex } from '@/lib/db';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import {
   type AuthorizationRecord,
+  type AuthorizationReason,
   type RelationshipTemplateKey,
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -88,6 +89,8 @@ export interface AuthorizationBundleSimulationPayload {
   draft: AuthorizationSimulationDecision;
   published: AuthorizationSimulationDecision;
 }
+
+const SUPPORTED_SIMULATION_ACTIONS = new Set(['read', 'approve']);
 
 export interface AuthorizationBundleAuditEvent {
   eventType:
@@ -594,12 +597,12 @@ export const listAuthorizationSimulationRecordsAction = withAuth(
       return rows.map((row) => ({ id: row.asset_id, label: row.name || row.asset_id }));
     }
 
-    const rows = await knex('invoices')
+    const rows = await knex('quotes')
       .where({ tenant })
       .orderBy('updated_at', 'desc')
       .limit(50)
-      .select<{ invoice_id: string; invoice_number: string | null }[]>('invoice_id', 'invoice_number');
-    return rows.map((row) => ({ id: row.invoice_id, label: row.invoice_number || row.invoice_id }));
+      .select<{ quote_id: string; quote_number: string | null }[]>('quote_id', 'quote_number');
+    return rows.map((row) => ({ id: row.quote_id, label: row.quote_number || row.quote_id }));
   }
 );
 
@@ -656,6 +659,7 @@ function toAuthorizationRecord(row: Record<string, unknown>): AuthorizationRecor
       (typeof row.entry_id === 'string' ? row.entry_id : null) ??
       (typeof row.project_id === 'string' ? row.project_id : null) ??
       (typeof row.asset_id === 'string' ? row.asset_id : null) ??
+      (typeof row.quote_id === 'string' ? row.quote_id : null) ??
       (typeof row.invoice_id === 'string' ? row.invoice_id : null),
     ownerUserId,
     clientId: typeof row.client_id === 'string' ? row.client_id : null,
@@ -696,9 +700,61 @@ async function loadSimulationRecord(
     return toAuthorizationRecord(row);
   }
 
-  const row = await knex('invoices').where({ tenant, invoice_id: resourceId }).first();
-  if (!row) throw new Error('Invoice not found.');
+  const row = await knex('quotes').where({ tenant, quote_id: resourceId }).first();
+  if (!row) throw new Error('Quote not found.');
   return toAuthorizationRecord(row);
+}
+
+function assertSimulationModeSupported(input: {
+  resourceType: string;
+  action: string;
+  principalUserType: 'internal' | 'client';
+}): void {
+  if (!SUPPORTED_SIMULATION_ACTIONS.has(input.action)) {
+    throw new Error(
+      `Simulator only supports read/approve actions in this remediation; "${input.action}" is not currently modeled faithfully.`
+    );
+  }
+
+  if (input.resourceType === 'ticket' && input.principalUserType === 'client') {
+    throw new Error(
+      'Ticket simulation for client principals is not supported in this remediation because board-visibility builtin invariants are not modeled yet.'
+    );
+  }
+}
+
+function applySimulationInvariantNarrowing(input: {
+  resourceType: string;
+  action: string;
+  principalUserId: string;
+  principalUserType: 'internal' | 'client';
+  record: AuthorizationRecord;
+  decision: { allowed: boolean; reasons: AuthorizationReason[] };
+}): { allowed: boolean; reasons: AuthorizationReason[] } {
+  if (!input.decision.allowed) {
+    return input.decision;
+  }
+
+  if (input.resourceType === 'document' && input.action === 'read' && input.principalUserType === 'client') {
+    const isOwner = input.record.ownerUserId === input.principalUserId;
+    const isClientVisible = input.record.is_client_visible === true;
+    if (!isOwner && !isClientVisible) {
+      return {
+        allowed: false,
+        reasons: [
+          ...input.decision.reasons,
+          {
+            stage: 'builtin',
+            sourceType: 'builtin',
+            code: 'document_client_visibility_denied',
+            message: 'Client principals can only access own documents unless the record is client-visible.',
+          },
+        ],
+      };
+    }
+  }
+
+  return input.decision;
 }
 
 export const runAuthorizationBundleSimulationAction = withAuth(
@@ -738,9 +794,16 @@ export const runAuthorizationBundleSimulationAction = withAuth(
       throw new Error('Principal user not found in tenant scope.');
     }
 
-    const [roleRows, teamRows, draftRevision] = await Promise.all([
+    assertSimulationModeSupported({
+      resourceType: input.resourceType,
+      action: input.action,
+      principalUserType: principal.user_type,
+    });
+
+    const [roleRows, teamRows, managedRows, draftRevision] = await Promise.all([
       knex('user_roles').where({ tenant, user_id: principal.user_id }).select<{ role_id: string }[]>('role_id'),
       knex('team_members').where({ tenant, user_id: principal.user_id }).select<{ team_id: string }[]>('team_id'),
+      knex('users').where({ tenant, reports_to: principal.user_id }).select<{ user_id: string }[]>('user_id'),
       ensureDraftBundleRevision(knex, {
         tenant,
         bundleId: input.bundleId,
@@ -786,7 +849,58 @@ export const runAuthorizationBundleSimulationAction = withAuth(
 
     const createKernelWithRules = (rules: BundleNarrowingRule[]) =>
       createAuthorizationKernel({
-        builtinProvider: new BuiltinAuthorizationKernelProvider(),
+        builtinProvider: new BuiltinAuthorizationKernelProvider({
+          relationshipRules:
+            input.resourceType === 'document' && principal.user_type === 'client' && input.action === 'read'
+              ? [{ template: 'own' }, { template: 'same_client' }]
+              : [],
+          mutationGuards:
+            input.action === 'approve' &&
+            (input.resourceType === 'billing' || input.resourceType === 'time_entry')
+              ? [
+                  (evaluationInput) => {
+                    const ownerUserId = evaluationInput.record?.ownerUserId;
+                    if (typeof ownerUserId === 'string' && ownerUserId === evaluationInput.subject.userId) {
+                      return {
+                        allowed: false,
+                        reasons: [
+                          {
+                            stage: 'mutation' as const,
+                            sourceType: 'builtin' as const,
+                            code:
+                              input.resourceType === 'billing'
+                                ? 'billing_not_self_approver_denied'
+                                : 'timesheet_not_self_approver_denied',
+                            message:
+                              input.resourceType === 'billing'
+                                ? 'Approvers cannot approve their own quotes.'
+                                : 'Approvers cannot approve their own time submissions.',
+                          },
+                        ],
+                      };
+                    }
+
+                    return {
+                      allowed: true,
+                      reasons: [
+                        {
+                          stage: 'mutation' as const,
+                          sourceType: 'builtin' as const,
+                          code:
+                            input.resourceType === 'billing'
+                              ? 'billing_not_self_approver_passed'
+                              : 'timesheet_not_self_approver_passed',
+                          message:
+                            input.resourceType === 'billing'
+                              ? 'Not-self-approver guard passed for billing approvals.'
+                              : 'Not-self-approver guard passed for time approvals.',
+                        },
+                      ],
+                    };
+                  },
+                ]
+              : [],
+        }),
         bundleProvider: new BundleAuthorizationKernelProvider({
           resolveRules: async () => rules,
         }),
@@ -800,7 +914,7 @@ export const runAuthorizationBundleSimulationAction = withAuth(
         roleIds: roleRows.map((row) => row.role_id),
         teamIds: teamRows.map((row) => row.team_id),
         clientId: principal.client_id,
-        managedUserIds: [],
+        managedUserIds: managedRows.map((row) => row.user_id),
         portfolioClientIds: [],
       },
       resource: {
@@ -812,9 +926,32 @@ export const runAuthorizationBundleSimulationAction = withAuth(
       knex,
     };
 
+    const evaluateDecision = async (rules: BundleNarrowingRule[]) => {
+      const kernel = createKernelWithRules(rules);
+      const decision =
+        input.action === 'approve'
+          ? await kernel.authorizeMutation({
+              ...evaluationInput,
+              mutation: {
+                kind: 'approve',
+                record,
+              },
+            })
+          : await kernel.authorizeResource(evaluationInput);
+
+      return applySimulationInvariantNarrowing({
+        resourceType: input.resourceType,
+        action: input.action,
+        principalUserId: principal.user_id,
+        principalUserType: principal.user_type,
+        record,
+        decision,
+      });
+    };
+
     const [draftDecision, publishedDecision] = await Promise.all([
-      createKernelWithRules(draftRules).authorizeResource(evaluationInput),
-      createKernelWithRules(publishedRules).authorizeResource(evaluationInput),
+      evaluateDecision(draftRules),
+      evaluateDecision(publishedRules),
     ]);
 
     return {

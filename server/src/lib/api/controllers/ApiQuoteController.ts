@@ -22,6 +22,7 @@ import {
 } from '../../db';
 import { getConnection } from '../../db/db';
 import { authorizeApiResourceRead } from './authorizationKernel';
+import { buildAuthorizationAwarePage } from './authorizationAwarePagination';
 import {
   ForbiddenError,
   NotFoundError,
@@ -106,28 +107,35 @@ export class ApiQuoteController extends ApiBaseController {
             search: filters.search,
           };
 
-          const result = await this.quoteService.list(listOptions, apiRequest.context, filters);
           const knex = await getConnection(apiRequest.context.tenant);
-          const allowedQuotes: Record<string, any>[] = [];
-
-          for (const quote of result.data as Record<string, any>[]) {
-            const allowed = await authorizeApiResourceRead({
-              knex,
-              tenant: apiRequest.context.tenant,
-              user: apiRequest.context.user,
-              apiKeyId: apiRequest.context.apiKeyId,
-              resource: 'billing',
-              recordContext: this.buildQuoteRecordContext(quote),
-            });
-
-            if (allowed) {
-              allowedQuotes.push(quote);
-            }
-          }
+          const authorizedPage = await buildAuthorizationAwarePage<Record<string, any>>({
+            page,
+            limit,
+            fetchPage: (sourcePage, sourceLimit) =>
+              this.quoteService.list(
+                {
+                  ...listOptions,
+                  page: sourcePage,
+                  limit: sourceLimit,
+                },
+                apiRequest.context,
+                filters
+              ),
+            authorizeRecord: (quote) =>
+              authorizeApiResourceRead({
+                knex,
+                tenant: apiRequest.context.tenant,
+                user: apiRequest.context.user,
+                apiKeyId: apiRequest.context.apiKeyId,
+                resource: 'billing',
+                recordContext: this.buildQuoteRecordContext(quote),
+              }),
+            scanLimit: 100,
+          });
 
           return createPaginatedResponse(
-            allowedQuotes,
-            allowedQuotes.length,
+            authorizedPage.data,
+            authorizedPage.total,
             page,
             limit,
             { sort, order, filters },
