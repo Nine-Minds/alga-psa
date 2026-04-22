@@ -198,3 +198,11 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd packages/documents && npx tsc --pretty false --noEmit -p tsconfig.json`
   - `cd .. && npx tsc --pretty false --noEmit -p server/tsconfig.json`
   - `cd server && npx vitest run src/test/unit/authorization/kernel.engine.test.ts src/test/unit/authorization/bundle.provider.test.ts --coverage.enabled=false`
+- (2026-04-21) Completed `F043` by kernelizing selected time/timesheet delegation checks through shared relationship semantics:
+  - `packages/scheduling/src/actions/timeEntryDelegationAuth.ts` now resolves managed scope (`teams` manager + optional reports-to chain) and evaluates non-self delegation with kernel `managed` relationship templates via `authorizeResource`.
+  - Preserved delegation hierarchy: `self` short-circuit, `timesheet:approve` prerequisite, `timesheet:read_all` tenant-wide override, then manager/reports-to managed scope.
+  - `fetchTimeSheetsForApproval` now uses the same managed-subject resolver to scope approval list visibility consistently with delegation rules.
+- (2026-04-21) Validation runbook for `F043` checkpoint:
+  - `cd packages/scheduling && npx tsc --pretty false --noEmit -p tsconfig.json`
+  - `cd .. && npx tsc --pretty false --noEmit -p server/tsconfig.json`
+  - `cd packages/scheduling && npx vitest run tests/timeEntryCrud.changeRequests.test.ts tests/timeSheetClient.reopen.test.tsx --coverage.enabled=false` (known pre-existing failure in `T012` mock chain: `db(...).leftJoin is not a function`)

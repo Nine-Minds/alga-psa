@@ -394,7 +394,7 @@
   {
     "id": "F043",
     "description": "Migrate time / timesheet delegation and approval authorization onto the shared kernel while preserving self, manager, reports-to, and tenant-wide semantics where they already exist.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Functional Requirements",

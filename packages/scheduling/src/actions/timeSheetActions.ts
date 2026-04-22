@@ -11,9 +11,9 @@ import {
   ITimeSheetApprovalView,
   ITimePeriodView
 } from '@alga-psa/types';
-import { createTenantKnex, User } from '@alga-psa/db';
+import { createTenantKnex } from '@alga-psa/db';
 import { formatISO } from 'date-fns';
-import { toPlainDate, isFeatureFlagEnabled } from '@alga-psa/core';
+import { toPlainDate } from '@alga-psa/core';
 import {
   timeSheetApprovalViewSchema,
   timeSheetCommentSchema,
@@ -24,7 +24,7 @@ import { WorkItemType } from '@alga-psa/types';
 import { validateArray, validateData } from '@alga-psa/validation';
 import { Temporal } from '@js-temporal/polyfill';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { assertCanActOnBehalf } from './timeEntryDelegationAuth';
+import { assertCanActOnBehalf, resolveManagedSubjectUserIds } from './timeEntryDelegationAuth';
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
@@ -147,32 +147,13 @@ export const fetchTimeSheetsForApproval = withAuth(async (
       );
 
     if (!canReadAll) {
-      const reportsToEnabled = await isFeatureFlagEnabled('teams-v2', {
-        userId: user.user_id,
-        tenantId: tenant
-      });
-
-      const reportsToUserIds = reportsToEnabled
-        ? await User.getReportsToSubordinateIds(db, user.user_id)
-        : [];
+      const managedUserIds = await resolveManagedSubjectUserIds(db, tenant, user);
+      if (managedUserIds.length === 0) {
+        return [];
+      }
 
       query = query
-        .where((builder) => {
-          builder.whereExists(function managerScope() {
-            this.select(1)
-              .from('team_members')
-              .join('teams', function joinTeams() {
-                this.on('team_members.team_id', '=', 'teams.team_id').andOn('team_members.tenant', '=', 'teams.tenant');
-              })
-              .where('team_members.user_id', db.ref('users.user_id'))
-              .andWhere('teams.manager_id', user.user_id)
-              .andWhere('teams.tenant', tenant);
-          });
-
-          if (reportsToEnabled && reportsToUserIds.length > 0) {
-            builder.orWhereIn('users.user_id', reportsToUserIds);
-          }
-        })
+        .whereIn('users.user_id', managedUserIds)
         .distinct();
     }
 
