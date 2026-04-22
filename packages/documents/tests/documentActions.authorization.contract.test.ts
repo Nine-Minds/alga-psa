@@ -79,4 +79,10 @@ describe('document authorization kernel wiring contracts', () => {
     expect(source).toContain('async function enrichFolderTreeWithCounts(');
     expect(source).toContain("let documentsQuery = knex('documents as d')");
   });
+
+  it('F020: folder document queries bypass legacy documentPermissionUtils shadow auth filtering', () => {
+    expect(source).not.toContain("from '../lib/documentPermissionUtils'");
+    expect(source).not.toContain('getEntityTypesForUser');
+    expect(source).not.toContain("whereIn('da.entity_type', allowedEntityTypes)");
+  });
 });

@@ -90,6 +90,8 @@ It intentionally preserves the earlier 2026-04-22 remediation plan as a historic
   - `getDocumentCountsForEntities` now resolves associated documents and counts only kernel-authorized records.
   - `getFolderStats` now computes count/size from authorized document sets.
   - folder-tree count enrichment now removes hardcoded entity-type shortcuts and counts only authorized records.
+- (2026-04-22) Implemented `F020` by removing the remaining `documentPermissionUtils`-based entity-type prefilter from `getDocumentsByFolder(...)`; folder document visibility now depends on kernel-backed document authorization, not helper-layer shadow auth rules.
+- (2026-04-22) Closed `F021` via the same aggregate sweep: folder trees (`enrichFolderTreeWithCounts`), folder stats (`getFolderStats`), and entity count helpers now derive values from authorized-document sets only.
 - (2026-04-22) Typecheck status after `F018`:
   - `packages/documents` still has pre-existing TS errors in UI components (`block_data` typing in `CollaborativeEditor.tsx` and `Documents.tsx` family).
   - no new type errors remain in changed action files after remediation patching.
@@ -230,6 +232,14 @@ It intentionally preserves the earlier 2026-04-22 remediation plan as a historic
   - `packages/documents/src/actions/documentActions.ts`
   - `packages/documents/tests/documentActions.authorization.contract.test.ts` (`T014`)
   - `server/src/test/unit/documentFolderOperations.test.ts` (updated folder-stats expectations for auth-aware counting)
+- (2026-04-22) Completed `F020` (bypass divergent `documentPermissionUtils` shadow auth path) in:
+  - `packages/documents/src/actions/documentActions.ts`
+  - `packages/documents/tests/documentActions.authorization.contract.test.ts`
+  - `server/src/test/unit/documentFolderOperations.test.ts` (removed entity-type helper mock assumptions)
+- (2026-04-22) Completed `F021` (authorized semantics for folder trees/counts/summary metrics) in:
+  - `packages/documents/src/actions/documentActions.ts`
+  - `packages/documents/tests/documentActions.authorization.contract.test.ts` (`T014`)
+  - `server/src/test/unit/documentFolderOperations.test.ts`
 - (2026-04-22) Marked quote parity regression tests `T007-T010` complete after re-validating:
   - `packages/billing/src/actions/quoteAuthorizationParity.contract.test.ts`
 - (2026-04-22) Marked document URL regression test `T011` complete:

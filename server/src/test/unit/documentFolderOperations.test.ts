@@ -34,13 +34,8 @@ vi.mock('@alga-psa/auth', () => {
   };
 });
 
-vi.mock('@alga-psa/documents/lib/documentPermissionUtils', () => ({
-  getEntityTypesForUser: vi.fn()
-}));
-
 import { getCurrentUser, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
-import { getEntityTypesForUser } from '@alga-psa/documents/lib/documentPermissionUtils';
 
 type MockKnex = ReturnType<typeof createMockKnex>;
 
@@ -120,7 +115,6 @@ describe('Document Folder Operations', () => {
     // Default mocks
     vi.mocked(getCurrentUser).mockResolvedValue(mockUser);
     vi.mocked(hasPermission).mockResolvedValue(true);
-    vi.mocked(getEntityTypesForUser).mockResolvedValue(['tenant', 'ticket', 'contract']);
 
     // Setup mock knex with chaining - knex must be a function that returns itself
     mockKnex = createMockKnex();
@@ -358,8 +352,6 @@ describe('Document Folder Operations', () => {
     });
 
     it('should scope global folder queries to unassociated documents', async () => {
-      vi.mocked(getEntityTypesForUser).mockResolvedValue(['tenant', 'ticket']);
-
       const queryBuilder = createQueryBuilder();
 
       const clonedQuery = createQueryBuilder();
@@ -395,7 +387,6 @@ describe('Document Folder Operations', () => {
       const queryBuilder = createQueryBuilder();
       let sawEntityIdFilter = false;
       let sawEntityTypeFilter = false;
-      let sawAllowedEntityTypeFilter = false;
 
       queryBuilder.whereExists = vi.fn(function(this: any, callback: (this: any) => void) {
         const nestedBuilder: any = {};
@@ -413,14 +404,6 @@ describe('Document Folder Operations', () => {
 
           return nestedBuilder;
         });
-        nestedBuilder.whereIn = vi.fn((column: string, values: string[]) => {
-          if (column === 'da.entity_type' && Array.isArray(values) && values.includes('client')) {
-            sawAllowedEntityTypeFilter = true;
-          }
-
-          return nestedBuilder;
-        });
-
         callback.call(nestedBuilder);
         return queryBuilder;
       });
@@ -447,15 +430,12 @@ describe('Document Folder Operations', () => {
       });
 
       mockKnex.mockImplementation(() => queryBuilder);
-      vi.mocked(getEntityTypesForUser).mockResolvedValue(['client', 'ticket']);
-
       await getDocumentsByFolder('/Legal', false, 1, 15, undefined, 'entity-123', 'client');
 
       expect(queryBuilder.whereExists).toHaveBeenCalled();
       expect(queryBuilder.whereNotExists).not.toHaveBeenCalled();
       expect(sawEntityIdFilter).toBe(true);
       expect(sawEntityTypeFilter).toBe(true);
-      expect(sawAllowedEntityTypeFilter).toBe(true);
     });
 
     it('should handle null folder path (root folder)', async () => {

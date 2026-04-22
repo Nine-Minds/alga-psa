@@ -36,7 +36,6 @@ import { deleteBlockContent } from './documentBlockContentActions';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { DocumentHandlerRegistry } from '@alga-psa/documents/handlers/DocumentHandlerRegistry';
-import { getEntityTypesForUser } from '../lib/documentPermissionUtils';
 import { generateDocumentPreviews } from '../lib/documentPreviewGenerator';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
@@ -2904,7 +2903,6 @@ export const getDocumentsByFolder = withAuth(async (
     return permissionError('Permission denied');
   }
 
-  const allowedEntityTypes = await getEntityTypesForUser(user);
   const { knex } = await createTenantKnex();
   const hasEntityScope = Boolean(entityId && entityType);
 
@@ -2920,8 +2918,7 @@ export const getDocumentsByFolder = withAuth(async (
             .whereRaw('da.document_id = d.document_id')
             .andWhere('da.tenant', tenant)
             .andWhere('da.entity_id', entityId)
-            .andWhere('da.entity_type', entityType)
-            .whereIn('da.entity_type', allowedEntityTypes);
+            .andWhere('da.entity_type', entityType);
         });
       } else {
         query = query.where(function() {
@@ -2935,8 +2932,7 @@ export const getDocumentsByFolder = withAuth(async (
             this.select('*')
               .from('document_associations as da')
               .whereRaw('da.document_id = d.document_id')
-              .andWhere('da.tenant', tenant)
-              .whereIn('da.entity_type', allowedEntityTypes);
+              .andWhere('da.tenant', tenant);
           });
         });
       }

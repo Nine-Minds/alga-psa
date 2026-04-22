@@ -191,7 +191,7 @@
   {
     "id": "F020",
     "description": "Replace or bypass `documentPermissionUtils` where it acts as a weaker, divergent authorization model.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Problem",
       "Goals",
@@ -201,7 +201,7 @@
   {
     "id": "F021",
     "description": "Make folder trees, folder counts, and document summary metrics use authorized-document semantics only.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements",
