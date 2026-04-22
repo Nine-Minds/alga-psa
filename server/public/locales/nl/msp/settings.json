@@ -444,6 +444,7 @@
         "edit": "Bewerken",
         "delete": "Verwijderen"
       },
+      "retiredAlert": "Ticketstatussen worden nu binnen elk bord beheerd. Gebruik het tabblad Borden om de levenscycli van tickets voor een specifiek bord te bewerken.",
       "messages": {
         "success": {
           "deleted": "Status succesvol verwijderd",
@@ -484,7 +485,11 @@
         "close": "Sluiten",
         "create": "Aanmaken",
         "update": "Bijwerken",
-        "importSelected": "Selectie importeren"
+        "importSelected": "Selectie importeren",
+        "up": "Omhoog",
+        "down": "Omlaag",
+        "remove": "Verwijderen",
+        "addStatus": "Status toevoegen"
       },
       "fields": {
         "boardName": {
@@ -524,6 +529,46 @@
           "placeholder": "Selecteer SLA-beleid",
           "help": "Het SLA-beleid dat op tickets op dit bord wordt toegepast",
           "none": "Geen"
+        },
+        "ticketStatusSetup": {
+          "label": "Ticketstatus-configuratie",
+          "help": "Kies of dit bord start vanuit een bestaande levenscyclus of een nieuwe inline-statuslijst.",
+          "copyExisting": "Kopiëren van bestaand bord",
+          "createInline": "Statussen inline maken"
+        },
+        "copyTicketStatuses": {
+          "label": "Ticketstatussen kopiëren van",
+          "help": "Nieuwe borden klonen hun ticketlevenscyclus van een bestaand bord.",
+          "selectSource": "Een bronbord selecteren",
+          "noSourceAvailable": "Geen bronborden beschikbaar",
+          "unnamedBoard": "Naamloos bord"
+        },
+        "ticketStatuses": {
+          "labelEditing": "Ticketstatussen van bord",
+          "labelCopied": "Gekopieerde ticketstatussen",
+          "labelInline": "Inline-ticketstatussen",
+          "helpEditing": "Bewerk de ticketlevenscyclus alleen voor dit bord.",
+          "helpCopied": "Controleer en pas de gekopieerde levenscyclus aan voordat u het nieuwe bord opslaat.",
+          "helpInline": "Stel de initiële ticketlevenscyclus van het bord op voordat u opslaat.",
+          "loading": "Ticketstatussen van bord laden…",
+          "statusName": "Statusnaam",
+          "closed": "Gesloten",
+          "default": "Standaard"
+        },
+        "inboundReplyReopen": {
+          "enabledLabel": "Gesloten tickets heropenen bij inkomende antwoorden",
+          "enabledHelp": "Van toepassing op antwoorden in threads die overeenkomen met reeds gesloten tickets op dit bord.",
+          "cutoffHoursLabel": "Heropeningsgrens (uren)",
+          "cutoffHoursHelp": "Antwoorden die na dit venster worden ontvangen, maken nieuwe tickets in plaats van oude te heropenen.",
+          "statusLabel": "Heropeningsstatus (optioneel)",
+          "statusPlaceholder": "Heropeningsstatus selecteren",
+          "statusUseDefault": "Standaard open status van bord gebruiken",
+          "suppressAiLabel": "Heropenen onderdrukken bij korte bevestigingsantwoorden (AI)",
+          "suppressAiHelp": "Alleen Enterprise AI Assistant add-on. Als niet beschikbaar, heropenen antwoorden normaal."
+        },
+        "liveTimer": {
+          "label": "Live tickettimer inschakelen",
+          "help": "Toont de live timer en bijgehouden intervallen op tickets in dit bord. Handmatige tijdinvoer blijft beschikbaar."
         }
       },
       "dialog": {
@@ -584,6 +629,86 @@
           "updateStatusFailed": "Bordstatus kon niet worden bijgewerkt",
           "updateDefaultFailed": "Standaardbord kon niet worden bijgewerkt"
         }
+      }
+    },
+    "priorities": {
+      "title": {
+        "ticket": "Ticketprioriteiten",
+        "projectTask": "Projecttaakprioriteiten"
+      },
+      "alert": {
+        "header": "Prioriteitsbeheer:",
+        "description": "Maak aangepaste prioriteiten voor uw organisatie of importeer vanuit standaardsjablonen.",
+        "itilNote": "ITIL-standaardprioriteiten kunnen niet worden bewerkt of verwijderd.",
+        "nonItilNote": "Alle prioriteiten kunnen worden bewerkt of verwijderd om aan uw werkstroom te voldoen."
+      },
+      "table": {
+        "name": "Naam",
+        "type": "Type",
+        "color": "Kleur",
+        "order": "Volgorde",
+        "actions": "Acties",
+        "standardTag": "(Standaard)",
+        "itilProtected": "Beschermd"
+      },
+      "itemTypes": {
+        "ticket": "Ticket",
+        "projectTask": "Projecttaak"
+      },
+      "actions": {
+        "addPriority": "Prioriteit toevoegen",
+        "importStandard": "Importeren vanuit standaardprioriteiten",
+        "openMenu": "Menu openen",
+        "edit": "Bewerken",
+        "delete": "Verwijderen",
+        "cancel": "Annuleren"
+      },
+      "dialog": {
+        "addTitle": "Nieuwe prioriteit toevoegen",
+        "editTitle": "Prioriteit bewerken",
+        "submitAdd": "Prioriteit toevoegen",
+        "submitUpdate": "Prioriteit bijwerken"
+      },
+      "fields": {
+        "priorityName": {
+          "label": "Prioriteitsnaam",
+          "placeholder": "bijv. Urgent"
+        },
+        "orderNumber": {
+          "label": "Volgordenummer (1-100, hogere nummers verschijnen eerst)",
+          "help": "Bepaalt de volgorde waarin prioriteiten verschijnen in dropdown-menu's in het platform. Hogere nummers verschijnen eerst voor prioriteiten.",
+          "used": "Gebruikte volgordenummers: {{numbers}}",
+          "noneUsed": "Nog geen volgordenummers gebruikt"
+        },
+        "color": {
+          "label": "Kleur",
+          "chooseButton": "Kleur kiezen"
+        }
+      },
+      "import": {
+        "title": "Standaardprioriteiten importeren",
+        "submit": "Importeren ({{count}})",
+        "allImportedTicket": "Alle standaardprioriteiten zijn al geïmporteerd voor tickets.",
+        "allImportedProjectTask": "Alle standaardprioriteiten zijn al geïmporteerd voor projecttaken.",
+        "instructions": "Selecteer de standaardprioriteiten die u wilt importeren. Deze worden gekopieerd naar de prioriteiten van uw organisatie."
+      },
+      "messages": {
+        "success": {
+          "deleted": "Prioriteit succesvol verwijderd",
+          "imported": "{{count}} prioriteiten succesvol geïmporteerd",
+          "skipped": "{{count}} prioriteiten overgeslagen (bestaan al)"
+        },
+        "error": {
+          "orderTaken": "Volgordenummer {{order}} is al in gebruik door \"{{name}}\". Kies een ander volgordenummer.",
+          "uniqueConstraint": "Dit volgordenummer is al in gebruik. Kies een ander volgordenummer.",
+          "saveFailed": "Prioriteit kon niet worden opgeslagen",
+          "deleteFailed": "Prioriteit kon niet worden verwijderd",
+          "deleteValidationFailed": "Verwijdering kon niet worden gevalideerd. Probeer het opnieuw.",
+          "importFailed": "Prioriteiten konden niet worden geïmporteerd"
+        }
+      },
+      "entity": {
+        "fallback": "deze prioriteit"
       }
     }
   },

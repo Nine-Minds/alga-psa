@@ -444,6 +444,7 @@
         "edit": "Edytuj",
         "delete": "Usuń"
       },
+      "retiredAlert": "Statusy zgłoszeń są teraz zarządzane w obrębie każdej tablicy. Użyj zakładki Tablice, aby edytować cykle życia zgłoszeń dla konkretnej tablicy.",
       "messages": {
         "success": {
           "deleted": "Status został usunięty pomyślnie",
@@ -484,7 +485,11 @@
         "close": "Zamknij",
         "create": "Utwórz",
         "update": "Zaktualizuj",
-        "importSelected": "Importuj zaznaczone"
+        "importSelected": "Importuj zaznaczone",
+        "up": "W górę",
+        "down": "W dół",
+        "remove": "Usuń",
+        "addStatus": "Dodaj status"
       },
       "fields": {
         "boardName": {
@@ -524,6 +529,46 @@
           "placeholder": "Wybierz politykę SLA",
           "help": "Polityka SLA stosowana do zgłoszeń na tej tablicy",
           "none": "Brak"
+        },
+        "ticketStatusSetup": {
+          "label": "Konfiguracja statusów zgłoszeń",
+          "help": "Wybierz, czy ta tablica rozpoczyna się od istniejącego cyklu życia, czy od nowej listy statusów inline.",
+          "copyExisting": "Kopiuj z istniejącej tablicy",
+          "createInline": "Utwórz statusy inline"
+        },
+        "copyTicketStatuses": {
+          "label": "Kopiuj statusy zgłoszeń z",
+          "help": "Nowe tablice klonują swój cykl życia zgłoszeń z istniejącej tablicy.",
+          "selectSource": "Wybierz tablicę źródłową",
+          "noSourceAvailable": "Brak dostępnych tablic źródłowych",
+          "unnamedBoard": "Tablica bez nazwy"
+        },
+        "ticketStatuses": {
+          "labelEditing": "Statusy zgłoszeń tablicy",
+          "labelCopied": "Skopiowane statusy zgłoszeń",
+          "labelInline": "Statusy zgłoszeń inline",
+          "helpEditing": "Edytuj cykl życia zgłoszeń tylko dla tej tablicy.",
+          "helpCopied": "Przejrzyj i dostosuj skopiowany cykl życia przed zapisaniem nowej tablicy.",
+          "helpInline": "Utwórz początkowy cykl życia zgłoszeń tablicy przed zapisaniem.",
+          "loading": "Ładowanie statusów zgłoszeń tablicy…",
+          "statusName": "Nazwa statusu",
+          "closed": "Zamknięte",
+          "default": "Domyślne"
+        },
+        "inboundReplyReopen": {
+          "enabledLabel": "Otwórz ponownie zamknięte zgłoszenia przy przychodzących odpowiedziach",
+          "enabledHelp": "Dotyczy odpowiedzi w wątkach dopasowanych do już zamkniętych zgłoszeń na tej tablicy.",
+          "cutoffHoursLabel": "Próg ponownego otwarcia (godziny)",
+          "cutoffHoursHelp": "Odpowiedzi otrzymane po tym okresie tworzą nowe zgłoszenia zamiast otwierać ponownie stare.",
+          "statusLabel": "Status po otwarciu (opcjonalnie)",
+          "statusPlaceholder": "Wybierz status ponownego otwarcia",
+          "statusUseDefault": "Użyj domyślnego statusu otwartego tablicy",
+          "suppressAiLabel": "Pomiń ponowne otwieranie dla krótkich odpowiedzi potwierdzających (AI)",
+          "suppressAiHelp": "Tylko dodatek Enterprise AI Assistant. Jeśli niedostępny, odpowiedzi otwierają zgłoszenia normalnie."
+        },
+        "liveTimer": {
+          "label": "Włącz stoper zgłoszeń na żywo",
+          "help": "Pokazuje stoper na żywo i rejestrowane interwały na zgłoszeniach tej tablicy. Ręczne wprowadzanie czasu pozostaje dostępne."
         }
       },
       "dialog": {
@@ -584,6 +629,86 @@
           "updateStatusFailed": "Nie udało się zaktualizować statusu tablicy",
           "updateDefaultFailed": "Nie udało się zaktualizować domyślnej tablicy"
         }
+      }
+    },
+    "priorities": {
+      "title": {
+        "ticket": "Priorytety zgłoszeń",
+        "projectTask": "Priorytety zadań projektu"
+      },
+      "alert": {
+        "header": "Zarządzanie priorytetami:",
+        "description": "Utwórz niestandardowe priorytety dla swojej organizacji lub zaimportuj ze standardowych szablonów.",
+        "itilNote": "Standardowych priorytetów ITIL nie można edytować ani usuwać.",
+        "nonItilNote": "Wszystkie priorytety można edytować lub usuwać, aby dopasować je do przepływu pracy."
+      },
+      "table": {
+        "name": "Nazwa",
+        "type": "Typ",
+        "color": "Kolor",
+        "order": "Kolejność",
+        "actions": "Akcje",
+        "standardTag": "(Standardowy)",
+        "itilProtected": "Chroniony"
+      },
+      "itemTypes": {
+        "ticket": "Zgłoszenie",
+        "projectTask": "Zadanie projektu"
+      },
+      "actions": {
+        "addPriority": "Dodaj priorytet",
+        "importStandard": "Importuj ze standardowych priorytetów",
+        "openMenu": "Otwórz menu",
+        "edit": "Edytuj",
+        "delete": "Usuń",
+        "cancel": "Anuluj"
+      },
+      "dialog": {
+        "addTitle": "Dodaj nowy priorytet",
+        "editTitle": "Edytuj priorytet",
+        "submitAdd": "Dodaj priorytet",
+        "submitUpdate": "Zaktualizuj priorytet"
+      },
+      "fields": {
+        "priorityName": {
+          "label": "Nazwa priorytetu",
+          "placeholder": "np. Pilne"
+        },
+        "orderNumber": {
+          "label": "Numer kolejności (1-100, wyższe numery pojawiają się pierwsze)",
+          "help": "Kontroluje kolejność, w której priorytety pojawiają się w menu rozwijanych w platformie. Wyższe numery pojawiają się pierwsze dla priorytetów.",
+          "used": "Używane numery kolejności: {{numbers}}",
+          "noneUsed": "Nie użyto jeszcze żadnych numerów kolejności"
+        },
+        "color": {
+          "label": "Kolor",
+          "chooseButton": "Wybierz kolor"
+        }
+      },
+      "import": {
+        "title": "Importuj standardowe priorytety",
+        "submit": "Importuj ({{count}})",
+        "allImportedTicket": "Wszystkie standardowe priorytety zostały już zaimportowane dla zgłoszeń.",
+        "allImportedProjectTask": "Wszystkie standardowe priorytety zostały już zaimportowane dla zadań projektu.",
+        "instructions": "Wybierz standardowe priorytety do zaimportowania. Zostaną skopiowane do priorytetów Twojej organizacji."
+      },
+      "messages": {
+        "success": {
+          "deleted": "Priorytet został usunięty pomyślnie",
+          "imported": "Pomyślnie zaimportowano {{count}} priorytetów",
+          "skipped": "Pominięto {{count}} priorytetów (już istnieją)"
+        },
+        "error": {
+          "orderTaken": "Numer kolejności {{order}} jest już zajęty przez „{{name}}”. Wybierz inny numer kolejności.",
+          "uniqueConstraint": "Ten numer kolejności jest już używany. Wybierz inny numer kolejności.",
+          "saveFailed": "Nie udało się zapisać priorytetu",
+          "deleteFailed": "Nie udało się usunąć priorytetu",
+          "deleteValidationFailed": "Nie udało się zweryfikować usunięcia. Spróbuj ponownie.",
+          "importFailed": "Nie udało się zaimportować priorytetów"
+        }
+      },
+      "entity": {
+        "fallback": "ten priorytet"
       }
     }
   },

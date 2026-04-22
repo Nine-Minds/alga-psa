@@ -444,6 +444,7 @@
         "edit": "Modifica",
         "delete": "Elimina"
       },
+      "retiredAlert": "Gli stati dei ticket sono ora gestiti all'interno di ogni bacheca. Usa la scheda Bacheche per modificare i cicli di vita dei ticket per una bacheca specifica.",
       "messages": {
         "success": {
           "deleted": "Stato eliminato con successo",
@@ -484,7 +485,11 @@
         "close": "Chiudi",
         "create": "Crea",
         "update": "Aggiorna",
-        "importSelected": "Importa selezione"
+        "importSelected": "Importa selezione",
+        "up": "Su",
+        "down": "Giù",
+        "remove": "Rimuovi",
+        "addStatus": "Aggiungi stato"
       },
       "fields": {
         "boardName": {
@@ -524,6 +529,46 @@
           "placeholder": "Selezionare la politica SLA",
           "help": "La politica SLA da applicare ai ticket su questa bacheca",
           "none": "Nessuna"
+        },
+        "ticketStatusSetup": {
+          "label": "Configurazione stati ticket",
+          "help": "Scegli se questa bacheca parte da un ciclo di vita esistente o da un nuovo elenco di stati inline.",
+          "copyExisting": "Copia da una bacheca esistente",
+          "createInline": "Crea stati inline"
+        },
+        "copyTicketStatuses": {
+          "label": "Copia stati ticket da",
+          "help": "Le nuove bacheche clonano il loro ciclo di vita dei ticket da una bacheca esistente.",
+          "selectSource": "Seleziona una bacheca di origine",
+          "noSourceAvailable": "Nessuna bacheca di origine disponibile",
+          "unnamedBoard": "Bacheca senza nome"
+        },
+        "ticketStatuses": {
+          "labelEditing": "Stati ticket della bacheca",
+          "labelCopied": "Stati ticket copiati",
+          "labelInline": "Stati ticket inline",
+          "helpEditing": "Modifica il ciclo di vita dei ticket solo per questa bacheca.",
+          "helpCopied": "Rivedi e modifica il ciclo di vita copiato prima di salvare la nuova bacheca.",
+          "helpInline": "Crea il ciclo di vita iniziale dei ticket della bacheca prima di salvare.",
+          "loading": "Caricamento stati ticket della bacheca…",
+          "statusName": "Nome stato",
+          "closed": "Chiuso",
+          "default": "Predefinito"
+        },
+        "inboundReplyReopen": {
+          "enabledLabel": "Riapri ticket chiusi in caso di risposte in arrivo",
+          "enabledHelp": "Si applica alle risposte in thread corrispondenti a ticket già chiusi su questa bacheca.",
+          "cutoffHoursLabel": "Limite di riapertura (ore)",
+          "cutoffHoursHelp": "Le risposte ricevute dopo questa finestra creano nuovi ticket invece di riaprire quelli vecchi.",
+          "statusLabel": "Stato alla riapertura (facoltativo)",
+          "statusPlaceholder": "Seleziona stato di riapertura",
+          "statusUseDefault": "Usa lo stato aperto predefinito della bacheca",
+          "suppressAiLabel": "Sopprimi riapertura per brevi risposte di conferma (IA)",
+          "suppressAiHelp": "Solo componente aggiuntivo Enterprise AI Assistant. Se non disponibile, le risposte riaprono normalmente."
+        },
+        "liveTimer": {
+          "label": "Attiva timer ticket in tempo reale",
+          "help": "Mostra il timer in tempo reale e gli intervalli registrati sui ticket di questa bacheca. L'inserimento manuale del tempo rimane disponibile."
         }
       },
       "dialog": {
@@ -584,6 +629,86 @@
           "updateStatusFailed": "Impossibile aggiornare lo stato della bacheca",
           "updateDefaultFailed": "Impossibile aggiornare la bacheca predefinita"
         }
+      }
+    },
+    "priorities": {
+      "title": {
+        "ticket": "Priorità dei ticket",
+        "projectTask": "Priorità delle attività di progetto"
+      },
+      "alert": {
+        "header": "Gestione delle priorità:",
+        "description": "Crea priorità personalizzate per la tua organizzazione o importa da modelli standard.",
+        "itilNote": "Le priorità standard ITIL non possono essere modificate o eliminate.",
+        "nonItilNote": "Tutte le priorità possono essere modificate o eliminate per adattarsi al tuo flusso di lavoro."
+      },
+      "table": {
+        "name": "Nome",
+        "type": "Tipo",
+        "color": "Colore",
+        "order": "Ordine",
+        "actions": "Azioni",
+        "standardTag": "(Standard)",
+        "itilProtected": "Protetto"
+      },
+      "itemTypes": {
+        "ticket": "Ticket",
+        "projectTask": "Attività di progetto"
+      },
+      "actions": {
+        "addPriority": "Aggiungi priorità",
+        "importStandard": "Importa da priorità standard",
+        "openMenu": "Apri menu",
+        "edit": "Modifica",
+        "delete": "Elimina",
+        "cancel": "Annulla"
+      },
+      "dialog": {
+        "addTitle": "Aggiungi nuova priorità",
+        "editTitle": "Modifica priorità",
+        "submitAdd": "Aggiungi priorità",
+        "submitUpdate": "Aggiorna priorità"
+      },
+      "fields": {
+        "priorityName": {
+          "label": "Nome della priorità",
+          "placeholder": "es. Urgente"
+        },
+        "orderNumber": {
+          "label": "Numero d'ordine (1-100, i numeri più alti appaiono per primi)",
+          "help": "Controlla l'ordine in cui le priorità appaiono nei menu a discesa della piattaforma. I numeri più alti appaiono per primi per le priorità.",
+          "used": "Numeri d'ordine utilizzati: {{numbers}}",
+          "noneUsed": "Nessun numero d'ordine ancora utilizzato"
+        },
+        "color": {
+          "label": "Colore",
+          "chooseButton": "Scegli colore"
+        }
+      },
+      "import": {
+        "title": "Importa priorità standard",
+        "submit": "Importa ({{count}})",
+        "allImportedTicket": "Tutte le priorità standard sono già state importate per i ticket.",
+        "allImportedProjectTask": "Tutte le priorità standard sono già state importate per le attività di progetto.",
+        "instructions": "Seleziona le priorità standard che desideri importare. Verranno copiate nelle priorità della tua organizzazione."
+      },
+      "messages": {
+        "success": {
+          "deleted": "Priorità eliminata con successo",
+          "imported": "{{count}} priorità importate con successo",
+          "skipped": "{{count}} priorità saltate (esistono già)"
+        },
+        "error": {
+          "orderTaken": "Il numero d'ordine {{order}} è già in uso da \"{{name}}\". Scegli un numero d'ordine diverso.",
+          "uniqueConstraint": "Questo numero d'ordine è già in uso. Scegli un numero d'ordine diverso.",
+          "saveFailed": "Impossibile salvare la priorità",
+          "deleteFailed": "Impossibile eliminare la priorità",
+          "deleteValidationFailed": "Impossibile convalidare l'eliminazione. Riprova.",
+          "importFailed": "Impossibile importare le priorità"
+        }
+      },
+      "entity": {
+        "fallback": "questa priorità"
       }
     }
   },

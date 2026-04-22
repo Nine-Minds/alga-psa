@@ -444,6 +444,7 @@
         "edit": "Edit",
         "delete": "Delete"
       },
+      "retiredAlert": "Ticket statuses are now managed inside each board. Use the Boards tab to edit ticket lifecycles for a specific board.",
       "messages": {
         "success": {
           "deleted": "Status deleted successfully",
@@ -484,7 +485,11 @@
         "close": "Close",
         "create": "Create",
         "update": "Update",
-        "importSelected": "Import Selected"
+        "importSelected": "Import Selected",
+        "up": "Up",
+        "down": "Down",
+        "remove": "Remove",
+        "addStatus": "Add Status"
       },
       "fields": {
         "boardName": {
@@ -524,6 +529,46 @@
           "placeholder": "Select SLA policy",
           "help": "The SLA policy to apply to tickets on this board",
           "none": "None"
+        },
+        "ticketStatusSetup": {
+          "label": "Ticket status setup",
+          "help": "Choose whether this board starts from an existing lifecycle or a new inline status list.",
+          "copyExisting": "Copy from existing board",
+          "createInline": "Create statuses inline"
+        },
+        "copyTicketStatuses": {
+          "label": "Copy ticket statuses from",
+          "help": "New boards clone their ticket lifecycle from an existing board.",
+          "selectSource": "Select a source board",
+          "noSourceAvailable": "No source boards available",
+          "unnamedBoard": "Unnamed board"
+        },
+        "ticketStatuses": {
+          "labelEditing": "Board ticket statuses",
+          "labelCopied": "Copied ticket statuses",
+          "labelInline": "Inline ticket statuses",
+          "helpEditing": "Edit the ticket lifecycle for this board only.",
+          "helpCopied": "Review and adjust the copied lifecycle before saving the new board.",
+          "helpInline": "Author the board's initial ticket lifecycle before saving.",
+          "loading": "Loading board ticket statuses…",
+          "statusName": "Status name",
+          "closed": "Closed",
+          "default": "Default"
+        },
+        "inboundReplyReopen": {
+          "enabledLabel": "Reopen closed tickets on inbound replies",
+          "enabledHelp": "Applies to threaded replies matched to already closed tickets on this board.",
+          "cutoffHoursLabel": "Reopen cutoff (hours)",
+          "cutoffHoursHelp": "Replies received after this window create new tickets instead of reopening old ones.",
+          "statusLabel": "Reopen status (optional)",
+          "statusPlaceholder": "Select reopen status",
+          "statusUseDefault": "Use board default open status",
+          "suppressAiLabel": "Suppress reopen for short ACK replies (AI)",
+          "suppressAiHelp": "Enterprise AI Assistant add-on only. If unavailable, replies reopen normally."
+        },
+        "liveTimer": {
+          "label": "Enable live ticket timer",
+          "help": "Shows the live timer and tracked intervals on tickets in this board. Manual time entry remains available."
         }
       },
       "dialog": {
@@ -584,6 +629,86 @@
           "updateStatusFailed": "Failed to update board status",
           "updateDefaultFailed": "Failed to update default board"
         }
+      }
+    },
+    "priorities": {
+      "title": {
+        "ticket": "Ticket Priorities",
+        "projectTask": "Project Task Priorities"
+      },
+      "alert": {
+        "header": "Priority Management:",
+        "description": "Create custom priorities for your organization or import from standard templates.",
+        "itilNote": "ITIL standard priorities cannot be edited or deleted.",
+        "nonItilNote": "All priorities can be edited or deleted to fit your workflow."
+      },
+      "table": {
+        "name": "Name",
+        "type": "Type",
+        "color": "Color",
+        "order": "Order",
+        "actions": "Actions",
+        "standardTag": "(Standard)",
+        "itilProtected": "Protected"
+      },
+      "itemTypes": {
+        "ticket": "Ticket",
+        "projectTask": "Project Task"
+      },
+      "actions": {
+        "addPriority": "Add Priority",
+        "importStandard": "Import from Standard Priorities",
+        "openMenu": "Open menu",
+        "edit": "Edit",
+        "delete": "Delete",
+        "cancel": "Cancel"
+      },
+      "dialog": {
+        "addTitle": "Add New Priority",
+        "editTitle": "Edit Priority",
+        "submitAdd": "Add Priority",
+        "submitUpdate": "Update Priority"
+      },
+      "fields": {
+        "priorityName": {
+          "label": "Priority Name",
+          "placeholder": "e.g., Urgent"
+        },
+        "orderNumber": {
+          "label": "Order Number (1-100, higher numbers appear first)",
+          "help": "Controls the order in which priorities appear in dropdown menus throughout the platform. Higher numbers appear first for priorities.",
+          "used": "Used order numbers: {{numbers}}",
+          "noneUsed": "No order numbers used yet"
+        },
+        "color": {
+          "label": "Color",
+          "chooseButton": "Choose Color"
+        }
+      },
+      "import": {
+        "title": "Import Standard Priorities",
+        "submit": "Import ({{count}})",
+        "allImportedTicket": "All standard priorities have already been imported for tickets.",
+        "allImportedProjectTask": "All standard priorities have already been imported for project tasks.",
+        "instructions": "Select the standard priorities you want to import. These will be copied to your organization's priorities."
+      },
+      "messages": {
+        "success": {
+          "deleted": "Priority deleted successfully",
+          "imported": "Successfully imported {{count}} priorities",
+          "skipped": "Skipped {{count}} priorities (already exist)"
+        },
+        "error": {
+          "orderTaken": "Order number {{order}} is already taken by \"{{name}}\". Please choose a different order number.",
+          "uniqueConstraint": "This order number is already in use. Please choose a different order number.",
+          "saveFailed": "Failed to save priority",
+          "deleteFailed": "Failed to delete priority",
+          "deleteValidationFailed": "Failed to validate deletion. Please try again.",
+          "importFailed": "Failed to import priorities"
+        }
+      },
+      "entity": {
+        "fallback": "this priority"
       }
     }
   },

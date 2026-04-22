@@ -444,6 +444,7 @@
         "edit": "Edit",
         "delete": "Delete"
       },
+      "retiredAlert": "Os estados dos tickets agora são geridos dentro de cada quadro. Use a aba Quadros para editar os ciclos de vida dos tickets de um quadro específico.",
       "messages": {
         "success": {
           "deleted": "Status deleted successfully",
@@ -484,7 +485,11 @@
         "close": "Close",
         "create": "Create",
         "update": "Update",
-        "importSelected": "Import Selected"
+        "importSelected": "Import Selected",
+        "up": "Mover para cima",
+        "down": "Mover para baixo",
+        "remove": "Remover",
+        "addStatus": "Adicionar estado"
       },
       "fields": {
         "boardName": {
@@ -524,6 +529,46 @@
           "placeholder": "Select SLA policy",
           "help": "The SLA policy to apply to tickets on this board",
           "none": "None"
+        },
+        "ticketStatusSetup": {
+          "label": "Configuração de estados de tickets",
+          "help": "Escolha se este quadro começa a partir de um ciclo de vida existente ou de uma nova lista de estados em linha.",
+          "copyExisting": "Copiar de quadro existente",
+          "createInline": "Criar estados em linha"
+        },
+        "copyTicketStatuses": {
+          "label": "Copiar estados de tickets de",
+          "help": "Novos quadros clonam o seu ciclo de vida de tickets de um quadro existente.",
+          "selectSource": "Selecionar um quadro de origem",
+          "noSourceAvailable": "Nenhum quadro de origem disponível",
+          "unnamedBoard": "Quadro sem nome"
+        },
+        "ticketStatuses": {
+          "labelEditing": "Estados de tickets do quadro",
+          "labelCopied": "Estados de tickets copiados",
+          "labelInline": "Estados de tickets em linha",
+          "helpEditing": "Edite o ciclo de vida de tickets apenas para este quadro.",
+          "helpCopied": "Reveja e ajuste o ciclo de vida copiado antes de guardar o novo quadro.",
+          "helpInline": "Crie o ciclo de vida inicial de tickets do quadro antes de guardar.",
+          "loading": "A carregar estados de tickets do quadro…",
+          "statusName": "Nome do estado",
+          "closed": "Fechado",
+          "default": "Padrão"
+        },
+        "inboundReplyReopen": {
+          "enabledLabel": "Reabrir tickets fechados em respostas recebidas",
+          "enabledHelp": "Aplica-se a respostas encadeadas correspondentes a tickets já fechados neste quadro.",
+          "cutoffHoursLabel": "Limite de reabertura (horas)",
+          "cutoffHoursHelp": "Respostas recebidas após este período criam novos tickets em vez de reabrir os antigos.",
+          "statusLabel": "Estado ao reabrir (opcional)",
+          "statusPlaceholder": "Selecionar estado de reabertura",
+          "statusUseDefault": "Usar o estado aberto padrão do quadro",
+          "suppressAiLabel": "Suprimir reabertura para respostas curtas de confirmação (IA)",
+          "suppressAiHelp": "Apenas complemento Enterprise AI Assistant. Se indisponível, as respostas reabrem normalmente."
+        },
+        "liveTimer": {
+          "label": "Ativar cronómetro de ticket em tempo real",
+          "help": "Mostra o cronómetro em tempo real e os intervalos registados nos tickets deste quadro. A introdução manual de tempo permanece disponível."
         }
       },
       "dialog": {
@@ -584,6 +629,86 @@
           "updateStatusFailed": "Falha ao atualizar o estado do quadro",
           "updateDefaultFailed": "Falha ao atualizar o quadro predefinido"
         }
+      }
+    },
+    "priorities": {
+      "title": {
+        "ticket": "Prioridades de tickets",
+        "projectTask": "Prioridades de tarefas de projeto"
+      },
+      "alert": {
+        "header": "Gestão de prioridades:",
+        "description": "Crie prioridades personalizadas para a sua organização ou importe a partir de modelos padrão.",
+        "itilNote": "As prioridades padrão ITIL não podem ser editadas ou eliminadas.",
+        "nonItilNote": "Todas as prioridades podem ser editadas ou eliminadas para se adequarem ao seu fluxo de trabalho."
+      },
+      "table": {
+        "name": "Nome",
+        "type": "Tipo",
+        "color": "Cor",
+        "order": "Ordem",
+        "actions": "Ações",
+        "standardTag": "(Padrão)",
+        "itilProtected": "Protegido"
+      },
+      "itemTypes": {
+        "ticket": "Ticket",
+        "projectTask": "Tarefa de projeto"
+      },
+      "actions": {
+        "addPriority": "Adicionar prioridade",
+        "importStandard": "Importar de prioridades padrão",
+        "openMenu": "Abrir menu",
+        "edit": "Editar",
+        "delete": "Eliminar",
+        "cancel": "Cancelar"
+      },
+      "dialog": {
+        "addTitle": "Adicionar nova prioridade",
+        "editTitle": "Editar prioridade",
+        "submitAdd": "Adicionar prioridade",
+        "submitUpdate": "Atualizar prioridade"
+      },
+      "fields": {
+        "priorityName": {
+          "label": "Nome da prioridade",
+          "placeholder": "p. ex., Urgente"
+        },
+        "orderNumber": {
+          "label": "Número de ordem (1-100, números mais altos aparecem primeiro)",
+          "help": "Controla a ordem em que as prioridades aparecem nos menus pendentes em toda a plataforma. Números mais altos aparecem primeiro para prioridades.",
+          "used": "Números de ordem usados: {{numbers}}",
+          "noneUsed": "Ainda não foram usados números de ordem"
+        },
+        "color": {
+          "label": "Cor",
+          "chooseButton": "Escolher cor"
+        }
+      },
+      "import": {
+        "title": "Importar prioridades padrão",
+        "submit": "Importar ({{count}})",
+        "allImportedTicket": "Todas as prioridades padrão já foram importadas para tickets.",
+        "allImportedProjectTask": "Todas as prioridades padrão já foram importadas para tarefas de projeto.",
+        "instructions": "Selecione as prioridades padrão que deseja importar. Serão copiadas para as prioridades da sua organização."
+      },
+      "messages": {
+        "success": {
+          "deleted": "Prioridade eliminada com sucesso",
+          "imported": "{{count}} prioridades importadas com sucesso",
+          "skipped": "{{count}} prioridades ignoradas (já existem)"
+        },
+        "error": {
+          "orderTaken": "O número de ordem {{order}} já está em uso por \"{{name}}\". Escolha um número de ordem diferente.",
+          "uniqueConstraint": "Este número de ordem já está em uso. Escolha um número de ordem diferente.",
+          "saveFailed": "Falha ao guardar a prioridade",
+          "deleteFailed": "Falha ao eliminar a prioridade",
+          "deleteValidationFailed": "Falha ao validar a eliminação. Tente novamente.",
+          "importFailed": "Falha ao importar prioridades"
+        }
+      },
+      "entity": {
+        "fallback": "esta prioridade"
       }
     }
   },
