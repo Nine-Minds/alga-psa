@@ -153,6 +153,10 @@ It intentionally preserves the earlier 2026-04-22 remediation plan as a historic
 - (2026-04-22) `packages/projects/src/actions/projectTaskStatusActions.ts` was flagged for both RBAC-only paths and zero-check surfaces.
 - (2026-04-22) Cross-project move/duplicate/link flows are especially risky because they need authorization on both source and target projects.
 - (2026-04-22) Phase task counts and status-mapping task counts are auth-sensitive aggregate leaks, not just UX helpers.
+- (2026-04-22) Implemented `F027` project-actions parity sweep in `packages/projects/src/actions/projectActions.ts`:
+  - phase mutations (`updatePhase`, `deletePhase`, `addProjectPhase`, `reorderPhase`) now resolve parent project and enforce `assertProjectReadAllowed(...)`.
+  - project status mutations now authorize all project mappings tied to a status ID before update/delete (`resolveProjectIdsForStatus(...)` + per-project assert).
+  - internal status resolution helper `getProjectTaskStatusesInternal(...)` now enforces parent-project authorization before returning phase/status data.
 
 ### Time / remaining resource-family re-audit
 - (2026-04-22) The prior remediation fixed the `time_entry` resource key mismatch, but a broader re-audit is still needed to confirm there are no leftover helper/count leaks or RBAC-only delegation paths.
@@ -201,6 +205,10 @@ It intentionally preserves the earlier 2026-04-22 remediation plan as a historic
   - `cd server && pnpm vitest ../packages/assets/src/actions/assetAuthorization.contract.test.ts --coverage.enabled false`
 - (2026-04-22) Run assets package typecheck after exhaustive hardening:
   - `pnpm -C packages/assets typecheck`
+- (2026-04-22) Run project-action parity contract test:
+  - `cd server && pnpm vitest ../packages/projects/src/actions/projectAuthorization.contract.test.ts --coverage.enabled false`
+- (2026-04-22) Run projects package typecheck:
+  - `pnpm -C packages/projects typecheck`
 
 ## Links / References
 
@@ -300,6 +308,12 @@ It intentionally preserves the earlier 2026-04-22 remediation plan as a historic
 - (2026-04-22) Validation status for asset exhaustive wave:
   - `cd server && pnpm vitest ../packages/assets/src/actions/assetAuthorization.contract.test.ts --coverage.enabled false` passed.
   - `pnpm -C packages/assets typecheck` passed.
+- (2026-04-22) Completed `F027` (projectActions phase/detail/status/tree parity hardening) in:
+  - `packages/projects/src/actions/projectActions.ts`
+  - `packages/projects/src/actions/projectAuthorization.contract.test.ts` (`T019`)
+- (2026-04-22) Validation status for `F027`:
+  - `cd server && pnpm vitest ../packages/projects/src/actions/projectAuthorization.contract.test.ts --coverage.enabled false` passed.
+  - `pnpm -C packages/projects typecheck` passed.
 - (2026-04-22) Marked quote parity regression tests `T007-T010` complete after re-validating:
   - `packages/billing/src/actions/quoteAuthorizationParity.contract.test.ts`
 - (2026-04-22) Marked document URL regression test `T011` complete:

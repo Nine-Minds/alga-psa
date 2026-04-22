@@ -261,7 +261,7 @@
   {
     "id": "F027",
     "description": "Finish `projectActions.ts` parity for any remaining phase/detail/status/count/tree surfaces that still rely only on RBAC.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Problem",
       "Requirements",

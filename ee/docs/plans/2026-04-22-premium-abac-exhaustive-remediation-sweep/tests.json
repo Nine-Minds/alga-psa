@@ -173,7 +173,7 @@
   {
     "id": "T019",
     "description": "Project server-action integration: remaining `projectActions.ts` phase/detail/status/tree/count surfaces deny narrowed-away parent projects.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027",
       "F043"
