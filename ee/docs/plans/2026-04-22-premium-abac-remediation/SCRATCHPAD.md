@@ -27,6 +27,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-04-22) API list controllers for tickets, projects, and quotes paginate in the service layer first, then narrow in memory, then report filtered-page counts as totals.
 - (2026-04-22) Simulator fidelity is weakened by billing-record mismatch and by simulator kernel construction that does not mirror all builtin resource-specific invariants used in real runtime paths.
 - (2026-04-22) `server` package tests run directly via `cd server && npx vitest run ...`; root `npm run test:local -- ...` currently fails because its `dotenv` invocation expects a different CLI syntax.
+- (2026-04-22) Control-plane schema allows `authorization_bundle_rules.bundle_id` to drift from the referenced revision’s `bundle_id` because rule rows currently only foreign-key revision by `(tenant, revision_id)`.
 
 ## Commands / Runbooks
 
@@ -84,4 +85,11 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - Delete now fails closed when the rule is not in the expected draft revision scope.
 - (2026-04-22) Verification for `F002-F004`:
   - Command: `cd server && npx vitest run src/test/unit/authorization/bundleManagementPermissions.test.ts`
+  - Result: pass.
+- (2026-04-22) Completed `F005`:
+  - Added migration `server/migrations/20260422113000_enforce_authorization_rule_revision_bundle_integrity.cjs`.
+  - Enforced unique key on `authorization_bundle_revisions (tenant, bundle_id, revision_id)` and moved rules FK to `(tenant, bundle_id, revision_id)`.
+  - Result: a rule can no longer reference a revision from a different bundle.
+- (2026-04-22) Verification for `F005`:
+  - Command: `cd server && npx vitest run src/test/unit/migrations/authorizationBundleControlPlaneMigration.test.ts`
   - Result: pass.

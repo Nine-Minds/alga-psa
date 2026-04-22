@@ -26,7 +26,7 @@
   {
     "id": "F005",
     "description": "Add or tighten data-model integrity constraints needed to support draft/publish isolation where the current schema does not fully enforce revision/bundle consistency.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Problem", "Functional Requirements", "Data / API / Integrations"]
   },
   {
