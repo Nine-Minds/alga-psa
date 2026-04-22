@@ -354,7 +354,9 @@
         "loadFailed": "Error al cargar los equipos. Inténtelo de nuevo.",
         "fetchUsers": "Error al obtener los usuarios",
         "createFailed": "Error al crear el equipo: {{error}}",
-        "deleteFailed": "Error al eliminar el equipo"
+        "deleteFailed": "Error al eliminar el equipo",
+        "updateName": "No se pudo actualizar el nombre del equipo",
+        "saveChanges": "No se pudieron guardar los cambios. Inténtalo de nuevo."
       }
     }
   },

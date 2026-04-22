@@ -354,7 +354,9 @@
         "loadFailed": "Impossibile caricare i team. Riprovi.",
         "fetchUsers": "Impossibile recuperare gli utenti",
         "createFailed": "Impossibile creare il team: {{error}}",
-        "deleteFailed": "Impossibile eliminare il team"
+        "deleteFailed": "Impossibile eliminare il team",
+        "updateName": "Impossibile aggiornare il nome del team",
+        "saveChanges": "Impossibile salvare le modifiche. Riprova."
       }
     }
   },

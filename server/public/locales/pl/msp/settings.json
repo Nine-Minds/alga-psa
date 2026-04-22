@@ -354,7 +354,9 @@
         "loadFailed": "Nie udało się załadować zespołów. Proszę spróbować ponownie.",
         "fetchUsers": "Nie udało się pobrać użytkowników",
         "createFailed": "Nie udało się utworzyć zespołu: {{error}}",
-        "deleteFailed": "Nie udało się usunąć zespołu"
+        "deleteFailed": "Nie udało się usunąć zespołu",
+        "updateName": "Nie udało się zaktualizować nazwy zespołu",
+        "saveChanges": "Nie udało się zapisać zmian. Spróbuj ponownie."
       }
     }
   },

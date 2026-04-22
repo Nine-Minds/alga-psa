@@ -354,7 +354,9 @@
         "loadFailed": "Échec du chargement des équipes. Veuillez réessayer.",
         "fetchUsers": "Échec de la récupération des utilisateurs",
         "createFailed": "Échec de la création de l'équipe : {{error}}",
-        "deleteFailed": "Échec de la suppression de l'équipe"
+        "deleteFailed": "Échec de la suppression de l'équipe",
+        "updateName": "Échec de la mise à jour du nom de l'équipe",
+        "saveChanges": "Échec de l'enregistrement des modifications. Veuillez réessayer."
       }
     }
   },

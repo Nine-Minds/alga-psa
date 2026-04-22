@@ -354,7 +354,9 @@
         "loadFailed": "Kan teams niet laden. Probeer het opnieuw.",
         "fetchUsers": "Kan gebruikers niet ophalen",
         "createFailed": "Kan team niet aanmaken: {{error}}",
-        "deleteFailed": "Kan team niet verwijderen"
+        "deleteFailed": "Kan team niet verwijderen",
+        "updateName": "Kan teamnaam niet bijwerken",
+        "saveChanges": "Kan wijzigingen niet opslaan. Probeer het opnieuw."
       }
     }
   },

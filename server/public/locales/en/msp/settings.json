@@ -354,7 +354,9 @@
         "loadFailed": "Failed to load teams. Please try again.",
         "fetchUsers": "Failed to fetch users",
         "createFailed": "Failed to create team: {{error}}",
-        "deleteFailed": "Failed to delete team"
+        "deleteFailed": "Failed to delete team",
+        "updateName": "Failed to update team name",
+        "saveChanges": "Failed to save changes. Please try again."
       }
     }
   },

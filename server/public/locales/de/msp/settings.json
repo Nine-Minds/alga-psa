@@ -354,7 +354,9 @@
         "loadFailed": "Teams konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
         "fetchUsers": "Benutzer konnten nicht abgerufen werden",
         "createFailed": "Team konnte nicht erstellt werden: {{error}}",
-        "deleteFailed": "Team konnte nicht gelöscht werden"
+        "deleteFailed": "Team konnte nicht gelöscht werden",
+        "updateName": "Teamname konnte nicht aktualisiert werden",
+        "saveChanges": "Änderungen konnten nicht gespeichert werden. Bitte versuche es erneut."
       }
     }
   },
