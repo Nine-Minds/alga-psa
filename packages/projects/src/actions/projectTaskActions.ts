@@ -46,6 +46,15 @@ import {
   buildProjectTaskDependencyUnblockedPayload,
   buildProjectTaskStatusChangedPayload,
 } from '@alga-psa/workflow-streams';
+import {
+  BuiltinAuthorizationKernelProvider,
+  BundleAuthorizationKernelProvider,
+  RequestLocalAuthorizationCache,
+  createAuthorizationKernel,
+  type AuthorizationRecord,
+  type AuthorizationSubject,
+} from 'server/src/lib/authorization/kernel';
+import { resolveBundleNarrowingRulesForEvaluation } from 'server/src/lib/authorization/bundles/service';
 
 // Helper functions for workflow events
 async function resolveProjectStatusInfo(
@@ -176,6 +185,222 @@ async function checkPermission(user: IUser, resource: string, action: string, kn
     }
 }
 
+function extractRoleIdsFromUser(user: IUserWithRoles): string[] {
+    if (!Array.isArray(user.roles)) {
+        return [];
+    }
+
+    return user.roles
+        .map((role) => {
+            if (typeof role === 'string') {
+                return role;
+            }
+            return typeof role?.role_id === 'string' ? role.role_id : null;
+        })
+        .filter((value): value is string => Boolean(value));
+}
+
+async function resolveAuthorizationSubjectForUser(
+    trx: Knex.Transaction,
+    tenant: string,
+    user: IUserWithRoles
+): Promise<AuthorizationSubject> {
+    let roleIds = extractRoleIdsFromUser(user);
+    if (roleIds.length === 0) {
+        try {
+            const roleRows = await trx('user_roles')
+                .where({ tenant, user_id: user.user_id })
+                .select<{ role_id: string }[]>('role_id');
+            roleIds = roleRows.map((row) => row.role_id);
+        } catch {
+            roleIds = [];
+        }
+    }
+
+    const [teamRows, managedRows] = await Promise.all([
+        trx('team_members').where({ tenant, user_id: user.user_id }).select<{ team_id: string }[]>('team_id').catch(() => []),
+        trx('users').where({ tenant, reports_to: user.user_id }).select<{ user_id: string }[]>('user_id').catch(() => []),
+    ]);
+
+    return {
+        tenant,
+        userId: user.user_id,
+        userType: user.user_type,
+        roleIds,
+        teamIds: teamRows.map((row) => row.team_id),
+        managedUserIds: managedRows.map((row) => row.user_id),
+        clientId: user.clientId ?? null,
+        portfolioClientIds: user.clientId ? [user.clientId] : [],
+    };
+}
+
+function toProjectAuthorizationRecord(project: { project_id?: string | null; client_id?: string | null; assigned_to?: string | null; assigned_team_id?: string | null }): AuthorizationRecord {
+    const assignedUserIds =
+        typeof project.assigned_to === 'string' && project.assigned_to.length > 0 ? [project.assigned_to] : [];
+    const teamIds =
+        typeof project.assigned_team_id === 'string' && project.assigned_team_id.length > 0 ? [project.assigned_team_id] : [];
+
+    return {
+        id: project.project_id ?? null,
+        ownerUserId: project.assigned_to ?? null,
+        assignedUserIds,
+        clientId: project.client_id ?? null,
+        teamIds,
+    };
+}
+
+async function createProjectReadAuthorizer(
+    trx: Knex.Transaction,
+    tenant: string,
+    user: IUserWithRoles
+): Promise<(project: { project_id?: string | null; client_id?: string | null; assigned_to?: string | null; assigned_team_id?: string | null }) => Promise<boolean>> {
+    const subject = await resolveAuthorizationSubjectForUser(trx, tenant, user);
+    const authorizationKernel = createAuthorizationKernel({
+        builtinProvider: new BuiltinAuthorizationKernelProvider(),
+        bundleProvider: new BundleAuthorizationKernelProvider({
+            resolveRules: async (input) => {
+                try {
+                    return await resolveBundleNarrowingRulesForEvaluation(trx, input);
+                } catch {
+                    return [];
+                }
+            },
+        }),
+        rbacEvaluator: async () => true,
+    });
+    const requestCache = new RequestLocalAuthorizationCache();
+
+    return async (project): Promise<boolean> => {
+        const projectId = project.project_id;
+        if (!projectId) {
+            return false;
+        }
+
+        const decision = await authorizationKernel.authorizeResource({
+            subject,
+            resource: {
+                type: 'project',
+                action: 'read',
+                id: projectId,
+            },
+            record: toProjectAuthorizationRecord(project),
+            requestCache,
+            knex: trx,
+        });
+
+        return decision.allowed;
+    };
+}
+
+async function assertProjectReadAllowedById(
+    trx: Knex.Transaction,
+    tenant: string,
+    user: IUserWithRoles,
+    projectId: string
+): Promise<void> {
+    const project = await ProjectModel.getById(trx, tenant, projectId);
+    if (!project) {
+        throw new Error('Project not found');
+    }
+
+    const authorizeProjectRead = await createProjectReadAuthorizer(trx, tenant, user);
+    if (!await authorizeProjectRead(project)) {
+        throw new Error('Permission denied: Cannot read project');
+    }
+}
+
+async function resolveProjectIdForPhase(
+    trx: Knex.Transaction,
+    tenant: string,
+    phaseId: string
+): Promise<string | null> {
+    const row = await trx('project_phases')
+        .where({ tenant, phase_id: phaseId })
+        .first<{ project_id: string }>('project_id');
+
+    return row?.project_id ?? null;
+}
+
+async function resolveProjectIdForTask(
+    trx: Knex.Transaction,
+    tenant: string,
+    taskId: string
+): Promise<string | null> {
+    const row = await trx('project_tasks as pt')
+        .join('project_phases as pp', function() {
+            this.on('pt.phase_id', '=', 'pp.phase_id')
+                .andOn('pt.tenant', '=', 'pp.tenant');
+        })
+        .where({ 'pt.tenant': tenant, 'pt.task_id': taskId })
+        .first<{ project_id: string }>('pp.project_id');
+
+    return row?.project_id ?? null;
+}
+
+async function resolveProjectIdForChecklistItem(
+    trx: Knex.Transaction,
+    tenant: string,
+    checklistItemId: string
+): Promise<string | null> {
+    const row = await trx('task_checklist_items as tci')
+        .join('project_tasks as pt', function() {
+            this.on('tci.task_id', '=', 'pt.task_id')
+                .andOn('tci.tenant', '=', 'pt.tenant');
+        })
+        .join('project_phases as pp', function() {
+            this.on('pt.phase_id', '=', 'pp.phase_id')
+                .andOn('pt.tenant', '=', 'pp.tenant');
+        })
+        .where({ 'tci.tenant': tenant, 'tci.checklist_item_id': checklistItemId })
+        .first<{ project_id: string }>('pp.project_id');
+
+    return row?.project_id ?? null;
+}
+
+async function resolveProjectIdForTaskResourceAssignment(
+    trx: Knex.Transaction,
+    tenant: string,
+    assignmentId: string
+): Promise<string | null> {
+    const row = await trx('task_resources as tr')
+        .join('project_tasks as pt', function() {
+            this.on('tr.task_id', '=', 'pt.task_id')
+                .andOn('tr.tenant', '=', 'pt.tenant');
+        })
+        .join('project_phases as pp', function() {
+            this.on('pt.phase_id', '=', 'pp.phase_id')
+                .andOn('pt.tenant', '=', 'pp.tenant');
+        })
+        .where({ 'tr.tenant': tenant, 'tr.assignment_id': assignmentId })
+        .first<{ project_id: string }>('pp.project_id');
+
+    return row?.project_id ?? null;
+}
+
+async function resolveProjectIdForTaskTicketLink(
+    trx: Knex.Transaction,
+    tenant: string,
+    linkId: string
+): Promise<string | null> {
+    const row = await trx('project_ticket_links')
+        .where({ tenant, link_id: linkId })
+        .first<{ project_id: string }>('project_id');
+
+    return row?.project_id ?? null;
+}
+
+async function resolveProjectIdsForTicket(
+    trx: Knex.Transaction,
+    tenant: string,
+    ticketId: string
+): Promise<string[]> {
+    const rows = await trx('project_ticket_links')
+        .where({ tenant, ticket_id: ticketId })
+        .select<{ project_id: string }[]>('project_id');
+
+    return Array.from(new Set(rows.map((row) => row.project_id)));
+}
+
 export const updateTaskWithChecklist = withAuth(async (
     user,
     { tenant },
@@ -192,6 +417,11 @@ export const updateTaskWithChecklist = withAuth(async (
             if (!existingTask) {
                 throw new Error("Task not found");
             }
+            const projectId = await resolveProjectIdForPhase(trx, tenant, existingTask.phase_id);
+            if (!projectId) {
+                throw new Error('Project not found for task');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
             // Remove tenant field if present in taskData
             const { checklist_items, tenant: _, ...taskUpdateData } = taskData;
@@ -292,6 +522,11 @@ export const addTaskToPhase = withAuth(async (
 
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'update', trx);
+            const projectId = await resolveProjectIdForPhase(trx, tenant, phaseId);
+            if (!projectId) {
+                throw new Error('Project phase not found');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
             const newTask = await ProjectTaskModel.addTask(trx, tenant, phaseId, taskData);
 
@@ -371,6 +606,11 @@ export const updateTaskStatus = withAuth(async (
             if (!task) {
                 throw new Error('Task not found');
             }
+            const sourceProjectId = await resolveProjectIdForPhase(trx, tenant, task.phase_id);
+            if (!sourceProjectId) {
+                throw new Error('Project not found for task');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, sourceProjectId);
 
             // Validate the target status exists in the same project
             const targetStatus = await trx('project_status_mappings')
@@ -380,6 +620,9 @@ export const updateTaskStatus = withAuth(async (
 
             if (!targetStatus) {
                 throw new Error('Target status not found');
+            }
+            if (targetStatus.project_id) {
+                await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, targetStatus.project_id);
             }
 
             // Get order keys for positioning
@@ -498,6 +741,11 @@ export const addChecklistItemToTask = withAuth(async (
         const {knex: db} = await createTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'update', trx);
+            const projectId = await resolveProjectIdForTask(trx, tenant, taskId);
+            if (!projectId) {
+                throw new Error('Project not found for task');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
             return await ProjectTaskModel.addChecklistItem(trx, tenant, taskId, validatedData as Omit<ITaskChecklistItem, 'checklist_item_id' | 'task_id' | 'created_at' | 'updated_at' | 'tenant'>);
         });
     } catch (error) {
@@ -518,6 +766,11 @@ export const updateChecklistItem = withAuth(async (
         const {knex: db} = await createTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'update', trx);
+            const projectId = await resolveProjectIdForChecklistItem(trx, tenant, checklistItemId);
+            if (!projectId) {
+                throw new Error('Project not found for checklist item');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
             return await ProjectTaskModel.updateChecklistItem(trx, tenant, checklistItemId, validatedData);
         });
     } catch (error) {
@@ -535,6 +788,11 @@ export const deleteChecklistItem = withAuth(async (
         const {knex: db} = await createTenantKnex();
         await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'delete', trx);
+            const projectId = await resolveProjectIdForChecklistItem(trx, tenant, checklistItemId);
+            if (!projectId) {
+                throw new Error('Project not found for checklist item');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
             await ProjectTaskModel.deleteChecklistItem(trx, tenant, checklistItemId);
         });
     } catch (error) {
@@ -552,6 +810,11 @@ export const getTaskChecklistItems = withAuth(async (
         const {knex: db} = await createTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'read', trx);
+            const projectId = await resolveProjectIdForTask(trx, tenant, taskId);
+            if (!projectId) {
+                throw new Error('Project not found for task');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
             return await ProjectTaskModel.getChecklistItems(trx, tenant, taskId);
         });
     } catch (error) {
@@ -570,6 +833,11 @@ export const deleteTask = withAuth(async (
 
         await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'delete', trx);
+            const projectId = await resolveProjectIdForTask(trx, tenant, taskId);
+            if (!projectId) {
+                throw new Error('Project not found for task');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
             // Check for associated time entries before proceeding
             const timeEntryCount = await trx('time_entries')
@@ -613,6 +881,14 @@ export const addTicketLinkAction = withAuth(async (
         const {knex: db} = await createTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'update', trx);
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            if (taskId) {
+                const taskProjectId = await resolveProjectIdForTask(trx, tenant, taskId);
+                if (!taskProjectId) {
+                    throw new Error('Project not found for task');
+                }
+                await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, taskProjectId);
+            }
             return await ProjectTaskModel.addTaskTicketLink(trx, tenant, projectId, taskId, ticketId, phaseId);
         });
     } catch (error) {
@@ -630,6 +906,11 @@ export const getTaskTicketLinksAction = withAuth(async (
         const {knex: db} = await createTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'read', trx);
+            const projectId = await resolveProjectIdForTask(trx, tenant, taskId);
+            if (!projectId) {
+                throw new Error('Project not found for task');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
             return await ProjectTaskModel.getTaskTicketLinks(trx, tenant, taskId);
         });
     } catch (error) {
@@ -647,7 +928,25 @@ export const getLinkedTasksForTicketAction = withAuth(async (
         const {knex: db} = await createTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'read', trx);
-            return await ProjectTaskModel.getLinkedTasksForTicket(trx, tenant, ticketId);
+            const linkedTasks = await ProjectTaskModel.getLinkedTasksForTicket(trx, tenant, ticketId);
+            if (linkedTasks.length === 0) {
+                return linkedTasks;
+            }
+
+            const authorizeProjectRead = await createProjectReadAuthorizer(trx, tenant, user as IUserWithRoles);
+            const projects = await trx('projects')
+                .where({ tenant })
+                .whereIn('project_id', Array.from(new Set(linkedTasks.map((task) => task.project_id).filter(Boolean))))
+                .select('project_id', 'client_id', 'assigned_to', 'assigned_team_id');
+
+            const allowedProjectIds = new Set<string>();
+            await Promise.all(projects.map(async (project) => {
+                if (await authorizeProjectRead(project)) {
+                    allowedProjectIds.add(project.project_id);
+                }
+            }));
+
+            return linkedTasks.filter((task) => allowedProjectIds.has(task.project_id));
         });
     } catch (error) {
         console.error('Error getting linked tasks for ticket:', error);
@@ -671,6 +970,11 @@ export const getTasksForPhase = withAuth(async (
         const {knex: db} = await createTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'read', trx);
+            const projectId = await resolveProjectIdForPhase(trx, tenant, phaseId);
+            if (!projectId) {
+                throw new Error('Project phase not found');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
             // Get phase to get its WBS code
             const phase = await trx('project_phases')
@@ -819,6 +1123,11 @@ export const addTaskResourceAction = withAuth(async (
         const {knex: db} = await createTenantKnex();
         await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'update', trx);
+            const projectId = await resolveProjectIdForTask(trx, tenant, taskId);
+            if (!projectId) {
+                throw new Error('Project not found for task');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
             await ProjectTaskModel.addTaskResource(trx, tenant, taskId, userId, role);
 
             // When adding additional resource, publish task additional agent assigned event
@@ -865,6 +1174,11 @@ export const assignTeamToProjectTask = withAuth(async (
             if (!task) {
                 throw new Error('Task not found');
             }
+            const projectId = await resolveProjectIdForTask(trx, tenant, taskId);
+            if (!projectId) {
+                throw new Error('Project not found for task');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
             const team = await trx('teams')
                 .where({ team_id: teamId, tenant })
@@ -973,6 +1287,11 @@ export const removeTaskResourceAction = withAuth(async (
         const {knex: db} = await createTenantKnex();
         await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'update', trx);
+            const projectId = await resolveProjectIdForTaskResourceAssignment(trx, tenant, assignmentId);
+            if (!projectId) {
+                throw new Error('Project not found for task resource assignment');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
             await ProjectTaskModel.removeTaskResource(trx, tenant, assignmentId);
         });
     } catch (error) {
@@ -990,6 +1309,11 @@ export const getTaskResourcesAction = withAuth(async (
         const {knex: db} = await createTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'read', trx);
+            const projectId = await resolveProjectIdForTask(trx, tenant, taskId);
+            if (!projectId) {
+                throw new Error('Project not found for task');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
             return await ProjectTaskModel.getTaskResources(trx, tenant, taskId);
         });
     } catch (error) {
@@ -1007,6 +1331,11 @@ export const deleteTaskTicketLinkAction = withAuth(async (
         const {knex: db} = await createTenantKnex();
         await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'update', trx);
+            const projectId = await resolveProjectIdForTaskTicketLink(trx, tenant, linkId);
+            if (!projectId) {
+                throw new Error('Project not found for task ticket link');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
             await ProjectTaskModel.deleteTaskTicketLink(trx, tenant, linkId);
         });
     } catch (error) {
@@ -1024,6 +1353,12 @@ export const deleteTaskTicketLinksByTicketIdAction = withAuth(async (
         const {knex: db} = await createTenantKnex();
         await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'update', trx);
+            const projectIds = await resolveProjectIdsForTicket(trx, tenant, ticketId);
+            if (projectIds.length > 0) {
+                await Promise.all(projectIds.map((projectId) =>
+                    assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId)
+                ));
+            }
             await ProjectTaskModel.deleteTaskTicketLinksByTicketId(trx, tenant, ticketId);
         });
     } catch (error) {
@@ -1053,12 +1388,18 @@ export const moveTaskToPhase = withAuth(async (
             if (!existingTask) {
                 throw new Error('Task not found');
             }
+            const sourceProjectId = await resolveProjectIdForPhase(trx, tenant, existingTask.phase_id);
+            if (!sourceProjectId) {
+                throw new Error('Project not found for source task');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, sourceProjectId);
 
             // Get the new phase to access its project and WBS code
             const newPhase = await ProjectModel.getPhaseById(trx, tenant, newPhaseId);
             if (!newPhase) {
                 throw new Error('Target phase not found');
             }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, newPhase.project_id);
 
             // Get the current phase to check if this is a cross-project move
             const currentPhase = await ProjectModel.getPhaseById(trx, tenant, existingTask.phase_id);
@@ -1267,11 +1608,17 @@ export const duplicateTaskToPhase = withAuth(async (
             if (!originalTask) {
                 throw new Error('Original task not found');
             }
+            const sourceProjectId = await resolveProjectIdForPhase(trx, tenant, originalTask.phase_id);
+            if (!sourceProjectId) {
+                throw new Error('Project not found for source task');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, sourceProjectId);
 
             const newPhase = await ProjectModel.getPhaseById(trx, tenant, newPhaseId);
             if (!newPhase) {
                 throw new Error('Target phase not found');
             }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, newPhase.project_id);
 
             const currentPhase = await ProjectModel.getPhaseById(trx, tenant, originalTask.phase_id);
             if (!currentPhase) {
@@ -1484,6 +1831,11 @@ export const getTaskWithDetails = withAuth(async (
 
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'read', trx);
+            const projectId = await resolveProjectIdForTask(trx, tenant, taskId);
+            if (!projectId) {
+                throw new Error('Project not found for task');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
             // Example of proper tenant handling in JOINs:
             // Each JOIN includes an andOn clause to match tenants across tables,
@@ -1558,6 +1910,11 @@ export const reorderTask = withAuth(async (
         if (!task) {
             throw new Error('Task not found');
         }
+        const projectId = await resolveProjectIdForPhase(trx, tenant, task.phase_id);
+        if (!projectId) {
+            throw new Error('Project not found for task');
+        }
+        await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
         // Get order keys for positioning
         let beforeKey: string | null = null;
@@ -1617,6 +1974,15 @@ export const reorderTasksInStatus = withAuth(async (
         const {knex: db} = await createTenantKnex();
         await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'update', trx);
+            if (tasks.length > 0) {
+                const projectIds = await Promise.all(
+                    tasks.map(async (task) => resolveProjectIdForTask(trx, tenant, task.taskId))
+                );
+                const uniqueProjectIds = Array.from(new Set(projectIds.filter((value): value is string => Boolean(value))));
+                await Promise.all(uniqueProjectIds.map((projectId) =>
+                    assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId)
+                ));
+            }
 
             const taskRecords = await trx('project_tasks')
                 .whereIn('task_id', tasks.map((t): string => t.taskId))
@@ -1659,6 +2025,11 @@ export const cleanupOrderKeysForStatus = withAuth(async (
 
         const result = await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'update', trx);
+            const projectId = await resolveProjectIdForPhase(trx, tenant, phaseId);
+            if (!projectId) {
+                throw new Error('Project phase not found');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
             const wasFixed = await validateAndFixOrderKeys(phaseId, statusId);
 
@@ -1726,6 +2097,15 @@ export const addTaskDependency = withAuth(async (
 
     return await withTransaction(db, async (trx) => {
         await checkPermission(user, 'project', 'update', trx);
+        const [predecessorProjectId, successorProjectId] = await Promise.all([
+            resolveProjectIdForTask(trx as Knex.Transaction, tenant, predecessorTaskId),
+            resolveProjectIdForTask(trx as Knex.Transaction, tenant, successorTaskId),
+        ]);
+        if (!predecessorProjectId || !successorProjectId) {
+            throw new Error('Project not found for dependency task');
+        }
+        await assertProjectReadAllowedById(trx as Knex.Transaction, tenant, user as IUserWithRoles, predecessorProjectId);
+        await assertProjectReadAllowedById(trx as Knex.Transaction, tenant, user as IUserWithRoles, successorProjectId);
 
         // Handle 'blocked_by' by swapping the tasks and using 'blocks' instead
         let actualPredecessorId = predecessorTaskId;
@@ -1810,9 +2190,16 @@ export const getTaskDependencies = withAuth(async (
     successors: IProjectTaskDependency[]
 }> => {
     const {knex: db} = await createTenantKnex();
-    await checkPermission(user, 'project', 'read', db);
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+        await checkPermission(user, 'project', 'read', trx);
+        const projectId = await resolveProjectIdForTask(trx, tenant, taskId);
+        if (!projectId) {
+            throw new Error('Project not found for task');
+        }
+        await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
-    return await TaskDependencyModel.getTaskDependencies(db, tenant, taskId);
+        return TaskDependencyModel.getTaskDependencies(trx, tenant, taskId);
+    });
 });
 
 export const removeTaskDependency = withAuth(async (
@@ -1832,6 +2219,15 @@ export const removeTaskDependency = withAuth(async (
         if (!dependency) {
             throw new Error('Dependency not found');
         }
+        const [predecessorProjectId, successorProjectId] = await Promise.all([
+            resolveProjectIdForTask(trx as Knex.Transaction, tenant, dependency.predecessor_task_id),
+            resolveProjectIdForTask(trx as Knex.Transaction, tenant, dependency.successor_task_id),
+        ]);
+        if (!predecessorProjectId || !successorProjectId) {
+            throw new Error('Project not found for dependency task');
+        }
+        await assertProjectReadAllowedById(trx as Knex.Transaction, tenant, user as IUserWithRoles, predecessorProjectId);
+        await assertProjectReadAllowedById(trx as Knex.Transaction, tenant, user as IUserWithRoles, successorProjectId);
 
         await TaskDependencyModel.removeDependency(trx, tenant, dependencyId);
 
@@ -1876,9 +2272,28 @@ export const updateTaskDependency = withAuth(async (
     data: Partial<Pick<IProjectTaskDependency, 'lead_lag_days' | 'notes'>>
 ): Promise<IProjectTaskDependency> => {
     const {knex: db} = await createTenantKnex();
-    await checkPermission(user, 'project', 'update', db);
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+        await checkPermission(user, 'project', 'update', trx);
+        const dependency = await trx('project_task_dependencies')
+            .where({ dependency_id: dependencyId, tenant })
+            .first();
 
-    return await TaskDependencyModel.updateDependency(db, tenant, dependencyId, data);
+        if (!dependency) {
+            throw new Error('Dependency not found');
+        }
+
+        const [predecessorProjectId, successorProjectId] = await Promise.all([
+            resolveProjectIdForTask(trx, tenant, dependency.predecessor_task_id),
+            resolveProjectIdForTask(trx, tenant, dependency.successor_task_id),
+        ]);
+        if (!predecessorProjectId || !successorProjectId) {
+            throw new Error('Project not found for dependency task');
+        }
+        await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, predecessorProjectId);
+        await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, successorProjectId);
+
+        return TaskDependencyModel.updateDependency(trx, tenant, dependencyId, data);
+    });
 });
 
 export const getTaskById = withAuth(async (
@@ -1890,6 +2305,11 @@ export const getTaskById = withAuth(async (
         const {knex: db} = await createTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'read', trx);
+            const projectId = await resolveProjectIdForTask(trx, tenant, taskId);
+            if (!projectId) {
+                throw new Error('Project not found for task');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
             const task = await trx('project_tasks')
                 .where({
@@ -1924,6 +2344,7 @@ export const getAllProjectTasksForListView = withAuth(async (
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
         await checkPermission(user, 'project', 'read', trx);
+        await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
         // 1. Get all phases for this project
         const phases = await trx('project_phases')
@@ -2059,6 +2480,7 @@ export const getPhaseTaskCounts = withAuth(async (
     const { knex: db } = await createTenantKnex();
     return await withTransaction(db, async (trx: Knex.Transaction) => {
         await checkPermission(user, 'project', 'read', trx);
+        await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
         const counts = await trx('project_tasks as pt')
             .join('project_phases as pp', function() {
@@ -2094,6 +2516,7 @@ export const getProjectTaskData = withAuth(async (
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
         await checkPermission(user, 'project', 'read', trx);
+        await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
         // 1. Get all tasks across all phases for this project
         const phases = await trx('project_phases')

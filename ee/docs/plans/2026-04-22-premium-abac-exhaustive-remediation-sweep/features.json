@@ -271,7 +271,7 @@
   {
     "id": "F028",
     "description": "Introduce reusable parent-project gating for task, checklist, dependency, resource-assignment, and ticket-link actions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Project / phase / task / status exhaustive remediation"
@@ -280,7 +280,7 @@
   {
     "id": "F029",
     "description": "Apply parent-project gating to all remaining `projectTaskActions.ts` read and mutation paths.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Problem",
       "Requirements",
@@ -290,7 +290,7 @@
   {
     "id": "F030",
     "description": "Apply parent-project gating to all `projectTaskStatusActions.ts` and phase/custom-status flows, and add missing auth to currently zero-check surfaces.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Problem",
       "Requirements",
@@ -300,7 +300,7 @@
   {
     "id": "F031",
     "description": "Fix project count and summarization helpers so they do not leak task/status cardinality for narrowed-away projects.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Problem",
       "Requirements",
@@ -310,7 +310,7 @@
   {
     "id": "F032",
     "description": "Require cross-project operations such as move, duplicate, and link flows to authorize both source and target projects correctly.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Project / phase / task / status exhaustive remediation",
@@ -418,7 +418,7 @@
   {
     "id": "F043",
     "description": "Add project regression coverage for phase/task/status parity, cross-project operations, and aggregate/count leak fixes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Requirements",

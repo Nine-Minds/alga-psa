@@ -157,6 +157,20 @@ It intentionally preserves the earlier 2026-04-22 remediation plan as a historic
   - phase mutations (`updatePhase`, `deletePhase`, `addProjectPhase`, `reorderPhase`) now resolve parent project and enforce `assertProjectReadAllowed(...)`.
   - project status mutations now authorize all project mappings tied to a status ID before update/delete (`resolveProjectIdsForStatus(...)` + per-project assert).
   - internal status resolution helper `getProjectTaskStatusesInternal(...)` now enforces parent-project authorization before returning phase/status data.
+- (2026-04-22) Implemented `F028-F029` parent-project gating across `projectTaskActions.ts`:
+  - Added shared reusable parent-project gating helpers in task actions:
+    - `createProjectReadAuthorizer(...)`
+    - `assertProjectReadAllowedById(...)`
+    - resolver helpers for task/phase/checklist/resource/ticket-link IDs.
+  - Applied parent-project gating to task/checklist/dependency/resource/ticket-link reads and mutations.
+  - `getLinkedTasksForTicketAction` now filters linked tasks to authorized project contexts only.
+- (2026-04-22) Implemented `F030` status-action gating in `projectTaskStatusActions.ts`:
+  - Added project kernel authorization helper `assertProjectReadAllowed(...)`.
+  - Applied parent-project gating to status mapping create/read/update/delete/reorder/copy/remove-phase flows.
+  - Closed previously zero-check count surface by hardening `getStatusMappingTaskCount`.
+- (2026-04-22) Implemented `F031-F032` via task/status helper hardening:
+  - aggregate helpers now require project authorization (`getPhaseTaskCounts`, `getProjectTaskData`, `getStatusMappingTaskCount`).
+  - cross-project move/duplicate/link flows now enforce source + target project authorization (`moveTaskToPhase`, `duplicateTaskToPhase`, `addTicketLinkAction`).
 
 ### Time / remaining resource-family re-audit
 - (2026-04-22) The prior remediation fixed the `time_entry` resource key mismatch, but a broader re-audit is still needed to confirm there are no leftover helper/count leaks or RBAC-only delegation paths.
@@ -313,6 +327,19 @@ It intentionally preserves the earlier 2026-04-22 remediation plan as a historic
   - `packages/projects/src/actions/projectAuthorization.contract.test.ts` (`T019`)
 - (2026-04-22) Validation status for `F027`:
   - `cd server && pnpm vitest ../packages/projects/src/actions/projectAuthorization.contract.test.ts --coverage.enabled false` passed.
+  - `pnpm -C packages/projects typecheck` passed.
+- (2026-04-22) Completed project task/status hardening wave (`F028-F032`) in:
+  - `packages/projects/src/actions/projectTaskActions.ts`
+  - `packages/projects/src/actions/projectTaskStatusActions.ts`
+  - `packages/projects/src/actions/projectAuthorization.contract.test.ts` (`T020-T023`)
+- (2026-04-22) Completed `F043` project regression coverage by expanding contract assertions for:
+  - `T019` projectActions parity
+  - `T020` task/checklist/dependency/resource/ticket-link gating
+  - `T021` status-action parent gating + zero-check remediation
+  - `T022` aggregate/count helper protection
+  - `T023` cross-project source/target authorization.
+- (2026-04-22) Validation status for project task/status wave:
+  - `cd server && pnpm vitest ../packages/projects/src/actions/projectAuthorization.contract.test.ts --coverage.enabled false` passed (7 tests).
   - `pnpm -C packages/projects typecheck` passed.
 - (2026-04-22) Marked quote parity regression tests `T007-T010` complete after re-validating:
   - `packages/billing/src/actions/quoteAuthorizationParity.contract.test.ts`

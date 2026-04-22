@@ -6,6 +6,8 @@ const readSource = (fileName: string) => readFileSync(path.resolve(__dirname, fi
 
 describe('project authorization kernel contracts', () => {
   const projectActionsSource = readSource('projectActions.ts');
+  const projectTaskActionsSource = readSource('projectTaskActions.ts');
+  const projectTaskStatusActionsSource = readSource('projectTaskStatusActions.ts');
   const commentActionsSource = readSource('projectTaskCommentActions.ts');
 
   it('T020: preserves own-comment/internal-user behavior and supports bundle narrowing on project list/detail', () => {
@@ -46,5 +48,60 @@ describe('project authorization kernel contracts', () => {
     expect(projectActionsSource).toContain('await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, project.project_id);');
     expect(projectActionsSource).toContain('const relatedProjectIds = await resolveProjectIdsForStatus(trx, tenant, statusId);');
     expect(projectActionsSource).toContain('await Promise.all(');
+  });
+
+  it('T020: task/checklist/dependency/resource/ticket-link actions enforce reusable parent-project gating', () => {
+    expect(projectTaskActionsSource).toContain('async function assertProjectReadAllowedById(');
+    expect(projectTaskActionsSource).toContain('async function resolveProjectIdForTask(');
+    expect(projectTaskActionsSource).toContain('async function resolveProjectIdForChecklistItem(');
+    expect(projectTaskActionsSource).toContain('async function resolveProjectIdForTaskResourceAssignment(');
+    expect(projectTaskActionsSource).toContain('async function resolveProjectIdForTaskTicketLink(');
+    expect(projectTaskActionsSource).toContain('async function resolveProjectIdsForTicket(');
+    expect(projectTaskActionsSource).toContain('export const updateTaskWithChecklist = withAuth(async (');
+    expect(projectTaskActionsSource).toContain('export const addTaskToPhase = withAuth(async (');
+    expect(projectTaskActionsSource).toContain('export const addChecklistItemToTask = withAuth(async (');
+    expect(projectTaskActionsSource).toContain('export const updateChecklistItem = withAuth(async (');
+    expect(projectTaskActionsSource).toContain('export const deleteChecklistItem = withAuth(async (');
+    expect(projectTaskActionsSource).toContain('export const addTaskDependency = withAuth(async (');
+    expect(projectTaskActionsSource).toContain('export const addTaskResourceAction = withAuth(async (');
+    expect(projectTaskActionsSource).toContain('export const removeTaskResourceAction = withAuth(async (');
+    expect(projectTaskActionsSource).toContain('export const addTicketLinkAction = withAuth(async (');
+    expect(projectTaskActionsSource).toContain('export const deleteTaskTicketLinkAction = withAuth(async (');
+    expect(projectTaskActionsSource).toContain('await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);');
+    expect(projectTaskActionsSource).toContain('const sourceProjectId = await resolveProjectIdForPhase(trx, tenant, existingTask.phase_id);');
+    expect(projectTaskActionsSource).toContain('const projectId = await resolveProjectIdForChecklistItem(trx, tenant, checklistItemId);');
+    expect(projectTaskActionsSource).toContain('const projectIds = await resolveProjectIdsForTicket(trx, tenant, ticketId);');
+  });
+
+  it('T021: status/phase mapping actions enforce parent-project narrowing and close prior zero-check count surfaces', () => {
+    expect(projectTaskStatusActionsSource).toContain('async function assertProjectReadAllowed(');
+    expect(projectTaskStatusActionsSource).toContain('export const getProjectStatusMappings = withAuth(async (');
+    expect(projectTaskStatusActionsSource).toContain('export const copyProjectStatusesToPhase = withAuth(async (');
+    expect(projectTaskStatusActionsSource).toContain('export const removePhaseStatuses = withAuth(async (');
+    expect(projectTaskStatusActionsSource).toContain('export const updateProjectStatusMapping = withAuth(async (');
+    expect(projectTaskStatusActionsSource).toContain('export const getStatusMappingTaskCount = withAuth(async (');
+    expect(projectTaskStatusActionsSource).toContain('export const deleteProjectStatusMapping = withAuth(async (');
+    expect(projectTaskStatusActionsSource).toContain('export const reorderProjectStatuses = withAuth(async (');
+    expect(projectTaskStatusActionsSource).toContain('await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);');
+    expect(projectTaskStatusActionsSource).toContain('await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, mapping.project_id);');
+    expect(projectTaskStatusActionsSource).toContain('if (!await hasPermission(user, \'project\', \'read\', trx)) {');
+  });
+
+  it('T022: project task/status count helpers require parent-project authorization before returning cardinalities', () => {
+    expect(projectTaskActionsSource).toContain('export const getPhaseTaskCounts = withAuth(async (');
+    expect(projectTaskActionsSource).toContain('export const getProjectTaskData = withAuth(async (');
+    expect(projectTaskActionsSource).toContain('await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);');
+    expect(projectTaskStatusActionsSource).toContain('export const getStatusMappingTaskCount = withAuth(async (');
+    expect(projectTaskStatusActionsSource).toContain('await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, mapping.project_id);');
+  });
+
+  it('T023: cross-project move/duplicate/link flows authorize both source and target project contexts', () => {
+    expect(projectTaskActionsSource).toContain('export const moveTaskToPhase = withAuth(async (');
+    expect(projectTaskActionsSource).toContain('export const duplicateTaskToPhase = withAuth(async (');
+    expect(projectTaskActionsSource).toContain('export const addTicketLinkAction = withAuth(async (');
+    expect(projectTaskActionsSource).toContain('const sourceProjectId = await resolveProjectIdForPhase(trx, tenant, existingTask.phase_id);');
+    expect(projectTaskActionsSource).toContain('await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, sourceProjectId);');
+    expect(projectTaskActionsSource).toContain('await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, newPhase.project_id);');
+    expect(projectTaskActionsSource).toContain('await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);');
   });
 });

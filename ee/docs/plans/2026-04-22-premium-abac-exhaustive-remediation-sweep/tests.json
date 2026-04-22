@@ -182,7 +182,7 @@
   {
     "id": "T020",
     "description": "Project task integration: task, checklist, dependency, resource-assignment, and ticket-link actions all enforce parent-project authorization.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028",
       "F029",
@@ -192,7 +192,7 @@
   {
     "id": "T021",
     "description": "Project status integration: phase/custom-status actions add missing auth, reject zero-check leaks, and honor parent-project narrowing.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030",
       "F043"
@@ -201,7 +201,7 @@
   {
     "id": "T022",
     "description": "Project aggregate integration: phase task counts, status-mapping task counts, and similar project aggregates no longer leak cardinality for unauthorized projects.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031",
       "F043"
@@ -210,7 +210,7 @@
   {
     "id": "T023",
     "description": "Cross-project integration: move/duplicate/link flows authorize both source and target projects and reject cross-project bypasses.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032",
       "F033",
