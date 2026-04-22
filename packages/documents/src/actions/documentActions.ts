@@ -1699,25 +1699,64 @@ export const getDocumentCountsForEntities = withAuth(async (
   const { knex } = await createTenantKnex();
   
   try {
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const counts = await trx('document_associations')
-        .select('entity_id')
-        .count('document_id as count')
-        .where('tenant', tenant)
-        .whereIn('entity_id', entityIds)
-        .where('entity_type', entityType)
-        .groupBy('entity_id');
+    if (!await hasPermission(user, 'document', 'read')) {
+      return new Map(entityIds.map((entityId) => [entityId, 0]));
+    }
 
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const countMap = new Map<string, number>();
-      for (const row of counts) {
-        countMap.set(String(row.entity_id), Number(row.count));
+      for (const entityId of entityIds) {
+        countMap.set(entityId, 0);
       }
 
-      // Ensure all requested entities have a count (0 if no documents)
-      for (const entityId of entityIds) {
-        if (!countMap.has(entityId)) {
-          countMap.set(entityId, 0);
+      if (entityIds.length === 0) {
+        return countMap;
+      }
+
+      const rows = await trx('document_associations as da')
+        .join('documents as d', function joinDocuments() {
+          this.on('da.document_id', '=', 'd.document_id').andOn('da.tenant', '=', 'd.tenant');
+        })
+        .where('da.tenant', tenant)
+        .whereIn('da.entity_id', entityIds)
+        .where('da.entity_type', entityType)
+        .select('da.entity_id', 'd.document_id', 'd.created_by', 'd.is_client_visible');
+
+      if (rows.length === 0) {
+        return countMap;
+      }
+
+      const documentsById = new Map<string, IDocument>();
+      for (const row of rows as Array<{ document_id: string; created_by: string | null; is_client_visible: boolean | null }>) {
+        if (!documentsById.has(row.document_id)) {
+          documentsById.set(row.document_id, {
+            document_id: row.document_id,
+            created_by: row.created_by ?? undefined,
+            is_client_visible: row.is_client_visible ?? false,
+          } as IDocument);
         }
+      }
+
+      const authorizedDocuments = await authorizeAndRedactDocuments(
+        trx,
+        tenant,
+        user,
+        Array.from(documentsById.values())
+      );
+      const authorizedIds = new Set(authorizedDocuments.map((document) => document.document_id));
+      const countedByEntity = new Map<string, Set<string>>();
+
+      for (const row of rows as Array<{ entity_id: string; document_id: string }>) {
+        if (!authorizedIds.has(row.document_id)) {
+          continue;
+        }
+        const entitySet = countedByEntity.get(row.entity_id) ?? new Set<string>();
+        entitySet.add(row.document_id);
+        countedByEntity.set(row.entity_id, entitySet);
+      }
+
+      for (const entityId of entityIds) {
+        countMap.set(entityId, countedByEntity.get(entityId)?.size ?? 0);
       }
 
       return countMap;
@@ -2687,7 +2726,8 @@ export const getDistinctEntityTypes = withAuth(async (user, { tenant }): Promise
  * intended to be called from already-authenticated contexts.
  */
 async function _getFolderTreeInternal(
-  knex: Knex,
+  knex: Knex.Transaction,
+  user: IUser,
   tenant: string,
   entityId?: string | null,
   entityType?: string | null
@@ -2756,7 +2796,7 @@ async function _getFolderTreeInternal(
   const tree = buildFolderTreeFromPaths(allPaths, explicitFolderMetadata);
 
   // Get document counts for each folder (single query)
-  await enrichFolderTreeWithCounts(tree, knex, tenant, entityId, entityType);
+  await enrichFolderTreeWithCounts(tree, knex, tenant, user, entityId, entityType);
 
   return tree;
 }
@@ -2773,7 +2813,9 @@ export const getFolderTree = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  return _getFolderTreeInternal(knex, tenant, entityId, entityType);
+  return withTransaction(knex, async (trx: Knex.Transaction) =>
+    _getFolderTreeInternal(trx, user, tenant, entityId, entityType)
+  );
 });
 
 /**
@@ -3372,10 +3414,12 @@ export const ensureEntityFolders = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  await ensureEntityFoldersInitializedInternal(knex, tenant, entityId, entityType, user.user_id);
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    await ensureEntityFoldersInitializedInternal(trx, tenant, entityId, entityType, user.user_id);
 
-  // Return current folder tree
-  return _getFolderTreeInternal(knex, tenant, entityId, entityType);
+    // Return current folder tree
+    return _getFolderTreeInternal(trx, user, tenant, entityId, entityType);
+  });
 });
 
 /**
@@ -3388,23 +3432,49 @@ export const getFolderStats = withAuth(async (
   user,
   { tenant },
   folderPath: string
-): Promise<IFolderStats> => {
+): Promise<IFolderStats | ActionPermissionError> => {
+  if (!(await hasPermission(user, 'document', 'read'))) {
+    return permissionError('Permission denied');
+  }
+
   const { knex } = await createTenantKnex();
 
-  const result = await knex('documents')
-    .where('tenant', tenant)
-    .where(function() {
-      this.where('folder_path', folderPath)
-        .orWhere('folder_path', 'like', `${folderPath}/%`);
-    })
-    .count('* as count')
-    .sum('file_size as size')
-    .first();
+  const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const rows = await trx('documents')
+      .where('tenant', tenant)
+      .where(function() {
+        this.where('folder_path', folderPath)
+          .orWhere('folder_path', 'like', `${folderPath}/%`);
+      })
+      .select('document_id', 'created_by', 'is_client_visible', 'file_size');
+
+    const authorizationInput = rows.map((row: { document_id: string; created_by: string | null; is_client_visible: boolean | null; file_size: number | string | null }) => ({
+      document_id: row.document_id,
+      created_by: row.created_by ?? undefined,
+      is_client_visible: row.is_client_visible ?? false,
+      file_size: row.file_size == null ? undefined : Number(row.file_size),
+    })) as IDocument[];
+    const authorizedDocuments = await authorizeAndRedactDocuments(trx, tenant, user, authorizationInput);
+    const authorizedDocumentIds = new Set(authorizedDocuments.map((document) => document.document_id));
+    const totalSize = rows.reduce((sum, row: { document_id: string; file_size: number | string | null }) => {
+      if (!authorizedDocumentIds.has(row.document_id)) {
+        return sum;
+      }
+
+      const size = row.file_size == null ? 0 : Number(row.file_size);
+      return sum + (Number.isFinite(size) ? size : 0);
+    }, 0);
+
+    return {
+      documentCount: authorizedDocumentIds.size,
+      totalSize,
+    };
+  });
 
   return {
     path: folderPath,
-    documentCount: parseInt(result?.count as string) || 0,
-    totalSize: parseInt(result?.size as string) || 0,
+    documentCount: result.documentCount,
+    totalSize: result.totalSize,
   };
 });
 
@@ -3617,8 +3687,9 @@ function buildFolderTreeFromPaths(
 
 async function enrichFolderTreeWithCounts(
   nodes: IFolderNode[],
-  knex: Knex,
+  knex: Knex.Transaction,
   tenant: string,
+  user: IUser,
   entityId?: string | null,
   entityType?: string | null
 ): Promise<void> {
@@ -3638,18 +3709,13 @@ async function enrichFolderTreeWithCounts(
     return;
   }
 
-  // Note: This is an internal helper called from within withAuth-wrapped functions
-  // so the tenant context is already established. We use a fixed set of entity types.
-  const allowedEntityTypes = ['ticket', 'client', 'contact', 'asset', 'project_task', 'contract'];
-
-  // Single query to get counts for ALL folders at once - with same permission filtering as getDocumentsByFolder
-  const countsQuery = knex('documents as d')
+  // Gather candidate documents first, then apply kernel authorization before counting.
+  let documentsQuery = knex('documents as d')
     .where('d.tenant', tenant)
     .whereIn('d.folder_path', allPaths);
 
   if (entityId && entityType) {
-    // Entity-scoped: only count documents associated with this specific entity
-    countsQuery.whereExists(function() {
+    documentsQuery = documentsQuery.whereExists(function() {
       this.select('*')
         .from('document_associations as da')
         .whereRaw('da.document_id = d.document_id')
@@ -3658,36 +3724,35 @@ async function enrichFolderTreeWithCounts(
         .andWhere('da.entity_type', entityType);
     });
   } else {
-    // Tenant-level: count unassociated docs + docs with allowed entity types
-    countsQuery.where(function() {
-      // Option 1: Document has no associations (tenant-level doc)
-      this.whereNotExists(function() {
-        this.select('*')
-          .from('document_associations as da')
-          .whereRaw('da.document_id = d.document_id')
-          .andWhere('da.tenant', tenant);
-      })
-      // Option 2: Document has associations user has permission for
-      .orWhereExists(function() {
-        this.select('*')
-          .from('document_associations as da')
-          .whereRaw('da.document_id = d.document_id')
-          .andWhere('da.tenant', tenant)
-          .whereIn('da.entity_type', allowedEntityTypes);
-      });
-    });
+    // No entity scope: include all documents and rely on kernel decisions for narrowing.
   }
 
-  const counts = await countsQuery
-    .groupBy('d.folder_path')
-    .select('d.folder_path')
-    .count('* as count');
+  const rows = await documentsQuery.select(
+    'd.document_id',
+    'd.created_by',
+    'd.is_client_visible',
+    'd.folder_path'
+  );
+  if (rows.length === 0) {
+    return;
+  }
+
+  const authorizationInput = rows.map((row: { document_id: string; created_by: string | null; is_client_visible: boolean | null }) => ({
+    document_id: row.document_id,
+    created_by: row.created_by ?? undefined,
+    is_client_visible: row.is_client_visible ?? false,
+  })) as IDocument[];
+  const authorizedDocuments = await authorizeAndRedactDocuments(knex, tenant, user, authorizationInput);
+  const authorizedDocumentIds = new Set(authorizedDocuments.map((document) => document.document_id));
 
   // Build map of path -> count
   const countMap = new Map<string, number>();
-  for (const row of counts) {
-    const count = typeof row.count === 'string' ? parseInt(row.count) : Number(row.count);
-    countMap.set(String(row.folder_path), count);
+  for (const row of rows as Array<{ document_id: string; folder_path: string }>) {
+    if (!authorizedDocumentIds.has(row.document_id)) {
+      continue;
+    }
+    const folderPath = String(row.folder_path);
+    countMap.set(folderPath, (countMap.get(folderPath) ?? 0) + 1);
   }
 
   // Apply counts to nodes recursively

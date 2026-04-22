@@ -124,7 +124,7 @@
   {
     "id": "T014",
     "description": "Document aggregate integration: entity document counts, folder stats, and folder-tree counts only reflect authorized documents and do not leak no-auth totals.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019",
       "F020",

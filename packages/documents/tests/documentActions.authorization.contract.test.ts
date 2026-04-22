@@ -64,4 +64,19 @@ describe('document authorization kernel wiring contracts', () => {
     expect(source).toContain('export const toggleFolderVisibilityByPath = withAuth(async');
     expect(source).toContain('export const deleteFolder = withAuth(async');
   });
+
+  it('T014: count and folder-stat helpers derive totals from authorized document sets', () => {
+    expect(source).toContain('export const getDocumentCountsForEntities = withAuth(async (');
+    expect(source).toContain("if (!await hasPermission(user, 'document', 'read')) {");
+    expect(source).toContain("return new Map(entityIds.map((entityId) => [entityId, 0]));");
+    expect(source).toContain("const rows = await trx('document_associations as da')");
+    expect(source).toContain('const authorizedDocuments = await authorizeAndRedactDocuments(');
+    expect(source).toContain('const authorizedIds = new Set(authorizedDocuments.map((document) => document.document_id));');
+    expect(source).toContain('const countedByEntity = new Map<string, Set<string>>();');
+    expect(source).toContain('export const getFolderStats = withAuth(async (');
+    expect(source).toContain('const authorizationInput = rows.map');
+    expect(source).toContain('documentCount: authorizedDocumentIds.size,');
+    expect(source).toContain('async function enrichFolderTreeWithCounts(');
+    expect(source).toContain("let documentsQuery = knex('documents as d')");
+  });
 });

@@ -86,6 +86,10 @@ It intentionally preserves the earlier 2026-04-22 remediation plan as a historic
 - (2026-04-22) Hardened content/block-content document helpers (`F018`) so read/write/delete operations require:
   - resource-level RBAC permission (`document.read/update/delete`)
   - authorized parent-document resolution via `getAuthorizedDocumentById(...)`
+- (2026-04-22) Implemented aggregate hardening (`F019`) for document count surfaces:
+  - `getDocumentCountsForEntities` now resolves associated documents and counts only kernel-authorized records.
+  - `getFolderStats` now computes count/size from authorized document sets.
+  - folder-tree count enrichment now removes hardcoded entity-type shortcuts and counts only authorized records.
 - (2026-04-22) Typecheck status after `F018`:
   - `packages/documents` still has pre-existing TS errors in UI components (`block_data` typing in `CollaborativeEditor.tsx` and `Documents.tsx` family).
   - no new type errors remain in changed action files after remediation patching.
@@ -146,6 +150,8 @@ It intentionally preserves the earlier 2026-04-22 remediation plan as a historic
   - `cd server && pnpm vitest ../packages/billing/src/actions/quoteAuthorizationParity.contract.test.ts --coverage.enabled false`
 - (2026-04-22) Run package-level document typecheck:
   - `pnpm -C packages/documents typecheck`
+- (2026-04-22) Re-run count/folder hardening tests:
+  - `cd server && pnpm vitest src/test/unit/documentFolderOperations.test.ts ../packages/documents/tests/documentActions.authorization.contract.test.ts --coverage.enabled false`
 
 ## Links / References
 
@@ -220,6 +226,10 @@ It intentionally preserves the earlier 2026-04-22 remediation plan as a historic
   - `packages/documents/src/actions/documentContentActions.ts`
   - `packages/documents/src/actions/documentBlockContentActions.ts`
   - `packages/documents/tests/documentContent.authorization.contract.test.ts` (`T013`)
+- (2026-04-22) Completed document aggregate hardening `F019` in:
+  - `packages/documents/src/actions/documentActions.ts`
+  - `packages/documents/tests/documentActions.authorization.contract.test.ts` (`T014`)
+  - `server/src/test/unit/documentFolderOperations.test.ts` (updated folder-stats expectations for auth-aware counting)
 - (2026-04-22) Marked quote parity regression tests `T007-T010` complete after re-validating:
   - `packages/billing/src/actions/quoteAuthorizationParity.contract.test.ts`
 - (2026-04-22) Marked document URL regression test `T011` complete:

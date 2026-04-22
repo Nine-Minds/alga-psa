@@ -717,28 +717,21 @@ describe('Document Folder Operations', () => {
 
   describe('getFolderStats', () => {
     it('should return document count and total size for folder', async () => {
-      const mockStats = {
-        count: '5',
-        size: '1024000'
-      };
-
-      mockKnex.first.mockResolvedValue(mockStats);
+      mockKnex.select.mockResolvedValue([
+        { document_id: 'doc-1', created_by: mockUser.user_id, is_client_visible: true, file_size: 256000 },
+        { document_id: 'doc-2', created_by: mockUser.user_id, is_client_visible: true, file_size: 768000 },
+      ]);
 
       const stats = await getFolderStats('/Legal/Contracts');
 
       expect(stats).toEqual({
         path: '/Legal/Contracts',
-        documentCount: 5,
+        documentCount: 2,
         totalSize: 1024000
       });
     });
 
     it('should include subfolders in statistics', async () => {
-      const mockStats = {
-        count: '10',
-        size: '2048000'
-      };
-
       let orWhereCalled = false;
       const queryBuilder = createQueryBuilder();
       queryBuilder.where = vi.fn(function(this: any, ...args: any[]) {
@@ -753,7 +746,7 @@ describe('Document Folder Operations', () => {
         }
         return queryBuilder;
       });
-      queryBuilder.first = vi.fn().mockResolvedValue(mockStats);
+      queryBuilder.select = vi.fn().mockResolvedValue([]);
 
       mockKnex.mockImplementation(() => queryBuilder);
 
@@ -764,7 +757,7 @@ describe('Document Folder Operations', () => {
     });
 
     it('should handle empty folders', async () => {
-      mockKnex.first.mockResolvedValue({ count: null, size: null });
+      mockKnex.select.mockResolvedValue([]);
 
       const stats = await getFolderStats('/Empty');
 

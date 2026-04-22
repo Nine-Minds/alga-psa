@@ -181,7 +181,7 @@
   {
     "id": "F019",
     "description": "Eliminate no-auth or RBAC-only document count leaks, including entity document counts, folder stats, and folder-tree count enrichment.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Problem",
       "Requirements",
