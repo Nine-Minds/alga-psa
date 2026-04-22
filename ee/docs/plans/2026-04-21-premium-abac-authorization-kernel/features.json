@@ -458,7 +458,7 @@
   {
     "id": "F050",
     "description": "Migrate the selected v1 billing authorization paths onto the shared kernel while preserving existing quote/invoice visibility, approval, and blocker semantics.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -467,7 +467,7 @@
   {
     "id": "F051",
     "description": "Support premium billing narrowing bundles that can restrict billing visibility by client portfolio and apply selected v1 approval-oriented guards without widening access.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Functional Requirements"
@@ -476,7 +476,7 @@
   {
     "id": "F052",
     "description": "Support billing-sensitive-field redaction hooks for the selected v1 billing surfaces where field-level hiding is part of the premium authorization story.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements",
       "Open Questions"

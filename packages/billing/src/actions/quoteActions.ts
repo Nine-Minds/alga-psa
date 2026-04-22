@@ -18,6 +18,15 @@ import { getQuoteApprovalWorkflowSettings as loadQuoteApprovalWorkflowSettings, 
 import { createQuoteItemSchema, createQuoteSchema, updateQuoteItemSchema, updateQuoteSchema } from '../schemas/quoteSchemas';
 import { buildQuoteConversionPreview, convertQuoteToDraftContract, convertQuoteToDraftContractAndInvoice, convertQuoteToDraftInvoice, createPDFGenerationService } from '../services';
 import { Document as DocumentModel, DocumentAssociation } from '@alga-psa/documents/models';
+import {
+  BuiltinAuthorizationKernelProvider,
+  BundleAuthorizationKernelProvider,
+  RequestLocalAuthorizationCache,
+  createAuthorizationKernel,
+  type AuthorizationRecord,
+  type AuthorizationSubject,
+} from 'server/src/lib/authorization/kernel';
+import { resolveBundleNarrowingRulesForEvaluation } from 'server/src/lib/authorization/bundles/service';
 
 type CreateQuoteInput = Omit<
   IQuote,
@@ -111,6 +120,81 @@ const getActorUserId = (user: unknown): string | null => {
   const candidate = (user as { user_id?: string; id?: string }).user_id ?? (user as { id?: string }).id;
   return typeof candidate === 'string' ? candidate : null;
 };
+
+type BillingAuthUser = {
+  user_id: string;
+  user_type: 'internal' | 'client';
+  clientId?: string | null;
+  roles?: Array<{ role_id?: string } | string>;
+};
+
+function extractRoleIdsFromUser(user: BillingAuthUser): string[] {
+  if (!Array.isArray(user.roles)) {
+    return [];
+  }
+
+  return user.roles
+    .map((role) => {
+      if (typeof role === 'string') {
+        return role;
+      }
+      return typeof role?.role_id === 'string' ? role.role_id : null;
+    })
+    .filter((value): value is string => Boolean(value));
+}
+
+async function resolveAuthorizationSubjectForUser(
+  knex: Knex,
+  tenant: string,
+  user: BillingAuthUser
+): Promise<AuthorizationSubject> {
+  let roleIds = extractRoleIdsFromUser(user);
+  if (roleIds.length === 0) {
+    try {
+      const roleRows = await knex('user_roles')
+        .where({ tenant, user_id: user.user_id })
+        .select<{ role_id: string }[]>('role_id');
+      roleIds = roleRows.map((row) => row.role_id);
+    } catch {
+      roleIds = [];
+    }
+  }
+
+  const [teamRows, managedRows] = await Promise.all([
+    knex('team_members').where({ tenant, user_id: user.user_id }).select<{ team_id: string }[]>('team_id').catch(() => []),
+    knex('users').where({ tenant, reports_to: user.user_id }).select<{ user_id: string }[]>('user_id').catch(() => []),
+  ]);
+
+  return {
+    tenant,
+    userId: user.user_id,
+    userType: user.user_type,
+    roleIds,
+    teamIds: teamRows.map((row) => row.team_id),
+    managedUserIds: managedRows.map((row) => row.user_id),
+    clientId: user.clientId ?? null,
+    portfolioClientIds: user.clientId ? [user.clientId] : [],
+  };
+}
+
+function toQuoteAuthorizationRecord(quote: Partial<IQuote>): AuthorizationRecord {
+  return {
+    id: quote.quote_id ?? null,
+    ownerUserId: quote.created_by ?? null,
+    clientId: quote.client_id ?? null,
+  };
+}
+
+function applyQuoteRedactions<T extends object>(value: T, redactedFields: string[]): T {
+  if (redactedFields.length === 0) {
+    return value;
+  }
+  const redacted = { ...value } as Record<string, unknown>;
+  for (const field of redactedFields) {
+    delete redacted[field];
+  }
+  return redacted as T;
+}
 
 const QUOTE_DATE_FIELDS = [
   'quote_date',
@@ -311,6 +395,35 @@ export const getQuote = withAuth(async (
   const quote = await Quote.getById(knex, tenant, quoteId);
   if (!quote) return null;
 
+  const subject = await resolveAuthorizationSubjectForUser(knex, tenant, user as BillingAuthUser);
+  const authorizationKernel = createAuthorizationKernel({
+    builtinProvider: new BuiltinAuthorizationKernelProvider(),
+    bundleProvider: new BundleAuthorizationKernelProvider({
+      resolveRules: async (input) => {
+        try {
+          return await resolveBundleNarrowingRulesForEvaluation(knex, input);
+        } catch {
+          return [];
+        }
+      },
+    }),
+    rbacEvaluator: async () => true,
+  });
+  const decision = await authorizationKernel.authorizeResource({
+    subject,
+    resource: {
+      type: 'billing',
+      action: 'read',
+      id: quote.quote_id,
+    },
+    record: toQuoteAuthorizationRecord(quote),
+    requestCache: new RequestLocalAuthorizationCache(),
+    knex,
+  });
+  if (!decision.allowed) {
+    return null;
+  }
+
   // Resolve accepted_by UUID to a display name
   if (quote.accepted_by) {
     try {
@@ -334,7 +447,7 @@ export const getQuote = withAuth(async (
     }
   }
 
-  return quote;
+  return applyQuoteRedactions(quote, decision.redactedFields);
 });
 
 export const listQuotes = withAuth(async (
@@ -348,7 +461,48 @@ export const listQuotes = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  return await Quote.listByTenant(knex, tenant, options);
+  const result = await Quote.listByTenant(knex, tenant, options);
+  const subject = await resolveAuthorizationSubjectForUser(knex, tenant, user as BillingAuthUser);
+  const authorizationKernel = createAuthorizationKernel({
+    builtinProvider: new BuiltinAuthorizationKernelProvider(),
+    bundleProvider: new BundleAuthorizationKernelProvider({
+      resolveRules: async (input) => {
+        try {
+          return await resolveBundleNarrowingRulesForEvaluation(knex, input);
+        } catch {
+          return [];
+        }
+      },
+    }),
+    rbacEvaluator: async () => true,
+  });
+  const requestCache = new RequestLocalAuthorizationCache();
+
+  const decisions = await Promise.all(
+    result.data.map((quote) =>
+      authorizationKernel.authorizeResource({
+        subject,
+        resource: {
+          type: 'billing',
+          action: 'read',
+          id: quote.quote_id,
+        },
+        record: toQuoteAuthorizationRecord(quote as unknown as Partial<IQuote>),
+        requestCache,
+        knex,
+      })
+    )
+  );
+  const filteredData = result.data
+    .map((quote, index) => ({ quote, decision: decisions[index] }))
+    .filter((row) => row.decision?.allowed)
+    .map((row) => applyQuoteRedactions(row.quote, row.decision?.redactedFields ?? []));
+
+  return {
+    ...result,
+    data: filteredData,
+    total: filteredData.length,
+  };
 });
 
 export const deleteQuote = withAuth(async (
@@ -799,6 +953,62 @@ export const approveQuote = withAuth(async (
 
   if (quote.status !== 'pending_approval') {
     throw new Error('Only quotes pending approval can be approved');
+  }
+
+  const subject = await resolveAuthorizationSubjectForUser(knex, tenant, user as BillingAuthUser);
+  const authorizationKernel = createAuthorizationKernel({
+    builtinProvider: new BuiltinAuthorizationKernelProvider({
+      mutationGuards: [
+        (input) => {
+          if (input.mutation?.kind === 'approve' && input.record?.ownerUserId === input.subject.userId) {
+            return {
+              allowed: false,
+              reasons: [
+                {
+                  stage: 'mutation' as const,
+                  sourceType: 'builtin' as const,
+                  code: 'billing_not_self_approver_denied',
+                  message: 'Approvers cannot approve their own quotes.',
+                },
+              ],
+            };
+          }
+
+          return {
+            allowed: true,
+            reasons: [],
+          };
+        },
+      ],
+    }),
+    bundleProvider: new BundleAuthorizationKernelProvider({
+      resolveRules: async (input) => {
+        try {
+          return await resolveBundleNarrowingRulesForEvaluation(knex, input);
+        } catch {
+          return [];
+        }
+      },
+    }),
+    rbacEvaluator: async () => true,
+  });
+  const mutationDecision = await authorizationKernel.authorizeMutation({
+    subject,
+    resource: {
+      type: 'billing',
+      action: 'approve',
+      id: quote.quote_id,
+    },
+    record: toQuoteAuthorizationRecord(quote),
+    mutation: {
+      kind: 'approve',
+      record: toQuoteAuthorizationRecord(quote),
+    },
+    requestCache: new RequestLocalAuthorizationCache(),
+    knex,
+  });
+  if (!mutationDecision.allowed) {
+    throw new Error('Permission denied: Cannot approve your own quote');
   }
 
   const updatedQuote = await Quote.update(knex, tenant, quoteId, {

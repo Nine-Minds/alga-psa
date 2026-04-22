@@ -246,3 +246,14 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd packages/assets && npx tsc --pretty false --noEmit -p tsconfig.json`
   - `cd .. && npx tsc --pretty false --noEmit -p server/tsconfig.json`
   - `cd packages/assets && npx vitest run tests --coverage.enabled=false` (no matching tests discovered in this package)
+- (2026-04-21) Completed `F050` by migrating selected billing (quote) visibility/mutation paths onto kernel checks:
+  - `packages/billing/src/actions/quoteActions.ts` now authorizes `getQuote` and `listQuotes` through kernel `authorizeResource` (resource `billing:read`) after RBAC.
+  - `approveQuote` now uses kernel `authorizeMutation` for approval guards before state transition.
+- (2026-04-21) Completed `F051` by enabling premium billing bundle narrowing on migrated quote paths:
+  - Billing quote read/approve kernel calls now include `BundleAuthorizationKernelProvider` with `resolveBundleNarrowingRulesForEvaluation(...)`, enabling client-portfolio style narrowing and bundle mutation constraints.
+- (2026-04-21) Completed `F052` by adding billing field-redaction hook application on selected quote surfaces:
+  - `getQuote` and `listQuotes` now apply kernel `redactedFields` to returned quote payloads without changing base allow/deny semantics.
+- (2026-04-21) Validation runbook for `F050`-`F052` checkpoint:
+  - `cd packages/billing && npx tsc --pretty false --noEmit -p tsconfig.json`
+  - `cd .. && npx tsc --pretty false --noEmit -p server/tsconfig.json`
+  - `cd packages/billing && npx vitest run tests/contractReportActions.revenue.assignmentFact.test.ts tests/contractReportActions.expiration.wiring.test.ts --coverage.enabled=false`
