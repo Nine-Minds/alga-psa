@@ -485,7 +485,7 @@
   {
     "id": "F053",
     "description": "Normalize migrated API/programmatic paths to resolve effective authorization through the shared kernel rather than duplicating feature-specific inline checks.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Problem",
       "Functional Requirements",
@@ -495,7 +495,7 @@
   {
     "id": "F054",
     "description": "Adopt shared-kernel authorization in the selected v1 API-key-backed ticket, document, time, project, asset, and billing endpoints where parity work is in scope.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements",
       "Rollout / Migration",
@@ -505,7 +505,7 @@
   {
     "id": "F055",
     "description": "Ensure CE continues to use the shared built-in kernel path for migrated resource families even though configurable premium bundle management is unavailable.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Summary",
       "Goals",
@@ -516,7 +516,7 @@
   {
     "id": "F056",
     "description": "Validate that migrated resource-family cutovers preserve baseline behavior rather than silently broadening access, using the plan-local baseline artifact as the parity contract.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Rollout / Migration",

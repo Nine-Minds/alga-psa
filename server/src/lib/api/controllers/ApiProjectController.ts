@@ -29,6 +29,7 @@ import {
 import { 
   hasPermission 
 } from '../../auth/rbac';
+import { authorizeApiResourceRead } from './authorizationKernel';
 import {
   ApiRequest,
   AuthenticatedApiRequest,
@@ -63,6 +64,112 @@ export class ApiProjectController extends ApiBaseController {
     });
     
     this.projectService = projectService;
+  }
+
+  private buildProjectRecordContext(project: Record<string, any>) {
+    return {
+      id: project.project_id,
+      ownerUserId: typeof project.created_by === 'string' ? project.created_by : undefined,
+      assignedUserIds: typeof project.assigned_to === 'string' ? [project.assigned_to] : [],
+      clientId: typeof project.client_id === 'string' ? project.client_id : undefined,
+      status: project.status,
+      isClosed: project.is_closed,
+    };
+  }
+
+  list() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.list || 'read');
+
+          let validatedQuery = {};
+          if (this.options.querySchema) {
+            validatedQuery = this.validateQuery(apiRequest, this.options.querySchema);
+          }
+
+          const url = new URL(apiRequest.url);
+          const page = parseInt(url.searchParams.get('page') || '1');
+          const limit = Math.min(parseInt(url.searchParams.get('limit') || '25'), 100);
+          const sort = url.searchParams.get('sort') || 'created_at';
+          const order = (url.searchParams.get('order') || 'desc') as 'asc' | 'desc';
+
+          const filters: any = { ...validatedQuery };
+          delete filters.page;
+          delete filters.limit;
+          delete filters.sort;
+          delete filters.order;
+
+          const result = await this.projectService.list({ page, limit, filters, sort, order }, apiRequest.context, filters);
+          const knex = await getConnection(apiRequest.context.tenant);
+          const allowedProjects: Record<string, any>[] = [];
+
+          for (const project of result.data as Record<string, any>[]) {
+            const allowed = await authorizeApiResourceRead({
+              knex,
+              tenant: apiRequest.context.tenant,
+              user: apiRequest.context.user,
+              apiKeyId: apiRequest.context.apiKeyId,
+              resource: 'project',
+              recordContext: this.buildProjectRecordContext(project),
+            });
+
+            if (allowed) {
+              allowedProjects.push(project);
+            }
+          }
+
+          return createPaginatedResponse(
+            allowedProjects,
+            allowedProjects.length,
+            page,
+            limit,
+            { sort, order, filters },
+            apiRequest,
+          );
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  getById() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
+          const id = await this.extractIdFromPath(apiRequest);
+
+          const project = await this.projectService.getById(id, apiRequest.context);
+          if (!project) {
+            throw new NotFoundError('Project not found');
+          }
+
+          const knex = await getConnection(apiRequest.context.tenant);
+          const allowed = await authorizeApiResourceRead({
+            knex,
+            tenant: apiRequest.context.tenant,
+            user: apiRequest.context.user,
+            apiKeyId: apiRequest.context.apiKeyId,
+            resource: 'project',
+            recordContext: this.buildProjectRecordContext(project as Record<string, any>),
+          });
+
+          if (!allowed) {
+            throw new ForbiddenError('Permission denied: Cannot read project');
+          }
+
+          return createSuccessResponse(project, 200, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
   }
 
   /**

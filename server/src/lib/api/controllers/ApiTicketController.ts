@@ -26,9 +26,13 @@ import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { 
   runWithTenant 
 } from '../../db';
+import {
+  getConnection
+} from '../../db/db';
 import { 
   hasPermission 
 } from '../../auth/rbac';
+import { authorizeApiResourceRead } from './authorizationKernel';
 import {
   ApiRequest,
   UnauthorizedError,
@@ -36,6 +40,7 @@ import {
   ValidationError,
   NotFoundError,
   createSuccessResponse,
+  createPaginatedResponse,
   handleApiError
 } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
@@ -61,6 +66,113 @@ export class ApiTicketController extends ApiBaseController {
     });
     
     this.ticketService = ticketService;
+  }
+
+  private buildTicketRecordContext(ticket: Record<string, any>) {
+    return {
+      id: ticket.ticket_id,
+      ownerUserId: typeof ticket.entered_by === 'string' ? ticket.entered_by : undefined,
+      assignedUserIds: typeof ticket.assigned_to === 'string' ? [ticket.assigned_to] : [],
+      clientId: typeof ticket.client_id === 'string' ? ticket.client_id : undefined,
+      boardId: typeof ticket.board_id === 'string' ? ticket.board_id : undefined,
+      is_client_visible: typeof ticket.is_client_visible === 'boolean' ? ticket.is_client_visible : undefined,
+      statusId: ticket.status_id,
+    };
+  }
+
+  list() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.list || 'read');
+
+          let validatedQuery = {};
+          if (this.options.querySchema) {
+            validatedQuery = this.validateQuery(apiRequest, this.options.querySchema);
+          }
+
+          const url = new URL(apiRequest.url);
+          const page = parseInt(url.searchParams.get('page') || '1');
+          const limit = Math.min(parseInt(url.searchParams.get('limit') || '25'), 100);
+          const sort = url.searchParams.get('sort') || 'created_at';
+          const order = (url.searchParams.get('order') || 'desc') as 'asc' | 'desc';
+
+          const filters: any = { ...validatedQuery };
+          delete filters.page;
+          delete filters.limit;
+          delete filters.sort;
+          delete filters.order;
+
+          const result = await this.ticketService.list({ page, limit, filters, sort, order }, apiRequest.context);
+          const knex = await getConnection(apiRequest.context.tenant);
+
+          const allowedTickets: Record<string, any>[] = [];
+          for (const ticket of result.data as Record<string, any>[]) {
+            const allowed = await authorizeApiResourceRead({
+              knex,
+              tenant: apiRequest.context.tenant,
+              user: apiRequest.context.user,
+              apiKeyId: apiRequest.context.apiKeyId,
+              resource: 'ticket',
+              recordContext: this.buildTicketRecordContext(ticket),
+            });
+
+            if (allowed) {
+              allowedTickets.push(ticket);
+            }
+          }
+
+          return createPaginatedResponse(
+            allowedTickets,
+            allowedTickets.length,
+            page,
+            limit,
+            { sort, order, filters },
+            apiRequest
+          );
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  getById() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
+          const id = await this.extractIdFromPath(apiRequest);
+
+          const ticket = await this.ticketService.getById(id, apiRequest.context);
+          if (!ticket) {
+            throw new NotFoundError('ticket not found');
+          }
+
+          const knex = await getConnection(apiRequest.context.tenant);
+          const allowed = await authorizeApiResourceRead({
+            knex,
+            tenant: apiRequest.context.tenant,
+            user: apiRequest.context.user,
+            apiKeyId: apiRequest.context.apiKeyId,
+            resource: 'ticket',
+            recordContext: this.buildTicketRecordContext(ticket as Record<string, any>),
+          });
+
+          if (!allowed) {
+            throw new ForbiddenError('Permission denied: Cannot read ticket');
+          }
+
+          return createSuccessResponse(ticket, 200, undefined, apiRequest as AuthenticatedApiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
   }
 
   /**

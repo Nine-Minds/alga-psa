@@ -31,7 +31,7 @@
   {
     "id": "T004",
     "description": "Guard: assignment creation rejects cross-tenant or wrong-target references for role, team, user, and API-key bundle attachments.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017",
       "F018"
@@ -40,7 +40,7 @@
   {
     "id": "T005",
     "description": "Integration: effective bundle resolution for a user combines role, team, and direct-user attachments as narrowing intersections rather than widening unions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
@@ -48,7 +48,7 @@
   {
     "id": "T006",
     "description": "Guard/integration: API-key effective access is the intersection of user access and API-key bundle restrictions and never broadens the impersonated user's scope.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023",
       "F054"
@@ -57,7 +57,7 @@
   {
     "id": "T007",
     "description": "Kernel contract: callers can resolve a single-resource decision, list/query scope, mutation guards, and explainability reasons through one shared authorization interface in both CE and EE modes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002",
       "F003",
@@ -69,7 +69,7 @@
   {
     "id": "T008",
     "description": "Guard: if RBAC denies a resource/action, neither built-in kernel behavior nor configured bundles restore access.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ]
@@ -77,7 +77,7 @@
   {
     "id": "T009",
     "description": "Guard: configured premium bundles can only narrow access; multiple configured bundle rules for the same resource/action resolve as intersections.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008",
       "F022",
@@ -110,7 +110,7 @@
   {
     "id": "T012",
     "description": "Happy path: a published starter or custom bundle can be attached to a role and immediately narrows effective ticket scope for users in that role.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020",
       "F022",
@@ -294,7 +294,7 @@
   {
     "id": "T030",
     "description": "Legacy-direction regression: migrated authorization paths no longer depend on end-user-authored DSL parsing or the old policy-engine runtime to make access decisions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]

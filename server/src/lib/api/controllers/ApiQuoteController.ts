@@ -20,7 +20,10 @@ import {
 import {
   runWithTenant,
 } from '../../db';
+import { getConnection } from '../../db/db';
+import { authorizeApiResourceRead } from './authorizationKernel';
 import {
+  ForbiddenError,
   NotFoundError,
   ValidationError,
   createSuccessResponse,
@@ -50,6 +53,16 @@ export class ApiQuoteController extends ApiBaseController {
     });
 
     this.quoteService = quoteService;
+  }
+
+  private buildQuoteRecordContext(quote: Record<string, any>) {
+    return {
+      id: quote.quote_id,
+      ownerUserId: typeof quote.created_by === 'string' ? quote.created_by : undefined,
+      assignedUserIds: typeof quote.approved_by === 'string' ? [quote.approved_by] : [],
+      clientId: typeof quote.client_id === 'string' ? quote.client_id : undefined,
+      status: quote.status,
+    };
   }
 
   // ============================================================================
@@ -94,10 +107,27 @@ export class ApiQuoteController extends ApiBaseController {
           };
 
           const result = await this.quoteService.list(listOptions, apiRequest.context, filters);
+          const knex = await getConnection(apiRequest.context.tenant);
+          const allowedQuotes: Record<string, any>[] = [];
+
+          for (const quote of result.data as Record<string, any>[]) {
+            const allowed = await authorizeApiResourceRead({
+              knex,
+              tenant: apiRequest.context.tenant,
+              user: apiRequest.context.user,
+              apiKeyId: apiRequest.context.apiKeyId,
+              resource: 'billing',
+              recordContext: this.buildQuoteRecordContext(quote),
+            });
+
+            if (allowed) {
+              allowedQuotes.push(quote);
+            }
+          }
 
           return createPaginatedResponse(
-            result.data,
-            result.total,
+            allowedQuotes,
+            allowedQuotes.length,
             page,
             limit,
             { sort, order, filters },
@@ -123,6 +153,20 @@ export class ApiQuoteController extends ApiBaseController {
 
           if (!quote) {
             throw new NotFoundError('Quote not found');
+          }
+
+          const knex = await getConnection(apiRequest.context.tenant);
+          const allowed = await authorizeApiResourceRead({
+            knex,
+            tenant: apiRequest.context.tenant,
+            user: apiRequest.context.user,
+            apiKeyId: apiRequest.context.apiKeyId,
+            resource: 'billing',
+            recordContext: this.buildQuoteRecordContext(quote as Record<string, any>),
+          });
+
+          if (!allowed) {
+            throw new ForbiddenError('Permission denied: Cannot read quote');
           }
 
           return createSuccessResponse(quote);

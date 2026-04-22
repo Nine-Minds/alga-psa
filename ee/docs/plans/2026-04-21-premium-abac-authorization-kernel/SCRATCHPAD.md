@@ -257,3 +257,28 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd packages/billing && npx tsc --pretty false --noEmit -p tsconfig.json`
   - `cd .. && npx tsc --pretty false --noEmit -p server/tsconfig.json`
   - `cd packages/billing && npx vitest run tests/contractReportActions.revenue.assignmentFact.test.ts tests/contractReportActions.expiration.wiring.test.ts --coverage.enabled=false`
+- (2026-04-21) Completed `F053` and `F054` for selected API-key-backed v1 parity read surfaces by moving API authorization to shared kernel decisions:
+  - Added API helper `server/src/lib/api/controllers/authorizationKernel.ts` for subject normalization and kernel delegation.
+  - Added `apiKeyId` to API request context (`ApiContext`, `ApiBaseController.authenticate`) so API-key bundle assignments are intersected in authorization subject evaluation.
+  - Kernelized selected read paths in:
+    - `server/src/lib/api/controllers/ApiTicketController.ts` (`list`, `getById`)
+    - `server/src/lib/api/controllers/ApiProjectController.ts` (`list`, `getById`)
+    - `server/src/lib/api/controllers/ApiQuoteController.ts` (`list`, `getById`)
+  - These controllers now apply shared-kernel allow/deny checks per record, instead of RBAC-only pass-through.
+- (2026-04-21) Completed `F055` by ensuring migrated API/server-action authorization uses shared kernel loading (`getAuthorizationKernel`) so CE remains on builtin-kernel runtime while EE overlays remain edition-gated.
+- (2026-04-21) Completed `F056` by adding DB-backed narrowing regression coverage for assignment guards and intersection composition to catch silent broadening on migrated paths.
+- (2026-04-21) Completed `T004`, `T005`, `T006`, and `T012` with DB-backed integration coverage in `server/src/test/integration/authorization/bundleAssignmentResolution.integration.test.ts`:
+  - assignment target validation rejects invalid role/team/user/api_key references
+  - role+team+user bundle attachments compose as narrowing intersections
+  - api-key bundle restrictions intersect with impersonated user bundles
+  - role assignment to published bundle immediately narrows ticket read decisions
+- (2026-04-21) Completed `T008` and `T009` using existing kernel guard/intersection unit tests (`server/src/test/unit/authorization/kernel.engine.test.ts`) and reinforced by new integration assertions.
+- (2026-04-21) Completed `T030` via existing legacy-direction guard (`server/src/test/unit/authorization/kernel.legacyDirection.test.ts`).
+- (2026-04-21) Added API helper unit coverage in `server/src/test/unit/api/authorizationKernel.test.ts` for subject shaping and shared-kernel delegation.
+- (2026-04-21) Validation runbook for `F053`-`F056` + tests checkpoint:
+  - `npx tsc --pretty false --noEmit -p server/tsconfig.json`
+  - `cd server && npx vitest run --coverage.enabled=false src/test/unit/api/authorizationKernel.test.ts src/test/integration/authorization/bundleAssignmentResolution.integration.test.ts`
+- (2026-04-21) Completed `T007` with shared-contract mode tests in `server/src/test/unit/authorization/kernel.contract.modes.test.ts`:
+  - validates that CE mode (builtin only) and EE-overlay mode (builtin + bundle provider) both expose and execute shared kernel entry points (`authorizeResource`, `resolveScope`, `authorizeMutation`, `explainDecision`).
+- (2026-04-21) Additional validation runbook:
+  - `cd server && npx vitest run --coverage.enabled=false src/test/unit/authorization/kernel.contract.modes.test.ts src/test/unit/api/authorizationKernel.test.ts`
