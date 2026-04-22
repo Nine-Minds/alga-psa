@@ -109,6 +109,115 @@ export class ApiTicketController extends ApiBaseController {
     return ticket as Record<string, any>;
   }
 
+  private async filterAuthorizedTickets(
+    apiRequest: AuthenticatedApiRequest,
+    tickets: Record<string, any>[],
+    knex?: Awaited<ReturnType<typeof getConnection>>
+  ): Promise<Record<string, any>[]> {
+    if (tickets.length === 0) {
+      return [];
+    }
+
+    const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
+    const allowedByRow = await Promise.all(
+      tickets.map((ticket) =>
+        authorizeApiResourceRead({
+          knex: resolvedKnex,
+          tenant: apiRequest.context.tenant,
+          user: apiRequest.context.user,
+          apiKeyId: apiRequest.context.apiKeyId,
+          resource: 'ticket',
+          recordContext: this.buildTicketRecordContext(ticket),
+        })
+      )
+    );
+
+    return tickets.filter((_, index) => allowedByRow[index]);
+  }
+
+  private async listAllAuthorizedTickets(
+    apiRequest: AuthenticatedApiRequest,
+    knex?: Awaited<ReturnType<typeof getConnection>>
+  ): Promise<Record<string, any>[]> {
+    const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
+    const authorizedTickets: Record<string, any>[] = [];
+    const pageSize = 100;
+    let page = 1;
+
+    for (;;) {
+      const result = await this.ticketService.list({ page, limit: pageSize }, apiRequest.context);
+      if (!Array.isArray(result.data) || result.data.length === 0) {
+        break;
+      }
+
+      authorizedTickets.push(
+        ...(await this.filterAuthorizedTickets(apiRequest, result.data as Record<string, any>[], resolvedKnex))
+      );
+
+      if (page * pageSize >= result.total || result.data.length < pageSize) {
+        break;
+      }
+
+      page += 1;
+    }
+
+    return authorizedTickets;
+  }
+
+  private buildTicketStatsFromAuthorizedRows(tickets: Record<string, any>[]) {
+    const now = new Date();
+    const startOfToday = new Date(now);
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const startOfWeek = new Date(startOfToday);
+    startOfWeek.setDate(startOfWeek.getDate() - 7);
+
+    const startOfMonth = new Date(startOfToday);
+    startOfMonth.setDate(startOfMonth.getDate() - 30);
+
+    const ticketsByStatus = tickets.reduce((acc: Record<string, number>, ticket) => {
+      const key = String(ticket.status_id ?? ticket.status_name ?? 'unknown');
+      acc[key] = (acc[key] ?? 0) + 1;
+      return acc;
+    }, {});
+
+    const ticketsByPriority = tickets.reduce((acc: Record<string, number>, ticket) => {
+      const key = String(ticket.priority_name ?? 'unknown');
+      acc[key] = (acc[key] ?? 0) + 1;
+      return acc;
+    }, {});
+
+    const ticketsByCategory = tickets.reduce((acc: Record<string, number>, ticket) => {
+      if (!ticket.category_name) {
+        return acc;
+      }
+      const key = String(ticket.category_name);
+      acc[key] = (acc[key] ?? 0) + 1;
+      return acc;
+    }, {});
+
+    const ticketsByBoard = tickets.reduce((acc: Record<string, number>, ticket) => {
+      const key = String(ticket.board_name ?? 'unknown');
+      acc[key] = (acc[key] ?? 0) + 1;
+      return acc;
+    }, {});
+
+    return {
+      total_tickets: tickets.length,
+      open_tickets: tickets.filter((ticket) => ticket.status_is_closed === false).length,
+      closed_tickets: tickets.filter((ticket) => ticket.status_is_closed === true).length,
+      unassigned_tickets: tickets.filter((ticket) => !ticket.assigned_to).length,
+      overdue_tickets: 0,
+      tickets_by_status: ticketsByStatus,
+      tickets_by_priority: ticketsByPriority,
+      tickets_by_category: ticketsByCategory,
+      tickets_by_board: ticketsByBoard,
+      tickets_created_today: tickets.filter((ticket) => new Date(ticket.entered_at) >= startOfToday).length,
+      tickets_created_this_week: tickets.filter((ticket) => new Date(ticket.entered_at) >= startOfWeek).length,
+      tickets_created_this_month: tickets.filter((ticket) => new Date(ticket.entered_at) >= startOfMonth).length,
+    };
+  }
+
   list() {
     return async (req: NextRequest): Promise<NextResponse> => {
       try {
@@ -255,12 +364,18 @@ export class ApiTicketController extends ApiBaseController {
             throw error;
           }
 
+          const knex = await getConnection(apiRequest.context!.tenant);
           const result = await this.ticketService.search(
             validatedQuery,
             apiRequest.context!
           );
+          const authorizedResult = await this.filterAuthorizedTickets(
+            apiRequest,
+            result as Record<string, any>[],
+            knex,
+          );
 
-          return createSuccessResponse(result);
+          return createSuccessResponse(authorizedResult);
         });
       } catch (error) {
         return handleApiError(error);
@@ -322,8 +437,10 @@ export class ApiTicketController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot read ticket');
           }
 
-          const stats = await this.ticketService.getTicketStats(apiRequest.context!);
-          
+          const knex = await getConnection(apiRequest.context!.tenant);
+          const authorizedTickets = await this.listAllAuthorizedTickets(apiRequest, knex);
+          const stats = this.buildTicketStatsFromAuthorizedRows(authorizedTickets);
+
           return createSuccessResponse(stats);
         });
       } catch (error) {
@@ -489,6 +606,8 @@ export class ApiTicketController extends ApiBaseController {
           await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
 
           const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
           const formData = await req.formData();
           const file = formData.get('file');
 
@@ -520,6 +639,8 @@ export class ApiTicketController extends ApiBaseController {
           await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
 
           const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
 
           // Extract documentId from the URL path segment after "documents/"
           const url = new URL(apiRequest.url || req.url);
@@ -560,6 +681,8 @@ export class ApiTicketController extends ApiBaseController {
           await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
 
           const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
 
           const url = new URL(apiRequest.url || req.url);
           const segments = url.pathname.split('/');
@@ -594,6 +717,8 @@ export class ApiTicketController extends ApiBaseController {
           await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
 
           const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
           const materials = await this.ticketService.getTicketMaterials(ticketId, apiRequest.context!);
 
           return createSuccessResponse(materials, 200, undefined, apiRequest);
@@ -617,6 +742,8 @@ export class ApiTicketController extends ApiBaseController {
           await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
 
           const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
           const material = await this.ticketService.addTicketMaterial(ticketId, validatedData, apiRequest.context!);
 
           return createSuccessResponse(material, 201, undefined, apiRequest);
@@ -694,6 +821,8 @@ export class ApiTicketController extends ApiBaseController {
           }
 
           const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
           const comment = await this.ticketService.addComment(
             ticketId,
             validatedData,
@@ -762,6 +891,8 @@ export class ApiTicketController extends ApiBaseController {
           }
 
           const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
           // Extract commentId from URL: /api/v1/tickets/{id}/comments/{commentId}
           const url = new URL(req.url);
           const segments = url.pathname.split('/').filter(Boolean);
@@ -849,6 +980,8 @@ export class ApiTicketController extends ApiBaseController {
           }
 
           const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
           const updated = await this.ticketService.update(
             ticketId,
             validatedData,
@@ -934,6 +1067,8 @@ export class ApiTicketController extends ApiBaseController {
           }
 
           const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
           const updated = await this.ticketService.update(
             ticketId,
             validatedData,
@@ -945,6 +1080,61 @@ export class ApiTicketController extends ApiBaseController {
           }
 
           return createSuccessResponse(updated);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  update() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+
+          const id = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          await this.assertTicketReadAllowed(apiRequest, id, knex);
+
+          const data = this.options.updateSchema
+            ? await this.validateData(apiRequest, this.options.updateSchema)
+            : await apiRequest.json();
+
+          const updated = await this.service.update(id, data, apiRequest.context);
+          if (!updated) {
+            throw new NotFoundError(`${this.options.resource} not found`);
+          }
+
+          return createSuccessResponse(updated);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  delete() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.delete || 'delete');
+
+          const id = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          await this.assertTicketReadAllowed(apiRequest, id, knex);
+
+          const resource = await this.service.getById(id, apiRequest.context);
+          if (!resource) {
+            throw new NotFoundError(`${this.options.resource} not found`);
+          }
+
+          await this.service.delete(id, apiRequest.context);
+          return new NextResponse(null, { status: 204 });
         });
       } catch (error) {
         return handleApiError(error);

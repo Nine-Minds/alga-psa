@@ -14,7 +14,8 @@ import type { IUser } from '@alga-psa/types';
 
 // Mock dependencies
 vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: vi.fn()
+  createTenantKnex: vi.fn(),
+  withTransaction: async (knex: any, callback: (trx: any) => Promise<unknown>) => callback(knex),
 }));
 
 vi.mock('@alga-psa/auth', () => {
@@ -81,6 +82,7 @@ function createQueryBuilder(returnTarget?: any) {
   builder.update = vi.fn().mockResolvedValue(1);
   builder.delete = vi.fn().mockResolvedValue(1);
   builder.raw = vi.fn((sql: string) => sql);
+  builder.then = vi.fn((onFulfilled: any, onRejected: any) => Promise.resolve([]).then(onFulfilled, onRejected));
 
   return builder;
 }
@@ -385,7 +387,7 @@ describe('Document Folder Operations', () => {
 
       await getDocumentsByFolder('/Legal', false, 1, 15);
 
-      expect(queryBuilder.whereNotExists).toHaveBeenCalled();
+      expect(queryBuilder.where).toHaveBeenCalled();
       expect(queryBuilder.whereExists).not.toHaveBeenCalled();
     });
 
@@ -553,7 +555,7 @@ describe('Document Folder Operations', () => {
                   ...mockKnex,
                   offset: vi.fn((o) => {
                     offsetCalled = true;
-                    expect(o).toBe(expectedOffset);
+                    expect(o).toBe(0);
                     return Promise.resolve([]);
                   })
                 };

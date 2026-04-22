@@ -243,31 +243,34 @@ export async function deleteBundleRule(
     ruleId: string;
   }
 ): Promise<void> {
-  const draftRevision = await knex('authorization_bundle_revisions')
-    .where({
-      tenant: input.tenant,
-      bundle_id: input.bundleId,
-      revision_id: input.revisionId,
-      lifecycle_state: 'draft',
-    })
-    .first<{ revision_id: string }>('revision_id');
+  await knex.transaction(async (trx) => {
+    const draftRevision = await trx('authorization_bundle_revisions')
+      .where({
+        tenant: input.tenant,
+        bundle_id: input.bundleId,
+        revision_id: input.revisionId,
+        lifecycle_state: 'draft',
+      })
+      .forUpdate()
+      .first<{ revision_id: string }>('revision_id');
 
-  if (!draftRevision) {
-    throw new Error('Draft revision not found for bundle in tenant scope.');
-  }
+    if (!draftRevision) {
+      throw new Error('Draft revision not found for bundle in tenant scope.');
+    }
 
-  const deleted = await knex('authorization_bundle_rules')
-    .where({
-      tenant: input.tenant,
-      bundle_id: input.bundleId,
-      revision_id: input.revisionId,
-      rule_id: input.ruleId,
-    })
-    .del();
+    const deleted = await trx('authorization_bundle_rules')
+      .where({
+        tenant: input.tenant,
+        bundle_id: input.bundleId,
+        revision_id: input.revisionId,
+        rule_id: input.ruleId,
+      })
+      .del();
 
-  if (deleted === 0) {
-    throw new Error('Rule not found in draft revision for bundle in tenant scope.');
-  }
+    if (deleted === 0) {
+      throw new Error('Rule not found in draft revision for bundle in tenant scope.');
+    }
+  });
 }
 
 export async function createAuthorizationBundle(
@@ -598,34 +601,56 @@ export async function publishBundleRevision(
   input: PublishBundleRevisionInput
 ): Promise<void> {
   await knex.transaction(async (trx) => {
+    const bundle = await trx('authorization_bundles')
+      .where({
+        tenant: input.tenant,
+        bundle_id: input.bundleId,
+      })
+      .forUpdate()
+      .first<{ bundle_id: string; published_revision_id: string | null }>('bundle_id', 'published_revision_id');
+
+    if (!bundle) {
+      throw new Error('Bundle not found in tenant scope.');
+    }
+
     const revision = await trx('authorization_bundle_revisions')
       .where({
         tenant: input.tenant,
         bundle_id: input.bundleId,
         revision_id: input.revisionId,
       })
-      .first('revision_id');
+      .forUpdate()
+      .first<{ revision_id: string; lifecycle_state: string }>('revision_id', 'lifecycle_state');
 
     if (!revision) {
       throw new Error('Revision not found for bundle in tenant scope.');
     }
 
-    await trx('authorization_bundle_revisions')
+    if (revision.lifecycle_state !== 'draft') {
+      throw new Error('Only draft revisions can be published. Refresh bundle state and try again.');
+    }
+
+    if (bundle.published_revision_id) {
+      await trx('authorization_bundle_revisions')
+        .where({
+          tenant: input.tenant,
+          bundle_id: input.bundleId,
+          revision_id: bundle.published_revision_id,
+          lifecycle_state: 'published',
+        })
+        .update({
+          lifecycle_state: 'archived',
+          updated_by: input.actorUserId ?? null,
+          updated_at: trx.fn.now(),
+        });
+    }
+
+    const published = await trx('authorization_bundle_revisions')
       .where({
         tenant: input.tenant,
         bundle_id: input.bundleId,
-        lifecycle_state: 'published',
-      })
-      .update({
-        lifecycle_state: 'archived',
-        updated_by: input.actorUserId ?? null,
-        updated_at: trx.fn.now(),
-      });
-
-    await trx('authorization_bundle_revisions')
-      .where({
-        tenant: input.tenant,
         revision_id: input.revisionId,
+        lifecycle_state: 'draft',
       })
       .update({
         lifecycle_state: 'published',
@@ -634,6 +659,10 @@ export async function publishBundleRevision(
         updated_by: input.actorUserId ?? null,
         updated_at: trx.fn.now(),
       });
+
+    if (published === 0) {
+      throw new Error('Draft revision changed before publish could complete. Refresh bundle state and try again.');
+    }
 
     await trx('authorization_bundles')
       .where({
@@ -658,57 +687,61 @@ export async function upsertBundleRule(
     constraintKey: input.constraintKey ?? null,
   });
 
-  const draftRevision = await knex('authorization_bundle_revisions')
-    .where({
-      tenant: input.tenant,
-      bundle_id: input.bundleId,
-      revision_id: input.revisionId,
-      lifecycle_state: 'draft',
-    })
-    .first<{ revision_id: string }>('revision_id');
-
-  if (!draftRevision) {
-    throw new Error('Draft revision not found for bundle in tenant scope.');
-  }
-
-  const basePayload = {
-    tenant: input.tenant,
-    bundle_id: input.bundleId,
-    revision_id: input.revisionId,
-    resource_type: input.resourceType,
-    action: input.action,
-    template_key: input.templateKey,
-    effect: 'narrow',
-    constraint_key: input.constraintKey ?? null,
-    config: input.config ?? {},
-    updated_at: knex.fn.now(),
-  };
-
-  if (input.ruleId) {
-    const updatePayload: Record<string, unknown> = { ...basePayload };
-    if (typeof input.position === 'number') {
-      updatePayload.position = input.position;
-    }
-
-    const updated = await knex('authorization_bundle_rules')
+  await knex.transaction(async (trx) => {
+    const draftRevision = await trx('authorization_bundle_revisions')
       .where({
         tenant: input.tenant,
         bundle_id: input.bundleId,
         revision_id: input.revisionId,
-        rule_id: input.ruleId,
+        lifecycle_state: 'draft',
       })
-      .update(updatePayload);
+      .forUpdate()
+      .first<{ revision_id: string }>('revision_id');
 
-    if (updated === 0) {
-      throw new Error('Rule not found in draft revision for bundle in tenant scope.');
+    if (!draftRevision) {
+      throw new Error('Draft revision not found for bundle in tenant scope.');
     }
-    return;
-  }
 
-  await knex('authorization_bundle_rules').insert({
-    ...basePayload,
-    position: input.position ?? 0,
-    created_by: input.actorUserId ?? null,
+    const basePayload = {
+      tenant: input.tenant,
+      bundle_id: input.bundleId,
+      revision_id: input.revisionId,
+      resource_type: input.resourceType,
+      action: input.action,
+      template_key: input.templateKey,
+      effect: 'narrow',
+      constraint_key: input.constraintKey ?? null,
+      config: input.config ?? {},
+      updated_by: input.actorUserId ?? null,
+      updated_at: trx.fn.now(),
+    };
+
+    if (input.ruleId) {
+      const updatePayload: Record<string, unknown> = { ...basePayload };
+      if (typeof input.position === 'number') {
+        updatePayload.position = input.position;
+      }
+
+      const updated = await trx('authorization_bundle_rules')
+        .where({
+          tenant: input.tenant,
+          bundle_id: input.bundleId,
+          revision_id: input.revisionId,
+          rule_id: input.ruleId,
+        })
+        .update(updatePayload);
+
+      if (updated === 0) {
+        throw new Error('Rule not found in draft revision for bundle in tenant scope.');
+      }
+      return;
+    }
+
+    await trx('authorization_bundle_rules').insert({
+      ...basePayload,
+      position: input.position ?? 0,
+      created_by: input.actorUserId ?? null,
+    });
   });
 }
 

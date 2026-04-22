@@ -20,6 +20,12 @@ describe('document authorization kernel wiring contracts', () => {
     expect(source).toContain("export const getAllDocuments = withAuth(async (");
     expect(source).toContain("export const getDocumentsByEntity = withAuth(async (");
     expect(source).toContain("export const getDocumentsByFolder = withAuth(async (");
+    expect(source).toContain('export async function getAuthorizedDocumentByFileId(');
+    expect(source).toContain('export const getDocumentByContactNameId = withAuth(async');
+    expect(source).toContain('export const getDocumentsByContractId = withAuth(async');
+    expect(source).toContain('export const getDocumentPreview = withAuth(async (');
+    expect(source).toContain('export const getDocumentByFileId = withAuth(async (');
+    expect(source).toContain('async function paginateAuthorizedDocuments(input: {');
     expect(source).toContain("export const downloadDocument = withAuth(async (user, { tenant }, documentIdOrFileId: string)");
   });
 
@@ -28,5 +34,11 @@ describe('document authorization kernel wiring contracts', () => {
     expect(source).toContain('if (!document || !decision?.allowed) {');
     expect(source).toContain('authorizedDocuments.push(applyDocumentRedactions(document, decision.redactedFields));');
     expect(source).toContain('redactedFields: decision.redactedFields,');
+    expect(source).toContain('return authorizeAndRedactDocuments(trx, tenant, user, documents as IDocument[]);');
+    expect(source).toContain('getAuthorizedDocumentByFileId(trx, tenant, user, identifier)');
+    expect(source).toContain('getAuthorizedDocumentByFileId(trx, tenant, user, fileId)');
+    expect(source).toContain('totalCount: authorizedTotalCount,');
+    expect(source).toContain('documents: pagination.documents,');
+    expect(source).toContain('total: pagination.totalCount,');
   });
 });

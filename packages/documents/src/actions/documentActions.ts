@@ -369,7 +369,7 @@ async function resolveDocumentAuthorizationRecords(
   return records;
 }
 
-async function authorizeAndRedactDocuments<T extends IDocument>(
+export async function authorizeAndRedactDocuments<T extends IDocument>(
   trx: Knex.Transaction,
   tenant: string,
   user: IUser,
@@ -454,6 +454,109 @@ async function authorizeAndRedactDocuments<T extends IDocument>(
   }
 
   return authorizedDocuments;
+}
+
+export async function getAuthorizedDocumentByFileId(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUser,
+  fileId: string
+): Promise<IDocument | null> {
+  const document = await trx('documents')
+    .where({ tenant, file_id: fileId })
+    .first();
+
+  if (!document) {
+    return null;
+  }
+
+  const [authorizedDocument] = await authorizeAndRedactDocuments(trx, tenant, user, [document as IDocument]);
+  return authorizedDocument ?? null;
+}
+
+function mapDocumentRowToDocument(doc: any): IDocument {
+  return {
+    document_id: doc.document_id,
+    document_name: doc.document_name,
+    type_id: doc.type_id,
+    shared_type_id: doc.shared_type_id,
+    user_id: doc.user_id ?? doc.created_by,
+    order_number: doc.order_number || 0,
+    created_by: doc.created_by,
+    tenant: doc.tenant,
+    file_id: doc.file_id,
+    storage_path: doc.storage_path,
+    mime_type: doc.mime_type,
+    file_size: doc.file_size,
+    is_client_visible: doc.is_client_visible,
+    created_by_full_name: doc.created_by_full_name,
+    type_name: doc.type_name,
+    type_icon: doc.type_icon,
+    entered_at: doc.entered_at,
+    updated_at: doc.updated_at,
+    edited_by: doc.edited_by,
+    thumbnail_file_id: doc.thumbnail_file_id,
+    preview_file_id: doc.preview_file_id,
+    preview_generated_at: doc.preview_generated_at,
+    folder_path: doc.folder_path,
+  };
+}
+
+async function paginateAuthorizedDocuments(input: {
+  trx: Knex.Transaction;
+  tenant: string;
+  user: IUser;
+  page: number;
+  limit: number;
+  scanLimit?: number;
+  fetchPage: (page: number, limit: number) => Promise<any[]>;
+}): Promise<PaginatedDocumentsResponse> {
+  const requestedPage = Number.isFinite(input.page) && input.page > 0 ? Math.floor(input.page) : 1;
+  const requestedLimit = Number.isFinite(input.limit) && input.limit > 0 ? Math.floor(input.limit) : 15;
+  const scanLimit = Math.max(1, input.scanLimit ?? requestedLimit);
+  const pageOffset = (requestedPage - 1) * requestedLimit;
+  const pageUpperBoundExclusive = pageOffset + requestedLimit;
+
+  const authorizedDocumentsForPage: IDocument[] = [];
+  let authorizedTotalCount = 0;
+  let sourcePage = 1;
+
+  for (;;) {
+    const rows = await input.fetchPage(sourcePage, scanLimit);
+    if (!Array.isArray(rows) || rows.length === 0) {
+      break;
+    }
+
+    const authorizedBatch = await authorizeAndRedactDocuments(
+      input.trx,
+      input.tenant,
+      input.user,
+      rows.map(mapDocumentRowToDocument)
+    );
+
+    for (const document of authorizedBatch) {
+      if (
+        authorizedTotalCount >= pageOffset &&
+        authorizedTotalCount < pageUpperBoundExclusive
+      ) {
+        authorizedDocumentsForPage.push(document);
+      }
+      authorizedTotalCount += 1;
+    }
+
+    if (rows.length < scanLimit) {
+      break;
+    }
+
+    sourcePage += 1;
+  }
+
+  return {
+    documents: authorizedDocumentsForPage,
+    totalCount: authorizedTotalCount,
+    currentPage: requestedPage,
+    totalPages: Math.ceil(authorizedTotalCount / requestedLimit),
+  };
 }
 
 // Add new document
@@ -968,7 +1071,7 @@ export const getDocumentByContactNameId = withAuth(async (user, { tenant }, cont
           `)
         )
         .orderBy('documents.updated_at', 'desc');
-      return documents;
+      return authorizeAndRedactDocuments(trx, tenant, user, documents as IDocument[]);
     });
   } catch (error) {
     console.error(error);
@@ -1004,7 +1107,7 @@ export const getDocumentsByContractId = withAuth(async (user, { tenant }, contra
           'document_associations.tenant': tenant
         })
         .select('documents.*', 'document_associations.association_id');
-      return documents;
+      return authorizeAndRedactDocuments(trx, tenant, user, documents as IDocument[]);
     });
   } catch (error) {
     console.error(error);
@@ -1224,7 +1327,18 @@ export const getDocumentPreview = withAuth(async (
     if (!document) {
       console.log(`[getDocumentPreview] Document not found, treating identifier as file ID: ${identifier}`);
 
-      // Check cache for file ID
+      document = await withTransaction(knex, async (trx: Knex.Transaction) =>
+        getAuthorizedDocumentByFileId(trx, tenant, user, identifier)
+      );
+
+      if (!document) {
+        return {
+          success: false,
+          error: 'File not found or inaccessible'
+        };
+      }
+
+      // Check cache for file ID only after authorization succeeds
       const cache = CacheFactory.getPreviewCache(tenant);
       const cachedPreview = await cache.get(identifier);
       if (cachedPreview) {
@@ -1238,39 +1352,20 @@ export const getDocumentPreview = withAuth(async (
           content: 'Cached Preview'
         };
       }
-
-      // Try to download the file to get metadata
-      try {
-        const downloadResult = await StorageService.downloadFile(identifier);
-        if (!downloadResult) {
-          console.error(`[getDocumentPreview] File not found in storage for ID: ${identifier}`);
-          return {
-            success: false,
-            error: 'File not found in storage'
-          };
-        }
-
-        // Create a temporary document object with file metadata
-        document = {
-          document_id: identifier,
-          document_name: downloadResult.metadata.original_name || 'Unknown',
-          type_id: null,
-          user_id: '',
-          order_number: 0,
-          created_by: '',
-          tenant,
-          file_id: identifier,
-          mime_type: downloadResult.metadata.mime_type,
-          type_name: downloadResult.metadata.mime_type
-        };
-      } catch (storageError) {
-        console.error(`[getDocumentPreview] Storage error for ID ${identifier}:`, storageError);
-        return {
-          success: false,
-          error: 'File not found or inaccessible'
-        };
-      }
     }
+
+    const [authorizedDocument] = await withTransaction(knex, async (trx: Knex.Transaction) =>
+      authorizeAndRedactDocuments(trx, tenant, user, [document as IDocument])
+    );
+
+    if (!authorizedDocument) {
+      return {
+        success: false,
+        error: 'Permission denied: Cannot read documents'
+      };
+    }
+
+    document = authorizedDocument;
 
     // NEW: Try cached preview first if available
     if (document.preview_file_id) {
@@ -1527,231 +1622,87 @@ export const getDocumentsByEntity = withAuth(async (
   limit: number = 15
 ): Promise<PaginatedDocumentsResponse | ActionPermissionError> => {
   try {
-    // Check permission for document reading
     if (!await hasPermission(user, 'document', 'read')) {
       return permissionError('Permission denied: Cannot read documents');
     }
 
     const { knex } = await createTenantKnex();
 
-    console.log('Getting documents for entity:', { entity_id, entity_type, filters, page, limit });
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const fetchPage = async (sourcePage: number, sourceLimit: number) => {
+        let query = trx('documents')
+          .join('document_associations', function() {
+            this.on('documents.document_id', '=', 'document_associations.document_id')
+                .andOn('document_associations.tenant', '=', trx.raw('?', [tenant]));
+          })
+          .leftJoin('users', function() {
+            this.on('documents.created_by', '=', 'users.user_id')
+                .andOn('users.tenant', '=', trx.raw('?', [tenant]));
+          })
+          .leftJoin('document_types as dt', function() {
+            this.on('documents.type_id', '=', 'dt.type_id')
+                .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
+          })
+          .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
+          .where('documents.tenant', tenant)
+          .where('document_associations.entity_id', entity_id)
+          .andWhere('document_associations.entity_type', entity_type)
+          .select(
+            'documents.*',
+            'users.first_name',
+            'users.last_name',
+            trx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
+            trx.raw(`
+              COALESCE(dt.type_name, sdt.type_name) as type_name,
+              COALESCE(dt.icon, sdt.icon) as type_icon
+            `),
+            trx.raw(`
+              CASE
+                WHEN documents.document_name ~ '^[0-9]'
+                THEN CAST(COALESCE(NULLIF(LEFT(regexp_replace(documents.document_name, '[^0-9].*$', ''), 18), ''), '0') AS BIGINT)
+                ELSE 0
+              END as document_name_sort_key
+            `)
+          )
+          .distinct('documents.document_id');
 
-    const offset = (page - 1) * limit;
-
-    // Base query structure, executed sequentially
-    const buildBaseQuery = () => {
-      let query = knex('documents')
-        .join('document_associations', function() {
-          this.on('documents.document_id', '=', 'document_associations.document_id')
-              .andOn('document_associations.tenant', '=', knex.raw('?', [tenant]));
-        })
-        .leftJoin('users', function() {
-          this.on('documents.created_by', '=', 'users.user_id')
-              .andOn('users.tenant', '=', knex.raw('?', [tenant]));
-        })
-        .leftJoin('document_types as dt', function() {
-          this.on('documents.type_id', '=', 'dt.type_id')
-              .andOn('dt.tenant', '=', knex.raw('?', [tenant]));
-        })
-        .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
-        .where('documents.tenant', tenant)
-        .where('document_associations.entity_id', entity_id)
-        .andWhere('document_associations.entity_type', entity_type);
-
-      if (filters) {
-        if (filters.searchTerm) {
-          query = query.whereRaw('LOWER(documents.document_name) LIKE ?',
-            [`%${filters.searchTerm.toLowerCase()}%`]);
+        if (filters?.searchTerm) {
+          query = query.whereRaw('LOWER(documents.document_name) LIKE ?', [`%${filters.searchTerm.toLowerCase()}%`]);
         }
-        if (filters.uploadedBy) {
+        if (filters?.uploadedBy) {
           query = query.where('documents.created_by', filters.uploadedBy);
         }
-        if (filters.updated_at_start) {
+        if (filters?.updated_at_start) {
           query = query.where('documents.updated_at', '>=', filters.updated_at_start);
         }
-        if (filters.updated_at_end) {
+        if (filters?.updated_at_end) {
           const endDate = new Date(filters.updated_at_end);
           endDate.setDate(endDate.getDate() + 1);
           query = query.where('documents.updated_at', '<', endDate.toISOString().split('T')[0]);
         }
-      }
-      return query;
-    };
 
-    // Execute count query first
-    const totalResult = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const buildBaseTrxQuery = () => {
-        let query = trx('documents')
-          .join('document_associations', function() {
-            this.on('documents.document_id', '=', 'document_associations.document_id')
-                .andOn('document_associations.tenant', '=', trx.raw('?', [tenant]));
-          })
-          .leftJoin('users', function() {
-            this.on('documents.created_by', '=', 'users.user_id')
-                .andOn('users.tenant', '=', trx.raw('?', [tenant]));
-          })
-          .leftJoin('document_types as dt', function() {
-            this.on('documents.type_id', '=', 'dt.type_id')
-                .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
-          })
-          .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
-          .where('documents.tenant', tenant)
-          .where('document_associations.entity_id', entity_id)
-          .andWhere('document_associations.entity_type', entity_type);
-
-        if (filters) {
-          if (filters.searchTerm) {
-            query = query.whereRaw('LOWER(documents.document_name) LIKE ?',
-              [`%${filters.searchTerm.toLowerCase()}%`]);
-          }
-          if (filters.uploadedBy) {
-            query = query.where('documents.created_by', filters.uploadedBy);
-          }
-          if (filters.updated_at_start) {
-            query = query.where('documents.updated_at', '>=', filters.updated_at_start);
-          }
-          if (filters.updated_at_end) {
-            const endDate = new Date(filters.updated_at_end);
-            endDate.setDate(endDate.getDate() + 1);
-            query = query.where('documents.updated_at', '<', endDate.toISOString().split('T')[0]);
-          }
-        }
-        return query;
-      };
-      return await buildBaseTrxQuery()
-        .countDistinct('documents.document_id as total')
-        .first();
-    });
-    const totalCount = totalResult ? Number(totalResult.total) : 0;
-
-    // Execute data query second
-    const documents = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const buildBaseTrxQuery = () => {
-        let query = trx('documents')
-          .join('document_associations', function() {
-            this.on('documents.document_id', '=', 'document_associations.document_id')
-                .andOn('document_associations.tenant', '=', trx.raw('?', [tenant]));
-          })
-          .leftJoin('users', function() {
-            this.on('documents.created_by', '=', 'users.user_id')
-                .andOn('users.tenant', '=', trx.raw('?', [tenant]));
-          })
-          .leftJoin('document_types as dt', function() {
-            this.on('documents.type_id', '=', 'dt.type_id')
-                .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
-          })
-          .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
-          .where('documents.tenant', tenant)
-          .where('document_associations.entity_id', entity_id)
-          .andWhere('document_associations.entity_type', entity_type);
-
-        if (filters) {
-          if (filters.searchTerm) {
-            query = query.whereRaw('LOWER(documents.document_name) LIKE ?',
-              [`%${filters.searchTerm.toLowerCase()}%`]);
-          }
-          if (filters.uploadedBy) {
-            query = query.where('documents.created_by', filters.uploadedBy);
-          }
-          if (filters.updated_at_start) {
-            query = query.where('documents.updated_at', '>=', filters.updated_at_start);
-          }
-          if (filters.updated_at_end) {
-            const endDate = new Date(filters.updated_at_end);
-            endDate.setDate(endDate.getDate() + 1);
-            query = query.where('documents.updated_at', '<', endDate.toISOString().split('T')[0]);
-          }
-        }
-        return query;
-      };
-      let query = buildBaseTrxQuery()
-        .select(
-          'documents.*',
-          'users.first_name',
-          'users.last_name',
-          trx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
-          trx.raw(`
-            COALESCE(dt.type_name, sdt.type_name) as type_name,
-            COALESCE(dt.icon, sdt.icon) as type_icon
-          `),
-          trx.raw(`
-            CASE
-              WHEN documents.document_name ~ '^[0-9]'
-              THEN CAST(COALESCE(NULLIF(LEFT(regexp_replace(documents.document_name, '[^0-9].*$', ''), 18), ''), '0') AS BIGINT)
-              ELSE 0
-            END as document_name_sort_key
-          `)
-        )
-        .distinct('documents.document_id');
-
-      // Apply sorting based on filters (before limit/offset)
-      if (filters?.sortBy) {
-        const sortField = filters.sortBy;
-        const sortOrder = filters.sortOrder || 'desc';
-
-        // Handle special case for created_by_full_name which is a computed field
-        if (sortField === 'created_by_full_name') {
-          query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${sortOrder}`);
-        } else if (sortField === 'document_name') {
-          // Natural sort for document_name: sort numerically by leading digits, then alphabetically
-          query = query.orderBy('document_name_sort_key', sortOrder).orderBy('documents.document_name', sortOrder);
+        if (filters?.sortBy === 'created_by_full_name') {
+          query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${filters.sortOrder || 'desc'}`);
+        } else if (filters?.sortBy === 'document_name') {
+          query = query.orderBy('document_name_sort_key', filters.sortOrder || 'desc').orderBy('documents.document_name', filters.sortOrder || 'desc');
+        } else if (filters?.sortBy) {
+          query = query.orderBy(`documents.${filters.sortBy}`, filters.sortOrder || 'desc');
         } else {
-          // For other fields, prefix with table name for clarity
-          query = query.orderBy(`documents.${sortField}`, sortOrder);
+          query = query.orderBy('documents.updated_at', 'desc');
         }
-      } else {
-        // Default sort by updated_at desc if no sort specified
-        query = query.orderBy('documents.updated_at', 'desc');
-      }
 
-      // Apply pagination after sorting
-      query = query.limit(limit).offset(offset);
-
-      return await query;
-    });
-
-    console.log('Raw documents from database:', documents);
-    console.log('Total count:', totalCount);
-
-    // Process the documents
-    const processedDocuments = documents.map((doc: any): IDocument => {
-      const processedDoc = {
-        document_id: doc.document_id,
-        document_name: doc.document_name,
-        type_id: doc.type_id,
-        shared_type_id: doc.shared_type_id,
-        user_id: doc.created_by,
-        order_number: doc.order_number || 0,
-        created_by: doc.created_by,
-        tenant: doc.tenant,
-        file_id: doc.file_id,
-        storage_path: doc.storage_path,
-        mime_type: doc.mime_type,
-        file_size: doc.file_size,
-        is_client_visible: doc.is_client_visible,
-        created_by_full_name: doc.created_by_full_name,
-        type_name: doc.type_name,
-        type_icon: doc.type_icon,
-        entered_at: doc.entered_at,
-        updated_at: doc.updated_at,
-        thumbnail_file_id: doc.thumbnail_file_id,
-        preview_file_id: doc.preview_file_id,
-        preview_generated_at: doc.preview_generated_at
+        return query.limit(sourceLimit).offset((sourcePage - 1) * sourceLimit);
       };
-      console.log('Processed document:', processedDoc);
-      return processedDoc;
+
+      return paginateAuthorizedDocuments({
+        trx,
+        tenant,
+        user,
+        page,
+        limit,
+        fetchPage,
+      });
     });
-
-    const authorizedDocuments = await withTransaction(knex, async (trx: Knex.Transaction) =>
-      authorizeAndRedactDocuments(trx, tenant, user, processedDocuments)
-    );
-
-    return {
-      documents: authorizedDocuments,
-      totalCount,
-      currentPage: page,
-      totalPages: Math.ceil(totalCount / limit),
-    };
   } catch (error) {
     console.error('Error fetching documents by entity:', error);
     throw new Error('Failed to fetch documents');
@@ -1767,40 +1718,49 @@ export const getAllDocuments = withAuth(async (
   limit: number = 10
 ): Promise<PaginatedDocumentsResponse | ActionPermissionError> => {
   try {
-    // Check permission for document reading
     if (!await hasPermission(user, 'document', 'read')) {
       return permissionError('Permission denied: Cannot read documents');
     }
 
     const { knex } = await createTenantKnex();
 
-    console.log('Getting documents with filters:', { filters, page, limit });
-    const offset = (page - 1) * limit;
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const fetchPage = async (sourcePage: number, sourceLimit: number) => {
+        let query = trx('documents')
+          .where('documents.tenant', tenant)
+          .leftJoin('document_types as dt', function() {
+            this.on('documents.type_id', '=', 'dt.type_id')
+                .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
+          })
+          .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
+          .leftJoin('users', function() {
+            this.on('documents.created_by', '=', 'users.user_id')
+                .andOn('users.tenant', '=', trx.raw('?', [tenant]));
+          })
+          .select(
+            'documents.*',
+            'users.first_name',
+            'users.last_name',
+            trx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
+            trx.raw(`
+              COALESCE(dt.type_name, sdt.type_name) as type_name,
+              COALESCE(dt.icon, sdt.icon) as type_icon
+            `),
+            trx.raw(`
+              CASE
+                WHEN documents.document_name ~ '^[0-9]'
+                THEN CAST(COALESCE(NULLIF(LEFT(regexp_replace(documents.document_name, '[^0-9].*$', ''), 18), ''), '0') AS BIGINT)
+                ELSE 0
+              END as document_name_sort_key
+            `)
+          )
+          .distinct('documents.document_id');
 
-    // Base query structure, executed sequentially
-    const buildBaseQuery = () => {
-      let query = knex('documents')
-        .where('documents.tenant', tenant);
-
-      query = query
-        .leftJoin('document_types as dt', function() {
-          this.on('documents.type_id', '=', 'dt.type_id')
-              .andOn('dt.tenant', '=', knex.raw('?', [tenant]));
-        })
-        .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
-        .leftJoin('users', function() {
-          this.on('documents.created_by', '=', 'users.user_id')
-              .andOn('users.tenant', '=', knex.raw('?', [tenant]));
-        });
-
-      if (filters) {
-        if (filters.searchTerm) {
-          query = query.whereRaw('LOWER(documents.document_name) LIKE ?',
-            [`%${filters.searchTerm.toLowerCase()}%`]);
+        if (filters?.searchTerm) {
+          query = query.whereRaw('LOWER(documents.document_name) LIKE ?', [`%${filters.searchTerm.toLowerCase()}%`]);
         }
-
-        if (filters.type) {
-           if (filters.type === 'application/pdf') {
+        if (filters?.type) {
+          if (filters.type === 'application/pdf') {
             query = query.where(function() {
               this.where(function() {
                 this.where('dt.type_name', '=', 'application/pdf')
@@ -1815,7 +1775,7 @@ export const getAllDocuments = withAuth(async (
               }).whereNotNull('documents.file_id');
             });
           } else if (filters.type === 'text') {
-             query = query.where(function() {
+            query = query.where(function() {
               this.where('dt.type_name', 'like', 'text/%')
                   .orWhere('sdt.type_name', 'like', 'text/%')
                   .orWhere('dt.type_name', '=', 'application/msword')
@@ -1829,7 +1789,7 @@ export const getAllDocuments = withAuth(async (
                   .orWhereNull('documents.file_id');
             });
           } else if (filters.type === 'application') {
-             query = query.where(function() {
+            query = query.where(function() {
               this.where(function() {
                 this.where(function() {
                   this.where('dt.type_name', 'like', 'application/%')
@@ -1846,7 +1806,7 @@ export const getAllDocuments = withAuth(async (
                       .whereNot('sdt.type_name', 'like', 'application/vnd.ms-excel%')
                       .whereNot('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%');
                 });
-             }).whereNotNull('documents.file_id');
+              }).whereNotNull('documents.file_id');
             });
           } else {
             query = query.where(function() {
@@ -1855,21 +1815,18 @@ export const getAllDocuments = withAuth(async (
             });
           }
         }
-
-        if (filters.uploadedBy) {
+        if (filters?.uploadedBy) {
           query = query.where('documents.created_by', filters.uploadedBy);
         }
-
-        if (filters.updated_at_start) {
+        if (filters?.updated_at_start) {
           query = query.where('documents.updated_at', '>=', filters.updated_at_start);
         }
-        if (filters.updated_at_end) {
+        if (filters?.updated_at_end) {
           const endDate = new Date(filters.updated_at_end);
           endDate.setDate(endDate.getDate() + 1);
           query = query.where('documents.updated_at', '<', endDate.toISOString().split('T')[0]);
         }
-
-        if (filters.excludeEntityId && filters.excludeEntityType) {
+        if (filters?.excludeEntityId && filters?.excludeEntityType) {
           query = query.whereNotExists(function() {
             this.select('*')
                 .from('document_associations')
@@ -1879,390 +1836,47 @@ export const getAllDocuments = withAuth(async (
                 .andWhere('document_associations.tenant', tenant);
           });
         }
-
-        if (filters.entityType) {
+        if (filters?.entityType) {
           query = query
             .leftJoin('document_associations', function() {
               this.on('documents.document_id', '=', 'document_associations.document_id')
-                  .andOn('document_associations.tenant', '=', knex.raw('?', [tenant]));
+                  .andOn('document_associations.tenant', '=', trx.raw('?', [tenant]));
             })
             .where('document_associations.entity_type', filters.entityType);
         }
-
-        // Add folder filtering
-        if (filters.folder_path !== undefined && !filters.showAllDocuments) {
+        if (filters?.folder_path !== undefined && !filters.showAllDocuments) {
           if (filters.folder_path === null || filters.folder_path === '') {
-            // Root folder - documents with no folder_path
             query = query.whereNull('documents.folder_path');
           } else {
-            // Specific folder - match exact path or subfolders
             query = query.where(function() {
               this.where('documents.folder_path', filters.folder_path)
                 .orWhere('documents.folder_path', 'like', `${filters.folder_path}/%`);
             });
           }
         }
-        // If showAllDocuments is true, don't add any folder filtering - show all documents
-      }
-      return query;
-    };
 
-    // Execute count query first
-    const totalResult = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const buildBaseTrxQuery = () => {
-        let query = trx('documents')
-          .where('documents.tenant', tenant);
-
-        query = query
-          .leftJoin('document_types as dt', function() {
-            this.on('documents.type_id', '=', 'dt.type_id')
-                .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
-          })
-          .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
-          .leftJoin('users', function() {
-            this.on('documents.created_by', '=', 'users.user_id')
-                .andOn('users.tenant', '=', trx.raw('?', [tenant]));
-          });
-
-        if (filters) {
-          if (filters.searchTerm) {
-            query = query.whereRaw('LOWER(documents.document_name) LIKE ?',
-              [`%${filters.searchTerm.toLowerCase()}%`]);
-          }
-
-          if (filters.type) {
-             if (filters.type === 'application/pdf') {
-              query = query.where(function() {
-                this.where(function() {
-                  this.where('dt.type_name', '=', 'application/pdf')
-                      .orWhere('sdt.type_name', '=', 'application/pdf');
-                }).whereNotNull('documents.file_id');
-              });
-            } else if (filters.type === 'image') {
-              query = query.where(function() {
-                this.where(function() {
-                  this.where('dt.type_name', 'like', 'image/%')
-                      .orWhere('sdt.type_name', 'like', 'image/%');
-                }).whereNotNull('documents.file_id');
-              });
-            } else if (filters.type === 'text') {
-               query = query.where(function() {
-                this.where('dt.type_name', 'like', 'text/%')
-                    .orWhere('sdt.type_name', 'like', 'text/%')
-                    .orWhere('dt.type_name', '=', 'application/msword')
-                    .orWhere('sdt.type_name', '=', 'application/msword')
-                    .orWhere('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
-                    .orWhere('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
-                    .orWhere('dt.type_name', 'like', 'application/vnd.ms-excel%')
-                    .orWhere('sdt.type_name', 'like', 'application/vnd.ms-excel%')
-                    .orWhere('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%')
-                    .orWhere('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%')
-                    .orWhereNull('documents.file_id');
-              });
-            } else if (filters.type === 'application') {
-               query = query.where(function() {
-                this.where(function() {
-                  this.where(function() {
-                    this.where('dt.type_name', 'like', 'application/%')
-                        .whereNot('dt.type_name', '=', 'application/pdf')
-                        .whereNot('dt.type_name', '=', 'application/msword')
-                        .whereNot('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
-                        .whereNot('dt.type_name', 'like', 'application/vnd.ms-excel%')
-                        .whereNot('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%');
-                  }).orWhere(function() {
-                    this.where('sdt.type_name', 'like', 'application/%')
-                        .whereNot('sdt.type_name', '=', 'application/pdf')
-                        .whereNot('sdt.type_name', '=', 'application/msword')
-                        .whereNot('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
-                        .whereNot('sdt.type_name', 'like', 'application/vnd.ms-excel%')
-                        .whereNot('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%');
-                  });
-               }).whereNotNull('documents.file_id');
-              });
-            } else {
-              query = query.where(function() {
-                this.where('dt.type_name', 'like', `${filters.type}%`)
-                    .orWhere('sdt.type_name', 'like', `${filters.type}%`);
-              });
-            }
-          }
-
-          if (filters.uploadedBy) {
-            query = query.where('documents.created_by', filters.uploadedBy);
-          }
-
-          if (filters.updated_at_start) {
-            query = query.where('documents.updated_at', '>=', filters.updated_at_start);
-          }
-          if (filters.updated_at_end) {
-            const endDate = new Date(filters.updated_at_end);
-            endDate.setDate(endDate.getDate() + 1);
-            query = query.where('documents.updated_at', '<', endDate.toISOString().split('T')[0]);
-          }
-
-          if (filters.excludeEntityId && filters.excludeEntityType) {
-            query = query.whereNotExists(function() {
-              this.select('*')
-                  .from('document_associations')
-                  .whereRaw('document_associations.document_id = documents.document_id')
-                  .andWhere('document_associations.entity_id', filters.excludeEntityId)
-                  .andWhere('document_associations.entity_type', filters.excludeEntityType)
-                  .andWhere('document_associations.tenant', tenant);
-            });
-          }
-
-          if (filters.entityType) {
-            query = query
-              .leftJoin('document_associations', function() {
-                this.on('documents.document_id', '=', 'document_associations.document_id')
-                    .andOn('document_associations.tenant', '=', trx.raw('?', [tenant]));
-              })
-              .where('document_associations.entity_type', filters.entityType);
-          }
-
-          // Add folder filtering
-          if (filters.folder_path !== undefined && !filters.showAllDocuments) {
-            if (filters.folder_path === null || filters.folder_path === '') {
-              // Root folder - documents with no folder_path
-              query = query.whereNull('documents.folder_path');
-            } else {
-              // Specific folder - match exact path or subfolders
-              query = query.where(function() {
-                this.where('documents.folder_path', filters.folder_path)
-                  .orWhere('documents.folder_path', 'like', `${filters.folder_path}/%`);
-              });
-            }
-          }
-          // If showAllDocuments is true, don't add any folder filtering - show all documents
-        }
-        return query;
-      };
-      return await buildBaseTrxQuery()
-        .countDistinct('documents.document_id as total')
-        .first();
-    });
-    const totalCount = totalResult ? Number(totalResult.total) : 0;
-
-    // Execute data query second
-    const documents = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const buildBaseTrxQuery = () => {
-        let query = trx('documents')
-          .where('documents.tenant', tenant);
-
-        query = query
-          .leftJoin('document_types as dt', function() {
-            this.on('documents.type_id', '=', 'dt.type_id')
-                .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
-          })
-          .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
-          .leftJoin('users', function() {
-            this.on('documents.created_by', '=', 'users.user_id')
-                .andOn('users.tenant', '=', trx.raw('?', [tenant]));
-          });
-
-        if (filters) {
-          if (filters.searchTerm) {
-            query = query.whereRaw('LOWER(documents.document_name) LIKE ?',
-              [`%${filters.searchTerm.toLowerCase()}%`]);
-          }
-
-          if (filters.type) {
-             if (filters.type === 'application/pdf') {
-              query = query.where(function() {
-                this.where(function() {
-                  this.where('dt.type_name', '=', 'application/pdf')
-                      .orWhere('sdt.type_name', '=', 'application/pdf');
-                }).whereNotNull('documents.file_id');
-              });
-            } else if (filters.type === 'image') {
-              query = query.where(function() {
-                this.where(function() {
-                  this.where('dt.type_name', 'like', 'image/%')
-                      .orWhere('sdt.type_name', 'like', 'image/%');
-                }).whereNotNull('documents.file_id');
-              });
-            } else if (filters.type === 'text') {
-               query = query.where(function() {
-                this.where('dt.type_name', 'like', 'text/%')
-                    .orWhere('sdt.type_name', 'like', 'text/%')
-                    .orWhere('dt.type_name', '=', 'application/msword')
-                    .orWhere('sdt.type_name', '=', 'application/msword')
-                    .orWhere('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
-                    .orWhere('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
-                    .orWhere('dt.type_name', 'like', 'application/vnd.ms-excel%')
-                    .orWhere('sdt.type_name', 'like', 'application/vnd.ms-excel%')
-                    .orWhere('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%')
-                    .orWhere('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%')
-                    .orWhereNull('documents.file_id');
-              });
-            } else if (filters.type === 'application') {
-               query = query.where(function() {
-                this.where(function() {
-                  this.where(function() {
-                    this.where('dt.type_name', 'like', 'application/%')
-                        .whereNot('dt.type_name', '=', 'application/pdf')
-                        .whereNot('dt.type_name', '=', 'application/msword')
-                        .whereNot('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
-                        .whereNot('dt.type_name', 'like', 'application/vnd.ms-excel%')
-                        .whereNot('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%');
-                  }).orWhere(function() {
-                    this.where('sdt.type_name', 'like', 'application/%')
-                        .whereNot('sdt.type_name', '=', 'application/pdf')
-                        .whereNot('sdt.type_name', '=', 'application/msword')
-                        .whereNot('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
-                        .whereNot('sdt.type_name', 'like', 'application/vnd.ms-excel%')
-                        .whereNot('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%');
-                  });
-               }).whereNotNull('documents.file_id');
-              });
-            } else {
-              query = query.where(function() {
-                this.where('dt.type_name', 'like', `${filters.type}%`)
-                    .orWhere('sdt.type_name', 'like', `${filters.type}%`);
-              });
-            }
-          }
-
-          if (filters.uploadedBy) {
-            query = query.where('documents.created_by', filters.uploadedBy);
-          }
-
-          if (filters.updated_at_start) {
-            query = query.where('documents.updated_at', '>=', filters.updated_at_start);
-          }
-          if (filters.updated_at_end) {
-            const endDate = new Date(filters.updated_at_end);
-            endDate.setDate(endDate.getDate() + 1);
-            query = query.where('documents.updated_at', '<', endDate.toISOString().split('T')[0]);
-          }
-
-          if (filters.excludeEntityId && filters.excludeEntityType) {
-            query = query.whereNotExists(function() {
-              this.select('*')
-                  .from('document_associations')
-                  .whereRaw('document_associations.document_id = documents.document_id')
-                  .andWhere('document_associations.entity_id', filters.excludeEntityId)
-                  .andWhere('document_associations.entity_type', filters.excludeEntityType)
-                  .andWhere('document_associations.tenant', tenant);
-            });
-          }
-
-          if (filters.entityType) {
-            query = query
-              .leftJoin('document_associations', function() {
-                this.on('documents.document_id', '=', 'document_associations.document_id')
-                    .andOn('document_associations.tenant', '=', trx.raw('?', [tenant]));
-              })
-              .where('document_associations.entity_type', filters.entityType);
-          }
-
-          // Add folder filtering
-          if (filters.folder_path !== undefined && !filters.showAllDocuments) {
-            if (filters.folder_path === null || filters.folder_path === '') {
-              // Root folder - documents with no folder_path
-              query = query.whereNull('documents.folder_path');
-            } else {
-              // Specific folder - match exact path or subfolders
-              query = query.where(function() {
-                this.where('documents.folder_path', filters.folder_path)
-                  .orWhere('documents.folder_path', 'like', `${filters.folder_path}/%`);
-              });
-            }
-          }
-          // If showAllDocuments is true, don't add any folder filtering - show all documents
-        }
-        return query;
-      };
-
-      let query = buildBaseTrxQuery()
-        .select(
-          'documents.*',
-          'users.first_name',
-          'users.last_name',
-          trx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
-          trx.raw(`
-            COALESCE(dt.type_name, sdt.type_name) as type_name,
-            COALESCE(dt.icon, sdt.icon) as type_icon
-          `),
-          trx.raw(`
-            CASE
-              WHEN documents.document_name ~ '^[0-9]'
-              THEN CAST(COALESCE(NULLIF(LEFT(regexp_replace(documents.document_name, '[^0-9].*$', ''), 18), ''), '0') AS BIGINT)
-              ELSE 0
-            END as document_name_sort_key
-          `)
-        )
-        .distinct('documents.document_id');
-
-      // Apply sorting based on filters (before limit/offset)
-      if (filters?.sortBy) {
-        const sortField = filters.sortBy;
-        const sortOrder = filters.sortOrder || 'desc';
-
-        // Handle special case for created_by_full_name which is a computed field
-        if (sortField === 'created_by_full_name') {
-          query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${sortOrder}`);
-        } else if (sortField === 'document_name') {
-          // Natural sort for document_name: sort numerically by leading digits, then alphabetically
-          query = query.orderBy('document_name_sort_key', sortOrder).orderBy('documents.document_name', sortOrder);
+        if (filters?.sortBy === 'created_by_full_name') {
+          query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${filters.sortOrder || 'desc'}`);
+        } else if (filters?.sortBy === 'document_name') {
+          query = query.orderBy('document_name_sort_key', filters.sortOrder || 'desc').orderBy('documents.document_name', filters.sortOrder || 'desc');
+        } else if (filters?.sortBy) {
+          query = query.orderBy(`documents.${filters.sortBy}`, filters.sortOrder || 'desc');
         } else {
-          // For other fields, prefix with table name for clarity
-          query = query.orderBy(`documents.${sortField}`, sortOrder);
+          query = query.orderBy('documents.updated_at', 'desc');
         }
-      } else {
-        // Default sort by updated_at desc if no sort specified
-        query = query.orderBy('documents.updated_at', 'desc');
-      }
 
-      // Apply pagination after sorting
-      query = query.limit(limit).offset(offset);
-
-      return await query;
-    });
-
-    console.log('Raw documents from database:', documents);
-    console.log('Total count:', totalCount);
-
-    // Process the documents
-    const processedDocuments = documents.map((doc: any): IDocument => {
-      const processedDoc = {
-        document_id: doc.document_id,
-        document_name: doc.document_name,
-        type_id: doc.type_id,
-        shared_type_id: doc.shared_type_id,
-        user_id: doc.created_by,
-        order_number: doc.order_number || 0,
-        created_by: doc.created_by,
-        tenant: doc.tenant,
-        file_id: doc.file_id,
-        storage_path: doc.storage_path,
-        mime_type: doc.mime_type,
-        file_size: doc.file_size,
-        created_by_full_name: doc.created_by_full_name,
-        type_name: doc.type_name,
-        type_icon: doc.type_icon,
-        entered_at: doc.entered_at,
-        updated_at: doc.updated_at,
-        thumbnail_file_id: doc.thumbnail_file_id,
-        preview_file_id: doc.preview_file_id,
-        preview_generated_at: doc.preview_generated_at
+        return query.limit(sourceLimit).offset((sourcePage - 1) * sourceLimit);
       };
-      console.log('Processed document:', processedDoc);
-      return processedDoc;
+
+      return paginateAuthorizedDocuments({
+        trx,
+        tenant,
+        user,
+        page,
+        limit,
+        fetchPage,
+      });
     });
-
-    const authorizedDocuments = await withTransaction(knex, async (trx: Knex.Transaction) =>
-      authorizeAndRedactDocuments(trx, tenant, user, processedDocuments)
-    );
-
-    const authorizedTotalCount = authorizedDocuments.length;
-
-    return {
-      documents: authorizedDocuments,
-      totalCount: authorizedTotalCount,
-      currentPage: page,
-      totalPages: Math.ceil(authorizedTotalCount / limit),
-    };
   } catch (error) {
     console.error('Error fetching documents:', error);
     throw error;
@@ -3092,230 +2706,198 @@ export const getDocumentsByFolder = withAuth(async (
     return permissionError('Permission denied');
   }
 
-  // Build list of entity types user has permission for
   const allowedEntityTypes = await getEntityTypesForUser(user);
-
   const { knex } = await createTenantKnex();
   const hasEntityScope = Boolean(entityId && entityType);
 
-  // Build base query with permission filtering at DB level
-  let query = knex('documents as d')
-    .where('d.tenant', tenant);
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const fetchPage = async (sourcePage: number, sourceLimit: number) => {
+      let query = trx('documents as d')
+        .where('d.tenant', tenant);
 
-  if (hasEntityScope) {
-    query = query.whereExists(function() {
-      this.select('*')
-        .from('document_associations as da')
-        .whereRaw('da.document_id = d.document_id')
-        .andWhere('da.tenant', tenant)
-        .andWhere('da.entity_id', entityId)
-        .andWhere('da.entity_type', entityType)
-        .whereIn('da.entity_type', allowedEntityTypes);
-    });
-  } else {
-    // Global view: show documents with no associations OR associations the user has permission for
-    query = query.where(function() {
-      this.whereNotExists(function() {
-        this.select('*')
-          .from('document_associations as da')
-          .whereRaw('da.document_id = d.document_id')
-          .andWhere('da.tenant', tenant);
-      })
-      .orWhereExists(function() {
-        this.select('*')
-          .from('document_associations as da')
-          .whereRaw('da.document_id = d.document_id')
-          .andWhere('da.tenant', tenant)
-          .whereIn('da.entity_type', allowedEntityTypes);
-      });
-    });
-  }
-
-  // Add folder filtering
-  if (folderPath) {
-    if (includeSubfolders) {
-      query = query.where(function() {
-        this.where('d.folder_path', folderPath)
-          .orWhere('d.folder_path', 'like', `${folderPath}/%`);
-      });
-    } else {
-      query = query.where('d.folder_path', folderPath);
-    }
-  } else if (!includeSubfolders) {
-    // Root folder - documents with no folder_path
-    // If includeSubfolders is true with null folderPath, show ALL documents (no folder filtering)
-    query = query.whereNull('d.folder_path');
-  }
-  // If folderPath is null and includeSubfolders is true, don't add any folder filtering - show all documents
-
-  // Add joins for filtering by document type
-  query = query
-    .leftJoin('document_types as dt', function() {
-      this.on('d.type_id', '=', 'dt.type_id')
-          .andOn('dt.tenant', '=', knex.raw('?', [tenant]));
-    })
-    .leftJoin('shared_document_types as sdt', 'd.shared_type_id', 'sdt.type_id');
-
-  // Apply additional filters if provided
-  if (filters) {
-    if (filters.searchTerm) {
-      query = query.whereRaw('LOWER(d.document_name) LIKE ?',
-        [`%${filters.searchTerm.toLowerCase()}%`]);
-    }
-
-    if (filters.type) {
-      if (filters.type === 'application/pdf') {
-        query = query.where(function() {
-          this.where(function() {
-            this.where('dt.type_name', '=', 'application/pdf')
-                .orWhere('sdt.type_name', '=', 'application/pdf');
-          }).whereNotNull('d.file_id');
-        });
-      } else if (filters.type === 'image') {
-        query = query.where(function() {
-          this.where(function() {
-            this.where('dt.type_name', 'like', 'image/%')
-                .orWhere('sdt.type_name', 'like', 'image/%');
-          }).whereNotNull('d.file_id');
-        });
-      } else if (filters.type === 'text') {
-        query = query.where(function() {
-          this.where('dt.type_name', 'like', 'text/%')
-              .orWhere('sdt.type_name', 'like', 'text/%')
-              .orWhere('dt.type_name', '=', 'application/msword')
-              .orWhere('sdt.type_name', '=', 'application/msword')
-              .orWhere('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
-              .orWhere('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
-              .orWhere('dt.type_name', 'like', 'application/vnd.ms-excel%')
-              .orWhere('sdt.type_name', 'like', 'application/vnd.ms-excel%')
-              .orWhere('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%')
-              .orWhere('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%')
-              .orWhereNull('d.file_id');
-        });
-      } else if (filters.type === 'application') {
-        query = query.where(function() {
-          this.where(function() {
-            this.where(function() {
-              this.where('dt.type_name', 'like', 'application/%')
-                  .whereNot('dt.type_name', '=', 'application/pdf')
-                  .whereNot('dt.type_name', '=', 'application/msword')
-                  .whereNot('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
-                  .whereNot('dt.type_name', 'like', 'application/vnd.ms-excel%')
-                  .whereNot('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%');
-            }).orWhere(function() {
-              this.where('sdt.type_name', 'like', 'application/%')
-                  .whereNot('sdt.type_name', '=', 'application/pdf')
-                  .whereNot('sdt.type_name', '=', 'application/msword')
-                  .whereNot('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
-                  .whereNot('sdt.type_name', 'like', 'application/vnd.ms-excel%')
-                  .whereNot('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%');
-            });
-          }).whereNotNull('d.file_id');
+      if (hasEntityScope) {
+        query = query.whereExists(function() {
+          this.select('*')
+            .from('document_associations as da')
+            .whereRaw('da.document_id = d.document_id')
+            .andWhere('da.tenant', tenant)
+            .andWhere('da.entity_id', entityId)
+            .andWhere('da.entity_type', entityType)
+            .whereIn('da.entity_type', allowedEntityTypes);
         });
       } else {
         query = query.where(function() {
-          this.where('dt.type_name', 'like', `${filters.type}%`)
-              .orWhere('sdt.type_name', 'like', `${filters.type}%`);
+          this.whereNotExists(function() {
+            this.select('*')
+              .from('document_associations as da')
+              .whereRaw('da.document_id = d.document_id')
+              .andWhere('da.tenant', tenant);
+          })
+          .orWhereExists(function() {
+            this.select('*')
+              .from('document_associations as da')
+              .whereRaw('da.document_id = d.document_id')
+              .andWhere('da.tenant', tenant)
+              .whereIn('da.entity_type', allowedEntityTypes);
+          });
         });
       }
-    }
 
-    if (filters.uploadedBy) {
-      query = query.where('d.created_by', filters.uploadedBy);
-    }
+      if (folderPath) {
+        if (includeSubfolders) {
+          query = query.where(function() {
+            this.where('d.folder_path', folderPath)
+              .orWhere('d.folder_path', 'like', `${folderPath}/%`);
+          });
+        } else {
+          query = query.where('d.folder_path', folderPath);
+        }
+      } else if (!includeSubfolders) {
+        query = query.whereNull('d.folder_path');
+      }
 
-    if (filters.updated_at_start) {
-      query = query.where('d.updated_at', '>=', filters.updated_at_start);
-    }
-
-    if (filters.updated_at_end) {
-      const endDate = new Date(filters.updated_at_end);
-      endDate.setDate(endDate.getDate() + 1);
-      query = query.where('d.updated_at', '<', endDate.toISOString().split('T')[0]);
-    }
-
-    if (filters.entityType) {
       query = query
-        .leftJoin('document_associations as da', function() {
-          this.on('d.document_id', '=', 'da.document_id')
-              .andOn('da.tenant', '=', knex.raw('?', [tenant]));
+        .leftJoin('document_types as dt', function() {
+          this.on('d.type_id', '=', 'dt.type_id')
+              .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
         })
-        .where('da.entity_type', filters.entityType);
-    }
+        .leftJoin('shared_document_types as sdt', 'd.shared_type_id', 'sdt.type_id');
 
-    if (filters.clientVisibility === 'visible') {
-      query = query.where('d.is_client_visible', true);
-    } else if (filters.clientVisibility === 'hidden') {
-      query = query.where(function() {
-        this.where('d.is_client_visible', false).orWhereNull('d.is_client_visible');
-      });
-    }
-  }
+      if (filters?.searchTerm) {
+        query = query.whereRaw('LOWER(d.document_name) LIKE ?', [`%${filters.searchTerm.toLowerCase()}%`]);
+      }
+      if (filters?.type) {
+        if (filters.type === 'application/pdf') {
+          query = query.where(function() {
+            this.where(function() {
+              this.where('dt.type_name', '=', 'application/pdf')
+                  .orWhere('sdt.type_name', '=', 'application/pdf');
+            }).whereNotNull('d.file_id');
+          });
+        } else if (filters.type === 'image') {
+          query = query.where(function() {
+            this.where(function() {
+              this.where('dt.type_name', 'like', 'image/%')
+                  .orWhere('sdt.type_name', 'like', 'image/%');
+            }).whereNotNull('d.file_id');
+          });
+        } else if (filters.type === 'text') {
+          query = query.where(function() {
+            this.where('dt.type_name', 'like', 'text/%')
+                .orWhere('sdt.type_name', 'like', 'text/%')
+                .orWhere('dt.type_name', '=', 'application/msword')
+                .orWhere('sdt.type_name', '=', 'application/msword')
+                .orWhere('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
+                .orWhere('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
+                .orWhere('dt.type_name', 'like', 'application/vnd.ms-excel%')
+                .orWhere('sdt.type_name', 'like', 'application/vnd.ms-excel%')
+                .orWhere('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%')
+                .orWhere('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%')
+                .orWhereNull('d.file_id');
+          });
+        } else if (filters.type === 'application') {
+          query = query.where(function() {
+            this.where(function() {
+              this.where(function() {
+                this.where('dt.type_name', 'like', 'application/%')
+                    .whereNot('dt.type_name', '=', 'application/pdf')
+                    .whereNot('dt.type_name', '=', 'application/msword')
+                    .whereNot('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
+                    .whereNot('dt.type_name', 'like', 'application/vnd.ms-excel%')
+                    .whereNot('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%');
+              }).orWhere(function() {
+                this.where('sdt.type_name', 'like', 'application/%')
+                    .whereNot('sdt.type_name', '=', 'application/pdf')
+                    .whereNot('sdt.type_name', '=', 'application/msword')
+                    .whereNot('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
+                    .whereNot('sdt.type_name', 'like', 'application/vnd.ms-excel%')
+                    .whereNot('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%');
+              });
+            }).whereNotNull('d.file_id');
+          });
+        } else {
+          query = query.where(function() {
+            this.where('dt.type_name', 'like', `${filters.type}%`)
+                .orWhere('sdt.type_name', 'like', `${filters.type}%`);
+          });
+        }
+      }
+      if (filters?.uploadedBy) {
+        query = query.where('d.created_by', filters.uploadedBy);
+      }
+      if (filters?.updated_at_start) {
+        query = query.where('d.updated_at', '>=', filters.updated_at_start);
+      }
+      if (filters?.updated_at_end) {
+        const endDate = new Date(filters.updated_at_end);
+        endDate.setDate(endDate.getDate() + 1);
+        query = query.where('d.updated_at', '<', endDate.toISOString().split('T')[0]);
+      }
+      if (filters?.entityType) {
+        query = query
+          .leftJoin('document_associations as da', function() {
+            this.on('d.document_id', '=', 'da.document_id')
+                .andOn('da.tenant', '=', trx.raw('?', [tenant]));
+          })
+          .where('da.entity_type', filters.entityType);
+      }
+      if (filters?.clientVisibility === 'visible') {
+        query = query.where('d.is_client_visible', true);
+      } else if (filters?.clientVisibility === 'hidden') {
+        query = query.where(function() {
+          this.where('d.is_client_visible', false).orWhereNull('d.is_client_visible');
+        });
+      }
 
-  // Get total count
-  const countResult = await query.clone().countDistinct('d.document_id as count');
-  const total = parseInt(countResult[0].count as string);
+      query = query
+        .leftJoin('users', function() {
+          this.on('d.created_by', '=', 'users.user_id')
+              .andOn('users.tenant', '=', trx.raw('?', [tenant]));
+        })
+        .select(
+          'd.*',
+          trx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
+          trx.raw(`
+            COALESCE(dt.type_name, sdt.type_name) as type_name,
+            COALESCE(dt.icon, sdt.icon) as type_icon
+          `),
+          trx.raw(`
+            CASE
+              WHEN d.document_name ~ '^[0-9]'
+              THEN CAST(COALESCE(NULLIF(regexp_replace(d.document_name, '[^0-9].*$', ''), ''), '0') AS INTEGER)
+              ELSE 0
+            END as numeric_prefix
+          `)
+        )
+        .distinct('d.document_id');
 
-  // Get paginated results with joins for sorting support
-  const offset = (page - 1) * limit;
+      if (filters?.sortBy === 'created_by_full_name') {
+        query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${filters.sortOrder || 'desc'}`);
+      } else if (filters?.sortBy === 'document_name') {
+        query = query.orderByRaw(`numeric_prefix ${filters.sortOrder || 'desc'}, d.document_name ${filters.sortOrder || 'desc'}`);
+      } else if (filters?.sortBy) {
+        query = query.orderBy(`d.${filters.sortBy}`, filters.sortOrder || 'desc');
+      } else {
+        query = query.orderByRaw('numeric_prefix ASC, d.document_name ASC');
+      }
 
-  // Add joins for computed fields used in sorting
-  query = query
-    .leftJoin('users', function() {
-      this.on('d.created_by', '=', 'users.user_id')
-          .andOn('users.tenant', '=', knex.raw('?', [tenant]));
-    })
-    .select(
-      'd.*',
-      knex.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
-      knex.raw(`
-        COALESCE(dt.type_name, sdt.type_name) as type_name,
-        COALESCE(dt.icon, sdt.icon) as type_icon
-      `),
-      // Add natural sort field for ORDER BY compatibility with DISTINCT
-      knex.raw(`
-        CASE
-          WHEN d.document_name ~ '^[0-9]'
-          THEN CAST(COALESCE(NULLIF(regexp_replace(d.document_name, '[^0-9].*$', ''), ''), '0') AS INTEGER)
-          ELSE 0
-        END as numeric_prefix
-      `)
-    )
-    .distinct('d.document_id');
+      return query.limit(sourceLimit).offset((sourcePage - 1) * sourceLimit);
+    };
 
-  // Apply sorting based on filters
-  if (filters?.sortBy) {
-    const sortField = filters.sortBy;
-    const sortOrder = filters.sortOrder || 'desc';
+    const pagination = await paginateAuthorizedDocuments({
+      trx,
+      tenant,
+      user,
+      page,
+      limit,
+      fetchPage,
+    });
 
-    // Handle special case for created_by_full_name which is a computed field
-    if (sortField === 'created_by_full_name') {
-      query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${sortOrder}`);
-    } else if (sortField === 'document_name') {
-      // Natural sort for document_name: sort numerically by leading digits, then alphabetically
-      query = query.orderByRaw(`numeric_prefix ${sortOrder}, d.document_name ${sortOrder}`);
-    } else {
-      // For other fields, prefix with table alias
-      query = query.orderBy(`d.${sortField}`, sortOrder);
-    }
-  } else {
-    // Default sort by document_name asc with natural sorting
-    query = query.orderByRaw(`numeric_prefix ASC, d.document_name ASC`);
-  }
-
-  // Apply pagination after sorting
-  query = query.limit(limit).offset(offset);
-
-  const documents = await query;
-
-  const authorizedDocuments = await withTransaction(knex, async (trx: Knex.Transaction) =>
-    authorizeAndRedactDocuments(trx, tenant, user, documents as IDocument[])
-  );
-
-  return {
-    documents: authorizedDocuments,
-    total,
-  };
+    return {
+      documents: pagination.documents,
+      total: pagination.totalCount,
+    };
+  });
 });
 
 /**
@@ -3897,10 +3479,9 @@ export const getDocumentByFileId = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  const row = await knex('documents')
-    .select('document_id', 'document_name', 'is_client_visible')
-    .where({ tenant, file_id: fileId })
-    .first<{ document_id: string; document_name: string; is_client_visible: boolean }>();
+  const row = await withTransaction(knex, async (trx: Knex.Transaction) =>
+    getAuthorizedDocumentByFileId(trx, tenant, user, fileId)
+  );
 
   if (!row) return null;
 

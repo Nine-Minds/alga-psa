@@ -74,6 +74,34 @@ export class ApiQuoteController extends ApiBaseController {
     };
   }
 
+  private async assertQuoteReadAllowed(
+    apiRequest: AuthenticatedApiRequest,
+    quoteId: string,
+    knex?: Awaited<ReturnType<typeof getConnection>>
+  ): Promise<Record<string, any>> {
+    const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
+    const quote = await this.quoteService.getById(quoteId, apiRequest.context);
+
+    if (!quote) {
+      throw new NotFoundError('Quote not found');
+    }
+
+    const allowed = await authorizeApiResourceRead({
+      knex: resolvedKnex,
+      tenant: apiRequest.context.tenant,
+      user: apiRequest.context.user,
+      apiKeyId: apiRequest.context.apiKeyId,
+      resource: 'billing',
+      recordContext: this.buildQuoteRecordContext(quote as Record<string, any>),
+    });
+
+    if (!allowed) {
+      throw new ForbiddenError('Permission denied: Cannot read quote');
+    }
+
+    return quote as Record<string, any>;
+  }
+
   private async assertQuoteApproveAllowed(apiRequest: AuthenticatedApiRequest, quote: Record<string, any>) {
     const knex = await getConnection(apiRequest.context.tenant);
     const subject = buildAuthorizationPrincipalSubject(apiRequest.context.user, apiRequest.context.apiKeyId);
@@ -221,28 +249,64 @@ export class ApiQuoteController extends ApiBaseController {
           await this.checkPermission(apiRequest, 'read');
 
           const id = await this.extractIdFromPath(apiRequest);
-
-          const quote = await this.quoteService.getById(id, apiRequest.context);
-
-          if (!quote) {
-            throw new NotFoundError('Quote not found');
-          }
-
-          const knex = await getConnection(apiRequest.context.tenant);
-          const allowed = await authorizeApiResourceRead({
-            knex,
-            tenant: apiRequest.context.tenant,
-            user: apiRequest.context.user,
-            apiKeyId: apiRequest.context.apiKeyId,
-            resource: 'billing',
-            recordContext: this.buildQuoteRecordContext(quote as Record<string, any>),
-          });
-
-          if (!allowed) {
-            throw new ForbiddenError('Permission denied: Cannot read quote');
-          }
+          const quote = await this.assertQuoteReadAllowed(apiRequest, id);
 
           return createSuccessResponse(quote);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  update() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+
+          const id = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
+          await this.assertQuoteReadAllowed(apiRequest, id, knex);
+
+          const data = this.options.updateSchema
+            ? await this.validateData(apiRequest, this.options.updateSchema)
+            : await apiRequest.json();
+
+          const updated = await this.service.update(id, data, apiRequest.context);
+          if (!updated) {
+            throw new NotFoundError(`${this.options.resource} not found`);
+          }
+
+          return createSuccessResponse(updated);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  delete() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.delete || 'delete');
+
+          const id = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
+          await this.assertQuoteReadAllowed(apiRequest, id, knex);
+
+          const resource = await this.service.getById(id, apiRequest.context);
+          if (!resource) {
+            throw new NotFoundError(`${this.options.resource} not found`);
+          }
+
+          await this.service.delete(id, apiRequest.context);
+          return new NextResponse(null, { status: 204 });
         });
       } catch (error) {
         return handleApiError(error);
@@ -263,6 +327,8 @@ export class ApiQuoteController extends ApiBaseController {
           await this.checkPermission(apiRequest, 'read');
 
           const id = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
+          await this.assertQuoteReadAllowed(apiRequest, id, knex);
           const items = await this.quoteService.listItems(id, apiRequest.context);
 
           return createSuccessResponse(items);
@@ -282,6 +348,8 @@ export class ApiQuoteController extends ApiBaseController {
           await this.checkPermission(apiRequest, 'update');
 
           const id = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
+          await this.assertQuoteReadAllowed(apiRequest, id, knex);
           const body = await req.json();
           const data = createQuoteItemSchema.parse(body);
 
@@ -307,6 +375,8 @@ export class ApiQuoteController extends ApiBaseController {
           await this.checkPermission(apiRequest, 'update');
 
           const quoteId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
+          await this.assertQuoteReadAllowed(apiRequest, quoteId, knex);
           const params = await (apiRequest as any).params;
           const itemId = params?.itemId;
 
@@ -339,6 +409,8 @@ export class ApiQuoteController extends ApiBaseController {
           await this.checkPermission(apiRequest, 'update');
 
           const quoteId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
+          await this.assertQuoteReadAllowed(apiRequest, quoteId, knex);
           const params = await (apiRequest as any).params;
           const itemId = params?.itemId;
 
@@ -365,6 +437,8 @@ export class ApiQuoteController extends ApiBaseController {
           await this.checkPermission(apiRequest, 'update');
 
           const id = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
+          await this.assertQuoteReadAllowed(apiRequest, id, knex);
           const body = await req.json();
           const data = reorderQuoteItemsSchema.parse(body);
 
@@ -394,6 +468,8 @@ export class ApiQuoteController extends ApiBaseController {
           await this.checkPermission(apiRequest, 'update');
 
           const id = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
+          await this.assertQuoteReadAllowed(apiRequest, id, knex);
           const body = await req.json().catch(() => ({}));
           const data = sendQuoteSchema.parse(body);
 
@@ -419,6 +495,8 @@ export class ApiQuoteController extends ApiBaseController {
           await this.checkPermission(apiRequest, 'update');
 
           const id = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
+          await this.assertQuoteReadAllowed(apiRequest, id, knex);
           const body = await req.json().catch(() => ({}));
           const data = sendQuoteSchema.parse(body);
 
@@ -444,6 +522,8 @@ export class ApiQuoteController extends ApiBaseController {
           await this.checkPermission(apiRequest, 'update');
 
           const id = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
+          await this.assertQuoteReadAllowed(apiRequest, id, knex);
 
           const quote = await this.quoteService.sendReminder(id, apiRequest.context);
 
@@ -464,6 +544,8 @@ export class ApiQuoteController extends ApiBaseController {
           await this.checkPermission(apiRequest, 'update');
 
           const id = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
+          await this.assertQuoteReadAllowed(apiRequest, id, knex);
 
           const quote = await this.quoteService.submitForApproval(id, apiRequest.context);
 
@@ -484,11 +566,8 @@ export class ApiQuoteController extends ApiBaseController {
           await this.checkPermission(apiRequest, 'approve');
 
           const id = await this.extractIdFromPath(apiRequest);
-          const existingQuote = await this.quoteService.getById(id, apiRequest.context);
-
-          if (!existingQuote) {
-            throw new NotFoundError('Quote not found');
-          }
+          const knex = await getConnection(apiRequest.context.tenant);
+          const existingQuote = await this.assertQuoteReadAllowed(apiRequest, id, knex);
 
           if (existingQuote.status !== 'pending_approval') {
             throw new ForbiddenError('Only quotes pending approval can be approved');
@@ -514,13 +593,10 @@ export class ApiQuoteController extends ApiBaseController {
           await this.checkPermission(apiRequest, 'approve');
 
           const id = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
           const body = await req.json();
           const data = approvalRequestChangesSchema.parse(body);
-          const existingQuote = await this.quoteService.getById(id, apiRequest.context);
-
-          if (!existingQuote) {
-            throw new NotFoundError('Quote not found');
-          }
+          const existingQuote = await this.assertQuoteReadAllowed(apiRequest, id, knex);
 
           if (existingQuote.status !== 'pending_approval') {
             throw new ForbiddenError('Only quotes pending approval can be sent back for changes');
@@ -552,6 +628,8 @@ export class ApiQuoteController extends ApiBaseController {
           await this.checkPermission(apiRequest, 'read');
 
           const id = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
+          await this.assertQuoteReadAllowed(apiRequest, id, knex);
 
           const preview = await this.quoteService.getConversionPreview(id, apiRequest.context);
 
@@ -572,6 +650,8 @@ export class ApiQuoteController extends ApiBaseController {
           await this.checkPermission(apiRequest, 'update');
 
           const id = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
+          await this.assertQuoteReadAllowed(apiRequest, id, knex);
           const body = await req.json();
           const data = convertQuoteSchema.parse(body);
 
@@ -601,6 +681,8 @@ export class ApiQuoteController extends ApiBaseController {
           await this.checkPermission(apiRequest, 'read');
 
           const id = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
+          await this.assertQuoteReadAllowed(apiRequest, id, knex);
 
           const versions = await this.quoteService.listVersions(id, apiRequest.context);
 
@@ -621,6 +703,8 @@ export class ApiQuoteController extends ApiBaseController {
           await this.checkPermission(apiRequest, 'update');
 
           const id = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
+          await this.assertQuoteReadAllowed(apiRequest, id, knex);
 
           const revision = await this.quoteService.createRevision(id, apiRequest.context);
 
@@ -645,6 +729,8 @@ export class ApiQuoteController extends ApiBaseController {
           await this.checkPermission(apiRequest, 'read');
 
           const id = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
+          await this.assertQuoteReadAllowed(apiRequest, id, knex);
 
           const activities = await this.quoteService.listActivities(id, apiRequest.context);
 

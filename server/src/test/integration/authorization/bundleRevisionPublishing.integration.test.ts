@@ -131,4 +131,43 @@ describe('authorization bundle revision publish integration', () => {
     expect(assignmentAfterPublish?.assignment_id).toBe(assignmentBeforePublish?.assignment_id);
     expect(assignmentAfterPublish?.bundle_id).toBe(created.bundleId);
   });
+
+  it('rejects publishing a revision that is no longer draft', async () => {
+    const tenant = ctx.tenantId;
+    const actorUserId = ctx.user.user_id;
+
+    const created = await createAuthorizationBundle(ctx.db, {
+      tenant,
+      name: 'Dispatchers',
+      description: 'Bundle for publish state checks',
+      actorUserId,
+    });
+
+    await upsertBundleRule(ctx.db, {
+      tenant,
+      bundleId: created.bundleId,
+      revisionId: created.revisionId,
+      resourceType: 'ticket',
+      action: 'read',
+      templateKey: 'own_or_assigned',
+      position: 0,
+      actorUserId,
+    });
+
+    await publishBundleRevision(ctx.db as any, {
+      tenant,
+      bundleId: created.bundleId,
+      revisionId: created.revisionId,
+      actorUserId,
+    });
+
+    await expect(
+      publishBundleRevision(ctx.db as any, {
+        tenant,
+        bundleId: created.bundleId,
+        revisionId: created.revisionId,
+        actorUserId,
+      })
+    ).rejects.toThrow('Only draft revisions can be published. Refresh bundle state and try again.');
+  });
 });
