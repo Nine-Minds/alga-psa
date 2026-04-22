@@ -408,13 +408,17 @@ export const sendPortalInvitation = withAuth(async (
 export async function verifyPortalToken(token: string): Promise<VerifyTokenResult> {
   try {
     if (!token) {
-      return { success: false, error: 'Token is required' };
+      return { success: false, error: 'Token is required', errorCode: 'TOKEN_REQUIRED' };
     }
 
     const verificationResult = await PortalInvitationService.verifyToken(token);
-    
+
     if (!verificationResult.valid) {
-      return { success: false, error: verificationResult.error || 'Invalid token' };
+      return {
+        success: false,
+        error: verificationResult.error || 'Invalid token',
+        errorCode: verificationResult.errorCode || 'INVALID_OR_EXPIRED_TOKEN'
+      };
     }
 
     return {
@@ -424,7 +428,7 @@ export async function verifyPortalToken(token: string): Promise<VerifyTokenResul
 
   } catch (error) {
     console.error('Error verifying portal token:', error);
-    return { success: false, error: 'Failed to verify token' };
+    return { success: false, error: 'Failed to verify token', errorCode: 'VERIFICATION_FAILED' };
   }
 }
 
@@ -437,18 +441,30 @@ export async function completePortalSetup(
 ): Promise<CompleteSetupResult> {
   try {
     if (!token || !password) {
-      return { success: false, error: 'Token and password are required' };
+      return {
+        success: false,
+        error: 'Token and password are required',
+        errorCode: 'TOKEN_AND_PASSWORD_REQUIRED'
+      };
     }
 
     // Validate password strength
     if (password.length < 8) {
-      return { success: false, error: 'Password must be at least 8 characters long' };
+      return {
+        success: false,
+        error: 'Password must be at least 8 characters long',
+        errorCode: 'PASSWORD_TOO_SHORT'
+      };
     }
 
     // Verify token first and derive tenant from it
     const verificationResult = await PortalInvitationService.verifyToken(token);
     if (!verificationResult.valid || !verificationResult.contact || !verificationResult.tenant) {
-      return { success: false, error: 'Invalid or expired invitation token' };
+      return {
+        success: false,
+        error: 'Invalid or expired invitation token',
+        errorCode: 'INVALID_OR_EXPIRED_TOKEN'
+      };
     }
 
     const tenantFromInvitation = verificationResult.tenant;
@@ -459,7 +475,11 @@ export async function completePortalSetup(
       const { knex, tenant } = await createTenantKnex();
 
       if (!tenant) {
-        return { success: false, error: 'Tenant context is required' } as CompleteSetupResult;
+        return {
+          success: false,
+          error: 'Tenant context is required',
+          errorCode: 'TENANT_CONTEXT_REQUIRED'
+        } as CompleteSetupResult;
       }
 
       // Check if user already exists
@@ -499,7 +519,11 @@ export async function completePortalSetup(
           return { success: true, userId: existingUser.user_id, username: existingUser.username, message: 'Password updated. You can now sign in.' } as CompleteSetupResult;
         } catch (e) {
           console.error('Error resetting password for existing user:', e);
-          return { success: false, error: 'Failed to reset password for existing account' } as CompleteSetupResult;
+          return {
+            success: false,
+            error: 'Failed to reset password for existing account',
+            errorCode: 'RESET_PASSWORD_FAILED'
+          } as CompleteSetupResult;
         }
       }
 
@@ -536,7 +560,11 @@ export async function completePortalSetup(
         });
       } catch (error) {
         console.error('Error creating user account:', error);
-        return { success: false, error: error instanceof Error ? error.message : 'Failed to create user account' } as CompleteSetupResult;
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to create user account',
+          errorCode: 'CREATE_USER_FAILED'
+        } as CompleteSetupResult;
       }
 
       // Assign appropriate role based on contact's is_client_admin flag
@@ -596,7 +624,7 @@ export async function completePortalSetup(
 
   } catch (error) {
     console.error('Error completing portal setup:', error);
-    return { success: false, error: 'Failed to complete portal setup' };
+    return { success: false, error: 'Failed to complete portal setup', errorCode: 'SETUP_FAILED' };
   }
 }
 
