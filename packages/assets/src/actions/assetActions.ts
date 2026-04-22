@@ -331,6 +331,68 @@ async function assertAssetReadAllowed(
     }
 }
 
+async function resolveAssetAuthorizationInputById(
+    trx: Knex.Transaction,
+    tenant: string,
+    asset_id: string
+): Promise<AssetAuthorizationInput> {
+    const asset = await trx('assets')
+        .where({ tenant, asset_id })
+        .select('asset_id', 'client_id')
+        .first() as AssetAuthorizationInput | undefined;
+
+    if (!asset) {
+        throw new Error('Asset not found');
+    }
+
+    return asset;
+}
+
+async function assertAssetReadAllowedById(
+    trx: Knex.Transaction,
+    tenant: string,
+    context: AssetReadAuthorizationContext,
+    asset_id: string
+): Promise<AssetAuthorizationInput> {
+    const asset = await resolveAssetAuthorizationInputById(trx, tenant, asset_id);
+    await assertAssetReadAllowed(trx, tenant, context, asset);
+    return asset;
+}
+
+async function createAuthorizedAssetReadContextForUser(
+    trx: Knex.Transaction,
+    tenant: string,
+    user: AssetAuthUser,
+    asset_id: string
+): Promise<{ context: AssetReadAuthorizationContext; asset: AssetAuthorizationInput }> {
+    const context = await createAssetReadAuthorizationContext(trx, tenant, user);
+    const asset = await assertAssetReadAllowedById(trx, tenant, context, asset_id);
+    return { context, asset };
+}
+
+async function getAuthorizedAssetIdsForClient(
+    trx: Knex.Transaction,
+    tenant: string,
+    context: AssetReadAuthorizationContext,
+    client_id: string
+): Promise<string[]> {
+    const assets = await trx('assets')
+        .where({ tenant, client_id })
+        .select('asset_id', 'client_id') as AssetAuthorizationInput[];
+
+    if (assets.length === 0) {
+        return [];
+    }
+
+    const decisions = await Promise.all(
+        assets.map((asset) => authorizeAssetReadDecision(trx, tenant, context, asset))
+    );
+
+    return assets
+        .filter((_, index) => decisions[index]?.allowed)
+        .map((asset) => asset.asset_id);
+}
+
 function collectAssetUpdatedPaths(validatedData: Record<string, unknown>): string[] {
     const extensionKeys = new Set(['workstation', 'network_device', 'server', 'mobile_device', 'printer']);
     const paths: string[] = [];
@@ -478,13 +540,13 @@ export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: 
         throw new Error('Permission denied: Cannot read assets');
     }
 
-    const [assetRecord, canReadTickets, canReadDocuments] = await Promise.all([
-        getAssetWithExtensions(knex, tenant, asset_id),
-        hasPermission(user, 'ticket', 'read', knex),
-        hasPermission(user, 'document', 'read', knex)
-    ]);
+    return withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetDetailBundle> => {
+        const [assetRecord, canReadTickets, canReadDocuments] = await Promise.all([
+            getAssetWithExtensions(trx, tenant, asset_id),
+            hasPermission(user, 'ticket', 'read', trx),
+            hasPermission(user, 'document', 'read', trx)
+        ]);
 
-    await withTransaction(knex, async (trx: Knex.Transaction) => {
         const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
         await assertAssetReadAllowed(
             trx,
@@ -492,25 +554,27 @@ export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: 
             context,
             { asset_id: assetRecord.asset_id, client_id: assetRecord.client_id }
         );
+
+        const formattedAsset = formatAssetForOutput(assetRecord);
+
+        // Structural child data inherits parent-asset authorization. Linked ticket/document data
+        // additionally intersects with their own resource-family authorization.
+        const [maintenanceReport, history, tickets, documents] = await Promise.all([
+            fetchAssetMaintenanceReport(trx, tenant, asset_id),
+            fetchAssetHistory(trx, tenant, asset_id),
+            canReadTickets ? fetchAssetLinkedTickets(trx, tenant, asset_id, context) : Promise.resolve([]),
+            canReadDocuments ? fetchAssetDocuments(trx, tenant, asset_id, 15, context) : Promise.resolve([])
+        ]);
+
+        return {
+            asset: formattedAsset,
+            maintenanceReport,
+            maintenanceHistory: maintenanceReport?.maintenance_history ?? [],
+            history,
+            tickets,
+            documents
+        };
     });
-
-    const formattedAsset = formatAssetForOutput(assetRecord);
-
-    const [maintenanceReport, history, tickets, documents] = await Promise.all([
-        fetchAssetMaintenanceReport(knex, tenant, asset_id),
-        fetchAssetHistory(knex, tenant, asset_id),
-        canReadTickets ? fetchAssetLinkedTickets(knex, tenant, asset_id) : Promise.resolve([]),
-        canReadDocuments ? fetchAssetDocuments(knex, tenant, asset_id) : Promise.resolve([])
-    ]);
-
-    return {
-        asset: formattedAsset,
-        maintenanceReport,
-        maintenanceHistory: maintenanceReport?.maintenance_history ?? [],
-        history,
-        tickets,
-        documents
-    };
 });
 
 function formatAssetForOutput(asset: any): Asset {
@@ -772,6 +836,8 @@ export const updateAsset = withAuth(async (user, { tenant }, asset_id: string, d
 
     try {
         const result = await knex.transaction(async (trx: Knex.Transaction) => {
+            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
+
             const normalizedData = sanitizeUpdatePayload(data);
             const validatedData = validateData(updateAssetSchema, normalizedData);
             const {
@@ -945,7 +1011,14 @@ export const deleteAsset = withAuth(async (
 ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
     try {
         const { knex } = await createTenantKnex();
+
+        if (!await hasPermission(user, 'asset', 'delete')) {
+            throw new Error('Permission denied: Cannot delete assets');
+        }
+
         const result = await deleteEntityWithValidation('asset', asset_id, knex, tenant, async (trx, tenantId) => {
+            await createAuthorizedAssetReadContextForUser(trx as Knex.Transaction, tenantId, user as AssetAuthUser, asset_id);
+
             const asset = await trx('assets')
                 .where({ tenant: tenantId, asset_id })
                 .first();
@@ -1090,41 +1163,45 @@ export const getAssetRelationships = withAuth(async (user, { tenant }, asset_id:
         throw new Error('Permission denied: Cannot read asset relationships');
     }
 
-    const rawRelationships = await knex('asset_relationships as ar')
-        .select(
-            'ar.*',
-            'parent.name as parent_name',
-            'child.name as child_name'
-        )
-        .leftJoin('assets as parent', function(this: Knex.JoinClause) {
-            this.on('ar.parent_asset_id', '=', 'parent.asset_id')
-                .andOn('ar.tenant', '=', 'parent.tenant');
-        })
-        .leftJoin('assets as child', function(this: Knex.JoinClause) {
-            this.on('ar.child_asset_id', '=', 'child.asset_id')
-                .andOn('ar.tenant', '=', 'child.tenant');
-        })
-        .where('ar.tenant', tenant)
-        .andWhere(function(this: Knex.QueryBuilder) {
-            this.where('ar.parent_asset_id', asset_id)
-                .orWhere('ar.child_asset_id', asset_id);
-        })
-        .orderBy('ar.created_at', 'desc');
+    return withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetRelationship[]> => {
+        await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
 
-    return rawRelationships.map((rel: any): AssetRelationship => {
-        const created_at = rel.created_at instanceof Date ? rel.created_at.toISOString() : rel.created_at;
-        const updated_at = rel.updated_at instanceof Date ? rel.updated_at.toISOString() : rel.updated_at;
-        const name = asset_id === rel.parent_asset_id ? (rel.child_name ?? '') : (rel.parent_name ?? '');
+        const rawRelationships = await trx('asset_relationships as ar')
+            .select(
+                'ar.*',
+                'parent.name as parent_name',
+                'child.name as child_name'
+            )
+            .leftJoin('assets as parent', function(this: Knex.JoinClause) {
+                this.on('ar.parent_asset_id', '=', 'parent.asset_id')
+                    .andOn('ar.tenant', '=', 'parent.tenant');
+            })
+            .leftJoin('assets as child', function(this: Knex.JoinClause) {
+                this.on('ar.child_asset_id', '=', 'child.asset_id')
+                    .andOn('ar.tenant', '=', 'child.tenant');
+            })
+            .where('ar.tenant', tenant)
+            .andWhere(function(this: Knex.QueryBuilder) {
+                this.where('ar.parent_asset_id', asset_id)
+                    .orWhere('ar.child_asset_id', asset_id);
+            })
+            .orderBy('ar.created_at', 'desc');
 
-        return validateData(assetRelationshipSchema, {
-            tenant: rel.tenant,
-            parent_asset_id: rel.parent_asset_id,
-            child_asset_id: rel.child_asset_id,
-            relationship_type: rel.relationship_type,
-            created_at,
-            updated_at,
-            name
-        }) as AssetRelationship;
+        return rawRelationships.map((rel: any): AssetRelationship => {
+            const created_at = rel.created_at instanceof Date ? rel.created_at.toISOString() : rel.created_at;
+            const updated_at = rel.updated_at instanceof Date ? rel.updated_at.toISOString() : rel.updated_at;
+            const name = asset_id === rel.parent_asset_id ? (rel.child_name ?? '') : (rel.parent_name ?? '');
+
+            return validateData(assetRelationshipSchema, {
+                tenant: rel.tenant,
+                parent_asset_id: rel.parent_asset_id,
+                child_asset_id: rel.child_asset_id,
+                relationship_type: rel.relationship_type,
+                created_at,
+                updated_at,
+                name
+            }) as AssetRelationship;
+        });
     });
 });
 
@@ -1143,38 +1220,44 @@ export const createAssetRelationship = withAuth(async (user, { tenant }, data: C
         throw new Error('An asset cannot be related to itself');
     }
 
-    const [row] = await knex('asset_relationships')
-        .insert({
-            tenant,
-            parent_asset_id: validated.parent_asset_id,
-            child_asset_id: validated.child_asset_id,
-            relationship_type: validated.relationship_type,
-            created_at: knex.fn.now(),
-            updated_at: knex.fn.now()
-        })
-        .returning('*');
+    const rel = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
+        await assertAssetReadAllowedById(trx, tenant, context, validated.parent_asset_id);
+        await assertAssetReadAllowedById(trx, tenant, context, validated.child_asset_id);
 
-    // Hydrate name for response
-    const rel = await knex('asset_relationships as ar')
-        .select(
-            'ar.*',
-            'parent.name as parent_name',
-            'child.name as child_name'
-        )
-        .leftJoin('assets as parent', function(this: Knex.JoinClause) {
-            this.on('ar.parent_asset_id', '=', 'parent.asset_id')
-                .andOn('ar.tenant', '=', 'parent.tenant');
-        })
-        .leftJoin('assets as child', function(this: Knex.JoinClause) {
-            this.on('ar.child_asset_id', '=', 'child.asset_id')
-                .andOn('ar.tenant', '=', 'child.tenant');
-        })
-        .where({
-            'ar.tenant': tenant,
-            'ar.parent_asset_id': validated.parent_asset_id,
-            'ar.child_asset_id': validated.child_asset_id
-        })
-        .first();
+        await trx('asset_relationships')
+            .insert({
+                tenant,
+                parent_asset_id: validated.parent_asset_id,
+                child_asset_id: validated.child_asset_id,
+                relationship_type: validated.relationship_type,
+                created_at: trx.fn.now(),
+                updated_at: trx.fn.now()
+            })
+            .returning('*');
+
+        // Hydrate name for response
+        return trx('asset_relationships as ar')
+            .select(
+                'ar.*',
+                'parent.name as parent_name',
+                'child.name as child_name'
+            )
+            .leftJoin('assets as parent', function(this: Knex.JoinClause) {
+                this.on('ar.parent_asset_id', '=', 'parent.asset_id')
+                    .andOn('ar.tenant', '=', 'parent.tenant');
+            })
+            .leftJoin('assets as child', function(this: Knex.JoinClause) {
+                this.on('ar.child_asset_id', '=', 'child.asset_id')
+                    .andOn('ar.tenant', '=', 'child.tenant');
+            })
+            .where({
+                'ar.tenant': tenant,
+                'ar.parent_asset_id': validated.parent_asset_id,
+                'ar.child_asset_id': validated.child_asset_id
+            })
+            .first();
+    });
 
     if (!rel) {
         throw new Error('Failed to create asset relationship');
@@ -1210,13 +1293,19 @@ export const deleteAssetRelationship = withAuth(async (user, { tenant }, parent_
         throw new Error('Permission denied: Cannot delete asset relationships');
     }
 
-    await knex('asset_relationships')
-        .where({
-            tenant,
-            parent_asset_id,
-            child_asset_id
-        })
-        .delete();
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
+        await assertAssetReadAllowedById(trx, tenant, context, parent_asset_id);
+        await assertAssetReadAllowedById(trx, tenant, context, child_asset_id);
+
+        await trx('asset_relationships')
+            .where({
+                tenant,
+                parent_asset_id,
+                child_asset_id
+            })
+            .delete();
+    });
 
     revalidatePath('/assets');
     revalidatePath(`/assets/${parent_asset_id}`);
@@ -1390,35 +1479,41 @@ export const createMaintenanceSchedule = withAuth(async (user, { tenant }, data:
         // Validate the input data
         const validatedData = validateData(createMaintenanceScheduleSchema, data);
 
-        // Insert the schedule
-        const [schedule] = await knex('asset_maintenance_schedules')
-            .insert({
-                tenant,
-                asset_id: validatedData.asset_id,
-                schedule_name: validatedData.schedule_name,
-                description: validatedData.description || null,
-                maintenance_type: validatedData.maintenance_type,
-                frequency: validatedData.frequency,
-                frequency_interval: validatedData.frequency_interval,
-                schedule_config: validatedData.schedule_config,
-                next_maintenance: validatedData.next_maintenance,
-                created_by: user.user_id
-            })
-            .returning('*');
+        const schedule = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, validatedData.asset_id);
 
-        // Create initial notification
-        await knex('asset_maintenance_notifications')
-            .insert({
-                tenant,
-                schedule_id: schedule.schedule_id,
-                asset_id: schedule.asset_id,
-                notification_type: 'upcoming',
-                notification_date: schedule.next_maintenance,
-                notification_data: {
-                    schedule_name: schedule.schedule_name,
-                    maintenance_type: schedule.maintenance_type
-                }
-            });
+            // Insert the schedule
+            const [createdSchedule] = await trx('asset_maintenance_schedules')
+                .insert({
+                    tenant,
+                    asset_id: validatedData.asset_id,
+                    schedule_name: validatedData.schedule_name,
+                    description: validatedData.description || null,
+                    maintenance_type: validatedData.maintenance_type,
+                    frequency: validatedData.frequency,
+                    frequency_interval: validatedData.frequency_interval,
+                    schedule_config: validatedData.schedule_config,
+                    next_maintenance: validatedData.next_maintenance,
+                    created_by: user.user_id
+                })
+                .returning('*');
+
+            // Create initial notification
+            await trx('asset_maintenance_notifications')
+                .insert({
+                    tenant,
+                    schedule_id: createdSchedule.schedule_id,
+                    asset_id: createdSchedule.asset_id,
+                    notification_type: 'upcoming',
+                    notification_date: createdSchedule.next_maintenance,
+                    notification_data: {
+                        schedule_name: createdSchedule.schedule_name,
+                        maintenance_type: createdSchedule.maintenance_type
+                    }
+                });
+
+            return createdSchedule;
+        });
 
         revalidatePath('/assets');
         revalidatePath(`/assets/${data.asset_id}`);
@@ -1465,34 +1560,49 @@ export const updateMaintenanceSchedule = withAuth(async (
         // Validate the update data
         const validatedData = validateData(updateMaintenanceScheduleSchema, data);
 
-        // Update the schedule
-        const [schedule] = await knex('asset_maintenance_schedules')
-            .where({ tenant, schedule_id })
-            .update({
-                ...validatedData,
-                updated_at: knex.fn.now()
-            })
-            .returning('*');
+        const schedule = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            const existingSchedule = await trx('asset_maintenance_schedules')
+                .where({ tenant, schedule_id })
+                .select('asset_id')
+                .first();
 
-        // Update notifications if next_maintenance changed
-        if (validatedData.next_maintenance) {
-            await knex('asset_maintenance_notifications')
-                .where({
-                    tenant,
-                    schedule_id,
-                    is_sent: false
-                })
+            if (!existingSchedule) {
+                throw new Error('Maintenance schedule not found');
+            }
+
+            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, existingSchedule.asset_id);
+
+            // Update the schedule
+            const [updatedSchedule] = await trx('asset_maintenance_schedules')
+                .where({ tenant, schedule_id })
                 .update({
-                    notification_date: validatedData.next_maintenance,
-                    notification_data: knex.raw(`
-                        jsonb_set(
-                            notification_data,
-                            '{schedule_name}',
-                            ?::jsonb
-                        )
-                    `, [JSON.stringify(validatedData.schedule_name || schedule.schedule_name)])
-                });
-        }
+                    ...validatedData,
+                    updated_at: trx.fn.now()
+                })
+                .returning('*');
+
+            // Update notifications if next_maintenance changed
+            if (validatedData.next_maintenance) {
+                await trx('asset_maintenance_notifications')
+                    .where({
+                        tenant,
+                        schedule_id,
+                        is_sent: false
+                    })
+                    .update({
+                        notification_date: validatedData.next_maintenance,
+                        notification_data: trx.raw(`
+                            jsonb_set(
+                                notification_data,
+                                '{schedule_name}',
+                                ?::jsonb
+                            )
+                        `, [JSON.stringify(validatedData.schedule_name || updatedSchedule.schedule_name)])
+                    });
+            }
+
+            return updatedSchedule;
+        });
 
         revalidatePath('/assets');
         revalidatePath(`/assets/${schedule.asset_id}`);
@@ -1532,6 +1642,16 @@ export const deleteMaintenanceSchedule = withAuth(async (user, { tenant }, sched
 
     try {
         const [schedule] = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            const existingSchedule = await trx('asset_maintenance_schedules')
+                .where({ tenant, schedule_id })
+                .select('asset_id')
+                .first();
+            if (!existingSchedule) {
+                throw new Error('Maintenance schedule not found');
+            }
+
+            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, existingSchedule.asset_id);
+
             return await trx('asset_maintenance_schedules')
                 .where({ tenant, schedule_id })
                 .delete()
@@ -1560,49 +1680,71 @@ export const recordMaintenanceHistory = withAuth(async (user, { tenant }, data: 
         // Validate the input data
         const validatedData = validateData(createMaintenanceHistorySchema, data);
 
-        // Record the maintenance history
-        const [history] = await knex('asset_maintenance_history')
-            .insert({
-                tenant,
-                ...validatedData,
-                performed_by: user.user_id
-            })
-            .returning('*');
+        const history = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            const schedule = await trx('asset_maintenance_schedules')
+                .where({
+                    tenant,
+                    schedule_id: validatedData.schedule_id
+                })
+                .select('schedule_id', 'asset_id', 'frequency', 'frequency_interval', 'schedule_name', 'maintenance_type')
+                .first();
 
-        // Update the schedule's last maintenance date and calculate next maintenance
-        const [schedule] = await knex('asset_maintenance_schedules')
-            .where({
-                tenant,
-                schedule_id: validatedData.schedule_id
-            })
-            .update({
-                last_maintenance: validatedData.performed_at,
-                next_maintenance: knex.raw(`
-                    CASE frequency
-                        WHEN 'daily' THEN ? + INTERVAL '1 day' * frequency_interval
-                        WHEN 'weekly' THEN ? + INTERVAL '1 week' * frequency_interval
-                        WHEN 'monthly' THEN ? + INTERVAL '1 month' * frequency_interval
-                        WHEN 'quarterly' THEN ? + INTERVAL '3 months' * frequency_interval
-                        WHEN 'yearly' THEN ? + INTERVAL '1 year' * frequency_interval
-                        ELSE ? + INTERVAL '1 day' * frequency_interval
-                    END
-                `, Array(6).fill(validatedData.performed_at))
-            })
-            .returning('*');
+            if (!schedule) {
+                throw new Error('Maintenance schedule not found');
+            }
 
-        // Create next notification
-        await knex('asset_maintenance_notifications')
-            .insert({
-                tenant,
-                schedule_id: schedule.schedule_id,
-                asset_id: schedule.asset_id,
-                notification_type: 'upcoming',
-                notification_date: schedule.next_maintenance,
-                notification_data: {
-                    schedule_name: schedule.schedule_name,
-                    maintenance_type: schedule.maintenance_type
-                }
-            });
+            if (schedule.asset_id !== validatedData.asset_id) {
+                throw new Error('Maintenance history schedule does not belong to the provided asset');
+            }
+
+            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, schedule.asset_id);
+
+            // Record the maintenance history
+            const [createdHistory] = await trx('asset_maintenance_history')
+                .insert({
+                    tenant,
+                    ...validatedData,
+                    performed_by: user.user_id
+                })
+                .returning('*');
+
+            // Update the schedule's last maintenance date and calculate next maintenance
+            const [updatedSchedule] = await trx('asset_maintenance_schedules')
+                .where({
+                    tenant,
+                    schedule_id: validatedData.schedule_id
+                })
+                .update({
+                    last_maintenance: validatedData.performed_at,
+                    next_maintenance: trx.raw(`
+                        CASE frequency
+                            WHEN 'daily' THEN ? + INTERVAL '1 day' * frequency_interval
+                            WHEN 'weekly' THEN ? + INTERVAL '1 week' * frequency_interval
+                            WHEN 'monthly' THEN ? + INTERVAL '1 month' * frequency_interval
+                            WHEN 'quarterly' THEN ? + INTERVAL '3 months' * frequency_interval
+                            WHEN 'yearly' THEN ? + INTERVAL '1 year' * frequency_interval
+                            ELSE ? + INTERVAL '1 day' * frequency_interval
+                        END
+                    `, Array(6).fill(validatedData.performed_at))
+                })
+                .returning('*');
+
+            // Create next notification
+            await trx('asset_maintenance_notifications')
+                .insert({
+                    tenant,
+                    schedule_id: updatedSchedule.schedule_id,
+                    asset_id: updatedSchedule.asset_id,
+                    notification_type: 'upcoming',
+                    notification_date: updatedSchedule.next_maintenance,
+                    notification_data: {
+                        schedule_name: updatedSchedule.schedule_name,
+                        maintenance_type: updatedSchedule.maintenance_type
+                    }
+                });
+
+            return createdHistory;
+        });
 
         revalidatePath('/assets');
         revalidatePath(`/assets/${data.asset_id}`);
@@ -1623,28 +1765,32 @@ export const getAssetMaintenanceSchedules = withAuth(async (user, { tenant }, as
     }
 
     try {
-        const schedules = await knex('asset_maintenance_schedules')
-            .where({ tenant, asset_id })
-            .orderBy('next_maintenance', 'asc')
-            .select('*');
+        return await withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetMaintenanceSchedule[]> => {
+            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
 
-        // Transform Date objects to ISO strings
-        return schedules.map(schedule => ({
-            ...schedule,
-            next_maintenance: schedule.next_maintenance instanceof Date
-                ? schedule.next_maintenance.toISOString()
-                : schedule.next_maintenance,
-            last_maintenance: schedule.last_maintenance instanceof Date
-                ? schedule.last_maintenance.toISOString()
-                : schedule.last_maintenance || undefined,
-            created_at: schedule.created_at instanceof Date
-                ? schedule.created_at.toISOString()
-                : schedule.created_at,
-            updated_at: schedule.updated_at instanceof Date
-                ? schedule.updated_at.toISOString()
-                : schedule.updated_at,
-            description: schedule.description || undefined
-        })) as AssetMaintenanceSchedule[];
+            const schedules = await trx('asset_maintenance_schedules')
+                .where({ tenant, asset_id })
+                .orderBy('next_maintenance', 'asc')
+                .select('*');
+
+            // Transform Date objects to ISO strings
+            return schedules.map(schedule => ({
+                ...schedule,
+                next_maintenance: schedule.next_maintenance instanceof Date
+                    ? schedule.next_maintenance.toISOString()
+                    : schedule.next_maintenance,
+                last_maintenance: schedule.last_maintenance instanceof Date
+                    ? schedule.last_maintenance.toISOString()
+                    : schedule.last_maintenance || undefined,
+                created_at: schedule.created_at instanceof Date
+                    ? schedule.created_at.toISOString()
+                    : schedule.created_at,
+                updated_at: schedule.updated_at instanceof Date
+                    ? schedule.updated_at.toISOString()
+                    : schedule.updated_at,
+                description: schedule.description || undefined
+            })) as AssetMaintenanceSchedule[];
+        });
     } catch (error) {
         console.error('Error getting asset maintenance schedules:', error);
         throw new Error('Failed to get asset maintenance schedules');
@@ -1660,7 +1806,10 @@ export const getAssetMaintenanceReport = withAuth(async (user, { tenant }, asset
     }
 
     try {
-        return await fetchAssetMaintenanceReport(knex, tenant, asset_id);
+        return await withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetMaintenanceReport> => {
+            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
+            return fetchAssetMaintenanceReport(trx, tenant, asset_id);
+        });
     } catch (error) {
         console.error('Error getting asset maintenance report:', error);
         throw new Error('Failed to get asset maintenance report');
@@ -1676,6 +1825,8 @@ export const getAssetHistory = withAuth(async (user, { tenant }, asset_id: strin
                 throw new Error('Permission denied: Cannot read asset history');
             }
 
+            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
+
             return fetchAssetHistory(trx, tenant, asset_id);
         });
     } catch (error) {
@@ -1689,6 +1840,12 @@ type RawLinkedTicket = {
     relationship_type?: string | null;
     linked_at: string | Date;
     ticket_id: string | null;
+    entered_by?: string | null;
+    assigned_to?: string | null;
+    assigned_team_id?: string | null;
+    client_id?: string | null;
+    board_id?: string | null;
+    is_client_visible?: boolean | null;
     title: string | null;
     status_id: string | null;
     status_name: string | null;
@@ -1709,7 +1866,9 @@ export const getAssetLinkedTickets = withAuth(async (user, { tenant }, asset_id:
                 throw new Error('Permission denied: Cannot read linked tickets');
             }
 
-            return fetchAssetLinkedTickets(trx, tenant, asset_id);
+            const { context } = await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
+
+            return fetchAssetLinkedTickets(trx, tenant, asset_id, context);
         });
     } catch (error) {
         console.error('Error getting asset linked tickets:', error);
@@ -1726,7 +1885,16 @@ export const getClientMaintenanceSummary = withAuth(async (user, { tenant }, cli
     }
 
     try {
-        return await getClientMaintenanceSummaryForTenant(knex, tenant, client_id);
+        return await withTransaction(knex, async (trx: Knex.Transaction): Promise<ClientMaintenanceSummary> => {
+            const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
+            const authorizedAssetIds = await getAuthorizedAssetIdsForClient(trx, tenant, context, client_id);
+
+            if (authorizedAssetIds.length === 0) {
+                throw new Error('Permission denied: Cannot read client maintenance summaries');
+            }
+
+            return getClientMaintenanceSummaryForTenant(trx, tenant, client_id, authorizedAssetIds);
+        });
     } catch (error) {
         console.error('Error getting client maintenance summary:', error);
         throw new Error('Failed to get client maintenance summary');
@@ -1840,7 +2008,8 @@ async function fetchAssetHistory(
 async function fetchAssetLinkedTickets(
     db: Knex | Knex.Transaction,
     tenant: string,
-    asset_id: string
+    asset_id: string,
+    authorizationContext?: AssetReadAuthorizationContext
 ): Promise<AssetTicketSummary[]> {
     const rows = await db('asset_associations as aa')
         .leftJoin('tickets as t', function(this: Knex.JoinClause) {
@@ -1874,6 +2043,12 @@ async function fetchAssetLinkedTickets(
             'aa.relationship_type',
             'aa.created_at as linked_at',
             't.ticket_id',
+            't.entered_by',
+            't.assigned_to',
+            't.assigned_team_id',
+            't.client_id',
+            't.board_id',
+            't.is_client_visible',
             't.title',
             't.status_id',
             's.name as status_name',
@@ -1885,7 +2060,34 @@ async function fetchAssetLinkedTickets(
             'c.client_name'
         );
 
-    return rows.map((row): AssetTicketSummary => {
+    const rowsAfterIntersection = authorizationContext
+        ? (await Promise.all(rows.map(async (row) => {
+            if (!row.ticket_id) {
+                return null;
+            }
+
+            const decision = await authorizationContext.authorizationKernel.authorizeResource({
+                subject: authorizationContext.subject,
+                resource: { type: 'ticket', action: 'read', id: row.ticket_id },
+                record: {
+                    id: row.ticket_id,
+                    ownerUserId: row.entered_by ?? null,
+                    assignedUserIds: row.assigned_to ? [row.assigned_to] : [],
+                    clientId: row.client_id ?? null,
+                    boardId: row.board_id ?? undefined,
+                    teamIds: row.assigned_team_id ? [row.assigned_team_id] : [],
+                    is_client_visible: row.is_client_visible === true,
+                    statusId: row.status_id,
+                },
+                requestCache: authorizationContext.requestCache,
+                knex: db as Knex.Transaction,
+            });
+
+            return decision.allowed ? row : null;
+        }))).filter((row): row is RawLinkedTicket => Boolean(row))
+        : rows;
+
+    return rowsAfterIntersection.map((row): AssetTicketSummary => {
         const ticketId = row.ticket_id || row.entity_id;
         const assigned_to_name = [row.assigned_first_name, row.assigned_last_name]
             .filter(Boolean)
@@ -1916,7 +2118,8 @@ async function fetchAssetDocuments(
     db: Knex | Knex.Transaction,
     tenant: string,
     asset_id: string,
-    limit = 15
+    limit = 15,
+    authorizationContext?: AssetReadAuthorizationContext
 ): Promise<IDocument[]> {
     const records = await db('documents')
         .join('document_associations', function() {
@@ -1937,7 +2140,26 @@ async function fetchAssetDocuments(
             db.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name")
         );
 
-    return records.map((record) => ({
+    const recordsAfterIntersection = authorizationContext
+        ? (await Promise.all(records.map(async (record) => {
+            const decision = await authorizationContext.authorizationKernel.authorizeResource({
+                subject: authorizationContext.subject,
+                resource: { type: 'document', action: 'read', id: record.document_id },
+                record: {
+                    id: record.document_id,
+                    ownerUserId: record.created_by ?? null,
+                    clientId: record.client_id ?? null,
+                    is_client_visible: record.is_client_visible === true,
+                },
+                requestCache: authorizationContext.requestCache,
+                knex: db as Knex.Transaction,
+            });
+
+            return decision.allowed ? record : null;
+        }))).filter((record): record is any => Boolean(record))
+        : records;
+
+    return recordsAfterIntersection.map((record) => ({
         document_id: record.document_id,
         document_name: record.document_name,
         type_id: record.type_id,
@@ -1959,7 +2181,8 @@ async function fetchAssetDocuments(
 async function getClientMaintenanceSummaryForTenant(
     db: Knex | Knex.Transaction,
     tenant: string,
-    client_id: string
+    client_id: string,
+    authorizedAssetIds?: string[]
 ): Promise<ClientMaintenanceSummary> {
     const client = await db('clients')
         .where({ tenant, client_id })
@@ -1969,8 +2192,29 @@ async function getClientMaintenanceSummaryForTenant(
         throw new Error('Client not found');
     }
 
+    const clientAssetIds = authorizedAssetIds && authorizedAssetIds.length > 0
+        ? authorizedAssetIds
+        : await db('assets')
+            .where({ 'assets.tenant': tenant, client_id })
+            .pluck<string[]>('asset_id');
+
+    if (clientAssetIds.length === 0) {
+        return validateData(clientMaintenanceSummarySchema, {
+            client_id,
+            client_name: client.client_name,
+            total_assets: 0,
+            assets_with_maintenance: 0,
+            total_schedules: 0,
+            overdue_maintenances: 0,
+            upcoming_maintenances: 0,
+            compliance_rate: 100,
+            maintenance_by_type: {},
+        }) as ClientMaintenanceSummary;
+    }
+
     const assetStats = await db('assets')
         .where({ 'assets.tenant': tenant, client_id })
+        .whereIn('assets.asset_id', clientAssetIds)
         .select(
             db.raw('COUNT(DISTINCT assets.asset_id) as total_assets'),
             db.raw(`
@@ -1986,13 +2230,9 @@ async function getClientMaintenanceSummaryForTenant(
         })
         .first() as unknown as { total_assets: string; assets_with_maintenance: string } | undefined;
 
-    const assetIdsSubquery = db('assets')
-        .where({ 'assets.tenant': tenant, client_id })
-        .select('asset_id');
-
     const maintenanceStats = await db('asset_maintenance_schedules')
         .where({ 'asset_maintenance_schedules.tenant': tenant })
-        .whereIn('asset_id', assetIdsSubquery)
+        .whereIn('asset_id', clientAssetIds)
         .select(
             db.raw('COUNT(*) as total_schedules'),
             db.raw(`
@@ -2012,7 +2252,7 @@ async function getClientMaintenanceSummaryForTenant(
 
     const typeBreakdown = await db('asset_maintenance_schedules')
         .where({ 'asset_maintenance_schedules.tenant': tenant })
-        .whereIn('asset_id', assetIdsSubquery)
+        .whereIn('asset_id', clientAssetIds)
         .select('maintenance_type')
         .count('* as count')
         .groupBy('maintenance_type')
@@ -2025,13 +2265,13 @@ async function getClientMaintenanceSummaryForTenant(
 
     const completed = await db('asset_maintenance_history')
         .where({ 'asset_maintenance_history.tenant': tenant })
-        .whereIn('asset_id', assetIdsSubquery)
+        .whereIn('asset_id', clientAssetIds)
         .count('* as count')
         .first();
 
     const scheduled = await db('asset_maintenance_schedules')
         .where({ 'asset_maintenance_schedules.tenant': tenant })
-        .whereIn('asset_id', assetIdsSubquery)
+        .whereIn('asset_id', clientAssetIds)
         .sum('frequency_interval as sum')
         .first();
 
@@ -2066,24 +2306,31 @@ export const getClientMaintenanceSummaries = withAuth(async (user, { tenant }, c
     }
 
     try {
-        const entries = await Promise.all(
-            client_ids.map(async (clientId) => {
-                try {
-                    const summary = await getClientMaintenanceSummaryForTenant(knex, tenant, clientId);
-                    return [clientId, summary] as const;
-                } catch (error) {
-                    console.error('Failed to load maintenance summary for client', clientId, error);
-                    return null;
-                }
-            })
-        );
+        return await withTransaction(knex, async (trx: Knex.Transaction): Promise<Record<string, ClientMaintenanceSummary>> => {
+            const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
+            const entries = await Promise.all(
+                client_ids.map(async (clientId) => {
+                    try {
+                        const authorizedAssetIds = await getAuthorizedAssetIdsForClient(trx, tenant, context, clientId);
+                        if (authorizedAssetIds.length === 0) {
+                            return null;
+                        }
+                        const summary = await getClientMaintenanceSummaryForTenant(trx, tenant, clientId, authorizedAssetIds);
+                        return [clientId, summary] as const;
+                    } catch (error) {
+                        console.error('Failed to load maintenance summary for client', clientId, error);
+                        return null;
+                    }
+                })
+            );
 
-        return entries.reduce<Record<string, ClientMaintenanceSummary>>((acc, entry) => {
-            if (entry) {
-                acc[entry[0]] = entry[1];
-            }
-            return acc;
-        }, {});
+            return entries.reduce<Record<string, ClientMaintenanceSummary>>((acc, entry) => {
+                if (entry) {
+                    acc[entry[0]] = entry[1];
+                }
+                return acc;
+            }, {});
+        });
     } catch (error) {
         console.error('Error getting client maintenance summaries:', error);
         throw new Error('Failed to get client maintenance summaries');
@@ -2101,22 +2348,49 @@ export const listEntityAssets = withAuth(async (user, { tenant }, entity_id: str
     }
 
     try {
-        // Get asset associations
-        const associations = await knex('asset_associations')
-            .where({
-                tenant,
-                entity_id,
-                entity_type
-            });
+        return await withTransaction(knex, async (trx: Knex.Transaction): Promise<Asset[]> => {
+            const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
 
-        // Add explicit return type to the map callback
-        const assets = await Promise.all(
-            associations.map(async (association): Promise<Asset> =>
-                getAssetWithExtensions(knex, tenant, association.asset_id)
-            )
-        );
+            // Get asset associations
+            const associations = await trx('asset_associations')
+                .where({
+                    tenant,
+                    entity_id,
+                    entity_type
+                })
+                .select('asset_id');
 
-        return assets;
+            const candidateAssetIds = associations.map((association: { asset_id: string }) => association.asset_id);
+            const uniqueAssetIds = Array.from(new Set(candidateAssetIds));
+            if (uniqueAssetIds.length === 0) {
+                return [];
+            }
+
+            const candidateAssets = await trx('assets')
+                .where({ tenant })
+                .whereIn('asset_id', uniqueAssetIds)
+                .select('asset_id', 'client_id') as AssetAuthorizationInput[];
+
+            const decisions = await Promise.all(
+                candidateAssets.map((asset) => authorizeAssetReadDecision(trx, tenant, context, asset))
+            );
+
+            const authorizedAssetIds = candidateAssets
+                .filter((_, index) => decisions[index]?.allowed)
+                .map((asset) => asset.asset_id);
+
+            if (authorizedAssetIds.length === 0) {
+                return [];
+            }
+
+            const assets = await Promise.all(
+                authorizedAssetIds.map(async (authorizedAssetId): Promise<Asset> =>
+                    getAssetWithExtensions(trx, tenant, authorizedAssetId)
+                )
+            );
+
+            return assets;
+        });
     } catch (error) {
         console.error('Error listing entity assets:', error);
         throw new Error('Failed to list entity assets');
@@ -2135,15 +2409,21 @@ export const createAssetAssociation = withAuth(async (user, { tenant }, data: Cr
         // Validate the input data
         const validatedData = validateData(createAssetAssociationSchema, data);
 
-        // Create the association
-        const [association] = await knex('asset_associations')
-            .insert({
-                tenant,
-                ...validatedData,
-                created_by: user.user_id,
-                created_at: knex.fn.now()
-            })
-            .returning('*');
+        const association = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, validatedData.asset_id);
+
+            // Create the association
+            const [createdAssociation] = await trx('asset_associations')
+                .insert({
+                    tenant,
+                    ...validatedData,
+                    created_by: user.user_id,
+                    created_at: trx.fn.now()
+                })
+                .returning('*');
+
+            return createdAssociation;
+        });
 
         const occurredAt = new Date().toISOString();
         await publishWorkflowEvent({
@@ -2200,14 +2480,18 @@ export const removeAssetAssociation = withAuth(async (
     }
 
     try {
-        await knex('asset_associations')
-            .where({
-                tenant,
-                asset_id,
-                entity_id,
-                entity_type
-            })
-            .delete();
+        await withTransaction(knex, async (trx: Knex.Transaction) => {
+            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
+
+            await trx('asset_associations')
+                .where({
+                    tenant,
+                    asset_id,
+                    entity_id,
+                    entity_type
+                })
+                .delete();
+        });
 
         const occurredAt = new Date().toISOString();
         await publishWorkflowEvent({
@@ -2240,69 +2524,73 @@ export const removeAssetAssociation = withAuth(async (
     }
 });
 
-export const getAssetSummaryMetrics = withAuth(async (_user, { tenant }, asset_id: string): Promise<AssetSummaryMetrics> => {
+export const getAssetSummaryMetrics = withAuth(async (user, { tenant }, asset_id: string): Promise<AssetSummaryMetrics> => {
     const { knex } = await createTenantKnex();
 
     try {
-        // Get asset info
-        const asset = await knex('assets')
-            .where({ tenant, asset_id })
-            .select(
-                'asset_type',
-                'agent_status',
-                'last_seen_at',
-                'warranty_end_date'
-            )
-            .first();
+        return await withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetSummaryMetrics> => {
+            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
 
-        if (!asset) {
-            throw new Error('Asset not found');
-        }
+            // Get asset info
+            const asset = await trx('assets')
+                .where({ tenant, asset_id })
+                .select(
+                    'asset_type',
+                    'agent_status',
+                    'last_seen_at',
+                    'warranty_end_date'
+                )
+                .first();
 
-        // Calculate health status based on agent status and last seen time
-        const { health_status, health_reason } = calculateHealthStatus(asset);
+            if (!asset) {
+                throw new Error('Asset not found');
+            }
 
-        // Count open tickets associated with this asset
-        const ticketCountResult = await knex('asset_associations')
-            .where('asset_associations.tenant', tenant)
-            .where('asset_associations.asset_id', asset_id)
-            .where('asset_associations.entity_type', 'ticket')
-            .join('tickets', function() {
-                this.on('tickets.tenant', '=', 'asset_associations.tenant')
-                    .andOn('tickets.ticket_id', '=', 'asset_associations.entity_id');
-            })
-            .join('statuses', function() {
-                this.on('statuses.tenant', '=', 'tickets.tenant')
-                    .andOn('statuses.status_id', '=', 'tickets.status_id');
-            })
-            .where('statuses.is_closed', false)
-            .count('* as count')
-            .first();
+            // Calculate health status based on agent status and last seen time
+            const { health_status, health_reason } = calculateHealthStatus(asset);
 
-        const open_tickets_count = parseInt(String(ticketCountResult?.count || 0), 10);
+            // Count open tickets associated with this asset
+            const ticketCountResult = await trx('asset_associations')
+                .where('asset_associations.tenant', tenant)
+                .where('asset_associations.asset_id', asset_id)
+                .where('asset_associations.entity_type', 'ticket')
+                .join('tickets', function() {
+                    this.on('tickets.tenant', '=', 'asset_associations.tenant')
+                        .andOn('tickets.ticket_id', '=', 'asset_associations.entity_id');
+                })
+                .join('statuses', function() {
+                    this.on('statuses.tenant', '=', 'tickets.tenant')
+                        .andOn('statuses.status_id', '=', 'tickets.status_id');
+                })
+                .where('statuses.is_closed', false)
+                .count('* as count')
+                .first();
 
-        // Calculate security status based on asset extension data
-        const { security_status, security_issues } = await calculateSecurityStatus(
-            knex,
-            tenant,
-            asset_id,
-            asset.asset_type
-        );
+            const open_tickets_count = parseInt(String(ticketCountResult?.count || 0), 10);
 
-        // Calculate warranty status
-        const { warranty_status, warranty_days_remaining } = calculateWarrantyStatus(
-            asset.warranty_end_date
-        );
+            // Calculate security status based on asset extension data
+            const { security_status, security_issues } = await calculateSecurityStatus(
+                trx,
+                tenant,
+                asset_id,
+                asset.asset_type
+            );
 
-        return {
-            health_status,
-            health_reason,
-            open_tickets_count,
-            security_status,
-            security_issues,
-            warranty_days_remaining,
-            warranty_status,
-        };
+            // Calculate warranty status
+            const { warranty_status, warranty_days_remaining } = calculateWarrantyStatus(
+                asset.warranty_end_date
+            );
+
+            return {
+                health_status,
+                health_reason,
+                open_tickets_count,
+                security_status,
+                security_issues,
+                warranty_days_remaining,
+                warranty_status,
+            };
+        });
     } catch (error) {
         console.error('Error getting asset summary metrics:', error);
         throw new Error('Failed to get asset summary metrics');

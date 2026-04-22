@@ -145,7 +145,7 @@
   {
     "id": "T016",
     "description": "Asset read integration: relationships, maintenance schedules/report, history, linked tickets, client maintenance summaries, and summary metrics deny unauthorized assets.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022",
       "F024",
@@ -155,7 +155,7 @@
   {
     "id": "T017",
     "description": "Asset mutation integration: update/delete, relationship/association changes, and maintenance mutations reject unauthorized assets.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025",
       "F042"
@@ -164,7 +164,7 @@
   {
     "id": "T018",
     "description": "Asset linked-child integration: asset detail bundles enforce the chosen semantics for linked tickets/documents and do not weaken child-resource auth accidentally.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026",
       "F042"

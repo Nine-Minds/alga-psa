@@ -231,7 +231,7 @@
   {
     "id": "F024",
     "description": "Apply asset-level auth to all remaining asset reads, including relationships, maintenance schedules, maintenance reports, history, linked tickets, client maintenance summaries, entity-linked asset lists, and summary metrics.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Asset exhaustive remediation",
@@ -241,7 +241,7 @@
   {
     "id": "F025",
     "description": "Apply asset-level auth to all remaining asset mutations, including update/delete, relationship create/delete, association create/delete, and maintenance create/update/delete/history operations.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Asset exhaustive remediation",
@@ -251,7 +251,7 @@
   {
     "id": "F026",
     "description": "Decide and implement linked child-resource semantics for asset detail bundles, including whether linked tickets/documents require intersection with their own resource-family auth.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Asset exhaustive remediation",
@@ -408,7 +408,7 @@
   {
     "id": "F042",
     "description": "Add asset regression coverage for list totals, summary/maintenance/history/relationship reads, mutations, and linked child-resource semantics.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Requirements",

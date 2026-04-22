@@ -18,6 +18,7 @@ It intentionally preserves the earlier 2026-04-22 remediation plan as a historic
 - (2026-04-22) Default principle for this sweep: reuse the shared kernel or a parent-authorized structural helper; do not create new shadow auth models.
 - (2026-04-22) Archive semantics decision: archiving a bundle will immediately disable active assignments to avoid misleading active-but-inert state.
 - (2026-04-22) Clone semantics decision: cloning a bundle without a published revision is rejected; cloning only uses published revisions.
+- (2026-04-22) Asset linked-child semantics decision: structural asset-owned data (maintenance/history) inherits parent asset authorization, while linked ticket/document payloads must satisfy intersection semantics (authorized parent asset + child resource-family authorization).
 
 ## Discoveries / Constraints
 
@@ -108,6 +109,42 @@ It intentionally preserves the earlier 2026-04-22 remediation plan as a historic
   - `authorizeAssetReadDecision(...)`
   - `assertAssetReadAllowed(...)`
 - (2026-04-22) Implemented authorization-aware asset pagination totals (`F023`) by moving `listAssets` to `buildAuthorizationAwarePage(...)` and returning `authorizedPage.total`.
+- (2026-04-22) Implemented exhaustive asset read hardening (`F024`) in `packages/assets/src/actions/assetActions.ts`:
+  - Added reusable helpers for ID-based asset auth enforcement across non-list surfaces:
+    - `resolveAssetAuthorizationInputById(...)`
+    - `assertAssetReadAllowedById(...)`
+    - `createAuthorizedAssetReadContextForUser(...)`
+    - `getAuthorizedAssetIdsForClient(...)`
+  - Applied asset-level authorization checks to remaining read surfaces:
+    - `getAssetRelationships`
+    - `getAssetMaintenanceSchedules`
+    - `getAssetMaintenanceReport`
+    - `getAssetHistory`
+    - `getAssetLinkedTickets`
+    - `listEntityAssets`
+    - `getClientMaintenanceSummary`
+    - `getClientMaintenanceSummaries`
+    - `getAssetSummaryMetrics` (previously zero-auth).
+  - Client maintenance summaries now compute metrics over authorized asset sets only.
+- (2026-04-22) Implemented asset mutation hardening (`F025`) in `packages/assets/src/actions/assetActions.ts`:
+  - Added asset-level authorization gating to:
+    - `updateAsset`
+    - `deleteAsset`
+    - `createAssetRelationship`
+    - `deleteAssetRelationship`
+    - `createAssetAssociation`
+    - `removeAssetAssociation`
+    - `createMaintenanceSchedule`
+    - `updateMaintenanceSchedule`
+    - `deleteMaintenanceSchedule`
+    - `recordMaintenanceHistory`
+  - Added maintenance-history integrity check: schedule must belong to the provided asset.
+- (2026-04-22) Implemented linked-child intersection semantics (`F026`) in asset detail and linked-ticket/document reads:
+  - `getAssetDetailBundle` now performs:
+    - parent asset authorization for structural children
+    - child `ticket`/`document` authorization filtering for linked payloads.
+  - `fetchAssetLinkedTickets(...)` now supports child `ticket` kernel filtering.
+  - `fetchAssetDocuments(...)` now supports child `document` kernel filtering.
 
 ### Projects / tasks / statuses
 - (2026-04-22) `packages/projects/src/actions/projectActions.ts` is partially hardened but still has remaining parity work.
@@ -162,6 +199,8 @@ It intentionally preserves the earlier 2026-04-22 remediation plan as a historic
   - `cd server && pnpm vitest src/test/unit/documentFolderOperations.test.ts ../packages/documents/tests/documentActions.authorization.contract.test.ts --coverage.enabled false`
 - (2026-04-22) Run asset auth/pagination contract test:
   - `cd server && pnpm vitest ../packages/assets/src/actions/assetAuthorization.contract.test.ts --coverage.enabled false`
+- (2026-04-22) Run assets package typecheck after exhaustive hardening:
+  - `pnpm -C packages/assets typecheck`
 
 ## Links / References
 
@@ -251,6 +290,16 @@ It intentionally preserves the earlier 2026-04-22 remediation plan as a historic
 - (2026-04-22) Completed asset shared read-authorizer + pagination totals wave (`F022-F023`) in:
   - `packages/assets/src/actions/assetActions.ts`
   - `packages/assets/src/actions/assetAuthorization.contract.test.ts` (`T015`)
+- (2026-04-22) Completed asset exhaustive hardening wave (`F024-F026`) in:
+  - `packages/assets/src/actions/assetActions.ts`
+  - `packages/assets/src/actions/assetAuthorization.contract.test.ts` (`T016-T018`)
+- (2026-04-22) Completed asset regression-coverage feature (`F042`) by expanding asset contract coverage for:
+  - remaining reads (relationships/maintenance/history/linked tickets/client summaries/entity-linked assets/summary metrics)
+  - remaining mutations (asset update/delete, relationships/associations, maintenance mutations)
+  - linked child-resource intersection semantics in detail bundles.
+- (2026-04-22) Validation status for asset exhaustive wave:
+  - `cd server && pnpm vitest ../packages/assets/src/actions/assetAuthorization.contract.test.ts --coverage.enabled false` passed.
+  - `pnpm -C packages/assets typecheck` passed.
 - (2026-04-22) Marked quote parity regression tests `T007-T010` complete after re-validating:
   - `packages/billing/src/actions/quoteAuthorizationParity.contract.test.ts`
 - (2026-04-22) Marked document URL regression test `T011` complete:
