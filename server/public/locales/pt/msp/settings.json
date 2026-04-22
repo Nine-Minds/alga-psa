@@ -567,7 +567,17 @@
           "fetchAvailableFailed": "Failed to fetch available boards for import",
           "nameRequired": "Board name is required",
           "saveFailed": "Failed to save board",
-          "lastDefault": "Cannot remove the last default board"
+          "lastDefault": "Cannot remove the last default board",
+          "statusRequired": "Adicione pelo menos um estado de ticket antes de guardar o quadro.",
+          "duplicateStatusName": "Os nomes dos estados de ticket devem ser únicos dentro de um quadro.",
+          "invalidOpenDefault": "Selecione exatamente um estado de ticket aberto predefinido antes de guardar o quadro.",
+          "nameAlreadyExists": "Já existe um quadro com este nome.",
+          "selectBoardToCopy": "Selecione um quadro existente a partir do qual copiar os estados de ticket.",
+          "fetchStatusesFailed": "Falha ao carregar os estados de ticket do quadro.",
+          "deleteFailed": "Falha ao eliminar o quadro",
+          "importFailed": "Falha ao importar os quadros",
+          "updateStatusFailed": "Falha ao atualizar o estado do quadro",
+          "updateDefaultFailed": "Falha ao atualizar o quadro predefinido"
         }
       }
     }

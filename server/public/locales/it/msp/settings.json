@@ -567,7 +567,17 @@
           "fetchAvailableFailed": "Impossibile recuperare le bacheche disponibili per l'importazione",
           "nameRequired": "Il nome della bacheca è obbligatorio",
           "saveFailed": "Impossibile salvare la bacheca",
-          "lastDefault": "Impossibile rimuovere l'ultima bacheca predefinita"
+          "lastDefault": "Impossibile rimuovere l'ultima bacheca predefinita",
+          "statusRequired": "Aggiungi almeno uno stato di ticket prima di salvare la bacheca.",
+          "duplicateStatusName": "I nomi degli stati di ticket devono essere univoci all'interno di una bacheca.",
+          "invalidOpenDefault": "Seleziona esattamente uno stato di ticket aperto predefinito prima di salvare la bacheca.",
+          "nameAlreadyExists": "Esiste già una bacheca con questo nome.",
+          "selectBoardToCopy": "Seleziona una bacheca esistente da cui copiare gli stati di ticket.",
+          "fetchStatusesFailed": "Impossibile caricare gli stati di ticket della bacheca.",
+          "deleteFailed": "Impossibile eliminare la bacheca",
+          "importFailed": "Impossibile importare le bacheche",
+          "updateStatusFailed": "Impossibile aggiornare lo stato della bacheca",
+          "updateDefaultFailed": "Impossibile aggiornare la bacheca predefinita"
         }
       }
     }

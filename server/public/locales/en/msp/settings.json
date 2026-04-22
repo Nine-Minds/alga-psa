@@ -567,7 +567,17 @@
           "fetchAvailableFailed": "Failed to fetch available boards for import",
           "nameRequired": "Board name is required",
           "saveFailed": "Failed to save board",
-          "lastDefault": "Cannot remove the last default board"
+          "lastDefault": "Cannot remove the last default board",
+          "statusRequired": "Add at least one ticket status before saving the board.",
+          "duplicateStatusName": "Ticket status names must be unique within a board.",
+          "invalidOpenDefault": "Select exactly one open default ticket status before saving the board.",
+          "nameAlreadyExists": "A board with this name already exists.",
+          "selectBoardToCopy": "Select an existing board to copy ticket statuses from.",
+          "fetchStatusesFailed": "Failed to load board ticket statuses.",
+          "deleteFailed": "Failed to delete board",
+          "importFailed": "Failed to import boards",
+          "updateStatusFailed": "Failed to update board status",
+          "updateDefaultFailed": "Failed to update default board"
         }
       }
     }

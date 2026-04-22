@@ -567,7 +567,17 @@
           "fetchAvailableFailed": "Error al obtener los tableros disponibles para importar",
           "nameRequired": "El nombre del tablero es obligatorio",
           "saveFailed": "Error al guardar el tablero",
-          "lastDefault": "No se puede eliminar el último tablero predeterminado"
+          "lastDefault": "No se puede eliminar el último tablero predeterminado",
+          "statusRequired": "Agrega al menos un estado de ticket antes de guardar el tablero.",
+          "duplicateStatusName": "Los nombres de estado de ticket deben ser únicos dentro de un tablero.",
+          "invalidOpenDefault": "Selecciona exactamente un estado de ticket abierto predeterminado antes de guardar el tablero.",
+          "nameAlreadyExists": "Ya existe un tablero con este nombre.",
+          "selectBoardToCopy": "Selecciona un tablero existente desde el cual copiar los estados de ticket.",
+          "fetchStatusesFailed": "No se pudieron cargar los estados de ticket del tablero.",
+          "deleteFailed": "No se pudo eliminar el tablero",
+          "importFailed": "No se pudieron importar los tableros",
+          "updateStatusFailed": "No se pudo actualizar el estado del tablero",
+          "updateDefaultFailed": "No se pudo actualizar el tablero predeterminado"
         }
       }
     }

@@ -103,27 +103,40 @@ function normalizeManagedTicketStatuses(statuses: ManagedTicketStatus[]) {
     .filter((status) => status.name.length > 0);
 }
 
-function getManagedTicketStatusValidationError(statuses: ManagedTicketStatus[]): string | null {
+type ManagedTicketStatusValidationCode =
+  | 'STATUS_REQUIRED'
+  | 'DUPLICATE_STATUS_NAME'
+  | 'INVALID_OPEN_DEFAULT';
+
+function getManagedTicketStatusValidationError(
+  statuses: ManagedTicketStatus[]
+): ManagedTicketStatusValidationCode | null {
   const normalizedStatuses = normalizeManagedTicketStatuses(statuses);
 
   if (normalizedStatuses.length === 0) {
-    return 'Add at least one ticket status before saving the board.';
+    return 'STATUS_REQUIRED';
   }
 
   const duplicateName = normalizedStatuses.find((status, index) =>
     normalizedStatuses.findIndex((candidate) => candidate.name.toLowerCase() === status.name.toLowerCase()) !== index
   );
   if (duplicateName) {
-    return 'Ticket status names must be unique within a board.';
+    return 'DUPLICATE_STATUS_NAME';
   }
 
   const openDefaultStatuses = normalizedStatuses.filter((status) => status.is_default && !status.is_closed);
   if (openDefaultStatuses.length !== 1 || normalizedStatuses.some((status) => status.is_default && status.is_closed)) {
-    return 'Select exactly one open default ticket status before saving the board.';
+    return 'INVALID_OPEN_DEFAULT';
   }
 
   return null;
 }
+
+const TICKET_STATUS_VALIDATION_KEYS: Record<ManagedTicketStatusValidationCode, string> = {
+  STATUS_REQUIRED: 'ticketing.boards.messages.error.statusRequired',
+  DUPLICATE_STATUS_NAME: 'ticketing.boards.messages.error.duplicateStatusName',
+  INVALID_OPEN_DEFAULT: 'ticketing.boards.messages.error.invalidOpenDefault'
+};
 
 const BoardsSettings: React.FC = () => {
   const { t } = useTranslation('msp/settings');
@@ -317,7 +330,7 @@ const BoardsSettings: React.FC = () => {
       }));
     } catch (loadError) {
       console.error('Error loading board ticket statuses:', loadError);
-      setError(loadError instanceof Error ? loadError.message : 'Failed to load board ticket statuses.');
+      setError(loadError instanceof Error ? loadError.message : t('ticketing.boards.messages.error.fetchStatusesFailed'));
     } finally {
       setIsLoadingBoardStatuses(false);
     }
@@ -476,12 +489,12 @@ const BoardsSettings: React.FC = () => {
         case 'NO_TENANT':
         default:
           // Fatal errors - show toast and close dialog
-          toast.error(result.message || 'Failed to delete board');
+          toast.error(result.message || t('ticketing.boards.messages.error.deleteFailed'));
           setDeleteDialog({ isOpen: false, boardId: '', boardName: '' });
           break;
       }
     } catch (error) {
-      handleError(error, 'Failed to delete board');
+      handleError(error, t('ticketing.boards.messages.error.deleteFailed'));
       setDeleteDialog({ isOpen: false, boardId: '', boardName: '' });
     }
   };
@@ -514,7 +527,7 @@ const BoardsSettings: React.FC = () => {
       }
 
       if (isDuplicateBoardName) {
-        setError('A board with this name already exists.');
+        setError(t('ticketing.boards.messages.error.nameAlreadyExists'));
         return;
       }
 
@@ -529,12 +542,12 @@ const BoardsSettings: React.FC = () => {
         formData.status_seed_mode === 'copy_existing';
 
       if (shouldRequireStatusCopySource && !formData.copy_ticket_statuses_from_board_id) {
-        setError('Select an existing board to copy ticket statuses from.');
+        setError(t('ticketing.boards.messages.error.selectBoardToCopy'));
         return;
       }
 
       if (shouldManageTicketStatuses && ticketStatusValidationError) {
-        setError(ticketStatusValidationError);
+        setError(t(TICKET_STATUS_VALIDATION_KEYS[ticketStatusValidationError]));
         return;
       }
 
@@ -673,7 +686,7 @@ const BoardsSettings: React.FC = () => {
       setConflictResolutions({});
       await fetchBoards();
     } catch (error) {
-      handleError(error, 'Failed to import boards');
+      handleError(error, t('ticketing.boards.messages.error.importFailed'));
     }
   };
 
@@ -712,7 +725,7 @@ const BoardsSettings: React.FC = () => {
                 });
                 await fetchBoards();
               } catch (error) {
-                handleError(error, 'Failed to update board status');
+                handleError(error, t('ticketing.boards.messages.error.updateStatusFailed'));
               }
             }}
             className="data-[state=checked]:bg-primary-500"
@@ -742,7 +755,7 @@ const BoardsSettings: React.FC = () => {
                 });
                 await fetchBoards();
               } catch (error) {
-                handleError(error, 'Failed to update default board');
+                handleError(error, t('ticketing.boards.messages.error.updateDefaultFailed'));
               }
             }}
             className="data-[state=checked]:bg-primary-500"
@@ -1022,7 +1035,7 @@ const BoardsSettings: React.FC = () => {
               />
               {isDuplicateBoardName && (
                 <p className="text-sm text-red-600 mt-1" data-testid="board-name-duplicate-error">
-                  A board with this name already exists.
+                  {t('ticketing.boards.messages.error.nameAlreadyExists')}
                 </p>
               )}
             </div>
@@ -1411,7 +1424,7 @@ const BoardsSettings: React.FC = () => {
 
                 {ticketStatusValidationError && !isLoadingBoardStatuses && (
                   <p className="text-sm text-red-600" data-testid="ticket-status-validation-error">
-                    {ticketStatusValidationError}
+                    {t(TICKET_STATUS_VALIDATION_KEYS[ticketStatusValidationError])}
                   </p>
                 )}
               </div>

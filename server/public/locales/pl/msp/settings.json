@@ -567,7 +567,17 @@
           "fetchAvailableFailed": "Nie udało się pobrać dostępnych tablic do importu",
           "nameRequired": "Nazwa tablicy jest wymagana",
           "saveFailed": "Nie udało się zapisać tablicy",
-          "lastDefault": "Nie można usunąć ostatniej domyślnej tablicy"
+          "lastDefault": "Nie można usunąć ostatniej domyślnej tablicy",
+          "statusRequired": "Dodaj co najmniej jeden status zgłoszenia przed zapisaniem tablicy.",
+          "duplicateStatusName": "Nazwy statusów zgłoszeń muszą być unikalne w obrębie tablicy.",
+          "invalidOpenDefault": "Wybierz dokładnie jeden otwarty domyślny status zgłoszenia przed zapisaniem tablicy.",
+          "nameAlreadyExists": "Tablica o tej nazwie już istnieje.",
+          "selectBoardToCopy": "Wybierz istniejącą tablicę, z której skopiować statusy zgłoszeń.",
+          "fetchStatusesFailed": "Nie udało się załadować statusów zgłoszeń tablicy.",
+          "deleteFailed": "Nie udało się usunąć tablicy",
+          "importFailed": "Nie udało się zaimportować tablic",
+          "updateStatusFailed": "Nie udało się zaktualizować statusu tablicy",
+          "updateDefaultFailed": "Nie udało się zaktualizować domyślnej tablicy"
         }
       }
     }

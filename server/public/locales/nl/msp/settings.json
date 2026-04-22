@@ -567,7 +567,17 @@
           "fetchAvailableFailed": "Kan beschikbare borden voor import niet ophalen",
           "nameRequired": "Bordnaam is verplicht",
           "saveFailed": "Kan bord niet opslaan",
-          "lastDefault": "Kan het laatste standaardbord niet verwijderen"
+          "lastDefault": "Kan het laatste standaardbord niet verwijderen",
+          "statusRequired": "Voeg ten minste één ticketstatus toe voordat je het bord opslaat.",
+          "duplicateStatusName": "Namen van ticketstatussen moeten uniek zijn binnen een bord.",
+          "invalidOpenDefault": "Selecteer precies één open standaard ticketstatus voordat je het bord opslaat.",
+          "nameAlreadyExists": "Er bestaat al een bord met deze naam.",
+          "selectBoardToCopy": "Selecteer een bestaand bord waarvan je de ticketstatussen wilt kopiëren.",
+          "fetchStatusesFailed": "Ticketstatussen van het bord konden niet worden geladen.",
+          "deleteFailed": "Bord kon niet worden verwijderd",
+          "importFailed": "Borden konden niet worden geïmporteerd",
+          "updateStatusFailed": "Bordstatus kon niet worden bijgewerkt",
+          "updateDefaultFailed": "Standaardbord kon niet worden bijgewerkt"
         }
       }
     }

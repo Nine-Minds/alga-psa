@@ -567,7 +567,17 @@
           "fetchAvailableFailed": "Verfügbare Boards zum Importieren konnten nicht abgerufen werden",
           "nameRequired": "Board-Name ist erforderlich",
           "saveFailed": "Board konnte nicht gespeichert werden",
-          "lastDefault": "Das letzte Standard-Board kann nicht entfernt werden"
+          "lastDefault": "Das letzte Standard-Board kann nicht entfernt werden",
+          "statusRequired": "Füge mindestens einen Ticketstatus hinzu, bevor du das Board speicherst.",
+          "duplicateStatusName": "Ticketstatusnamen müssen innerhalb eines Boards eindeutig sein.",
+          "invalidOpenDefault": "Wähle genau einen offenen Standard-Ticketstatus aus, bevor du das Board speicherst.",
+          "nameAlreadyExists": "Ein Board mit diesem Namen existiert bereits.",
+          "selectBoardToCopy": "Wähle ein vorhandenes Board aus, von dem die Ticketstatus kopiert werden sollen.",
+          "fetchStatusesFailed": "Ticketstatus des Boards konnten nicht geladen werden.",
+          "deleteFailed": "Board konnte nicht gelöscht werden",
+          "importFailed": "Boards konnten nicht importiert werden",
+          "updateStatusFailed": "Boardstatus konnte nicht aktualisiert werden",
+          "updateDefaultFailed": "Standard-Board konnte nicht aktualisiert werden"
         }
       }
     }

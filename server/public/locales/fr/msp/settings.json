@@ -567,7 +567,17 @@
           "fetchAvailableFailed": "Échec de la récupération des tableaux disponibles à l'import",
           "nameRequired": "Le nom du tableau est requis",
           "saveFailed": "Échec de l'enregistrement du tableau",
-          "lastDefault": "Impossible de supprimer le dernier tableau par défaut"
+          "lastDefault": "Impossible de supprimer le dernier tableau par défaut",
+          "statusRequired": "Ajoutez au moins un statut de ticket avant d'enregistrer le tableau.",
+          "duplicateStatusName": "Les noms des statuts de ticket doivent être uniques dans un tableau.",
+          "invalidOpenDefault": "Sélectionnez exactement un statut de ticket ouvert par défaut avant d'enregistrer le tableau.",
+          "nameAlreadyExists": "Un tableau portant ce nom existe déjà.",
+          "selectBoardToCopy": "Sélectionnez un tableau existant depuis lequel copier les statuts de ticket.",
+          "fetchStatusesFailed": "Échec du chargement des statuts de ticket du tableau.",
+          "deleteFailed": "Échec de la suppression du tableau",
+          "importFailed": "Échec de l'importation des tableaux",
+          "updateStatusFailed": "Échec de la mise à jour du statut du tableau",
+          "updateDefaultFailed": "Échec de la mise à jour du tableau par défaut"
         }
       }
     }
