@@ -78,6 +78,7 @@ import {
     type AuthorizationSubject,
 } from 'server/src/lib/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from 'server/src/lib/authorization/bundles/service';
+import { buildAuthorizationAwarePage } from 'server/src/lib/api/controllers/authorizationAwarePagination';
 
 type AssetExtensionType = WorkstationAsset | NetworkDeviceAsset | ServerAsset | MobileDeviceAsset | PrinterAsset;
 
@@ -262,6 +263,74 @@ async function resolveAssetAuthorizationRecords(
     return records;
 }
 
+type AssetAuthorizationInput = Pick<Asset, 'asset_id' | 'client_id'>;
+
+type AssetReadAuthorizationContext = {
+    subject: AuthorizationSubject;
+    authorizationKernel: ReturnType<typeof createAuthorizationKernel>;
+    requestCache: RequestLocalAuthorizationCache;
+};
+
+function createAssetReadAuthorizationKernel(trx: Knex.Transaction) {
+    return createAuthorizationKernel({
+        builtinProvider: new BuiltinAuthorizationKernelProvider(),
+        bundleProvider: new BundleAuthorizationKernelProvider({
+            resolveRules: async (input) => {
+                try {
+                    return await resolveBundleNarrowingRulesForEvaluation(trx, input);
+                } catch {
+                    return [];
+                }
+            },
+        }),
+        rbacEvaluator: async () => true,
+    });
+}
+
+async function createAssetReadAuthorizationContext(
+    trx: Knex.Transaction,
+    tenant: string,
+    user: AssetAuthUser
+): Promise<AssetReadAuthorizationContext> {
+    return {
+        subject: await resolveAuthorizationSubjectForUser(trx, tenant, user),
+        authorizationKernel: createAssetReadAuthorizationKernel(trx),
+        requestCache: new RequestLocalAuthorizationCache(),
+    };
+}
+
+async function authorizeAssetReadDecision(
+    trx: Knex.Transaction,
+    tenant: string,
+    context: AssetReadAuthorizationContext,
+    asset: AssetAuthorizationInput
+) {
+    const assetRecords = await resolveAssetAuthorizationRecords(trx, tenant, [asset]);
+    return context.authorizationKernel.authorizeResource({
+        subject: context.subject,
+        resource: {
+            type: 'asset',
+            action: 'read',
+            id: asset.asset_id,
+        },
+        record: assetRecords.get(asset.asset_id),
+        requestCache: context.requestCache,
+        knex: trx,
+    });
+}
+
+async function assertAssetReadAllowed(
+    trx: Knex.Transaction,
+    tenant: string,
+    context: AssetReadAuthorizationContext,
+    asset: AssetAuthorizationInput
+): Promise<void> {
+    const decision = await authorizeAssetReadDecision(trx, tenant, context, asset);
+    if (!decision.allowed) {
+        throw new Error('Permission denied: Cannot read assets');
+    }
+}
+
 function collectAssetUpdatedPaths(validatedData: Record<string, unknown>): string[] {
     const extensionKeys = new Set(['workstation', 'network_device', 'server', 'mobile_device', 'printer']);
     const paths: string[] = [];
@@ -395,37 +464,8 @@ export const getAsset = withAuth(async (user, { tenant }, asset_id: string): Pro
 
     const asset = await getAssetWithExtensions(knex, tenant, asset_id);
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-        const subject = await resolveAuthorizationSubjectForUser(trx, tenant, user as AssetAuthUser);
-        const assetRecords = await resolveAssetAuthorizationRecords(trx, tenant, [{ asset_id: asset.asset_id, client_id: asset.client_id }]);
-        const authorizationKernel = createAuthorizationKernel({
-            builtinProvider: new BuiltinAuthorizationKernelProvider(),
-            bundleProvider: new BundleAuthorizationKernelProvider({
-                resolveRules: async (input) => {
-                    try {
-                        return await resolveBundleNarrowingRulesForEvaluation(trx, input);
-                    } catch {
-                        return [];
-                    }
-                },
-            }),
-            rbacEvaluator: async () => true,
-        });
-
-        const decision = await authorizationKernel.authorizeResource({
-            subject,
-            resource: {
-                type: 'asset',
-                action: 'read',
-                id: asset.asset_id,
-            },
-            record: assetRecords.get(asset.asset_id),
-            requestCache: new RequestLocalAuthorizationCache(),
-            knex: trx,
-        });
-
-        if (!decision.allowed) {
-            throw new Error('Permission denied: Cannot read assets');
-        }
+        const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
+        await assertAssetReadAllowed(trx, tenant, context, { asset_id: asset.asset_id, client_id: asset.client_id });
     });
 
     return asset;
@@ -445,37 +485,13 @@ export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: 
     ]);
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-        const subject = await resolveAuthorizationSubjectForUser(trx, tenant, user as AssetAuthUser);
-        const assetRecords = await resolveAssetAuthorizationRecords(trx, tenant, [{ asset_id: assetRecord.asset_id, client_id: assetRecord.client_id }]);
-        const authorizationKernel = createAuthorizationKernel({
-            builtinProvider: new BuiltinAuthorizationKernelProvider(),
-            bundleProvider: new BundleAuthorizationKernelProvider({
-                resolveRules: async (input) => {
-                    try {
-                        return await resolveBundleNarrowingRulesForEvaluation(trx, input);
-                    } catch {
-                        return [];
-                    }
-                },
-            }),
-            rbacEvaluator: async () => true,
-        });
-
-        const decision = await authorizationKernel.authorizeResource({
-            subject,
-            resource: {
-                type: 'asset',
-                action: 'read',
-                id: assetRecord.asset_id,
-            },
-            record: assetRecords.get(assetRecord.asset_id),
-            requestCache: new RequestLocalAuthorizationCache(),
-            knex: trx,
-        });
-
-        if (!decision.allowed) {
-            throw new Error('Permission denied: Cannot read assets');
-        }
+        const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
+        await assertAssetReadAllowed(
+            trx,
+            tenant,
+            context,
+            { asset_id: assetRecord.asset_id, client_id: assetRecord.client_id }
+        );
     });
 
     const formattedAsset = formatAssetForOutput(assetRecord);
@@ -1223,85 +1239,59 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
         const validatedParams = validateData(assetQuerySchema, params);
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            // Build base query
-            const baseQuery = trx('assets')
-            .where('assets.tenant', tenant)
-            .leftJoin('clients', function(this: Knex.JoinClause) {
-                this.on('clients.client_id', '=', 'assets.client_id')
-                    .andOn('clients.tenant', '=', 'assets.tenant')
-                    .andOn('clients.tenant', '=', trx.raw('?', [tenant]));
-            });
-
-        const resolveSortColumn = (sortBy?: string): string | null => {
-            if (!sortBy) return null;
-            const allowed: Record<string, string> = {
-                name: 'assets.name',
-                asset_tag: 'assets.asset_tag',
-                asset_type: 'assets.asset_type',
-                status: 'assets.status',
-                agent_status: 'assets.agent_status',
-                location: 'assets.location',
-                client_name: 'clients.client_name',
-                created_at: 'assets.created_at',
+            const resolveSortColumn = (sortBy?: string): string | null => {
+                if (!sortBy) return null;
+                const allowed: Record<string, string> = {
+                    name: 'assets.name',
+                    asset_tag: 'assets.asset_tag',
+                    asset_type: 'assets.asset_type',
+                    status: 'assets.status',
+                    agent_status: 'assets.agent_status',
+                    location: 'assets.location',
+                    client_name: 'clients.client_name',
+                    created_at: 'assets.created_at',
+                };
+                return allowed[sortBy] ?? null;
             };
-            return allowed[sortBy] ?? null;
-        };
 
-        // Apply filters
-        if (validatedParams.client_id) {
-            baseQuery.where('assets.client_id', validatedParams.client_id);
-        }
-        if (validatedParams.asset_type) {
-            baseQuery.where('assets.asset_type', validatedParams.asset_type);
-        }
-        if (validatedParams.status) {
-            baseQuery.where('assets.status', validatedParams.status);
-        }
-        if (validatedParams.search) {
-            const searchTerm = `%${validatedParams.search}%`;
-            baseQuery.where(function() {
-                this.whereILike('assets.name', searchTerm)
-                    .orWhereILike('assets.asset_tag', searchTerm)
-                    .orWhereILike('assets.serial_number', searchTerm)
-                    .orWhereILike('clients.client_name', searchTerm);
-            });
-        }
-        if (validatedParams.agent_status) {
-            baseQuery.where('assets.agent_status', validatedParams.agent_status);
-        }
-        if (validatedParams.rmm_managed !== undefined) {
-            if (validatedParams.rmm_managed) {
-                baseQuery.whereNotNull('assets.rmm_provider')
-                         .whereNotNull('assets.rmm_device_id');
-            } else {
-                baseQuery.where(function() {
-                    this.whereNull('assets.rmm_provider')
-                        .orWhereNull('assets.rmm_device_id');
-                });
-            }
-        }
+            const applyFilters = (query: Knex.QueryBuilder) => {
+                if (validatedParams.client_id) {
+                    query.where('assets.client_id', validatedParams.client_id);
+                }
+                if (validatedParams.asset_type) {
+                    query.where('assets.asset_type', validatedParams.asset_type);
+                }
+                if (validatedParams.status) {
+                    query.where('assets.status', validatedParams.status);
+                }
+                if (validatedParams.search) {
+                    const searchTerm = `%${validatedParams.search}%`;
+                    query.where(function () {
+                        this.whereILike('assets.name', searchTerm)
+                            .orWhereILike('assets.asset_tag', searchTerm)
+                            .orWhereILike('assets.serial_number', searchTerm)
+                            .orWhereILike('clients.client_name', searchTerm);
+                    });
+                }
+                if (validatedParams.agent_status) {
+                    query.where('assets.agent_status', validatedParams.agent_status);
+                }
+                if (validatedParams.rmm_managed !== undefined) {
+                    if (validatedParams.rmm_managed) {
+                        query.whereNotNull('assets.rmm_provider').whereNotNull('assets.rmm_device_id');
+                    } else {
+                        query.where(function () {
+                            this.whereNull('assets.rmm_provider').orWhereNull('assets.rmm_device_id');
+                        });
+                    }
+                }
+            };
 
-        // Get total count
-        const [{ count }] = await baseQuery.clone().count('* as count');
-
-        // Get paginated results
-        const page = validatedParams.page || 1;
-        const limit = validatedParams.limit || 10;
-        const offset = (page - 1) * limit;
-
-        const sortColumn = resolveSortColumn(validatedParams.sort_by);
-        const sortDirection = validatedParams.sort_direction ?? 'desc';
-
-        const assets = await baseQuery
-            .select(
-                'assets.*',
-                'clients.client_name'
-            )
-            .modify((query) => {
+            const applySort = (query: Knex.QueryBuilder) => {
+                const sortColumn = resolveSortColumn(validatedParams.sort_by);
+                const sortDirection = validatedParams.sort_direction ?? 'desc';
                 if (sortColumn) {
-                    if (sortColumn === 'clients.client_name') {
-                        query.orderByRaw(`lower(${sortColumn}) ${sortDirection}`);
-                    } else if (sortColumn === 'assets.name') {
+                    if (sortColumn === 'clients.client_name' || sortColumn === 'assets.name') {
                         query.orderByRaw(`lower(${sortColumn}) ${sortDirection}`);
                     } else {
                         query.orderBy(sortColumn, sortDirection);
@@ -1311,50 +1301,49 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 }
 
                 query.orderBy('assets.created_at', 'desc');
-            })
-            .limit(limit)
-            .offset(offset);
+            };
 
-        const subject = await resolveAuthorizationSubjectForUser(trx, tenant, user as AssetAuthUser);
-        const assetRecords = await resolveAssetAuthorizationRecords(
-            trx,
-            tenant,
-            assets.map((asset: any) => ({ asset_id: asset.asset_id, client_id: asset.client_id }))
-        );
-        const authorizationKernel = createAuthorizationKernel({
-            builtinProvider: new BuiltinAuthorizationKernelProvider(),
-            bundleProvider: new BundleAuthorizationKernelProvider({
-                resolveRules: async (input) => {
-                    try {
-                        return await resolveBundleNarrowingRulesForEvaluation(trx, input);
-                    } catch {
-                        return [];
-                    }
+            const fetchPage = async (sourcePage: number, sourceLimit: number) => {
+                const offset = (sourcePage - 1) * sourceLimit;
+                const query = trx('assets')
+                    .where('assets.tenant', tenant)
+                    .leftJoin('clients', function(this: Knex.JoinClause) {
+                        this.on('clients.client_id', '=', 'assets.client_id')
+                            .andOn('clients.tenant', '=', 'assets.tenant')
+                            .andOn('clients.tenant', '=', trx.raw('?', [tenant]));
+                    });
+
+                applyFilters(query);
+
+                return query
+                    .select('assets.*', 'clients.client_name')
+                    .modify(applySort)
+                    .limit(sourceLimit)
+                    .offset(offset);
+            };
+
+            const page = validatedParams.page || 1;
+            const limit = validatedParams.limit || 10;
+            const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
+            const authorizedPage = await buildAuthorizationAwarePage<any>({
+                page,
+                limit,
+                fetchPage,
+                authorizeRecord: async (asset) => {
+                    const decision = await authorizeAssetReadDecision(
+                        trx,
+                        tenant,
+                        context,
+                        { asset_id: asset.asset_id, client_id: asset.client_id }
+                    );
+                    return decision.allowed;
                 },
-            }),
-            rbacEvaluator: async () => true,
-        });
-        const requestCache = new RequestLocalAuthorizationCache();
-        const decisions = await Promise.all(
-            assets.map((asset: any) =>
-                authorizationKernel.authorizeResource({
-                    subject,
-                    resource: {
-                        type: 'asset',
-                        action: 'read',
-                        id: asset.asset_id,
-                    },
-                    record: assetRecords.get(asset.asset_id),
-                    requestCache,
-                    knex: trx,
-                })
-            )
-        );
-        const authorizedAssets = assets.filter((_: any, index: number) => decisions[index]?.allowed);
+                scanLimit: Math.max(limit, 100),
+            });
 
         // Get extension data for each asset if requested
         const assetsWithExtensions = await Promise.all(
-            authorizedAssets.map(async (asset: any): Promise<Asset> => {
+            authorizedPage.data.map(async (asset: any): Promise<Asset> => {
                 const extensionData = validatedParams.include_extension_data
                     ? await getExtensionData(trx, tenant, asset.asset_id, asset.asset_type)
                     : null;
@@ -1375,7 +1364,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
 
             const response = {
                 assets: assetsWithExtensions,
-                total: Number(count),
+                total: authorizedPage.total,
                 page,
                 limit
             };

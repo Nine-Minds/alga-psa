@@ -9,9 +9,15 @@ describe('asset authorization kernel contracts', () => {
 
   it('T021: keeps selected asset surfaces on shared kernel with baseline + bundle narrowing composition', () => {
     expect(source).toContain('async function resolveAssetAuthorizationRecords(');
+    expect(source).toContain('async function createAssetReadAuthorizationContext(');
+    expect(source).toContain('async function authorizeAssetReadDecision(');
+    expect(source).toContain('async function assertAssetReadAllowed(');
     expect(source).toContain('export const getAsset = withAuth(async (user, { tenant }, asset_id: string)');
     expect(source).toContain('export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: string)');
     expect(source).toContain('export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryParams)');
+    expect(source).toContain('buildAuthorizationAwarePage<any>({');
+    expect(source).toContain('authorizeRecord: async (asset) => {');
+    expect(source).toContain('total: authorizedPage.total,');
     expect(source).toContain('builtinProvider: new BuiltinAuthorizationKernelProvider(),');
     expect(source).toContain('bundleProvider: new BundleAuthorizationKernelProvider({');
     expect(source).toContain('return await resolveBundleNarrowingRulesForEvaluation(trx, input);');

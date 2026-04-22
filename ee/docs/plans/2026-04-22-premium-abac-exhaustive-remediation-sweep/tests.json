@@ -135,7 +135,7 @@
   {
     "id": "T015",
     "description": "Asset pagination integration: `listAssets` returns honest authorized totals/pages after narrowing.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022",
       "F023",

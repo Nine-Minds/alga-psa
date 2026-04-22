@@ -211,7 +211,7 @@
   {
     "id": "F022",
     "description": "Introduce a shared asset-read authorizer and use it consistently across asset server actions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Problem",
       "Requirements",
@@ -221,7 +221,7 @@
   {
     "id": "F023",
     "description": "Fix `listAssets` totals and page metadata so they match authorized rows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Problem",
       "Requirements",

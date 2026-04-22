@@ -102,6 +102,12 @@ It intentionally preserves the earlier 2026-04-22 remediation plan as a historic
 - (2026-04-22) `getAssetSummaryMetrics` was flagged as a zero-auth surface.
 - (2026-04-22) Relationship, maintenance, history, linked-ticket, and client-summary paths still mostly rely on RBAC only.
 - (2026-04-22) Asset detail bundles need an explicit policy decision about linked tickets/documents: parent asset read only, or parent + child intersection.
+- (2026-04-22) Implemented shared asset-read authorizer helpers (`F022`) in `packages/assets/src/actions/assetActions.ts`:
+  - `createAssetReadAuthorizationKernel(...)`
+  - `createAssetReadAuthorizationContext(...)`
+  - `authorizeAssetReadDecision(...)`
+  - `assertAssetReadAllowed(...)`
+- (2026-04-22) Implemented authorization-aware asset pagination totals (`F023`) by moving `listAssets` to `buildAuthorizationAwarePage(...)` and returning `authorizedPage.total`.
 
 ### Projects / tasks / statuses
 - (2026-04-22) `packages/projects/src/actions/projectActions.ts` is partially hardened but still has remaining parity work.
@@ -154,6 +160,8 @@ It intentionally preserves the earlier 2026-04-22 remediation plan as a historic
   - `pnpm -C packages/documents typecheck`
 - (2026-04-22) Re-run count/folder hardening tests:
   - `cd server && pnpm vitest src/test/unit/documentFolderOperations.test.ts ../packages/documents/tests/documentActions.authorization.contract.test.ts --coverage.enabled false`
+- (2026-04-22) Run asset auth/pagination contract test:
+  - `cd server && pnpm vitest ../packages/assets/src/actions/assetAuthorization.contract.test.ts --coverage.enabled false`
 
 ## Links / References
 
@@ -240,6 +248,9 @@ It intentionally preserves the earlier 2026-04-22 remediation plan as a historic
   - `packages/documents/src/actions/documentActions.ts`
   - `packages/documents/tests/documentActions.authorization.contract.test.ts` (`T014`)
   - `server/src/test/unit/documentFolderOperations.test.ts`
+- (2026-04-22) Completed asset shared read-authorizer + pagination totals wave (`F022-F023`) in:
+  - `packages/assets/src/actions/assetActions.ts`
+  - `packages/assets/src/actions/assetAuthorization.contract.test.ts` (`T015`)
 - (2026-04-22) Marked quote parity regression tests `T007-T010` complete after re-validating:
   - `packages/billing/src/actions/quoteAuthorizationParity.contract.test.ts`
 - (2026-04-22) Marked document URL regression test `T011` complete:
