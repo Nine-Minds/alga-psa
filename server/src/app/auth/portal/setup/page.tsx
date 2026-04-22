@@ -28,7 +28,21 @@ const PORTAL_ERROR_CODE_KEYS: Record<PortalInvitationErrorCode, string> = {
   CREATE_USER_FAILED: 'auth.portalSetup.errors.createUserFailed',
   SETUP_FAILED: 'auth.portalSetup.errors.setupFailed',
   VERIFICATION_FAILED: 'auth.portalSetup.errors.verificationFailed',
-  INVITATION_FAILED: 'auth.portalSetup.errors.invitationFailed'
+  INVITATION_FAILED: 'auth.portalSetup.errors.invitationFailed',
+  PERMISSION_DENIED_INVITE: 'auth.portalSetup.errors.permissionDeniedInvite',
+  PERMISSION_DENIED_CREATE: 'auth.portalSetup.errors.permissionDeniedCreate',
+  EMAIL_NOT_CONFIGURED: 'auth.portalSetup.errors.emailNotConfigured',
+  CONTACT_NOT_FOUND: 'auth.portalSetup.errors.contactNotFound',
+  CONTACT_MISSING_EMAIL: 'auth.portalSetup.errors.contactMissingEmail',
+  CONTACT_INVALID_EMAIL: 'auth.portalSetup.errors.contactInvalidEmail',
+  USER_EXISTS_FOR_CONTACT: 'auth.portalSetup.errors.userExistsForContact',
+  PORTAL_USER_ALREADY_EXISTS: 'auth.portalSetup.errors.portalUserAlreadyExists',
+  NO_DEFAULT_CLIENT: 'auth.portalSetup.errors.noDefaultClient',
+  NO_DEFAULT_LOCATION: 'auth.portalSetup.errors.noDefaultLocation',
+  NO_LOCATION_EMAIL: 'auth.portalSetup.errors.noLocationEmail',
+  BASE_URL_NOT_CONFIGURED: 'auth.portalSetup.errors.baseUrlNotConfigured',
+  INVITATION_NOT_FOUND: 'auth.portalSetup.errors.invitationNotFound',
+  REVOKE_FAILED: 'auth.portalSetup.errors.revokeFailed'
 };
 
 interface ContactInfo {

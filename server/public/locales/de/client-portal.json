@@ -129,7 +129,21 @@
         "createUserFailed": "Dein Benutzerkonto konnte nicht erstellt werden. Bitte versuche es erneut.",
         "setupFailed": "Die Portaleinrichtung konnte nicht abgeschlossen werden. Bitte versuche es erneut.",
         "verificationFailed": "Dein Einladungstoken konnte nicht überprüft werden. Bitte versuche es erneut.",
-        "invitationFailed": "Die Einladung konnte nicht gesendet werden. Bitte versuche es erneut."
+        "invitationFailed": "Die Einladung konnte nicht gesendet werden. Bitte versuche es erneut.",
+        "permissionDeniedInvite": "Du hast keine Berechtigung, Portal-Einladungen zu versenden.",
+        "permissionDeniedCreate": "Du hast keine Berechtigung, Portal-Benutzerkonten zu erstellen.",
+        "emailNotConfigured": "Der E-Mail-Dienst ist nicht konfiguriert. Bitte wende dich an deinen Administrator.",
+        "contactNotFound": "Kontakt nicht gefunden.",
+        "contactMissingEmail": "Der Kontakt hat keine E-Mail-Adresse.",
+        "contactInvalidEmail": "Der Kontakt hat eine ungültige E-Mail-Adresse.",
+        "userExistsForContact": "Für diesen Kontakt existiert bereits ein Benutzerkonto.",
+        "portalUserAlreadyExists": "Für diesen Kontakt existiert bereits ein Portal-Benutzer.",
+        "noDefaultClient": "Für diesen Mandanten ist kein Standard-Kunde konfiguriert.",
+        "noDefaultLocation": "Der Standard-Kunde hat keinen Standard-Standort konfiguriert.",
+        "noLocationEmail": "Für den Kundenstandort ist keine Kontakt-E-Mail konfiguriert.",
+        "baseUrlNotConfigured": "Die Basis-URL der Anwendung ist nicht konfiguriert.",
+        "invitationNotFound": "Einladung nicht gefunden.",
+        "revokeFailed": "Die Einladung konnte nicht widerrufen werden. Bitte versuche es erneut."
       }
     },
     "features": {

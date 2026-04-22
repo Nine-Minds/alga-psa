@@ -129,7 +129,21 @@
         "createUserFailed": "Non è stato possibile creare il tuo account utente. Riprova.",
         "setupFailed": "Non è stato possibile completare la configurazione del portale. Riprova.",
         "verificationFailed": "Non è stato possibile verificare il tuo token di invito. Riprova.",
-        "invitationFailed": "Non è stato possibile inviare l'invito. Riprova."
+        "invitationFailed": "Non è stato possibile inviare l'invito. Riprova.",
+        "permissionDeniedInvite": "Non hai l'autorizzazione per inviare inviti al portale.",
+        "permissionDeniedCreate": "Non hai l'autorizzazione per creare account utente del portale.",
+        "emailNotConfigured": "Il servizio e-mail non è configurato. Contatta il tuo amministratore.",
+        "contactNotFound": "Contatto non trovato.",
+        "contactMissingEmail": "Il contatto non ha un indirizzo e-mail.",
+        "contactInvalidEmail": "Il contatto ha un indirizzo e-mail non valido.",
+        "userExistsForContact": "Esiste già un account utente per questo contatto.",
+        "portalUserAlreadyExists": "Esiste già un utente del portale per questo contatto.",
+        "noDefaultClient": "Nessun cliente predefinito configurato per questo tenant.",
+        "noDefaultLocation": "Il cliente predefinito non ha una posizione predefinita configurata.",
+        "noLocationEmail": "La posizione del cliente non ha un'e-mail di contatto configurata.",
+        "baseUrlNotConfigured": "L'URL di base dell'applicazione non è configurato.",
+        "invitationNotFound": "Invito non trovato.",
+        "revokeFailed": "Non è stato possibile revocare l'invito. Riprova."
       }
     },
     "features": {

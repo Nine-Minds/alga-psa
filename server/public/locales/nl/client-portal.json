@@ -129,7 +129,21 @@
         "createUserFailed": "Je gebruikersaccount kon niet worden aangemaakt. Probeer het opnieuw.",
         "setupFailed": "De portaalconfiguratie kon niet worden voltooid. Probeer het opnieuw.",
         "verificationFailed": "Je uitnodigingstoken kon niet worden geverifieerd. Probeer het opnieuw.",
-        "invitationFailed": "De uitnodiging kon niet worden verzonden. Probeer het opnieuw."
+        "invitationFailed": "De uitnodiging kon niet worden verzonden. Probeer het opnieuw.",
+        "permissionDeniedInvite": "Je hebt geen toestemming om portaal-uitnodigingen te verzenden.",
+        "permissionDeniedCreate": "Je hebt geen toestemming om portaal-gebruikersaccounts aan te maken.",
+        "emailNotConfigured": "De e-mailservice is niet geconfigureerd. Neem contact op met je beheerder.",
+        "contactNotFound": "Contact niet gevonden.",
+        "contactMissingEmail": "Het contact heeft geen e-mailadres.",
+        "contactInvalidEmail": "Het contact heeft een ongeldig e-mailadres.",
+        "userExistsForContact": "Er bestaat al een gebruikersaccount voor dit contact.",
+        "portalUserAlreadyExists": "Er bestaat al een portaalgebruiker voor dit contact.",
+        "noDefaultClient": "Er is geen standaardklant geconfigureerd voor deze tenant.",
+        "noDefaultLocation": "De standaardklant heeft geen standaardlocatie geconfigureerd.",
+        "noLocationEmail": "De klantlocatie heeft geen contact-e-mail geconfigureerd.",
+        "baseUrlNotConfigured": "De basis-URL van de applicatie is niet geconfigureerd.",
+        "invitationNotFound": "Uitnodiging niet gevonden.",
+        "revokeFailed": "De uitnodiging kon niet worden ingetrokken. Probeer het opnieuw."
       }
     },
     "features": {

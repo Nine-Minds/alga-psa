@@ -129,7 +129,21 @@
         "createUserFailed": "11111",
         "setupFailed": "11111",
         "verificationFailed": "11111",
-        "invitationFailed": "11111"
+        "invitationFailed": "11111",
+        "permissionDeniedInvite": "11111",
+        "permissionDeniedCreate": "11111",
+        "emailNotConfigured": "11111",
+        "contactNotFound": "11111",
+        "contactMissingEmail": "11111",
+        "contactInvalidEmail": "11111",
+        "userExistsForContact": "11111",
+        "portalUserAlreadyExists": "11111",
+        "noDefaultClient": "11111",
+        "noDefaultLocation": "11111",
+        "noLocationEmail": "11111",
+        "baseUrlNotConfigured": "11111",
+        "invitationNotFound": "11111",
+        "revokeFailed": "11111"
       }
     },
     "features": {

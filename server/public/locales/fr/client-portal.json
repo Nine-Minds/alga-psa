@@ -129,7 +129,21 @@
         "createUserFailed": "Impossible de créer votre compte utilisateur. Veuillez réessayer.",
         "setupFailed": "Impossible de terminer la configuration du portail. Veuillez réessayer.",
         "verificationFailed": "Impossible de vérifier votre jeton d'invitation. Veuillez réessayer.",
-        "invitationFailed": "Impossible d'envoyer l'invitation. Veuillez réessayer."
+        "invitationFailed": "Impossible d'envoyer l'invitation. Veuillez réessayer.",
+        "permissionDeniedInvite": "Vous n'avez pas l'autorisation d'envoyer des invitations au portail.",
+        "permissionDeniedCreate": "Vous n'avez pas l'autorisation de créer des comptes utilisateurs du portail.",
+        "emailNotConfigured": "Le service e-mail n'est pas configuré. Veuillez contacter votre administrateur.",
+        "contactNotFound": "Contact introuvable.",
+        "contactMissingEmail": "Le contact n'a pas d'adresse e-mail.",
+        "contactInvalidEmail": "Le contact a une adresse e-mail invalide.",
+        "userExistsForContact": "Un compte utilisateur existe déjà pour ce contact.",
+        "portalUserAlreadyExists": "Un utilisateur du portail existe déjà pour ce contact.",
+        "noDefaultClient": "Aucun client par défaut n'est configuré pour ce locataire.",
+        "noDefaultLocation": "Le client par défaut n'a pas d'emplacement par défaut configuré.",
+        "noLocationEmail": "L'emplacement du client n'a pas d'e-mail de contact configuré.",
+        "baseUrlNotConfigured": "L'URL de base de l'application n'est pas configurée.",
+        "invitationNotFound": "Invitation introuvable.",
+        "revokeFailed": "Impossible de révoquer l'invitation. Veuillez réessayer."
       }
     },
     "features": {

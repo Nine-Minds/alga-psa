@@ -129,7 +129,21 @@
         "createUserFailed": "Nie udało się utworzyć Twojego konta użytkownika. Spróbuj ponownie.",
         "setupFailed": "Nie udało się ukończyć konfiguracji portalu. Spróbuj ponownie.",
         "verificationFailed": "Nie udało się zweryfikować Twojego tokena zaproszenia. Spróbuj ponownie.",
-        "invitationFailed": "Nie udało się wysłać zaproszenia. Spróbuj ponownie."
+        "invitationFailed": "Nie udało się wysłać zaproszenia. Spróbuj ponownie.",
+        "permissionDeniedInvite": "Nie masz uprawnień do wysyłania zaproszeń do portalu.",
+        "permissionDeniedCreate": "Nie masz uprawnień do tworzenia kont użytkowników portalu.",
+        "emailNotConfigured": "Usługa e-mail nie jest skonfigurowana. Skontaktuj się z administratorem.",
+        "contactNotFound": "Nie znaleziono kontaktu.",
+        "contactMissingEmail": "Kontakt nie ma adresu e-mail.",
+        "contactInvalidEmail": "Kontakt ma nieprawidłowy adres e-mail.",
+        "userExistsForContact": "Konto użytkownika już istnieje dla tego kontaktu.",
+        "portalUserAlreadyExists": "Użytkownik portalu już istnieje dla tego kontaktu.",
+        "noDefaultClient": "Nie skonfigurowano domyślnego klienta dla tego najemcy.",
+        "noDefaultLocation": "Domyślny klient nie ma skonfigurowanej domyślnej lokalizacji.",
+        "noLocationEmail": "Lokalizacja klienta nie ma skonfigurowanego kontaktowego adresu e-mail.",
+        "baseUrlNotConfigured": "Bazowy adres URL aplikacji nie jest skonfigurowany.",
+        "invitationNotFound": "Nie znaleziono zaproszenia.",
+        "revokeFailed": "Nie udało się cofnąć zaproszenia. Spróbuj ponownie."
       }
     },
     "features": {
