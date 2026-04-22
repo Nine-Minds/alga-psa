@@ -292,6 +292,112 @@ async function createProjectReadAuthorizer(
     };
 }
 
+type KernelAuthorizationContext = {
+    subject: AuthorizationSubject;
+    authorizationKernel: ReturnType<typeof createAuthorizationKernel>;
+    requestCache: RequestLocalAuthorizationCache;
+};
+
+async function createKernelAuthorizationContext(
+    trx: Knex.Transaction,
+    tenant: string,
+    user: IUserWithRoles
+): Promise<KernelAuthorizationContext> {
+    const subject = await resolveAuthorizationSubjectForUser(trx, tenant, user);
+    const authorizationKernel = createAuthorizationKernel({
+        builtinProvider: new BuiltinAuthorizationKernelProvider(),
+        bundleProvider: new BundleAuthorizationKernelProvider({
+            resolveRules: async (input) => {
+                try {
+                    return await resolveBundleNarrowingRulesForEvaluation(trx, input);
+                } catch {
+                    return [];
+                }
+            },
+        }),
+        rbacEvaluator: async () => true,
+    });
+
+    return {
+        subject,
+        authorizationKernel,
+        requestCache: new RequestLocalAuthorizationCache(),
+    };
+}
+
+async function filterAuthorizedTicketIds(
+    trx: Knex.Transaction,
+    tenant: string,
+    user: IUserWithRoles,
+    ticketIds: string[]
+): Promise<Set<string>> {
+    const uniqueTicketIds = Array.from(new Set(ticketIds.filter(Boolean)));
+    if (uniqueTicketIds.length === 0) {
+        return new Set();
+    }
+
+    if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        return new Set();
+    }
+
+    const context = await createKernelAuthorizationContext(trx, tenant, user);
+    const tickets = await trx('tickets')
+        .where({ tenant })
+        .whereIn('ticket_id', uniqueTicketIds)
+        .select(
+            'ticket_id',
+            'entered_by',
+            'assigned_to',
+            'assigned_team_id',
+            'client_id',
+            'board_id',
+            'is_client_visible',
+            'status_id'
+        );
+
+    const decisions = await Promise.all(
+        tickets.map((ticket) =>
+            context.authorizationKernel.authorizeResource({
+                subject: context.subject,
+                resource: { type: 'ticket', action: 'read', id: ticket.ticket_id },
+                record: {
+                    id: ticket.ticket_id,
+                    ownerUserId: ticket.entered_by ?? null,
+                    assignedUserIds: ticket.assigned_to ? [ticket.assigned_to] : [],
+                    clientId: ticket.client_id ?? null,
+                    boardId: ticket.board_id ?? undefined,
+                    teamIds: ticket.assigned_team_id ? [ticket.assigned_team_id] : [],
+                    is_client_visible: ticket.is_client_visible === true,
+                    statusId: ticket.status_id,
+                },
+                requestCache: context.requestCache,
+                knex: trx,
+            })
+        )
+    );
+
+    const allowedIds = new Set<string>();
+    tickets.forEach((ticket, index) => {
+        if (decisions[index]?.allowed) {
+            allowedIds.add(ticket.ticket_id);
+        }
+    });
+
+    return allowedIds;
+}
+
+async function assertTicketReadAllowedById(
+    trx: Knex.Transaction,
+    tenant: string,
+    user: IUserWithRoles,
+    ticketId: string
+): Promise<void> {
+    const allowedTicketIds = await filterAuthorizedTicketIds(trx, tenant, user, [ticketId]);
+    if (!allowedTicketIds.has(ticketId)) {
+        throw new Error('Permission denied: Cannot read ticket');
+    }
+}
+
 async function assertProjectReadAllowedById(
     trx: Knex.Transaction,
     tenant: string,
@@ -881,6 +987,7 @@ export const addTicketLinkAction = withAuth(async (
         const {knex: db} = await createTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'update', trx);
+            await assertTicketReadAllowedById(trx, tenant, user as IUserWithRoles, ticketId);
             await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
             if (taskId) {
                 const taskProjectId = await resolveProjectIdForTask(trx, tenant, taskId);
@@ -911,7 +1018,14 @@ export const getTaskTicketLinksAction = withAuth(async (
                 throw new Error('Project not found for task');
             }
             await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
-            return await ProjectTaskModel.getTaskTicketLinks(trx, tenant, taskId);
+            const links = await ProjectTaskModel.getTaskTicketLinks(trx, tenant, taskId);
+            const allowedTicketIds = await filterAuthorizedTicketIds(
+                trx,
+                tenant,
+                user as IUserWithRoles,
+                links.map((link) => link.ticket_id)
+            );
+            return links.filter((link) => allowedTicketIds.has(link.ticket_id));
         });
     } catch (error) {
         console.error('Error getting task ticket links:', error);
@@ -928,6 +1042,7 @@ export const getLinkedTasksForTicketAction = withAuth(async (
         const {knex: db} = await createTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'read', trx);
+            await assertTicketReadAllowedById(trx, tenant, user as IUserWithRoles, ticketId);
             const linkedTasks = await ProjectTaskModel.getLinkedTasksForTicket(trx, tenant, ticketId);
             if (linkedTasks.length === 0) {
                 return linkedTasks;
@@ -1026,6 +1141,14 @@ export const getTasksForPhase = withAuth(async (
                     : []
             ]);
 
+            const allowedTicketIds = await filterAuthorizedTicketIds(
+                trx,
+                tenant,
+                user as IUserWithRoles,
+                ticketLinksArray.map((link) => link.ticket_id)
+            );
+            const authorizedTicketLinksArray = ticketLinksArray.filter((link) => allowedTicketIds.has(link.ticket_id));
+
             // Convert arrays to maps
             const ticketLinks: { [taskId: string]: IProjectTicketLinkWithDetails[] } = {};
             const taskResources: { [taskId: string]: any[] } = {};
@@ -1033,7 +1156,7 @@ export const getTasksForPhase = withAuth(async (
             const taskTags: Record<string, ITag[]> = {};
             const taskDependencies: { [taskId: string]: { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] } } = {};
 
-            for (const link of ticketLinksArray) {
+            for (const link of authorizedTicketLinksArray) {
                 if (link.task_id) {
                     if (!ticketLinks[link.task_id]) {
                         ticketLinks[link.task_id] = [];
@@ -1353,6 +1476,7 @@ export const deleteTaskTicketLinksByTicketIdAction = withAuth(async (
         const {knex: db} = await createTenantKnex();
         await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'update', trx);
+            await assertTicketReadAllowedById(trx, tenant, user as IUserWithRoles, ticketId);
             const projectIds = await resolveProjectIdsForTicket(trx, tenant, ticketId);
             if (projectIds.length > 0) {
                 await Promise.all(projectIds.map((projectId) =>
@@ -1876,10 +2000,18 @@ export const getTaskWithDetails = withAuth(async (
                 ProjectTaskModel.getTaskResources(trx, tenant, taskId)
             ]);
 
+            const allowedTicketIds = await filterAuthorizedTicketIds(
+                trx,
+                tenant,
+                user as IUserWithRoles,
+                ticketLinks.map((link) => link.ticket_id)
+            );
+            const authorizedTicketLinks = ticketLinks.filter((link) => allowedTicketIds.has(link.ticket_id));
+
             return {
                 ...task,
                 checklist_items: checklistItems,
-                ticket_links: ticketLinks,
+                ticket_links: authorizedTicketLinks,
                 resources: resources
             };
         });
@@ -2408,6 +2540,14 @@ export const getAllProjectTasksForListView = withAuth(async (
                 : []
         ]);
 
+        const allowedTicketIds = await filterAuthorizedTicketIds(
+            trx,
+            tenant,
+            user as IUserWithRoles,
+            ticketLinksArray.map((link) => link.ticket_id)
+        );
+        const authorizedTicketLinksArray = ticketLinksArray.filter((link) => allowedTicketIds.has(link.ticket_id));
+
         // 5. Convert arrays to maps keyed by task_id
         const ticketLinks: Record<string, IProjectTicketLinkWithDetails[]> = {};
         const taskResources: Record<string, any[]> = {};
@@ -2415,7 +2555,7 @@ export const getAllProjectTasksForListView = withAuth(async (
         const taskTags: Record<string, ITag[]> = {};
         const taskDependencies: Record<string, { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] }> = {};
 
-        for (const link of ticketLinksArray) {
+        for (const link of authorizedTicketLinksArray) {
             if (link.task_id) {
                 (ticketLinks[link.task_id] ??= []).push(link);
             }

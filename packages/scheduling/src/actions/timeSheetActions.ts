@@ -208,6 +208,9 @@ export const addCommentToTimeSheet = withAuth(async (
     if (!isOwner && !canApprove) {
       throw new Error('Permission denied: Cannot add comments to timesheets');
     }
+    if (!isOwner) {
+      await assertCanActOnBehalf(user, tenant, timeSheet.user_id, db);
+    }
     const [newComment] = await db('time_sheet_comments')
       .insert({
         time_sheet_id: timeSheetId,
@@ -602,6 +605,8 @@ export const requestChangesForTimeSheet = withAuth(async (user, { tenant }, time
       if (!timeSheet) {
         throw new Error('Time sheet not found');
       }
+
+      await assertCanActOnBehalf(user, tenant, timeSheet.user_id, trx);
 
       await trx('time_sheets')
         .where({

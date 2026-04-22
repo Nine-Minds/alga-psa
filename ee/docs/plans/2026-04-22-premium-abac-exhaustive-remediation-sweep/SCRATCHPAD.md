@@ -174,6 +174,16 @@ It intentionally preserves the earlier 2026-04-22 remediation plan as a historic
 
 ### Time / remaining resource-family re-audit
 - (2026-04-22) The prior remediation fixed the `time_entry` resource key mismatch, but a broader re-audit is still needed to confirm there are no leftover helper/count leaks or RBAC-only delegation paths.
+- (2026-04-22) Re-audit (`F034`) found delegation gaps in time-sheet actions:
+  - `requestChangesForTimeSheet` did not enforce delegation on the target subject.
+  - non-owner path in `addCommentToTimeSheet` did not enforce delegation.
+- (2026-04-22) Implemented time/delegation remediation (`F034`) in:
+  - `packages/scheduling/src/actions/timeSheetActions.ts`
+  - `packages/scheduling/src/actions/timeEntryDelegationAuth.ts`
+  - `packages/scheduling/tests/timeDelegationSweep.contract.test.ts`
+  - `packages/scheduling/tests/timeEntryDelegationAuth.authorization.test.ts`
+- (2026-04-22) `requestChangesForTimeSheet` and non-owner comments now require `assertCanActOnBehalf(...)`.
+- (2026-04-22) Delegation helper now avoids unnecessary managed-user expansion for tenant-wide (`timesheet:read_all`) checks while preserving fail-closed behavior.
 
 ## Commands / Runbooks
 
@@ -223,6 +233,10 @@ It intentionally preserves the earlier 2026-04-22 remediation plan as a historic
   - `cd server && pnpm vitest ../packages/projects/src/actions/projectAuthorization.contract.test.ts --coverage.enabled false`
 - (2026-04-22) Run projects package typecheck:
   - `pnpm -C packages/projects typecheck`
+- (2026-04-22) Run time/delegation re-audit validation tests:
+  - `cd server && pnpm vitest ../packages/scheduling/tests/timeDelegationSweep.contract.test.ts ../packages/scheduling/tests/timeEntryDelegationAuth.authorization.test.ts --coverage.enabled false`
+- (2026-04-22) Run close-out artifact contract test:
+  - `cd server && pnpm vitest src/test/unit/authorization/premiumAbacExhaustiveInventory.contract.test.ts --coverage.enabled false`
 
 ## Links / References
 
@@ -332,6 +346,17 @@ It intentionally preserves the earlier 2026-04-22 remediation plan as a historic
   - `packages/projects/src/actions/projectTaskActions.ts`
   - `packages/projects/src/actions/projectTaskStatusActions.ts`
   - `packages/projects/src/actions/projectAuthorization.contract.test.ts` (`T020-T023`)
+- (2026-04-22) Completed `F033` project structural-child semantics in:
+  - `packages/projects/src/actions/projectTaskActions.ts` (linked ticket data now intersects with ticket-resource auth).
+  - `packages/projects/src/actions/projectAuthorization.contract.test.ts` (`F033` assertion block).
+- (2026-04-22) Completed exhaustive re-audit and close-out artifact wave (`F034-F038`) in:
+  - `packages/scheduling/src/actions/timeEntryDelegationAuth.ts`
+  - `packages/scheduling/src/actions/timeSheetActions.ts`
+  - `packages/scheduling/tests/timeDelegationSweep.contract.test.ts` (`T024`)
+  - `packages/scheduling/tests/timeEntryDelegationAuth.authorization.test.ts` (`T024`)
+  - `ee/docs/plans/2026-04-22-premium-abac-exhaustive-remediation-sweep/EXHAUSTIVE_SURFACE_INVENTORY.md` (`F037`)
+  - `ee/docs/plans/2026-04-21-premium-abac-authorization-kernel/CURRENT_AUTHORIZATION_BASELINE.md` (`F038`)
+  - `server/src/test/unit/authorization/premiumAbacExhaustiveInventory.contract.test.ts` (`T025`)
 - (2026-04-22) Completed `F043` project regression coverage by expanding contract assertions for:
   - `T019` projectActions parity
   - `T020` task/checklist/dependency/resource/ticket-link gating
@@ -341,6 +366,9 @@ It intentionally preserves the earlier 2026-04-22 remediation plan as a historic
 - (2026-04-22) Validation status for project task/status wave:
   - `cd server && pnpm vitest ../packages/projects/src/actions/projectAuthorization.contract.test.ts --coverage.enabled false` passed (7 tests).
   - `pnpm -C packages/projects typecheck` passed.
+- (2026-04-22) Validation status for re-audit + close-out wave:
+  - `cd server && pnpm vitest ../packages/scheduling/tests/timeDelegationSweep.contract.test.ts ../packages/scheduling/tests/timeEntryDelegationAuth.authorization.test.ts --coverage.enabled false` passed.
+  - close-out artifact contract `premiumAbacExhaustiveInventory.contract.test.ts` authored (executed in this wave).
 - (2026-04-22) Marked quote parity regression tests `T007-T010` complete after re-validating:
   - `packages/billing/src/actions/quoteAuthorizationParity.contract.test.ts`
 - (2026-04-22) Marked document URL regression test `T011` complete:

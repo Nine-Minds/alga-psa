@@ -320,7 +320,7 @@
   {
     "id": "F033",
     "description": "Decide and implement structural-child semantics for project subresources so phases/tasks/checklists/status mappings inherit project auth while linked ticket data still respects ticket-resource auth where exposed.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Project / phase / task / status exhaustive remediation",
@@ -330,7 +330,7 @@
   {
     "id": "F034",
     "description": "Re-audit time/delegation flows beyond the prior `time_entry` resource-key fix and capture any remaining RBAC-only or aggregate leaks.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Remaining migrated resource-family re-audit"
@@ -339,7 +339,7 @@
   {
     "id": "F035",
     "description": "Re-audit non-API entry points that reach hardened resources, including file routes, previews, shared lookup helpers, and composition-layer actions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Remaining migrated resource-family re-audit"
@@ -348,7 +348,7 @@
   {
     "id": "F036",
     "description": "Re-audit CE/EE helper seams so both sides use the same runtime semantics and do not regress into duplicated auth logic.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Remaining migrated resource-family re-audit",
@@ -358,7 +358,7 @@
   {
     "id": "F037",
     "description": "Produce an exhaustive surface inventory mapping file/function -> chosen auth semantics -> status -> validating tests.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Summary",
       "Requirements",
@@ -368,7 +368,7 @@
   {
     "id": "F038",
     "description": "Update the authorization baseline and cross-links so the final current-behavior ledger reflects the exhaustive sweep outcome.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Validation / close-out artifacts",
@@ -378,7 +378,7 @@
   {
     "id": "F039",
     "description": "Add bundle lifecycle concurrency and integrity regression coverage for draft creation, publish validation, migration preflights, and assignment governance.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Requirements",
@@ -388,7 +388,7 @@
   {
     "id": "F040",
     "description": "Add quote server-action parity regression coverage for list totals, quote mutations, quote item integrity, and converted-record helper lookups.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Requirements",
@@ -398,7 +398,7 @@
   {
     "id": "F041",
     "description": "Add document regression coverage for URL helpers, content/block-content actions, folder/count leaks, bulk mutations, and folder-tree semantics.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Requirements",

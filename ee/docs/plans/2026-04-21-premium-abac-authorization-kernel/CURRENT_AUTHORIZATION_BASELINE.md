@@ -4,6 +4,25 @@
 - Date captured: `2026-04-21`
 - Purpose: document current authorization behavior before the authorization-kernel / premium-ABAC overhaul so implementation can validate behavior parity at the end.
 
+## Baseline Delta Cross-Links (2026-04-22 Exhaustive Sweep)
+
+- Surgical remediation checkpoint:
+  - `ee/docs/plans/2026-04-22-premium-abac-remediation/`
+- Exhaustive remediation sweep:
+  - `ee/docs/plans/2026-04-22-premium-abac-exhaustive-remediation-sweep/PRD.md`
+  - `ee/docs/plans/2026-04-22-premium-abac-exhaustive-remediation-sweep/SCRATCHPAD.md`
+  - `ee/docs/plans/2026-04-22-premium-abac-exhaustive-remediation-sweep/EXHAUSTIVE_SURFACE_INVENTORY.md`
+- Exhaustive sweep implementation checkpoints:
+  - `2507228e1` (`feat(F001-F010): harden bundle lifecycle integrity and governance`)
+  - `33e72b1a2` (`feat(F011-F015): harden quote action authorization parity`)
+  - `fbef61405` (`feat(F016): enforce kernel-backed document URL authorization`)
+  - `7cec52725` (`feat(F017-F018): enforce document mutation and content auth parity`)
+  - `54facac75` (`feat(F019): harden document aggregate count surfaces`)
+  - `16acac536` (`feat(F020-F021): remove document shadow auth filters`)
+  - `596c43d91` (`feat(F024-F026): harden exhaustive asset auth parity`)
+  - `0384ad23c` (`feat(F027): harden projectActions parent-project auth`)
+  - `d57083f49` (`feat(F028-F032): enforce parent-project gating across task/status actions`)
+
 ## Current System Summary
 
 Today the codebase uses:

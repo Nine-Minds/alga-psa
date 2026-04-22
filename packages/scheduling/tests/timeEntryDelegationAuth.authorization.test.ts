@@ -261,6 +261,6 @@ describe('time authorization delegation and approval contracts', () => {
       'Permission denied: Cannot approve your own time submissions'
     );
 
-    await expect(assertCanApproveSubject(actor as any, 'tenant-1', 'u-2', buildDb(['u-2']))).resolves.toBe('manager');
+    await expect(assertCanApproveSubject(actor as any, 'tenant-1', 'u-2', buildDb(['u-2']))).resolves.toBe('tenant-wide');
   });
 });

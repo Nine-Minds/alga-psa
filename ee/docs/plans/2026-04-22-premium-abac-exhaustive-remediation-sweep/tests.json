@@ -220,7 +220,7 @@
   {
     "id": "T024",
     "description": "Time/delegation regression: the remaining time-entry approval/delegation surfaces still honor narrowing after the full sweep and no count/helper bypasses remain.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ]
@@ -228,7 +228,7 @@
   {
     "id": "T025",
     "description": "Close-out contract: the remediation inventory artifact maps every reviewed surface to a disposition and at least one validating test or explicit rationale.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F037",
       "F038",

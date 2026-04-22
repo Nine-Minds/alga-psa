@@ -104,4 +104,13 @@ describe('project authorization kernel contracts', () => {
     expect(projectTaskActionsSource).toContain('await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, newPhase.project_id);');
     expect(projectTaskActionsSource).toContain('await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);');
   });
+
+  it('F033: linked ticket payloads in project structural surfaces apply ticket-resource intersection semantics', () => {
+    expect(projectTaskActionsSource).toContain('async function filterAuthorizedTicketIds(');
+    expect(projectTaskActionsSource).toContain('async function assertTicketReadAllowedById(');
+    expect(projectTaskActionsSource).toContain('resource: { type: \'ticket\', action: \'read\', id: ticket.ticket_id }');
+    expect(projectTaskActionsSource).toContain('await assertTicketReadAllowedById(trx, tenant, user as IUserWithRoles, ticketId);');
+    expect(projectTaskActionsSource).toContain('const allowedTicketIds = await filterAuthorizedTicketIds(');
+    expect(projectTaskActionsSource).toContain('const authorizedTicketLinksArray = ticketLinksArray.filter((link) => allowedTicketIds.has(link.ticket_id));');
+  });
 });

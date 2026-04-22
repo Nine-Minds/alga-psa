@@ -119,7 +119,7 @@ export async function assertCanActOnBehalf(
   }
 
   const canReadAll = await hasPermission(actor, 'timesheet', 'read_all', db);
-  const managedUserIds = await resolveManagedSubjectUserIds(db, tenant, actor);
+  const managedUserIds = canReadAll ? [] : await resolveManagedSubjectUserIds(db, tenant, actor);
   const authorizationSubject: AuthorizationSubject = {
     tenant,
     userId: actor.user_id,
@@ -183,7 +183,7 @@ export async function assertCanApproveSubject(
   db: Knex | Knex.Transaction
 ): Promise<DelegationScope> {
   const scope = await assertCanActOnBehalf(actor, tenant, subjectUserId, db);
-  const managedUserIds = await resolveManagedSubjectUserIds(db, tenant, actor);
+  const managedUserIds = scope === 'tenant-wide' ? [] : await resolveManagedSubjectUserIds(db, tenant, actor);
 
   const subject: AuthorizationSubject = {
     tenant,
