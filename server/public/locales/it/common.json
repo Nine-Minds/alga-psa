@@ -108,6 +108,19 @@
       "resendFailed": "Impossibile inviare nuovamente l'e-mail. Riprova."
     }
   },
+  "share": {
+    "errors": {
+      "loadFailed": "Impossibile caricare il link di condivisione",
+      "connectionFailed": "Impossibile connettersi al server",
+      "passwordRequired": "Password richiesta",
+      "invalidPassword": "Password non valida",
+      "downloadFailedRetry": "Download non riuscito. Riprova.",
+      "downloadFailed": "Download non riuscito",
+      "linkNotAvailable": "Link non disponibile",
+      "linkExpired": "Questo link di condivisione è scaduto.",
+      "downloadLimitReached": "Il limite di download è stato raggiunto."
+    }
+  },
   "tickets": {
     "responseSource": {
       "clientPortal": "Ricevuto tramite Portale Clienti",

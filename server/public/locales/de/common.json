@@ -550,6 +550,19 @@
       "resendFailed": "E-Mail konnte nicht erneut gesendet werden. Bitte versuche es erneut."
     }
   },
+  "share": {
+    "errors": {
+      "loadFailed": "Freigabelink konnte nicht geladen werden",
+      "connectionFailed": "Verbindung zum Server fehlgeschlagen",
+      "passwordRequired": "Passwort erforderlich",
+      "invalidPassword": "Ungültiges Passwort",
+      "downloadFailedRetry": "Download fehlgeschlagen. Bitte versuche es erneut.",
+      "downloadFailed": "Download fehlgeschlagen",
+      "linkNotAvailable": "Link nicht verfügbar",
+      "linkExpired": "Dieser Freigabelink ist abgelaufen.",
+      "downloadLimitReached": "Die Download-Grenze wurde erreicht."
+    }
+  },
   "tickets": {
     "responseSource": {
       "clientPortal": "Empfangen über Kundenportal",

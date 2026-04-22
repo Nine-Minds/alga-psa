@@ -122,6 +122,19 @@
       "resendFailed": "Failed to resend email. Please try again."
     }
   },
+  "share": {
+    "errors": {
+      "loadFailed": "Failed to load share link",
+      "connectionFailed": "Failed to connect to server",
+      "passwordRequired": "Password required",
+      "invalidPassword": "Invalid password",
+      "downloadFailedRetry": "Download failed. Please try again.",
+      "downloadFailed": "Download failed",
+      "linkNotAvailable": "Link Not Available",
+      "linkExpired": "This share link has expired.",
+      "downloadLimitReached": "Download limit has been reached."
+    }
+  },
   "tickets": {
     "origin": {
       "internal": "Created Internally",

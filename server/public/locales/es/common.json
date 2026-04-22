@@ -83,6 +83,19 @@
       "resendFailed": "No se pudo reenviar el correo. Inténtalo de nuevo."
     }
   },
+  "share": {
+    "errors": {
+      "loadFailed": "No se pudo cargar el enlace compartido",
+      "connectionFailed": "No se pudo conectar al servidor",
+      "passwordRequired": "Se requiere contraseña",
+      "invalidPassword": "Contraseña no válida",
+      "downloadFailedRetry": "La descarga falló. Inténtalo de nuevo.",
+      "downloadFailed": "La descarga falló",
+      "linkNotAvailable": "Enlace no disponible",
+      "linkExpired": "Este enlace compartido ha caducado.",
+      "downloadLimitReached": "Se alcanzó el límite de descargas."
+    }
+  },
   "tickets": {
     "responseSource": {
       "clientPortal": "Recibido vía Portal de Cliente",

@@ -108,6 +108,19 @@
       "resendFailed": "Falha ao reenviar o e-mail. Tente novamente."
     }
   },
+  "share": {
+    "errors": {
+      "loadFailed": "Falha ao carregar o link de partilha",
+      "connectionFailed": "Falha ao ligar ao servidor",
+      "passwordRequired": "Palavra-passe necessária",
+      "invalidPassword": "Palavra-passe inválida",
+      "downloadFailedRetry": "Falha no download. Tente novamente.",
+      "downloadFailed": "Falha no download",
+      "linkNotAvailable": "Link indisponível",
+      "linkExpired": "Este link de partilha expirou.",
+      "downloadLimitReached": "O limite de downloads foi atingido."
+    }
+  },
   "tickets": {
     "origin": {
       "internal": "Created Internally",

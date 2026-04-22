@@ -550,6 +550,19 @@
       "resendFailed": "Échec de l'envoi de l'e-mail. Veuillez réessayer."
     }
   },
+  "share": {
+    "errors": {
+      "loadFailed": "Échec du chargement du lien de partage",
+      "connectionFailed": "Échec de la connexion au serveur",
+      "passwordRequired": "Mot de passe requis",
+      "invalidPassword": "Mot de passe invalide",
+      "downloadFailedRetry": "Échec du téléchargement. Veuillez réessayer.",
+      "downloadFailed": "Échec du téléchargement",
+      "linkNotAvailable": "Lien indisponible",
+      "linkExpired": "Ce lien de partage a expiré.",
+      "downloadLimitReached": "La limite de téléchargements a été atteinte."
+    }
+  },
   "tickets": {
     "responseSource": {
       "clientPortal": "Reçu via le Portail Client",

@@ -550,6 +550,19 @@
       "resendFailed": "E-mail opnieuw verzenden is mislukt. Probeer het opnieuw."
     }
   },
+  "share": {
+    "errors": {
+      "loadFailed": "Kan de deellink niet laden",
+      "connectionFailed": "Verbinding met server mislukt",
+      "passwordRequired": "Wachtwoord vereist",
+      "invalidPassword": "Ongeldig wachtwoord",
+      "downloadFailedRetry": "Download mislukt. Probeer het opnieuw.",
+      "downloadFailed": "Download mislukt",
+      "linkNotAvailable": "Link niet beschikbaar",
+      "linkExpired": "Deze deellink is verlopen.",
+      "downloadLimitReached": "De downloadlimiet is bereikt."
+    }
+  },
   "tickets": {
     "responseSource": {
       "clientPortal": "Ontvangen via Klantenportaal",

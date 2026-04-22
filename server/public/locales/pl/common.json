@@ -108,6 +108,19 @@
       "resendFailed": "Nie udało się ponownie wysłać e-maila. Spróbuj ponownie."
     }
   },
+  "share": {
+    "errors": {
+      "loadFailed": "Nie udało się załadować linku udostępniania",
+      "connectionFailed": "Nie udało się połączyć z serwerem",
+      "passwordRequired": "Wymagane hasło",
+      "invalidPassword": "Nieprawidłowe hasło",
+      "downloadFailedRetry": "Pobieranie nie powiodło się. Spróbuj ponownie.",
+      "downloadFailed": "Pobieranie nie powiodło się",
+      "linkNotAvailable": "Link niedostępny",
+      "linkExpired": "Ten link udostępniania wygasł.",
+      "downloadLimitReached": "Osiągnięto limit pobierań."
+    }
+  },
   "tickets": {
     "responseSource": {
       "clientPortal": "Otrzymano przez Portal Klienta",
