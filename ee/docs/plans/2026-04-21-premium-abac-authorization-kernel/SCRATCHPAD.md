@@ -222,3 +222,11 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-04-21) Validation runbook for `F045` checkpoint:
   - `cd packages/scheduling && npx tsc --pretty false --noEmit -p tsconfig.json`
   - `cd .. && npx tsc --pretty false --noEmit -p server/tsconfig.json`
+- (2026-04-21) Completed `F046` by migrating selected project comment authorization semantics to kernel evaluation:
+  - `packages/projects/src/actions/projectTaskCommentActions.ts` now enforces non-internal comment edit/delete access via kernel `own` relationship evaluation on the comment owner record.
+  - Preserved prior behavior exactly for internal users (retain full edit/delete capability), while non-internal users must satisfy `own` semantics through the shared kernel path.
+  - This captures the targeted v1 own-comment/internal-user seam under shared authorization contracts.
+- (2026-04-21) Validation runbook for `F046` checkpoint:
+  - `cd packages/projects && npx tsc --pretty false --noEmit -p tsconfig.json`
+  - `cd .. && npx tsc --pretty false --noEmit -p server/tsconfig.json`
+  - `cd packages/projects && npx vitest run src/actions/projectPhaseStatusActions.contract.test.ts src/actions/projectPhaseStatusCopyRemove.contract.test.ts --coverage.enabled=false` (known pre-existing contract drift in `projectTaskStatusActions.ts` expectation: missing literal `async function getScopedProjectStatusMappings(`)

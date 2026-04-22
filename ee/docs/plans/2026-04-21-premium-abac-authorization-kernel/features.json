@@ -422,7 +422,7 @@
   {
     "id": "F046",
     "description": "Migrate the selected v1 project authorization paths onto the shared kernel, including the existing own-comment / internal-user semantics that must remain intact.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements",
       "Acceptance Criteria (Definition of Done)"
