@@ -7,10 +7,12 @@ import { isFeatureFlagEnabled } from '@alga-psa/core';
 import { User } from '@alga-psa/db';
 import {
   BuiltinAuthorizationKernelProvider,
+  BundleAuthorizationKernelProvider,
   RequestLocalAuthorizationCache,
   createAuthorizationKernel,
   type AuthorizationSubject,
 } from 'server/src/lib/authorization/kernel';
+import { resolveBundleNarrowingRulesForEvaluation } from 'server/src/lib/authorization/bundles/service';
 
 export type DelegationScope = 'self' | 'tenant-wide' | 'manager';
 
@@ -84,10 +86,6 @@ export async function assertCanActOnBehalf(
   }
 
   const canReadAll = await hasPermission(actor, 'timesheet', 'read_all', db);
-  if (canReadAll) {
-    return 'tenant-wide';
-  }
-
   const managedUserIds = await resolveManagedSubjectUserIds(db, tenant, actor);
   const authorizationSubject: AuthorizationSubject = {
     tenant,
@@ -102,7 +100,16 @@ export async function assertCanActOnBehalf(
 
   const authorizationKernel = createAuthorizationKernel({
     builtinProvider: new BuiltinAuthorizationKernelProvider({
-      relationshipRules: [{ template: 'managed' }],
+      relationshipRules: canReadAll ? [] : [{ template: 'managed' }],
+    }),
+    bundleProvider: new BundleAuthorizationKernelProvider({
+      resolveRules: async (input) => {
+        try {
+          return await resolveBundleNarrowingRulesForEvaluation(db, input);
+        } catch {
+          return [];
+        }
+      },
     }),
     rbacEvaluator: async () => true,
   });
@@ -124,6 +131,12 @@ export async function assertCanActOnBehalf(
   });
 
   if (decision.allowed) {
+    if (managedUserIds.includes(subjectUserId)) {
+      return 'manager';
+    }
+    if (canReadAll) {
+      return 'tenant-wide';
+    }
     return 'manager';
   }
 

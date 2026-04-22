@@ -404,7 +404,7 @@
   {
     "id": "F044",
     "description": "Support premium time narrowing bundles that can restrict access to self-only or self-plus-managed-user scopes without broadening existing delegation behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Functional Requirements"

@@ -206,3 +206,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd packages/scheduling && npx tsc --pretty false --noEmit -p tsconfig.json`
   - `cd .. && npx tsc --pretty false --noEmit -p server/tsconfig.json`
   - `cd packages/scheduling && npx vitest run tests/timeEntryCrud.changeRequests.test.ts tests/timeSheetClient.reopen.test.tsx --coverage.enabled=false` (known pre-existing failure in `T012` mock chain: `db(...).leftJoin is not a function`)
+- (2026-04-21) Completed `F044` by enabling premium time narrowing overlays in delegation evaluation:
+  - `assertCanActOnBehalf` now composes built-in delegation and premium bundle narrowing by adding `BundleAuthorizationKernelProvider` with `resolveBundleNarrowingRulesForEvaluation(...)`.
+  - For `timesheet:read_all` principals, builtin delegation now allows broad scope, while bundle templates can narrow that scope (for example to managed-only/self-only behavior) without widening baseline RBAC/delegation.
+  - Result scope classification remains explicit (`manager` when subject is in managed set, otherwise `tenant-wide` only when read-all plus kernel allow).
+- (2026-04-21) Validation runbook for `F044` checkpoint:
+  - `cd packages/scheduling && npx tsc --pretty false --noEmit -p tsconfig.json`
+  - `cd .. && npx tsc --pretty false --noEmit -p server/tsconfig.json`
