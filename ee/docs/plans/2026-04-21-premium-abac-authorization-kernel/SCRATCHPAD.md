@@ -184,3 +184,17 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - Ticket actions now instantiate kernel with a bundle provider that resolves active published bundle rules for the current principal (`resolveBundleNarrowingRulesForEvaluation`).
   - Bundle template semantics are now enforced in bundle provider (`bundle_template_denied`) by evaluating each matching rule’s relationship template against record context.
   - This enables ticket narrowing from bundle templates like assignment/client/team/selected-board in the migrated ticket paths.
+- (2026-04-21) Completed `F040` by migrating selected document server-action list/detail/download paths to the shared kernel:
+  - Added shared document auth helpers in `packages/documents/src/actions/documentActions.ts` for principal resolution, relationship-context normalization from `document_associations`, and per-record kernel evaluation.
+  - Migrated `getDocument`, `getAllDocuments`, `getDocumentsByEntity`, `getDocumentsByFolder`, and `downloadDocument` to run `authorizeResource` through the kernel after RBAC.
+  - Preserved client-user semantics by enforcing `own OR same_client` relationship checks plus fail-closed `is_client_visible` guard on non-owned records.
+- (2026-04-21) Completed `F041` by enabling premium document bundle overlays on migrated document paths:
+  - Document actions now instantiate a bundle provider backed by `resolveBundleNarrowingRulesForEvaluation(...)`.
+  - Document record context passed to kernel now includes `clientId`, `teamIds`, and `is_client_visible`, enabling client/portfolio-style narrowing and `client_visible_only` enforcement where configured.
+- (2026-04-21) Completed `F042` by wiring document field-redaction hooks into migrated document surfaces:
+  - Migrated list/detail document actions now apply kernel-provided `redactedFields` to returned document payloads without mutating allow/deny behavior.
+  - Redaction plumbing is centralized via `authorizeAndRedactDocuments(...)`.
+- (2026-04-21) Validation runbook for `F040`-`F042` checkpoint:
+  - `cd packages/documents && npx tsc --pretty false --noEmit -p tsconfig.json`
+  - `cd .. && npx tsc --pretty false --noEmit -p server/tsconfig.json`
+  - `cd server && npx vitest run src/test/unit/authorization/kernel.engine.test.ts src/test/unit/authorization/bundle.provider.test.ts --coverage.enabled=false`

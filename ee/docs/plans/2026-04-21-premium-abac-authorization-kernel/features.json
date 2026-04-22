@@ -367,7 +367,7 @@
   {
     "id": "F040",
     "description": "Migrate document authorization for the selected v1 UI/server-action paths onto the shared kernel while preserving ownership, same-client, and client-visible semantics.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -376,7 +376,7 @@
   {
     "id": "F041",
     "description": "Support premium document narrowing bundles that can restrict document access by client portfolio and client-visible-only rules.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Functional Requirements"
@@ -385,7 +385,7 @@
   {
     "id": "F042",
     "description": "Support document-sensitive-field redaction hooks for the selected v1 document surfaces without changing record-level visibility semantics.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements",
       "Security / Permissions"

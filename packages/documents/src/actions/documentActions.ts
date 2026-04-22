@@ -18,6 +18,7 @@ import {
     IDocument,
     IDocumentType,
     ISharedDocumentType,
+    IUser,
     DocumentFilters,
     PreviewResponse,
     DocumentInput,
@@ -44,6 +45,16 @@ import {
 } from '@alga-psa/workflow-streams';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  BuiltinAuthorizationKernelProvider,
+  BundleAuthorizationKernelProvider,
+  RequestLocalAuthorizationCache,
+  createAuthorizationKernel,
+  type AuthorizationRecord,
+  type AuthorizationSubject,
+  type RelationshipRule,
+} from 'server/src/lib/authorization/kernel';
+import { resolveBundleNarrowingRulesForEvaluation } from 'server/src/lib/authorization/bundles/service';
 
 async function loadSharp() {
   try {
@@ -113,6 +124,336 @@ async function ensureEntityFoldersInitializedInternal(
   if (foldersToInsert.length > 0) {
     await knex('document_folders').insert(foldersToInsert);
   }
+}
+
+type UserWithOptionalRoles = IUser & { roles?: Array<{ role_id?: string } | string> };
+
+interface DocumentAssociationRow {
+  document_id: string;
+  entity_id: string;
+  entity_type: string;
+}
+
+interface DocumentAuthorizationInput {
+  document_id: string;
+  created_by?: string | null;
+  is_client_visible?: boolean | null;
+}
+
+function extractRoleIdsFromUser(user: UserWithOptionalRoles): string[] {
+  if (!Array.isArray(user.roles)) {
+    return [];
+  }
+
+  return user.roles
+    .map((role: { role_id?: string } | string) => {
+      if (typeof role === 'string') {
+        return role;
+      }
+      return typeof role?.role_id === 'string' ? role.role_id : null;
+    })
+    .filter((value: string | null): value is string => Boolean(value));
+}
+
+async function resolveAuthorizationSubjectForUser(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: UserWithOptionalRoles
+): Promise<AuthorizationSubject> {
+  let roleIds = extractRoleIdsFromUser(user);
+  if (roleIds.length === 0) {
+    try {
+      const roleRows = await trx('user_roles')
+        .where({ tenant, user_id: user.user_id })
+        .select<{ role_id: string }[]>('role_id');
+      roleIds = roleRows.map((row) => row.role_id);
+    } catch {
+      roleIds = [];
+    }
+  }
+
+  let teamRows: Array<{ team_id: string }> = [];
+  let managedRows: Array<{ user_id: string }> = [];
+  try {
+    teamRows = await trx('team_members')
+      .where({ tenant, user_id: user.user_id })
+      .select<{ team_id: string }[]>('team_id');
+  } catch {
+    teamRows = [];
+  }
+  try {
+    managedRows = await trx('users')
+      .where({ tenant, reports_to: user.user_id })
+      .select<{ user_id: string }[]>('user_id');
+  } catch {
+    managedRows = [];
+  }
+
+  return {
+    tenant,
+    userId: user.user_id,
+    userType: user.user_type,
+    roleIds,
+    teamIds: teamRows.map((row) => row.team_id),
+    managedUserIds: managedRows.map((row) => row.user_id),
+    clientId: user.clientId ?? null,
+    portfolioClientIds: user.clientId ? [user.clientId] : [],
+  };
+}
+
+function applyDocumentRedactions<T extends object>(document: T, redactedFields: string[]): T {
+  if (redactedFields.length === 0) {
+    return document;
+  }
+
+  const redacted = { ...document } as Record<string, unknown>;
+  for (const field of redactedFields) {
+    delete redacted[field];
+  }
+  return redacted as T;
+}
+
+function getDocumentBuiltinRelationshipRules(user: IUser): RelationshipRule[] {
+  if (user.user_type !== 'client') {
+    return [];
+  }
+
+  return [{ template: 'own' }, { template: 'same_client' }];
+}
+
+async function resolveDocumentAuthorizationRecords(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUser,
+  documents: DocumentAuthorizationInput[]
+): Promise<Map<string, AuthorizationRecord>> {
+  const documentIds = documents.map((doc) => doc.document_id);
+  const records = new Map<string, AuthorizationRecord>();
+  if (documentIds.length === 0) {
+    return records;
+  }
+
+  const associations = await trx('document_associations')
+    .where({ tenant })
+    .whereIn('document_id', documentIds)
+    .select<DocumentAssociationRow[]>('document_id', 'entity_id', 'entity_type');
+
+  const associationByDocument = new Map<string, DocumentAssociationRow[]>();
+  for (const association of associations) {
+    const existing = associationByDocument.get(association.document_id) ?? [];
+    existing.push(association);
+    associationByDocument.set(association.document_id, existing);
+  }
+
+  const contactIds = new Set<string>();
+  const ticketIds = new Set<string>();
+  const projectTaskIds = new Set<string>();
+  const contractIds = new Set<string>();
+
+  for (const association of associations) {
+    if (association.entity_type === 'contact') {
+      contactIds.add(association.entity_id);
+    }
+    if (association.entity_type === 'ticket') {
+      ticketIds.add(association.entity_id);
+    }
+    if (association.entity_type === 'project_task') {
+      projectTaskIds.add(association.entity_id);
+    }
+    if (association.entity_type === 'contract') {
+      contractIds.add(association.entity_id);
+    }
+  }
+
+  const [contactClientRows, ticketClientRows, projectTaskClientRows, contractClientRows] = await Promise.all([
+    contactIds.size > 0
+      ? trx('contacts')
+          .where({ tenant })
+          .whereIn('contact_name_id', Array.from(contactIds))
+          .select<{ contact_name_id: string; client_id: string | null }[]>('contact_name_id', 'client_id')
+      : Promise.resolve([]),
+    ticketIds.size > 0
+      ? trx('tickets')
+          .where({ tenant })
+          .whereIn('ticket_id', Array.from(ticketIds))
+          .select<{ ticket_id: string; client_id: string | null }[]>('ticket_id', 'client_id')
+      : Promise.resolve([]),
+    projectTaskIds.size > 0
+      ? trx('project_tasks as pt')
+          .join('project_phases as pp', function joinPhases() {
+            this.on('pt.phase_id', '=', 'pp.phase_id').andOn('pt.tenant', '=', 'pp.tenant');
+          })
+          .join('projects as p', function joinProjects() {
+            this.on('pp.project_id', '=', 'p.project_id').andOn('pp.tenant', '=', 'p.tenant');
+          })
+          .where('pt.tenant', tenant)
+          .whereIn('pt.task_id', Array.from(projectTaskIds))
+          .select<{ task_id: string; client_id: string | null }[]>('pt.task_id', 'p.client_id')
+      : Promise.resolve([]),
+    contractIds.size > 0
+      ? trx('billing_plans')
+          .where({ tenant })
+          .whereIn('plan_id', Array.from(contractIds))
+          .select<{ plan_id: string; company_id: string | null }[]>('plan_id', 'company_id')
+      : Promise.resolve([]),
+  ]);
+
+  const contactClientById = new Map<string, string | null>();
+  for (const row of contactClientRows) {
+    contactClientById.set(row.contact_name_id, row.client_id ?? null);
+  }
+  const ticketClientById = new Map<string, string | null>();
+  for (const row of ticketClientRows) {
+    ticketClientById.set(row.ticket_id, row.client_id ?? null);
+  }
+  const projectTaskClientById = new Map<string, string | null>();
+  for (const row of projectTaskClientRows) {
+    projectTaskClientById.set(row.task_id, row.client_id ?? null);
+  }
+  const contractClientById = new Map<string, string | null>();
+  for (const row of contractClientRows) {
+    contractClientById.set(row.plan_id, row.company_id ?? null);
+  }
+
+  for (const document of documents) {
+    const documentAssociations = associationByDocument.get(document.document_id) ?? [];
+    const directClientAssociation = documentAssociations.find((association) => association.entity_type === 'client');
+    const userAssociations = documentAssociations.filter((association) => association.entity_type === 'user');
+    const teamAssociations = documentAssociations.filter((association) => association.entity_type === 'team');
+    const contactAssociations = documentAssociations.filter((association) => association.entity_type === 'contact');
+    const ticketAssociations = documentAssociations.filter((association) => association.entity_type === 'ticket');
+    const projectTaskAssociations = documentAssociations.filter((association) => association.entity_type === 'project_task');
+    const contractAssociations = documentAssociations.filter((association) => association.entity_type === 'contract');
+
+    const ownerFromUserAssociation = userAssociations[0]?.entity_id ?? null;
+    const ownerViaContactMatch =
+      user.contact_id && contactAssociations.some((association) => association.entity_id === user.contact_id)
+        ? user.user_id
+        : null;
+
+    const clientFromContact =
+      contactAssociations
+        .map((association) => contactClientById.get(association.entity_id))
+        .find((clientId): clientId is string => typeof clientId === 'string') ?? null;
+    const clientFromTicket =
+      ticketAssociations
+        .map((association) => ticketClientById.get(association.entity_id))
+        .find((clientId): clientId is string => typeof clientId === 'string') ?? null;
+    const clientFromTask =
+      projectTaskAssociations
+        .map((association) => projectTaskClientById.get(association.entity_id))
+        .find((clientId): clientId is string => typeof clientId === 'string') ?? null;
+    const clientFromContract =
+      contractAssociations
+        .map((association) => contractClientById.get(association.entity_id))
+        .find((clientId): clientId is string => typeof clientId === 'string') ?? null;
+
+    const clientId =
+      directClientAssociation?.entity_id ??
+      clientFromContact ??
+      clientFromTicket ??
+      clientFromTask ??
+      clientFromContract ??
+      null;
+
+    records.set(document.document_id, {
+      id: document.document_id,
+      ownerUserId: ownerFromUserAssociation ?? ownerViaContactMatch ?? document.created_by ?? null,
+      assignedUserIds: Array.from(new Set(userAssociations.map((association) => association.entity_id))),
+      clientId,
+      teamIds: Array.from(new Set(teamAssociations.map((association) => association.entity_id))),
+      is_client_visible: document.is_client_visible === true,
+    });
+  }
+
+  return records;
+}
+
+async function authorizeAndRedactDocuments<T extends IDocument>(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUser,
+  documents: T[]
+): Promise<T[]> {
+  if (documents.length === 0) {
+    return [];
+  }
+
+  const authorizationSubject = await resolveAuthorizationSubjectForUser(trx, tenant, user as UserWithOptionalRoles);
+  const relationshipRules = getDocumentBuiltinRelationshipRules(user);
+  const selectedClientIds = user.clientId ? [user.clientId] : undefined;
+  const authorizationKernel = createAuthorizationKernel({
+    builtinProvider: new BuiltinAuthorizationKernelProvider({
+      relationshipRules,
+    }),
+    bundleProvider: new BundleAuthorizationKernelProvider({
+      resolveRules: async (input) => {
+        try {
+          return await resolveBundleNarrowingRulesForEvaluation(trx, input);
+        } catch {
+          return [];
+        }
+      },
+    }),
+    rbacEvaluator: async () => true,
+  });
+  const requestCache = new RequestLocalAuthorizationCache();
+  const authorizationRecords = await resolveDocumentAuthorizationRecords(
+    trx,
+    tenant,
+    user,
+    documents.map((document) => ({
+      document_id: document.document_id,
+      created_by: document.created_by,
+      is_client_visible: document.is_client_visible,
+    }))
+  );
+
+  const decisions = await Promise.all(
+    documents.map(async (document) => {
+      const record = authorizationRecords.get(document.document_id) ?? {
+        id: document.document_id,
+        ownerUserId: document.created_by ?? null,
+        is_client_visible: document.is_client_visible === true,
+      };
+
+      const decision = await authorizationKernel.authorizeResource({
+        subject: authorizationSubject,
+        resource: {
+          type: 'document',
+          action: 'read',
+          id: document.document_id,
+        },
+        record,
+        selectedClientIds,
+        requestCache,
+        knex: trx,
+      });
+
+      const isClientVisible = record.is_client_visible === true;
+      const isOwnedBySubject = record.ownerUserId === authorizationSubject.userId;
+      const deniedByClientVisibility =
+        user.user_type === 'client' && !isOwnedBySubject && !isClientVisible;
+      const allowed = decision.allowed && !deniedByClientVisibility;
+
+      return {
+        allowed,
+        redactedFields: decision.redactedFields,
+      };
+    })
+  );
+
+  const authorizedDocuments: T[] = [];
+  for (let index = 0; index < documents.length; index += 1) {
+    const document = documents[index];
+    const decision = decisions[index];
+    if (!document || !decision?.allowed) {
+      continue;
+    }
+    authorizedDocuments.push(applyDocumentRedactions(document, decision.redactedFields));
+  }
+
+  return authorizedDocuments;
 }
 
 // Add new document
@@ -410,6 +751,7 @@ export const getDocument = withAuth(async (user, { tenant }, documentId: string)
       storage_path: document.storage_path,
       mime_type: document.mime_type,
       file_size: document.file_size,
+      is_client_visible: document.is_client_visible,
       created_by_full_name: document.created_by_full_name,
       type_name: document.type_name,
       type_icon: document.type_icon,
@@ -418,7 +760,15 @@ export const getDocument = withAuth(async (user, { tenant }, documentId: string)
       edited_by: document.edited_by
     };
 
-    return processedDoc;
+    const [authorizedDocument] = await withTransaction(knex, async (trx: Knex.Transaction) =>
+      authorizeAndRedactDocuments(trx, tenant, user, [processedDoc])
+    );
+
+    if (!authorizedDocument) {
+      return permissionError('Permission denied: Cannot read documents');
+    }
+
+    return authorizedDocument;
   } catch (error) {
     console.error(error);
     throw new Error("Failed to get the document");
@@ -1081,8 +1431,15 @@ export const downloadDocument = withAuth(async (user, { tenant }, documentIdOrFi
             throw new Error('Document not found or has no associated file');
         }
 
+        const [authorizedDocument] = await withTransaction(knex, async (trx: Knex.Transaction) =>
+          authorizeAndRedactDocuments(trx, tenant, user, [document as IDocument])
+        );
+        if (!authorizedDocument) {
+          return permissionError('Permission denied: Cannot read documents');
+        }
+
         // Download file from storage
-        const result = await StorageService.downloadFile(document.file_id);
+        const result = await StorageService.downloadFile(authorizedDocument.file_id!);
         if (!result) {
             throw new Error('File not found in storage');
         }
@@ -1094,8 +1451,8 @@ export const downloadDocument = withAuth(async (user, { tenant }, documentIdOrFi
         headers.set('Content-Type', metadata.mime_type || 'application/octet-stream');
 
         // Properly encode filename to handle special characters
-        const encodedFilename = encodeURIComponent(document.document_name || 'download');
-        const asciiFilename = document.document_name?.replace(/[^\x00-\x7F]/g, '_') || 'download';
+        const encodedFilename = encodeURIComponent(authorizedDocument.document_name || 'download');
+        const asciiFilename = authorizedDocument.document_name?.replace(/[^\x00-\x7F]/g, '_') || 'download';
         headers.set('Content-Disposition', `attachment; filename="${asciiFilename}"; filename*=UTF-8''${encodedFilename}`);
         headers.set('Content-Length', buffer.length.toString());
 
@@ -1105,7 +1462,7 @@ export const downloadDocument = withAuth(async (user, { tenant }, documentIdOrFi
             // Cache images for 7 days, but revalidate after 1 day
             headers.set('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
             // Add ETag for conditional requests
-            headers.set('ETag', `"${document.file_id}"`);
+            headers.set('ETag', `"${authorizedDocument.file_id}"`);
         } else {
             // For non-images, use no-cache to ensure fresh content
             headers.set('Cache-Control', 'no-cache');
@@ -1371,6 +1728,7 @@ export const getDocumentsByEntity = withAuth(async (
         storage_path: doc.storage_path,
         mime_type: doc.mime_type,
         file_size: doc.file_size,
+        is_client_visible: doc.is_client_visible,
         created_by_full_name: doc.created_by_full_name,
         type_name: doc.type_name,
         type_icon: doc.type_icon,
@@ -1384,8 +1742,12 @@ export const getDocumentsByEntity = withAuth(async (
       return processedDoc;
     });
 
+    const authorizedDocuments = await withTransaction(knex, async (trx: Knex.Transaction) =>
+      authorizeAndRedactDocuments(trx, tenant, user, processedDocuments)
+    );
+
     return {
-      documents: processedDocuments,
+      documents: authorizedDocuments,
       totalCount,
       currentPage: page,
       totalPages: Math.ceil(totalCount / limit),
@@ -2940,8 +3302,12 @@ export const getDocumentsByFolder = withAuth(async (
 
   const documents = await query;
 
+  const authorizedDocuments = await withTransaction(knex, async (trx: Knex.Transaction) =>
+    authorizeAndRedactDocuments(trx, tenant, user, documents as IDocument[])
+  );
+
   return {
-    documents,
+    documents: authorizedDocuments,
     total,
   };
 });
