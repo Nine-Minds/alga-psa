@@ -50,7 +50,7 @@
   {
     "id": "F009",
     "description": "Publish the initial revision when seeding starter bundles so seeded bundles are immediately enforceable through the normal published-revision path.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Problem", "Functional Requirements", "UX / UI Notes"]
   },
   {

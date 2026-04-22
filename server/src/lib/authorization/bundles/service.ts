@@ -546,7 +546,7 @@ export async function archiveBundle(
 }
 
 export async function publishBundleRevision(
-  knex: Knex,
+  knex: Knex | Knex.Transaction,
   input: PublishBundleRevisionInput
 ): Promise<void> {
   await knex.transaction(async (trx) => {

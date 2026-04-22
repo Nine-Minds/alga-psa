@@ -194,6 +194,13 @@ export const seedStarterAuthorizationBundlesAction = withAuth(
             actorUserId: user.user_id,
           });
         }
+
+        await publishBundleRevision(trx, {
+          tenant,
+          bundleId: created.bundleId,
+          revisionId: created.revisionId,
+          actorUserId: user.user_id,
+        });
       }
     });
   }

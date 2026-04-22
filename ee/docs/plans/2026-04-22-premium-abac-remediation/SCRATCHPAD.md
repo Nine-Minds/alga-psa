@@ -29,6 +29,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-04-22) `server` package tests run directly via `cd server && npx vitest run ...`; root `npm run test:local -- ...` currently fails because its `dotenv` invocation expects a different CLI syntax.
 - (2026-04-22) Control-plane schema allows `authorization_bundle_rules.bundle_id` to drift from the referenced revision’s `bundle_id` because rule rows currently only foreign-key revision by `(tenant, revision_id)`.
 - (2026-04-22) Runtime rule mapping loaded `constraints`/`redactedFields` from rule config but did not load `selectedClientIds` or `selectedBoardIds`, so selected template rules could evaluate against missing IDs.
+- (2026-04-22) `seedStarterAuthorizationBundlesAction` created starter bundle draft revisions/rules but never published them, so seeded bundles were assignable yet inert.
 
 ## Commands / Runbooks
 
@@ -106,3 +107,11 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-04-22) Verification for `F006-F008`:
   - Command: `cd server && npx vitest run src/test/unit/authorization/bundle.provider.test.ts`
   - Result: pass.
+- (2026-04-22) Completed `F009`:
+  - Starter seeding now publishes each created starter bundle revision immediately after inserting starter rules.
+  - Kept publish inside the existing transaction flow by widening `publishBundleRevision` to accept `Knex | Knex.Transaction`.
+- (2026-04-22) Verification for `F009`:
+  - Command: `cd server && npx vitest run src/test/unit/authorization/starterBundles.test.ts`
+  - Result: pass.
+  - Command: `cd server && npx vitest run src/test/unit/authorization/bundleManagementPermissions.test.ts`
+  - Result: test pass but process ended with coverage cleanup error (`ENOENT .../coverage/.tmp`).
