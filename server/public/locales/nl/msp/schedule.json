@@ -219,7 +219,9 @@
         "action": "Actie"
       },
       "actions": {
-        "edit": "Bewerken"
+        "edit": "Bewerken",
+        "delete": "Verwijderen",
+        "deleting": "Bezig met verwijderen..."
       },
       "defaultApprover": {
         "placeholder": "Selecteer een goedkeurder"
@@ -323,7 +325,13 @@
       "feedback": {
         "selectUserError": "Selecteer een gebruiker",
         "saveSuccess": "Gebruikersuren opgeslagen",
-        "saveError": "Kan gebruikersuren niet opslaan"
+        "saveError": "Kan gebruikersuren niet opslaan",
+        "deleteSuccess": "Beschikbaarheid van gebruiker verwijderd",
+        "deleteError": "Kan beschikbaarheid van gebruiker niet verwijderen"
+      },
+      "deleteDialog": {
+        "title": "Beschikbaarheid van gebruiker verwijderen",
+        "message": "Weet u zeker dat u de beschikbaarheidsinstellingen voor {{userName}} wilt verwijderen? Hierdoor worden alle geconfigureerde werkuren verwijderd. Deze actie kan niet ongedaan worden gemaakt."
       }
     },
     "serviceRules": {
@@ -365,7 +373,13 @@
       "feedback": {
         "selectServiceError": "Selecteer een dienst",
         "saveSuccess": "Serviceregels opgeslagen",
-        "saveError": "Kan serviceregels niet opslaan"
+        "saveError": "Kan serviceregels niet opslaan",
+        "deleteSuccess": "Serviceregels verwijderd",
+        "deleteError": "Kan serviceregels niet verwijderen"
+      },
+      "deleteDialog": {
+        "title": "Serviceregels verwijderen",
+        "message": "Weet u zeker dat u de regels voor {{serviceName}} wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
       }
     },
     "exceptions": {
