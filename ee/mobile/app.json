@@ -39,9 +39,17 @@
       "expo-secure-store",
       "expo-localization",
       "expo-notifications",
-      "expo-image-picker",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Alga PSA to access your photo library so you can attach screenshots and images to tickets.",
+          "cameraPermission": "Allow Alga PSA to use the camera so you can capture photos to attach to tickets.",
+          "microphonePermission": false
+        }
+      ],
       "expo-document-picker",
       "expo-web-browser",
+      "expo-apple-authentication",
       [
         "@sentry/react-native/expo",
         {

@@ -17,6 +17,11 @@ export const MobileAnalyticsEvents = {
   authSignInOpenFailed: "auth.sign_in.open_failed",
   authSignInOpenedBrowser: "auth.sign_in.opened_browser",
   authSignInStart: "auth.sign_in.start",
+  authAppleStart: "auth.apple.start",
+  authAppleCancelled: "auth.apple.cancelled",
+  authAppleFailed: "auth.apple.failed",
+  authAppleSucceeded: "auth.apple.succeeded",
+  authAppleNoAccount: "auth.apple.no_account",
 } as const;
 
 export type MobileAnalyticsEventName =
