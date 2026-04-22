@@ -1,0 +1,73 @@
+# Scratchpad — Premium ABAC Follow-up Remediation
+
+- Plan slug: `premium-abac-remediation`
+- Created: `2026-04-22`
+
+## What This Is
+
+Keep a lightweight, continuously-updated log of discoveries and decisions made while implementing this plan.
+
+Prefer short bullets. Append new entries as you learn things, and also *update earlier notes* when a decision changes or an open question is resolved.
+
+## Decisions
+
+- (2026-04-22) This is a **follow-up remediation plan** for `ee/docs/plans/2026-04-21-premium-abac-authorization-kernel/`, not a replacement for it.
+- (2026-04-22) Scope is limited to defects identified during review of the first implementation session.
+- (2026-04-22) Remediation should be **surgical** where possible and should preserve the architecture and product decisions from the original plan.
+- (2026-04-22) The most urgent fixes are draft/publish integrity, selected-rule fidelity, starter-bundle publish behavior, time resource-key alignment, simulator fidelity, and API pagination semantics.
+- (2026-04-22) `F001` implemented by adding explicit remediation-to-original feature/test mapping to this plan PRD; this follow-up now has auditable traceability to original plan IDs.
+
+## Discoveries / Constraints
+
+- (2026-04-22) `getAuthorizationBundleDraftEditorAction` currently requires only read permission but calls `ensureDraftBundleRevision(...)`, which creates draft state as a side effect.
+- (2026-04-22) `upsertBundleRule(...)` and `deleteBundleRule(...)` are currently not scoped tightly enough to the active draft revision, which weakens draft/publish isolation.
+- (2026-04-22) Runtime relationship evaluation for `selected_clients` and `selected_boards` depends on evaluation input fields, but the stored rule config is not fully propagated into bundle-rule evaluation objects.
+- (2026-04-22) Starter bundle seeding currently creates bundle rules without publishing the initial revision, leaving seeded bundles inert.
+- (2026-04-22) Migrated Time UI/catalog uses `time_entry` while selected time/delegation kernel calls currently use `timesheet`.
+- (2026-04-22) API list controllers for tickets, projects, and quotes paginate in the service layer first, then narrow in memory, then report filtered-page counts as totals.
+- (2026-04-22) Simulator fidelity is weakened by billing-record mismatch and by simulator kernel construction that does not mirror all builtin resource-specific invariants used in real runtime paths.
+
+## Commands / Runbooks
+
+- (2026-04-22) Inspect original plan scratchpad and feature/test references:
+  `read ee/docs/plans/2026-04-21-premium-abac-authorization-kernel/SCRATCHPAD.md`
+- (2026-04-22) Review committed implementation history on this branch:
+  `git log --oneline --decorate --reverse --ancestry-path $(git merge-base HEAD origin/main)..HEAD`
+- (2026-04-22) Review changed files in the premium-ABAC rollout:
+  `git diff --stat $(git merge-base HEAD origin/main)..HEAD`
+- (2026-04-22) Spot-check known hot files:
+  - `server/src/lib/authorization/bundles/service.ts`
+  - `ee/server/src/lib/actions/auth/authorizationBundleActions.ts`
+  - `server/src/lib/authorization/kernel/providers/bundleProvider.ts`
+  - `packages/scheduling/src/actions/timeEntryDelegationAuth.ts`
+  - `server/src/lib/api/controllers/Api{Ticket,Project,Quote}Controller.ts`
+
+## Links / References
+
+- Original plan:
+  - `ee/docs/plans/2026-04-21-premium-abac-authorization-kernel/PRD.md`
+  - `ee/docs/plans/2026-04-21-premium-abac-authorization-kernel/features.json`
+  - `ee/docs/plans/2026-04-21-premium-abac-authorization-kernel/tests.json`
+  - `ee/docs/plans/2026-04-21-premium-abac-authorization-kernel/SCRATCHPAD.md`
+- Key implementation files:
+  - `server/src/lib/authorization/bundles/service.ts`
+  - `server/src/lib/authorization/kernel/providers/bundleProvider.ts`
+  - `server/src/lib/authorization/kernel/relationships.ts`
+  - `ee/server/src/lib/actions/auth/authorizationBundleActions.ts`
+  - `packages/scheduling/src/actions/timeEntryDelegationAuth.ts`
+  - `server/src/lib/api/controllers/authorizationKernel.ts`
+  - `server/src/lib/api/controllers/ApiTicketController.ts`
+  - `server/src/lib/api/controllers/ApiProjectController.ts`
+  - `server/src/lib/api/controllers/ApiQuoteController.ts`
+  - `server/migrations/20260421190000_create_authorization_bundle_control_plane.cjs`
+
+## Open Questions
+
+- Should this follow-up fully solve post-authorization pagination totals, or only make pagination semantics honest and fail-safe for now?
+- Should simulator fidelity in this follow-up be broadened by modeling builtin resource rules per resource family, or narrowed by explicitly refusing unsupported scenario types?
+
+## Progress Log
+
+- (2026-04-22) Completed `F001`:
+  - Added a new `Traceability Mapping` section in `PRD.md` that maps each remediation feature cluster to original-plan feature/test IDs.
+  - Purpose: satisfy follow-up-plan auditability and make remediation-to-original linkage explicit in the source-of-truth artifact.
