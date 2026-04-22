@@ -91,6 +91,14 @@ export interface AuthorizationBundleSimulationPayload {
 }
 
 const SUPPORTED_SIMULATION_ACTIONS = new Set(['read', 'approve']);
+const SUPPORTED_SIMULATION_RESOURCE_TYPES = new Set([
+  'ticket',
+  'document',
+  'time_entry',
+  'project',
+  'asset',
+  'billing',
+]);
 
 export interface AuthorizationBundleAuditEvent {
   eventType:
@@ -386,7 +394,9 @@ export const upsertAuthorizationBundleDraftRuleAction = withAuth(
       tenant,
       revisionId: draft.revisionId,
     });
-    const nextPosition = input.ruleId ? 0 : existingRules.length;
+    const existingRule = input.ruleId
+      ? existingRules.find((rule) => rule.ruleId === input.ruleId)
+      : undefined;
 
     await upsertBundleRule(knex, {
       tenant,
@@ -398,7 +408,7 @@ export const upsertAuthorizationBundleDraftRuleAction = withAuth(
       templateKey: input.templateKey,
       constraintKey: input.constraintKey ?? null,
       config: input.config ?? {},
-      position: nextPosition,
+      position: input.ruleId ? existingRule?.position : existingRules.length,
       actorUserId: user.user_id,
     });
   }
@@ -597,12 +607,16 @@ export const listAuthorizationSimulationRecordsAction = withAuth(
       return rows.map((row) => ({ id: row.asset_id, label: row.name || row.asset_id }));
     }
 
-    const rows = await knex('quotes')
-      .where({ tenant })
-      .orderBy('updated_at', 'desc')
-      .limit(50)
-      .select<{ quote_id: string; quote_number: string | null }[]>('quote_id', 'quote_number');
-    return rows.map((row) => ({ id: row.quote_id, label: row.quote_number || row.quote_id }));
+    if (input.resourceType === 'billing') {
+      const rows = await knex('quotes')
+        .where({ tenant })
+        .orderBy('updated_at', 'desc')
+        .limit(50)
+        .select<{ quote_id: string; quote_number: string | null }[]>('quote_id', 'quote_number');
+      return rows.map((row) => ({ id: row.quote_id, label: row.quote_number || row.quote_id }));
+    }
+
+    throw new Error(`Unsupported simulation resource type: ${input.resourceType}`);
   }
 );
 
@@ -700,9 +714,13 @@ async function loadSimulationRecord(
     return toAuthorizationRecord(row);
   }
 
-  const row = await knex('quotes').where({ tenant, quote_id: resourceId }).first();
-  if (!row) throw new Error('Quote not found.');
-  return toAuthorizationRecord(row);
+  if (resourceType === 'billing') {
+    const row = await knex('quotes').where({ tenant, quote_id: resourceId }).first();
+    if (!row) throw new Error('Quote not found.');
+    return toAuthorizationRecord(row);
+  }
+
+  throw new Error(`Unsupported simulation resource type: ${resourceType}`);
 }
 
 function assertSimulationModeSupported(input: {
@@ -714,6 +732,10 @@ function assertSimulationModeSupported(input: {
     throw new Error(
       `Simulator only supports read/approve actions in this remediation; "${input.action}" is not currently modeled faithfully.`
     );
+  }
+
+  if (!SUPPORTED_SIMULATION_RESOURCE_TYPES.has(input.resourceType)) {
+    throw new Error(`Unsupported simulation resource type: ${input.resourceType}`);
   }
 
   if (input.resourceType === 'ticket' && input.principalUserType === 'client') {

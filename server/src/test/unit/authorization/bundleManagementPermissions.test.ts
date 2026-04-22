@@ -6,6 +6,7 @@ const createTenantKnexMock = vi.hoisted(() => vi.fn(async () => ({ knex: vi.fn()
 const serviceMocks = vi.hoisted(() => ({
   createAuthorizationBundle: vi.fn(),
   ensureDraftBundleRevision: vi.fn(),
+  listBundleRulesForRevision: vi.fn(),
   upsertBundleRule: vi.fn(),
   publishBundleRevision: vi.fn(),
   createBundleAssignment: vi.fn(),
@@ -40,7 +41,7 @@ vi.mock('server/src/lib/authorization/bundles/service', () => ({
   deleteBundleRule: vi.fn(),
   createAuthorizationBundle: (...args: unknown[]) => serviceMocks.createAuthorizationBundle(...args),
   ensureDraftBundleRevision: (...args: unknown[]) => serviceMocks.ensureDraftBundleRevision(...args),
-  listBundleRulesForRevision: vi.fn(async () => []),
+  listBundleRulesForRevision: (...args: unknown[]) => serviceMocks.listBundleRulesForRevision(...args),
   listAuthorizationBundles: vi.fn(async () => []),
   publishBundleRevision: (...args: unknown[]) => serviceMocks.publishBundleRevision(...args),
   setBundleAssignmentStatus: (...args: unknown[]) => serviceMocks.setBundleAssignmentStatus(...args),
@@ -63,6 +64,7 @@ describe('authorization bundle management permission guards', () => {
     createTenantKnexMock.mockReset();
     serviceMocks.createAuthorizationBundle.mockReset();
     serviceMocks.ensureDraftBundleRevision.mockReset();
+    serviceMocks.listBundleRulesForRevision.mockReset();
     serviceMocks.upsertBundleRule.mockReset();
     serviceMocks.publishBundleRevision.mockReset();
     serviceMocks.createBundleAssignment.mockReset();
@@ -72,6 +74,7 @@ describe('authorization bundle management permission guards', () => {
     hasPermissionMock.mockResolvedValue(true);
     createTenantKnexMock.mockResolvedValue({ knex: vi.fn() });
     serviceMocks.ensureDraftBundleRevision.mockResolvedValue({ revisionId: 'draft-1' });
+    serviceMocks.listBundleRulesForRevision.mockResolvedValue([]);
   });
 
   it('T026: blocks create/edit/publish/assignment/simulator actions when system_settings permission is missing', async () => {
@@ -119,5 +122,35 @@ describe('authorization bundle management permission guards', () => {
     expect(serviceMocks.publishBundleRevision).not.toHaveBeenCalled();
     expect(serviceMocks.createBundleAssignment).not.toHaveBeenCalled();
     expect(serviceMocks.setBundleAssignmentStatus).not.toHaveBeenCalled();
+  });
+
+  it('preserves draft rule position when updating an existing rule', async () => {
+    serviceMocks.listBundleRulesForRevision.mockResolvedValue([
+      {
+        ruleId: 'rule-1',
+        resourceType: 'ticket',
+        action: 'read',
+        templateKey: 'own',
+        constraintKey: null,
+        config: {},
+        position: 7,
+      },
+    ]);
+
+    await upsertAuthorizationBundleDraftRuleAction({
+      bundleId: 'bundle-1',
+      ruleId: 'rule-1',
+      resourceType: 'ticket',
+      action: 'read',
+      templateKey: 'own_or_assigned',
+    });
+
+    expect(serviceMocks.upsertBundleRule).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        ruleId: 'rule-1',
+        position: 7,
+      })
+    );
   });
 });

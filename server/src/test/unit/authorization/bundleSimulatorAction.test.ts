@@ -450,4 +450,20 @@ describe('runAuthorizationBundleSimulationAction', () => {
       })
     ).rejects.toThrow('Simulator only supports read/approve actions');
   });
+
+  it('fails closed for unsupported simulator resource types', async () => {
+    await expect(
+      listAuthorizationSimulationRecordsAction({ resourceType: 'unknown_resource' })
+    ).rejects.toThrow('Unsupported simulation resource type: unknown_resource');
+
+    await expect(
+      runAuthorizationBundleSimulationAction({
+        bundleId: 'bundle-1',
+        principalUserId,
+        resourceType: 'unknown_resource',
+        action: 'read',
+        syntheticRecord: { ownerUserId: principalUserId },
+      })
+    ).rejects.toThrow('Unsupported simulation resource type: unknown_resource');
+  });
 });

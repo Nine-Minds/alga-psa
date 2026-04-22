@@ -636,7 +636,7 @@ export async function upsertBundleRule(
     throw new Error('Draft revision not found for bundle in tenant scope.');
   }
 
-  const payload = {
+  const basePayload = {
     tenant: input.tenant,
     bundle_id: input.bundleId,
     revision_id: input.revisionId,
@@ -646,12 +646,15 @@ export async function upsertBundleRule(
     effect: 'narrow',
     constraint_key: input.constraintKey ?? null,
     config: input.config ?? {},
-    position: input.position ?? 0,
-    created_by: input.actorUserId ?? null,
     updated_at: knex.fn.now(),
   };
 
   if (input.ruleId) {
+    const updatePayload: Record<string, unknown> = { ...basePayload };
+    if (typeof input.position === 'number') {
+      updatePayload.position = input.position;
+    }
+
     const updated = await knex('authorization_bundle_rules')
       .where({
         tenant: input.tenant,
@@ -659,7 +662,7 @@ export async function upsertBundleRule(
         revision_id: input.revisionId,
         rule_id: input.ruleId,
       })
-      .update(payload);
+      .update(updatePayload);
 
     if (updated === 0) {
       throw new Error('Rule not found in draft revision for bundle in tenant scope.');
@@ -667,7 +670,11 @@ export async function upsertBundleRule(
     return;
   }
 
-  await knex('authorization_bundle_rules').insert(payload);
+  await knex('authorization_bundle_rules').insert({
+    ...basePayload,
+    position: input.position ?? 0,
+    created_by: input.actorUserId ?? null,
+  });
 }
 
 async function resolveRoleIdsForUser(
