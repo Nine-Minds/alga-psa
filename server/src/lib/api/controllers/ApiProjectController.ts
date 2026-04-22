@@ -70,12 +70,40 @@ export class ApiProjectController extends ApiBaseController {
   private buildProjectRecordContext(project: Record<string, any>) {
     return {
       id: project.project_id,
-      ownerUserId: typeof project.created_by === 'string' ? project.created_by : undefined,
+      ownerUserId: typeof project.assigned_to === 'string' ? project.assigned_to : undefined,
       assignedUserIds: typeof project.assigned_to === 'string' ? [project.assigned_to] : [],
       clientId: typeof project.client_id === 'string' ? project.client_id : undefined,
+      teamIds: typeof project.assigned_team_id === 'string' ? [project.assigned_team_id] : [],
       status: project.status,
       isClosed: project.is_closed,
     };
+  }
+
+  private async assertProjectReadAllowed(
+    apiRequest: AuthenticatedApiRequest,
+    projectId: string,
+    knex?: Awaited<ReturnType<typeof getConnection>>
+  ): Promise<Record<string, any>> {
+    const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
+    const project = await this.projectService.getById(projectId, apiRequest.context);
+    if (!project) {
+      throw new NotFoundError('Project not found');
+    }
+
+    const allowed = await authorizeApiResourceRead({
+      knex: resolvedKnex,
+      tenant: apiRequest.context.tenant,
+      user: apiRequest.context.user,
+      apiKeyId: apiRequest.context.apiKeyId,
+      resource: 'project',
+      recordContext: this.buildProjectRecordContext(project as Record<string, any>),
+    });
+
+    if (!allowed) {
+      throw new ForbiddenError('Permission denied: Cannot read project');
+    }
+
+    return project as Record<string, any>;
   }
 
   list() {
@@ -148,25 +176,7 @@ export class ApiProjectController extends ApiBaseController {
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
           const id = await this.extractIdFromPath(apiRequest);
-
-          const project = await this.projectService.getById(id, apiRequest.context);
-          if (!project) {
-            throw new NotFoundError('Project not found');
-          }
-
-          const knex = await getConnection(apiRequest.context.tenant);
-          const allowed = await authorizeApiResourceRead({
-            knex,
-            tenant: apiRequest.context.tenant,
-            user: apiRequest.context.user,
-            apiKeyId: apiRequest.context.apiKeyId,
-            resource: 'project',
-            recordContext: this.buildProjectRecordContext(project as Record<string, any>),
-          });
-
-          if (!allowed) {
-            throw new ForbiddenError('Permission denied: Cannot read project');
-          }
+          const project = await this.assertProjectReadAllowed(apiRequest, id);
 
           return createSuccessResponse(project, 200, undefined, apiRequest);
         });
@@ -353,7 +363,8 @@ export class ApiProjectController extends ApiBaseController {
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
-          user
+          user,
+          apiKeyId: keyRecord.api_key_id,
         };
 
         // Extract project ID from path
@@ -371,11 +382,7 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot read project');
           }
 
-          // Verify project exists
-          const project = await this.projectService.getById(projectId, apiRequest.context!);
-          if (!project) {
-            throw new NotFoundError('Project not found');
-          }
+          await this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex);
 
           const tasks = await this.projectService.getProjectTasks(
             projectId,
@@ -428,7 +435,8 @@ export class ApiProjectController extends ApiBaseController {
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
-          user
+          user,
+          apiKeyId: keyRecord.api_key_id,
         };
 
         const url = new URL(req.url);
@@ -442,6 +450,8 @@ export class ApiProjectController extends ApiBaseController {
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot read project');
           }
+
+          await this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex);
 
           const mappings = await this.projectService.getProjectTaskStatusMappings(
             projectId,
@@ -498,7 +508,8 @@ export class ApiProjectController extends ApiBaseController {
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
-          user
+          user,
+          apiKeyId: keyRecord.api_key_id,
         };
 
         // Extract project ID from path
@@ -516,25 +527,43 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot read project');
           }
 
-          // Verify project exists
-          const project = await this.projectService.getById(projectId, apiRequest.context!);
-          if (!project) {
-            throw new NotFoundError('Project not found');
-          }
+          await this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex);
 
           // Get pagination params
           const page = parseInt(url.searchParams.get('page') || '1');
           const limit = Math.min(parseInt(url.searchParams.get('limit') || '25'), 100);
 
-          const tickets = await this.projectService.getProjectTickets(
-            projectId,
-            { page, limit },
-            apiRequest.context!
-          );
+          const authorizedPage = await buildAuthorizationAwarePage<Record<string, any>>({
+            page,
+            limit,
+            fetchPage: (sourcePage, sourceLimit) =>
+              this.projectService.getProjectTickets(
+                projectId,
+                { page: sourcePage, limit: sourceLimit },
+                apiRequest.context!
+              ),
+            authorizeRecord: (ticket) =>
+              authorizeApiResourceRead({
+                knex,
+                tenant: tenantId!,
+                user,
+                apiKeyId: keyRecord.api_key_id,
+                resource: 'ticket',
+                recordContext: {
+                  id: ticket.ticket_id,
+                  ownerUserId: typeof ticket.entered_by === 'string' ? ticket.entered_by : undefined,
+                  assignedUserIds: typeof ticket.assigned_to === 'string' ? [ticket.assigned_to] : [],
+                  clientId: typeof ticket.client_id === 'string' ? ticket.client_id : undefined,
+                  boardId: typeof ticket.board_id === 'string' ? ticket.board_id : undefined,
+                  teamIds: typeof ticket.assigned_team_id === 'string' ? [ticket.assigned_team_id] : [],
+                },
+              }),
+            scanLimit: 100,
+          });
           
           return createPaginatedResponse(
-            tickets.data,
-            tickets.total,
+            authorizedPage.data,
+            authorizedPage.total,
             page,
             limit
           );
@@ -587,7 +616,8 @@ export class ApiProjectController extends ApiBaseController {
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
-          user
+          user,
+          apiKeyId: keyRecord.api_key_id,
         };
 
         // Run within tenant context
@@ -659,7 +689,8 @@ export class ApiProjectController extends ApiBaseController {
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
-          user
+          user,
+          apiKeyId: keyRecord.api_key_id,
         };
 
         // Run within tenant context
@@ -731,7 +762,8 @@ export class ApiProjectController extends ApiBaseController {
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
-          user
+          user,
+          apiKeyId: keyRecord.api_key_id,
         };
 
         // Run within tenant context
@@ -803,7 +835,8 @@ export class ApiProjectController extends ApiBaseController {
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
-          user
+          user,
+          apiKeyId: keyRecord.api_key_id,
         };
 
         // Extract project ID from URL
@@ -882,7 +915,8 @@ export class ApiProjectController extends ApiBaseController {
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
-          user
+          user,
+          apiKeyId: keyRecord.api_key_id,
         };
 
         // Extract project ID from URL
@@ -965,7 +999,8 @@ export class ApiProjectController extends ApiBaseController {
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
-          user
+          user,
+          apiKeyId: keyRecord.api_key_id,
         };
 
         // Extract IDs from URL
@@ -1045,7 +1080,8 @@ export class ApiProjectController extends ApiBaseController {
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
-          user
+          user,
+          apiKeyId: keyRecord.api_key_id,
         };
 
         // Extract phase ID from URL
@@ -1117,7 +1153,8 @@ export class ApiProjectController extends ApiBaseController {
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
-          user
+          user,
+          apiKeyId: keyRecord.api_key_id,
         };
 
         // Extract phase ID from URL
@@ -1190,7 +1227,8 @@ export class ApiProjectController extends ApiBaseController {
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
-          user
+          user,
+          apiKeyId: keyRecord.api_key_id,
         };
 
         // Extract IDs from URL
@@ -1285,7 +1323,8 @@ export class ApiProjectController extends ApiBaseController {
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
-          user
+          user,
+          apiKeyId: keyRecord.api_key_id,
         };
 
         // Extract task ID from URL
@@ -1361,7 +1400,8 @@ export class ApiProjectController extends ApiBaseController {
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
-          user
+          user,
+          apiKeyId: keyRecord.api_key_id,
         };
 
         // Extract task ID from URL
@@ -1450,7 +1490,8 @@ export class ApiProjectController extends ApiBaseController {
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
-          user
+          user,
+          apiKeyId: keyRecord.api_key_id,
         };
 
         // Extract task ID from URL
@@ -1522,7 +1563,8 @@ export class ApiProjectController extends ApiBaseController {
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
-          user
+          user,
+          apiKeyId: keyRecord.api_key_id,
         };
 
         // Extract task ID from URL
@@ -1595,7 +1637,8 @@ export class ApiProjectController extends ApiBaseController {
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
-          user
+          user,
+          apiKeyId: keyRecord.api_key_id,
         };
 
         // Extract task ID from URL

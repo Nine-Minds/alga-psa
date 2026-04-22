@@ -76,9 +76,37 @@ export class ApiTicketController extends ApiBaseController {
       assignedUserIds: typeof ticket.assigned_to === 'string' ? [ticket.assigned_to] : [],
       clientId: typeof ticket.client_id === 'string' ? ticket.client_id : undefined,
       boardId: typeof ticket.board_id === 'string' ? ticket.board_id : undefined,
+      teamIds: typeof ticket.assigned_team_id === 'string' ? [ticket.assigned_team_id] : [],
       is_client_visible: typeof ticket.is_client_visible === 'boolean' ? ticket.is_client_visible : undefined,
       statusId: ticket.status_id,
     };
+  }
+
+  private async assertTicketReadAllowed(
+    apiRequest: AuthenticatedApiRequest,
+    ticketId: string,
+    knex?: Awaited<ReturnType<typeof getConnection>>
+  ): Promise<Record<string, any>> {
+    const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
+    const ticket = await this.ticketService.getById(ticketId, apiRequest.context);
+    if (!ticket) {
+      throw new NotFoundError('ticket not found');
+    }
+
+    const allowed = await authorizeApiResourceRead({
+      knex: resolvedKnex,
+      tenant: apiRequest.context.tenant,
+      user: apiRequest.context.user,
+      apiKeyId: apiRequest.context.apiKeyId,
+      resource: 'ticket',
+      recordContext: this.buildTicketRecordContext(ticket as Record<string, any>),
+    });
+
+    if (!allowed) {
+      throw new ForbiddenError('Permission denied: Cannot read ticket');
+    }
+
+    return ticket as Record<string, any>;
   }
 
   list() {
@@ -147,25 +175,7 @@ export class ApiTicketController extends ApiBaseController {
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
           const id = await this.extractIdFromPath(apiRequest);
-
-          const ticket = await this.ticketService.getById(id, apiRequest.context);
-          if (!ticket) {
-            throw new NotFoundError('ticket not found');
-          }
-
-          const knex = await getConnection(apiRequest.context.tenant);
-          const allowed = await authorizeApiResourceRead({
-            knex,
-            tenant: apiRequest.context.tenant,
-            user: apiRequest.context.user,
-            apiKeyId: apiRequest.context.apiKeyId,
-            resource: 'ticket',
-            recordContext: this.buildTicketRecordContext(ticket as Record<string, any>),
-          });
-
-          if (!allowed) {
-            throw new ForbiddenError('Permission denied: Cannot read ticket');
-          }
+          const ticket = await this.assertTicketReadAllowed(apiRequest, id);
 
           return createSuccessResponse(ticket, 200, undefined, apiRequest as AuthenticatedApiRequest);
         });
@@ -217,7 +227,8 @@ export class ApiTicketController extends ApiBaseController {
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
-          user
+          user,
+          apiKeyId: keyRecord.api_key_id,
         };
 
         // Run within tenant context
@@ -299,7 +310,8 @@ export class ApiTicketController extends ApiBaseController {
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
-          user
+          user,
+          apiKeyId: keyRecord.api_key_id,
         };
 
         // Run within tenant context
@@ -362,7 +374,8 @@ export class ApiTicketController extends ApiBaseController {
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
-          user
+          user,
+          apiKeyId: keyRecord.api_key_id,
         };
 
         // Run within tenant context
@@ -423,6 +436,9 @@ export class ApiTicketController extends ApiBaseController {
           }
 
           const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+
           const comments = await this.ticketService.getTicketComments(
             ticketId,
             apiRequest.context!,
@@ -449,6 +465,8 @@ export class ApiTicketController extends ApiBaseController {
           await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
 
           const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
           const documents = await this.ticketService.getTicketDocuments(ticketId, apiRequest.context!);
 
           return createSuccessResponse(documents, 200, undefined, apiRequest);
@@ -651,7 +669,8 @@ export class ApiTicketController extends ApiBaseController {
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
-          user
+          user,
+          apiKeyId: keyRecord.api_key_id,
         };
 
         // Run within tenant context
@@ -721,7 +740,8 @@ export class ApiTicketController extends ApiBaseController {
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
-          user
+          user,
+          apiKeyId: keyRecord.api_key_id,
         };
 
         return await runWithTenant(tenantId!, async () => {
@@ -804,7 +824,8 @@ export class ApiTicketController extends ApiBaseController {
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
-          user
+          user,
+          apiKeyId: keyRecord.api_key_id,
         };
 
         // Run within tenant context
@@ -888,7 +909,8 @@ export class ApiTicketController extends ApiBaseController {
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
-          user
+          user,
+          apiKeyId: keyRecord.api_key_id,
         };
 
         // Run within tenant context
@@ -972,7 +994,8 @@ export class ApiTicketController extends ApiBaseController {
         apiRequest.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
-          user
+          user,
+          apiKeyId: keyRecord.api_key_id,
         };
 
         // Run within tenant context

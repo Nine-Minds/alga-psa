@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseController } from './ApiBaseController';
+import type { AuthenticatedApiRequest } from '../middleware/apiMiddleware';
 import { QuoteService } from '../services/QuoteService';
 import {
   createQuoteApiSchema,
@@ -21,7 +22,14 @@ import {
   runWithTenant,
 } from '../../db';
 import { getConnection } from '../../db/db';
-import { authorizeApiResourceRead } from './authorizationKernel';
+import { resolveBundleNarrowingRulesForEvaluation } from '../../authorization/bundles/service';
+import {
+  BuiltinAuthorizationKernelProvider,
+  BundleAuthorizationKernelProvider,
+  RequestLocalAuthorizationCache,
+  createAuthorizationKernel,
+} from '../../authorization/kernel';
+import { authorizeApiResourceRead, buildAuthorizationPrincipalSubject } from './authorizationKernel';
 import { buildAuthorizationAwarePage } from './authorizationAwarePagination';
 import {
   ForbiddenError,
@@ -64,6 +72,63 @@ export class ApiQuoteController extends ApiBaseController {
       clientId: typeof quote.client_id === 'string' ? quote.client_id : undefined,
       status: quote.status,
     };
+  }
+
+  private async assertQuoteApproveAllowed(apiRequest: AuthenticatedApiRequest, quote: Record<string, any>) {
+    const knex = await getConnection(apiRequest.context.tenant);
+    const subject = buildAuthorizationPrincipalSubject(apiRequest.context.user, apiRequest.context.apiKeyId);
+    subject.tenant = apiRequest.context.tenant;
+
+    const kernel = createAuthorizationKernel({
+      builtinProvider: new BuiltinAuthorizationKernelProvider({
+        mutationGuards: [
+          (input) => {
+            if (input.mutation?.kind === 'approve' && input.record?.ownerUserId === input.subject.userId) {
+              return {
+                allowed: false,
+                reasons: [
+                  {
+                    stage: 'mutation' as const,
+                    sourceType: 'builtin' as const,
+                    code: 'billing_not_self_approver_denied',
+                    message: 'Approvers cannot approve their own quotes.',
+                  },
+                ],
+              };
+            }
+
+            return {
+              allowed: true,
+              reasons: [],
+            };
+          },
+        ],
+      }),
+      bundleProvider: new BundleAuthorizationKernelProvider({
+        resolveRules: (input) => resolveBundleNarrowingRulesForEvaluation(knex, input),
+      }),
+      rbacEvaluator: async () => true,
+    });
+
+    const decision = await kernel.authorizeMutation({
+      knex,
+      subject,
+      resource: {
+        type: 'billing',
+        action: 'approve',
+        id: quote.quote_id,
+      },
+      record: this.buildQuoteRecordContext(quote),
+      mutation: {
+        kind: 'approve',
+        record: this.buildQuoteRecordContext(quote),
+      },
+      requestCache: new RequestLocalAuthorizationCache(),
+    });
+
+    if (!decision.allowed) {
+      throw new ForbiddenError('Permission denied: Cannot approve your own quote');
+    }
   }
 
   // ============================================================================
@@ -419,7 +484,17 @@ export class ApiQuoteController extends ApiBaseController {
           await this.checkPermission(apiRequest, 'approve');
 
           const id = await this.extractIdFromPath(apiRequest);
+          const existingQuote = await this.quoteService.getById(id, apiRequest.context);
 
+          if (!existingQuote) {
+            throw new NotFoundError('Quote not found');
+          }
+
+          if (existingQuote.status !== 'pending_approval') {
+            throw new ForbiddenError('Only quotes pending approval can be approved');
+          }
+
+          await this.assertQuoteApproveAllowed(apiRequest, existingQuote as Record<string, any>);
           const quote = await this.quoteService.approve(id, apiRequest.context);
 
           return createSuccessResponse(quote);
@@ -441,6 +516,15 @@ export class ApiQuoteController extends ApiBaseController {
           const id = await this.extractIdFromPath(apiRequest);
           const body = await req.json();
           const data = approvalRequestChangesSchema.parse(body);
+          const existingQuote = await this.quoteService.getById(id, apiRequest.context);
+
+          if (!existingQuote) {
+            throw new NotFoundError('Quote not found');
+          }
+
+          if (existingQuote.status !== 'pending_approval') {
+            throw new ForbiddenError('Only quotes pending approval can be sent back for changes');
+          }
 
           const quote = await this.quoteService.requestChanges(id, data.reason, apiRequest.context);
 

@@ -68,6 +68,19 @@ export interface BundleRuleRecord {
   position: number;
 }
 
+function isDraftRevisionUniquenessViolation(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const candidate = error as { code?: string; message?: string };
+  return (
+    candidate.code === '23505' &&
+    typeof candidate.message === 'string' &&
+    candidate.message.includes('authorization_bundle_revisions_single_draft_idx')
+  );
+}
+
 export async function ensureDraftBundleRevision(
   knex: Knex | Knex.Transaction,
   input: {
@@ -110,16 +123,38 @@ export async function ensureDraftBundleRevision(
 
   const nextRevisionNumber = Number(maxRevisionRow?.max_revision_number || 0) + 1;
 
-  const [draftRevision] = await knex('authorization_bundle_revisions')
-    .insert({
-      tenant: input.tenant,
-      bundle_id: input.bundleId,
-      revision_number: nextRevisionNumber,
-      lifecycle_state: 'draft',
-      created_by: input.actorUserId ?? null,
-      updated_by: input.actorUserId ?? null,
-    })
-    .returning<{ revision_id: string }[]>('revision_id');
+  let draftRevision: { revision_id: string };
+  try {
+    [draftRevision] = await knex('authorization_bundle_revisions')
+      .insert({
+        tenant: input.tenant,
+        bundle_id: input.bundleId,
+        revision_number: nextRevisionNumber,
+        lifecycle_state: 'draft',
+        created_by: input.actorUserId ?? null,
+        updated_by: input.actorUserId ?? null,
+      })
+      .returning<{ revision_id: string }[]>('revision_id');
+  } catch (error) {
+    if (!isDraftRevisionUniquenessViolation(error)) {
+      throw error;
+    }
+
+    const concurrentDraft = await knex('authorization_bundle_revisions')
+      .where({
+        tenant: input.tenant,
+        bundle_id: input.bundleId,
+        lifecycle_state: 'draft',
+      })
+      .orderBy('revision_number', 'desc')
+      .first<{ revision_id: string }>('revision_id');
+
+    if (!concurrentDraft) {
+      throw error;
+    }
+
+    return { revisionId: concurrentDraft.revision_id, created: false };
+  }
 
   if (!bundle.published_revision_id) {
     return { revisionId: draftRevision.revision_id, created: true };

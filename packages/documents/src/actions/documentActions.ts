@@ -817,7 +817,7 @@ export const getDocumentByTicketId = withAuth(async (user, { tenant }, ticketId:
           `)
         )
         .orderBy('documents.updated_at', 'desc');
-      return documents;
+      return authorizeAndRedactDocuments(trx, tenant, user, documents as IDocument[]);
     });
   } catch (error) {
     console.error(error);
@@ -867,7 +867,7 @@ export const getDocumentByClientId = withAuth(async (user, { tenant }, clientId:
           `)
         )
         .orderBy('documents.updated_at', 'desc');
-      return documents;
+      return authorizeAndRedactDocuments(trx, tenant, user, documents as IDocument[]);
     });
   } catch (error) {
     console.error(error);
@@ -2251,11 +2251,17 @@ export const getAllDocuments = withAuth(async (
       return processedDoc;
     });
 
+    const authorizedDocuments = await withTransaction(knex, async (trx: Knex.Transaction) =>
+      authorizeAndRedactDocuments(trx, tenant, user, processedDocuments)
+    );
+
+    const authorizedTotalCount = authorizedDocuments.length;
+
     return {
-      documents: processedDocuments,
-      totalCount,
+      documents: authorizedDocuments,
+      totalCount: authorizedTotalCount,
       currentPage: page,
-      totalPages: Math.ceil(totalCount / limit),
+      totalPages: Math.ceil(authorizedTotalCount / limit),
     };
   } catch (error) {
     console.error('Error fetching documents:', error);
