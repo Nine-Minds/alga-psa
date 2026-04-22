@@ -10,6 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ArrowLeft, Mail, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { I18nWrapper } from '@alga-psa/tenancy/components';
 
 const CheckEmailContent: React.FC = () => {
   const [isResending, setIsResending] = useState(false);
@@ -18,16 +20,17 @@ const CheckEmailContent: React.FC = () => {
   const email = searchParams!.get('email');
   const type = searchParams!.get('type');
   const portal = searchParams!.get('portal') || 'msp'; // Default to MSP if not specified
+  const { t } = useTranslation();
 
   const handleResend = async () => {
     if (!email) return;
-    
+
     setIsResending(true);
     try {
       await recoverPassword(email, portal as 'msp' | 'client');
-      toast.success('Email sent! Please check your inbox.');
+      toast.success(t('auth.checkEmail.resendSuccess', 'Email sent! Please check your inbox.'));
     } catch (error) {
-      toast.error('Failed to resend email. Please try again.');
+      toast.error(t('auth.checkEmail.resendFailed', 'Failed to resend email. Please try again.'));
     } finally {
       setIsResending(false);
     }
@@ -121,7 +124,9 @@ const CheckEmailContent: React.FC = () => {
 const CheckEmail: React.FC = () => {
     return (
         <Suspense fallback={<div>Loading...</div>}>
-        <CheckEmailContent />
+            <I18nWrapper portal="client">
+                <CheckEmailContent />
+            </I18nWrapper>
         </Suspense>
     );
 };

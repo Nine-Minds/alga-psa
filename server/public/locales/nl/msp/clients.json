@@ -1089,5 +1089,11 @@
     "error": "Fout",
     "saving": "Opslaan...",
     "success": "Succes"
+  },
+  "notes": {
+    "messages": {
+      "saveSuccess": "Notities opgeslagen",
+      "saveFailed": "Notities opslaan is mislukt"
+    }
   }
 }

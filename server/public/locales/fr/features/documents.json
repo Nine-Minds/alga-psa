@@ -258,5 +258,14 @@
       "troubleshooting": "Dépannage",
       "reference": "Référence"
     }
+  },
+  "documents": {
+    "messages": {
+      "error": {
+        "noPermission": "Vous n'avez pas la permission de consulter les documents",
+        "invalidData": "Données de document invalides reçues",
+        "fetchFailed": "Échec du chargement des documents"
+      }
+    }
   }
 }

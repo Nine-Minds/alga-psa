@@ -118,7 +118,33 @@
       "accountReady": "55555",
       "accountCreatedSuccess": "55555",
       "welcome": "55555",
-      "createFailed": "55555"
+      "createFailed": "55555",
+      "errors": {
+        "tokenRequired": "55555",
+        "tokenAndPasswordRequired": "55555",
+        "passwordTooShort": "55555",
+        "invalidOrExpiredToken": "55555",
+        "tenantContextRequired": "55555",
+        "resetPasswordFailed": "55555",
+        "createUserFailed": "55555",
+        "setupFailed": "55555",
+        "verificationFailed": "55555",
+        "invitationFailed": "55555",
+        "permissionDeniedInvite": "55555",
+        "permissionDeniedCreate": "55555",
+        "emailNotConfigured": "55555",
+        "contactNotFound": "55555",
+        "contactMissingEmail": "55555",
+        "contactInvalidEmail": "55555",
+        "userExistsForContact": "55555",
+        "portalUserAlreadyExists": "55555",
+        "noDefaultClient": "55555",
+        "noDefaultLocation": "55555",
+        "noLocationEmail": "55555",
+        "baseUrlNotConfigured": "55555",
+        "invitationNotFound": "55555",
+        "revokeFailed": "55555"
+      }
     },
     "features": {
       "submitTickets": {

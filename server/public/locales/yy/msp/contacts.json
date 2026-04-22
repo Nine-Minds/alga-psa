@@ -370,7 +370,20 @@
       "updateStatusPermissionDenied": "55555",
       "userActivated": "55555",
       "userDeactivated": "55555",
-      "updateUserStatusFailed": "55555"
+      "updateUserStatusFailed": "55555",
+      "errors": {
+        "permissionDeniedInvite": "55555",
+        "emailNotConfigured": "55555",
+        "contactNotFound": "55555",
+        "contactMissingEmail": "55555",
+        "contactInvalidEmail": "55555",
+        "userExistsForContact": "55555",
+        "noDefaultClient": "55555",
+        "noDefaultLocation": "55555",
+        "noLocationEmail": "55555",
+        "noBaseUrl": "55555",
+        "invitationNotFound": "55555"
+      }
     }
   },
   "quickAddContact": {
@@ -577,5 +590,11 @@
       "unknown": "55555"
     },
     "lastUpdated": "55555 {{date}} 55555"
+  },
+  "notes": {
+    "messages": {
+      "saveSuccess": "55555",
+      "saveFailed": "55555"
+    }
   }
 }

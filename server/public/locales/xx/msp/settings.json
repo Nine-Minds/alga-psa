@@ -223,7 +223,18 @@
         "portalUserExistsForContact": "11111",
         "selectAppropriateRole": "11111",
         "contactMissingEmail": "11111 {{name}} 11111",
-        "licenseLimit": "11111"
+        "licenseLimit": "11111",
+        "permissionDeniedInvite": "11111",
+        "permissionDeniedCreate": "11111",
+        "emailNotConfigured": "11111",
+        "contactNotFound": "11111",
+        "contactMissingEmailGeneric": "11111",
+        "contactInvalidEmail": "11111",
+        "noDefaultClient": "11111",
+        "noDefaultLocation": "11111",
+        "noLocationEmail": "11111",
+        "noBaseUrl": "11111",
+        "passwordTooShort": "11111"
       }
     }
   },
@@ -343,7 +354,9 @@
         "loadFailed": "11111",
         "fetchUsers": "11111",
         "createFailed": "11111 {{error}} 11111",
-        "deleteFailed": "11111"
+        "deleteFailed": "11111",
+        "updateName": "11111",
+        "saveChanges": "11111"
       }
     }
   },
@@ -398,7 +411,10 @@
         "error": {
           "noSettings": "11111",
           "loadFailed": "11111",
-          "updateFailed": "11111"
+          "updateFailed": "11111",
+          "updatePaddingFailed": "11111",
+          "updateLastNumberFailed": "11111",
+          "updateInitialValueFailed": "11111"
         },
         "success": {
           "updated": "11111"
@@ -428,6 +444,7 @@
         "edit": "11111",
         "delete": "11111"
       },
+      "retiredAlert": "11111",
       "messages": {
         "success": {
           "deleted": "11111",
@@ -468,7 +485,11 @@
         "close": "11111",
         "create": "11111",
         "update": "11111",
-        "importSelected": "11111"
+        "importSelected": "11111",
+        "up": "11111",
+        "down": "11111",
+        "remove": "11111",
+        "addStatus": "11111"
       },
       "fields": {
         "boardName": {
@@ -508,6 +529,46 @@
           "placeholder": "11111",
           "help": "11111",
           "none": "11111"
+        },
+        "ticketStatusSetup": {
+          "label": "11111",
+          "help": "11111",
+          "copyExisting": "11111",
+          "createInline": "11111"
+        },
+        "copyTicketStatuses": {
+          "label": "11111",
+          "help": "11111",
+          "selectSource": "11111",
+          "noSourceAvailable": "11111",
+          "unnamedBoard": "11111"
+        },
+        "ticketStatuses": {
+          "labelEditing": "11111",
+          "labelCopied": "11111",
+          "labelInline": "11111",
+          "helpEditing": "11111",
+          "helpCopied": "11111",
+          "helpInline": "11111",
+          "loading": "11111",
+          "statusName": "11111",
+          "closed": "11111",
+          "default": "11111"
+        },
+        "inboundReplyReopen": {
+          "enabledLabel": "11111",
+          "enabledHelp": "11111",
+          "cutoffHoursLabel": "11111",
+          "cutoffHoursHelp": "11111",
+          "statusLabel": "11111",
+          "statusPlaceholder": "11111",
+          "statusUseDefault": "11111",
+          "suppressAiLabel": "11111",
+          "suppressAiHelp": "11111"
+        },
+        "liveTimer": {
+          "label": "11111",
+          "help": "11111"
         }
       },
       "dialog": {
@@ -556,8 +617,98 @@
           "fetchAvailableFailed": "11111",
           "nameRequired": "11111",
           "saveFailed": "11111",
-          "lastDefault": "11111"
+          "lastDefault": "11111",
+          "statusRequired": "11111",
+          "duplicateStatusName": "11111",
+          "invalidOpenDefault": "11111",
+          "nameAlreadyExists": "11111",
+          "selectBoardToCopy": "11111",
+          "fetchStatusesFailed": "11111",
+          "deleteFailed": "11111",
+          "importFailed": "11111",
+          "updateStatusFailed": "11111",
+          "updateDefaultFailed": "11111"
         }
+      }
+    },
+    "priorities": {
+      "title": {
+        "ticket": "11111",
+        "projectTask": "11111"
+      },
+      "alert": {
+        "header": "11111",
+        "description": "11111",
+        "itilNote": "11111",
+        "nonItilNote": "11111"
+      },
+      "table": {
+        "name": "11111",
+        "type": "11111",
+        "color": "11111",
+        "order": "11111",
+        "actions": "11111",
+        "standardTag": "11111",
+        "itilProtected": "11111"
+      },
+      "itemTypes": {
+        "ticket": "11111",
+        "projectTask": "11111"
+      },
+      "actions": {
+        "addPriority": "11111",
+        "importStandard": "11111",
+        "openMenu": "11111",
+        "edit": "11111",
+        "delete": "11111",
+        "cancel": "11111"
+      },
+      "dialog": {
+        "addTitle": "11111",
+        "editTitle": "11111",
+        "submitAdd": "11111",
+        "submitUpdate": "11111"
+      },
+      "fields": {
+        "priorityName": {
+          "label": "11111",
+          "placeholder": "11111"
+        },
+        "orderNumber": {
+          "label": "11111",
+          "help": "11111",
+          "used": "11111 {{numbers}} 11111",
+          "noneUsed": "11111"
+        },
+        "color": {
+          "label": "11111",
+          "chooseButton": "11111"
+        }
+      },
+      "import": {
+        "title": "11111",
+        "submit": "11111 {{count}} 11111",
+        "allImportedTicket": "11111",
+        "allImportedProjectTask": "11111",
+        "instructions": "11111"
+      },
+      "messages": {
+        "success": {
+          "deleted": "11111",
+          "imported": "11111 {{count}} 11111",
+          "skipped": "11111 {{count}} 11111"
+        },
+        "error": {
+          "orderTaken": "11111 {{order}} 11111 {{name}} 11111",
+          "uniqueConstraint": "11111",
+          "saveFailed": "11111",
+          "deleteFailed": "11111",
+          "deleteValidationFailed": "11111",
+          "importFailed": "11111"
+        }
+      },
+      "entity": {
+        "fallback": "11111"
       }
     }
   },
@@ -643,7 +794,9 @@
         },
         "error": {
           "lastClosed": "11111",
-          "deleteLastClosed": "11111"
+          "deleteLastClosed": "11111",
+          "skipped": "11111 {{count}} 11111 {{reason}} 11111",
+          "importFailed": "11111"
         }
       }
     },
@@ -1023,6 +1176,16 @@
         "noValues": "11111"
       },
       "truncated": "11111 {{count}} 11111"
+    },
+    "messages": {
+      "error": {
+        "loadImportData": "11111",
+        "createPreview": "11111",
+        "selectPreviewFirst": "11111",
+        "startImportJob": "11111",
+        "loadJobDetails": "11111",
+        "refreshHistory": "11111"
+      }
     }
   },
   "email": {

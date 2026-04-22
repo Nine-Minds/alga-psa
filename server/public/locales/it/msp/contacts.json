@@ -370,7 +370,20 @@
       "updateStatusPermissionDenied": "Non hai il permesso di aggiornare lo stato utente",
       "userActivated": "Utente attivato con successo",
       "userDeactivated": "Utente disattivato con successo",
-      "updateUserStatusFailed": "Impossibile aggiornare lo stato utente"
+      "updateUserStatusFailed": "Impossibile aggiornare lo stato utente",
+      "errors": {
+        "permissionDeniedInvite": "Non hai il permesso di invitare utenti.",
+        "emailNotConfigured": "Il servizio e-mail è disabilitato o non configurato.",
+        "contactNotFound": "Contatto non trovato.",
+        "contactMissingEmail": "Il contatto non ha un indirizzo e-mail. Aggiungi un indirizzo e-mail al contatto prima di inviare un invito.",
+        "contactInvalidEmail": "Il contatto ha un indirizzo e-mail non valido. Aggiorna il contatto con un indirizzo e-mail valido prima di inviare un invito.",
+        "userExistsForContact": "Esiste già un account utente per questo contatto. Usa il reimposta password invece di inviare un invito.",
+        "noDefaultClient": "Nessun client predefinito configurato per questo tenant. Imposta un client predefinito nelle Impostazioni generali.",
+        "noDefaultLocation": "Il client predefinito deve avere una sede predefinita configurata per inviare inviti al portale.",
+        "noLocationEmail": "La sede del client predefinito deve avere un indirizzo e-mail di contatto configurato.",
+        "noBaseUrl": "L'URL di base non è configurato per gli inviti al portale.",
+        "invitationNotFound": "Invito non trovato o già utilizzato."
+      }
     }
   },
   "quickAddContact": {
@@ -577,5 +590,11 @@
       "unknown": "Errore sconosciuto"
     },
     "lastUpdated": "Ultimo aggiornamento: {{date}}"
+  },
+  "notes": {
+    "messages": {
+      "saveSuccess": "Note salvate",
+      "saveFailed": "Impossibile salvare le note"
+    }
   }
 }

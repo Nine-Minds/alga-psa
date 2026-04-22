@@ -118,7 +118,33 @@
       "accountReady": "Account ready. Please sign in.",
       "accountCreatedSuccess": "Account created successfully. Please sign in.",
       "welcome": "Welcome to the client portal!",
-      "createFailed": "Failed to create account"
+      "createFailed": "Failed to create account",
+      "errors": {
+        "tokenRequired": "A valid invitation token is required.",
+        "tokenAndPasswordRequired": "A token and password are required to complete setup.",
+        "passwordTooShort": "Password must be at least 8 characters long.",
+        "invalidOrExpiredToken": "This invitation link is invalid or has expired.",
+        "tenantContextRequired": "Missing organization context. Please reopen the invitation link.",
+        "resetPasswordFailed": "We couldn't reset the password for the existing account. Please try again.",
+        "createUserFailed": "We couldn't create your user account. Please try again.",
+        "setupFailed": "We couldn't complete the portal setup. Please try again.",
+        "verificationFailed": "We couldn't verify your invitation token. Please try again.",
+        "invitationFailed": "We couldn't send the invitation. Please try again.",
+        "permissionDeniedInvite": "You don't have permission to send portal invitations.",
+        "permissionDeniedCreate": "You don't have permission to create portal user accounts.",
+        "emailNotConfigured": "Email service is not configured. Please contact your administrator.",
+        "contactNotFound": "Contact not found.",
+        "contactMissingEmail": "The contact doesn't have an email address.",
+        "contactInvalidEmail": "The contact has an invalid email address.",
+        "userExistsForContact": "A user account already exists for this contact.",
+        "portalUserAlreadyExists": "A portal user already exists for this contact.",
+        "noDefaultClient": "No default client is configured for this tenant.",
+        "noDefaultLocation": "The default client has no default location configured.",
+        "noLocationEmail": "The client location has no contact email configured.",
+        "baseUrlNotConfigured": "The application base URL is not configured.",
+        "invitationNotFound": "Invitation not found.",
+        "revokeFailed": "Failed to revoke the invitation. Please try again."
+      }
     },
     "features": {
       "submitTickets": {

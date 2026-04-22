@@ -42,6 +42,20 @@
     "confirmDeletion": "11111",
     "saving": "11111"
   },
+  "form": {
+    "selectPlaceholder": "11111",
+    "clearSelection": "11111",
+    "fromDate": "11111",
+    "toDate": "11111",
+    "noResults": "11111",
+    "searchPlaceholder": "11111"
+  },
+  "tagFilter": {
+    "placeholder": "11111",
+    "filter": "11111",
+    "selectedCount": "11111 {{count}} 11111",
+    "clearAll": "11111"
+  },
   "status": {
     "loading": "11111",
     "saving": "11111",
@@ -96,6 +110,30 @@
   },
   "fields": {
     "notes": "11111"
+  },
+  "auth": {
+    "messages": {
+      "handoffMissingToken": "11111",
+      "handoffFinalizeFailed": "11111",
+      "handoffNetworkIssue": "11111"
+    },
+    "checkEmail": {
+      "resendSuccess": "11111",
+      "resendFailed": "11111"
+    }
+  },
+  "share": {
+    "errors": {
+      "loadFailed": "11111",
+      "connectionFailed": "11111",
+      "passwordRequired": "11111",
+      "invalidPassword": "11111",
+      "downloadFailedRetry": "11111",
+      "downloadFailed": "11111",
+      "linkNotAvailable": "11111",
+      "linkExpired": "11111",
+      "downloadLimitReached": "11111"
+    }
   },
   "tickets": {
     "origin": {
@@ -971,26 +1009,5 @@
     "addOnDescription": {
       "ai_assistant": "11111"
     }
-  },
-  "auth": {
-    "messages": {
-      "handoffMissingToken": "11111",
-      "handoffFinalizeFailed": "11111",
-      "handoffNetworkIssue": "11111"
-    }
-  },
-  "form": {
-    "selectPlaceholder": "11111",
-    "clearSelection": "11111",
-    "fromDate": "11111",
-    "toDate": "11111",
-    "noResults": "11111",
-    "searchPlaceholder": "11111"
-  },
-  "tagFilter": {
-    "placeholder": "11111",
-    "filter": "11111",
-    "selectedCount": "11111 {{count}} 11111",
-    "clearAll": "11111"
   }
 }

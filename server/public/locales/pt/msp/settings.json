@@ -223,7 +223,18 @@
         "portalUserExistsForContact": "A portal user already exists for this contact. Use password reset for the existing user.",
         "selectAppropriateRole": "Please select an appropriate role for this user type",
         "contactMissingEmail": "Contact \"{{name}}\" is missing an email address. Please update the contact's email before sending an invitation.",
-        "licenseLimit": "Cannot activate user: License limit reached. Please deactivate another user or upgrade your license."
+        "licenseLimit": "Cannot activate user: License limit reached. Please deactivate another user or upgrade your license.",
+        "permissionDeniedInvite": "Não tem permissão para convidar utilizadores.",
+        "permissionDeniedCreate": "Não tem permissão para criar utilizadores.",
+        "emailNotConfigured": "O serviço de e-mail está desativado ou não configurado.",
+        "contactNotFound": "Contacto não encontrado.",
+        "contactMissingEmailGeneric": "O contacto não tem um endereço de e-mail. Adicione um endereço de e-mail ao contacto antes de enviar um convite.",
+        "contactInvalidEmail": "O contacto tem um endereço de e-mail inválido. Atualize o contacto com um endereço de e-mail válido antes de enviar um convite.",
+        "noDefaultClient": "Nenhum cliente predefinido configurado para este inquilino. Defina um cliente predefinido nas Definições Gerais.",
+        "noDefaultLocation": "O cliente predefinido deve ter uma localização predefinida configurada para enviar convites do portal.",
+        "noLocationEmail": "A localização do cliente predefinido deve ter um e-mail de contacto configurado.",
+        "noBaseUrl": "O URL base não está configurado para convites do portal.",
+        "passwordTooShort": "A palavra-passe deve ter pelo menos 8 caracteres."
       }
     }
   },
@@ -343,7 +354,9 @@
         "loadFailed": "Failed to load teams. Please try again.",
         "fetchUsers": "Failed to fetch users",
         "createFailed": "Failed to create team: {{error}}",
-        "deleteFailed": "Failed to delete team"
+        "deleteFailed": "Failed to delete team",
+        "updateName": "Falha ao atualizar o nome da equipa",
+        "saveChanges": "Falha ao guardar as alterações. Tente novamente."
       }
     }
   },
@@ -398,7 +411,10 @@
         "error": {
           "noSettings": "No ticket numbering settings found. Please contact your administrator.",
           "loadFailed": "Failed to load ticket numbering settings",
-          "updateFailed": "Failed to update settings"
+          "updateFailed": "Failed to update settings",
+          "updatePaddingFailed": "Falha ao atualizar o comprimento de preenchimento",
+          "updateLastNumberFailed": "Falha ao atualizar o último número",
+          "updateInitialValueFailed": "Falha ao atualizar o valor inicial"
         },
         "success": {
           "updated": "Ticket numbering settings updated successfully"
@@ -428,6 +444,7 @@
         "edit": "Edit",
         "delete": "Delete"
       },
+      "retiredAlert": "Os estados dos tickets agora são geridos dentro de cada quadro. Use a aba Quadros para editar os ciclos de vida dos tickets de um quadro específico.",
       "messages": {
         "success": {
           "deleted": "Status deleted successfully",
@@ -468,7 +485,11 @@
         "close": "Close",
         "create": "Create",
         "update": "Update",
-        "importSelected": "Import Selected"
+        "importSelected": "Import Selected",
+        "up": "Mover para cima",
+        "down": "Mover para baixo",
+        "remove": "Remover",
+        "addStatus": "Adicionar estado"
       },
       "fields": {
         "boardName": {
@@ -508,6 +529,46 @@
           "placeholder": "Select SLA policy",
           "help": "The SLA policy to apply to tickets on this board",
           "none": "None"
+        },
+        "ticketStatusSetup": {
+          "label": "Configuração de estados de tickets",
+          "help": "Escolha se este quadro começa a partir de um ciclo de vida existente ou de uma nova lista de estados em linha.",
+          "copyExisting": "Copiar de quadro existente",
+          "createInline": "Criar estados em linha"
+        },
+        "copyTicketStatuses": {
+          "label": "Copiar estados de tickets de",
+          "help": "Novos quadros clonam o seu ciclo de vida de tickets de um quadro existente.",
+          "selectSource": "Selecionar um quadro de origem",
+          "noSourceAvailable": "Nenhum quadro de origem disponível",
+          "unnamedBoard": "Quadro sem nome"
+        },
+        "ticketStatuses": {
+          "labelEditing": "Estados de tickets do quadro",
+          "labelCopied": "Estados de tickets copiados",
+          "labelInline": "Estados de tickets em linha",
+          "helpEditing": "Edite o ciclo de vida de tickets apenas para este quadro.",
+          "helpCopied": "Reveja e ajuste o ciclo de vida copiado antes de guardar o novo quadro.",
+          "helpInline": "Crie o ciclo de vida inicial de tickets do quadro antes de guardar.",
+          "loading": "A carregar estados de tickets do quadro…",
+          "statusName": "Nome do estado",
+          "closed": "Fechado",
+          "default": "Padrão"
+        },
+        "inboundReplyReopen": {
+          "enabledLabel": "Reabrir tickets fechados em respostas recebidas",
+          "enabledHelp": "Aplica-se a respostas encadeadas correspondentes a tickets já fechados neste quadro.",
+          "cutoffHoursLabel": "Limite de reabertura (horas)",
+          "cutoffHoursHelp": "Respostas recebidas após este período criam novos tickets em vez de reabrir os antigos.",
+          "statusLabel": "Estado ao reabrir (opcional)",
+          "statusPlaceholder": "Selecionar estado de reabertura",
+          "statusUseDefault": "Usar o estado aberto padrão do quadro",
+          "suppressAiLabel": "Suprimir reabertura para respostas curtas de confirmação (IA)",
+          "suppressAiHelp": "Apenas complemento Enterprise AI Assistant. Se indisponível, as respostas reabrem normalmente."
+        },
+        "liveTimer": {
+          "label": "Ativar cronómetro de ticket em tempo real",
+          "help": "Mostra o cronómetro em tempo real e os intervalos registados nos tickets deste quadro. A introdução manual de tempo permanece disponível."
         }
       },
       "dialog": {
@@ -556,8 +617,98 @@
           "fetchAvailableFailed": "Failed to fetch available boards for import",
           "nameRequired": "Board name is required",
           "saveFailed": "Failed to save board",
-          "lastDefault": "Cannot remove the last default board"
+          "lastDefault": "Cannot remove the last default board",
+          "statusRequired": "Adicione pelo menos um estado de ticket antes de guardar o quadro.",
+          "duplicateStatusName": "Os nomes dos estados de ticket devem ser únicos dentro de um quadro.",
+          "invalidOpenDefault": "Selecione exatamente um estado de ticket aberto predefinido antes de guardar o quadro.",
+          "nameAlreadyExists": "Já existe um quadro com este nome.",
+          "selectBoardToCopy": "Selecione um quadro existente a partir do qual copiar os estados de ticket.",
+          "fetchStatusesFailed": "Falha ao carregar os estados de ticket do quadro.",
+          "deleteFailed": "Falha ao eliminar o quadro",
+          "importFailed": "Falha ao importar os quadros",
+          "updateStatusFailed": "Falha ao atualizar o estado do quadro",
+          "updateDefaultFailed": "Falha ao atualizar o quadro predefinido"
         }
+      }
+    },
+    "priorities": {
+      "title": {
+        "ticket": "Prioridades de tickets",
+        "projectTask": "Prioridades de tarefas de projeto"
+      },
+      "alert": {
+        "header": "Gestão de prioridades:",
+        "description": "Crie prioridades personalizadas para a sua organização ou importe a partir de modelos padrão.",
+        "itilNote": "As prioridades padrão ITIL não podem ser editadas ou eliminadas.",
+        "nonItilNote": "Todas as prioridades podem ser editadas ou eliminadas para se adequarem ao seu fluxo de trabalho."
+      },
+      "table": {
+        "name": "Nome",
+        "type": "Tipo",
+        "color": "Cor",
+        "order": "Ordem",
+        "actions": "Ações",
+        "standardTag": "(Padrão)",
+        "itilProtected": "Protegido"
+      },
+      "itemTypes": {
+        "ticket": "Ticket",
+        "projectTask": "Tarefa de projeto"
+      },
+      "actions": {
+        "addPriority": "Adicionar prioridade",
+        "importStandard": "Importar de prioridades padrão",
+        "openMenu": "Abrir menu",
+        "edit": "Editar",
+        "delete": "Eliminar",
+        "cancel": "Cancelar"
+      },
+      "dialog": {
+        "addTitle": "Adicionar nova prioridade",
+        "editTitle": "Editar prioridade",
+        "submitAdd": "Adicionar prioridade",
+        "submitUpdate": "Atualizar prioridade"
+      },
+      "fields": {
+        "priorityName": {
+          "label": "Nome da prioridade",
+          "placeholder": "p. ex., Urgente"
+        },
+        "orderNumber": {
+          "label": "Número de ordem (1-100, números mais altos aparecem primeiro)",
+          "help": "Controla a ordem em que as prioridades aparecem nos menus pendentes em toda a plataforma. Números mais altos aparecem primeiro para prioridades.",
+          "used": "Números de ordem usados: {{numbers}}",
+          "noneUsed": "Ainda não foram usados números de ordem"
+        },
+        "color": {
+          "label": "Cor",
+          "chooseButton": "Escolher cor"
+        }
+      },
+      "import": {
+        "title": "Importar prioridades padrão",
+        "submit": "Importar ({{count}})",
+        "allImportedTicket": "Todas as prioridades padrão já foram importadas para tickets.",
+        "allImportedProjectTask": "Todas as prioridades padrão já foram importadas para tarefas de projeto.",
+        "instructions": "Selecione as prioridades padrão que deseja importar. Serão copiadas para as prioridades da sua organização."
+      },
+      "messages": {
+        "success": {
+          "deleted": "Prioridade eliminada com sucesso",
+          "imported": "{{count}} prioridades importadas com sucesso",
+          "skipped": "{{count}} prioridades ignoradas (já existem)"
+        },
+        "error": {
+          "orderTaken": "O número de ordem {{order}} já está em uso por \"{{name}}\". Escolha um número de ordem diferente.",
+          "uniqueConstraint": "Este número de ordem já está em uso. Escolha um número de ordem diferente.",
+          "saveFailed": "Falha ao guardar a prioridade",
+          "deleteFailed": "Falha ao eliminar a prioridade",
+          "deleteValidationFailed": "Falha ao validar a eliminação. Tente novamente.",
+          "importFailed": "Falha ao importar prioridades"
+        }
+      },
+      "entity": {
+        "fallback": "esta prioridade"
       }
     }
   },
@@ -643,7 +794,9 @@
         },
         "error": {
           "lastClosed": "At least one status must remain marked as closed",
-          "deleteLastClosed": "Cannot delete the last closed status for this type."
+          "deleteLastClosed": "Cannot delete the last closed status for this type.",
+          "skipped": "{{count}} estados ignorados ({{reason}})",
+          "importFailed": "Falha ao importar os estados"
         }
       }
     },
@@ -1023,6 +1176,16 @@
         "noValues": "No values"
       },
       "truncated": "Showing the first {{count}} records. Download the job results for full history."
+    },
+    "messages": {
+      "error": {
+        "loadImportData": "Falha ao carregar os dados de importação",
+        "createPreview": "Falha ao criar a pré-visualização",
+        "selectPreviewFirst": "Selecione uma pré-visualização para aprovar antes de importar.",
+        "startImportJob": "Falha ao iniciar o trabalho de importação",
+        "loadJobDetails": "Falha ao carregar os detalhes do trabalho",
+        "refreshHistory": "Falha ao atualizar o histórico de importação"
+      }
     }
   },
   "email": {

@@ -103,27 +103,40 @@ function normalizeManagedTicketStatuses(statuses: ManagedTicketStatus[]) {
     .filter((status) => status.name.length > 0);
 }
 
-function getManagedTicketStatusValidationError(statuses: ManagedTicketStatus[]): string | null {
+type ManagedTicketStatusValidationCode =
+  | 'STATUS_REQUIRED'
+  | 'DUPLICATE_STATUS_NAME'
+  | 'INVALID_OPEN_DEFAULT';
+
+function getManagedTicketStatusValidationError(
+  statuses: ManagedTicketStatus[]
+): ManagedTicketStatusValidationCode | null {
   const normalizedStatuses = normalizeManagedTicketStatuses(statuses);
 
   if (normalizedStatuses.length === 0) {
-    return 'Add at least one ticket status before saving the board.';
+    return 'STATUS_REQUIRED';
   }
 
   const duplicateName = normalizedStatuses.find((status, index) =>
     normalizedStatuses.findIndex((candidate) => candidate.name.toLowerCase() === status.name.toLowerCase()) !== index
   );
   if (duplicateName) {
-    return 'Ticket status names must be unique within a board.';
+    return 'DUPLICATE_STATUS_NAME';
   }
 
   const openDefaultStatuses = normalizedStatuses.filter((status) => status.is_default && !status.is_closed);
   if (openDefaultStatuses.length !== 1 || normalizedStatuses.some((status) => status.is_default && status.is_closed)) {
-    return 'Select exactly one open default ticket status before saving the board.';
+    return 'INVALID_OPEN_DEFAULT';
   }
 
   return null;
 }
+
+const TICKET_STATUS_VALIDATION_KEYS: Record<ManagedTicketStatusValidationCode, string> = {
+  STATUS_REQUIRED: 'ticketing.boards.messages.error.statusRequired',
+  DUPLICATE_STATUS_NAME: 'ticketing.boards.messages.error.duplicateStatusName',
+  INVALID_OPEN_DEFAULT: 'ticketing.boards.messages.error.invalidOpenDefault'
+};
 
 const BoardsSettings: React.FC = () => {
   const { t } = useTranslation('msp/settings');
@@ -317,7 +330,7 @@ const BoardsSettings: React.FC = () => {
       }));
     } catch (loadError) {
       console.error('Error loading board ticket statuses:', loadError);
-      setError(loadError instanceof Error ? loadError.message : 'Failed to load board ticket statuses.');
+      setError(loadError instanceof Error ? loadError.message : t('ticketing.boards.messages.error.fetchStatusesFailed'));
     } finally {
       setIsLoadingBoardStatuses(false);
     }
@@ -476,12 +489,12 @@ const BoardsSettings: React.FC = () => {
         case 'NO_TENANT':
         default:
           // Fatal errors - show toast and close dialog
-          toast.error(result.message || 'Failed to delete board');
+          toast.error(result.message || t('ticketing.boards.messages.error.deleteFailed'));
           setDeleteDialog({ isOpen: false, boardId: '', boardName: '' });
           break;
       }
     } catch (error) {
-      handleError(error, 'Failed to delete board');
+      handleError(error, t('ticketing.boards.messages.error.deleteFailed'));
       setDeleteDialog({ isOpen: false, boardId: '', boardName: '' });
     }
   };
@@ -514,7 +527,7 @@ const BoardsSettings: React.FC = () => {
       }
 
       if (isDuplicateBoardName) {
-        setError('A board with this name already exists.');
+        setError(t('ticketing.boards.messages.error.nameAlreadyExists'));
         return;
       }
 
@@ -529,12 +542,12 @@ const BoardsSettings: React.FC = () => {
         formData.status_seed_mode === 'copy_existing';
 
       if (shouldRequireStatusCopySource && !formData.copy_ticket_statuses_from_board_id) {
-        setError('Select an existing board to copy ticket statuses from.');
+        setError(t('ticketing.boards.messages.error.selectBoardToCopy'));
         return;
       }
 
       if (shouldManageTicketStatuses && ticketStatusValidationError) {
-        setError(ticketStatusValidationError);
+        setError(t(TICKET_STATUS_VALIDATION_KEYS[ticketStatusValidationError]));
         return;
       }
 
@@ -673,7 +686,7 @@ const BoardsSettings: React.FC = () => {
       setConflictResolutions({});
       await fetchBoards();
     } catch (error) {
-      handleError(error, 'Failed to import boards');
+      handleError(error, t('ticketing.boards.messages.error.importFailed'));
     }
   };
 
@@ -712,7 +725,7 @@ const BoardsSettings: React.FC = () => {
                 });
                 await fetchBoards();
               } catch (error) {
-                handleError(error, 'Failed to update board status');
+                handleError(error, t('ticketing.boards.messages.error.updateStatusFailed'));
               }
             }}
             className="data-[state=checked]:bg-primary-500"
@@ -742,7 +755,7 @@ const BoardsSettings: React.FC = () => {
                 });
                 await fetchBoards();
               } catch (error) {
-                handleError(error, 'Failed to update default board');
+                handleError(error, t('ticketing.boards.messages.error.updateDefaultFailed'));
               }
             }}
             className="data-[state=checked]:bg-primary-500"
@@ -1022,7 +1035,7 @@ const BoardsSettings: React.FC = () => {
               />
               {isDuplicateBoardName && (
                 <p className="text-sm text-red-600 mt-1" data-testid="board-name-duplicate-error">
-                  A board with this name already exists.
+                  {t('ticketing.boards.messages.error.nameAlreadyExists')}
                 </p>
               )}
             </div>
@@ -1135,9 +1148,9 @@ const BoardsSettings: React.FC = () => {
             <div className="space-y-3 rounded-md border border-gray-200 p-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label htmlFor="inbound_reply_reopen_enabled">Reopen closed tickets on inbound replies</Label>
+                  <Label htmlFor="inbound_reply_reopen_enabled">{t('ticketing.boards.fields.inboundReplyReopen.enabledLabel')}</Label>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Applies to threaded replies matched to already closed tickets on this board.
+                    {t('ticketing.boards.fields.inboundReplyReopen.enabledHelp')}
                   </p>
                 </div>
                 <Switch
@@ -1150,7 +1163,7 @@ const BoardsSettings: React.FC = () => {
               </div>
 
               <div>
-                <Label htmlFor="inbound_reply_reopen_cutoff_hours">Reopen cutoff (hours)</Label>
+                <Label htmlFor="inbound_reply_reopen_cutoff_hours">{t('ticketing.boards.fields.inboundReplyReopen.cutoffHoursLabel')}</Label>
                 <Input
                   id="inbound_reply_reopen_cutoff_hours"
                   type="number"
@@ -1165,12 +1178,12 @@ const BoardsSettings: React.FC = () => {
                   disabled={!formData.inbound_reply_reopen_enabled}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Replies received after this window create new tickets instead of reopening old ones.
+                  {t('ticketing.boards.fields.inboundReplyReopen.cutoffHoursHelp')}
                 </p>
               </div>
 
               <div>
-                <Label htmlFor="inbound_reply_reopen_status_id">Reopen status (optional)</Label>
+                <Label htmlFor="inbound_reply_reopen_status_id">{t('ticketing.boards.fields.inboundReplyReopen.statusLabel')}</Label>
                 <CustomSelect
                   id="inbound_reply_reopen_status_id"
                   value={formData.inbound_reply_reopen_status_id}
@@ -1181,7 +1194,7 @@ const BoardsSettings: React.FC = () => {
                     })
                   }
                   options={[
-                    { value: '', label: 'Use board default open status' },
+                    { value: '', label: t('ticketing.boards.fields.inboundReplyReopen.statusUseDefault') },
                     ...normalizeManagedTicketStatuses(formData.ticket_statuses)
                       .filter((status) => !status.is_closed)
                       .map((status): SelectOption => ({
@@ -1190,16 +1203,16 @@ const BoardsSettings: React.FC = () => {
                       }))
                       .filter((option) => option.value),
                   ]}
-                  placeholder="Select reopen status"
+                  placeholder={t('ticketing.boards.fields.inboundReplyReopen.statusPlaceholder')}
                   disabled={!formData.inbound_reply_reopen_enabled}
                 />
               </div>
 
               <div className="flex items-center justify-between">
                 <div>
-                  <Label htmlFor="inbound_reply_ai_ack_suppression_enabled">Suppress reopen for short ACK replies (AI)</Label>
+                  <Label htmlFor="inbound_reply_ai_ack_suppression_enabled">{t('ticketing.boards.fields.inboundReplyReopen.suppressAiLabel')}</Label>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Enterprise AI Assistant add-on only. If unavailable, replies reopen normally.
+                    {t('ticketing.boards.fields.inboundReplyReopen.suppressAiHelp')}
                   </p>
                 </div>
                 <Switch
@@ -1249,7 +1262,7 @@ const BoardsSettings: React.FC = () => {
 
             {!editingBoard && (
               <div>
-                <Label required>Ticket status setup</Label>
+                <Label required>{t('ticketing.boards.fields.ticketStatusSetup.label')}</Label>
                 <ViewSwitcher
                   currentView={formData.status_seed_mode}
                   onChange={(value) => {
@@ -1266,21 +1279,21 @@ const BoardsSettings: React.FC = () => {
                     }));
                   }}
                   options={[
-                    { value: 'copy_existing', label: 'Copy from existing board', id: 'ticket-status-seed-mode-copy-existing' },
-                    { value: 'create_inline', label: 'Create statuses inline', id: 'ticket-status-seed-mode-create-inline' },
+                    { value: 'copy_existing', label: t('ticketing.boards.fields.ticketStatusSetup.copyExisting'), id: 'ticket-status-seed-mode-copy-existing' },
+                    { value: 'create_inline', label: t('ticketing.boards.fields.ticketStatusSetup.createInline'), id: 'ticket-status-seed-mode-create-inline' },
                   ]}
-                  aria-label="Ticket status setup"
+                  aria-label={t('ticketing.boards.fields.ticketStatusSetup.label')}
                   className="mt-2 w-fit"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Choose whether this board starts from an existing lifecycle or a new inline status list.
+                  {t('ticketing.boards.fields.ticketStatusSetup.help')}
                 </p>
               </div>
             )}
 
             {!editingBoard && formData.status_seed_mode === 'copy_existing' && (
               <div>
-                <Label htmlFor="copy-ticket-statuses-select" required>Copy ticket statuses from</Label>
+                <Label htmlFor="copy-ticket-statuses-select" required>{t('ticketing.boards.fields.copyTicketStatuses.label')}</Label>
                 <CustomSelect
                   id="copy-ticket-statuses-select"
                   value={formData.copy_ticket_statuses_from_board_id}
@@ -1299,20 +1312,20 @@ const BoardsSettings: React.FC = () => {
                     await loadManagedTicketStatusesFromBoard(value);
                   }}
                   options={[
-                    { value: '', label: boards.length > 0 ? 'Select a source board' : 'No source boards available' },
+                    { value: '', label: boards.length > 0 ? t('ticketing.boards.fields.copyTicketStatuses.selectSource') : t('ticketing.boards.fields.copyTicketStatuses.noSourceAvailable') },
                     ...boards
                       .slice()
                       .sort((a, b) => (a.display_order || 0) - (b.display_order || 0) || (a.board_name || '').localeCompare(b.board_name || ''))
                       .map((board): SelectOption => ({
                         value: board.board_id || '',
-                        label: board.board_name || 'Unnamed board'
+                        label: board.board_name || t('ticketing.boards.fields.copyTicketStatuses.unnamedBoard')
                       }))
                   ]}
-                  placeholder="Select a source board"
+                  placeholder={t('ticketing.boards.fields.copyTicketStatuses.selectSource')}
                   disabled={boards.length === 0}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  New boards clone their ticket lifecycle from an existing board.
+                  {t('ticketing.boards.fields.copyTicketStatuses.help')}
                 </p>
               </div>
             )}
@@ -1322,35 +1335,35 @@ const BoardsSettings: React.FC = () => {
                 <div>
                   <Label>
                     {editingBoard
-                      ? 'Board ticket statuses'
+                      ? t('ticketing.boards.fields.ticketStatuses.labelEditing')
                       : formData.status_seed_mode === 'copy_existing'
-                        ? 'Copied ticket statuses'
-                        : 'Inline ticket statuses'}
+                        ? t('ticketing.boards.fields.ticketStatuses.labelCopied')
+                        : t('ticketing.boards.fields.ticketStatuses.labelInline')}
                   </Label>
                   <p className="text-xs text-muted-foreground mt-1">
                     {editingBoard
-                      ? 'Edit the ticket lifecycle for this board only.'
+                      ? t('ticketing.boards.fields.ticketStatuses.helpEditing')
                       : formData.status_seed_mode === 'copy_existing'
-                        ? 'Review and adjust the copied lifecycle before saving the new board.'
-                        : 'Author the board&apos;s initial ticket lifecycle before saving.'}
+                        ? t('ticketing.boards.fields.ticketStatuses.helpCopied')
+                        : t('ticketing.boards.fields.ticketStatuses.helpInline')}
                   </p>
                 </div>
 
                 {isLoadingBoardStatuses ? (
-                  <p className="text-sm text-muted-foreground">Loading board ticket statuses…</p>
+                  <p className="text-sm text-muted-foreground">{t('ticketing.boards.fields.ticketStatuses.loading')}</p>
                 ) : formData.ticket_statuses.map((status, index) => (
                   <div key={status.temp_id} className="grid gap-3 rounded-md border border-gray-200 p-3 md:grid-cols-[minmax(0,1fr)_auto_auto_auto] md:items-center">
                     <div>
-                      <Label htmlFor={`inline-ticket-status-name-${index}`}>Status name</Label>
+                      <Label htmlFor={`inline-ticket-status-name-${index}`}>{t('ticketing.boards.fields.ticketStatuses.statusName')}</Label>
                       <Input
                         id={`inline-ticket-status-name-${index}`}
                         value={status.name}
                         onChange={(event) => updateManagedTicketStatus(status.temp_id, { name: event.target.value })}
-                        placeholder="Status name"
+                        placeholder={t('ticketing.boards.fields.ticketStatuses.statusName')}
                       />
                     </div>
                     <div className="flex items-center gap-2">
-                      <Label htmlFor={`inline-ticket-status-closed-${index}`}>Closed</Label>
+                      <Label htmlFor={`inline-ticket-status-closed-${index}`}>{t('ticketing.boards.fields.ticketStatuses.closed')}</Label>
                       <Switch
                         id={`inline-ticket-status-closed-${index}`}
                         checked={status.is_closed}
@@ -1358,7 +1371,7 @@ const BoardsSettings: React.FC = () => {
                       />
                     </div>
                     <div className="flex items-center gap-2">
-                      <Label htmlFor={`inline-ticket-status-default-${index}`}>Default</Label>
+                      <Label htmlFor={`inline-ticket-status-default-${index}`}>{t('ticketing.boards.fields.ticketStatuses.default')}</Label>
                       <Switch
                         id={`inline-ticket-status-default-${index}`}
                         checked={status.is_default}
@@ -1377,7 +1390,7 @@ const BoardsSettings: React.FC = () => {
                         onClick={() => moveManagedTicketStatus(status.temp_id, 'up')}
                         disabled={index === 0}
                       >
-                        Up
+                        {t('ticketing.boards.actions.up')}
                       </Button>
                       <Button
                         id={`move-inline-ticket-status-down-${index}`}
@@ -1386,7 +1399,7 @@ const BoardsSettings: React.FC = () => {
                         onClick={() => moveManagedTicketStatus(status.temp_id, 'down')}
                         disabled={index === formData.ticket_statuses.length - 1}
                       >
-                        Down
+                        {t('ticketing.boards.actions.down')}
                       </Button>
                       <Button
                         id={`remove-inline-ticket-status-${index}`}
@@ -1395,7 +1408,7 @@ const BoardsSettings: React.FC = () => {
                         onClick={() => removeManagedTicketStatus(status.temp_id)}
                         disabled={formData.ticket_statuses.length === 1}
                       >
-                        Remove
+                        {t('ticketing.boards.actions.remove')}
                       </Button>
                     </div>
                   </div>
@@ -1404,14 +1417,14 @@ const BoardsSettings: React.FC = () => {
                 {!isLoadingBoardStatuses && (
                   <div className="flex justify-start">
                     <Button id="add-inline-ticket-status-button" type="button" variant="outline" onClick={addManagedTicketStatus}>
-                      Add Status
+                      {t('ticketing.boards.actions.addStatus')}
                     </Button>
                   </div>
                 )}
 
                 {ticketStatusValidationError && !isLoadingBoardStatuses && (
                   <p className="text-sm text-red-600" data-testid="ticket-status-validation-error">
-                    {ticketStatusValidationError}
+                    {t(TICKET_STATUS_VALIDATION_KEYS[ticketStatusValidationError])}
                   </p>
                 )}
               </div>
@@ -1422,9 +1435,9 @@ const BoardsSettings: React.FC = () => {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <Label htmlFor="enable_live_ticket_timer">Enable live ticket timer</Label>
+                  <Label htmlFor="enable_live_ticket_timer">{t('ticketing.boards.fields.liveTimer.label')}</Label>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Shows the live timer and tracked intervals on tickets in this board. Manual time entry remains available.
+                    {t('ticketing.boards.fields.liveTimer.help')}
                   </p>
                 </div>
                 <Switch

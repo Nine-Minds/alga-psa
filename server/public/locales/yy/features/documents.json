@@ -258,5 +258,14 @@
       "troubleshooting": "55555",
       "reference": "55555"
     }
+  },
+  "documents": {
+    "messages": {
+      "error": {
+        "noPermission": "55555",
+        "invalidData": "55555",
+        "fetchFailed": "55555"
+      }
+    }
   }
 }

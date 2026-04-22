@@ -223,7 +223,18 @@
         "portalUserExistsForContact": "Er bestaat al een portaalgebruiker voor dit contactpersoon. Gebruik wachtwoord herstellen voor de bestaande gebruiker.",
         "selectAppropriateRole": "Selecteer een geschikte rol voor dit gebruikerstype",
         "contactMissingEmail": "Contactpersoon \"{{name}}\" heeft geen e-mailadres. Werk het e-mailadres van het contactpersoon bij voordat u een uitnodiging verstuurt.",
-        "licenseLimit": "Kan gebruiker niet activeren: licentielimiet bereikt. Deactiveer een andere gebruiker of upgrade uw licentie."
+        "licenseLimit": "Kan gebruiker niet activeren: licentielimiet bereikt. Deactiveer een andere gebruiker of upgrade uw licentie.",
+        "permissionDeniedInvite": "U heeft geen toestemming om gebruikers uit te nodigen.",
+        "permissionDeniedCreate": "U heeft geen toestemming om gebruikers aan te maken.",
+        "emailNotConfigured": "De e-mailservice is uitgeschakeld of niet geconfigureerd.",
+        "contactNotFound": "Contactpersoon niet gevonden.",
+        "contactMissingEmailGeneric": "Het contactpersoon heeft geen e-mailadres. Voeg een e-mailadres toe aan het contactpersoon voordat u een uitnodiging verstuurt.",
+        "contactInvalidEmail": "Het contactpersoon heeft een ongeldig e-mailadres. Werk het contactpersoon bij met een geldig e-mailadres voordat u een uitnodiging verstuurt.",
+        "noDefaultClient": "Geen standaardklant geconfigureerd voor deze tenant. Stel een standaardklant in bij Algemene instellingen.",
+        "noDefaultLocation": "De standaardklant moet een standaardlocatie hebben om portaluitnodigingen te versturen.",
+        "noLocationEmail": "De locatie van de standaardklant moet een contact-e-mailadres hebben geconfigureerd.",
+        "noBaseUrl": "Basis-URL is niet geconfigureerd voor portaluitnodigingen.",
+        "passwordTooShort": "Wachtwoord moet minstens 8 tekens lang zijn."
       }
     }
   },
@@ -343,7 +354,9 @@
         "loadFailed": "Kan teams niet laden. Probeer het opnieuw.",
         "fetchUsers": "Kan gebruikers niet ophalen",
         "createFailed": "Kan team niet aanmaken: {{error}}",
-        "deleteFailed": "Kan team niet verwijderen"
+        "deleteFailed": "Kan team niet verwijderen",
+        "updateName": "Kan teamnaam niet bijwerken",
+        "saveChanges": "Kan wijzigingen niet opslaan. Probeer het opnieuw."
       }
     }
   },
@@ -398,7 +411,10 @@
         "error": {
           "noSettings": "Geen ticketnummerinstellingen gevonden. Neem contact op met uw beheerder.",
           "loadFailed": "Kan ticketnummerinstellingen niet laden",
-          "updateFailed": "Kan instellingen niet bijwerken"
+          "updateFailed": "Kan instellingen niet bijwerken",
+          "updatePaddingFailed": "Kan opvullingslengte niet bijwerken",
+          "updateLastNumberFailed": "Kan laatste nummer niet bijwerken",
+          "updateInitialValueFailed": "Kan beginwaarde niet bijwerken"
         },
         "success": {
           "updated": "Ticketnummerinstellingen succesvol bijgewerkt"
@@ -428,6 +444,7 @@
         "edit": "Bewerken",
         "delete": "Verwijderen"
       },
+      "retiredAlert": "Ticketstatussen worden nu binnen elk bord beheerd. Gebruik het tabblad Borden om de levenscycli van tickets voor een specifiek bord te bewerken.",
       "messages": {
         "success": {
           "deleted": "Status succesvol verwijderd",
@@ -468,7 +485,11 @@
         "close": "Sluiten",
         "create": "Aanmaken",
         "update": "Bijwerken",
-        "importSelected": "Selectie importeren"
+        "importSelected": "Selectie importeren",
+        "up": "Omhoog",
+        "down": "Omlaag",
+        "remove": "Verwijderen",
+        "addStatus": "Status toevoegen"
       },
       "fields": {
         "boardName": {
@@ -508,6 +529,46 @@
           "placeholder": "Selecteer SLA-beleid",
           "help": "Het SLA-beleid dat op tickets op dit bord wordt toegepast",
           "none": "Geen"
+        },
+        "ticketStatusSetup": {
+          "label": "Ticketstatus-configuratie",
+          "help": "Kies of dit bord start vanuit een bestaande levenscyclus of een nieuwe inline-statuslijst.",
+          "copyExisting": "Kopiëren van bestaand bord",
+          "createInline": "Statussen inline maken"
+        },
+        "copyTicketStatuses": {
+          "label": "Ticketstatussen kopiëren van",
+          "help": "Nieuwe borden klonen hun ticketlevenscyclus van een bestaand bord.",
+          "selectSource": "Een bronbord selecteren",
+          "noSourceAvailable": "Geen bronborden beschikbaar",
+          "unnamedBoard": "Naamloos bord"
+        },
+        "ticketStatuses": {
+          "labelEditing": "Ticketstatussen van bord",
+          "labelCopied": "Gekopieerde ticketstatussen",
+          "labelInline": "Inline-ticketstatussen",
+          "helpEditing": "Bewerk de ticketlevenscyclus alleen voor dit bord.",
+          "helpCopied": "Controleer en pas de gekopieerde levenscyclus aan voordat u het nieuwe bord opslaat.",
+          "helpInline": "Stel de initiële ticketlevenscyclus van het bord op voordat u opslaat.",
+          "loading": "Ticketstatussen van bord laden…",
+          "statusName": "Statusnaam",
+          "closed": "Gesloten",
+          "default": "Standaard"
+        },
+        "inboundReplyReopen": {
+          "enabledLabel": "Gesloten tickets heropenen bij inkomende antwoorden",
+          "enabledHelp": "Van toepassing op antwoorden in threads die overeenkomen met reeds gesloten tickets op dit bord.",
+          "cutoffHoursLabel": "Heropeningsgrens (uren)",
+          "cutoffHoursHelp": "Antwoorden die na dit venster worden ontvangen, maken nieuwe tickets in plaats van oude te heropenen.",
+          "statusLabel": "Heropeningsstatus (optioneel)",
+          "statusPlaceholder": "Heropeningsstatus selecteren",
+          "statusUseDefault": "Standaard open status van bord gebruiken",
+          "suppressAiLabel": "Heropenen onderdrukken bij korte bevestigingsantwoorden (AI)",
+          "suppressAiHelp": "Alleen Enterprise AI Assistant add-on. Als niet beschikbaar, heropenen antwoorden normaal."
+        },
+        "liveTimer": {
+          "label": "Live tickettimer inschakelen",
+          "help": "Toont de live timer en bijgehouden intervallen op tickets in dit bord. Handmatige tijdinvoer blijft beschikbaar."
         }
       },
       "dialog": {
@@ -556,8 +617,98 @@
           "fetchAvailableFailed": "Kan beschikbare borden voor import niet ophalen",
           "nameRequired": "Bordnaam is verplicht",
           "saveFailed": "Kan bord niet opslaan",
-          "lastDefault": "Kan het laatste standaardbord niet verwijderen"
+          "lastDefault": "Kan het laatste standaardbord niet verwijderen",
+          "statusRequired": "Voeg ten minste één ticketstatus toe voordat je het bord opslaat.",
+          "duplicateStatusName": "Namen van ticketstatussen moeten uniek zijn binnen een bord.",
+          "invalidOpenDefault": "Selecteer precies één open standaard ticketstatus voordat je het bord opslaat.",
+          "nameAlreadyExists": "Er bestaat al een bord met deze naam.",
+          "selectBoardToCopy": "Selecteer een bestaand bord waarvan je de ticketstatussen wilt kopiëren.",
+          "fetchStatusesFailed": "Ticketstatussen van het bord konden niet worden geladen.",
+          "deleteFailed": "Bord kon niet worden verwijderd",
+          "importFailed": "Borden konden niet worden geïmporteerd",
+          "updateStatusFailed": "Bordstatus kon niet worden bijgewerkt",
+          "updateDefaultFailed": "Standaardbord kon niet worden bijgewerkt"
         }
+      }
+    },
+    "priorities": {
+      "title": {
+        "ticket": "Ticketprioriteiten",
+        "projectTask": "Projecttaakprioriteiten"
+      },
+      "alert": {
+        "header": "Prioriteitsbeheer:",
+        "description": "Maak aangepaste prioriteiten voor uw organisatie of importeer vanuit standaardsjablonen.",
+        "itilNote": "ITIL-standaardprioriteiten kunnen niet worden bewerkt of verwijderd.",
+        "nonItilNote": "Alle prioriteiten kunnen worden bewerkt of verwijderd om aan uw werkstroom te voldoen."
+      },
+      "table": {
+        "name": "Naam",
+        "type": "Type",
+        "color": "Kleur",
+        "order": "Volgorde",
+        "actions": "Acties",
+        "standardTag": "(Standaard)",
+        "itilProtected": "Beschermd"
+      },
+      "itemTypes": {
+        "ticket": "Ticket",
+        "projectTask": "Projecttaak"
+      },
+      "actions": {
+        "addPriority": "Prioriteit toevoegen",
+        "importStandard": "Importeren vanuit standaardprioriteiten",
+        "openMenu": "Menu openen",
+        "edit": "Bewerken",
+        "delete": "Verwijderen",
+        "cancel": "Annuleren"
+      },
+      "dialog": {
+        "addTitle": "Nieuwe prioriteit toevoegen",
+        "editTitle": "Prioriteit bewerken",
+        "submitAdd": "Prioriteit toevoegen",
+        "submitUpdate": "Prioriteit bijwerken"
+      },
+      "fields": {
+        "priorityName": {
+          "label": "Prioriteitsnaam",
+          "placeholder": "bijv. Urgent"
+        },
+        "orderNumber": {
+          "label": "Volgordenummer (1-100, hogere nummers verschijnen eerst)",
+          "help": "Bepaalt de volgorde waarin prioriteiten verschijnen in dropdown-menu's in het platform. Hogere nummers verschijnen eerst voor prioriteiten.",
+          "used": "Gebruikte volgordenummers: {{numbers}}",
+          "noneUsed": "Nog geen volgordenummers gebruikt"
+        },
+        "color": {
+          "label": "Kleur",
+          "chooseButton": "Kleur kiezen"
+        }
+      },
+      "import": {
+        "title": "Standaardprioriteiten importeren",
+        "submit": "Importeren ({{count}})",
+        "allImportedTicket": "Alle standaardprioriteiten zijn al geïmporteerd voor tickets.",
+        "allImportedProjectTask": "Alle standaardprioriteiten zijn al geïmporteerd voor projecttaken.",
+        "instructions": "Selecteer de standaardprioriteiten die u wilt importeren. Deze worden gekopieerd naar de prioriteiten van uw organisatie."
+      },
+      "messages": {
+        "success": {
+          "deleted": "Prioriteit succesvol verwijderd",
+          "imported": "{{count}} prioriteiten succesvol geïmporteerd",
+          "skipped": "{{count}} prioriteiten overgeslagen (bestaan al)"
+        },
+        "error": {
+          "orderTaken": "Volgordenummer {{order}} is al in gebruik door \"{{name}}\". Kies een ander volgordenummer.",
+          "uniqueConstraint": "Dit volgordenummer is al in gebruik. Kies een ander volgordenummer.",
+          "saveFailed": "Prioriteit kon niet worden opgeslagen",
+          "deleteFailed": "Prioriteit kon niet worden verwijderd",
+          "deleteValidationFailed": "Verwijdering kon niet worden gevalideerd. Probeer het opnieuw.",
+          "importFailed": "Prioriteiten konden niet worden geïmporteerd"
+        }
+      },
+      "entity": {
+        "fallback": "deze prioriteit"
       }
     }
   },
@@ -643,7 +794,9 @@
         },
         "error": {
           "lastClosed": "Ten minste één status moet als gesloten gemarkeerd blijven",
-          "deleteLastClosed": "Kan de laatste gesloten status voor dit type niet verwijderen."
+          "deleteLastClosed": "Kan de laatste gesloten status voor dit type niet verwijderen.",
+          "skipped": "{{count}} statussen overgeslagen ({{reason}})",
+          "importFailed": "Kan statussen niet importeren"
         }
       }
     },
@@ -1023,6 +1176,16 @@
         "noValues": "Geen waarden"
       },
       "truncated": "Toont de eerste {{count}} records. Download de taakresultaten voor de volledige geschiedenis."
+    },
+    "messages": {
+      "error": {
+        "loadImportData": "Kan importgegevens niet laden",
+        "createPreview": "Kan voorbeeld niet maken",
+        "selectPreviewFirst": "Selecteer een voorbeeld om goed te keuren voordat je importeert.",
+        "startImportJob": "Kan importopdracht niet starten",
+        "loadJobDetails": "Kan opdrachtdetails niet laden",
+        "refreshHistory": "Kan importgeschiedenis niet vernieuwen"
+      }
     }
   },
   "email": {

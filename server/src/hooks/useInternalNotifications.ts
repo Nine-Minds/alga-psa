@@ -14,6 +14,7 @@ import {
   markAsReadAction,
   markAllAsReadAction
 } from '@alga-psa/notifications/actions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Construct Hocuspocus URL based on current domain
 // In production, use wss://{current-domain}/hocuspocus
@@ -62,6 +63,7 @@ export function useInternalNotifications(
   options: UseInternalNotificationsOptions
 ): UseInternalNotificationsReturn {
   const { tenant, userId, limit = 20, enablePolling = true } = options;
+  const { t } = useTranslation('msp/core');
 
   const [notifications, setNotifications] = useState<InternalNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
@@ -102,7 +104,7 @@ export function useInternalNotifications(
       }
     } catch (err) {
       console.error('Failed to fetch notifications:', err);
-      setError('Failed to load notifications');
+      setError(t('notifications.messages.error.loadFailed', 'Failed to load notifications'));
     } finally {
       setIsLoading(false);
     }

@@ -223,7 +223,18 @@
         "portalUserExistsForContact": "Esistè già un utente del portale per questo contatto. Utilizzi il ripristino della password per l'utente esistente.",
         "selectAppropriateRole": "Selezioni un ruolo appropriato per questo tipo di utente",
         "contactMissingEmail": "Il contatto \"{{name}}\" non dispone di un indirizzo email. Aggiorni l'email del contatto prima di inviare un invito.",
-        "licenseLimit": "Impossibile attivare l'utente: limite di licenze raggiunto. Disattivi un altro utente o aggiorni la Sua licenza."
+        "licenseLimit": "Impossibile attivare l'utente: limite di licenze raggiunto. Disattivi un altro utente o aggiorni la Sua licenza.",
+        "permissionDeniedInvite": "Non hai il permesso di invitare utenti.",
+        "permissionDeniedCreate": "Non hai il permesso di creare utenti.",
+        "emailNotConfigured": "Il servizio e-mail è disabilitato o non configurato.",
+        "contactNotFound": "Contatto non trovato.",
+        "contactMissingEmailGeneric": "Il contatto non ha un indirizzo e-mail. Aggiungi un indirizzo e-mail al contatto prima di inviare un invito.",
+        "contactInvalidEmail": "Il contatto ha un indirizzo e-mail non valido. Aggiorna il contatto con un indirizzo e-mail valido prima di inviare un invito.",
+        "noDefaultClient": "Nessun client predefinito configurato per questo tenant. Imposta un client predefinito nelle Impostazioni generali.",
+        "noDefaultLocation": "Il client predefinito deve avere una sede predefinita configurata per inviare inviti al portale.",
+        "noLocationEmail": "La sede del client predefinito deve avere un indirizzo e-mail di contatto configurato.",
+        "noBaseUrl": "L'URL di base non è configurato per gli inviti al portale.",
+        "passwordTooShort": "La password deve contenere almeno 8 caratteri."
       }
     }
   },
@@ -343,7 +354,9 @@
         "loadFailed": "Impossibile caricare i team. Riprovi.",
         "fetchUsers": "Impossibile recuperare gli utenti",
         "createFailed": "Impossibile creare il team: {{error}}",
-        "deleteFailed": "Impossibile eliminare il team"
+        "deleteFailed": "Impossibile eliminare il team",
+        "updateName": "Impossibile aggiornare il nome del team",
+        "saveChanges": "Impossibile salvare le modifiche. Riprova."
       }
     }
   },
@@ -398,7 +411,10 @@
         "error": {
           "noSettings": "Nessuna impostazione di numerazione ticket trovata. Contatti il Suo amministratore.",
           "loadFailed": "Impossibile caricare le impostazioni di numerazione dei ticket",
-          "updateFailed": "Impossibile aggiornare le impostazioni"
+          "updateFailed": "Impossibile aggiornare le impostazioni",
+          "updatePaddingFailed": "Impossibile aggiornare la lunghezza di riempimento",
+          "updateLastNumberFailed": "Impossibile aggiornare l'ultimo numero",
+          "updateInitialValueFailed": "Impossibile aggiornare il valore iniziale"
         },
         "success": {
           "updated": "Impostazioni di numerazione dei ticket aggiornate con successo"
@@ -428,6 +444,7 @@
         "edit": "Modifica",
         "delete": "Elimina"
       },
+      "retiredAlert": "Gli stati dei ticket sono ora gestiti all'interno di ogni bacheca. Usa la scheda Bacheche per modificare i cicli di vita dei ticket per una bacheca specifica.",
       "messages": {
         "success": {
           "deleted": "Stato eliminato con successo",
@@ -468,7 +485,11 @@
         "close": "Chiudi",
         "create": "Crea",
         "update": "Aggiorna",
-        "importSelected": "Importa selezione"
+        "importSelected": "Importa selezione",
+        "up": "Su",
+        "down": "Giù",
+        "remove": "Rimuovi",
+        "addStatus": "Aggiungi stato"
       },
       "fields": {
         "boardName": {
@@ -508,6 +529,46 @@
           "placeholder": "Selezionare la politica SLA",
           "help": "La politica SLA da applicare ai ticket su questa bacheca",
           "none": "Nessuna"
+        },
+        "ticketStatusSetup": {
+          "label": "Configurazione stati ticket",
+          "help": "Scegli se questa bacheca parte da un ciclo di vita esistente o da un nuovo elenco di stati inline.",
+          "copyExisting": "Copia da una bacheca esistente",
+          "createInline": "Crea stati inline"
+        },
+        "copyTicketStatuses": {
+          "label": "Copia stati ticket da",
+          "help": "Le nuove bacheche clonano il loro ciclo di vita dei ticket da una bacheca esistente.",
+          "selectSource": "Seleziona una bacheca di origine",
+          "noSourceAvailable": "Nessuna bacheca di origine disponibile",
+          "unnamedBoard": "Bacheca senza nome"
+        },
+        "ticketStatuses": {
+          "labelEditing": "Stati ticket della bacheca",
+          "labelCopied": "Stati ticket copiati",
+          "labelInline": "Stati ticket inline",
+          "helpEditing": "Modifica il ciclo di vita dei ticket solo per questa bacheca.",
+          "helpCopied": "Rivedi e modifica il ciclo di vita copiato prima di salvare la nuova bacheca.",
+          "helpInline": "Crea il ciclo di vita iniziale dei ticket della bacheca prima di salvare.",
+          "loading": "Caricamento stati ticket della bacheca…",
+          "statusName": "Nome stato",
+          "closed": "Chiuso",
+          "default": "Predefinito"
+        },
+        "inboundReplyReopen": {
+          "enabledLabel": "Riapri ticket chiusi in caso di risposte in arrivo",
+          "enabledHelp": "Si applica alle risposte in thread corrispondenti a ticket già chiusi su questa bacheca.",
+          "cutoffHoursLabel": "Limite di riapertura (ore)",
+          "cutoffHoursHelp": "Le risposte ricevute dopo questa finestra creano nuovi ticket invece di riaprire quelli vecchi.",
+          "statusLabel": "Stato alla riapertura (facoltativo)",
+          "statusPlaceholder": "Seleziona stato di riapertura",
+          "statusUseDefault": "Usa lo stato aperto predefinito della bacheca",
+          "suppressAiLabel": "Sopprimi riapertura per brevi risposte di conferma (IA)",
+          "suppressAiHelp": "Solo componente aggiuntivo Enterprise AI Assistant. Se non disponibile, le risposte riaprono normalmente."
+        },
+        "liveTimer": {
+          "label": "Attiva timer ticket in tempo reale",
+          "help": "Mostra il timer in tempo reale e gli intervalli registrati sui ticket di questa bacheca. L'inserimento manuale del tempo rimane disponibile."
         }
       },
       "dialog": {
@@ -556,8 +617,98 @@
           "fetchAvailableFailed": "Impossibile recuperare le bacheche disponibili per l'importazione",
           "nameRequired": "Il nome della bacheca è obbligatorio",
           "saveFailed": "Impossibile salvare la bacheca",
-          "lastDefault": "Impossibile rimuovere l'ultima bacheca predefinita"
+          "lastDefault": "Impossibile rimuovere l'ultima bacheca predefinita",
+          "statusRequired": "Aggiungi almeno uno stato di ticket prima di salvare la bacheca.",
+          "duplicateStatusName": "I nomi degli stati di ticket devono essere univoci all'interno di una bacheca.",
+          "invalidOpenDefault": "Seleziona esattamente uno stato di ticket aperto predefinito prima di salvare la bacheca.",
+          "nameAlreadyExists": "Esiste già una bacheca con questo nome.",
+          "selectBoardToCopy": "Seleziona una bacheca esistente da cui copiare gli stati di ticket.",
+          "fetchStatusesFailed": "Impossibile caricare gli stati di ticket della bacheca.",
+          "deleteFailed": "Impossibile eliminare la bacheca",
+          "importFailed": "Impossibile importare le bacheche",
+          "updateStatusFailed": "Impossibile aggiornare lo stato della bacheca",
+          "updateDefaultFailed": "Impossibile aggiornare la bacheca predefinita"
         }
+      }
+    },
+    "priorities": {
+      "title": {
+        "ticket": "Priorità dei ticket",
+        "projectTask": "Priorità delle attività di progetto"
+      },
+      "alert": {
+        "header": "Gestione delle priorità:",
+        "description": "Crea priorità personalizzate per la tua organizzazione o importa da modelli standard.",
+        "itilNote": "Le priorità standard ITIL non possono essere modificate o eliminate.",
+        "nonItilNote": "Tutte le priorità possono essere modificate o eliminate per adattarsi al tuo flusso di lavoro."
+      },
+      "table": {
+        "name": "Nome",
+        "type": "Tipo",
+        "color": "Colore",
+        "order": "Ordine",
+        "actions": "Azioni",
+        "standardTag": "(Standard)",
+        "itilProtected": "Protetto"
+      },
+      "itemTypes": {
+        "ticket": "Ticket",
+        "projectTask": "Attività di progetto"
+      },
+      "actions": {
+        "addPriority": "Aggiungi priorità",
+        "importStandard": "Importa da priorità standard",
+        "openMenu": "Apri menu",
+        "edit": "Modifica",
+        "delete": "Elimina",
+        "cancel": "Annulla"
+      },
+      "dialog": {
+        "addTitle": "Aggiungi nuova priorità",
+        "editTitle": "Modifica priorità",
+        "submitAdd": "Aggiungi priorità",
+        "submitUpdate": "Aggiorna priorità"
+      },
+      "fields": {
+        "priorityName": {
+          "label": "Nome della priorità",
+          "placeholder": "es. Urgente"
+        },
+        "orderNumber": {
+          "label": "Numero d'ordine (1-100, i numeri più alti appaiono per primi)",
+          "help": "Controlla l'ordine in cui le priorità appaiono nei menu a discesa della piattaforma. I numeri più alti appaiono per primi per le priorità.",
+          "used": "Numeri d'ordine utilizzati: {{numbers}}",
+          "noneUsed": "Nessun numero d'ordine ancora utilizzato"
+        },
+        "color": {
+          "label": "Colore",
+          "chooseButton": "Scegli colore"
+        }
+      },
+      "import": {
+        "title": "Importa priorità standard",
+        "submit": "Importa ({{count}})",
+        "allImportedTicket": "Tutte le priorità standard sono già state importate per i ticket.",
+        "allImportedProjectTask": "Tutte le priorità standard sono già state importate per le attività di progetto.",
+        "instructions": "Seleziona le priorità standard che desideri importare. Verranno copiate nelle priorità della tua organizzazione."
+      },
+      "messages": {
+        "success": {
+          "deleted": "Priorità eliminata con successo",
+          "imported": "{{count}} priorità importate con successo",
+          "skipped": "{{count}} priorità saltate (esistono già)"
+        },
+        "error": {
+          "orderTaken": "Il numero d'ordine {{order}} è già in uso da \"{{name}}\". Scegli un numero d'ordine diverso.",
+          "uniqueConstraint": "Questo numero d'ordine è già in uso. Scegli un numero d'ordine diverso.",
+          "saveFailed": "Impossibile salvare la priorità",
+          "deleteFailed": "Impossibile eliminare la priorità",
+          "deleteValidationFailed": "Impossibile convalidare l'eliminazione. Riprova.",
+          "importFailed": "Impossibile importare le priorità"
+        }
+      },
+      "entity": {
+        "fallback": "questa priorità"
       }
     }
   },
@@ -643,7 +794,9 @@
         },
         "error": {
           "lastClosed": "Almeno uno stato deve rimanere contrassegnato come chiuso",
-          "deleteLastClosed": "Impossibile eliminare l'ultimo stato chiuso per questo tipo."
+          "deleteLastClosed": "Impossibile eliminare l'ultimo stato chiuso per questo tipo.",
+          "skipped": "{{count}} stati saltati ({{reason}})",
+          "importFailed": "Impossibile importare gli stati"
         }
       }
     },
@@ -1023,6 +1176,16 @@
         "noValues": "Nessun valore"
       },
       "truncated": "Visualizzazione dei primi {{count}} record. Scarichi i risultati dell'operazione per la cronologia completa."
+    },
+    "messages": {
+      "error": {
+        "loadImportData": "Impossibile caricare i dati di importazione",
+        "createPreview": "Impossibile creare l'anteprima",
+        "selectPreviewFirst": "Seleziona un'anteprima da approvare prima di importare.",
+        "startImportJob": "Impossibile avviare il processo di importazione",
+        "loadJobDetails": "Impossibile caricare i dettagli del processo",
+        "refreshHistory": "Impossibile aggiornare la cronologia di importazione"
+      }
     }
   },
   "email": {

@@ -176,14 +176,17 @@ const InteractionStatusSettings = (): React.JSX.Element => {
         }
 
         if (result.skipped.length > 0) {
-          toast.error(`Skipped ${result.skipped.length} statuses (${(result.skipped as any[])[0].reason})`);
+          toast.error(t('interactions.statuses.messages.error.skipped', {
+            count: result.skipped.length,
+            reason: (result.skipped as any[])[0].reason
+          }));
         }
 
         setShowStatusImportDialog(false);
         setSelectedImportStatuses([]);
       }
     } catch (error) {
-      handleError(error, 'Failed to import statuses');
+      handleError(error, t('interactions.statuses.messages.error.importFailed'));
     }
   };
 
@@ -214,7 +217,7 @@ const InteractionStatusSettings = (): React.JSX.Element => {
       setImportConflicts([]);
       setConflictResolutions({});
     } catch (error) {
-      handleError(error, 'Failed to import statuses');
+      handleError(error, t('interactions.statuses.messages.error.importFailed'));
     }
   };
 

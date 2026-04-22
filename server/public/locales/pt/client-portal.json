@@ -118,7 +118,33 @@
       "accountReady": "Account ready. Please sign in.",
       "accountCreatedSuccess": "Account created successfully. Please sign in.",
       "welcome": "Welcome to the client portal!",
-      "createFailed": "Failed to create account"
+      "createFailed": "Failed to create account",
+      "errors": {
+        "tokenRequired": "É necessário um token de convite válido.",
+        "tokenAndPasswordRequired": "São necessários um token e uma palavra-passe para concluir a configuração.",
+        "passwordTooShort": "A palavra-passe deve ter pelo menos 8 caracteres.",
+        "invalidOrExpiredToken": "Este link de convite é inválido ou expirou.",
+        "tenantContextRequired": "Falta o contexto da organização. Volte a abrir o link de convite.",
+        "resetPasswordFailed": "Não foi possível redefinir a palavra-passe da conta existente. Tente novamente.",
+        "createUserFailed": "Não foi possível criar a sua conta de utilizador. Tente novamente.",
+        "setupFailed": "Não foi possível concluir a configuração do portal. Tente novamente.",
+        "verificationFailed": "Não foi possível verificar o seu token de convite. Tente novamente.",
+        "invitationFailed": "Não foi possível enviar o convite. Tente novamente.",
+        "permissionDeniedInvite": "Não tens permissão para enviar convites do portal.",
+        "permissionDeniedCreate": "Não tens permissão para criar contas de utilizador do portal.",
+        "emailNotConfigured": "O serviço de e-mail não está configurado. Contacta o teu administrador.",
+        "contactNotFound": "Contacto não encontrado.",
+        "contactMissingEmail": "O contacto não tem um endereço de e-mail.",
+        "contactInvalidEmail": "O contacto tem um endereço de e-mail inválido.",
+        "userExistsForContact": "Já existe uma conta de utilizador para este contacto.",
+        "portalUserAlreadyExists": "Já existe um utilizador do portal para este contacto.",
+        "noDefaultClient": "Nenhum cliente predefinido está configurado para este inquilino.",
+        "noDefaultLocation": "O cliente predefinido não tem uma localização predefinida configurada.",
+        "noLocationEmail": "A localização do cliente não tem um e-mail de contacto configurado.",
+        "baseUrlNotConfigured": "O URL base da aplicação não está configurado.",
+        "invitationNotFound": "Convite não encontrado.",
+        "revokeFailed": "Não foi possível revogar o convite. Tente novamente."
+      }
     },
     "features": {
       "submitTickets": {
