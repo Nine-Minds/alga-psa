@@ -13,8 +13,23 @@ import {
   verifyPortalToken,
   completePortalSetup
 } from '@alga-psa/client-portal/actions';
+import type { PortalInvitationErrorCode } from '@alga-psa/portal-shared/types';
 import { signIn } from 'next-auth/react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { I18nWrapper } from '@alga-psa/tenancy/components';
+
+const PORTAL_ERROR_CODE_KEYS: Record<PortalInvitationErrorCode, string> = {
+  TOKEN_REQUIRED: 'auth.portalSetup.errors.tokenRequired',
+  TOKEN_AND_PASSWORD_REQUIRED: 'auth.portalSetup.errors.tokenAndPasswordRequired',
+  PASSWORD_TOO_SHORT: 'auth.portalSetup.errors.passwordTooShort',
+  INVALID_OR_EXPIRED_TOKEN: 'auth.portalSetup.errors.invalidOrExpiredToken',
+  TENANT_CONTEXT_REQUIRED: 'auth.portalSetup.errors.tenantContextRequired',
+  RESET_PASSWORD_FAILED: 'auth.portalSetup.errors.resetPasswordFailed',
+  CREATE_USER_FAILED: 'auth.portalSetup.errors.createUserFailed',
+  SETUP_FAILED: 'auth.portalSetup.errors.setupFailed',
+  VERIFICATION_FAILED: 'auth.portalSetup.errors.verificationFailed',
+  INVITATION_FAILED: 'auth.portalSetup.errors.invitationFailed'
+};
 
 interface ContactInfo {
   contact_name_id: string;
@@ -23,8 +38,24 @@ interface ContactInfo {
   client_name: string;
 }
 
-export default function PortalSetupPage() {
+function PortalSetupContent() {
   const { t } = useTranslation('client-portal');
+
+  const translatePortalError = (
+    errorCode: PortalInvitationErrorCode | undefined,
+    fallback: string | undefined,
+    defaultKey: string,
+    defaultValue: string
+  ): string => {
+    if (errorCode) {
+      const key = PORTAL_ERROR_CODE_KEYS[errorCode];
+      if (key) {
+        return t(key, { defaultValue: fallback ?? defaultValue });
+      }
+    }
+    return fallback || t(defaultKey, defaultValue);
+  };
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams?.get('token') || '';
@@ -72,7 +103,12 @@ export default function PortalSetupPage() {
       if (result.success && result.contact) {
         setContactInfo(result.contact);
       } else {
-        setError(result.error || t('auth.portalSetup.invalidOrExpiredToken', 'Invalid or expired invitation token'));
+        setError(translatePortalError(
+          result.errorCode,
+          result.error,
+          'auth.portalSetup.invalidOrExpiredToken',
+          'Invalid or expired invitation token'
+        ));
       }
     } catch (error) {
       console.error('Token verification error:', error);
@@ -147,7 +183,12 @@ export default function PortalSetupPage() {
           router.push(signinUrl);
         }
       } else {
-        toast.error(result.error || t('auth.portalSetup.createFailed', 'Failed to create account'));
+        toast.error(translatePortalError(
+          result.errorCode,
+          result.error,
+          'auth.portalSetup.createFailed',
+          'Failed to create account'
+        ));
       }
     } catch (error) {
       console.error('Setup completion error:', error);
@@ -358,5 +399,13 @@ export default function PortalSetupPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function PortalSetupPage() {
+  return (
+    <I18nWrapper portal="client">
+      <PortalSetupContent />
+    </I18nWrapper>
   );
 }
