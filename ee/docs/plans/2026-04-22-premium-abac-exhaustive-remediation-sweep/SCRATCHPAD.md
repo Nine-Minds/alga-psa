@@ -67,6 +67,19 @@ It intentionally preserves the earlier 2026-04-22 remediation plan as a historic
 - (2026-04-22) `getDocumentCountsForEntities` and `getFolderStats` were flagged as especially risky because they can leak counts/sizes without real narrowing.
 - (2026-04-22) `documentPermissionUtils.ts` still acts as a weaker parallel permission model and should likely be bypassed or retired in favor of kernel-backed helpers.
 - (2026-04-22) `documentContentActions.ts` and `documentBlockContentActions.ts` were flagged for very weak or missing auth.
+- (2026-04-22) Implemented kernel-backed document URL helper hardening (`F016`) by adding/using authorized document resolvers:
+  - new helper: `getAuthorizedDocumentById(...)` in `packages/documents/src/actions/documentActions.ts`
+  - existing helper reused: `getAuthorizedDocumentByFileId(...)`
+- (2026-04-22) Hardened server URL routes to use authorized resolvers instead of raw RBAC-only document lookups:
+  - `server/src/app/api/documents/[documentId]/download/route.ts`
+  - `server/src/app/api/documents/[documentId]/preview/route.ts`
+  - `server/src/app/api/documents/[documentId]/thumbnail/route.ts`
+  - `server/src/app/api/documents/view/[fileId]/route.ts`
+- (2026-04-22) Hardened URL-returning document actions to require authorized-document lookup before returning URL values:
+  - `getDocumentDownloadUrl`
+  - `getDocumentThumbnailUrl`
+  - `getDocumentPreviewUrl`
+  - `getImageUrl`
 
 ### Assets
 - (2026-04-22) `packages/assets/src/actions/assetActions.ts` only applies asset-level narrowing in a few places (`getAsset`, `getAssetDetailBundle`, `listAssets`).
@@ -116,6 +129,8 @@ It intentionally preserves the earlier 2026-04-22 remediation plan as a historic
   - `cd server && pnpm vitest src/test/integration/authorization/bundleLifecycleIntegrity.integration.test.ts`
 - (2026-04-22) Run quote parity contract test:
   - `cd server && pnpm vitest ../packages/billing/src/actions/quoteAuthorizationParity.contract.test.ts`
+- (2026-04-22) Run document URL authorization contract test:
+  - `cd server && pnpm vitest src/test/unit/documents/documentUrlAuthorization.contract.test.ts`
 
 ## Links / References
 
@@ -175,3 +190,10 @@ It intentionally preserves the earlier 2026-04-22 remediation plan as a historic
 - (2026-04-22) Completed quote hardening feature wave `F011-F015` in:
   - `packages/billing/src/actions/quoteActions.ts`
   - `packages/billing/src/actions/quoteAuthorizationParity.contract.test.ts`
+- (2026-04-22) Completed document URL helper hardening `F016` in:
+  - `packages/documents/src/actions/documentActions.ts`
+  - `server/src/app/api/documents/[documentId]/download/route.ts`
+  - `server/src/app/api/documents/[documentId]/preview/route.ts`
+  - `server/src/app/api/documents/[documentId]/thumbnail/route.ts`
+  - `server/src/app/api/documents/view/[fileId]/route.ts`
+  - `server/src/test/unit/documents/documentUrlAuthorization.contract.test.ts`

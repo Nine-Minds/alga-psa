@@ -474,6 +474,24 @@ export async function getAuthorizedDocumentByFileId(
   return authorizedDocument ?? null;
 }
 
+export async function getAuthorizedDocumentById(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUser,
+  documentId: string
+): Promise<IDocument | null> {
+  const document = await trx('documents')
+    .where({ tenant, document_id: documentId })
+    .first();
+
+  if (!document) {
+    return null;
+  }
+
+  const [authorizedDocument] = await authorizeAndRedactDocuments(trx, tenant, user, [document as IDocument]);
+  return authorizedDocument ?? null;
+}
+
 function mapDocumentRowToDocument(doc: any): IDocument {
   return {
     document_id: doc.document_id,
@@ -1406,6 +1424,14 @@ export const getDocumentDownloadUrl = withAuth(async (user, { tenant }, file_id:
       return permissionError('Permission denied: Cannot read documents');
     }
 
+    const { knex } = await createTenantKnex();
+    const authorizedDocument = await withTransaction(knex, async (trx: Knex.Transaction) =>
+      getAuthorizedDocumentByFileId(trx, tenant, user, file_id)
+    );
+    if (!authorizedDocument?.file_id) {
+      return permissionError('Permission denied: Cannot read documents');
+    }
+
     return `/api/documents/download/${file_id}`;
 });
 
@@ -1425,15 +1451,12 @@ export const getDocumentThumbnailUrl = withAuth(async (user, { tenant }, documen
 
     const { knex } = await createTenantKnex();
 
-    // Get document
-    const document = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('documents')
-        .where({ document_id: documentId, tenant })
-        .first();
-    });
+    const document = await withTransaction(knex, async (trx: Knex.Transaction) =>
+      getAuthorizedDocumentById(trx, tenant, user, documentId)
+    );
 
     if (!document) {
-      console.warn(`[getDocumentThumbnailUrl] Document not found: ${documentId}`);
+      console.warn(`[getDocumentThumbnailUrl] Document not found or unauthorized: ${documentId}`);
       return null;
     }
 
@@ -1471,15 +1494,12 @@ export const getDocumentPreviewUrl = withAuth(async (user, { tenant }, documentI
 
     const { knex } = await createTenantKnex();
 
-    // Get document
-    const document = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('documents')
-        .where({ document_id: documentId, tenant })
-        .first();
-    });
+    const document = await withTransaction(knex, async (trx: Knex.Transaction) =>
+      getAuthorizedDocumentById(trx, tenant, user, documentId)
+    );
 
     if (!document) {
-      console.warn(`[getDocumentPreviewUrl] Document not found: ${documentId}`);
+      console.warn(`[getDocumentPreviewUrl] Document not found or unauthorized: ${documentId}`);
       return null;
     }
 
@@ -2485,6 +2505,14 @@ export const getImageUrl = withAuth(async (user, { tenant }, file_id: string): P
     // Check permission for document reading
     if (!await hasPermission(user, 'document', 'read')) {
       return permissionError('Permission denied: Cannot read documents');
+    }
+
+    const { knex } = await createTenantKnex();
+    const authorizedDocument = await withTransaction(knex, async (trx: Knex.Transaction) =>
+      getAuthorizedDocumentByFileId(trx, tenant, user, file_id)
+    );
+    if (!authorizedDocument) {
+      return null;
     }
 
     return await getImageUrlCore(file_id, true);

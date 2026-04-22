@@ -111,21 +111,16 @@ export async function GET(
     }
 
     // --- Permission Check ---
-    let hasPermission = false;
-
-    if (isTenantLogo) {
-      hasPermission = true;
-    } else if (user?.user_type === 'internal') {
-      hasPermission = true;
-    } else if (user && tenant) {
+    if (!isTenantLogo) {
+      if (!user || !tenant) {
+        return new NextResponse('Unauthorized', { status: 401 });
+      }
       const authorizedDocument = await withTransaction(knex, async (trx) =>
         getAuthorizedDocumentByFileId(trx, tenant, user, fileId)
       );
-      hasPermission = Boolean(authorizedDocument);
-    }
-
-    if (!hasPermission) {
-      return new NextResponse('Forbidden', { status: 403 });
+      if (!authorizedDocument) {
+        return new NextResponse('Forbidden', { status: 403 });
+      }
     }
 
     // Check if it's a viewable file type (images, videos, PDFs)

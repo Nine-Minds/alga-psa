@@ -151,7 +151,7 @@
   {
     "id": "F016",
     "description": "Replace remaining RBAC-only document URL helpers with kernel-backed document lookup and authorization.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Problem",
       "Requirements",
