@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import type { AuthorizationEvaluationInput } from '../kernel';
+import type { AuthorizationEvaluationInput, RelationshipTemplateKey } from '../kernel';
 import type { BundleNarrowingRule } from '../kernel/providers/bundleProvider';
 import { assertBundleRuleCatalogInput } from './catalog';
 
@@ -726,15 +726,17 @@ export async function resolveBundleNarrowingRulesForEvaluation(
         rule_id: string;
         resource_type: string;
         action: string;
+        template_key: string;
         constraint_key: string | null;
         config: Record<string, unknown>;
       }>
-    >('rule_id', 'resource_type', 'action', 'constraint_key', 'config');
+    >('rule_id', 'resource_type', 'action', 'template_key', 'constraint_key', 'config');
 
   return rules.map((rule) => ({
     id: rule.rule_id,
     resource: rule.resource_type,
     action: rule.action,
+    templateKey: rule.template_key as RelationshipTemplateKey,
     constraintKey: rule.constraint_key ?? null,
     constraints: Array.isArray(rule.config?.constraints)
       ? (rule.config.constraints as BundleNarrowingRule['constraints'])

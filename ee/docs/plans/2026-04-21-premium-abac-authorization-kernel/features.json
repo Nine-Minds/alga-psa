@@ -348,7 +348,7 @@
   {
     "id": "F038",
     "description": "Preserve and kernelize selected-board ticket narrowing so current client-portal-style board scoping becomes a first-class shared authorization capability.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Functional Requirements",
@@ -358,7 +358,7 @@
   {
     "id": "F039",
     "description": "Support premium ticket narrowing bundles that can restrict ticket visibility and mutation by assignment, client portfolio, team scope, and selected boards.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Functional Requirements"

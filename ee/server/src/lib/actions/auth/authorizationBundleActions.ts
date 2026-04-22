@@ -579,6 +579,7 @@ function normalizeBundleRules(
     id: rule.ruleId,
     resource: rule.resourceType,
     action: rule.action,
+    templateKey: rule.templateKey,
     constraintKey: rule.constraintKey ?? null,
     constraints: Array.isArray(rule.config?.constraints)
       ? (rule.config.constraints as BundleNarrowingRule['constraints'])

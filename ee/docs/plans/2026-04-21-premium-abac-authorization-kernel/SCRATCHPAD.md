@@ -176,3 +176,11 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - Current cut keeps builtin-kernel path for these endpoints; premium ticket bundle overlays are tracked separately in `F039`.
 - (2026-04-21) Validation for `F037` path-level cutover:
   - `cd packages/tickets && npx vitest run src/actions/ticketActions.ticketOrigin.test.ts src/actions/ticketActions.moveToBoard.test.ts --coverage.enabled=false`
+- (2026-04-21) Completed `F038` by kernelizing selected-board narrowing for client-portal style ticket access in selected ticket action paths:
+  - Added client visibility-group board resolution via `getClientContactVisibilityContext(...)`.
+  - For client principals, ticket list/detail now pass `selectedBoardIds` into kernel evaluation with `selected_boards` relationship template and fail-closed behavior when visibility context is missing/invalid.
+  - Added client-scope guard (`clientId`) alongside board narrowing for list/detail parity.
+- (2026-04-21) Completed `F039` by enabling premium bundle overlays on selected ticket list/detail paths:
+  - Ticket actions now instantiate kernel with a bundle provider that resolves active published bundle rules for the current principal (`resolveBundleNarrowingRulesForEvaluation`).
+  - Bundle template semantics are now enforced in bundle provider (`bundle_template_denied`) by evaluating each matching rule’s relationship template against record context.
+  - This enables ticket narrowing from bundle templates like assignment/client/team/selected-board in the migrated ticket paths.

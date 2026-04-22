@@ -3,14 +3,17 @@ import type {
   AuthorizationReason,
   BundleAuthorizationProvider,
   BundleAuthorizationResult,
+  RelationshipTemplateKey,
   ScopeConstraint,
 } from '../contracts';
 import { ALLOW_ALL_SCOPE } from '../scope';
+import { evaluateRelationshipTemplate } from '../relationships';
 
 export interface BundleNarrowingRule {
   id: string;
   resource: string;
   action: string;
+  templateKey?: RelationshipTemplateKey | null;
   constraintKey?: string | null;
   constraints?: ScopeConstraint[];
   redactedFields?: string[];
@@ -64,6 +67,13 @@ export class BundleAuthorizationKernelProvider implements BundleAuthorizationPro
       (rule) => rule.constraintKey === 'client_visible_only' && input.record?.is_client_visible !== true
     );
 
+    const hasTemplateMismatch = matchingRules.some(
+      (rule) =>
+        Boolean(rule.templateKey) &&
+        input.record !== undefined &&
+        !evaluateRelationshipTemplate(rule.templateKey as RelationshipTemplateKey, input)
+    );
+
     const notSelfApproverViolation = matchingRules.some(
       (rule) =>
         rule.constraintKey === 'not_self_approver' &&
@@ -75,11 +85,21 @@ export class BundleAuthorizationKernelProvider implements BundleAuthorizationPro
     return {
       scope: {
         allowAll: false,
-        denied: hasClientVisibleOnlyViolation,
+        denied: hasClientVisibleOnlyViolation || hasTemplateMismatch,
         constraints: matchingRules.flatMap((rule) => rule.constraints ?? []),
       },
       reasons: [
         ...buildReasons(matchingRules),
+        ...(hasTemplateMismatch
+          ? [
+              {
+                stage: 'bundle' as const,
+                sourceType: 'bundle' as const,
+                code: 'bundle_template_denied',
+                message: 'Bundle relationship template narrowing denied access.',
+              },
+            ]
+          : []),
         ...(hasClientVisibleOnlyViolation
           ? [
               {
