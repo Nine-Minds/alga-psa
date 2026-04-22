@@ -23,7 +23,9 @@ describe('billing quote authorization kernel contracts', () => {
   it('T023: redacts configured fields on allowed quote records without changing base access decision', () => {
     expect(source).toContain('function applyQuoteRedactions<T extends object>(value: T, redactedFields: string[]): T');
     expect(source).toContain('return applyQuoteRedactions(quote, decision.redactedFields);');
-    expect(source).toContain('.map((row) => applyQuoteRedactions(row.quote, row.decision?.redactedFields ?? []));');
-    expect(source).toContain('.filter((row) => row.decision?.allowed)');
+    expect(source).toContain('const redactedData = await Promise.all(');
+    expect(source).toContain('authorizedPage.data.map(async (quote) => {');
+    expect(source).toContain('return applyQuoteRedactions(quote, decision.redactedFields ?? []);');
+    expect(source).toContain('total: authorizedPage.total,');
   });
 });

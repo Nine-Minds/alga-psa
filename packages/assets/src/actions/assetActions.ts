@@ -1901,7 +1901,10 @@ export const getClientMaintenanceSummary = withAuth(async (user, { tenant }, cli
             const authorizedAssetIds = await getAuthorizedAssetIdsForClient(trx, tenant, context, client_id);
 
             if (authorizedAssetIds.length === 0) {
-                throw new Error('Permission denied: Cannot read client maintenance summaries');
+                const clientAssetCount = await countAssetsForClient(trx, tenant, client_id);
+                if (clientAssetCount > 0) {
+                    throw new Error('Permission denied: Cannot read client maintenance summaries');
+                }
             }
 
             return getClientMaintenanceSummaryForTenant(trx, tenant, client_id, authorizedAssetIds);
@@ -2189,6 +2192,19 @@ async function fetchAssetDocuments(
     }));
 }
 
+async function countAssetsForClient(
+    db: Knex | Knex.Transaction,
+    tenant: string,
+    client_id: string
+): Promise<number> {
+    const result = await db('assets')
+        .where({ tenant, client_id })
+        .count<{ count: string }>('asset_id as count')
+        .first();
+
+    return Number(result?.count || 0);
+}
+
 async function getClientMaintenanceSummaryForTenant(
     db: Knex | Knex.Transaction,
     tenant: string,
@@ -2203,7 +2219,7 @@ async function getClientMaintenanceSummaryForTenant(
         throw new Error('Client not found');
     }
 
-    const clientAssetIds = authorizedAssetIds && authorizedAssetIds.length > 0
+    const clientAssetIds = authorizedAssetIds !== undefined
         ? authorizedAssetIds
         : await db('assets')
             .where({ 'assets.tenant': tenant, client_id })
@@ -2324,7 +2340,10 @@ export const getClientMaintenanceSummaries = withAuth(async (user, { tenant }, c
                     try {
                         const authorizedAssetIds = await getAuthorizedAssetIdsForClient(trx, tenant, context, clientId);
                         if (authorizedAssetIds.length === 0) {
-                            return null;
+                            const clientAssetCount = await countAssetsForClient(trx, tenant, clientId);
+                            if (clientAssetCount > 0) {
+                                return null;
+                            }
                         }
                         const summary = await getClientMaintenanceSummaryForTenant(trx, tenant, clientId, authorizedAssetIds);
                         return [clientId, summary] as const;

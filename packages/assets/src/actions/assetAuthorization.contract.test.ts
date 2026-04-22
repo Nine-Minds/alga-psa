@@ -41,6 +41,9 @@ describe('asset authorization kernel contracts', () => {
     expect(source).toContain('await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);');
     expect(source).toContain('const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);');
     expect(source).toContain('const authorizedAssetIds = await getAuthorizedAssetIdsForClient(trx, tenant, context, client_id);');
+    expect(source).toContain('async function countAssetsForClient(');
+    expect(source).toContain('const clientAssetCount = await countAssetsForClient(trx, tenant, client_id);');
+    expect(source).toContain('const clientAssetIds = authorizedAssetIds !== undefined');
     expect(source).toContain('return getClientMaintenanceSummaryForTenant(trx, tenant, client_id, authorizedAssetIds);');
   });
 

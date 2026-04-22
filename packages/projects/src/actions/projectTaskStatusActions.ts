@@ -395,22 +395,21 @@ export const updateProjectStatusMapping = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  const existingMapping = await knex('project_status_mappings')
-    .where({ project_status_mapping_id: mappingId, tenant })
-    .first();
-
-  if (!existingMapping) {
-    throw new Error('Status mapping not found');
-  }
-
   await withTransaction(knex, async (trx) => {
+    const existingMapping = await trx('project_status_mappings')
+      .where({ project_status_mapping_id: mappingId, tenant })
+      .first();
+
+    if (!existingMapping) {
+      throw new Error('Status mapping not found');
+    }
+
     await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, existingMapping.project_id);
+
+    await trx('project_status_mappings')
+      .where({ project_status_mapping_id: mappingId, tenant })
+      .update(updates);
   });
-
-  await knex('project_status_mappings')
-    .where({ project_status_mapping_id: mappingId, tenant })
-    .update(updates);
-
 });
 
 /**
@@ -558,10 +557,14 @@ export const reorderProjectStatuses = withAuth(async (
  * otherwise falls back to 'standard_statuses' table (old system)
  */
 export const getTenantProjectStatuses = withAuth(async (
-  _user,
+  user,
   { tenant }
 ): Promise<IStatus[]> => {
   const { knex } = await createTenantKnex();
+
+  if (!await hasPermission(user, 'project', 'read', knex)) {
+    throw new Error('Permission denied: Cannot read project');
+  }
 
   // First try the new statuses table
   const regularStatuses = await knex('statuses')

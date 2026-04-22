@@ -1883,7 +1883,16 @@ export const duplicateTaskToPhase = withAuth(async (
             // Duplicate Ticket Links
             if (options?.duplicateTicketLinks) {
                 const originalTicketLinks = await ProjectTaskModel.getTaskTicketLinks(trx, tenant, originalTaskId);
+                const allowedTicketIds = await filterAuthorizedTicketIds(
+                    trx,
+                    tenant,
+                    user as IUserWithRoles,
+                    originalTicketLinks.map((link) => link.ticket_id)
+                );
                 for (const link of originalTicketLinks) {
+                    if (!allowedTicketIds.has(link.ticket_id)) {
+                        continue;
+                    }
                     // addTaskTicketLink expects projectId, taskId, ticketId, phaseId
                     await ProjectTaskModel.addTaskTicketLink(trx, tenant, newPhase.project_id, newTask.task_id, link.ticket_id, newPhaseId);
                 }

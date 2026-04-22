@@ -83,8 +83,9 @@ describe('project authorization kernel contracts', () => {
     expect(projectTaskStatusActionsSource).toContain('export const deleteProjectStatusMapping = withAuth(async (');
     expect(projectTaskStatusActionsSource).toContain('export const reorderProjectStatuses = withAuth(async (');
     expect(projectTaskStatusActionsSource).toContain('await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);');
-    expect(projectTaskStatusActionsSource).toContain('await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, mapping.project_id);');
+    expect(projectTaskStatusActionsSource).toContain('await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, existingMapping.project_id);');
     expect(projectTaskStatusActionsSource).toContain('if (!await hasPermission(user, \'project\', \'read\', trx)) {');
+    expect(projectTaskStatusActionsSource).toContain('if (!await hasPermission(user, \'project\', \'read\', knex)) {');
   });
 
   it('T022: project task/status count helpers require parent-project authorization before returning cardinalities', () => {
@@ -103,6 +104,9 @@ describe('project authorization kernel contracts', () => {
     expect(projectTaskActionsSource).toContain('await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, sourceProjectId);');
     expect(projectTaskActionsSource).toContain('await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, newPhase.project_id);');
     expect(projectTaskActionsSource).toContain('await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);');
+    expect(projectTaskActionsSource).toContain('const allowedTicketIds = await filterAuthorizedTicketIds(');
+    expect(projectTaskActionsSource).toContain('originalTicketLinks.map((link) => link.ticket_id)');
+    expect(projectTaskActionsSource).toContain('if (!allowedTicketIds.has(link.ticket_id)) {');
   });
 
   it('F033: linked ticket payloads in project structural surfaces apply ticket-resource intersection semantics', () => {

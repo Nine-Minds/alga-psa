@@ -263,4 +263,27 @@ describe('time authorization delegation and approval contracts', () => {
 
     await expect(assertCanApproveSubject(actor as any, 'tenant-1', 'u-2', buildDb(['u-2']))).resolves.toBe('tenant-wide');
   });
+
+  it('T026: delegation and approval checks fail closed when bundle narrowing resolution errors', async () => {
+    const actor: TestUser = { user_id: 'u-1', user_type: 'internal' };
+
+    hasPermissionMock.mockImplementation(async (_user: unknown, resource: string, action: string) => {
+      if (resource !== 'timesheet') return false;
+      if (action === 'approve') return true;
+      if (action === 'read_all') return true;
+      return false;
+    });
+
+    resolveBundleRulesMock.mockRejectedValueOnce(new Error('bundle lookup failed'));
+    await expect(assertCanActOnBehalf(actor as any, 'tenant-1', 'u-2', buildDb(['u-2']))).rejects.toThrow(
+      'Permission denied: Cannot access other users time sheets'
+    );
+
+    resolveBundleRulesMock
+      .mockResolvedValueOnce([])
+      .mockRejectedValueOnce(new Error('bundle lookup failed'));
+    await expect(assertCanApproveSubject(actor as any, 'tenant-1', 'u-2', buildDb(['u-2']))).rejects.toThrow(
+      'Permission denied: Cannot approve time submissions'
+    );
+  });
 });

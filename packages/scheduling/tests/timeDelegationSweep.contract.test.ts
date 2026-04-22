@@ -14,8 +14,11 @@ describe('time/delegation narrowing sweep contracts', () => {
     expect(delegationSource).toContain("action: 'read'");
     expect(delegationSource).toContain("action: 'approve'");
     expect(delegationSource).toContain('function buildTimesheetNotSelfApproverGuard(');
+    expect(delegationSource).toContain('async function resolveBundleRulesOrThrow(');
     expect(delegationSource).toContain("code: 'timesheet_not_self_approver_denied'");
     expect(delegationSource).toContain('const managedUserIds = canReadAll ? [] : await resolveManagedSubjectUserIds(db, tenant, actor);');
+    expect(delegationSource).toContain("resolveBundleRulesOrThrow(db, input, 'Permission denied: Cannot access other users time sheets')");
+    expect(delegationSource).toContain("resolveBundleRulesOrThrow(db, input, 'Permission denied: Cannot approve time submissions')");
     expect(delegationSource).toContain("throw new Error('Permission denied: Cannot access other users time sheets')");
   });
 
@@ -27,6 +30,8 @@ describe('time/delegation narrowing sweep contracts', () => {
     expect(timeSheetSource).toContain(".first<{ user_id: string; first_name: string; last_name: string; email: string }>()");
     expect(timeSheetSource).toContain('await assertCanActOnBehalf(user, tenant, timeSheet.user_id, db);');
     expect(timeSheetSource).toContain('export const requestChangesForTimeSheet = withAuth(async');
+    expect(timeSheetSource).toContain("if (approverId !== user.user_id) {");
+    expect(timeSheetSource).toContain("throw new Error('Permission denied: Invalid approver');");
     expect(timeSheetSource).toContain('await assertCanActOnBehalf(user, tenant, timeSheet.user_id, trx);');
     expect(timeSheetSource).toContain('export const approveTimeSheet = withAuth(async');
     expect(timeSheetSource).toContain('await assertCanApproveSubject(user, tenant, timeSheet.user_id, trx);');

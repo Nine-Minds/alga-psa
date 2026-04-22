@@ -597,6 +597,10 @@ export const requestChangesForTimeSheet = withAuth(async (user, { tenant }, time
       throw new Error('Permission denied: Cannot request changes for timesheets');
     }
 
+    if (approverId !== user.user_id) {
+      throw new Error('Permission denied: Invalid approver');
+    }
+
     await db.transaction(async (trx) => {
       const timeSheet = await trx('time_sheets')
         .where({

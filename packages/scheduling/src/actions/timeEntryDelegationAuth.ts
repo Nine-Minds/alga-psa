@@ -49,6 +49,19 @@ function buildTimesheetNotSelfApproverGuard(input: AuthorizationEvaluationInput)
   };
 }
 
+async function resolveBundleRulesOrThrow(
+  db: Knex | Knex.Transaction,
+  input: AuthorizationEvaluationInput,
+  permissionDeniedMessage: string
+) {
+  try {
+    return await resolveBundleNarrowingRulesForEvaluation(db, input);
+  } catch (error) {
+    console.error('Failed to resolve time delegation bundle rules', error);
+    throw new Error(permissionDeniedMessage);
+  }
+}
+
 export async function isManagerOfSubject(
   db: Knex | Knex.Transaction,
   tenant: string,
@@ -136,13 +149,8 @@ export async function assertCanActOnBehalf(
       relationshipRules: canReadAll ? [] : [{ template: 'managed' }],
     }),
     bundleProvider: new BundleAuthorizationKernelProvider({
-      resolveRules: async (input) => {
-        try {
-          return await resolveBundleNarrowingRulesForEvaluation(db, input);
-        } catch {
-          return [];
-        }
-      },
+      resolveRules: async (input) =>
+        resolveBundleRulesOrThrow(db, input, 'Permission denied: Cannot access other users time sheets'),
     }),
     rbacEvaluator: async () => true,
   });
@@ -201,13 +209,8 @@ export async function assertCanApproveSubject(
       mutationGuards: [buildTimesheetNotSelfApproverGuard],
     }),
     bundleProvider: new BundleAuthorizationKernelProvider({
-      resolveRules: async (input) => {
-        try {
-          return await resolveBundleNarrowingRulesForEvaluation(db, input);
-        } catch {
-          return [];
-        }
-      },
+      resolveRules: async (input) =>
+        resolveBundleRulesOrThrow(db, input, 'Permission denied: Cannot approve time submissions'),
     }),
     rbacEvaluator: async () => true,
   });
