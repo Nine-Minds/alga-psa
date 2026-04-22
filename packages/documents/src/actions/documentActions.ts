@@ -492,6 +492,45 @@ export async function getAuthorizedDocumentById(
   return authorizedDocument ?? null;
 }
 
+function isActionPermissionErrorResult(value: unknown): value is ActionPermissionError {
+  return Boolean(value) && typeof value === 'object' && 'permissionError' in (value as Record<string, unknown>);
+}
+
+async function assertAuthorizedDocumentSetForMutation(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUser,
+  documentIds: string[],
+  deniedMessage: string = 'Permission denied: Cannot update documents'
+): Promise<IDocument[] | ActionPermissionError> {
+  const uniqueDocumentIds = Array.from(new Set(documentIds.filter((documentId) => typeof documentId === 'string' && documentId.length > 0)));
+  if (uniqueDocumentIds.length === 0) {
+    return [];
+  }
+
+  const documents = await trx('documents')
+    .where({ tenant })
+    .whereIn('document_id', uniqueDocumentIds)
+    .select('document_id', 'created_by', 'is_client_visible');
+
+  if (documents.length !== uniqueDocumentIds.length) {
+    return permissionError(deniedMessage);
+  }
+
+  const authorizedDocuments = await authorizeAndRedactDocuments(
+    trx,
+    tenant,
+    user,
+    documents as IDocument[]
+  );
+
+  if (authorizedDocuments.length !== uniqueDocumentIds.length) {
+    return permissionError(deniedMessage);
+  }
+
+  return authorizedDocuments;
+}
+
 function mapDocumentRowToDocument(doc: any): IDocument {
   return {
     document_id: doc.document_id,
@@ -632,14 +671,25 @@ export const updateDocument = withAuth(async (user, { tenant }, documentId: stri
 
     const { knex } = await createTenantKnex();
 
-    await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const authorizationResult = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const authorizedDocument = await getAuthorizedDocumentById(trx, tenant, user, documentId);
+      if (!authorizedDocument) {
+        return permissionError('Permission denied: Cannot update documents');
+      }
+
       await trx('documents')
         .where({ document_id: documentId, tenant })
         .update({
           ...data,
           updated_at: new Date()
         });
+
+      return null;
     });
+
+    if (isActionPermissionErrorResult(authorizationResult)) {
+      return authorizationResult;
+    }
 
     // Invalidate the preview cache for this document if it exists
     const cache = CacheFactory.getPreviewCache(tenant);
@@ -668,7 +718,26 @@ export const deleteDocument = withAuth(async (
 
   try {
     const { knex } = await createTenantKnex();
+    const authorizedDocumentForDelete = await withTransaction(knex, async (trx: Knex.Transaction) =>
+      getAuthorizedDocumentById(trx, tenant, user, documentId)
+    );
+    if (!authorizedDocumentForDelete) {
+      return {
+        success: false,
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Permission denied: Cannot delete documents',
+        dependencies: [],
+        alternatives: []
+      };
+    }
+
     const result = await deleteEntityWithValidation('document', documentId, knex, tenant, async (trx, tenantId) => {
+      const authorizedDocument = await getAuthorizedDocumentById(trx, tenantId, user, documentId);
+      if (!authorizedDocument) {
+        throw new Error('Permission denied: Cannot delete documents');
+      }
+
       const document = await trx('documents')
         .where({ document_id: documentId, tenant: tenantId })
         .first();
@@ -1009,6 +1078,11 @@ export const associateDocumentWithClient = withAuth(async (user, { tenant }, inp
     const { knex } = await createTenantKnex();
 
     const created = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const authorizedDocument = await getAuthorizedDocumentById(trx, tenant, user, input.document_id);
+      if (!authorizedDocument) {
+        return permissionError('Permission denied: Cannot associate documents');
+      }
+
       const association = await DocumentAssociation.create(trx, {
         ...input,
         entity_type: 'client',
@@ -1017,6 +1091,10 @@ export const associateDocumentWithClient = withAuth(async (user, { tenant }, inp
 
       return association;
     });
+
+    if (isActionPermissionErrorResult(created)) {
+      return created;
+    }
 
     try {
       const occurredAt = new Date().toISOString();
@@ -1149,6 +1227,11 @@ export const associateDocumentWithContract = withAuth(async (user, { tenant }, i
     const { knex } = await createTenantKnex();
 
     const created = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const authorizedDocument = await getAuthorizedDocumentById(trx, tenant, user, input.document_id);
+      if (!authorizedDocument) {
+        return permissionError('Permission denied: Cannot associate documents');
+      }
+
       const association = await DocumentAssociation.create(trx, {
         ...input,
         entity_type: 'contract',
@@ -1157,6 +1240,10 @@ export const associateDocumentWithContract = withAuth(async (user, { tenant }, i
 
       return association;
     });
+
+    if (isActionPermissionErrorResult(created)) {
+      return created;
+    }
 
     try {
       const occurredAt = new Date().toISOString();
@@ -1213,6 +1300,11 @@ export const removeDocumentFromContract = withAuth(async (user, { tenant }, asso
 
       if (!existing) return null;
 
+      const authorizedDocument = await getAuthorizedDocumentById(trx, tenant, user, existing.document_id);
+      if (!authorizedDocument) {
+        return permissionError('Permission denied: Cannot remove document associations');
+      }
+
       await trx('document_associations')
         .where({
           association_id: associationId,
@@ -1223,6 +1315,10 @@ export const removeDocumentFromContract = withAuth(async (user, { tenant }, asso
 
       return existing;
     });
+
+    if (isActionPermissionErrorResult(removed)) {
+      return removed;
+    }
 
     if (removed) {
       try {
@@ -1928,12 +2024,27 @@ export const createDocumentAssociations = withAuth(async (
     }));
 
     const created = await withTransaction(db, async (trx: Knex.Transaction) => {
+      const authorizationResult = await assertAuthorizedDocumentSetForMutation(
+        trx,
+        tenant,
+        user,
+        document_ids,
+        'Permission denied: Cannot update document associations'
+      );
+      if (isActionPermissionErrorResult(authorizationResult)) {
+        return authorizationResult;
+      }
+
       return await Promise.all(
         associations.map((association): Promise<Pick<IDocumentAssociation, "association_id">> =>
           DocumentAssociation.create(trx, association)
         )
       );
     });
+
+    if (isActionPermissionErrorResult(created)) {
+      return created;
+    }
 
     const occurredAt = new Date().toISOString();
     await Promise.all(
@@ -1997,9 +2108,26 @@ export const removeDocumentAssociations = withAuth(async (
       }
 
       const rows = await query.clone().select('association_id', 'document_id');
+
+      const targetedDocumentIds = rows.map((row: { document_id: string }) => row.document_id);
+      const authorizationResult = await assertAuthorizedDocumentSetForMutation(
+        trx,
+        tenant,
+        user,
+        targetedDocumentIds,
+        'Permission denied: Cannot update document associations'
+      );
+      if (isActionPermissionErrorResult(authorizationResult)) {
+        return authorizationResult;
+      }
+
       await query.delete();
       return rows;
     });
+
+    if (isActionPermissionErrorResult(removed)) {
+      return removed;
+    }
 
     if (removed.length > 0) {
       const occurredAt = new Date().toISOString();
@@ -2945,14 +3073,32 @@ export const moveDocumentsToFolder = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
+  const mutationResult = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const authorizationResult = await assertAuthorizedDocumentSetForMutation(
+      trx,
+      tenant,
+      user,
+      documentIds,
+      'Permission denied: Cannot move documents'
+    );
+    if (isActionPermissionErrorResult(authorizationResult)) {
+      return authorizationResult;
+    }
 
-  await knex('documents')
-    .whereIn('document_id', documentIds)
-    .andWhere('tenant', tenant)
-    .update({
-      folder_path: newFolderPath,
-      updated_at: new Date(),
-    });
+    await trx('documents')
+      .whereIn('document_id', documentIds)
+      .andWhere('tenant', tenant)
+      .update({
+        folder_path: newFolderPath,
+        updated_at: new Date(),
+      });
+
+    return null;
+  });
+
+  if (isActionPermissionErrorResult(mutationResult)) {
+    return mutationResult;
+  }
 });
 
 /**
@@ -2977,16 +3123,30 @@ export const toggleDocumentVisibility = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
+  const mutationResult = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const authorizationResult = await assertAuthorizedDocumentSetForMutation(
+      trx,
+      tenant,
+      user,
+      documentIds,
+      'Permission denied: Cannot update document visibility'
+    );
+    if (isActionPermissionErrorResult(authorizationResult)) {
+      return authorizationResult;
+    }
 
-  const updatedCount = await knex('documents')
-    .where('tenant', tenant)
-    .whereIn('document_id', documentIds)
-    .update({
-      is_client_visible: isClientVisible,
-      updated_at: new Date(),
-    });
+    const updatedCount = await trx('documents')
+      .where('tenant', tenant)
+      .whereIn('document_id', documentIds)
+      .update({
+        is_client_visible: isClientVisible,
+        updated_at: new Date(),
+      });
 
-  return Number(updatedCount || 0);
+    return Number(updatedCount || 0);
+  });
+
+  return mutationResult;
 });
 
 /**
@@ -3055,6 +3215,22 @@ export const toggleFolderVisibility = withAuth(async (
           .whereRaw('da.document_id = d.document_id')
           .andWhere('da.tenant', tenant);
       });
+    }
+
+    const documentsToUpdate = await documentsQuery
+      .clone()
+      .select('d.document_id', 'd.created_by', 'd.is_client_visible');
+    const authorizationResult = await withTransaction(knex, async (trx: Knex.Transaction) =>
+      assertAuthorizedDocumentSetForMutation(
+        trx,
+        tenant,
+        user,
+        documentsToUpdate.map((document: { document_id: string }) => document.document_id),
+        'Permission denied: Cannot update folder visibility'
+      )
+    );
+    if (isActionPermissionErrorResult(authorizationResult)) {
+      return authorizationResult;
     }
 
     const documentUpdatedCount = await documentsQuery.update({
@@ -3138,6 +3314,22 @@ export const toggleFolderVisibilityByPath = withAuth(async (
           .whereRaw('da.document_id = d.document_id')
           .andWhere('da.tenant', tenant);
       });
+    }
+
+    const documentsToUpdate = await documentsQuery
+      .clone()
+      .select('d.document_id', 'd.created_by', 'd.is_client_visible');
+    const authorizationResult = await withTransaction(knex, async (trx: Knex.Transaction) =>
+      assertAuthorizedDocumentSetForMutation(
+        trx,
+        tenant,
+        user,
+        documentsToUpdate.map((document: { document_id: string }) => document.document_id),
+        'Permission denied: Cannot update folder visibility'
+      )
+    );
+    if (isActionPermissionErrorResult(authorizationResult)) {
+      return authorizationResult;
     }
 
     const documentUpdatedCount = await documentsQuery.update({
@@ -3333,6 +3525,24 @@ export const deleteFolder = withAuth(async (user, { tenant }, folderPath: string
   }
 
   const { knex } = await createTenantKnex();
+
+  const documentsInFolder = await knex('documents')
+    .where('tenant', tenant)
+    .where('folder_path', folderPath)
+    .select('document_id', 'created_by', 'is_client_visible');
+
+  const authorizationResult = await withTransaction(knex, async (trx: Knex.Transaction) =>
+    assertAuthorizedDocumentSetForMutation(
+      trx,
+      tenant,
+      user,
+      documentsInFolder.map((document: { document_id: string }) => document.document_id),
+      'Permission denied: Cannot delete folder'
+    )
+  );
+  if (isActionPermissionErrorResult(authorizationResult)) {
+    return authorizationResult;
+  }
 
   // Check if folder has documents
   const docCount = await knex('documents')

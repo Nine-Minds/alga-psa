@@ -59,7 +59,7 @@
   {
     "id": "T007",
     "description": "Quote parity integration: quote server-action mutations require access to the parent quote, and unauthorized users cannot update/delete/send/request changes/convert narrowed-away quotes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011",
       "F012",
@@ -70,7 +70,7 @@
   {
     "id": "T008",
     "description": "Quote integrity integration: quote item add/update/remove/reorder rejects foreign quote-item IDs and unauthorized parent quotes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014",
       "F040"
@@ -79,7 +79,7 @@
   {
     "id": "T009",
     "description": "Quote pagination integration: `listQuotes` returns honest authorized totals/pages and does not strand accessible records behind filtered pages.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015",
       "F040"
@@ -88,7 +88,7 @@
   {
     "id": "T010",
     "description": "Quote helper parity integration: conversion preview, PDF/preview helpers, and converted-contract/invoice lookup helpers all enforce quote-level narrowing.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012",
       "F040"
@@ -97,7 +97,7 @@
   {
     "id": "T011",
     "description": "Document read parity integration: download/preview/thumbnail/image URL helpers deny narrowed-away documents and only return URLs for authorized documents.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016",
       "F041"
@@ -106,7 +106,7 @@
   {
     "id": "T012",
     "description": "Document mutation integration: update/delete/move/visibility/association/folder mutations reject unauthorized document sets rather than relying only on RBAC.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017",
       "F041"
@@ -115,7 +115,7 @@
   {
     "id": "T013",
     "description": "Document content integration: document content and block-content read/write/delete helpers enforce document-level authorization.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F041"

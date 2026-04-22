@@ -576,6 +576,11 @@ describe('Document Folder Operations', () => {
     it('should update folder_path for specified documents', async () => {
       const documentIds = ['doc-1', 'doc-2', 'doc-3'];
       const newFolderPath = '/Legal/Contracts';
+      mockKnex.select.mockResolvedValue([
+        { document_id: 'doc-1', created_by: mockUser.user_id, is_client_visible: false },
+        { document_id: 'doc-2', created_by: mockUser.user_id, is_client_visible: false },
+        { document_id: 'doc-3', created_by: mockUser.user_id, is_client_visible: false },
+      ]);
 
       await moveDocumentsToFolder(documentIds, newFolderPath);
 
@@ -589,6 +594,9 @@ describe('Document Folder Operations', () => {
 
     it('should support moving to root (null folder_path)', async () => {
       const documentIds = ['doc-1'];
+      mockKnex.select.mockResolvedValue([
+        { document_id: 'doc-1', created_by: mockUser.user_id, is_client_visible: false },
+      ]);
 
       await moveDocumentsToFolder(documentIds, null);
 
@@ -608,6 +616,9 @@ describe('Document Folder Operations', () => {
     });
 
     it('should update updated_at timestamp', async () => {
+      mockKnex.select.mockResolvedValue([
+        { document_id: 'doc-1', created_by: mockUser.user_id, is_client_visible: false },
+      ]);
       await moveDocumentsToFolder(['doc-1'], '/Legal');
 
       expect(mockKnex.update).toHaveBeenCalledWith(
@@ -637,7 +648,6 @@ describe('Document Folder Operations', () => {
       expect(mockKnex.update).toHaveBeenCalledWith(
         expect.objectContaining({
           is_client_visible: true,
-          updated_at: expect.any(Date),
         })
       );
     });

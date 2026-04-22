@@ -80,6 +80,15 @@ It intentionally preserves the earlier 2026-04-22 remediation plan as a historic
   - `getDocumentThumbnailUrl`
   - `getDocumentPreviewUrl`
   - `getImageUrl`
+- (2026-04-22) Implemented document mutation hardening (`F017`) with shared mutation guards:
+  - new helper: `assertAuthorizedDocumentSetForMutation(...)` in `packages/documents/src/actions/documentActions.ts`
+  - update/delete/association/folder-mutation flows now fail closed when any targeted document is missing or unauthorized.
+- (2026-04-22) Hardened content/block-content document helpers (`F018`) so read/write/delete operations require:
+  - resource-level RBAC permission (`document.read/update/delete`)
+  - authorized parent-document resolution via `getAuthorizedDocumentById(...)`
+- (2026-04-22) Typecheck status after `F018`:
+  - `packages/documents` still has pre-existing TS errors in UI components (`block_data` typing in `CollaborativeEditor.tsx` and `Documents.tsx` family).
+  - no new type errors remain in changed action files after remediation patching.
 
 ### Assets
 - (2026-04-22) `packages/assets/src/actions/assetActions.ts` only applies asset-level narrowing in a few places (`getAsset`, `getAssetDetailBundle`, `listAssets`).
@@ -131,6 +140,12 @@ It intentionally preserves the earlier 2026-04-22 remediation plan as a historic
   - `cd server && pnpm vitest ../packages/billing/src/actions/quoteAuthorizationParity.contract.test.ts`
 - (2026-04-22) Run document URL authorization contract test:
   - `cd server && pnpm vitest src/test/unit/documents/documentUrlAuthorization.contract.test.ts`
+- (2026-04-22) Run focused document mutation/content regression tests:
+  - `cd server && pnpm vitest src/test/unit/documentFolderOperations.test.ts ../packages/documents/tests/documentActions.authorization.contract.test.ts ../packages/documents/tests/documentContent.authorization.contract.test.ts --coverage.enabled false`
+- (2026-04-22) Run quote parity contract test for `T007-T010` status validation:
+  - `cd server && pnpm vitest ../packages/billing/src/actions/quoteAuthorizationParity.contract.test.ts --coverage.enabled false`
+- (2026-04-22) Run package-level document typecheck:
+  - `pnpm -C packages/documents typecheck`
 
 ## Links / References
 
@@ -196,4 +211,16 @@ It intentionally preserves the earlier 2026-04-22 remediation plan as a historic
   - `server/src/app/api/documents/[documentId]/preview/route.ts`
   - `server/src/app/api/documents/[documentId]/thumbnail/route.ts`
   - `server/src/app/api/documents/view/[fileId]/route.ts`
+  - `server/src/test/unit/documents/documentUrlAuthorization.contract.test.ts`
+- (2026-04-22) Completed document mutation hardening `F017` in:
+  - `packages/documents/src/actions/documentActions.ts`
+  - `server/src/test/unit/documentFolderOperations.test.ts` (updated to validate new mutation-guard behavior)
+  - `packages/documents/tests/documentActions.authorization.contract.test.ts` (expanded with `T012` mutation-surface contract coverage)
+- (2026-04-22) Completed document content/block-content hardening `F018` in:
+  - `packages/documents/src/actions/documentContentActions.ts`
+  - `packages/documents/src/actions/documentBlockContentActions.ts`
+  - `packages/documents/tests/documentContent.authorization.contract.test.ts` (`T013`)
+- (2026-04-22) Marked quote parity regression tests `T007-T010` complete after re-validating:
+  - `packages/billing/src/actions/quoteAuthorizationParity.contract.test.ts`
+- (2026-04-22) Marked document URL regression test `T011` complete:
   - `server/src/test/unit/documents/documentUrlAuthorization.contract.test.ts`

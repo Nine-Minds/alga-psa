@@ -161,7 +161,7 @@
   {
     "id": "F017",
     "description": "Apply record-level auth to remaining document mutations, including update/delete, bulk folder moves, visibility changes, association changes, and folder operations.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Documents exhaustive remediation",
@@ -171,7 +171,7 @@
   {
     "id": "F018",
     "description": "Apply record-level auth to document content and block-content read/write/delete helpers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Documents exhaustive remediation",

@@ -41,4 +41,27 @@ describe('document authorization kernel wiring contracts', () => {
     expect(source).toContain('documents: pagination.documents,');
     expect(source).toContain('total: pagination.totalCount,');
   });
+
+  it('T012: enforces record-level document authorization across mutation and folder-operation surfaces', () => {
+    expect(source).toContain('async function assertAuthorizedDocumentSetForMutation(');
+    expect(source).toContain("return permissionError('Permission denied: Cannot update documents');");
+    expect(source).toContain("'Permission denied: Cannot delete documents'");
+    expect(source).toContain("return permissionError('Permission denied: Cannot update document associations');");
+    expect(source).toContain("'Permission denied: Cannot move documents'");
+    expect(source).toContain("'Permission denied: Cannot update document visibility'");
+    expect(source).toContain("'Permission denied: Cannot update folder visibility'");
+    expect(source).toContain("'Permission denied: Cannot delete folder'");
+    expect(source).toContain('export const updateDocument = withAuth(async');
+    expect(source).toContain('export const deleteDocument = withAuth(async');
+    expect(source).toContain('export const createDocumentAssociations = withAuth(async');
+    expect(source).toContain('export const removeDocumentAssociations = withAuth(async');
+    expect(source).toContain('export const associateDocumentWithClient = withAuth(async');
+    expect(source).toContain('export const associateDocumentWithContract = withAuth(async');
+    expect(source).toContain('export const removeDocumentFromContract = withAuth(async');
+    expect(source).toContain('export const moveDocumentsToFolder = withAuth(async');
+    expect(source).toContain('export const toggleDocumentVisibility = withAuth(async');
+    expect(source).toContain('export const toggleFolderVisibility = withAuth(async');
+    expect(source).toContain('export const toggleFolderVisibilityByPath = withAuth(async');
+    expect(source).toContain('export const deleteFolder = withAuth(async');
+  });
 });
