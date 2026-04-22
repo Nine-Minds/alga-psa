@@ -370,7 +370,20 @@
       "updateStatusPermissionDenied": "Sie haben keine Berechtigung, den Benutzerstatus zu aktualisieren",
       "userActivated": "Benutzer erfolgreich aktiviert",
       "userDeactivated": "Benutzer erfolgreich deaktiviert",
-      "updateUserStatusFailed": "Benutzerstatus konnte nicht aktualisiert werden"
+      "updateUserStatusFailed": "Benutzerstatus konnte nicht aktualisiert werden",
+      "errors": {
+        "permissionDeniedInvite": "Sie haben keine Berechtigung, Benutzer einzuladen.",
+        "emailNotConfigured": "Der E-Mail-Dienst ist deaktiviert oder nicht konfiguriert.",
+        "contactNotFound": "Kontakt nicht gefunden.",
+        "contactMissingEmail": "Der Kontakt hat keine E-Mail-Adresse. Bitte fügen Sie dem Kontakt eine E-Mail-Adresse hinzu, bevor Sie eine Einladung senden.",
+        "contactInvalidEmail": "Der Kontakt hat eine ungültige E-Mail-Adresse. Bitte aktualisieren Sie den Kontakt mit einer gültigen E-Mail-Adresse, bevor Sie eine Einladung senden.",
+        "userExistsForContact": "Für diesen Kontakt existiert bereits ein Benutzerkonto. Verwenden Sie die Passwort-Zurücksetzung anstatt eine Einladung zu senden.",
+        "noDefaultClient": "Kein Standard-Client für diesen Mandanten konfiguriert. Bitte legen Sie in den allgemeinen Einstellungen einen Standard-Client fest.",
+        "noDefaultLocation": "Der Standard-Client muss einen Standard-Standort konfiguriert haben, um Portaleinladungen zu senden.",
+        "noLocationEmail": "Der Standort des Standard-Clients muss eine Kontakt-E-Mail-Adresse konfiguriert haben.",
+        "noBaseUrl": "Die Basis-URL ist nicht für Portaleinladungen konfiguriert.",
+        "invitationNotFound": "Einladung nicht gefunden oder bereits verwendet."
+      }
     }
   },
   "quickAddContact": {

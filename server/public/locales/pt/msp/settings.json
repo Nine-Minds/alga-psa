@@ -223,7 +223,18 @@
         "portalUserExistsForContact": "A portal user already exists for this contact. Use password reset for the existing user.",
         "selectAppropriateRole": "Please select an appropriate role for this user type",
         "contactMissingEmail": "Contact \"{{name}}\" is missing an email address. Please update the contact's email before sending an invitation.",
-        "licenseLimit": "Cannot activate user: License limit reached. Please deactivate another user or upgrade your license."
+        "licenseLimit": "Cannot activate user: License limit reached. Please deactivate another user or upgrade your license.",
+        "permissionDeniedInvite": "Não tem permissão para convidar utilizadores.",
+        "permissionDeniedCreate": "Não tem permissão para criar utilizadores.",
+        "emailNotConfigured": "O serviço de e-mail está desativado ou não configurado.",
+        "contactNotFound": "Contacto não encontrado.",
+        "contactMissingEmailGeneric": "O contacto não tem um endereço de e-mail. Adicione um endereço de e-mail ao contacto antes de enviar um convite.",
+        "contactInvalidEmail": "O contacto tem um endereço de e-mail inválido. Atualize o contacto com um endereço de e-mail válido antes de enviar um convite.",
+        "noDefaultClient": "Nenhum cliente predefinido configurado para este inquilino. Defina um cliente predefinido nas Definições Gerais.",
+        "noDefaultLocation": "O cliente predefinido deve ter uma localização predefinida configurada para enviar convites do portal.",
+        "noLocationEmail": "A localização do cliente predefinido deve ter um e-mail de contacto configurado.",
+        "noBaseUrl": "O URL base não está configurado para convites do portal.",
+        "passwordTooShort": "A palavra-passe deve ter pelo menos 8 caracteres."
       }
     }
   },

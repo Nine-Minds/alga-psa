@@ -370,7 +370,20 @@
       "updateStatusPermissionDenied": "Je hebt geen toestemming om gebruikersstatus bij te werken",
       "userActivated": "Gebruiker succesvol geactiveerd",
       "userDeactivated": "Gebruiker succesvol gedeactiveerd",
-      "updateUserStatusFailed": "Gebruikersstatus kon niet worden bijgewerkt"
+      "updateUserStatusFailed": "Gebruikersstatus kon niet worden bijgewerkt",
+      "errors": {
+        "permissionDeniedInvite": "U heeft geen toestemming om gebruikers uit te nodigen.",
+        "emailNotConfigured": "De e-mailservice is uitgeschakeld of niet geconfigureerd.",
+        "contactNotFound": "Contactpersoon niet gevonden.",
+        "contactMissingEmail": "Het contactpersoon heeft geen e-mailadres. Voeg een e-mailadres toe aan het contactpersoon voordat u een uitnodiging verstuurt.",
+        "contactInvalidEmail": "Het contactpersoon heeft een ongeldig e-mailadres. Werk het contactpersoon bij met een geldig e-mailadres voordat u een uitnodiging verstuurt.",
+        "userExistsForContact": "Er bestaat al een gebruikersaccount voor dit contactpersoon. Gebruik wachtwoord herstellen in plaats van een uitnodiging te versturen.",
+        "noDefaultClient": "Geen standaardklant geconfigureerd voor deze tenant. Stel een standaardklant in bij Algemene instellingen.",
+        "noDefaultLocation": "De standaardklant moet een standaardlocatie hebben om portaluitnodigingen te versturen.",
+        "noLocationEmail": "De locatie van de standaardklant moet een contact-e-mailadres hebben geconfigureerd.",
+        "noBaseUrl": "Basis-URL is niet geconfigureerd voor portaluitnodigingen.",
+        "invitationNotFound": "Uitnodiging niet gevonden of al gebruikt."
+      }
     }
   },
   "quickAddContact": {

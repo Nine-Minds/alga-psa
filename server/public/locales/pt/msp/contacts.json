@@ -370,7 +370,20 @@
       "updateStatusPermissionDenied": "You do not have permission to update user status",
       "userActivated": "User activated successfully",
       "userDeactivated": "User deactivated successfully",
-      "updateUserStatusFailed": "Failed to update user status"
+      "updateUserStatusFailed": "Failed to update user status",
+      "errors": {
+        "permissionDeniedInvite": "Não tem permissão para convidar utilizadores.",
+        "emailNotConfigured": "O serviço de e-mail está desativado ou não configurado.",
+        "contactNotFound": "Contacto não encontrado.",
+        "contactMissingEmail": "O contacto não tem um endereço de e-mail. Adicione um endereço de e-mail ao contacto antes de enviar um convite.",
+        "contactInvalidEmail": "O contacto tem um endereço de e-mail inválido. Atualize o contacto com um endereço de e-mail válido antes de enviar um convite.",
+        "userExistsForContact": "Já existe uma conta de utilizador para este contacto. Utilize a redefinição de palavra-passe em vez de enviar um convite.",
+        "noDefaultClient": "Nenhum cliente predefinido configurado para este inquilino. Defina um cliente predefinido nas Definições Gerais.",
+        "noDefaultLocation": "O cliente predefinido deve ter uma localização predefinida configurada para enviar convites do portal.",
+        "noLocationEmail": "A localização do cliente predefinido deve ter um e-mail de contacto configurado.",
+        "noBaseUrl": "O URL base não está configurado para convites do portal.",
+        "invitationNotFound": "Convite não encontrado ou já utilizado."
+      }
     }
   },
   "quickAddContact": {

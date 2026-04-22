@@ -223,7 +223,18 @@
         "portalUserExistsForContact": "Ya existe un usuario del portal para este contacto. Utilice el restablecimiento de contraseña para el usuario existente.",
         "selectAppropriateRole": "Seleccione un rol apropiado para este tipo de usuario",
         "contactMissingEmail": "El contacto \"{{name}}\" no tiene dirección de correo electrónico. Actualice el correo electrónico del contacto antes de enviar una invitación.",
-        "licenseLimit": "No se puede activar el usuario: se alcanzó el límite de licencias. Desactive otro usuario o actualice su licencia."
+        "licenseLimit": "No se puede activar el usuario: se alcanzó el límite de licencias. Desactive otro usuario o actualice su licencia.",
+        "permissionDeniedInvite": "No tienes permiso para invitar usuarios.",
+        "permissionDeniedCreate": "No tienes permiso para crear usuarios.",
+        "emailNotConfigured": "El servicio de correo electrónico está deshabilitado o no está configurado.",
+        "contactNotFound": "Contacto no encontrado.",
+        "contactMissingEmailGeneric": "El contacto no tiene dirección de correo electrónico. Agrega una dirección de correo al contacto antes de enviar una invitación.",
+        "contactInvalidEmail": "El contacto tiene una dirección de correo electrónico no válida. Actualiza el contacto con una dirección válida antes de enviar una invitación.",
+        "noDefaultClient": "No hay un cliente predeterminado configurado para este tenant. Configura un cliente predeterminado en Configuración General.",
+        "noDefaultLocation": "El cliente predeterminado debe tener una ubicación predeterminada configurada para enviar invitaciones al portal.",
+        "noLocationEmail": "La ubicación del cliente predeterminado debe tener un correo electrónico de contacto configurado.",
+        "noBaseUrl": "La URL base no está configurada para las invitaciones al portal.",
+        "passwordTooShort": "La contraseña debe tener al menos 8 caracteres."
       }
     }
   },

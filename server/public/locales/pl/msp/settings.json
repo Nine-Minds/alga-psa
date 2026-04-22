@@ -223,7 +223,18 @@
         "portalUserExistsForContact": "Użytkownik portalu już istnieje dla tego kontaktu. Proszę użyć resetowania hasła dla istniejącego użytkownika.",
         "selectAppropriateRole": "Proszę wybrać odpowiednią rolę dla tego typu użytkownika",
         "contactMissingEmail": "Kontakt \"{{name}}\" nie ma adresu e-mail. Proszę zaktualizować adres e-mail kontaktu przed wysłaniem zaproszenia.",
-        "licenseLimit": "Nie można aktywować użytkownika: osiągnięto limit licencji. Proszę dezaktywować innego użytkownika lub zaktualizować licencję."
+        "licenseLimit": "Nie można aktywować użytkownika: osiągnięto limit licencji. Proszę dezaktywować innego użytkownika lub zaktualizować licencję.",
+        "permissionDeniedInvite": "Nie masz uprawnień do zapraszania użytkowników.",
+        "permissionDeniedCreate": "Nie masz uprawnień do tworzenia użytkowników.",
+        "emailNotConfigured": "Usługa e-mail jest wyłączona lub nie jest skonfigurowana.",
+        "contactNotFound": "Kontakt nie został znaleziony.",
+        "contactMissingEmailGeneric": "Kontakt nie ma adresu e-mail. Przed wysłaniem zaproszenia dodaj adres e-mail do kontaktu.",
+        "contactInvalidEmail": "Kontakt ma nieprawidłowy adres e-mail. Przed wysłaniem zaproszenia zaktualizuj kontakt, podając prawidłowy adres e-mail.",
+        "noDefaultClient": "Brak domyślnego klienta skonfigurowanego dla tego tenanta. Ustaw domyślnego klienta w ustawieniach ogólnych.",
+        "noDefaultLocation": "Domyślny klient musi mieć skonfigurowaną domyślną lokalizację, aby wysyłać zaproszenia do portalu.",
+        "noLocationEmail": "Lokalizacja domyślnego klienta musi mieć skonfigurowany kontaktowy adres e-mail.",
+        "noBaseUrl": "Podstawowy adres URL nie jest skonfigurowany dla zaproszeń do portalu.",
+        "passwordTooShort": "Hasło musi mieć co najmniej 8 znaków."
       }
     }
   },

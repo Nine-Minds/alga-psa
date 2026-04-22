@@ -223,7 +223,18 @@
         "portalUserExistsForContact": "A portal user already exists for this contact. Use password reset for the existing user.",
         "selectAppropriateRole": "Please select an appropriate role for this user type",
         "contactMissingEmail": "Contact \"{{name}}\" is missing an email address. Please update the contact's email before sending an invitation.",
-        "licenseLimit": "Cannot activate user: License limit reached. Please deactivate another user or upgrade your license."
+        "licenseLimit": "Cannot activate user: License limit reached. Please deactivate another user or upgrade your license.",
+        "permissionDeniedInvite": "You do not have permission to invite users.",
+        "permissionDeniedCreate": "You do not have permission to create users.",
+        "emailNotConfigured": "Email service is disabled or not configured.",
+        "contactNotFound": "Contact not found.",
+        "contactMissingEmailGeneric": "Contact does not have an email address. Please add an email address to the contact before sending an invitation.",
+        "contactInvalidEmail": "Contact has an invalid email address. Please update the contact with a valid email address before sending an invitation.",
+        "noDefaultClient": "No default client configured for this tenant. Please set a default client in General Settings.",
+        "noDefaultLocation": "Default client must have a default location configured to send portal invitations.",
+        "noLocationEmail": "Default client's location must have a contact email configured.",
+        "noBaseUrl": "Base URL is not configured for portal invitations.",
+        "passwordTooShort": "Password must be at least 8 characters long."
       }
     }
   },

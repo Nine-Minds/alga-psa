@@ -223,7 +223,18 @@
         "portalUserExistsForContact": "Esistè già un utente del portale per questo contatto. Utilizzi il ripristino della password per l'utente esistente.",
         "selectAppropriateRole": "Selezioni un ruolo appropriato per questo tipo di utente",
         "contactMissingEmail": "Il contatto \"{{name}}\" non dispone di un indirizzo email. Aggiorni l'email del contatto prima di inviare un invito.",
-        "licenseLimit": "Impossibile attivare l'utente: limite di licenze raggiunto. Disattivi un altro utente o aggiorni la Sua licenza."
+        "licenseLimit": "Impossibile attivare l'utente: limite di licenze raggiunto. Disattivi un altro utente o aggiorni la Sua licenza.",
+        "permissionDeniedInvite": "Non hai il permesso di invitare utenti.",
+        "permissionDeniedCreate": "Non hai il permesso di creare utenti.",
+        "emailNotConfigured": "Il servizio e-mail è disabilitato o non configurato.",
+        "contactNotFound": "Contatto non trovato.",
+        "contactMissingEmailGeneric": "Il contatto non ha un indirizzo e-mail. Aggiungi un indirizzo e-mail al contatto prima di inviare un invito.",
+        "contactInvalidEmail": "Il contatto ha un indirizzo e-mail non valido. Aggiorna il contatto con un indirizzo e-mail valido prima di inviare un invito.",
+        "noDefaultClient": "Nessun client predefinito configurato per questo tenant. Imposta un client predefinito nelle Impostazioni generali.",
+        "noDefaultLocation": "Il client predefinito deve avere una sede predefinita configurata per inviare inviti al portale.",
+        "noLocationEmail": "La sede del client predefinito deve avere un indirizzo e-mail di contatto configurato.",
+        "noBaseUrl": "L'URL di base non è configurato per gli inviti al portale.",
+        "passwordTooShort": "La password deve contenere almeno 8 caratteri."
       }
     }
   },

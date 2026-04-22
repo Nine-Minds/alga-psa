@@ -370,7 +370,20 @@
       "updateStatusPermissionDenied": "Nie masz uprawnień do aktualizowania statusu użytkownika",
       "userActivated": "Użytkownik został pomyślnie aktywowany",
       "userDeactivated": "Użytkownik został pomyślnie dezaktywowany",
-      "updateUserStatusFailed": "Nie udało się zaktualizować statusu użytkownika"
+      "updateUserStatusFailed": "Nie udało się zaktualizować statusu użytkownika",
+      "errors": {
+        "permissionDeniedInvite": "Nie masz uprawnień do zapraszania użytkowników.",
+        "emailNotConfigured": "Usługa e-mail jest wyłączona lub nie jest skonfigurowana.",
+        "contactNotFound": "Kontakt nie został znaleziony.",
+        "contactMissingEmail": "Kontakt nie ma adresu e-mail. Przed wysłaniem zaproszenia dodaj adres e-mail do kontaktu.",
+        "contactInvalidEmail": "Kontakt ma nieprawidłowy adres e-mail. Przed wysłaniem zaproszenia zaktualizuj kontakt, podając prawidłowy adres e-mail.",
+        "userExistsForContact": "Dla tego kontaktu istnieje już konto użytkownika. Zamiast wysyłać zaproszenie, skorzystaj z resetowania hasła.",
+        "noDefaultClient": "Brak domyślnego klienta skonfigurowanego dla tego tenanta. Ustaw domyślnego klienta w ustawieniach ogólnych.",
+        "noDefaultLocation": "Domyślny klient musi mieć skonfigurowaną domyślną lokalizację, aby wysyłać zaproszenia do portalu.",
+        "noLocationEmail": "Lokalizacja domyślnego klienta musi mieć skonfigurowany kontaktowy adres e-mail.",
+        "noBaseUrl": "Podstawowy adres URL nie jest skonfigurowany dla zaproszeń do portalu.",
+        "invitationNotFound": "Nie znaleziono zaproszenia lub zostało już wykorzystane."
+      }
     }
   },
   "quickAddContact": {
