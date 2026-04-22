@@ -32,19 +32,19 @@
   {
     "id": "F006",
     "description": "Persist, normalize, and load `selectedClientIds` from bundle rule config into runtime bundle-rule evaluation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Problem", "Functional Requirements"]
   },
   {
     "id": "F007",
     "description": "Persist, normalize, and load `selectedBoardIds` from bundle rule config into runtime bundle-rule evaluation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Problem", "Functional Requirements"]
   },
   {
     "id": "F008",
     "description": "Update bundle-provider evaluation so `selected_clients` and `selected_boards` templates use rule-level configured IDs during runtime authorization decisions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Problem", "Functional Requirements", "Security / Permissions"]
   },
   {

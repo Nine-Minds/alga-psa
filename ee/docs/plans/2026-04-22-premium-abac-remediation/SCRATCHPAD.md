@@ -28,6 +28,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-04-22) Simulator fidelity is weakened by billing-record mismatch and by simulator kernel construction that does not mirror all builtin resource-specific invariants used in real runtime paths.
 - (2026-04-22) `server` package tests run directly via `cd server && npx vitest run ...`; root `npm run test:local -- ...` currently fails because its `dotenv` invocation expects a different CLI syntax.
 - (2026-04-22) Control-plane schema allows `authorization_bundle_rules.bundle_id` to drift from the referenced revision’s `bundle_id` because rule rows currently only foreign-key revision by `(tenant, revision_id)`.
+- (2026-04-22) Runtime rule mapping loaded `constraints`/`redactedFields` from rule config but did not load `selectedClientIds` or `selectedBoardIds`, so selected template rules could evaluate against missing IDs.
 
 ## Commands / Runbooks
 
@@ -92,4 +93,16 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - Result: a rule can no longer reference a revision from a different bundle.
 - (2026-04-22) Verification for `F005`:
   - Command: `cd server && npx vitest run src/test/unit/migrations/authorizationBundleControlPlaneMigration.test.ts`
+  - Result: pass.
+- (2026-04-22) Completed `F006`:
+  - Added selected-client ID normalization/loading from rule config in runtime rule resolution and simulator rule normalization.
+  - Supports both camelCase (`selectedClientIds`) and snake_case (`selected_client_ids`) config keys.
+- (2026-04-22) Completed `F007`:
+  - Added selected-board ID normalization/loading from rule config in runtime rule resolution and simulator rule normalization.
+  - Supports both camelCase (`selectedBoardIds`) and snake_case (`selected_board_ids`) config keys.
+- (2026-04-22) Completed `F008`:
+  - Extended bundle-provider rule type with `selectedClientIds`/`selectedBoardIds`.
+  - Updated template evaluation so `selected_clients` and `selected_boards` use rule-scoped configured IDs during decisioning instead of relying on ad hoc caller input.
+- (2026-04-22) Verification for `F006-F008`:
+  - Command: `cd server && npx vitest run src/test/unit/authorization/bundle.provider.test.ts`
   - Result: pass.

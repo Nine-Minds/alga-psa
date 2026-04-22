@@ -599,6 +599,22 @@ export const listAuthorizationSimulationRecordsAction = withAuth(
 function normalizeBundleRules(
   rules: Awaited<ReturnType<typeof listBundleRulesForRevision>>
 ): BundleNarrowingRule[] {
+  const normalizeRuleIdList = (value: unknown): string[] | undefined => {
+    if (!Array.isArray(value)) {
+      return undefined;
+    }
+
+    const normalized = [
+      ...new Set(
+        value
+          .map((item) => (typeof item === 'string' ? item.trim() : ''))
+          .filter((item) => item.length > 0)
+      ),
+    ];
+
+    return normalized.length > 0 ? normalized : [];
+  };
+
   return rules.map((rule) => ({
     id: rule.ruleId,
     resource: rule.resourceType,
@@ -611,6 +627,12 @@ function normalizeBundleRules(
     redactedFields: Array.isArray(rule.config?.redactedFields)
       ? (rule.config.redactedFields as string[])
       : [],
+    selectedClientIds:
+      normalizeRuleIdList(rule.config?.selectedClientIds) ??
+      normalizeRuleIdList(rule.config?.selected_client_ids),
+    selectedBoardIds:
+      normalizeRuleIdList(rule.config?.selectedBoardIds) ??
+      normalizeRuleIdList(rule.config?.selected_board_ids),
   }));
 }
 

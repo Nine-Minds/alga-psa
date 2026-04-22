@@ -17,6 +17,8 @@ export interface BundleNarrowingRule {
   constraintKey?: string | null;
   constraints?: ScopeConstraint[];
   redactedFields?: string[];
+  selectedClientIds?: string[];
+  selectedBoardIds?: string[];
 }
 
 export interface BundleProviderConfig {
@@ -39,6 +41,25 @@ function buildReasons(rules: BundleNarrowingRule[]): AuthorizationReason[] {
       },
     },
   ];
+}
+
+function evaluateTemplateForRule(
+  rule: BundleNarrowingRule,
+  input: AuthorizationEvaluationInput
+): boolean {
+  if (!rule.templateKey) {
+    return true;
+  }
+
+  const ruleScopedInput: AuthorizationEvaluationInput = {
+    ...input,
+    selectedClientIds:
+      rule.templateKey === 'selected_clients' ? (rule.selectedClientIds ?? []) : input.selectedClientIds,
+    selectedBoardIds:
+      rule.templateKey === 'selected_boards' ? (rule.selectedBoardIds ?? []) : input.selectedBoardIds,
+  };
+
+  return evaluateRelationshipTemplate(rule.templateKey as RelationshipTemplateKey, ruleScopedInput);
 }
 
 export class BundleAuthorizationKernelProvider implements BundleAuthorizationProvider {
@@ -71,7 +92,7 @@ export class BundleAuthorizationKernelProvider implements BundleAuthorizationPro
       (rule) =>
         Boolean(rule.templateKey) &&
         input.record !== undefined &&
-        !evaluateRelationshipTemplate(rule.templateKey as RelationshipTemplateKey, input)
+        !evaluateTemplateForRule(rule, input)
     );
 
     const notSelfApproverViolation = matchingRules.some(

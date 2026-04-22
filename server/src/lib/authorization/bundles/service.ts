@@ -683,6 +683,22 @@ function emptyRuleSet(): BundleNarrowingRule[] {
   return [];
 }
 
+function normalizeRuleIdList(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const normalized = [
+    ...new Set(
+      value
+        .map((item) => (typeof item === 'string' ? item.trim() : ''))
+        .filter((item) => item.length > 0)
+    ),
+  ];
+
+  return normalized.length > 0 ? normalized : [];
+}
+
 export async function resolveBundleNarrowingRulesForEvaluation(
   knex: Knex | Knex.Transaction,
   input: AuthorizationEvaluationInput
@@ -771,5 +787,11 @@ export async function resolveBundleNarrowingRulesForEvaluation(
     redactedFields: Array.isArray(rule.config?.redactedFields)
       ? (rule.config.redactedFields as string[])
       : [],
+    selectedClientIds:
+      normalizeRuleIdList(rule.config?.selectedClientIds) ??
+      normalizeRuleIdList(rule.config?.selected_client_ids),
+    selectedBoardIds:
+      normalizeRuleIdList(rule.config?.selectedBoardIds) ??
+      normalizeRuleIdList(rule.config?.selected_board_ids),
   }));
 }

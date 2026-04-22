@@ -62,4 +62,106 @@ describe('bundle authorization provider constraints', () => {
 
     expect(result.redactedFields).toEqual(['internal_cost', 'margin']);
   });
+
+  it('applies selected_clients using rule-level configured IDs', async () => {
+    const provider = new BundleAuthorizationKernelProvider({
+      resolveRules: async () => [
+        {
+          id: 'rule-3',
+          resource: 'ticket',
+          action: 'read',
+          templateKey: 'selected_clients',
+          selectedClientIds: ['client-allow'],
+        },
+      ],
+    });
+
+    const denied = await provider.evaluateNarrowing({
+      subject: {
+        tenant: 'tenant-a',
+        userId: 'user-a',
+        userType: 'internal',
+      },
+      resource: {
+        type: 'ticket',
+        action: 'read',
+      },
+      record: {
+        id: 'ticket-1',
+        clientId: 'client-deny',
+      },
+      selectedClientIds: ['client-deny'],
+    });
+
+    expect(denied.scope.denied).toBe(true);
+
+    const allowed = await provider.evaluateNarrowing({
+      subject: {
+        tenant: 'tenant-a',
+        userId: 'user-a',
+        userType: 'internal',
+      },
+      resource: {
+        type: 'ticket',
+        action: 'read',
+      },
+      record: {
+        id: 'ticket-2',
+        clientId: 'client-allow',
+      },
+    });
+
+    expect(allowed.scope.denied).toBe(false);
+  });
+
+  it('applies selected_boards using rule-level configured IDs', async () => {
+    const provider = new BundleAuthorizationKernelProvider({
+      resolveRules: async () => [
+        {
+          id: 'rule-4',
+          resource: 'ticket',
+          action: 'read',
+          templateKey: 'selected_boards',
+          selectedBoardIds: ['board-allow'],
+        },
+      ],
+    });
+
+    const denied = await provider.evaluateNarrowing({
+      subject: {
+        tenant: 'tenant-a',
+        userId: 'user-a',
+        userType: 'internal',
+      },
+      resource: {
+        type: 'ticket',
+        action: 'read',
+      },
+      record: {
+        id: 'ticket-3',
+        boardId: 'board-deny',
+      },
+      selectedBoardIds: ['board-deny'],
+    });
+
+    expect(denied.scope.denied).toBe(true);
+
+    const allowed = await provider.evaluateNarrowing({
+      subject: {
+        tenant: 'tenant-a',
+        userId: 'user-a',
+        userType: 'internal',
+      },
+      resource: {
+        type: 'ticket',
+        action: 'read',
+      },
+      record: {
+        id: 'ticket-4',
+        boardId: 'board-allow',
+      },
+    });
+
+    expect(allowed.scope.denied).toBe(false);
+  });
 });
