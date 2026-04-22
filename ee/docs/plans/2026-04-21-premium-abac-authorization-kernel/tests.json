@@ -145,7 +145,7 @@
   {
     "id": "T015",
     "description": "Regression/integration: migrated document authorization preserves baseline own/same-client/client-visible behavior while premium selected-client narrowing further restricts access without broadening it.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F040",
       "F041",
@@ -155,7 +155,7 @@
   {
     "id": "T016",
     "description": "Guard/redaction: document-sensitive-field redaction hides configured fields on allowed records without changing record-level allow/deny behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010",
       "F042"
@@ -164,7 +164,7 @@
   {
     "id": "T017",
     "description": "Regression/integration: migrated time authorization preserves self, manager, reports-to, and tenant-wide semantics from the current delegation model.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F043",
@@ -174,7 +174,7 @@
   {
     "id": "T018",
     "description": "Guard: premium time bundles can narrow access to self-only or self-plus-managed-users but cannot grant broader delegation than the builtin time model already allows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F044",
       "F056"
@@ -183,7 +183,7 @@
   {
     "id": "T019",
     "description": "Regression/guard: migrated time approval flows preserve the selected not-self-approver and related state-transition restrictions after kernelization.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009",
       "F045",
@@ -193,7 +193,7 @@
   {
     "id": "T020",
     "description": "Regression/integration: migrated project authorization preserves selected own-comment / internal-user semantics and can further narrow project visibility by assignment, client portfolio, or team bundle rules.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F046",
       "F047",
@@ -203,7 +203,7 @@
   {
     "id": "T021",
     "description": "Regression/integration: migrated asset authorization preserves baseline visibility while premium client/team/assignment bundles narrow access on the selected v1 asset surfaces.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F048",
       "F049",
@@ -213,7 +213,7 @@
   {
     "id": "T022",
     "description": "Regression/integration: migrated billing authorization preserves selected quote/invoice visibility and approval/blocker semantics while client-portfolio narrowing applies when configured.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F050",
       "F051",
@@ -223,7 +223,7 @@
   {
     "id": "T023",
     "description": "Guard/redaction: billing-sensitive-field redaction hides configured cost or financial fields on allowed records without broadening or denying the underlying record unexpectedly.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010",
       "F052"
@@ -232,7 +232,7 @@
   {
     "id": "T024",
     "description": "EE UI/action: Bundle Library, Bundle Editor, and Assignment Manager allow draft editing, publish, assignment, disable, and archive flows without mutating the currently published revision in place.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028",
       "F029",
@@ -242,7 +242,7 @@
   {
     "id": "T025",
     "description": "EE UX: bundle rules and revisions display human-readable summaries that reflect resource sections, typed templates, and material draft changes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024",
       "F025",
@@ -253,7 +253,7 @@
   {
     "id": "T026",
     "description": "Guard: only authorized users can create bundles, edit drafts, publish revisions, manage assignments, or run the simulator.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ]
@@ -261,7 +261,7 @@
   {
     "id": "T027",
     "description": "Audit trail: bundle creation, draft edits, revision publication, and assignment changes persist enough metadata to explain who changed what and when.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ]
@@ -269,7 +269,7 @@
   {
     "id": "T028",
     "description": "Regression: CE migrated flows for the selected ticket, document, time, project, asset, and billing paths continue to work through the shared builtin kernel even though premium bundle management is unavailable.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F037",

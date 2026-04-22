@@ -307,3 +307,32 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-04-21) Completed `T014` by extending `packages/tickets/src/actions/ticketActions.authorizationNarrowing.test.ts` with API/UI parity coverage:
   - compares migrated UI list scope (`getTicketsForList`) with API helper scope (`authorizeApiResourceRead`) under the same tenant/user/bundle-rule context.
   - asserts the same effective allowed ticket IDs for both paths in the selected v1 ticket parity scenario.
+- (2026-04-21) Completed `T015` and `T016` with document authorization contract coverage in `packages/documents/tests/documentActions.authorization.contract.test.ts`:
+  - `T015`: verifies migrated document paths preserve client baseline own/same-client/client-visible semantics while including selected-client bundle narrowing hooks.
+  - `T016`: verifies document redaction wiring applies `redactedFields` on allowed records without changing allow/deny filtering.
+- (2026-04-21) Completed `T017`, `T018`, and `T019` with runtime delegation/approval coverage in `packages/scheduling/tests/timeEntryDelegationAuth.authorization.test.ts`:
+  - `T017`: validates self, manager, reports-to, and tenant-wide delegation semantics remain intact.
+  - `T018`: validates premium bundle overlays narrow delegation (for example self-only on read-all users) and do not broaden non-managed access.
+  - `T019`: validates not-self-approver guard remains enforced in kernelized approval flow.
+- (2026-04-21) Completed `T020` with project authorization contract coverage in `packages/projects/src/actions/projectAuthorization.contract.test.ts`:
+  - preserves own-comment/internal-user behavior in `projectTaskCommentActions.ts` and bundle-aware kernel narrowing on project list/detail in `projectActions.ts`.
+- (2026-04-21) Completed `T021` with asset authorization contract coverage in `packages/assets/src/actions/assetAuthorization.contract.test.ts`:
+  - verifies selected migrated asset surfaces (`getAsset`, `getAssetDetailBundle`, `listAssets`) remain on shared kernel evaluation with bundle narrowing overlays.
+- (2026-04-21) Completed `T022` and `T023` with billing quote authorization contract coverage in `packages/billing/tests/quoteAuthorization.contract.test.ts`:
+  - `T022`: verifies selected quote read/approve paths stay on kernel read/mutation checks with bundle narrowing and self-approver guard.
+  - `T023`: verifies quote field redaction wiring on allowed records for both detail and list flows.
+- (2026-04-21) Completed `T024`, `T025`, and `T027` with EE bundle-management contract coverage in `server/src/test/unit/authorization/bundleManagement.contract.test.ts`:
+  - `T024`: verifies draft-first editor/publish/assignment flow wiring and explicit revision publishing seam.
+  - `T025`: verifies resource-section and human-readable summary wiring in both UI and server payloads.
+  - `T027`: verifies audit trail event model includes bundle/revision/assignment lifecycle metadata and chronological sorting.
+- (2026-04-21) Completed `T026` with runtime action guard coverage in `server/src/test/unit/authorization/bundleManagementPermissions.test.ts`:
+  - verifies create/edit/publish/assignment/simulator actions fail closed when `system_settings` permission is missing and no mutating service call executes.
+- (2026-04-21) Completed `T028` with CE migration contract coverage in `server/src/test/unit/authorization/kernel.ceMigratedFlows.contract.test.ts`:
+  - verifies selected migrated ticket/document/time/project/asset/billing paths continue to wire through shared builtin kernel entry points.
+- (2026-04-21) Validation runbook for `T015`-`T028` checkpoint:
+  - `cd packages/documents && npx vitest run tests/documentActions.authorization.contract.test.ts --coverage.enabled=false`
+  - `cd packages/scheduling && npx vitest run tests/timeEntryDelegationAuth.authorization.test.ts --coverage.enabled=false`
+  - `cd packages/projects && npx vitest run src/actions/projectAuthorization.contract.test.ts --coverage.enabled=false`
+  - `cd packages/assets && npx vitest run src/actions/assetAuthorization.contract.test.ts --coverage.enabled=false`
+  - `cd packages/billing && npx vitest run tests/quoteAuthorization.contract.test.ts --coverage.enabled=false`
+  - `cd server && npx vitest run src/test/unit/authorization/bundleManagement.contract.test.ts src/test/unit/authorization/kernel.ceMigratedFlows.contract.test.ts src/test/unit/authorization/bundleManagementPermissions.test.ts --coverage.enabled=false`
