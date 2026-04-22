@@ -590,5 +590,11 @@
       "unknown": "Unbekannter Fehler"
     },
     "lastUpdated": "Zuletzt aktualisiert: {{date}}"
+  },
+  "notes": {
+    "messages": {
+      "saveSuccess": "Notizen gespeichert",
+      "saveFailed": "Notizen konnten nicht gespeichert werden"
+    }
   }
 }

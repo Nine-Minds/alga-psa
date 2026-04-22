@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { IUserWithRoles } from '../interfaces/auth.interfaces';
 import { getAllUsers } from '@alga-psa/user-composition/actions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export function useUsers() {
+  const { t } = useTranslation('msp/settings');
   const [users, setUsers] = useState<IUserWithRoles[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -17,7 +19,7 @@ export function useUsers() {
         setUsers(users);
       } catch (err) {
         console.error('Error fetching users:', err);
-        setError('An error occurred while fetching users');
+        setError(t('users.messages.error.fetchUsers'));
         setUsers([]); // Set empty array on error
       } finally {
         setLoading(false);
@@ -25,7 +27,7 @@ export function useUsers() {
     }
 
     fetchUsers();
-  }, []);
+  }, [t]);
 
   return { users, loading, error };
 }

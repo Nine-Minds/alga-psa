@@ -1089,5 +1089,11 @@
     "error": "Fehler",
     "saving": "Speichern...",
     "success": "Erfolg"
+  },
+  "notes": {
+    "messages": {
+      "saveSuccess": "Notizen gespeichert",
+      "saveFailed": "Notizen konnten nicht gespeichert werden"
+    }
   }
 }

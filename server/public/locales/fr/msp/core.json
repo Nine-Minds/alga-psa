@@ -225,5 +225,12 @@
   "rightSidebar": {
     "title": "Discussion",
     "enterpriseOnly": "La fonctionnalité de chat est disponible uniquement dans l'édition Enterprise."
+  },
+  "notifications": {
+    "messages": {
+      "error": {
+        "loadFailed": "Échec du chargement des notifications"
+      }
+    }
   }
 }

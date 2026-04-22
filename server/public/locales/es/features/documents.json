@@ -258,5 +258,14 @@
       "troubleshooting": "Solución de problemas",
       "reference": "Referencia"
     }
+  },
+  "documents": {
+    "messages": {
+      "error": {
+        "noPermission": "No tienes permiso para ver los documentos",
+        "invalidData": "Datos de documento no válidos recibidos",
+        "fetchFailed": "No se pudieron cargar los documentos"
+      }
+    }
   }
 }

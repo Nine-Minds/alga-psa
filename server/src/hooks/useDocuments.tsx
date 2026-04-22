@@ -5,6 +5,7 @@ import type { DocumentFilters, IDocument } from 'server/src/interfaces/document.
 import { getAllDocuments } from '@alga-psa/documents/actions/documentActions';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 /**
  * Custom hook for fetching and managing documents with filtering and pagination
@@ -15,10 +16,11 @@ import { toast } from 'react-hot-toast';
  * @returns Document data, loading state, and error information
  */
 export function useDocuments(
-  filters: DocumentFilters, 
-  page: number, 
+  filters: DocumentFilters,
+  page: number,
   pageSize: number
 ) {
+  const { t } = useTranslation('features/documents');
   const [documents, setDocuments] = useState<IDocument[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -42,7 +44,7 @@ export function useDocuments(
       if (isActionPermissionError(response)) {
         setDocuments([]);
         setTotalCount(0);
-        setError('You do not have permission to view documents');
+        setError(t('documents.messages.error.noPermission', 'You do not have permission to view documents'));
       } else if (response && Array.isArray(response.documents)) {
         setDocuments(response.documents);
         setTotalCount(response.totalCount);
@@ -50,12 +52,13 @@ export function useDocuments(
         console.error('Received invalid documents data:', response);
         setDocuments([]);
         setTotalCount(0);
-        setError('Invalid document data received');
+        setError(t('documents.messages.error.invalidData', 'Invalid document data received'));
       }
     } catch (error) {
       console.error('Error fetching documents:', error);
-      setError('Failed to fetch documents');
-      toast.error('Failed to fetch documents');
+      const message = t('documents.messages.error.fetchFailed', 'Failed to fetch documents');
+      setError(message);
+      toast.error(message);
       setDocuments([]);
       setTotalCount(0);
     } finally {

@@ -590,5 +590,11 @@
       "unknown": "Erreur inconnue"
     },
     "lastUpdated": "Dernière mise à jour : {{date}}"
+  },
+  "notes": {
+    "messages": {
+      "saveSuccess": "Notes enregistrées",
+      "saveFailed": "Échec de l'enregistrement des notes"
+    }
   }
 }

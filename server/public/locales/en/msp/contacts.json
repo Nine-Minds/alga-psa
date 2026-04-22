@@ -590,5 +590,11 @@
       "unknown": "Unknown error"
     },
     "lastUpdated": "Last updated: {{date}}"
+  },
+  "notes": {
+    "messages": {
+      "saveSuccess": "Notes saved",
+      "saveFailed": "Failed to save notes"
+    }
   }
 }

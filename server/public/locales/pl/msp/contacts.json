@@ -590,5 +590,11 @@
       "unknown": "Nieznany błąd"
     },
     "lastUpdated": "Ostatnia aktualizacja: {{date}}"
+  },
+  "notes": {
+    "messages": {
+      "saveSuccess": "Notatki zapisane",
+      "saveFailed": "Nie udało się zapisać notatek"
+    }
   }
 }

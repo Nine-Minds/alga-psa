@@ -590,5 +590,11 @@
       "unknown": "Onbekende fout"
     },
     "lastUpdated": "Laatst bijgewerkt: {{date}}"
+  },
+  "notes": {
+    "messages": {
+      "saveSuccess": "Notities opgeslagen",
+      "saveFailed": "Notities opslaan is mislukt"
+    }
   }
 }
