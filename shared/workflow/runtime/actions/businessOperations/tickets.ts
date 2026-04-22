@@ -51,8 +51,8 @@ const workflowTicketAssignmentPrimaryTypeSchema = z.enum(['user', 'team', 'queue
 
 type WorkflowTicketAssignmentInput = {
   primary?: {
-    type: z.infer<typeof workflowTicketAssignmentPrimaryTypeSchema>;
-    id: string;
+    type?: z.infer<typeof workflowTicketAssignmentPrimaryTypeSchema>;
+    id?: string;
   } | null;
   additional_user_ids?: string[];
 };
@@ -136,7 +136,7 @@ const resolveWorkflowTicketAssignment = async (
   const primary = assignment?.primary ?? null;
   const explicitAdditionalUserIds = uniqueStrings(assignment?.additional_user_ids ?? []);
 
-  if (!primary) {
+  if (!primary?.type || !primary?.id) {
     if (options.requirePrimary) {
       throwActionError(ctx, {
         category: 'ValidationError',

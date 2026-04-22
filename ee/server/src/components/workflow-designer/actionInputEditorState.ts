@@ -12,6 +12,7 @@ type JsonSchema = {
   type?: string | string[];
   title?: string;
   description?: string;
+  format?: string;
   examples?: unknown[];
   properties?: Record<string, JsonSchema>;
   required?: string[];

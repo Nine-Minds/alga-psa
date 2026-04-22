@@ -747,6 +747,7 @@ export const WorkflowActionInputFixedMultiPicker: React.FC<{
   rootInputMapping,
   disabled,
 }) => {
+  const { t } = useTranslation('msp/workflows');
   const [data, setData] = useState<WorkflowPickerData>(EMPTY_PICKER_DATA);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -760,8 +761,8 @@ export const WorkflowActionInputFixedMultiPicker: React.FC<{
     [field.editor?.dependencies, field.picker?.dependencies, rootInputMapping]
   );
   const disabledExplanation = useMemo(
-    () => (pickerKind ? buildDisabledExplanation(pickerKind, dependencyResolutions) : undefined),
-    [dependencyResolutions, pickerKind]
+    () => (pickerKind ? buildDisabledExplanation(t, pickerKind, dependencyResolutions) : undefined),
+    [dependencyResolutions, pickerKind, t]
   );
   const dependencySignature = useMemo(
     () => JSON.stringify(dependencyResolutions),

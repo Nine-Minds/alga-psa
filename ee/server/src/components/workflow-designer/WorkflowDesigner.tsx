@@ -242,8 +242,15 @@ type JsonSchema = {
   anyOf?: JsonSchema[];
   oneOf?: JsonSchema[];
   default?: unknown;
+  format?: string;
+  examples?: unknown[];
   $ref?: string;
   definitions?: Record<string, JsonSchema>;
+  'x-workflow-picker-kind'?: string;
+  'x-workflow-picker-dependencies'?: string[];
+  'x-workflow-picker-fixed-value-hint'?: string;
+  'x-workflow-picker-allow-dynamic-reference'?: boolean;
+  'x-workflow-editor'?: import('@alga-psa/shared/workflow/runtime').WorkflowEditorJsonSchemaMetadata;
 };
 
 type WorkflowPlaywrightOverrides = {
