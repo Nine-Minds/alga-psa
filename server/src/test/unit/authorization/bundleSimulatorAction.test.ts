@@ -70,6 +70,7 @@ const dbMocks = vi.hoisted(() => ({
 }));
 
 const assertTierAccessMock = vi.hoisted(() => vi.fn(async () => undefined));
+const hasPermissionMock = vi.hoisted(() => vi.fn(async () => true));
 
 function pickColumns(row: Row | undefined, columns: string[]): Row | undefined {
   if (!row) {
@@ -194,7 +195,7 @@ vi.mock('@alga-psa/auth', () => ({
 }));
 
 vi.mock('@alga-psa/auth/rbac', () => ({
-  hasPermission: vi.fn(async () => true),
+  hasPermission: (...args: unknown[]) => hasPermissionMock(...args),
 }));
 
 vi.mock('server/src/lib/auth/rbac', () => ({
@@ -289,6 +290,8 @@ describe('runAuthorizationBundleSimulationAction', () => {
     serviceMocks.listAuthorizationBundles.mockClear();
     assertTierAccessMock.mockReset();
     assertTierAccessMock.mockResolvedValue(undefined);
+    hasPermissionMock.mockReset();
+    hasPermissionMock.mockResolvedValue(true);
   });
 
   it('denies bundle-management actions when tier access is not entitled', async () => {
@@ -340,6 +343,30 @@ describe('runAuthorizationBundleSimulationAction', () => {
     expect(result.draft.allowed).toBe(false);
     expect(result.published.reasonCodes).toContain('rbac:rbac_allowed');
     expect(result.draft.reasonCodes).toContain('bundle:bundle_template_denied');
+  });
+
+  it('does not create draft revisions during simulation for read-only users', async () => {
+    hasPermissionMock.mockImplementation(async (_user: unknown, resource: string, action: string) => {
+      if (resource === 'system_settings' && action === 'write') {
+        return false;
+      }
+      if (resource === 'system_settings' && action === 'read') {
+        return true;
+      }
+      return true;
+    });
+
+    const result = await runAuthorizationBundleSimulationAction({
+      bundleId: 'bundle-1',
+      principalUserId,
+      resourceType: 'ticket',
+      action: 'read',
+      resourceId: ticketId,
+    });
+
+    expect(result.published.allowed).toBe(true);
+    expect(result.draft.allowed).toBe(true);
+    expect(serviceMocks.ensureDraftBundleRevision).not.toHaveBeenCalled();
   });
 
   it('loads billing simulation records from quotes and honors approve self-approval guard', async () => {

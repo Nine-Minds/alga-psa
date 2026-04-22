@@ -800,26 +800,45 @@ export const runAuthorizationBundleSimulationAction = withAuth(
       principalUserType: principal.user_type,
     });
 
-    const [roleRows, teamRows, managedRows, draftRevision] = await Promise.all([
+    const canWrite = await hasPermission(user as any, 'system_settings', 'write');
+
+    const [roleRows, teamRows, managedRows, bundle] = await Promise.all([
       knex('user_roles').where({ tenant, user_id: principal.user_id }).select<{ role_id: string }[]>('role_id'),
       knex('team_members').where({ tenant, user_id: principal.user_id }).select<{ team_id: string }[]>('team_id'),
       knex('users').where({ tenant, reports_to: principal.user_id }).select<{ user_id: string }[]>('user_id'),
-      ensureDraftBundleRevision(knex, {
-        tenant,
-        bundleId: input.bundleId,
-        actorUserId: user.user_id,
-      }),
+      knex('authorization_bundles')
+        .where({
+          tenant,
+          bundle_id: input.bundleId,
+        })
+        .first<{ published_revision_id: string | null }>('published_revision_id'),
     ]);
-
-    const bundle = await knex('authorization_bundles')
-      .where({
-        tenant,
-        bundle_id: input.bundleId,
-      })
-      .first<{ published_revision_id: string | null }>('published_revision_id');
 
     if (!bundle) {
       throw new Error('Bundle not found in tenant scope.');
+    }
+
+    const draftRevisionId = canWrite
+      ? (
+          await ensureDraftBundleRevision(knex, {
+            tenant,
+            bundleId: input.bundleId,
+            actorUserId: user.user_id,
+          })
+        ).revisionId
+      : (
+          await knex('authorization_bundle_revisions')
+            .where({
+              tenant,
+              bundle_id: input.bundleId,
+              lifecycle_state: 'draft',
+            })
+            .orderBy('revision_number', 'desc')
+            .first<{ revision_id: string }>('revision_id')
+        )?.revision_id ?? bundle.published_revision_id;
+
+    if (!draftRevisionId) {
+      throw new Error('Draft or published revision not found for bundle in tenant scope.');
     }
 
     const record = input.syntheticRecord
@@ -835,7 +854,7 @@ export const runAuthorizationBundleSimulationAction = withAuth(
     const draftRules = normalizeBundleRules(
       await listBundleRulesForRevision(knex, {
         tenant,
-        revisionId: draftRevision.revisionId,
+        revisionId: draftRevisionId,
       })
     );
     const publishedRules = bundle.published_revision_id

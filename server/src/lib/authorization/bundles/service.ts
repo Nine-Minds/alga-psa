@@ -208,6 +208,19 @@ export async function deleteBundleRule(
     ruleId: string;
   }
 ): Promise<void> {
+  const draftRevision = await knex('authorization_bundle_revisions')
+    .where({
+      tenant: input.tenant,
+      bundle_id: input.bundleId,
+      revision_id: input.revisionId,
+      lifecycle_state: 'draft',
+    })
+    .first<{ revision_id: string }>('revision_id');
+
+  if (!draftRevision) {
+    throw new Error('Draft revision not found for bundle in tenant scope.');
+  }
+
   const deleted = await knex('authorization_bundle_rules')
     .where({
       tenant: input.tenant,
