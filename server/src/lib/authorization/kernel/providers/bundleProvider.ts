@@ -1,0 +1,105 @@
+import type {
+  AuthorizationEvaluationInput,
+  AuthorizationReason,
+  BundleAuthorizationProvider,
+  BundleAuthorizationResult,
+  ScopeConstraint,
+} from '../contracts';
+import { ALLOW_ALL_SCOPE } from '../scope';
+
+export interface BundleNarrowingRule {
+  id: string;
+  resource: string;
+  action: string;
+  constraintKey?: string | null;
+  constraints?: ScopeConstraint[];
+  redactedFields?: string[];
+}
+
+export interface BundleProviderConfig {
+  resolveRules: (input: AuthorizationEvaluationInput) => Promise<BundleNarrowingRule[]>;
+}
+
+function buildReasons(rules: BundleNarrowingRule[]): AuthorizationReason[] {
+  if (rules.length === 0) {
+    return [];
+  }
+
+  return [
+    {
+      stage: 'bundle',
+      sourceType: 'bundle',
+      code: 'bundle_narrowing_applied',
+      message: 'Bundle-based narrowing rules were applied as intersections.',
+      metadata: {
+        ruleIds: rules.map((rule) => rule.id),
+      },
+    },
+  ];
+}
+
+export class BundleAuthorizationKernelProvider implements BundleAuthorizationProvider {
+  private readonly resolveRules: BundleProviderConfig['resolveRules'];
+
+  constructor(config: BundleProviderConfig) {
+    this.resolveRules = config.resolveRules;
+  }
+
+  async evaluateNarrowing(input: AuthorizationEvaluationInput): Promise<BundleAuthorizationResult> {
+    const rules = await this.resolveRules(input);
+    const matchingRules = rules.filter(
+      (rule) => rule.resource === input.resource.type && rule.action === input.resource.action
+    );
+
+    if (matchingRules.length === 0) {
+      return {
+        scope: ALLOW_ALL_SCOPE,
+        reasons: [],
+        mutationDeniedReason: null,
+        redactedFields: [],
+      };
+    }
+
+    const hasClientVisibleOnlyViolation = matchingRules.some(
+      (rule) => rule.constraintKey === 'client_visible_only' && input.record?.is_client_visible !== true
+    );
+
+    const notSelfApproverViolation = matchingRules.some(
+      (rule) =>
+        rule.constraintKey === 'not_self_approver' &&
+        input.mutation?.kind === 'approve' &&
+        typeof input.record?.ownerUserId === 'string' &&
+        input.record.ownerUserId === input.subject.userId
+    );
+
+    return {
+      scope: {
+        allowAll: false,
+        denied: hasClientVisibleOnlyViolation,
+        constraints: matchingRules.flatMap((rule) => rule.constraints ?? []),
+      },
+      reasons: [
+        ...buildReasons(matchingRules),
+        ...(hasClientVisibleOnlyViolation
+          ? [
+              {
+                stage: 'bundle' as const,
+                sourceType: 'bundle' as const,
+                code: 'client_visible_only_denied',
+                message: 'Bundle client-visible-only guard denied access.',
+              },
+            ]
+          : []),
+      ],
+      mutationDeniedReason: notSelfApproverViolation
+        ? {
+            stage: 'mutation',
+            sourceType: 'bundle',
+            code: 'not_self_approver_denied',
+            message: 'Bundle not-self-approver guard denied this mutation.',
+          }
+        : null,
+      redactedFields: matchingRules.flatMap((rule) => rule.redactedFields ?? []),
+    };
+  }
+}
