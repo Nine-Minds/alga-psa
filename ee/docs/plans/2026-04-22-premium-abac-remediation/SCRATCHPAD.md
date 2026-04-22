@@ -30,6 +30,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-04-22) Control-plane schema allows `authorization_bundle_rules.bundle_id` to drift from the referenced revision’s `bundle_id` because rule rows currently only foreign-key revision by `(tenant, revision_id)`.
 - (2026-04-22) Runtime rule mapping loaded `constraints`/`redactedFields` from rule config but did not load `selectedClientIds` or `selectedBoardIds`, so selected template rules could evaluate against missing IDs.
 - (2026-04-22) `seedStarterAuthorizationBundlesAction` created starter bundle draft revisions/rules but never published them, so seeded bundles were assignable yet inert.
+- (2026-04-22) Time delegation/approval kernelization used resource type `timesheet` for bundle evaluation while the bundle editor/catalog and starter rules target `time_entry`.
 
 ## Commands / Runbooks
 
@@ -115,3 +116,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - Result: pass.
   - Command: `cd server && npx vitest run src/test/unit/authorization/bundleManagementPermissions.test.ts`
   - Result: test pass but process ended with coverage cleanup error (`ENOENT .../coverage/.tmp`).
+- (2026-04-22) Completed `F010`:
+  - Updated time delegation/approval kernel evaluations in `timeEntryDelegationAuth.ts` to use resource type `time_entry` for bundle decisions.
+  - Updated scheduling authorization regression test bundle-rule fixtures to match `time_entry`.
+- (2026-04-22) Verification for `F010`:
+  - Command: `cd server && npx vitest run ../packages/scheduling/tests/timeEntryDelegationAuth.authorization.test.ts`
+  - Result: pass.

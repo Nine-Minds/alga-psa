@@ -150,7 +150,7 @@ export async function assertCanActOnBehalf(
   const decision = await authorizationKernel.authorizeResource({
     subject: authorizationSubject,
     resource: {
-      type: 'timesheet',
+      type: 'time_entry',
       action: 'read',
       id: subjectUserId,
     },
@@ -215,7 +215,7 @@ export async function assertCanApproveSubject(
   const approvalDecision = await approvalKernel.authorizeMutation({
     subject,
     resource: {
-      type: 'timesheet',
+      type: 'time_entry',
       action: 'approve',
       id: subjectUserId,
     },

@@ -217,7 +217,7 @@ describe('time authorization delegation and approval contracts', () => {
 
     resolveBundleRulesMock.mockResolvedValueOnce([
       {
-        resource: 'timesheet',
+        resource: 'time_entry',
         action: 'read',
         templateKey: 'own',
       },
@@ -236,7 +236,7 @@ describe('time authorization delegation and approval contracts', () => {
 
     resolveBundleRulesMock.mockResolvedValueOnce([
       {
-        resource: 'timesheet',
+        resource: 'time_entry',
         action: 'read',
         templateKey: 'own_or_managed',
       },

@@ -56,7 +56,7 @@
   {
     "id": "F010",
     "description": "Align migrated time/delegation premium bundle evaluation with the configured Time resource key used by the bundle catalog/editor.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Problem", "Functional Requirements"]
   },
   {
