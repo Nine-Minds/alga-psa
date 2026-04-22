@@ -118,7 +118,19 @@
       "accountReady": "Cuenta lista. Inicia sesión.",
       "accountCreatedSuccess": "Cuenta creada con éxito. Inicia sesión.",
       "welcome": "¡Bienvenido al portal del cliente!",
-      "createFailed": "No se pudo crear la cuenta"
+      "createFailed": "No se pudo crear la cuenta",
+      "errors": {
+        "tokenRequired": "Se requiere un token de invitación válido.",
+        "tokenAndPasswordRequired": "Se requieren un token y una contraseña para completar la configuración.",
+        "passwordTooShort": "La contraseña debe tener al menos 8 caracteres.",
+        "invalidOrExpiredToken": "Este enlace de invitación no es válido o ha caducado.",
+        "tenantContextRequired": "Falta el contexto de la organización. Vuelve a abrir el enlace de invitación.",
+        "resetPasswordFailed": "No pudimos restablecer la contraseña de la cuenta existente. Inténtalo de nuevo.",
+        "createUserFailed": "No pudimos crear tu cuenta de usuario. Inténtalo de nuevo.",
+        "setupFailed": "No pudimos completar la configuración del portal. Inténtalo de nuevo.",
+        "verificationFailed": "No pudimos verificar tu token de invitación. Inténtalo de nuevo.",
+        "invitationFailed": "No pudimos enviar la invitación. Inténtalo de nuevo."
+      }
     },
     "features": {
       "submitTickets": {

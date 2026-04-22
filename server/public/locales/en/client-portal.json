@@ -118,7 +118,19 @@
       "accountReady": "Account ready. Please sign in.",
       "accountCreatedSuccess": "Account created successfully. Please sign in.",
       "welcome": "Welcome to the client portal!",
-      "createFailed": "Failed to create account"
+      "createFailed": "Failed to create account",
+      "errors": {
+        "tokenRequired": "A valid invitation token is required.",
+        "tokenAndPasswordRequired": "A token and password are required to complete setup.",
+        "passwordTooShort": "Password must be at least 8 characters long.",
+        "invalidOrExpiredToken": "This invitation link is invalid or has expired.",
+        "tenantContextRequired": "Missing organization context. Please reopen the invitation link.",
+        "resetPasswordFailed": "We couldn't reset the password for the existing account. Please try again.",
+        "createUserFailed": "We couldn't create your user account. Please try again.",
+        "setupFailed": "We couldn't complete the portal setup. Please try again.",
+        "verificationFailed": "We couldn't verify your invitation token. Please try again.",
+        "invitationFailed": "We couldn't send the invitation. Please try again."
+      }
     },
     "features": {
       "submitTickets": {

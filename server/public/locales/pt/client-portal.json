@@ -118,7 +118,19 @@
       "accountReady": "Account ready. Please sign in.",
       "accountCreatedSuccess": "Account created successfully. Please sign in.",
       "welcome": "Welcome to the client portal!",
-      "createFailed": "Failed to create account"
+      "createFailed": "Failed to create account",
+      "errors": {
+        "tokenRequired": "É necessário um token de convite válido.",
+        "tokenAndPasswordRequired": "São necessários um token e uma palavra-passe para concluir a configuração.",
+        "passwordTooShort": "A palavra-passe deve ter pelo menos 8 caracteres.",
+        "invalidOrExpiredToken": "Este link de convite é inválido ou expirou.",
+        "tenantContextRequired": "Falta o contexto da organização. Volte a abrir o link de convite.",
+        "resetPasswordFailed": "Não foi possível redefinir a palavra-passe da conta existente. Tente novamente.",
+        "createUserFailed": "Não foi possível criar a sua conta de utilizador. Tente novamente.",
+        "setupFailed": "Não foi possível concluir a configuração do portal. Tente novamente.",
+        "verificationFailed": "Não foi possível verificar o seu token de convite. Tente novamente.",
+        "invitationFailed": "Não foi possível enviar o convite. Tente novamente."
+      }
     },
     "features": {
       "submitTickets": {

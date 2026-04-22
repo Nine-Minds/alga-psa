@@ -118,7 +118,19 @@
       "accountReady": "Account pronto. Effettua l'accesso.",
       "accountCreatedSuccess": "Account creato con successo. Effettua l'accesso.",
       "welcome": "Benvenuto nel portale clienti!",
-      "createFailed": "Impossibile creare l'account"
+      "createFailed": "Impossibile creare l'account",
+      "errors": {
+        "tokenRequired": "È richiesto un token di invito valido.",
+        "tokenAndPasswordRequired": "Per completare la configurazione sono necessari un token e una password.",
+        "passwordTooShort": "La password deve contenere almeno 8 caratteri.",
+        "invalidOrExpiredToken": "Questo link di invito non è valido o è scaduto.",
+        "tenantContextRequired": "Contesto dell'organizzazione mancante. Riapri il link di invito.",
+        "resetPasswordFailed": "Non è stato possibile reimpostare la password dell'account esistente. Riprova.",
+        "createUserFailed": "Non è stato possibile creare il tuo account utente. Riprova.",
+        "setupFailed": "Non è stato possibile completare la configurazione del portale. Riprova.",
+        "verificationFailed": "Non è stato possibile verificare il tuo token di invito. Riprova.",
+        "invitationFailed": "Non è stato possibile inviare l'invito. Riprova."
+      }
     },
     "features": {
       "submitTickets": {

@@ -118,7 +118,19 @@
       "accountReady": "Konto bereit. Bitte melde dich an.",
       "accountCreatedSuccess": "Konto erfolgreich erstellt. Bitte melde dich an.",
       "welcome": "Willkommen im Kundenportal!",
-      "createFailed": "Konto konnte nicht erstellt werden"
+      "createFailed": "Konto konnte nicht erstellt werden",
+      "errors": {
+        "tokenRequired": "Ein gültiger Einladungstoken ist erforderlich.",
+        "tokenAndPasswordRequired": "Für die Einrichtung werden ein Token und ein Passwort benötigt.",
+        "passwordTooShort": "Das Passwort muss mindestens 8 Zeichen lang sein.",
+        "invalidOrExpiredToken": "Dieser Einladungslink ist ungültig oder abgelaufen.",
+        "tenantContextRequired": "Organisationskontext fehlt. Bitte öffne den Einladungslink erneut.",
+        "resetPasswordFailed": "Das Passwort für das bestehende Konto konnte nicht zurückgesetzt werden. Bitte versuche es erneut.",
+        "createUserFailed": "Dein Benutzerkonto konnte nicht erstellt werden. Bitte versuche es erneut.",
+        "setupFailed": "Die Portaleinrichtung konnte nicht abgeschlossen werden. Bitte versuche es erneut.",
+        "verificationFailed": "Dein Einladungstoken konnte nicht überprüft werden. Bitte versuche es erneut.",
+        "invitationFailed": "Die Einladung konnte nicht gesendet werden. Bitte versuche es erneut."
+      }
     },
     "features": {
       "submitTickets": {

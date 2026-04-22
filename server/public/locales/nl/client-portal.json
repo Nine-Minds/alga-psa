@@ -118,7 +118,19 @@
       "accountReady": "Account klaar. Meld je aan.",
       "accountCreatedSuccess": "Account succesvol aangemaakt. Meld je aan.",
       "welcome": "Welkom bij het klantportaal!",
-      "createFailed": "Account aanmaken is mislukt"
+      "createFailed": "Account aanmaken is mislukt",
+      "errors": {
+        "tokenRequired": "Er is een geldig uitnodigingstoken vereist.",
+        "tokenAndPasswordRequired": "Een token en wachtwoord zijn vereist om de configuratie af te ronden.",
+        "passwordTooShort": "Het wachtwoord moet minstens 8 tekens bevatten.",
+        "invalidOrExpiredToken": "Deze uitnodigingslink is ongeldig of verlopen.",
+        "tenantContextRequired": "Organisatiecontext ontbreekt. Open de uitnodigingslink opnieuw.",
+        "resetPasswordFailed": "Het wachtwoord voor het bestaande account kon niet worden gereset. Probeer het opnieuw.",
+        "createUserFailed": "Je gebruikersaccount kon niet worden aangemaakt. Probeer het opnieuw.",
+        "setupFailed": "De portaalconfiguratie kon niet worden voltooid. Probeer het opnieuw.",
+        "verificationFailed": "Je uitnodigingstoken kon niet worden geverifieerd. Probeer het opnieuw.",
+        "invitationFailed": "De uitnodiging kon niet worden verzonden. Probeer het opnieuw."
+      }
     },
     "features": {
       "submitTickets": {

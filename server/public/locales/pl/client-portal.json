@@ -118,7 +118,19 @@
       "accountReady": "Konto gotowe. Zaloguj się.",
       "accountCreatedSuccess": "Konto utworzone pomyślnie. Zaloguj się.",
       "welcome": "Witamy w portalu klienta!",
-      "createFailed": "Nie udało się utworzyć konta"
+      "createFailed": "Nie udało się utworzyć konta",
+      "errors": {
+        "tokenRequired": "Wymagany jest prawidłowy token zaproszenia.",
+        "tokenAndPasswordRequired": "Do ukończenia konfiguracji wymagane są token i hasło.",
+        "passwordTooShort": "Hasło musi mieć co najmniej 8 znaków.",
+        "invalidOrExpiredToken": "Ten link zaproszenia jest nieprawidłowy lub wygasł.",
+        "tenantContextRequired": "Brakuje kontekstu organizacji. Otwórz ponownie link zaproszenia.",
+        "resetPasswordFailed": "Nie udało się zresetować hasła istniejącego konta. Spróbuj ponownie.",
+        "createUserFailed": "Nie udało się utworzyć Twojego konta użytkownika. Spróbuj ponownie.",
+        "setupFailed": "Nie udało się ukończyć konfiguracji portalu. Spróbuj ponownie.",
+        "verificationFailed": "Nie udało się zweryfikować Twojego tokena zaproszenia. Spróbuj ponownie.",
+        "invitationFailed": "Nie udało się wysłać zaproszenia. Spróbuj ponownie."
+      }
     },
     "features": {
       "submitTickets": {

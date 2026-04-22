@@ -118,7 +118,19 @@
       "accountReady": "Compte prêt. Veuillez vous connecter.",
       "accountCreatedSuccess": "Compte créé avec succès. Veuillez vous connecter.",
       "welcome": "Bienvenue sur le portail client !",
-      "createFailed": "Échec de la création du compte"
+      "createFailed": "Échec de la création du compte",
+      "errors": {
+        "tokenRequired": "Un jeton d'invitation valide est requis.",
+        "tokenAndPasswordRequired": "Un jeton et un mot de passe sont requis pour terminer la configuration.",
+        "passwordTooShort": "Le mot de passe doit contenir au moins 8 caractères.",
+        "invalidOrExpiredToken": "Ce lien d'invitation est invalide ou a expiré.",
+        "tenantContextRequired": "Contexte d'organisation manquant. Veuillez rouvrir le lien d'invitation.",
+        "resetPasswordFailed": "Impossible de réinitialiser le mot de passe du compte existant. Veuillez réessayer.",
+        "createUserFailed": "Impossible de créer votre compte utilisateur. Veuillez réessayer.",
+        "setupFailed": "Impossible de terminer la configuration du portail. Veuillez réessayer.",
+        "verificationFailed": "Impossible de vérifier votre jeton d'invitation. Veuillez réessayer.",
+        "invitationFailed": "Impossible d'envoyer l'invitation. Veuillez réessayer."
+      }
     },
     "features": {
       "submitTickets": {
