@@ -440,7 +440,7 @@
   {
     "id": "F048",
     "description": "Migrate the selected v1 asset authorization paths onto the shared kernel with explicit client/team/assignment segmentation hooks suitable for later remote-access-sensitive behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -449,7 +449,7 @@
   {
     "id": "F049",
     "description": "Support premium asset narrowing bundles that can restrict asset access by client portfolio, team scope, and assignment on the selected v1 asset surfaces.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Functional Requirements"

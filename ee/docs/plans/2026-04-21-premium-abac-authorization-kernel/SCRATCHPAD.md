@@ -237,3 +237,12 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-04-21) Validation runbook for `F047` checkpoint:
   - `cd packages/projects && npx tsc --pretty false --noEmit -p tsconfig.json`
   - `cd .. && npx tsc --pretty false --noEmit -p server/tsconfig.json`
+- (2026-04-21) Completed `F048` on selected asset read paths by migrating authorization to kernel evaluation:
+  - `packages/assets/src/actions/assetActions.ts` now evaluates asset access via kernel in `getAsset`, `getAssetDetailBundle`, and `listAssets`.
+  - Added shared asset authorization subject resolution and asset record normalization from `assets` + `asset_associations` (client/team/assignment hooks).
+- (2026-04-21) Completed `F049` by enabling premium bundle narrowing on migrated asset paths:
+  - Asset kernel calls now include `BundleAuthorizationKernelProvider` with `resolveBundleNarrowingRulesForEvaluation(...)`, allowing published client/team/assignment bundle templates to narrow asset visibility on selected surfaces.
+- (2026-04-21) Validation runbook for `F048`-`F049` checkpoint:
+  - `cd packages/assets && npx tsc --pretty false --noEmit -p tsconfig.json`
+  - `cd .. && npx tsc --pretty false --noEmit -p server/tsconfig.json`
+  - `cd packages/assets && npx vitest run tests --coverage.enabled=false` (no matching tests discovered in this package)

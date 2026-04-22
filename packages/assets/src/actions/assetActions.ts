@@ -69,6 +69,15 @@ import {
     buildAssetWarrantyExpiringPayload,
     computeAssetWarrantyExpiring,
 } from '@alga-psa/workflow-streams';
+import {
+    BuiltinAuthorizationKernelProvider,
+    BundleAuthorizationKernelProvider,
+    RequestLocalAuthorizationCache,
+    createAuthorizationKernel,
+    type AuthorizationRecord,
+    type AuthorizationSubject,
+} from 'server/src/lib/authorization/kernel';
+import { resolveBundleNarrowingRulesForEvaluation } from 'server/src/lib/authorization/bundles/service';
 
 type AssetExtensionType = WorkstationAsset | NetworkDeviceAsset | ServerAsset | MobileDeviceAsset | PrinterAsset;
 
@@ -151,6 +160,106 @@ function sanitizeUpdatePayload(data: UpdateAssetRequest): UpdateAssetRequest {
     };
 
     return pruneNullishValues(sanitized) as UpdateAssetRequest;
+}
+
+type AssetAuthUser = {
+    user_id: string;
+    user_type: 'internal' | 'client';
+    clientId?: string | null;
+    roles?: Array<{ role_id?: string } | string>;
+};
+
+function extractRoleIdsFromUser(user: AssetAuthUser): string[] {
+    if (!Array.isArray(user.roles)) {
+        return [];
+    }
+
+    return user.roles
+        .map((role) => {
+            if (typeof role === 'string') {
+                return role;
+            }
+            return typeof role?.role_id === 'string' ? role.role_id : null;
+        })
+        .filter((value): value is string => Boolean(value));
+}
+
+async function resolveAuthorizationSubjectForUser(
+    trx: Knex.Transaction,
+    tenant: string,
+    user: AssetAuthUser
+): Promise<AuthorizationSubject> {
+    let roleIds = extractRoleIdsFromUser(user);
+    if (roleIds.length === 0) {
+        try {
+            const roleRows = await trx('user_roles')
+                .where({ tenant, user_id: user.user_id })
+                .select<{ role_id: string }[]>('role_id');
+            roleIds = roleRows.map((row) => row.role_id);
+        } catch {
+            roleIds = [];
+        }
+    }
+
+    const [teamRows, managedRows] = await Promise.all([
+        trx('team_members').where({ tenant, user_id: user.user_id }).select<{ team_id: string }[]>('team_id').catch(() => []),
+        trx('users').where({ tenant, reports_to: user.user_id }).select<{ user_id: string }[]>('user_id').catch(() => []),
+    ]);
+
+    return {
+        tenant,
+        userId: user.user_id,
+        userType: user.user_type,
+        roleIds,
+        teamIds: teamRows.map((row) => row.team_id),
+        managedUserIds: managedRows.map((row) => row.user_id),
+        clientId: user.clientId ?? null,
+        portfolioClientIds: user.clientId ? [user.clientId] : [],
+    };
+}
+
+async function resolveAssetAuthorizationRecords(
+    trx: Knex.Transaction,
+    tenant: string,
+    assets: Array<Pick<Asset, 'asset_id' | 'client_id'>>
+): Promise<Map<string, AuthorizationRecord>> {
+    const assetIds = assets.map((asset) => asset.asset_id);
+    if (assetIds.length === 0) {
+        return new Map();
+    }
+
+    const associationRows = await trx('asset_associations')
+        .where({ tenant })
+        .whereIn('asset_id', assetIds)
+        .select<Array<{ asset_id: string; entity_type: string; entity_id: string }>>('asset_id', 'entity_type', 'entity_id');
+
+    const associationsByAsset = new Map<string, Array<{ entity_type: string; entity_id: string }>>();
+    for (const row of associationRows) {
+        const existing = associationsByAsset.get(row.asset_id) ?? [];
+        existing.push({ entity_type: row.entity_type, entity_id: row.entity_id });
+        associationsByAsset.set(row.asset_id, existing);
+    }
+
+    const records = new Map<string, AuthorizationRecord>();
+    for (const asset of assets) {
+        const associations = associationsByAsset.get(asset.asset_id) ?? [];
+        const assignedUserIds = associations
+            .filter((association) => association.entity_type === 'user')
+            .map((association) => association.entity_id);
+        const teamIds = associations
+            .filter((association) => association.entity_type === 'team')
+            .map((association) => association.entity_id);
+
+        records.set(asset.asset_id, {
+            id: asset.asset_id,
+            ownerUserId: assignedUserIds[0] ?? null,
+            assignedUserIds,
+            clientId: asset.client_id ?? null,
+            teamIds,
+        });
+    }
+
+    return records;
 }
 
 function collectAssetUpdatedPaths(validatedData: Record<string, unknown>): string[] {
@@ -284,7 +393,42 @@ export const getAsset = withAuth(async (user, { tenant }, asset_id: string): Pro
         throw new Error('Permission denied: Cannot read assets');
     }
 
-    return getAssetWithExtensions(knex, tenant, asset_id);
+    const asset = await getAssetWithExtensions(knex, tenant, asset_id);
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const subject = await resolveAuthorizationSubjectForUser(trx, tenant, user as AssetAuthUser);
+        const assetRecords = await resolveAssetAuthorizationRecords(trx, tenant, [{ asset_id: asset.asset_id, client_id: asset.client_id }]);
+        const authorizationKernel = createAuthorizationKernel({
+            builtinProvider: new BuiltinAuthorizationKernelProvider(),
+            bundleProvider: new BundleAuthorizationKernelProvider({
+                resolveRules: async (input) => {
+                    try {
+                        return await resolveBundleNarrowingRulesForEvaluation(trx, input);
+                    } catch {
+                        return [];
+                    }
+                },
+            }),
+            rbacEvaluator: async () => true,
+        });
+
+        const decision = await authorizationKernel.authorizeResource({
+            subject,
+            resource: {
+                type: 'asset',
+                action: 'read',
+                id: asset.asset_id,
+            },
+            record: assetRecords.get(asset.asset_id),
+            requestCache: new RequestLocalAuthorizationCache(),
+            knex: trx,
+        });
+
+        if (!decision.allowed) {
+            throw new Error('Permission denied: Cannot read assets');
+        }
+    });
+
+    return asset;
 });
 
 export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: string): Promise<AssetDetailBundle> => {
@@ -299,6 +443,40 @@ export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: 
         hasPermission(user, 'ticket', 'read', knex),
         hasPermission(user, 'document', 'read', knex)
     ]);
+
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const subject = await resolveAuthorizationSubjectForUser(trx, tenant, user as AssetAuthUser);
+        const assetRecords = await resolveAssetAuthorizationRecords(trx, tenant, [{ asset_id: assetRecord.asset_id, client_id: assetRecord.client_id }]);
+        const authorizationKernel = createAuthorizationKernel({
+            builtinProvider: new BuiltinAuthorizationKernelProvider(),
+            bundleProvider: new BundleAuthorizationKernelProvider({
+                resolveRules: async (input) => {
+                    try {
+                        return await resolveBundleNarrowingRulesForEvaluation(trx, input);
+                    } catch {
+                        return [];
+                    }
+                },
+            }),
+            rbacEvaluator: async () => true,
+        });
+
+        const decision = await authorizationKernel.authorizeResource({
+            subject,
+            resource: {
+                type: 'asset',
+                action: 'read',
+                id: assetRecord.asset_id,
+            },
+            record: assetRecords.get(assetRecord.asset_id),
+            requestCache: new RequestLocalAuthorizationCache(),
+            knex: trx,
+        });
+
+        if (!decision.allowed) {
+            throw new Error('Permission denied: Cannot read assets');
+        }
+    });
 
     const formattedAsset = formatAssetForOutput(assetRecord);
 
@@ -1137,9 +1315,46 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
             .limit(limit)
             .offset(offset);
 
+        const subject = await resolveAuthorizationSubjectForUser(trx, tenant, user as AssetAuthUser);
+        const assetRecords = await resolveAssetAuthorizationRecords(
+            trx,
+            tenant,
+            assets.map((asset: any) => ({ asset_id: asset.asset_id, client_id: asset.client_id }))
+        );
+        const authorizationKernel = createAuthorizationKernel({
+            builtinProvider: new BuiltinAuthorizationKernelProvider(),
+            bundleProvider: new BundleAuthorizationKernelProvider({
+                resolveRules: async (input) => {
+                    try {
+                        return await resolveBundleNarrowingRulesForEvaluation(trx, input);
+                    } catch {
+                        return [];
+                    }
+                },
+            }),
+            rbacEvaluator: async () => true,
+        });
+        const requestCache = new RequestLocalAuthorizationCache();
+        const decisions = await Promise.all(
+            assets.map((asset: any) =>
+                authorizationKernel.authorizeResource({
+                    subject,
+                    resource: {
+                        type: 'asset',
+                        action: 'read',
+                        id: asset.asset_id,
+                    },
+                    record: assetRecords.get(asset.asset_id),
+                    requestCache,
+                    knex: trx,
+                })
+            )
+        );
+        const authorizedAssets = assets.filter((_: any, index: number) => decisions[index]?.allowed);
+
         // Get extension data for each asset if requested
         const assetsWithExtensions = await Promise.all(
-            assets.map(async (asset: any): Promise<Asset> => {
+            authorizedAssets.map(async (asset: any): Promise<Asset> => {
                 const extensionData = validatedParams.include_extension_data
                     ? await getExtensionData(trx, tenant, asset.asset_id, asset.asset_type)
                     : null;
