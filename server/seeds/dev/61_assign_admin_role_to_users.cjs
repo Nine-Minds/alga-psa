@@ -1,27 +1,59 @@
 exports.seed = async function(knex) {
-  // Get all users
-  const users = await knex('users').select('user_id', 'tenant');
-
-  // Get the Admin role
-  const adminRole = await knex('roles')
-    .where({ role_name: 'Admin' })
-    .first('role_id', 'tenant');
-
-  if (!adminRole) {
-    console.error('Admin role not found');
+  const tenants = await knex('tenants').select('tenant');
+  if (!tenants.length) {
     return;
   }
 
-  // Prepare the data for insertion
-  const userRoles = users.map(user => ({
-    tenant: user.tenant,
-    user_id: user.user_id,
-    role_id: adminRole.role_id,
-    created_at: new Date()
-  }));
+  const roleByUsername = {
+    glinda: { role_name: 'Admin', msp: true },
+    dorothy: { role_name: 'Manager', msp: true },
+    scarecrow: { role_name: 'Technician', msp: true },
+    tinman: { role_name: 'Technician', msp: true },
+    madhatter: { role_name: 'Project Manager', msp: true },
+    cheshire: { role_name: 'Dispatcher', msp: true },
+    queenhearts: { role_name: 'Finance', msp: true },
+  };
 
-  // Insert the user roles
-  await knex('user_roles').insert(userRoles);
+  for (const { tenant } of tenants) {
+    const roles = await knex('roles')
+      .where({ tenant })
+      .select('role_id', 'role_name', 'msp');
 
-  console.log(`Assigned Admin role to ${userRoles.length} users`);
-}
+    const roleMap = new Map(
+      roles.map((role) => [`${role.msp ? 'msp' : 'client'}:${role.role_name}`, role.role_id])
+    );
+
+    const users = await knex('users')
+      .where({ tenant, user_type: 'internal' })
+      .select('user_id', 'username');
+
+    await knex('user_roles').where({ tenant }).del();
+
+    const userRoles = users
+      .map((user) => {
+        const roleConfig = roleByUsername[user.username];
+        if (!roleConfig) {
+          return null;
+        }
+
+        const roleId = roleMap.get(`${roleConfig.msp ? 'msp' : 'client'}:${roleConfig.role_name}`);
+        if (!roleId) {
+          return null;
+        }
+
+        return {
+          tenant,
+          user_id: user.user_id,
+          role_id: roleId,
+          created_at: new Date()
+        };
+      })
+      .filter(Boolean);
+
+    if (userRoles.length > 0) {
+      await knex('user_roles').insert(userRoles);
+    }
+
+    console.log(`Assigned ${userRoles.length} baseline internal roles for tenant ${tenant}`);
+  }
+};
