@@ -12,8 +12,17 @@ export type ReceivedOtt = {
   receivedAtMs: number;
 };
 
+export type PendingAppleLink = {
+  identityToken: string;
+  authorizationCode?: string;
+  createdAtMs: number;
+  state?: string;
+};
+
 const PENDING_KEY = "alga.mobile.auth.pending";
 const OTT_KEY = "alga.mobile.auth.ott";
+const PENDING_APPLE_LINK_KEY = "alga.mobile.auth.appleLink";
+const PENDING_APPLE_LINK_MAX_AGE_MS = 10 * 60_000;
 
 function generateState(): string {
   const a = Math.random().toString(36).slice(2);
@@ -46,6 +55,41 @@ export async function getReceivedOtt(): Promise<ReceivedOtt | null> {
 
 export async function clearReceivedOtt(): Promise<void> {
   await secureStorage.deleteItem(OTT_KEY);
+}
+
+export async function storePendingAppleLink(payload: {
+  identityToken: string;
+  authorizationCode?: string;
+}): Promise<PendingAppleLink> {
+  const pending: PendingAppleLink = {
+    identityToken: payload.identityToken,
+    authorizationCode: payload.authorizationCode,
+    createdAtMs: Date.now(),
+  };
+  await setSecureJson(PENDING_APPLE_LINK_KEY, pending);
+  return pending;
+}
+
+export async function getPendingAppleLink(): Promise<PendingAppleLink | null> {
+  const pending = await getSecureJson<PendingAppleLink>(PENDING_APPLE_LINK_KEY);
+  if (!pending) return null;
+  if (Date.now() - pending.createdAtMs > PENDING_APPLE_LINK_MAX_AGE_MS) {
+    await secureStorage.deleteItem(PENDING_APPLE_LINK_KEY);
+    return null;
+  }
+  return pending;
+}
+
+export async function attachPendingAppleLinkToState(state: string): Promise<PendingAppleLink | null> {
+  const pending = await getPendingAppleLink();
+  if (!pending) return null;
+  const updated: PendingAppleLink = { ...pending, state };
+  await setSecureJson(PENDING_APPLE_LINK_KEY, updated);
+  return updated;
+}
+
+export async function clearPendingAppleLink(): Promise<void> {
+  await secureStorage.deleteItem(PENDING_APPLE_LINK_KEY);
 }
 
 export function getAuthCallbackRedirectUri(): string {
@@ -86,4 +130,3 @@ export function parseAuthCallback(inputUrl: string): { ott?: string; state?: str
     error: url.searchParams.get("error") ?? undefined,
   };
 }
-

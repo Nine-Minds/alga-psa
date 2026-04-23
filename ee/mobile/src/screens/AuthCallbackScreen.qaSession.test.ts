@@ -3,21 +3,27 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 
 const {
+  clearPendingAppleLinkMock,
   clearPendingMobileAuthMock,
   clearReceivedOttMock,
   createApiClientMock,
   exchangeOttWithRetryMock,
+  getPendingAppleLinkMock,
   getPendingMobileAuthMock,
   getTicketStatsMock,
+  linkAppleIdMock,
   setSessionMock,
   storeReceivedOttMock,
 } = vi.hoisted(() => ({
+  clearPendingAppleLinkMock: vi.fn(),
   clearPendingMobileAuthMock: vi.fn(),
   clearReceivedOttMock: vi.fn(),
   createApiClientMock: vi.fn(),
   exchangeOttWithRetryMock: vi.fn(),
+  getPendingAppleLinkMock: vi.fn(),
   getPendingMobileAuthMock: vi.fn(),
   getTicketStatsMock: vi.fn(),
+  linkAppleIdMock: vi.fn(),
   setSessionMock: vi.fn(),
   storeReceivedOttMock: vi.fn(),
 }));
@@ -38,8 +44,10 @@ vi.mock("../auth/AuthContext", () => ({
 }));
 
 vi.mock("../auth/mobileAuth", () => ({
+  clearPendingAppleLink: () => clearPendingAppleLinkMock(),
   clearPendingMobileAuth: () => clearPendingMobileAuthMock(),
   clearReceivedOtt: () => clearReceivedOttMock(),
+  getPendingAppleLink: () => getPendingAppleLinkMock(),
   getPendingMobileAuth: () => getPendingMobileAuthMock(),
   storeReceivedOtt: (...args: unknown[]) => storeReceivedOttMock(...args),
 }));
@@ -57,6 +65,10 @@ vi.mock("../api", () => ({
 
 vi.mock("../api/mobileAuth", () => ({
   exchangeOttWithRetry: (...args: unknown[]) => exchangeOttWithRetryMock(...args),
+}));
+
+vi.mock("../api/appleAuth", () => ({
+  linkAppleId: (...args: unknown[]) => linkAppleIdMock(...args),
 }));
 
 vi.mock("../api/tickets", () => ({
@@ -144,18 +156,25 @@ describe("AuthCallbackScreen dev QA session import", () => {
   beforeEach(() => {
     clearPendingMobileAuthMock.mockReset();
     clearReceivedOttMock.mockReset();
+    clearPendingAppleLinkMock.mockReset();
     createApiClientMock.mockReset();
     exchangeOttWithRetryMock.mockReset();
+    getPendingAppleLinkMock.mockReset();
     getPendingMobileAuthMock.mockReset();
     getTicketStatsMock.mockReset();
+    linkAppleIdMock.mockReset();
     setSessionMock.mockReset();
     storeReceivedOttMock.mockReset();
 
     clearPendingMobileAuthMock.mockResolvedValue(undefined);
     clearReceivedOttMock.mockResolvedValue(undefined);
+    clearPendingAppleLinkMock.mockResolvedValue(undefined);
+    createApiClientMock.mockReturnValue({ request: vi.fn() });
+    getPendingAppleLinkMock.mockResolvedValue(null);
     getPendingMobileAuthMock.mockResolvedValue({
       state: "state-123",
     });
+    linkAppleIdMock.mockResolvedValue({ ok: true, data: { linked: true } });
     storeReceivedOttMock.mockResolvedValue(undefined);
   });
 
@@ -318,5 +337,52 @@ describe("AuthCallbackScreen dev QA session import", () => {
     });
     expect(storeReceivedOttMock).not.toHaveBeenCalled();
     expect(navigation.reset).not.toHaveBeenCalled();
+  });
+
+  it("links a pending Apple identity after normal sign-in completes", async () => {
+    getPendingAppleLinkMock.mockResolvedValue({
+      identityToken: "apple-id-token",
+      authorizationCode: "apple-auth-code",
+      createdAtMs: Date.now(),
+      state: "state-123",
+    });
+    exchangeOttWithRetryMock.mockResolvedValue({
+      ok: true,
+      data: {
+        accessToken: "access-token",
+        refreshToken: "refresh-token",
+        expiresInSec: 60,
+        tenantId: "tenant-1",
+        user: {
+          id: "user-1",
+          email: "qa@example.com",
+          name: "QA User",
+        },
+      },
+    });
+    getTicketStatsMock.mockResolvedValue({
+      ok: true,
+      data: {
+        data: {
+          active: 1,
+          overdue: 0,
+          unassigned: 0,
+          dueToday: 0,
+        },
+      },
+    });
+
+    renderScreen({
+      ott: "ott-123",
+      state: "state-123",
+    });
+
+    await flushAsync();
+
+    expect(linkAppleIdMock).toHaveBeenCalledWith(expect.anything(), {
+      identityToken: "apple-id-token",
+      authorizationCode: "apple-auth-code",
+    });
+    expect(clearPendingAppleLinkMock).toHaveBeenCalled();
   });
 });
