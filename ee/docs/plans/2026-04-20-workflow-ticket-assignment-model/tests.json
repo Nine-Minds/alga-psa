@@ -1,0 +1,50 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: ticket workflow schemas export nested picker metadata for `assignment.primary.id` and multi-user picker metadata for `assignment.additional_user_ids`",
+    "implemented": true,
+    "featureIds": ["F001", "F002", "F003", "F011"]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: `tickets.create` with primary user plus additional users persists primary assignment and reconciles additional ticket resources deterministically",
+    "implemented": true,
+    "featureIds": ["F001", "F004", "F005", "F006"]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: `tickets.create` rejects non-empty `additional_user_ids` when `assignment.primary` is null",
+    "implemented": true,
+    "featureIds": ["F001", "F006"]
+  },
+  {
+    "id": "T004",
+    "description": "Unit: `tickets.update_fields` with `patch.assignment` atomically replaces both primary assignment and additional users",
+    "implemented": true,
+    "featureIds": ["F002", "F004", "F005", "F006"]
+  },
+  {
+    "id": "T005",
+    "description": "Unit: `tickets.assign` with team primary plus explicit `additional_user_ids` unions team expansion and explicit users, de-dupes, and excludes the resolved primary assignee",
+    "implemented": true,
+    "featureIds": ["F003", "F004", "F005", "F006", "F007"]
+  },
+  {
+    "id": "T006",
+    "description": "Unit: workflow designer schema resolution preserves picker metadata across nullable `anyOf` wrappers",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T007",
+    "description": "Component: workflow mapping editor renders nested `assignment.primary.id` as a dependency-aware picker",
+    "implemented": true,
+    "featureIds": ["F009", "F012"]
+  },
+  {
+    "id": "T008",
+    "description": "Component: workflow mapping editor renders `assignment.additional_user_ids` as a multi-user picker and preserves selected values",
+    "implemented": true,
+    "featureIds": ["F010", "F012"]
+  }
+]
