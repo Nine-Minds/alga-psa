@@ -219,7 +219,9 @@
         "action": "11111"
       },
       "actions": {
-        "edit": "11111"
+        "edit": "11111",
+        "delete": "11111",
+        "deleting": "11111"
       },
       "defaultApprover": {
         "placeholder": "11111"
@@ -323,7 +325,13 @@
       "feedback": {
         "selectUserError": "11111",
         "saveSuccess": "11111",
-        "saveError": "11111"
+        "saveError": "11111",
+        "deleteSuccess": "11111",
+        "deleteError": "11111"
+      },
+      "deleteDialog": {
+        "title": "11111",
+        "message": "11111"
       }
     },
     "serviceRules": {
@@ -365,7 +373,13 @@
       "feedback": {
         "selectServiceError": "11111",
         "saveSuccess": "11111",
-        "saveError": "11111"
+        "saveError": "11111",
+        "deleteSuccess": "11111",
+        "deleteError": "11111"
+      },
+      "deleteDialog": {
+        "title": "11111",
+        "message": "11111"
       }
     },
     "exceptions": {

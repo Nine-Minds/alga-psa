@@ -219,7 +219,9 @@
         "action": "Action"
       },
       "actions": {
-        "edit": "Edit"
+        "edit": "Edit",
+        "delete": "Delete",
+        "deleting": "Deleting..."
       },
       "defaultApprover": {
         "placeholder": "Select an approver"
@@ -323,7 +325,13 @@
       "feedback": {
         "selectUserError": "Please select a user",
         "saveSuccess": "User hours saved",
-        "saveError": "Failed to save user hours"
+        "saveError": "Failed to save user hours",
+        "deleteSuccess": "User availability deleted",
+        "deleteError": "Failed to delete user availability"
+      },
+      "deleteDialog": {
+        "title": "Delete User Availability",
+        "message": "Are you sure you want to delete availability settings for {{userName}}? This will remove all their configured working hours. This action cannot be undone."
       }
     },
     "serviceRules": {
@@ -365,7 +373,13 @@
       "feedback": {
         "selectServiceError": "Please select a service",
         "saveSuccess": "Service rules saved",
-        "saveError": "Failed to save service rules"
+        "saveError": "Failed to save service rules",
+        "deleteSuccess": "Service rules deleted",
+        "deleteError": "Failed to delete service rules"
+      },
+      "deleteDialog": {
+        "title": "Delete Service Rules",
+        "message": "Are you sure you want to delete the rules for {{serviceName}}? This action cannot be undone."
       }
     },
     "exceptions": {
