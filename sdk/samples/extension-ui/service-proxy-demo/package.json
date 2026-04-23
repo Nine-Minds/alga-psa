@@ -7,7 +7,7 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@alga-psa/extension-runtime": "^0.2.0",
+    "@alga-psa/extension-runtime": "^0.3.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3"
   },

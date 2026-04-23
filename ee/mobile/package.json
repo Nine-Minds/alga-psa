@@ -14,7 +14,7 @@
     "postinstall": "patch-package"
   },
   "dependencies": {
-    "@blocknote/core": "^0.47.0",
+    "@blocknote/core": "^0.47.3",
     "@expo/vector-icons": "^15.1.1",
     "@react-native-community/netinfo": "11.4.1",
     "@react-navigation/bottom-tabs": "^7.12.0",
