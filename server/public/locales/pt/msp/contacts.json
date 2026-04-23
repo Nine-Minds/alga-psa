@@ -253,12 +253,12 @@
     },
     "empty": "No phone numbers yet.",
     "phoneTypes": {
-      "work": "Work",
-      "mobile": "Mobile",
-      "home": "Home",
+      "work": "Trabalho",
+      "mobile": "Telemóvel",
+      "home": "Casa",
       "fax": "Fax",
-      "other": "Other",
-      "custom": "Custom"
+      "other": "Outro",
+      "custom": "Personalizado"
     },
     "row": {
       "title": "Phone {{number}}",
@@ -500,11 +500,11 @@
       "unknownClient": "Unknown Client"
     },
     "phoneTypes": {
-      "work": "Work",
-      "mobile": "Mobile",
-      "home": "Home",
+      "work": "Trabalho",
+      "mobile": "Telemóvel",
+      "home": "Casa",
       "fax": "Fax",
-      "other": "Other"
+      "other": "Outro"
     },
     "fields": {
       "fullName": "Full Name",
