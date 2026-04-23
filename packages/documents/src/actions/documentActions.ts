@@ -31,8 +31,8 @@ import type { IDocumentAssociation, IDocumentAssociationInput, DocumentAssociati
 import { v4 as uuidv4 } from 'uuid';
 import { deleteFile } from './file-actions/fileActions';
 import { NextResponse } from 'next/server';
-import { deleteDocumentContent } from './documentContentActions';
-import { deleteBlockContent } from './documentBlockContentActions';
+// deleteDocumentContent and deleteBlockContent imports removed – content rows are
+// now deleted inline inside the deleteDocument transaction.
 import { deleteEntityWithValidation } from '@alga-psa/core';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { DocumentHandlerRegistry } from '@alga-psa/documents/handlers/DocumentHandlerRegistry';
@@ -785,6 +785,16 @@ export const deleteDocument = withAuth(async (
       }));
 
       await DocumentAssociation.deleteByDocument(trx, document.document_id);
+      // Delete associated content rows while the document still exists so that
+      // downstream auth checks in deleteDocumentContent/deleteBlockContent can
+      // resolve the parent document.  These rows would be orphaned if deleted
+      // after the document row is removed.
+      await trx('document_content')
+        .where({ document_id: documentId, tenant: tenantId })
+        .delete();
+      await trx('document_block_content')
+        .where({ document_id: documentId, tenant: tenantId })
+        .delete();
       await trx('documents').where({ document_id: documentId, tenant: tenantId }).delete();
       deletedDocument = document;
     });
@@ -860,10 +870,8 @@ export const deleteDocument = withAuth(async (
       await cache.delete(deletedDocument.file_id);
     }
 
-    await Promise.all([
-      deleteDocumentContent(documentId),
-      deleteBlockContent(documentId)
-    ]);
+    // Content rows (document_content, document_block_content) were already
+    // deleted inside the transaction above.
 
     return {
       ...result,

@@ -284,9 +284,15 @@ export const archiveAuthorizationBundleAction = withAuth(
 );
 
 export const getAuthorizationBundleDraftEditorAction = withAuth(
-  async (user, { tenant }, bundleId: string): Promise<AuthorizationBundleDraftEditorPayload> => {
+  async (
+    user,
+    { tenant },
+    input: { bundleId: string; createDraftIfMissing?: boolean }
+  ): Promise<AuthorizationBundleDraftEditorPayload> => {
     await assertTierAccess(TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES);
     await assertSecuritySettingsPermission(user, 'read');
+
+    const { bundleId, createDraftIfMissing = true } = input;
 
     const { knex } = await createTenantKnex();
     const bundle = await knex('authorization_bundles')
@@ -306,8 +312,9 @@ export const getAuthorizationBundleDraftEditorAction = withAuth(
     }
 
     const canWrite = await hasPermission(user as any, 'system_settings', 'update');
+    const shouldCreateDraft = canWrite && createDraftIfMissing;
 
-    const draftRevisionId = canWrite
+    const draftRevisionId = shouldCreateDraft
       ? (
           await ensureDraftBundleRevision(knex, {
             tenant,
@@ -557,12 +564,12 @@ export const listAuthorizationBundleAssignmentsAction = withAuth(
         ? knex('users').where({ tenant }).whereIn('user_id', userIds).select<{ user_id: string; first_name: string | null; last_name: string | null; username: string | null; email: string | null }[]>('user_id', 'first_name', 'last_name', 'username', 'email')
         : Promise.resolve([]),
       apiKeyIds.length > 0
-        ? knex('api_keys').where({ tenant }).whereIn('api_key_id', apiKeyIds).select<{ api_key_id: string; key_name: string | null; description: string | null }[]>('api_key_id', 'key_name', 'description')
+        ? knex('api_keys').where({ tenant }).whereIn('api_key_id', apiKeyIds).select<{ api_key_id: string; description: string | null }[]>('api_key_id', 'description')
         : Promise.resolve([]),
       knex('roles').where({ tenant }).orderBy('role_name', 'asc').select<{ role_id: string; role_name: string }[]>('role_id', 'role_name'),
       knex('teams').where({ tenant }).orderBy('team_name', 'asc').select<{ team_id: string; team_name: string }[]>('team_id', 'team_name'),
       knex('users').where({ tenant }).orderBy('username', 'asc').select<{ user_id: string; first_name: string | null; last_name: string | null; username: string | null; email: string | null }[]>('user_id', 'first_name', 'last_name', 'username', 'email'),
-      knex('api_keys').where({ tenant }).orderBy('created_at', 'desc').select<{ api_key_id: string; key_name: string | null; description: string | null }[]>('api_key_id', 'key_name', 'description'),
+      knex('api_keys').where({ tenant }).orderBy('created_at', 'desc').select<{ api_key_id: string; description: string | null }[]>('api_key_id', 'description'),
     ]);
 
     const roleNameById = new Map(roles.map((row) => [row.role_id, row.role_name]));
@@ -574,7 +581,7 @@ export const listAuthorizationBundleAssignmentsAction = withAuth(
       ])
     );
     const apiKeyNameById = new Map(
-      apiKeys.map((row) => [row.api_key_id, row.key_name || row.description || 'Unnamed API key'])
+      apiKeys.map((row) => [row.api_key_id, row.description || 'Unnamed API key'])
     );
 
     return {
@@ -606,7 +613,7 @@ export const listAuthorizationBundleAssignmentsAction = withAuth(
         })),
         api_key: availableApiKeys.map((row) => ({
           id: row.api_key_id,
-          label: row.key_name || row.description || row.api_key_id,
+          label: row.description || row.api_key_id,
         })),
       },
     };
@@ -884,15 +891,18 @@ export const runAuthorizationBundleSimulationAction = withAuth(
     await assertSecuritySettingsPermission(user, 'read');
 
     const { knex } = await createTenantKnex();
-    const principal = await knex('users')
+    const principal = await knex('users as u')
+      .leftJoin('contacts as c', function joinPrincipalContact() {
+        this.on('c.tenant', '=', 'u.tenant').andOn('c.contact_name_id', '=', 'u.contact_id');
+      })
       .where({
-        tenant,
-        user_id: input.principalUserId,
+        'u.tenant': tenant,
+        'u.user_id': input.principalUserId,
       })
       .first<{ user_id: string; user_type: 'internal' | 'client'; client_id: string | null }>(
-        'user_id',
-        'user_type',
-        'client_id'
+        'u.user_id as user_id',
+        'u.user_type as user_type',
+        'c.client_id as client_id'
       );
 
     if (!principal) {

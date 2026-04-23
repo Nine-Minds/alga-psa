@@ -35,7 +35,11 @@ export const createBlockDocument = withAuth(async (
   user,
   { tenant },
   input: CreateBlockDocumentInput
-): Promise<{ document_id: string; content_id: string }> => {
+): Promise<{ document_id: string; content_id: string } | ActionPermissionError> => {
+  if (!await hasPermission(user, 'document', 'create')) {
+    return permissionError('Permission denied: Cannot create documents');
+  }
+
   const { knex } = await createTenantKnex();
 
   try {

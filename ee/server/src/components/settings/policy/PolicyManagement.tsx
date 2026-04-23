@@ -258,11 +258,17 @@ export default function PolicyManagement() {
     }
   }, [hasBundleLibrary, search, includeArchived]);
 
-  const loadEditor = useCallback(async (bundleId: string) => {
+  const loadEditor = useCallback(async (
+    bundleId: string,
+    options?: { createDraftIfMissing?: boolean }
+  ) => {
     setEditorLoading(true);
     setError(null);
     try {
-      const payload = await getAuthorizationBundleDraftEditorAction(bundleId);
+      const payload = await getAuthorizationBundleDraftEditorAction({
+        bundleId,
+        createDraftIfMissing: options?.createDraftIfMissing ?? true,
+      });
       setEditorData(payload);
       setRuleDrafts(buildInitialRuleDrafts(payload));
     } catch (editorError) {
@@ -366,6 +372,17 @@ export default function PolicyManagement() {
       })),
     []
   );
+
+  const editorHasPublishableDraft = useMemo(() => {
+    if (!editorData) {
+      return false;
+    }
+
+    return (
+      !editorData.bundle.publishedRevisionId ||
+      editorData.draftRevisionId !== editorData.bundle.publishedRevisionId
+    );
+  }, [editorData]);
 
   const updateRuleDraft = useCallback((resourceType: string, updates: Partial<RuleDraftFormState>) => {
     setRuleDrafts((current) => {
@@ -482,15 +499,16 @@ export default function PolicyManagement() {
       return;
     }
 
-    setPublishingBundleId(editorData.bundle.bundleId);
+    const bundleId = editorData.bundle.bundleId;
+    setPublishingBundleId(bundleId);
     setError(null);
     try {
-      await publishAuthorizationBundleDraftAction(editorData.bundle.bundleId);
+      await publishAuthorizationBundleDraftAction(bundleId);
       await fetchEntries();
-      if (assignmentBundleId === editorData.bundle.bundleId) {
-        await loadAssignments(editorData.bundle.bundleId);
+      if (assignmentBundleId === bundleId) {
+        await loadAssignments(bundleId);
       }
-      setEditorBundleId(null);
+      await loadEditor(bundleId, { createDraftIfMissing: false });
     } catch (publishError) {
       setError(publishError instanceof Error ? publishError.message : 'Failed to publish bundle draft.');
     } finally {
@@ -564,7 +582,7 @@ export default function PolicyManagement() {
         resetRuleDraft(resourceType);
       }
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : 'Failed to delete draft rule.');
+      setError(deleteError instanceof Error ? deleteError.message : 'Failed to remove rule.');
     }
   };
 
@@ -846,19 +864,32 @@ export default function PolicyManagement() {
               <h3 className="text-lg font-semibold">Bundle Editor</h3>
               {editorData ? (
                 <p className="text-sm text-muted-foreground">
-                  Editing draft revision for <span className="font-medium text-foreground">{editorData.bundle.name}</span>.{' '}
-                  Changes stay in draft until published.
+                  {editorHasPublishableDraft ? (
+                    <>
+                      Editing draft revision for <span className="font-medium text-foreground">{editorData.bundle.name}</span>.{' '}
+                      Changes stay in draft until published.
+                    </>
+                  ) : (
+                    <>
+                      Viewing the published revision for <span className="font-medium text-foreground">{editorData.bundle.name}</span>.{' '}
+                      No active draft revision exists right now.
+                    </>
+                  )}
                 </p>
               ) : null}
             </div>
-            <Button
-              id="authorization-bundle-publish-draft-button"
-              size="sm"
-              onClick={() => void handlePublishDraft()}
-              disabled={!editorData || editorLoading || publishingBundleId === editorData?.bundle.bundleId}
-            >
-              {publishingBundleId === editorData?.bundle.bundleId ? 'Publishing...' : 'Publish Draft'}
-            </Button>
+            {editorHasPublishableDraft ? (
+              <Button
+                id="authorization-bundle-publish-draft-button"
+                size="sm"
+                onClick={() => void handlePublishDraft()}
+                disabled={!editorData || editorLoading || publishingBundleId === editorData?.bundle.bundleId}
+              >
+                {publishingBundleId === editorData?.bundle.bundleId ? 'Publishing...' : 'Publish Draft'}
+              </Button>
+            ) : (
+              <Badge variant="outline">Published</Badge>
+            )}
           </div>
 
           {editorLoading || !editorData ? (
@@ -896,19 +927,42 @@ export default function PolicyManagement() {
                   is_inactive: board.is_inactive,
                 }));
                 const editingExistingRule = Boolean(draft.ruleId);
+                const ruleCountLabel = `${sectionRules.length} ${editorHasPublishableDraft ? 'draft' : 'published'} rule(s)`;
+                const emptyRulesLabel = `No ${editorHasPublishableDraft ? 'draft' : 'published'} rules yet for ${section.label.toLowerCase()}.`;
+                const ruleFormTitle = editorHasPublishableDraft
+                  ? editingExistingRule
+                    ? 'Edit Draft Rule'
+                    : 'Add Draft Rule'
+                  : editingExistingRule
+                    ? 'Edit Published Rule as Draft'
+                    : 'Create Draft Rule';
+                const ruleFormHelper = !editorHasPublishableDraft
+                  ? editingExistingRule
+                    ? 'Saving will create a new draft revision with your changes to this published rule.'
+                    : 'Saving will create a new draft revision for this bundle.'
+                  : null;
+                const saveRuleLabel = editorHasPublishableDraft
+                  ? editingExistingRule
+                    ? 'Save Draft Rule'
+                    : 'Add Draft Rule'
+                  : editingExistingRule
+                    ? 'Save as Draft Change'
+                    : 'Create Draft Rule';
+                const removeRuleLabel = editorHasPublishableDraft ? 'Remove' : 'Remove as Draft Change';
+                const removeRuleTitle = editorHasPublishableDraft
+                  ? 'Remove this draft rule.'
+                  : 'Create a new draft revision that removes this published rule.';
 
                 return (
                   <div key={section.resourceType} className="space-y-3 rounded-md border p-3">
                     <div className="flex items-center justify-between gap-2">
                       <h4 className="font-medium">{section.label}</h4>
-                      <Badge variant="outline">{sectionRules.length} draft rule(s)</Badge>
+                      <Badge variant="outline">{ruleCountLabel}</Badge>
                     </div>
 
                     <div className="space-y-2">
                       {sectionRules.length === 0 ? (
-                        <div className="text-sm text-muted-foreground">
-                          No draft rules yet for {section.label.toLowerCase()}.
-                        </div>
+                        <div className="text-sm text-muted-foreground">{emptyRulesLabel}</div>
                       ) : (
                         sectionRules.map((rule) => (
                           <div
@@ -955,9 +1009,10 @@ export default function PolicyManagement() {
                                 id={`authorization-bundle-delete-rule-${rule.ruleId}`}
                                 size="sm"
                                 variant="outline"
+                                title={removeRuleTitle}
                                 onClick={() => void handleDeleteRule(section.resourceType, rule.ruleId)}
                               >
-                                Remove
+                                {removeRuleLabel}
                               </Button>
                             </div>
                           </div>
@@ -967,8 +1022,11 @@ export default function PolicyManagement() {
 
                     <div className="space-y-3 rounded-md border border-dashed p-3">
                       <div className="flex items-center justify-between gap-2">
-                        <div className="text-sm font-medium">
-                          {editingExistingRule ? 'Edit Draft Rule' : 'Add Draft Rule'}
+                        <div className="space-y-1">
+                          <div className="text-sm font-medium">{ruleFormTitle}</div>
+                          {ruleFormHelper ? (
+                            <div className="text-xs text-muted-foreground">{ruleFormHelper}</div>
+                          ) : null}
                         </div>
                         <Button
                           id={`authorization-bundle-reset-rule-form-${section.resourceType}`}
@@ -1151,7 +1209,7 @@ export default function PolicyManagement() {
                           size="sm"
                           onClick={() => void handleSaveRule(section.resourceType)}
                         >
-                          {editingExistingRule ? 'Save Draft Rule' : 'Add Draft Rule'}
+                          {saveRuleLabel}
                         </Button>
                       </div>
                     </div>

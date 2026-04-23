@@ -13,6 +13,7 @@ import type {
   ITicketResource,
   IDocument,
   ITag,
+  IUserWithRoles,
   TicketResponseState,
 } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
@@ -39,6 +40,16 @@ import { resolveUserTimeZone, normalizeIanaTimeZone } from '@alga-psa/db';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
+import {
+  BuiltinAuthorizationKernelProvider,
+  BundleAuthorizationKernelProvider,
+  RequestLocalAuthorizationCache,
+  createAuthorizationKernel,
+  type AuthorizationRecord,
+  type AuthorizationSubject,
+} from 'server/src/lib/authorization/kernel';
+import { resolveBundleNarrowingRulesForEvaluation } from 'server/src/lib/authorization/bundles/service';
+import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
 import { buildTicketResolutionSlaStageCompletionEvent } from '../lib/workflowTicketSlaStageEvents';
@@ -58,6 +69,136 @@ function getEmailEventChannel(): string {
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into tickets.
+}
+
+async function resolveAuthorizationSubjectForUser(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles
+): Promise<AuthorizationSubject> {
+  const roleRows = await trx('user_roles')
+    .where({ tenant, user_id: user.user_id })
+    .select<{ role_id: string }[]>('role_id')
+    .catch(() => []);
+
+  const teamRows = await trx('team_members')
+    .where({ tenant, user_id: user.user_id })
+    .select<{ team_id: string }[]>('team_id')
+    .catch(() => []);
+
+  const managedRows = await trx('users')
+    .where({ tenant, reports_to: user.user_id })
+    .select<{ user_id: string }[]>('user_id')
+    .catch(() => []);
+
+  return {
+    tenant,
+    userId: user.user_id,
+    userType: user.user_type,
+    roleIds: roleRows.map((row) => row.role_id),
+    teamIds: teamRows.map((row) => row.team_id),
+    managedUserIds: managedRows.map((row) => row.user_id),
+    clientId: user.clientId ?? null,
+    portfolioClientIds: [],
+  };
+}
+
+function toTicketAuthorizationRecord(ticket: Partial<ITicket>): AuthorizationRecord {
+  return {
+    id: ticket.ticket_id ?? null,
+    ownerUserId: ticket.entered_by ?? null,
+    assignedUserIds: ticket.assigned_to ? [ticket.assigned_to] : [],
+    clientId: ticket.client_id ?? null,
+    boardId: ticket.board_id ?? null,
+    teamIds: ticket.assigned_team_id ? [ticket.assigned_team_id] : [],
+  };
+}
+
+async function resolveClientSelectedBoardIds(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles
+): Promise<string[] | undefined> {
+  if (user.user_type !== 'client') {
+    return undefined;
+  }
+
+  if (!user.contact_id) {
+    return [];
+  }
+
+  try {
+    const visibilityContext = await getClientContactVisibilityContext(trx, tenant, user.contact_id);
+    return visibilityContext.visibleBoardIds ?? undefined;
+  } catch {
+    return [];
+  }
+}
+
+async function createTicketAuthorizationContext(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles
+): Promise<{
+  authorizationSubject: AuthorizationSubject;
+  authorizationKernel: ReturnType<typeof createAuthorizationKernel>;
+  selectedBoardIds: string[] | undefined;
+  requestCache: RequestLocalAuthorizationCache;
+}> {
+  const authorizationSubject = await resolveAuthorizationSubjectForUser(trx, tenant, user);
+  const selectedBoardIds = await resolveClientSelectedBoardIds(trx, tenant, user);
+  const relationshipRules =
+    selectedBoardIds === undefined ? [] : [{ template: 'selected_boards' as const }];
+
+  return {
+    authorizationSubject,
+    authorizationKernel: createAuthorizationKernel({
+      builtinProvider: new BuiltinAuthorizationKernelProvider({
+        relationshipRules,
+      }),
+      bundleProvider: new BundleAuthorizationKernelProvider({
+        resolveRules: async (input) => {
+          try {
+            return await resolveBundleNarrowingRulesForEvaluation(trx, input);
+          } catch {
+            return [];
+          }
+        },
+      }),
+      rbacEvaluator: async () => true,
+    }),
+    selectedBoardIds,
+    requestCache: new RequestLocalAuthorizationCache(),
+  };
+}
+
+async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?: string | null }>(
+  trx: Knex.Transaction,
+  context: Awaited<ReturnType<typeof createTicketAuthorizationContext>>,
+  tickets: T[]
+): Promise<T[]> {
+  const decisions = await Promise.all(
+    tickets.map((ticket) => {
+      if (!ticket.ticket_id) {
+        return Promise.resolve({ allowed: false });
+      }
+
+      return context.authorizationKernel.authorizeResource({
+        subject: context.authorizationSubject,
+        resource: {
+          type: 'ticket',
+          action: 'read',
+          id: ticket.ticket_id,
+        },
+        record: toTicketAuthorizationRecord(ticket),
+        selectedBoardIds: context.selectedBoardIds,
+        requestCache: context.requestCache,
+        knex: trx,
+      });
+    })
+  );
+
+  return tickets.filter((_, index) => decisions[index]?.allowed);
 }
 
 async function updateTicketResponseStateFromComment(
@@ -188,6 +329,17 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 
     if (!ticket) {
       throw new Error('Ticket not found');
+    }
+
+    const authorizationContext = await createTicketAuthorizationContext(
+      trx,
+      tenant,
+      user as IUserWithRoles
+    );
+    const [authorizedTicket] = await filterAuthorizedTickets(trx, authorizationContext, [ticket]);
+
+    if (!authorizedTicket) {
+      throw new Error('Permission denied: Cannot view ticket');
     }
 
     // Fetch all related data in parallel
@@ -573,7 +725,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       .where({ tenant, master_ticket_id: bundleRootId })
       .first();
 
-    const bundleChildren = await trx('tickets as ct')
+    const rawBundleChildren = await trx('tickets as ct')
       .select(
         'ct.ticket_id',
         'ct.ticket_number',
@@ -582,7 +734,11 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         'comp.client_name',
         'ct.status_id',
         'ct.entered_at',
-        'ct.updated_at'
+        'ct.updated_at',
+        'ct.entered_by',
+        'ct.assigned_to',
+        'ct.board_id',
+        'ct.assigned_team_id'
       )
       .leftJoin('clients as comp', function() {
         this.on('ct.client_id', 'comp.client_id')
@@ -591,7 +747,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       .where({ 'ct.tenant': tenant, 'ct.master_ticket_id': bundleRootId })
       .orderBy('ct.updated_at', 'desc');
 
-    const bundleMaster = masterTicketId
+    const rawBundleMaster = masterTicketId
       ? await trx('tickets as mt')
         .select(
           'mt.ticket_id',
@@ -601,7 +757,11 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           'comp.client_name',
           'mt.status_id',
           'mt.entered_at',
-          'mt.updated_at'
+          'mt.updated_at',
+          'mt.entered_by',
+          'mt.assigned_to',
+          'mt.board_id',
+          'mt.assigned_team_id'
         )
         .leftJoin('clients as comp', function() {
           this.on('mt.client_id', 'comp.client_id')
@@ -611,8 +771,14 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         .first()
       : null;
 
+    const bundleChildren = await filterAuthorizedTickets(trx, authorizationContext, rawBundleChildren);
+    const [bundleMaster] = rawBundleMaster
+      ? await filterAuthorizedTickets(trx, authorizationContext, [rawBundleMaster])
+      : [null];
+
     const isBundleChild = Boolean(masterTicketId);
     const isBundleMaster = !isBundleChild && bundleChildren.length > 0;
+    const authorizedBundleChildIds = new Set(bundleChildren.map((child) => child.ticket_id).filter(Boolean));
 
     // Aggregated child inbound replies surfaced on master (view-only; not duplicated onto master)
     const aggregatedChildClientComments = isBundleMaster
@@ -637,6 +803,12 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         .andWhere('ct.master_ticket_id', ticketId)
         .orderBy('c.created_at', 'desc')
         .limit(200)
+      : [];
+
+    const filteredAggregatedChildClientComments = isBundleMaster
+      ? aggregatedChildClientComments.filter((comment: any) =>
+          typeof comment.child_ticket_id === 'string' && authorizedBundleChildIds.has(comment.child_ticket_id)
+        )
       : [];
 
     // Track ticket view analytics
@@ -677,7 +849,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         masterTicket: bundleMaster,
         children: bundleChildren
       },
-      aggregatedChildClientComments,
+      aggregatedChildClientComments: filteredAggregatedChildClientComments,
       comments,
       documents,
       client,
@@ -1072,39 +1244,6 @@ function applyTicketListSort(
 }
 
 /**
- * Get the ORDER BY clause as a raw SQL string for use in window functions.
- * Mirrors the logic in applyTicketListSort but returns a string instead of modifying a query.
- */
-function getTicketListSortOrderByClause(validatedFilters: ITicketListFilters): string {
-    const sortBy = validatedFilters.sortBy ?? 'entered_at';
-    const sortDirection: 'asc' | 'desc' = validatedFilters.sortDirection ?? 'desc';
-    const sortColumnMap: Record<string, { column?: string; rawExpression?: string }> = {
-      ticket_number: { column: 't.ticket_number' },
-      title: { column: 't.title' },
-      status_name: { column: 's.name' },
-      priority_name: { column: 'p.priority_name' },
-      board_name: { column: 'c.board_name' },
-      category_name: { column: 'cat.category_name' },
-      client_name: { column: 'comp.client_name' },
-      entered_at: { column: 't.entered_at' },
-      entered_by_name: { rawExpression: "COALESCE(CONCAT(u.first_name, ' ', u.last_name), '')" },
-      due_date: { column: 't.due_date' }
-    };
-    const selectedSort = sortColumnMap[sortBy] || sortColumnMap.entered_at;
-
-    let primarySort: string;
-    if (selectedSort.rawExpression) {
-      primarySort = `${selectedSort.rawExpression} ${sortDirection}`;
-    } else if (selectedSort.column) {
-      primarySort = `${selectedSort.column} ${sortDirection}`;
-    } else {
-      primarySort = `t.entered_at ${sortDirection}`;
-    }
-
-    return `${primarySort}, t.ticket_id DESC`;
-}
-
-/**
  * Validate and clean filter values, clearing "$undefined" string sentinel values.
  */
 function cleanFilterValues(validatedFilters: ITicketListFilters): ITicketListFilters {
@@ -1148,13 +1287,13 @@ export const getTicketsForList = withAuth(async (
 
     // Build base query for filtering
     const { builder: baseQuery } = await buildTicketListBaseQuery(trx, tenant, user, validatedFilters);
+    const authorizationContext = await createTicketAuthorizationContext(
+      trx,
+      tenant,
+      user as IUserWithRoles
+    );
 
-    // Get total count
-    const countQuery = baseQuery.clone().clearSelect().clearOrder().count('t.ticket_id as count');
-    const [{ count }] = await countQuery;
-    const totalCount = parseInt(String(count), 10);
-
-    // Build query for paginated results
+    // Build query for results before pagination so authorization can narrow rows first.
     // R2: Select explicit columns instead of t.* to reduce response size
     // R3: Use pre-aggregated LEFT JOINs instead of correlated subqueries
     const paginatedQuery = baseQuery
@@ -1225,14 +1364,16 @@ export const getTicketsForList = withAuth(async (
         trx.raw("COALESCE(ags.additional_agents, '[]'::json) as additional_agents"),
       );
 
-    const query = applyTicketListSort(paginatedQuery, validatedFilters)
-      .limit(pageSize)
-      .offset((page - 1) * pageSize);
-
-    const tickets = await query;
+    const tickets = await applyTicketListSort(paginatedQuery, validatedFilters);
+    const authorizedTickets = await filterAuthorizedTickets(trx, authorizationContext, tickets);
+    const totalCount = authorizedTickets.length;
+    const paginatedAuthorizedTickets = authorizedTickets.slice(
+      (page - 1) * pageSize,
+      (page - 1) * pageSize + pageSize
+    );
 
     // Transform and validate the data
-    const ticketListItems = tickets.map((ticket: any): ITicketListItem => {
+    const ticketListItems = paginatedAuthorizedTickets.map((ticket: any): ITicketListItem => {
       const {
         status_id,
         priority_id,
@@ -1405,9 +1546,21 @@ export const getAllMatchingTicketIds = withAuth(async (
     );
 
     const { builder: baseQuery } = await buildTicketListBaseQuery(trx, tenant, user, validatedFilters);
+    const authorizationContext = await createTicketAuthorizationContext(
+      trx,
+      tenant,
+      user as IUserWithRoles
+    );
 
-    const rows = await baseQuery.clone().clearSelect().clearOrder().select('t.ticket_id');
-    return rows.map((row: { ticket_id: string }) => row.ticket_id);
+    const rows = await baseQuery
+      .clone()
+      .clearSelect()
+      .clearOrder()
+      .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.board_id', 't.assigned_team_id');
+    const authorizedRows = await filterAuthorizedTickets(trx, authorizationContext, rows);
+    return authorizedRows
+      .map((row: { ticket_id?: string | null }) => row.ticket_id)
+      .filter((ticketId): ticketId is string => typeof ticketId === 'string' && ticketId.length > 0);
   });
 });
 
@@ -2298,6 +2451,12 @@ export const fetchBundleChildrenForMaster = withAuth(async (
       throw new Error('Permission denied: Cannot view tickets');
     }
 
+    const authorizationContext = await createTicketAuthorizationContext(
+      trx,
+      tenant,
+      user as IUserWithRoles
+    );
+
     const rows = await trx('tickets as t')
       .leftJoin('tickets as mt', function () {
         this.on('t.master_ticket_id', 'mt.ticket_id')
@@ -2352,7 +2511,9 @@ export const fetchBundleChildrenForMaster = withAuth(async (
       .where({ 't.tenant': tenant, 't.master_ticket_id': masterTicketId })
       .orderBy('t.updated_at', 'desc');
 
-    return rows.map((ticket: any): ITicketListItem => {
+    const authorizedRows = await filterAuthorizedTickets(trx, authorizationContext, rows);
+
+    return authorizedRows.map((ticket: any): ITicketListItem => {
       const {
         status_id,
         priority_id,
@@ -2448,50 +2609,40 @@ export const getAdjacentTicketIds = withAuth(async (
     );
 
     const { builder: baseQuery } = await buildTicketListBaseQuery(trx, tenant, user, validatedFilters);
+    const authorizationContext = await createTicketAuthorizationContext(
+      trx,
+      tenant,
+      user as IUserWithRoles
+    );
 
-    // R6: Use window functions (LAG/LEAD/ROW_NUMBER) to find adjacent tickets
-    // in a single query instead of fetching ALL matching IDs into memory.
-    const sortOrderBy = getTicketListSortOrderByClause(validatedFilters);
+    const orderedRows = await applyTicketListSort(
+      baseQuery.clone().clearSelect().select('t.ticket_id', 't.ticket_number', 't.entered_by', 't.assigned_to', 't.client_id', 't.board_id', 't.assigned_team_id'),
+      validatedFilters
+    );
+    const authorizedRows = await filterAuthorizedTickets(trx, authorizationContext, orderedRows);
+    const currentIndex = authorizedRows.findIndex((row) => row.ticket_id === currentTicketId);
 
-    const innerQuery = baseQuery.clone()
-      .select(
-        't.ticket_id',
-        't.ticket_number',
-        trx.raw(`LAG(t.ticket_id) OVER (ORDER BY ${sortOrderBy}) as prev_ticket_id`),
-        trx.raw(`LAG(t.ticket_number) OVER (ORDER BY ${sortOrderBy}) as prev_ticket_number`),
-        trx.raw(`LEAD(t.ticket_id) OVER (ORDER BY ${sortOrderBy}) as next_ticket_id`),
-        trx.raw(`LEAD(t.ticket_number) OVER (ORDER BY ${sortOrderBy}) as next_ticket_number`),
-        trx.raw(`ROW_NUMBER() OVER (ORDER BY ${sortOrderBy}) as rn`),
-        trx.raw(`COUNT(*) OVER () as total_count`)
-      );
-
-    const results = await trx
-      .select('*')
-      .from(innerQuery.as('windowed'))
-      .where('ticket_id', currentTicketId);
-
-    if (results.length === 0) {
-      // Current ticket is not in the filtered list (possibly status changed, etc.)
-      // Fall back to a count-only query for total
-      const [{ count }] = await baseQuery.clone().clearSelect().clearOrder().count('t.ticket_id as count');
+    if (currentIndex === -1) {
       return {
         prevTicketId: null,
         nextTicketId: null,
         prevTicketNumber: null,
         nextTicketNumber: null,
         currentPosition: 0,
-        totalCount: parseInt(String(count), 10),
+        totalCount: authorizedRows.length,
       };
     }
 
-    const row = results[0];
+    const prevRow = currentIndex > 0 ? authorizedRows[currentIndex - 1] : null;
+    const nextRow = currentIndex < authorizedRows.length - 1 ? authorizedRows[currentIndex + 1] : null;
+
     return {
-      prevTicketId: row.prev_ticket_id ?? null,
-      nextTicketId: row.next_ticket_id ?? null,
-      prevTicketNumber: row.prev_ticket_number ?? null,
-      nextTicketNumber: row.next_ticket_number ?? null,
-      currentPosition: parseInt(String(row.rn), 10),
-      totalCount: parseInt(String(row.total_count), 10),
+      prevTicketId: prevRow?.ticket_id ?? null,
+      nextTicketId: nextRow?.ticket_id ?? null,
+      prevTicketNumber: prevRow?.ticket_number ?? null,
+      nextTicketNumber: nextRow?.ticket_number ?? null,
+      currentPosition: currentIndex + 1,
+      totalCount: authorizedRows.length,
     };
   });
 });
