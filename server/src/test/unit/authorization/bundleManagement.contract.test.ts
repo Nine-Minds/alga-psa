@@ -12,6 +12,7 @@ describe('EE bundle management contracts', () => {
   const uiSource = readSource('ee/server/src/components/settings/policy/PolicyManagement.tsx');
 
   it('T024: library/editor/assignment flows remain draft-first and publish via explicit revision switch', () => {
+    expect(actionSource).toContain('export const createAuthorizationBundleAction = withAuth(');
     expect(actionSource).toContain('export const getAuthorizationBundleDraftEditorAction = withAuth(');
     expect(actionSource).toContain('await ensureDraftBundleRevision(knex, {');
     expect(actionSource).toContain('const draft = await ensureDraftBundleRevision(trx, {');
@@ -21,8 +22,11 @@ describe('EE bundle management contracts', () => {
     expect(actionSource).toContain('await publishBundleRevision(trx, {');
     expect(actionSource).toContain('export const createAuthorizationBundleAssignmentAction = withAuth(');
     expect(actionSource).toContain('export const setAuthorizationBundleAssignmentStatusAction = withAuth(');
+    expect(uiSource).toContain('id="authorization-bundle-create-button"');
+    expect(uiSource).toContain('id="authorization-bundle-publish-draft-button"');
     expect(uiSource).toContain('Revision summary: {editorData.revisionChangeSummary}');
     expect(uiSource).toContain('listAuthorizationBundleAssignmentsAction(bundleId)');
+    expect(uiSource).toContain('id="authorization-bundle-assignment-add-button"');
   });
 
   it('T025: UI and action payloads include human-readable rule/revision summaries by resource section', () => {
@@ -34,6 +38,14 @@ describe('EE bundle management contracts', () => {
     expect(uiSource).toContain("{ label: 'Assets', resourceType: 'asset' }");
     expect(uiSource).toContain("{ label: 'Billing', resourceType: 'billing' }");
     expect(uiSource).toContain('function summarizeRule(rule: {');
+    expect(uiSource).toContain('Selected client scopes');
+    expect(uiSource).toContain('Selected board scopes');
+    expect(uiSource).toContain('Redacted fields');
+    expect(actionSource).toContain('selectedClientIds: string[];');
+    expect(actionSource).toContain('selectedBoardIds: string[];');
+    expect(actionSource).toContain('redactedFields: string[];');
+    expect(actionSource).toContain('availableClients: Array<{');
+    expect(actionSource).toContain('availableBoards: Array<{');
     expect(actionSource).toContain('const revisionChangeSummary = bundle.published_revision_id');
   });
 

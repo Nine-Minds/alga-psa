@@ -57,10 +57,24 @@ export interface AuthorizationBundleDraftEditorPayload {
     templateKey: string;
     constraintKey: string | null;
     config: Record<string, unknown>;
+    selectedClientIds: string[];
+    selectedBoardIds: string[];
+    redactedFields: string[];
     position: number;
   }>;
   availableTemplates: string[];
   availableConstraints: string[];
+  availableClients: Array<{
+    client_id: string;
+    client_name: string;
+    is_inactive: boolean;
+    client_type: 'company' | 'individual' | null;
+  }>;
+  availableBoards: Array<{
+    board_id: string;
+    board_name: string;
+    is_inactive: boolean;
+  }>;
   revisionChangeSummary: string;
 }
 
@@ -73,6 +87,7 @@ export interface AuthorizationBundleAssignmentViewerPayload {
     targetLabel: string;
     status: 'active' | 'disabled';
   }>;
+  availableTargets: Record<'role' | 'team' | 'user' | 'api_key', AuthorizationSimulationOption[]>;
 }
 
 export interface AuthorizationSimulationOption {
@@ -99,6 +114,20 @@ const SUPPORTED_SIMULATION_RESOURCE_TYPES = new Set([
   'asset',
   'billing',
 ]);
+
+function normalizeRuleIdList(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return [
+    ...new Set(
+      value
+        .map((item) => (typeof item === 'string' ? item.trim() : ''))
+        .filter((item) => item.length > 0)
+    ),
+  ];
+}
 
 export interface AuthorizationBundleAuditEvent {
   eventType:
@@ -301,17 +330,37 @@ export const getAuthorizationBundleDraftEditorAction = withAuth(
       throw new Error('Draft or published revision not found for bundle in tenant scope.');
     }
 
-    const rules = await listBundleRulesForRevision(knex, {
-      tenant,
-      revisionId: draftRevisionId,
-    });
-
-    const publishedRules = bundle.published_revision_id
-      ? await listBundleRulesForRevision(knex, {
-          tenant,
-          revisionId: bundle.published_revision_id,
-        })
-      : [];
+    const [rules, publishedRules, availableClients, availableBoards] = await Promise.all([
+      listBundleRulesForRevision(knex, {
+        tenant,
+        revisionId: draftRevisionId,
+      }),
+      bundle.published_revision_id
+        ? listBundleRulesForRevision(knex, {
+            tenant,
+            revisionId: bundle.published_revision_id,
+          })
+        : Promise.resolve([]),
+      knex('clients')
+        .where({ tenant })
+        .orderBy('client_name', 'asc')
+        .select<
+          Array<{
+            client_id: string;
+            client_name: string;
+            is_inactive: boolean | null;
+            client_type: 'company' | 'individual' | null;
+          }>
+        >('client_id', 'client_name', 'is_inactive', 'client_type'),
+      knex('boards')
+        .where({ tenant })
+        .orderBy('board_name', 'asc')
+        .select<Array<{ board_id: string; board_name: string; is_inactive: boolean | null }>>(
+          'board_id',
+          'board_name',
+          'is_inactive'
+        ),
+    ]);
 
     const fingerprint = (rule: {
       resourceType: string;
@@ -359,9 +408,32 @@ export const getAuthorizationBundleDraftEditorAction = withAuth(
         publishedRevisionId: bundle.published_revision_id,
       },
       draftRevisionId,
-      rules,
+      rules: rules.map((rule) => ({
+        ...rule,
+        selectedClientIds: [
+          ...new Set([
+            ...normalizeRuleIdList(rule.config?.selectedClientIds),
+            ...normalizeRuleIdList(rule.config?.selected_client_ids),
+          ]),
+        ],
+        selectedBoardIds: [
+          ...new Set([
+            ...normalizeRuleIdList(rule.config?.selectedBoardIds),
+            ...normalizeRuleIdList(rule.config?.selected_board_ids),
+          ]),
+        ],
+        redactedFields: normalizeRuleIdList(rule.config?.redactedFields),
+      })),
       availableTemplates: [...AUTHORIZATION_TEMPLATE_CATALOG],
       availableConstraints: [...AUTHORIZATION_CONSTRAINT_CATALOG],
+      availableClients: availableClients.map((client) => ({
+        ...client,
+        is_inactive: client.is_inactive === true,
+      })),
+      availableBoards: availableBoards.map((board) => ({
+        ...board,
+        is_inactive: board.is_inactive === true,
+      })),
       revisionChangeSummary,
     };
   }
@@ -474,7 +546,7 @@ export const listAuthorizationBundleAssignmentsAction = withAuth(
       .filter((assignment) => assignment.target_type === 'api_key')
       .map((assignment) => assignment.target_id);
 
-    const [roles, teams, users, apiKeys] = await Promise.all([
+    const [roles, teams, users, apiKeys, availableRoles, availableTeams, availableUsers, availableApiKeys] = await Promise.all([
       roleIds.length > 0
         ? knex('roles').where({ tenant }).whereIn('role_id', roleIds).select<{ role_id: string; role_name: string }[]>('role_id', 'role_name')
         : Promise.resolve([]),
@@ -487,6 +559,10 @@ export const listAuthorizationBundleAssignmentsAction = withAuth(
       apiKeyIds.length > 0
         ? knex('api_keys').where({ tenant }).whereIn('api_key_id', apiKeyIds).select<{ api_key_id: string; key_name: string | null; description: string | null }[]>('api_key_id', 'key_name', 'description')
         : Promise.resolve([]),
+      knex('roles').where({ tenant }).orderBy('role_name', 'asc').select<{ role_id: string; role_name: string }[]>('role_id', 'role_name'),
+      knex('teams').where({ tenant }).orderBy('team_name', 'asc').select<{ team_id: string; team_name: string }[]>('team_id', 'team_name'),
+      knex('users').where({ tenant }).orderBy('username', 'asc').select<{ user_id: string; first_name: string | null; last_name: string | null; username: string | null; email: string | null }[]>('user_id', 'first_name', 'last_name', 'username', 'email'),
+      knex('api_keys').where({ tenant }).orderBy('created_at', 'desc').select<{ api_key_id: string; key_name: string | null; description: string | null }[]>('api_key_id', 'key_name', 'description'),
     ]);
 
     const roleNameById = new Map(roles.map((row) => [row.role_id, row.role_name]));
@@ -521,6 +597,18 @@ export const listAuthorizationBundleAssignmentsAction = withAuth(
           status: assignment.status,
         };
       }),
+      availableTargets: {
+        role: availableRoles.map((row) => ({ id: row.role_id, label: row.role_name })),
+        team: availableTeams.map((row) => ({ id: row.team_id, label: row.team_name })),
+        user: availableUsers.map((row) => ({
+          id: row.user_id,
+          label: [row.first_name, row.last_name].filter(Boolean).join(' ').trim() || row.username || row.email || row.user_id,
+        })),
+        api_key: availableApiKeys.map((row) => ({
+          id: row.api_key_id,
+          label: row.key_name || row.description || row.api_key_id,
+        })),
+      },
     };
   }
 );
@@ -628,22 +716,6 @@ export const listAuthorizationSimulationRecordsAction = withAuth(
 function normalizeBundleRules(
   rules: Awaited<ReturnType<typeof listBundleRulesForRevision>>
 ): BundleNarrowingRule[] {
-  const normalizeRuleIdList = (value: unknown): string[] | undefined => {
-    if (!Array.isArray(value)) {
-      return undefined;
-    }
-
-    const normalized = [
-      ...new Set(
-        value
-          .map((item) => (typeof item === 'string' ? item.trim() : ''))
-          .filter((item) => item.length > 0)
-      ),
-    ];
-
-    return normalized.length > 0 ? normalized : [];
-  };
-
   return rules.map((rule) => ({
     id: rule.ruleId,
     resource: rule.resourceType,
@@ -656,12 +728,18 @@ function normalizeBundleRules(
     redactedFields: Array.isArray(rule.config?.redactedFields)
       ? (rule.config.redactedFields as string[])
       : [],
-    selectedClientIds:
-      normalizeRuleIdList(rule.config?.selectedClientIds) ??
-      normalizeRuleIdList(rule.config?.selected_client_ids),
-    selectedBoardIds:
-      normalizeRuleIdList(rule.config?.selectedBoardIds) ??
-      normalizeRuleIdList(rule.config?.selected_board_ids),
+    selectedClientIds: [
+      ...new Set([
+        ...normalizeRuleIdList(rule.config?.selectedClientIds),
+        ...normalizeRuleIdList(rule.config?.selected_client_ids),
+      ]),
+    ],
+    selectedBoardIds: [
+      ...new Set([
+        ...normalizeRuleIdList(rule.config?.selectedBoardIds),
+        ...normalizeRuleIdList(rule.config?.selected_board_ids),
+      ]),
+    ],
   }));
 }
 
