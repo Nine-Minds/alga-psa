@@ -234,7 +234,11 @@
         "noDefaultLocation": "Default client must have a default location configured to send portal invitations.",
         "noLocationEmail": "Default client's location must have a contact email configured.",
         "noBaseUrl": "Base URL is not configured for portal invitations.",
-        "passwordTooShort": "Password must be at least 8 characters long."
+        "passwordTooShort": "Password must be at least 8 characters long.",
+        "roleRequired": "Role is required",
+        "invalidRole": "Selected role is invalid",
+        "licenseLimitReached": "You've reached your MSP user license limit.",
+        "soloPlanLimit": "Solo plan is limited to 1 user. Upgrade to Pro to add more users."
       }
     }
   },
@@ -293,6 +297,9 @@
         "removeRoleFailed": "Failed to remove role. Please try again.",
         "updateUserNotFound": "Failed to update user. User not found.",
         "updateFailed": "Failed to update user. Please try again.",
+        "emailAlreadyExists": "A user with this email address already exists",
+        "reportsToSelf": "A user cannot report to themselves",
+        "reportsToCycle": "This would create a circular reporting chain",
         "passwordTooShort": "Password must be at least 8 characters long",
         "passwordChangeFailed": "Failed to change password",
         "passwordChangeError": "An error occurred while changing password"
@@ -1360,7 +1367,11 @@
       },
       "error": {
         "userNotFound": "User not found",
-        "fillRequiredFields": "Please fill in all required fields"
+        "fillRequiredFields": "Please fill in all required fields",
+        "saveFailed": "Failed to save profile",
+        "emailAlreadyExists": "A user with this email address already exists",
+        "reportsToSelf": "A user cannot report to themselves",
+        "reportsToCycle": "This would create a circular reporting chain"
       }
     },
     "validation": {

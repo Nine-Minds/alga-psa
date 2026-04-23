@@ -122,7 +122,7 @@ export function ClientProfile() {
 
     try {
       // Update user profile
-      await updateUser(user.user_id, {
+      const result = await updateUser(user.user_id, {
         first_name: firstName,
         last_name: lastName,
         email: email,
@@ -130,16 +130,21 @@ export function ClientProfile() {
         timezone: timezone
       });
 
+      if (!result.success) {
+        const errorKeys: Record<typeof result.code, string> = {
+          EMAIL_ALREADY_EXISTS: 'profile.messages.emailAlreadyExists',
+          REPORTS_TO_SELF: 'profile.messages.reportsToSelf',
+          REPORTS_TO_CYCLE: 'profile.messages.reportsToCycle',
+        };
+        toast.error(tProfile(errorKeys[result.code], { defaultValue: result.error }));
+        return;
+      }
+
       // Show success toast
       toast.success(tProfile('profile.messages.updateSuccess'));
 
-      // Note: Notification preferences are managed separately through their own UI components:
-      // - InternalNotificationPreferences handles internal notification settings
-      // - Email notification preferences should be managed through their dedicated section
-
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : tProfile('profile.messages.updateError', 'Failed to save profile');
-      setError(errorMessage);
+      toast.error(tProfile('profile.messages.updateError', 'Failed to save profile'));
       handleError(err, tProfile('profile.messages.updateError', 'Failed to save profile'));
     }
   };

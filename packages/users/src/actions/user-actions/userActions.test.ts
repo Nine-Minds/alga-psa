@@ -188,6 +188,7 @@ describe('addUser', () => {
 
     expect(result).toEqual({
       success: false,
+      code: 'SOLO_PLAN_LIMIT',
       error: 'Solo plan is limited to 1 user. Upgrade to Pro to add more users.',
     });
   });
@@ -231,12 +232,15 @@ describe('addUser', () => {
 
     const updateUser = await loadUpdateUser();
 
-    await expect(
-      updateUser(actingUser, tenantContext, actingUser.user_id, {
-        email: 'duplicate@example.com',
-      })
-    ).rejects.toThrow('A user with this email address already exists');
+    const result = await updateUser(actingUser, tenantContext, actingUser.user_id, {
+      email: 'duplicate@example.com',
+    });
 
+    expect(result).toEqual({
+      success: false,
+      code: 'EMAIL_ALREADY_EXISTS',
+      error: 'A user with this email address already exists',
+    });
     expect(userUpdateMock).not.toHaveBeenCalled();
   });
 
@@ -258,8 +262,11 @@ describe('addUser', () => {
       })
     );
     expect(result).toEqual({
-      user_id: 'user-1',
-      email: 'updated@example.com',
+      success: true,
+      user: {
+        user_id: 'user-1',
+        email: 'updated@example.com',
+      },
     });
   });
 });

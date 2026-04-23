@@ -341,6 +341,9 @@
     "messages": {
       "updateSuccess": "Profile updated successfully",
       "updateError": "Failed to update profile",
+      "emailAlreadyExists": "A user with this email address already exists",
+      "reportsToSelf": "A user cannot report to themselves",
+      "reportsToCycle": "This would create a circular reporting chain",
       "photoUploaded": "Photo uploaded successfully",
       "photoRemoved": "Photo removed successfully",
       "userNotFound": "User not found",
@@ -446,6 +449,9 @@
       "permissionError": "You do not have permission to manage users",
       "loadError": "Failed to load users",
       "emailExists": "A contact with this email address already exists",
+      "emailAlreadyExists": "A user with this email address already exists",
+      "reportsToSelf": "A user cannot report to themselves",
+      "reportsToCycle": "This would create a circular reporting chain",
       "createError": "Failed to create user",
       "deleteError": "Failed to delete user"
     },

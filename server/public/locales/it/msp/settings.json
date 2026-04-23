@@ -234,7 +234,11 @@
         "noDefaultLocation": "Il client predefinito deve avere una sede predefinita configurata per inviare inviti al portale.",
         "noLocationEmail": "La sede del client predefinito deve avere un indirizzo e-mail di contatto configurato.",
         "noBaseUrl": "L'URL di base non è configurato per gli inviti al portale.",
-        "passwordTooShort": "La password deve contenere almeno 8 caratteri."
+        "passwordTooShort": "La password deve contenere almeno 8 caratteri.",
+        "roleRequired": "Il ruolo è obbligatorio",
+        "invalidRole": "Il ruolo selezionato non è valido",
+        "licenseLimitReached": "Hai raggiunto il limite di licenze utente MSP.",
+        "soloPlanLimit": "Il piano Solo è limitato a 1 utente. Passa a Pro per aggiungere altri utenti."
       }
     }
   },
@@ -295,7 +299,10 @@
         "updateFailed": "Impossibile aggiornare l'utente. Riprovi.",
         "passwordTooShort": "La password deve contenere almeno 8 caratteri",
         "passwordChangeFailed": "Impossibile modificare la password",
-        "passwordChangeError": "Si e verificato un errore durante la modifica della password"
+        "passwordChangeError": "Si e verificato un errore durante la modifica della password",
+        "emailAlreadyExists": "Esiste già un utente con questo indirizzo e-mail",
+        "reportsToSelf": "Un utente non può riferire a se stesso",
+        "reportsToCycle": "Questo creerebbe una catena di riporto circolare"
       }
     }
   },
@@ -1359,7 +1366,11 @@
       },
       "error": {
         "userNotFound": "Utente non trovato",
-        "fillRequiredFields": "Compili tutti i campi obbligatori"
+        "fillRequiredFields": "Compili tutti i campi obbligatori",
+        "saveFailed": "Impossibile salvare il profilo",
+        "emailAlreadyExists": "Esiste già un utente con questo indirizzo e-mail",
+        "reportsToSelf": "Un utente non può riferire a se stesso",
+        "reportsToCycle": "Questo creerebbe una catena di riporto circolare"
       }
     },
     "validation": {

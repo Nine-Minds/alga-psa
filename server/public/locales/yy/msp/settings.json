@@ -234,7 +234,11 @@
         "noDefaultLocation": "55555",
         "noLocationEmail": "55555",
         "noBaseUrl": "55555",
-        "passwordTooShort": "55555"
+        "passwordTooShort": "55555",
+        "roleRequired": "55555",
+        "invalidRole": "55555",
+        "licenseLimitReached": "55555",
+        "soloPlanLimit": "55555"
       }
     }
   },
@@ -295,7 +299,10 @@
         "updateFailed": "55555",
         "passwordTooShort": "55555",
         "passwordChangeFailed": "55555",
-        "passwordChangeError": "55555"
+        "passwordChangeError": "55555",
+        "emailAlreadyExists": "55555",
+        "reportsToSelf": "55555",
+        "reportsToCycle": "55555"
       }
     }
   },
@@ -1360,7 +1367,11 @@
       },
       "error": {
         "userNotFound": "55555",
-        "fillRequiredFields": "55555"
+        "fillRequiredFields": "55555",
+        "saveFailed": "55555",
+        "emailAlreadyExists": "55555",
+        "reportsToSelf": "55555",
+        "reportsToCycle": "55555"
       }
     },
     "validation": {

@@ -234,7 +234,11 @@
         "noDefaultLocation": "El cliente predeterminado debe tener una ubicación predeterminada configurada para enviar invitaciones al portal.",
         "noLocationEmail": "La ubicación del cliente predeterminado debe tener un correo electrónico de contacto configurado.",
         "noBaseUrl": "La URL base no está configurada para las invitaciones al portal.",
-        "passwordTooShort": "La contraseña debe tener al menos 8 caracteres."
+        "passwordTooShort": "La contraseña debe tener al menos 8 caracteres.",
+        "roleRequired": "Se requiere un rol",
+        "invalidRole": "El rol seleccionado no es válido",
+        "licenseLimitReached": "Ha alcanzado el límite de licencias de usuario MSP.",
+        "soloPlanLimit": "El plan Solo está limitado a 1 usuario. Actualice a Pro para agregar más usuarios."
       }
     }
   },
@@ -295,7 +299,10 @@
         "updateFailed": "Error al actualizar el usuario. Inténtelo de nuevo.",
         "passwordTooShort": "La contraseña debe tener al menos 8 caracteres",
         "passwordChangeFailed": "Error al cambiar la contraseña",
-        "passwordChangeError": "Se produjo un error al cambiar la contraseña"
+        "passwordChangeError": "Se produjo un error al cambiar la contraseña",
+        "emailAlreadyExists": "Ya existe un usuario con esta dirección de correo electrónico",
+        "reportsToSelf": "Un usuario no puede reportarse a sí mismo",
+        "reportsToCycle": "Esto crearía una cadena de reporte circular"
       }
     }
   },
@@ -1359,7 +1366,11 @@
       },
       "error": {
         "userNotFound": "Usuario no encontrado",
-        "fillRequiredFields": "Complete todos los campos obligatorios"
+        "fillRequiredFields": "Complete todos los campos obligatorios",
+        "saveFailed": "No se pudo guardar el perfil",
+        "emailAlreadyExists": "Ya existe un usuario con esta dirección de correo electrónico",
+        "reportsToSelf": "Un usuario no puede reportarse a sí mismo",
+        "reportsToCycle": "Esto crearía una cadena de reporte circular"
       }
     },
     "validation": {

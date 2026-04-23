@@ -346,7 +346,10 @@
       "userNotFound": "User not found",
       "loadError": "Failed to load profile",
       "loading": "Loading profile...",
-      "avatarDescription": "This avatar is shown to MSP staff when they view your contact information."
+      "avatarDescription": "This avatar is shown to MSP staff when they view your contact information.",
+      "emailAlreadyExists": "Já existe um utilizador com este endereço de e-mail",
+      "reportsToSelf": "Um utilizador não pode reportar a si próprio",
+      "reportsToCycle": "Isto criaria uma cadeia de reporte circular"
     },
     "imageUpload": {
       "uploadAvatar": "Upload Avatar",
@@ -447,7 +450,10 @@
       "loadError": "Failed to load users",
       "emailExists": "A contact with this email address already exists",
       "createError": "Failed to create user",
-      "deleteError": "Failed to delete user"
+      "deleteError": "Failed to delete user",
+      "emailAlreadyExists": "Já existe um utilizador com este endereço de e-mail",
+      "reportsToSelf": "Um utilizador não pode reportar a si próprio",
+      "reportsToCycle": "Isto criaria uma cadeia de reporte circular"
     },
     "messages": {
       "saveChanges": "Save Changes",

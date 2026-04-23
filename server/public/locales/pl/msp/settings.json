@@ -234,7 +234,11 @@
         "noDefaultLocation": "Domyślny klient musi mieć skonfigurowaną domyślną lokalizację, aby wysyłać zaproszenia do portalu.",
         "noLocationEmail": "Lokalizacja domyślnego klienta musi mieć skonfigurowany kontaktowy adres e-mail.",
         "noBaseUrl": "Podstawowy adres URL nie jest skonfigurowany dla zaproszeń do portalu.",
-        "passwordTooShort": "Hasło musi mieć co najmniej 8 znaków."
+        "passwordTooShort": "Hasło musi mieć co najmniej 8 znaków.",
+        "roleRequired": "Rola jest wymagana",
+        "invalidRole": "Wybrana rola jest nieprawidłowa",
+        "licenseLimitReached": "Osiągnięto limit licencji użytkowników MSP.",
+        "soloPlanLimit": "Plan Solo jest ograniczony do 1 użytkownika. Przejdź na Pro, aby dodać więcej użytkowników."
       }
     }
   },
@@ -295,7 +299,10 @@
         "updateFailed": "Nie udało się zaktualizować użytkownika. Proszę spróbować ponownie.",
         "passwordTooShort": "Hasło musi mieć co najmniej 8 znaków",
         "passwordChangeFailed": "Nie udało się zmienić hasła",
-        "passwordChangeError": "Wystąpił błąd podczas zmiany hasła"
+        "passwordChangeError": "Wystąpił błąd podczas zmiany hasła",
+        "emailAlreadyExists": "Użytkownik o tym adresie e-mail już istnieje",
+        "reportsToSelf": "Użytkownik nie może podlegać samemu sobie",
+        "reportsToCycle": "Spowodowałoby to cykliczną strukturę podległości"
       }
     }
   },
@@ -1359,7 +1366,11 @@
       },
       "error": {
         "userNotFound": "Nie znaleziono użytkownika",
-        "fillRequiredFields": "Proszę wypełnić wszystkie wymagane pola"
+        "fillRequiredFields": "Proszę wypełnić wszystkie wymagane pola",
+        "saveFailed": "Nie udało się zapisać profilu",
+        "emailAlreadyExists": "Użytkownik o tym adresie e-mail już istnieje",
+        "reportsToSelf": "Użytkownik nie może podlegać samemu sobie",
+        "reportsToCycle": "Spowodowałoby to cykliczną strukturę podległości"
       }
     },
     "validation": {
