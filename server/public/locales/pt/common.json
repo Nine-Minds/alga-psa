@@ -1009,5 +1009,24 @@
     "filter": "Filtrar",
     "selectedCount": "{{count}} selecionado(s)",
     "clearAll": "Limpar tudo"
+  },
+  "timezonePicker": {
+    "selectPlaceholder": "Selecionar fuso horário...",
+    "searchPlaceholder": "Pesquisar fusos horários ou abreviaturas (p. ex. EST)...",
+    "noResults": "Nenhum fuso horário encontrado",
+    "matchingGroup": "Correspondências a \"{{query}}\"",
+    "regions": {
+      "Africa": "África",
+      "America": "América",
+      "Antarctica": "Antártida",
+      "Arctic": "Ártico",
+      "Asia": "Ásia",
+      "Atlantic": "Atlântico",
+      "Australia": "Austrália",
+      "Europe": "Europa",
+      "Indian": "Oceano Índico",
+      "Pacific": "Pacífico",
+      "Etc": "Outro"
+    }
   }
 }
