@@ -1009,5 +1009,24 @@
     "addOnDescription": {
       "ai_assistant": "55555"
     }
+  },
+  "timezonePicker": {
+    "selectPlaceholder": "55555",
+    "searchPlaceholder": "55555",
+    "noResults": "55555",
+    "matchingGroup": "55555 {{query}} 55555",
+    "regions": {
+      "Africa": "55555",
+      "America": "55555",
+      "Antarctica": "55555",
+      "Arctic": "55555",
+      "Asia": "55555",
+      "Atlantic": "55555",
+      "Australia": "55555",
+      "Europe": "55555",
+      "Indian": "55555",
+      "Pacific": "55555",
+      "Etc": "55555"
+    }
   }
 }
