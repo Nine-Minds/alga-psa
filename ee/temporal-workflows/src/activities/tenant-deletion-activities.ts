@@ -104,6 +104,13 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Microsoft profile bindings (dependents before profile definitions)
   'microsoft_profile_consumer_bindings', 'teams_integrations', 'microsoft_profiles',
 
+  // Authorization bundles
+  // assignments/rules must be deleted before revisions and bundles; revisions and
+  // bundles also form a cycle via authorization_bundles.published_revision_id,
+  // which breakCircularDependencies() clears before deletion.
+  'authorization_bundle_assignments', 'authorization_bundle_rules',
+  'authorization_bundle_revisions', 'authorization_bundles',
+
   // User related details
   'user_activity_group_items', 'user_activity_groups',
   'user_notification_preferences', 'user_internal_notification_preferences', 'user_preferences',
@@ -1153,6 +1160,10 @@ async function getTableTenantColumn(
  *   (Both NO ACTION form a cycle. Deletion order keeps boards before statuses
  *    to respect the boards→statuses FK, so we null statuses.board_id here
  *    to allow boards to be deleted first.)
+ *
+ * - authorization_bundle_revisions.bundle_id → authorization_bundles.bundle_id
+ * - authorization_bundles.published_revision_id → authorization_bundle_revisions.revision_id
+ *   (Null published_revision_id first so revisions can be deleted before bundles.)
  */
 async function breakCircularDependencies(
   knex: Knex,
@@ -1206,6 +1217,23 @@ async function breakCircularDependencies(
   } catch (error) {
     // Ignore if column doesn't exist (older schemas)
     log.debug('Could not clear board_id in statuses (column may not exist)', {
+      error: error instanceof Error ? error.message : 'Unknown',
+    });
+  }
+
+  // Step 4: NULL out authorization_bundles.published_revision_id so
+  // authorization_bundle_revisions can be deleted before authorization_bundles.
+  try {
+    const result4 = await knex('authorization_bundles')
+      .where({ tenant: tenantId })
+      .whereNotNull('published_revision_id')
+      .update({ published_revision_id: null });
+    if (result4 > 0) {
+      log.info('Cleared published_revision_id references in authorization_bundles', { count: result4 });
+    }
+  } catch (error) {
+    // Ignore if table/column doesn't exist (older schemas)
+    log.debug('Could not clear published_revision_id in authorization_bundles (table or column may not exist)', {
       error: error instanceof Error ? error.message : 'Unknown',
     });
   }
