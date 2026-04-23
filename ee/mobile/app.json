@@ -15,7 +15,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.nineminds.algapsa",
-      "buildNumber": "20",
+      "buildNumber": "21",
       "supportsTablet": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -23,7 +23,7 @@
     },
     "android": {
       "package": "com.alga.psa.mobile",
-      "versionCode": 19,
+      "versionCode": 21,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
