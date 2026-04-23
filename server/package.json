@@ -55,6 +55,13 @@
     "migrate:ee:down": "node scripts/run-ee-migrations.js down",
     "migrate:ee:status": "node scripts/run-ee-migrations.js status"
   },
+  "nx": {
+    "targets": {
+      "build": {
+        "dependsOn": []
+      }
+    }
+  },
   "dependencies": {
     "@alga-psa/workflow-streams": "*",
     "@alga-psa/workflows": "*",
