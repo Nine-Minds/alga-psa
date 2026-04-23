@@ -5,6 +5,7 @@ import { Command } from 'cmdk';
 import { Check, Globe } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { AutomationProps } from '../ui-reflection/types';
+import { useTranslation } from '../lib/i18n/client';
 
 interface TimezoneOption {
   value: string;
@@ -25,9 +26,9 @@ interface TimezonePickerProps extends AutomationProps {
  * Returns strings like "EST", "CST", "GMT+5:30", etc.
  * Locale-aware — will return localized abbreviations for non-English users.
  */
-const getTimezoneAbbreviation = (timezone: string): string => {
+const getTimezoneAbbreviation = (timezone: string, locale?: string): string => {
   try {
-    const formatter = new Intl.DateTimeFormat(undefined, {
+    const formatter = new Intl.DateTimeFormat(locale, {
       timeZone: timezone,
       timeZoneName: 'short',
     });
@@ -38,9 +39,9 @@ const getTimezoneAbbreviation = (timezone: string): string => {
   }
 };
 
-const formatTimezoneLabel = (timezone: string): string => {
+const formatTimezoneLabel = (timezone: string, locale?: string): string => {
   try {
-    const formatter = new Intl.DateTimeFormat('en-US', {
+    const formatter = new Intl.DateTimeFormat(locale, {
       timeZone: timezone,
       timeZoneName: 'long',
       hour: 'numeric',
@@ -53,30 +54,34 @@ const formatTimezoneLabel = (timezone: string): string => {
   }
 };
 
-const groupTimezones = (timezones: string[]): TimezoneOption[] => {
+const groupTimezones = (timezones: string[], locale?: string): TimezoneOption[] => {
   return timezones.map((tz): TimezoneOption => {
     const region = tz.split('/')[0];
     return {
       value: tz,
-      label: formatTimezoneLabel(tz),
+      label: formatTimezoneLabel(tz, locale),
       region: region.replace('_', ' '),
-      abbreviation: getTimezoneAbbreviation(tz),
+      abbreviation: getTimezoneAbbreviation(tz, locale),
     };
   });
 };
 
 export default function TimezonePicker({ value, onValueChange, className }: TimezonePickerProps) {
+  const { t, i18n } = useTranslation();
+  const locale = i18n?.language;
   const [isExpanded, setIsExpanded] = React.useState(false);
   const [search, setSearch] = React.useState('');
 
   const selectedTimezoneLabel = React.useMemo(() => {
-    return value ? formatTimezoneLabel(value) : 'Select timezone...';
-  }, [value]);
+    return value
+      ? formatTimezoneLabel(value, locale)
+      : t('timezonePicker.selectPlaceholder', 'Select timezone...');
+  }, [value, locale, t]);
 
   const timezoneOptions = useMemo(() => {
     const timezones = Intl.supportedValuesOf('timeZone');
-    return groupTimezones(timezones);
-  }, []);
+    return groupTimezones(timezones, locale);
+  }, [locale]);
 
   const filteredOptions = useMemo(() => {
     if (!search) return timezoneOptions;
@@ -117,7 +122,13 @@ export default function TimezonePicker({ value, onValueChange, className }: Time
 
     const groups: [string, TimezoneOption[]][] = [];
     if (abbrMatches.length > 0) {
-      groups.push([`Matching "${search.toUpperCase()}"`, abbrMatches]);
+      groups.push([
+        t('timezonePicker.matchingGroup', {
+          defaultValue: 'Matching "{{query}}"',
+          query: search.toUpperCase()
+        }),
+        abbrMatches
+      ]);
     }
     if (otherMatches.length > 0) {
       // Group remaining by region
@@ -173,13 +184,15 @@ export default function TimezonePicker({ value, onValueChange, className }: Time
             value={search}
             onValueChange={setSearch}
             className="flex-1 outline-none placeholder:text-gray-500 text-sm"
-            placeholder="Search timezones or abbreviations (e.g. EST)..."
+            placeholder={t('timezonePicker.searchPlaceholder', 'Search timezones or abbreviations (e.g. EST)...')}
           />
         </div>
         <Command.List className="max-h-[300px] overflow-y-auto p-2">
-          {groupedOptions.map(([region, options]): React.JSX.Element => (
+          {groupedOptions.map(([region, options]): React.JSX.Element => {
+            const regionHeading = t(`timezonePicker.regions.${region}`, { defaultValue: region });
+            return (
             <React.Fragment key={region}>
-              <Command.Group heading={region} className="text-sm text-gray-500 px-2 py-1">
+              <Command.Group heading={regionHeading} className="text-sm text-gray-500 px-2 py-1">
                 {options.map((option): React.JSX.Element => (
                   <Command.Item
                     key={option.value}
@@ -203,10 +216,11 @@ export default function TimezonePicker({ value, onValueChange, className }: Time
                 ))}
               </Command.Group>
             </React.Fragment>
-          ))}
+            );
+          })}
           {filteredOptions.length === 0 && (
             <div className="text-sm text-gray-500 text-center py-4">
-              No timezones found
+              {t('timezonePicker.noResults', 'No timezones found')}
             </div>
           )}
         </Command.List>

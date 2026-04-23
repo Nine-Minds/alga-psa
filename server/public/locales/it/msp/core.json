@@ -1,6 +1,6 @@
 {
   "nav": {
-    "home": "Home",
+    "home": "Inizio",
     "userActivities": "Attività utenti",
     "tickets": "Ticket",
     "serviceRequests": "Richieste di servizio",
@@ -155,7 +155,7 @@
       "openJobCenter": "Apri centro job"
     },
     "breadcrumb": {
-      "home": "Home",
+      "home": "Inizio",
       "dashboard": "Dashboard"
     },
     "tenantBadge": {

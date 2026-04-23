@@ -1009,5 +1009,24 @@
     "filter": "Filteren",
     "selectedCount": "{{count}} geselecteerd",
     "clearAll": "Alles wissen"
+  },
+  "timezonePicker": {
+    "selectPlaceholder": "Tijdzone selecteren...",
+    "searchPlaceholder": "Tijdzones of afkortingen zoeken (bijv. EST)...",
+    "noResults": "Geen tijdzones gevonden",
+    "matchingGroup": "Overeenkomsten met \"{{query}}\"",
+    "regions": {
+      "Africa": "Afrika",
+      "America": "Amerika",
+      "Antarctica": "Antarctica",
+      "Arctic": "Arctisch gebied",
+      "Asia": "Azië",
+      "Atlantic": "Atlantische Oceaan",
+      "Australia": "Australië",
+      "Europe": "Europa",
+      "Indian": "Indische Oceaan",
+      "Pacific": "Stille Oceaan",
+      "Etc": "Overig"
+    }
   }
 }

@@ -1009,5 +1009,24 @@
     "addOnDescription": {
       "ai_assistant": "Unlock AI chat, document assistance, sidebar help, and workflow AI tools for your team."
     }
+  },
+  "timezonePicker": {
+    "selectPlaceholder": "Select timezone...",
+    "searchPlaceholder": "Search timezones or abbreviations (e.g. EST)...",
+    "noResults": "No timezones found",
+    "matchingGroup": "Matching \"{{query}}\"",
+    "regions": {
+      "Africa": "Africa",
+      "America": "America",
+      "Antarctica": "Antarctica",
+      "Arctic": "Arctic",
+      "Asia": "Asia",
+      "Atlantic": "Atlantic",
+      "Australia": "Australia",
+      "Europe": "Europe",
+      "Indian": "Indian",
+      "Pacific": "Pacific",
+      "Etc": "Other"
+    }
   }
 }
