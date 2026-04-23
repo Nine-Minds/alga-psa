@@ -293,13 +293,20 @@ export const getProjectTreeData = withAuth(async (user, { tenant }, projectId?: 
             ));
           }
 
-          const statuses = await getProjectTaskStatusesInternal(trx, tenant, project.project_id, user);
+          // Resolve effective statuses per phase (phase-specific overrides when present,
+          // else project-level defaults) so the status IDs surfaced in the tree match the
+          // IDs the kanban will render for each phase.
+          const phaseStatuses = await Promise.all(
+            phases.map((phase) =>
+              getProjectTaskStatusesInternal(trx, tenant, project.project_id, user, phase.phase_id)
+            )
+          );
 
         return {
           label: project.project_name,
           value: project.project_id,
           type: 'project' as const,
-          children: phases.map((phase): {
+          children: phases.map((phase, phaseIndex): {
             label: string;
             value: string;
             type: 'phase';
@@ -312,7 +319,7 @@ export const getProjectTreeData = withAuth(async (user, { tenant }, projectId?: 
             label: phase.phase_name,
             value: phase.phase_id,
             type: 'phase' as const,
-            children: statuses.map((status): {
+            children: phaseStatuses[phaseIndex].map((status): {
                 label: string;
                 value: string;
                 type: 'status';
