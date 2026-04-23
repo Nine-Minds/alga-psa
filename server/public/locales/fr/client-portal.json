@@ -346,7 +346,10 @@
       "userNotFound": "Utilisateur introuvable",
       "loadError": "Échec du chargement du profil",
       "loading": "Chargement du profil...",
-      "avatarDescription": "Cet avatar est affiché au personnel MSP lorsqu'il consulte vos informations de contact."
+      "avatarDescription": "Cet avatar est affiché au personnel MSP lorsqu'il consulte vos informations de contact.",
+      "emailAlreadyExists": "Un utilisateur avec cette adresse e-mail existe déjà",
+      "reportsToSelf": "Un utilisateur ne peut pas être son propre responsable",
+      "reportsToCycle": "Cela créerait une chaîne hiérarchique circulaire"
     },
     "imageUpload": {
       "uploadAvatar": "Téléverser un avatar",
@@ -447,7 +450,10 @@
       "loadError": "Échec du chargement des utilisateurs",
       "emailExists": "Un contact avec cette adresse e-mail existe déjà",
       "createError": "Échec de la création de l'utilisateur",
-      "deleteError": "Échec de la suppression de l'utilisateur"
+      "deleteError": "Échec de la suppression de l'utilisateur",
+      "emailAlreadyExists": "Un utilisateur avec cette adresse e-mail existe déjà",
+      "reportsToSelf": "Un utilisateur ne peut pas être son propre responsable",
+      "reportsToCycle": "Cela créerait une chaîne hiérarchique circulaire"
     },
     "visibilityGroups": {
       "title": "Groupes de visibilité",

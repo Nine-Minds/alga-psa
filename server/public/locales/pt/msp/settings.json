@@ -234,7 +234,11 @@
         "noDefaultLocation": "O cliente predefinido deve ter uma localização predefinida configurada para enviar convites do portal.",
         "noLocationEmail": "A localização do cliente predefinido deve ter um e-mail de contacto configurado.",
         "noBaseUrl": "O URL base não está configurado para convites do portal.",
-        "passwordTooShort": "A palavra-passe deve ter pelo menos 8 caracteres."
+        "passwordTooShort": "A palavra-passe deve ter pelo menos 8 caracteres.",
+        "roleRequired": "A função é obrigatória",
+        "invalidRole": "A função selecionada é inválida",
+        "licenseLimitReached": "Atingiu o limite de licenças de utilizador MSP.",
+        "soloPlanLimit": "O plano Solo está limitado a 1 utilizador. Atualize para Pro para adicionar mais utilizadores."
       }
     }
   },
@@ -295,7 +299,10 @@
         "updateFailed": "Failed to update user. Please try again.",
         "passwordTooShort": "Password must be at least 8 characters long",
         "passwordChangeFailed": "Failed to change password",
-        "passwordChangeError": "An error occurred while changing password"
+        "passwordChangeError": "An error occurred while changing password",
+        "emailAlreadyExists": "Já existe um utilizador com este endereço de e-mail",
+        "reportsToSelf": "Um utilizador não pode reportar a si próprio",
+        "reportsToCycle": "Isto criaria uma cadeia de reporte circular"
       }
     }
   },
@@ -1360,7 +1367,11 @@
       },
       "error": {
         "userNotFound": "User not found",
-        "fillRequiredFields": "Please fill in all required fields"
+        "fillRequiredFields": "Please fill in all required fields",
+        "saveFailed": "Falha ao guardar o perfil",
+        "emailAlreadyExists": "Já existe um utilizador com este endereço de e-mail",
+        "reportsToSelf": "Um utilizador não pode reportar a si próprio",
+        "reportsToCycle": "Isto criaria uma cadeia de reporte circular"
       }
     },
     "validation": {

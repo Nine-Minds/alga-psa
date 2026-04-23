@@ -346,7 +346,10 @@
       "userNotFound": "Nie znaleziono użytkownika",
       "loadError": "Nie udało się wczytać profilu",
       "loading": "Ładowanie profilu...",
-      "avatarDescription": "Ten awatar jest widoczny dla personelu MSP podczas przeglądania danych kontaktowych."
+      "avatarDescription": "Ten awatar jest widoczny dla personelu MSP podczas przeglądania danych kontaktowych.",
+      "emailAlreadyExists": "Użytkownik o tym adresie e-mail już istnieje",
+      "reportsToSelf": "Użytkownik nie może podlegać samemu sobie",
+      "reportsToCycle": "Spowodowałoby to cykliczną strukturę podległości"
     },
     "imageUpload": {
       "uploadAvatar": "Prześlij awatar",
@@ -447,7 +450,10 @@
       "loadError": "Nie udało się wczytać użytkowników",
       "emailExists": "Kontakt z tym adresem e-mail już istnieje",
       "createError": "Nie udało się utworzyć użytkownika",
-      "deleteError": "Nie udało się usunąć użytkownika"
+      "deleteError": "Nie udało się usunąć użytkownika",
+      "emailAlreadyExists": "Użytkownik o tym adresie e-mail już istnieje",
+      "reportsToSelf": "Użytkownik nie może podlegać samemu sobie",
+      "reportsToCycle": "Spowodowałoby to cykliczną strukturę podległości"
     },
     "visibilityGroups": {
       "title": "Grupy widoczności",
