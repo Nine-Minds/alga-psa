@@ -4,7 +4,7 @@ import {
   AUTHORIZATION_CONSTRAINT_CATALOG,
   AUTHORIZATION_TEMPLATE_CATALOG,
   assertBundleRuleCatalogInput,
-} from 'server/src/lib/authorization/bundles/catalog';
+} from '@alga-psa/authorization/bundles/catalog';
 
 describe('authorization bundle catalog', () => {
   it('supports the v1 typed relationship template catalog', () => {

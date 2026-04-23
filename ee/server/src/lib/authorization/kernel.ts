@@ -4,8 +4,8 @@ import {
   createAuthorizationKernel,
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
-} from 'server/src/lib/authorization/kernel';
-import { resolveBundleNarrowingRulesForEvaluation } from 'server/src/lib/authorization/bundles/service';
+} from '@alga-psa/authorization/kernel';
+import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 
 async function resolveBundleNarrowingRules(input: AuthorizationEvaluationInput) {
   const cache = input.requestCache;

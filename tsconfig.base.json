@@ -51,6 +51,8 @@
       "@alga-psa/auth": ["packages/auth/src"],
       "@alga-psa/auth/sso/entry": ["packages/auth/src/components/SsoProviderButtons.tsx"],
       "@alga-psa/auth/*": ["packages/auth/src/*", "packages/auth/src/lib/*"],
+      "@alga-psa/authorization": ["packages/authorization/src"],
+      "@alga-psa/authorization/*": ["packages/authorization/src/*"],
       "@alga-psa/analytics": ["packages/analytics/src"],
       "@alga-psa/analytics/*": ["packages/analytics/src/*"],
       "@alga-psa/event-bus": ["packages/event-bus/src"],

@@ -74,6 +74,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@alga-psa/authorization": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/formatting": "*",

@@ -93,11 +93,11 @@ vi.mock('../lib/clientPortalVisibility', () => ({
   getClientContactVisibilityContext: (...args: any[]) => getClientContactVisibilityContextMock(...args),
 }));
 
-vi.mock('server/src/lib/authorization/bundles/service', () => ({
+vi.mock('@alga-psa/authorization/bundles/service', () => ({
   resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => currentBundleRules),
 }));
 
-vi.mock('server/src/lib/authorization/kernel', () => {
+vi.mock('@alga-psa/authorization/kernel', () => {
   const evaluateWithRules = (
     input: {
       resource: { type: string; action: string };
@@ -426,18 +426,32 @@ describe('ticket authorization narrowing for migrated list/detail paths', () => 
     );
 
     const { getTicketsForList } = await import('./ticketActions');
-    const { authorizeApiResourceRead } = await import('server/src/lib/api/controllers/authorizationKernel');
+    const {
+      BuiltinAuthorizationKernelProvider,
+      BundleAuthorizationKernelProvider,
+      createAuthorizationKernel,
+    } = await import('@alga-psa/authorization/kernel');
+    const { resolveBundleNarrowingRulesForEvaluation } = await import('@alga-psa/authorization/bundles/service');
+    const apiKernel = createAuthorizationKernel({
+      builtinProvider: new BuiltinAuthorizationKernelProvider(),
+      bundleProvider: new BundleAuthorizationKernelProvider({
+        resolveRules: (input) => resolveBundleNarrowingRulesForEvaluation(trx as any, input),
+      }),
+    });
 
     const uiAllowedIds = (await getTicketsForList({ boardFilterState: 'all' } as any)).map((ticket) => ticket.ticket_id).sort();
 
     const apiAllowedIds: string[] = [];
     for (const ticket of listTickets) {
-      const allowed = await authorizeApiResourceRead({
+      const decision = await apiKernel.authorizeResource({
         knex: trx,
-        tenant: currentUser.tenant,
-        user: currentUser,
-        resource: 'ticket',
-        recordContext: {
+        subject: {
+          tenant: currentUser.tenant,
+          userId: currentUser.user_id,
+          userType: currentUser.user_type === 'client' ? 'client' : 'internal',
+        },
+        resource: { type: 'ticket', action: 'read' },
+        record: {
           id: ticket.ticket_id as string,
           ownerUserId: (ticket.entered_by as string) ?? undefined,
           assignedUserIds: typeof ticket.assigned_to === 'string' ? [ticket.assigned_to] : [],
@@ -445,7 +459,7 @@ describe('ticket authorization narrowing for migrated list/detail paths', () => 
           boardId: (ticket.board_id as string) ?? undefined,
         },
       });
-      if (allowed) {
+      if (decision.allowed) {
         apiAllowedIds.push(ticket.ticket_id as string);
       }
     }

@@ -63,6 +63,7 @@
     }
   },
   "dependencies": {
+    "@alga-psa/authorization": "*",
     "@alga-psa/workflow-streams": "*",
     "@alga-psa/workflows": "*",
     "@anthropic-ai/sdk": "^0.36.3",

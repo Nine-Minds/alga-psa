@@ -21,6 +21,14 @@ interface BlockContentInput {
   version_id?: string;
 }
 
+interface DocumentBlockContent {
+  content_id: string;
+  block_data: unknown;
+  version_id: string | null;
+  created_at: Date | string;
+  updated_at: Date | string;
+}
+
 interface CreateBlockDocumentInput extends BlockContentInput {
   document_name: string;
   user_id: string;
@@ -164,7 +172,7 @@ export const createBlockDocument = withAuth(async (
 });
 
 // Get document block content
-export const getBlockContent = withAuth(async (user, { tenant }, documentId: string): Promise<unknown | ActionPermissionError> => {
+export const getBlockContent = withAuth(async (user, { tenant }, documentId: string): Promise<DocumentBlockContent | null | ActionPermissionError> => {
   const { knex } = await createTenantKnex();
 
   try {

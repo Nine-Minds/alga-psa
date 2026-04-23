@@ -40,7 +40,7 @@ vi.mock('@/lib/db', () => ({
   createTenantKnex: (...args: unknown[]) => createTenantKnexMock(...args),
 }));
 
-vi.mock('server/src/lib/authorization/bundles/service', () => ({
+vi.mock('@alga-psa/authorization/bundles/service', () => ({
   archiveBundle: vi.fn(),
   cloneAuthorizationBundle: vi.fn(),
   createBundleAssignment: (...args: unknown[]) => serviceMocks.createBundleAssignment(...args),

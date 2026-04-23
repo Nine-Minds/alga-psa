@@ -19,11 +19,11 @@ vi.mock('@alga-psa/db', () => ({
   },
 }));
 
-vi.mock('server/src/lib/authorization/bundles/service', () => ({
+vi.mock('@alga-psa/authorization/bundles/service', () => ({
   resolveBundleNarrowingRulesForEvaluation: (...args: unknown[]) => resolveBundleRulesMock(...args),
 }));
 
-vi.mock('server/src/lib/authorization/kernel', () => {
+vi.mock('@alga-psa/authorization/kernel', () => {
   class BuiltinAuthorizationKernelProvider {
     relationshipRules?: Array<{ template: string }>;
     mutationGuards?: Array<(input: any) => { allowed: boolean }>;

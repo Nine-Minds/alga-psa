@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { buildAuthorizationAwarePage } from 'server/src/lib/api/controllers/authorizationAwarePagination';
+import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 
 function buildPagedFetcher<T>(rows: T[]) {
   return vi.fn(async (page: number, limit: number) => {

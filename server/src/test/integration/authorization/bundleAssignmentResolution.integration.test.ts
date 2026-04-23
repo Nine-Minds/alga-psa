@@ -7,12 +7,12 @@ import {
   publishBundleRevision,
   resolveBundleNarrowingRulesForEvaluation,
   upsertBundleRule,
-} from 'server/src/lib/authorization/bundles/service';
+} from '@alga-psa/authorization/bundles/service';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
   createAuthorizationKernel,
-} from 'server/src/lib/authorization/kernel';
+} from '@alga-psa/authorization/kernel';
 
 const helpers = TestContext.createHelpers();
 const HOOK_TIMEOUT = 900_000;

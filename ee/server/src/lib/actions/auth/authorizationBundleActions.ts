@@ -12,8 +12,8 @@ import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
   createAuthorizationKernel,
-} from 'server/src/lib/authorization/kernel';
-import type { BundleNarrowingRule } from 'server/src/lib/authorization/kernel/providers/bundleProvider';
+} from '@alga-psa/authorization/kernel';
+import type { BundleNarrowingRule } from '@alga-psa/authorization/kernel/providers/bundleProvider';
 import {
   archiveBundle,
   cloneAuthorizationBundle,
@@ -26,9 +26,9 @@ import {
   publishBundleRevision,
   setBundleAssignmentStatus,
   upsertBundleRule,
-} from 'server/src/lib/authorization/bundles/service';
-import { STARTER_AUTHORIZATION_BUNDLES } from 'server/src/lib/authorization/bundles/starterBundles';
-import { AUTHORIZATION_TEMPLATE_CATALOG, AUTHORIZATION_CONSTRAINT_CATALOG } from 'server/src/lib/authorization/bundles/catalog';
+} from '@alga-psa/authorization/bundles/service';
+import { STARTER_AUTHORIZATION_BUNDLES } from '@alga-psa/authorization/bundles/starterBundles';
+import { AUTHORIZATION_TEMPLATE_CATALOG, AUTHORIZATION_CONSTRAINT_CATALOG } from '@alga-psa/authorization/bundles/catalog';
 
 export interface AuthorizationBundleLibraryEntry {
   bundleId: string;

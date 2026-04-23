@@ -76,9 +76,9 @@ import {
     createAuthorizationKernel,
     type AuthorizationRecord,
     type AuthorizationSubject,
-} from 'server/src/lib/authorization/kernel';
-import { resolveBundleNarrowingRulesForEvaluation } from 'server/src/lib/authorization/bundles/service';
-import { buildAuthorizationAwarePage } from 'server/src/lib/api/controllers/authorizationAwarePagination';
+} from '@alga-psa/authorization/kernel';
+import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 
 type AssetExtensionType = WorkstationAsset | NetworkDeviceAsset | ServerAsset | MobileDeviceAsset | PrinterAsset;
 

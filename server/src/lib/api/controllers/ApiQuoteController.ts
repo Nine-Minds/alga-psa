@@ -22,15 +22,15 @@ import {
   runWithTenant,
 } from '../../db';
 import { getConnection } from '../../db/db';
-import { resolveBundleNarrowingRulesForEvaluation } from '../../authorization/bundles/service';
+import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
   RequestLocalAuthorizationCache,
   createAuthorizationKernel,
-} from '../../authorization/kernel';
+} from '@alga-psa/authorization/kernel';
 import { authorizeApiResourceRead, buildAuthorizationPrincipalSubject } from './authorizationKernel';
-import { buildAuthorizationAwarePage } from './authorizationAwarePagination';
+import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import {
   ForbiddenError,
   NotFoundError,

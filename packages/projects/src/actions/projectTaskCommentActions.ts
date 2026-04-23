@@ -12,7 +12,7 @@ import {
   BuiltinAuthorizationKernelProvider,
   RequestLocalAuthorizationCache,
   createAuthorizationKernel,
-} from 'server/src/lib/authorization/kernel';
+} from '@alga-psa/authorization/kernel';
 
 function buildCommentAuthorizationSubject(user: { user_id: string; user_type: 'internal' | 'client' }, tenant: string) {
   return {

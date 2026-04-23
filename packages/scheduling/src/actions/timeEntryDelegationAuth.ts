@@ -12,8 +12,8 @@ import {
   createAuthorizationKernel,
   type AuthorizationEvaluationInput,
   type AuthorizationSubject,
-} from 'server/src/lib/authorization/kernel';
-import { resolveBundleNarrowingRulesForEvaluation } from 'server/src/lib/authorization/bundles/service';
+} from '@alga-psa/authorization/kernel';
+import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 
 export type DelegationScope = 'self' | 'tenant-wide' | 'manager';
 

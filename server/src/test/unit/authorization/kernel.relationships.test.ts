@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { evaluateRelationshipTemplate } from 'server/src/lib/authorization/kernel';
+import { evaluateRelationshipTemplate } from '@alga-psa/authorization/kernel';
 
 const baseInput = {
   subject: {

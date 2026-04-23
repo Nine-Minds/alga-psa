@@ -3,7 +3,7 @@ import { getAuthorizationKernel } from 'server/src/lib/authorization/kernel';
 import type {
   AuthorizationRecord,
   AuthorizationSubject,
-} from 'server/src/lib/authorization/kernel/contracts';
+} from '@alga-psa/authorization/kernel/contracts';
 
 function normalizeStringArray(values: unknown): string[] {
   if (!Array.isArray(values)) {

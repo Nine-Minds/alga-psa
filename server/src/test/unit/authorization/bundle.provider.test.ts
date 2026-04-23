@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { BundleAuthorizationKernelProvider } from 'server/src/lib/authorization/kernel';
+import { BundleAuthorizationKernelProvider } from '@alga-psa/authorization/kernel';
 
 describe('bundle authorization provider constraints', () => {
   it('denies resource access when client_visible_only constraint is violated', async () => {

@@ -1,7 +1,9 @@
-import type { AuthorizationKernel } from './contracts';
-import { createAuthorizationKernel } from './engine';
+import type { AuthorizationKernel } from '@alga-psa/authorization/kernel';
+import {
+  BuiltinAuthorizationKernelProvider,
+  createAuthorizationKernel,
+} from '@alga-psa/authorization/kernel';
 import { loadEnterpriseAuthorizationKernelFactory } from './enterpriseEntry';
-import { BuiltinAuthorizationKernelProvider } from './providers/builtinProvider';
 
 declare global {
   // eslint-disable-next-line no-var
@@ -36,10 +38,4 @@ export function resetAuthorizationKernelForTests(): void {
   globalThis.__algaAuthorizationKernelSingleton = undefined;
 }
 
-export * from './contracts';
-export * from './engine';
-export * from './providers/builtinProvider';
-export * from './providers/bundleProvider';
-export * from './relationships';
-export * from './requestCache';
-export * from './scope';
+export * from '@alga-psa/authorization/kernel';

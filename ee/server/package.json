@@ -18,6 +18,7 @@
     "playwright:install-deps": "playwright install-deps"
   },
   "dependencies": {
+    "@alga-psa/authorization": "*",
     "@huggingface/inference": "^3.3.3",
     "@huggingface/jinja": "^0.5.0",
     "@monaco-editor/react": "^4.7.0",

@@ -4,7 +4,7 @@ import {
   BundleAuthorizationKernelProvider,
   createAuthorizationKernel,
   type AuthorizationEvaluationInput,
-} from 'server/src/lib/authorization/kernel';
+} from '@alga-psa/authorization/kernel';
 
 function baseInput(): AuthorizationEvaluationInput {
   return {

@@ -10,7 +10,7 @@ import {
   publishBundleRevision,
   setBundleAssignmentStatus,
   upsertBundleRule,
-} from 'server/src/lib/authorization/bundles/service';
+} from '@alga-psa/authorization/bundles/service';
 
 const helpers = TestContext.createHelpers();
 const HOOK_TIMEOUT = 900_000;

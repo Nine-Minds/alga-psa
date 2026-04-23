@@ -210,7 +210,7 @@ vi.mock('@/lib/db', () => ({
   createTenantKnex: (...args: unknown[]) => dbMocks.createTenantKnex(...args),
 }));
 
-vi.mock('server/src/lib/authorization/bundles/service', () => ({
+vi.mock('@alga-psa/authorization/bundles/service', () => ({
   archiveBundle: serviceMocks.archiveBundle,
   cloneAuthorizationBundle: serviceMocks.cloneAuthorizationBundle,
   createBundleAssignment: serviceMocks.createBundleAssignment,

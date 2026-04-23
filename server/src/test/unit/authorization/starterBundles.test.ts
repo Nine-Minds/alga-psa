@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { STARTER_AUTHORIZATION_BUNDLES } from 'server/src/lib/authorization/bundles/starterBundles';
+import { STARTER_AUTHORIZATION_BUNDLES } from '@alga-psa/authorization/bundles/starterBundles';
 
 describe('starter authorization bundles', () => {
   it('ships the expected enterprise MSP starter bundle set', () => {

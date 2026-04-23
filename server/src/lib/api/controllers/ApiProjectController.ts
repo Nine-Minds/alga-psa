@@ -30,7 +30,7 @@ import {
   hasPermission 
 } from '../../auth/rbac';
 import { authorizeApiResourceRead } from './authorizationKernel';
-import { buildAuthorizationAwarePage } from './authorizationAwarePagination';
+import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import {
   ApiRequest,
   AuthenticatedApiRequest,

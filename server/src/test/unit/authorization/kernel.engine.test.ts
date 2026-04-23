@@ -8,7 +8,7 @@ import {
   type AuthorizationScope,
   type BundleAuthorizationProvider,
   RequestLocalAuthorizationCache,
-} from 'server/src/lib/authorization/kernel';
+} from '@alga-psa/authorization/kernel';
 
 function baseInput(overrides: Partial<AuthorizationEvaluationInput> = {}): AuthorizationEvaluationInput {
   return {

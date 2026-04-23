@@ -1,4 +1,4 @@
 export * from './kernel';
-export * from './bundles/catalog';
-export * from './bundles/service';
-export * from './bundles/starterBundles';
+export * from '@alga-psa/authorization/bundles/catalog';
+export * from '@alga-psa/authorization/bundles/service';
+export * from '@alga-psa/authorization/bundles/starterBundles';
