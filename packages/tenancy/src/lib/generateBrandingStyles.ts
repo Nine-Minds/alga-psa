@@ -7,15 +7,15 @@ const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
     r: parseInt(result[1], 16),
     g: parseInt(result[2], 16),
     b: parseInt(result[3], 16)
-  } : null; 
+  } : null;
 };
 
 // Helper function to generate color shades
-const generateColorShades = (hex: string): Record<number, string> => {
+const generateColorShades = (hex: string): Record<number, string> | null => {
   const rgb = hexToRgb(hex);
   if (!rgb) {
     console.error('Failed to convert hex to RGB:', hex);
-    return {};
+    return null;
   }
 
   const shades: Record<number, string> = {};
@@ -52,347 +52,170 @@ const invertShades = (shades: Record<number, string>): Record<number, string> =>
   900: shades[50],
 });
 
-/**
- * Generate CSS styles for tenant branding
- * This function generates the same styles as BrandingProvider but can be used server-side
- */
-export function generateBrandingStyles(branding: TenantBranding | null): string {
-  if (!branding?.primaryColor && !branding?.secondaryColor) {
-    return '';
-  }
+const paletteVars = (name: 'primary' | 'secondary', shades: Record<number, string>): string => `
+      --color-${name}-50: ${shades[50]} !important;
+      --color-${name}-100: ${shades[100]} !important;
+      --color-${name}-200: ${shades[200]} !important;
+      --color-${name}-300: ${shades[300]} !important;
+      --color-${name}-400: ${shades[400]} !important;
+      --color-${name}-500: ${shades[500]} !important;
+      --color-${name}-600: ${shades[600]} !important;
+      --color-${name}-700: ${shades[700]} !important;
+      --color-${name}-800: ${shades[800]} !important;
+      --color-${name}-900: ${shades[900]} !important;`;
 
-  const primaryColor = branding.primaryColor || '#6366F1';
-  const secondaryColor = branding.secondaryColor || '#8B5CF6';
-
-  const primaryShades = generateColorShades(primaryColor);
-  const secondaryShades = generateColorShades(secondaryColor);
-  const primaryDarkShades = invertShades(primaryShades);
-  const secondaryDarkShades = invertShades(secondaryShades);
-
-  return `
-    :root {
-      /* Override primary color CSS variables */
-      --color-primary-50: ${primaryShades[50]} !important;
-      --color-primary-100: ${primaryShades[100]} !important;
-      --color-primary-200: ${primaryShades[200]} !important;
-      --color-primary-300: ${primaryShades[300]} !important;
-      --color-primary-400: ${primaryShades[400]} !important;
-      --color-primary-500: ${primaryShades[500]} !important;
-      --color-primary-600: ${primaryShades[600]} !important;
-      --color-primary-700: ${primaryShades[700]} !important;
-      --color-primary-800: ${primaryShades[800]} !important;
-      --color-primary-900: ${primaryShades[900]} !important;
-
-      /* Override secondary color CSS variables */
-      --color-secondary-50: ${secondaryShades[50]} !important;
-      --color-secondary-100: ${secondaryShades[100]} !important;
-      --color-secondary-200: ${secondaryShades[200]} !important;
-      --color-secondary-300: ${secondaryShades[300]} !important;
-      --color-secondary-400: ${secondaryShades[400]} !important;
-      --color-secondary-500: ${secondaryShades[500]} !important;
-      --color-secondary-600: ${secondaryShades[600]} !important;
-      --color-secondary-700: ${secondaryShades[700]} !important;
-      --color-secondary-800: ${secondaryShades[800]} !important;
-      --color-secondary-900: ${secondaryShades[900]} !important;
-    }
-
-    .dark {
-      /* Override primary color CSS variables (dark mode inversion) */
-      --color-primary-50: ${primaryDarkShades[50]} !important;
-      --color-primary-100: ${primaryDarkShades[100]} !important;
-      --color-primary-200: ${primaryDarkShades[200]} !important;
-      --color-primary-300: ${primaryDarkShades[300]} !important;
-      --color-primary-400: ${primaryDarkShades[400]} !important;
-      --color-primary-500: ${primaryDarkShades[500]} !important;
-      --color-primary-600: ${primaryDarkShades[600]} !important;
-      --color-primary-700: ${primaryDarkShades[700]} !important;
-      --color-primary-800: ${primaryDarkShades[800]} !important;
-      --color-primary-900: ${primaryDarkShades[900]} !important;
-
-      /* Override secondary color CSS variables (dark mode inversion) */
-      --color-secondary-50: ${secondaryDarkShades[50]} !important;
-      --color-secondary-100: ${secondaryDarkShades[100]} !important;
-      --color-secondary-200: ${secondaryDarkShades[200]} !important;
-      --color-secondary-300: ${secondaryDarkShades[300]} !important;
-      --color-secondary-400: ${secondaryDarkShades[400]} !important;
-      --color-secondary-500: ${secondaryDarkShades[500]} !important;
-      --color-secondary-600: ${secondaryDarkShades[600]} !important;
-      --color-secondary-700: ${secondaryDarkShades[700]} !important;
-      --color-secondary-800: ${secondaryDarkShades[800]} !important;
-      --color-secondary-900: ${secondaryDarkShades[900]} !important;
-    }
-
-    /* Override switch/toggle component colors */
+const primaryOverrides = `
+    /* Switch/toggle */
     button[role="switch"][data-state="checked"] {
       background-color: rgb(var(--color-primary-500)) !important;
     }
 
-    /* Override button variant classes that use CSS variables */
-    .bg-\\[rgb\\(var\\(--color-primary-500\\)\\)\\] {
-      background-color: rgb(var(--color-primary-500)) !important;
-    }
+    /* Button variant classes using CSS variables */
+    .bg-\\[rgb\\(var\\(--color-primary-500\\)\\)\\] { background-color: rgb(var(--color-primary-500)) !important; }
+    .bg-\\[rgb\\(var\\(--color-primary-600\\)\\)\\] { background-color: rgb(var(--color-primary-600)) !important; }
+    .hover\\:bg-\\[rgb\\(var\\(--color-primary-600\\)\\)\\]:hover { background-color: rgb(var(--color-primary-600)) !important; }
+    .bg-\\[rgb\\(var\\(--color-primary-100\\)\\)\\] { background-color: rgb(var(--color-primary-100)) !important; }
+    .bg-\\[rgb\\(var\\(--color-primary-200\\)\\)\\] { background-color: rgb(var(--color-primary-200)) !important; }
+    .hover\\:bg-\\[rgb\\(var\\(--color-primary-200\\)\\)\\]:hover { background-color: rgb(var(--color-primary-200)) !important; }
+    .bg-\\[rgb\\(var\\(--color-primary-50\\)\\)\\] { background-color: rgb(var(--color-primary-50)) !important; }
+    .hover\\:bg-\\[rgb\\(var\\(--color-primary-50\\)\\)\\]:hover { background-color: rgb(var(--color-primary-50)) !important; }
+    .text-\\[rgb\\(var\\(--color-primary-500\\)\\)\\] { color: rgb(var(--color-primary-500)) !important; }
+    .text-\\[rgb\\(var\\(--color-primary-700\\)\\)\\] { color: rgb(var(--color-primary-700)) !important; }
+    .hover\\:text-\\[rgb\\(var\\(--color-primary-700\\)\\)\\]:hover { color: rgb(var(--color-primary-700)) !important; }
+    .border-\\[rgb\\(var\\(--color-primary-500\\)\\)\\] { border-color: rgb(var(--color-primary-500)) !important; }
 
-    .bg-\\[rgb\\(var\\(--color-primary-600\\)\\)\\] {
-      background-color: rgb(var(--color-primary-600)) !important;
-    }
-
-    .hover\\:bg-\\[rgb\\(var\\(--color-primary-600\\)\\)\\]:hover {
-      background-color: rgb(var(--color-primary-600)) !important;
-    }
-
-    .bg-\\[rgb\\(var\\(--color-primary-100\\)\\)\\] {
-      background-color: rgb(var(--color-primary-100)) !important;
-    }
-
-    .bg-\\[rgb\\(var\\(--color-primary-200\\)\\)\\] {
-      background-color: rgb(var(--color-primary-200)) !important;
-    }
-
-    .hover\\:bg-\\[rgb\\(var\\(--color-primary-200\\)\\)\\]:hover {
-      background-color: rgb(var(--color-primary-200)) !important;
-    }
-
-    .text-\\[rgb\\(var\\(--color-primary-500\\)\\)\\] {
-      color: rgb(var(--color-primary-500)) !important;
-    }
-
-    .text-\\[rgb\\(var\\(--color-primary-700\\)\\)\\] {
-      color: rgb(var(--color-primary-700)) !important;
-    }
-
-    .hover\\:text-\\[rgb\\(var\\(--color-primary-700\\)\\)\\]:hover {
-      color: rgb(var(--color-primary-700)) !important;
-    }
-
-    .bg-\\[rgb\\(var\\(--color-primary-50\\)\\)\\] {
-      background-color: rgb(var(--color-primary-50)) !important;
-    }
-
-    .hover\\:bg-\\[rgb\\(var\\(--color-primary-50\\)\\)\\]:hover {
-      background-color: rgb(var(--color-primary-50)) !important;
-    }
-
-    .border-\\[rgb\\(var\\(--color-primary-500\\)\\)\\] {
-      border-color: rgb(var(--color-primary-500)) !important;
-    }
-
-    /* Override secondary color classes */
-    .bg-\\[rgb\\(var\\(--color-secondary-500\\)\\)\\] {
-      background-color: rgb(var(--color-secondary-500)) !important;
-    }
-
-    .bg-\\[rgb\\(var\\(--color-secondary-600\\)\\)\\] {
-      background-color: rgb(var(--color-secondary-600)) !important;
-    }
-
-    .hover\\:bg-\\[rgb\\(var\\(--color-secondary-600\\)\\)\\]:hover {
-      background-color: rgb(var(--color-secondary-600)) !important;
-    }
-
-    .bg-\\[rgb\\(var\\(--color-secondary-50\\)\\)\\] {
-      background-color: rgb(var(--color-secondary-50)) !important;
-    }
-
-    .bg-\\[rgb\\(var\\(--color-secondary-100\\)\\)\\] {
-      background-color: rgb(var(--color-secondary-100)) !important;
-    }
-
-    .bg-\\[rgb\\(var\\(--color-secondary-200\\)\\)\\] {
-      background-color: rgb(var(--color-secondary-200)) !important;
-    }
-
-    .bg-\\[rgb\\(var\\(--color-secondary-300\\)\\)\\] {
-      background-color: rgb(var(--color-secondary-300)) !important;
-    }
-
-    .bg-\\[rgb\\(var\\(--color-secondary-400\\)\\)\\] {
-      background-color: rgb(var(--color-secondary-400)) !important;
-    }
-
-    .text-\\[rgb\\(var\\(--color-secondary-500\\)\\)\\] {
-      color: rgb(var(--color-secondary-500)) !important;
-    }
-
-    .text-\\[rgb\\(var\\(--color-secondary-700\\)\\)\\] {
-      color: rgb(var(--color-secondary-700)) !important;
-    }
-
-    .border-\\[rgb\\(var\\(--color-secondary-400\\)\\)\\] {
-      border-color: rgb(var(--color-secondary-400)) !important;
-    }
-
-    /* Override accent colors to use secondary */
-    .bg-\\[rgb\\(var\\(--color-accent-500\\)\\)\\] {
-      background-color: rgb(var(--color-secondary-500)) !important;
-    }
-
-    .bg-\\[rgb\\(var\\(--color-accent-50\\)\\)\\] {
-      background-color: rgb(var(--color-secondary-50)) !important;
-    }
-
-    .text-\\[rgb\\(var\\(--color-accent-500\\)\\)\\] {
-      color: rgb(var(--color-secondary-500)) !important;
-    }
-
-    .text-\\[rgb\\(var\\(--color-accent-700\\)\\)\\] {
-      color: rgb(var(--color-secondary-700)) !important;
-    }
-
-    .border-\\[rgb\\(var\\(--color-accent-500\\)\\)\\] {
-      border-color: rgb(var(--color-secondary-500)) !important;
-    }
-
-    /* Override navigation link hover text to use primary color */
+    /* Nav link hover text */
     a[class*="hover\\:text-\\[rgb\\(var\\(--color-primary"]:hover {
       color: rgb(var(--color-primary-500)) !important;
     }
 
-    /* Override any remaining purple/indigo classes */
-    .bg-purple-600,
-    .bg-purple-500,
-    .bg-indigo-600,
-    .bg-indigo-500 {
+    /* Purple/indigo Tailwind classes mapped to primary */
+    .bg-purple-600, .bg-purple-500, .bg-indigo-600, .bg-indigo-500 {
       background-color: rgb(var(--color-primary-500)) !important;
     }
-
-    /* Override blue colors to use secondary */
-    .text-blue-600,
-    .text-blue-500 {
-      color: rgb(var(--color-secondary-600)) !important;
-    }
-
-    .text-blue-700 {
-      color: rgb(var(--color-secondary-700)) !important;
-    }
-
-    .text-blue-800 {
-      color: rgb(var(--color-secondary-800)) !important;
-    }
-
-    /* Override hover states for blue text */
-    .hover\\:text-blue-600:hover,
-    .hover\\:text-blue-500:hover {
-      color: rgb(var(--color-secondary-600)) !important;
-    }
-
-    .hover\\:text-blue-700:hover {
-      color: rgb(var(--color-secondary-700)) !important;
-    }
-
-    .hover\\:text-blue-800:hover {
-      color: rgb(var(--color-secondary-800)) !important;
-    }
-
-    .border-blue-600,
-    .border-blue-500 {
-      border-color: rgb(var(--color-secondary-600)) !important;
-    }
-
-    .bg-blue-600,
-    .bg-blue-500 {
-      background-color: rgb(var(--color-secondary-600)) !important;
-    }
-
-    .bg-blue-50 {
-      background-color: rgb(var(--color-secondary-50)) !important;
-    }
-
-    .bg-blue-100 {
-      background-color: rgb(var(--color-secondary-100)) !important;
-    }
-
-    .bg-blue-200 {
-      background-color: rgb(var(--color-secondary-200)) !important;
-    }
-
-    /* Override border-primary for tabs */
-    .border-primary {
-      border-color: rgb(var(--color-primary-500)) !important;
-    }
-
-    /* Override data attribute selectors for tabs */
-    [data-state="active"] {
-      color: rgb(var(--color-secondary-600)) !important;
-      border-color: rgb(var(--color-secondary-600)) !important;
-    }
-
-    .data-\\[state\\=active\\]\\:text-blue-600[data-state="active"] {
-      color: rgb(var(--color-secondary-600)) !important;
-    }
-
-    .data-\\[state\\=active\\]\\:border-blue-600[data-state="active"] {
-      border-color: rgb(var(--color-secondary-600)) !important;
-    }
-
-    .bg-purple-100,
-    .bg-indigo-100 {
+    .bg-purple-100, .bg-indigo-100 {
       background-color: rgb(var(--color-primary-100)) !important;
     }
-
-    .text-purple-600,
-    .text-purple-500,
-    .text-indigo-600,
-    .text-indigo-500 {
+    .text-purple-600, .text-purple-500, .text-indigo-600, .text-indigo-500 {
       color: rgb(var(--color-primary-500)) !important;
     }
-
-    .border-purple-600,
-    .border-purple-500,
-    .border-indigo-600,
-    .border-indigo-500 {
+    .border-purple-600, .border-purple-500, .border-indigo-600, .border-indigo-500 {
       border-color: rgb(var(--color-primary-500)) !important;
     }
-
-    /* Hover states */
-    .hover\\:bg-purple-700:hover,
-    .hover\\:bg-purple-600:hover,
-    .hover\\:bg-indigo-700:hover,
-    .hover\\:bg-indigo-600:hover {
+    .hover\\:bg-purple-700:hover, .hover\\:bg-purple-600:hover,
+    .hover\\:bg-indigo-700:hover, .hover\\:bg-indigo-600:hover {
       background-color: rgb(var(--color-primary-600)) !important;
     }
-
-    .hover\\:text-purple-700:hover,
-    .hover\\:text-purple-600:hover,
-    .hover\\:text-indigo-700:hover,
-    .hover\\:text-indigo-600:hover {
+    .hover\\:text-purple-700:hover, .hover\\:text-purple-600:hover,
+    .hover\\:text-indigo-700:hover, .hover\\:text-indigo-600:hover {
       color: rgb(var(--color-primary-600)) !important;
     }
-
-    /* Focus states and ring colors */
-    .focus\\:ring-purple-500:focus,
-    .focus\\:ring-indigo-500:focus {
+    .focus\\:ring-purple-500:focus, .focus\\:ring-indigo-500:focus {
       --tw-ring-color: rgb(var(--color-primary-500)) !important;
     }
-
-    .focus\\:border-purple-500:focus,
-    .focus\\:border-indigo-500:focus {
+    .focus\\:border-purple-500:focus, .focus\\:border-indigo-500:focus {
       border-color: rgb(var(--color-primary-500)) !important;
     }
 
-    /* Override ring color but not width */
+    /* Focus ring default */
     *:focus-visible {
       --tw-ring-color: rgb(var(--color-primary-500)) !important;
     }
 
-    /* Input focus states - only colors, not outline width */
-    input:focus,
-    textarea:focus,
-    select:focus {
+    /* Inputs */
+    input:focus, textarea:focus, select:focus {
       border-color: rgb(var(--color-primary-500)) !important;
       --tw-ring-color: rgb(var(--color-primary-500)) !important;
     }
-
-    /* Checkbox and radio buttons */
-    input[type="checkbox"]:checked,
-    input[type="radio"]:checked {
+    input[type="checkbox"]:checked, input[type="radio"]:checked {
       background-color: rgb(var(--color-primary-500)) !important;
       border-color: rgb(var(--color-primary-500)) !important;
     }
-
-    input[type="checkbox"]:focus,
-    input[type="radio"]:focus {
+    input[type="checkbox"]:focus, input[type="radio"]:focus {
       --tw-ring-color: rgb(var(--color-primary-500)) !important;
       border-color: rgb(var(--color-primary-500)) !important;
     }
+
+    /* Border-primary helper */
+    .border-primary { border-color: rgb(var(--color-primary-500)) !important; }
+`;
+
+const secondaryOverrides = `
+    /* Secondary color classes */
+    .bg-\\[rgb\\(var\\(--color-secondary-500\\)\\)\\] { background-color: rgb(var(--color-secondary-500)) !important; }
+    .bg-\\[rgb\\(var\\(--color-secondary-600\\)\\)\\] { background-color: rgb(var(--color-secondary-600)) !important; }
+    .hover\\:bg-\\[rgb\\(var\\(--color-secondary-600\\)\\)\\]:hover { background-color: rgb(var(--color-secondary-600)) !important; }
+    .bg-\\[rgb\\(var\\(--color-secondary-50\\)\\)\\] { background-color: rgb(var(--color-secondary-50)) !important; }
+    .bg-\\[rgb\\(var\\(--color-secondary-100\\)\\)\\] { background-color: rgb(var(--color-secondary-100)) !important; }
+    .bg-\\[rgb\\(var\\(--color-secondary-200\\)\\)\\] { background-color: rgb(var(--color-secondary-200)) !important; }
+    .bg-\\[rgb\\(var\\(--color-secondary-300\\)\\)\\] { background-color: rgb(var(--color-secondary-300)) !important; }
+    .bg-\\[rgb\\(var\\(--color-secondary-400\\)\\)\\] { background-color: rgb(var(--color-secondary-400)) !important; }
+    .text-\\[rgb\\(var\\(--color-secondary-500\\)\\)\\] { color: rgb(var(--color-secondary-500)) !important; }
+    .text-\\[rgb\\(var\\(--color-secondary-700\\)\\)\\] { color: rgb(var(--color-secondary-700)) !important; }
+    .border-\\[rgb\\(var\\(--color-secondary-400\\)\\)\\] { border-color: rgb(var(--color-secondary-400)) !important; }
+
+    /* Accent classes mapped to secondary */
+    .bg-\\[rgb\\(var\\(--color-accent-500\\)\\)\\] { background-color: rgb(var(--color-secondary-500)) !important; }
+    .bg-\\[rgb\\(var\\(--color-accent-50\\)\\)\\] { background-color: rgb(var(--color-secondary-50)) !important; }
+    .text-\\[rgb\\(var\\(--color-accent-500\\)\\)\\] { color: rgb(var(--color-secondary-500)) !important; }
+    .text-\\[rgb\\(var\\(--color-accent-700\\)\\)\\] { color: rgb(var(--color-secondary-700)) !important; }
+    .border-\\[rgb\\(var\\(--color-accent-500\\)\\)\\] { border-color: rgb(var(--color-secondary-500)) !important; }
+
+    /* Blue Tailwind classes mapped to secondary */
+    .text-blue-600, .text-blue-500 { color: rgb(var(--color-secondary-600)) !important; }
+    .text-blue-700 { color: rgb(var(--color-secondary-700)) !important; }
+    .text-blue-800 { color: rgb(var(--color-secondary-800)) !important; }
+    .hover\\:text-blue-600:hover, .hover\\:text-blue-500:hover { color: rgb(var(--color-secondary-600)) !important; }
+    .hover\\:text-blue-700:hover { color: rgb(var(--color-secondary-700)) !important; }
+    .hover\\:text-blue-800:hover { color: rgb(var(--color-secondary-800)) !important; }
+    .border-blue-600, .border-blue-500 { border-color: rgb(var(--color-secondary-600)) !important; }
+    .bg-blue-600, .bg-blue-500 { background-color: rgb(var(--color-secondary-600)) !important; }
+    .bg-blue-50 { background-color: rgb(var(--color-secondary-50)) !important; }
+    .bg-blue-100 { background-color: rgb(var(--color-secondary-100)) !important; }
+    .bg-blue-200 { background-color: rgb(var(--color-secondary-200)) !important; }
+
+    /* Tab active state */
+    [data-state="active"] {
+      color: rgb(var(--color-secondary-600)) !important;
+      border-color: rgb(var(--color-secondary-600)) !important;
+    }
+    .data-\\[state\\=active\\]\\:text-blue-600[data-state="active"] { color: rgb(var(--color-secondary-600)) !important; }
+    .data-\\[state\\=active\\]\\:border-blue-600[data-state="active"] { border-color: rgb(var(--color-secondary-600)) !important; }
+`;
+
+/**
+ * Generate CSS styles for tenant branding.
+ * Each color is applied independently — if only one is set, the other falls
+ * back to the globals.css palette rather than a hardcoded default.
+ */
+export function generateBrandingStyles(branding: TenantBranding | null): string {
+  const primaryShades = branding?.primaryColor ? generateColorShades(branding.primaryColor) : null;
+  const secondaryShades = branding?.secondaryColor ? generateColorShades(branding.secondaryColor) : null;
+
+  if (!primaryShades && !secondaryShades) {
+    return '';
+  }
+
+  const primaryDarkShades = primaryShades ? invertShades(primaryShades) : null;
+  const secondaryDarkShades = secondaryShades ? invertShades(secondaryShades) : null;
+
+  const rootBody = [
+    primaryShades ? paletteVars('primary', primaryShades) : '',
+    secondaryShades ? paletteVars('secondary', secondaryShades) : '',
+  ].filter(Boolean).join('\n');
+
+  const darkBody = [
+    primaryDarkShades ? paletteVars('primary', primaryDarkShades) : '',
+    secondaryDarkShades ? paletteVars('secondary', secondaryDarkShades) : '',
+  ].filter(Boolean).join('\n');
+
+  return `
+    :root {${rootBody}
+    }
+
+    html.dark {${darkBody}
+    }
+    ${primaryShades ? primaryOverrides : ''}
+    ${secondaryShades ? secondaryOverrides : ''}
   `;
 }

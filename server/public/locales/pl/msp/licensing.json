@@ -165,5 +165,12 @@
       "month": "miesiąc",
       "year": "rok"
     }
+  },
+  "workflowDesigner": {
+    "enterpriseHeading": "Funkcja Enterprise",
+    "unavailable": "Projektant przepływów pracy wymaga edycji Enterprise. Proszę dokonać aktualizacji, aby uzyskać dostęp do tej funkcji."
+  },
+  "runStudio": {
+    "unavailable": "Workflow Run Studio nie jest dostępne w tej edycji. (runId: {{runId}})"
   }
 }

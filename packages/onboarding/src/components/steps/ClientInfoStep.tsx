@@ -2,14 +2,22 @@
 
 // Onboarding step: initial MSP + client identity capture.
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
+import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Eye, EyeOff } from 'lucide-react';
 import type { StepProps } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { validateEmailAddress } from '@alga-psa/validation';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useI18n } from '@alga-psa/ui/lib/i18n/client';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import {
+  LOCALE_CONFIG,
+  filterPseudoLocales,
+  isSupportedLocale,
+  type SupportedLocale,
+} from '@alga-psa/core/i18n/config';
 
 interface ClientInfoStepProps extends StepProps {
   isRevisit?: boolean;
@@ -17,10 +25,53 @@ interface ClientInfoStepProps extends StepProps {
 
 export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientInfoStepProps) {
   const { t } = useTranslation('msp/onboarding');
+  const { locale: currentLocale, setLocale } = useI18n();
+  const { enabled: isMspI18nEnabled } = useFeatureFlag('msp-i18n-enabled', { defaultValue: false });
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [isLocaleChanging, setIsLocaleChanging] = useState(false);
+
+  const visibleLocales = useMemo(
+    () => filterPseudoLocales(LOCALE_CONFIG.supportedLocales, !!isMspI18nEnabled),
+    [isMspI18nEnabled],
+  );
+
+  const languageOptions = useMemo<SelectOption[]>(
+    () =>
+      visibleLocales.map((locale) => ({
+        value: locale,
+        label: `${LOCALE_CONFIG.localeNames[locale]} (${locale.toUpperCase()})`,
+      })),
+    [visibleLocales],
+  );
+
+  const selectedLocale: SupportedLocale = isSupportedLocale(data.locale ?? '')
+    ? (data.locale as SupportedLocale)
+    : currentLocale;
+
+  useEffect(() => {
+    if (!data.locale && isSupportedLocale(currentLocale)) {
+      updateData({ locale: currentLocale });
+    }
+    // Only seed from the resolved locale once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleLocaleChange = async (nextValue: string) => {
+    if (!isSupportedLocale(nextValue) || nextValue === selectedLocale) return;
+    const nextLocale = nextValue as SupportedLocale;
+    setIsLocaleChanging(true);
+    try {
+      updateData({ locale: nextLocale });
+      await setLocale(nextLocale);
+    } catch (error) {
+      console.error('Failed to switch onboarding locale:', error);
+    } finally {
+      setIsLocaleChanging(false);
+    }
+  };
   
   // Use a local variable for cleaner code
   const password = data.newPassword || '';
@@ -119,6 +170,31 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
           />
         </div>
 
+        {isMspI18nEnabled && (
+          <div className="space-y-2">
+            <CustomSelect
+              id="onboarding-language"
+              label={t('clientInfoStep.fields.language.label', {
+                defaultValue: 'Language',
+              })}
+              options={languageOptions}
+              value={selectedLocale}
+              onValueChange={handleLocaleChange}
+              disabled={isLocaleChanging}
+              placeholder={t('clientInfoStep.fields.language.placeholder', {
+                defaultValue: 'Select a language',
+              })}
+              data-automation-id="onboarding-language-select"
+            />
+            <p className="text-xs text-gray-500">
+              {t('clientInfoStep.fields.language.help', {
+                defaultValue:
+                  'This sets the default language for your workspace. You can change it later in settings.',
+              })}
+            </p>
+          </div>
+        )}
+
         <Alert variant="info">
           <AlertDescription>
             <span className="font-semibold">
@@ -203,6 +279,31 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
           required
         />
       </div>
+
+      {isMspI18nEnabled && (
+        <div className="space-y-2">
+          <CustomSelect
+            id="onboarding-language"
+            label={t('clientInfoStep.fields.language.label', {
+              defaultValue: 'Language',
+            })}
+            options={languageOptions}
+            value={selectedLocale}
+            onValueChange={handleLocaleChange}
+            disabled={isLocaleChanging}
+            placeholder={t('clientInfoStep.fields.language.placeholder', {
+              defaultValue: 'Select a language',
+            })}
+            data-automation-id="onboarding-language-select"
+          />
+          <p className="text-xs text-gray-500">
+            {t('clientInfoStep.fields.language.help', {
+              defaultValue:
+                'Becomes the organization default for everyone — MSP staff and client portal users. Individual users and clients can override it later.',
+            })}
+          </p>
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="email">

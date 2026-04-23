@@ -14,12 +14,14 @@ import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
 import { TIER_FEATURES, FEATURE_MINIMUM_TIER } from '@alga-psa/types';
 import { useTier } from 'server/src/context/TierContext';
 import { FeatureUpgradeNotice } from '@alga-psa/ui/components/tier-gating/FeatureUpgradeNotice';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface WorkflowAutomationGateProps {
   workflowProps: WorkflowProps;
 }
 
 export default function WorkflowAutomationGate({ workflowProps }: WorkflowAutomationGateProps) {
+  const { t } = useTranslation('msp/workflows');
   const router = useRouter();
   const { status } = useSession();
   const { hasFeature } = useTier();
@@ -60,7 +62,11 @@ export default function WorkflowAutomationGate({ workflowProps }: WorkflowAutoma
   if (status === 'loading' || workflowAutomationEnabled === null) {
     return (
       <div className="flex items-center justify-center py-8">
-        <LoadingIndicator layout="stacked" text="Loading workflow automation..." spinnerProps={{ size: 'md' }} />
+        <LoadingIndicator
+          layout="stacked"
+          text={t('automationGate.loading', { defaultValue: 'Loading workflow automation...' })}
+          spinnerProps={{ size: 'md' }}
+        />
       </div>
     );
   }
@@ -69,7 +75,7 @@ export default function WorkflowAutomationGate({ workflowProps }: WorkflowAutoma
     return (
       <div className="h-full p-6">
         <FeatureUpgradeNotice
-          featureName="Workflow Automation"
+          featureName={t('automationGate.featureName', { defaultValue: 'Workflow Automation' })}
           requiredTier={FEATURE_MINIMUM_TIER[TIER_FEATURES.WORKFLOW_DESIGNER]}
         />
       </div>
@@ -82,23 +88,27 @@ export default function WorkflowAutomationGate({ workflowProps }: WorkflowAutoma
         <Card className="p-6">
           <div className="space-y-4">
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">Workflow Automation</h2>
+              <h2 className="text-xl font-semibold text-gray-900">
+                {t('automationGate.featureName', { defaultValue: 'Workflow Automation' })}
+              </h2>
               <p className="text-sm text-gray-600">
-                This feature is experimental and is not enabled for your tenant.
+                {t('automationGate.notEnabled', { defaultValue: 'This feature is experimental and is not enabled for your tenant.' })}
               </p>
             </div>
             <Alert variant="warning">
-              <AlertTitle>Experimental</AlertTitle>
+              <AlertTitle>{t('automationGate.experimental', { defaultValue: 'Experimental' })}</AlertTitle>
               <AlertDescription>
-                Enable Workflow Automation in Settings to access workflow automation features.
+                {t('automationGate.enableHint', { defaultValue: 'Enable Workflow Automation in Settings to access workflow automation features.' })}
               </AlertDescription>
             </Alert>
             <div className="flex items-center gap-3">
               <Button id="enable-workflow-automation" asChild>
-                <Link href="/msp/settings?tab=experimental-features">Go to Experimental Features</Link>
+                <Link href="/msp/settings?tab=experimental-features">
+                  {t('automationGate.goToExperimental', { defaultValue: 'Go to Experimental Features' })}
+                </Link>
               </Button>
               <Link href="/msp/settings?tab=experimental-features" className="text-sm text-primary-600 hover:underline">
-                Open settings
+                {t('automationGate.openSettings', { defaultValue: 'Open settings' })}
               </Link>
             </div>
           </div>

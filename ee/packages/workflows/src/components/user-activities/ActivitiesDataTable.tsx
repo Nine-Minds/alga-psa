@@ -16,6 +16,7 @@ import { ActivityActionMenu } from './ActivityActionMenu';
 import { InlinePriorityPicker } from './InlinePriorityPicker';
 import { InlineStatusPicker } from './InlineStatusPicker';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Calendar, Layers, MessageSquare, Clock, ListChecks, Repeat, Bell } from 'lucide-react';
 
 interface ActivitiesDataTableProps {
@@ -82,23 +83,25 @@ const getPriorityIcon = (priorityColor?: string, priorityName?: string) => {
   return dot;
 };
 
+type TFn = (key: string, options?: Record<string, unknown>) => string;
+
 // Get activity type label
-const getActivityTypeLabel = (type: ActivityType) => {
+const getActivityTypeLabel = (type: ActivityType, t: TFn) => {
   switch (type) {
     case ActivityType.SCHEDULE:
-      return 'Schedule';
+      return t('table.activityTypes.schedule', { defaultValue: 'Schedule' });
     case ActivityType.PROJECT_TASK:
-      return 'Project Task';
+      return t('table.activityTypes.projectTask', { defaultValue: 'Project Task' });
     case ActivityType.TICKET:
-      return 'Ticket';
+      return t('table.activityTypes.ticket', { defaultValue: 'Ticket' });
     case ActivityType.TIME_ENTRY:
-      return 'Time Entry';
+      return t('table.activityTypes.timeEntry', { defaultValue: 'Time Entry' });
     case ActivityType.WORKFLOW_TASK:
-      return 'Workflow Task';
+      return t('table.activityTypes.workflowTask', { defaultValue: 'Workflow Task' });
     case ActivityType.NOTIFICATION:
-      return 'Notification';
+      return t('table.activityTypes.notification', { defaultValue: 'Notification' });
     default:
-      return 'Unknown';
+      return t('table.activityTypes.unknown', { defaultValue: 'Unknown' });
   }
 };
 
@@ -117,41 +120,42 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
   sortDirection,
   onSortChange
 }: ActivitiesDataTableProps) {
+  const { t } = useTranslation('msp/user-activities');
   const { openActivityDrawer } = useActivityDrawer();
 
   // Define columns for the DataTable - memoized to prevent unnecessary re-renders
   const columns = useMemo<ColumnDefinition<Activity>[]>(() => [
     {
-      title: 'Type',
+      title: t('table.columns.type', { defaultValue: 'Type' }),
       dataIndex: 'type',
       width: '10%',
       render: (value, record) => (
         <div className="flex items-center gap-2">
           {getActivityTypeIcon(value as ActivityType)}
-          <span className="text-xs">{getActivityTypeLabel(value as ActivityType)}</span>
+          <span className="text-xs">{getActivityTypeLabel(value as ActivityType, t)}</span>
         </div>
       ),
     },
     {
-      title: 'Title',
+      title: t('table.columns.title', { defaultValue: 'Title' }),
       dataIndex: 'title',
       width: '50%',
       render: (value, record) => (
         <div className="flex items-center gap-2">
-          <span className="font-medium text-gray-900 break-words">{value}</span>
+          <span className="font-medium text-gray-900 break-words">{value as string}</span>
           {record.type === ActivityType.SCHEDULE && (record as ScheduleActivity).isRecurring && (
-             <span title="Recurring Event">
+             <span title={t('table.values.recurringEvent', { defaultValue: 'Recurring Event' })}>
                <Repeat className="h-4 w-4 text-gray-500 flex-shrink-0" />
              </span>
           )}
           {record.type === ActivityType.NOTIFICATION && !(record as NotificationActivity).isRead && (
-            <div className="w-2 h-2 rounded-full bg-primary-500 flex-shrink-0" title="Unread" />
+            <div className="w-2 h-2 rounded-full bg-primary-500 flex-shrink-0" title={t('table.values.unread', { defaultValue: 'Unread' })} />
           )}
         </div>
       ),
     },
     {
-      title: 'Status',
+      title: t('table.columns.status', { defaultValue: 'Status' }),
       dataIndex: 'status',
       width: '15%',
       render: (_value, record) => (
@@ -162,7 +166,7 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
       ),
     },
     {
-      title: 'Priority',
+      title: t('table.columns.priority', { defaultValue: 'Priority' }),
       dataIndex: 'priority',
       width: '12%',
       render: (value, record) => {
@@ -182,13 +186,13 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
         return (
           <div className="flex items-center gap-2">
             {getPriorityIcon(record.priorityColor, record.priorityName)}
-            <span>{record.priorityName || value}</span>
+            <span>{record.priorityName || (value as string)}</span>
           </div>
         );
       },
     },
     {
-      title: 'Due Date',
+      title: t('table.columns.dueDate', { defaultValue: 'Due Date' }),
       dataIndex: 'dueDate',
       width: '10%',
       render: (value, record) => (
@@ -199,13 +203,13 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
               <span className="text-xs text-gray-500">{getRelativeTime(value as string)}</span>
             </div>
           ) : (
-            <span className="text-gray-400">No due date</span>
+            <span className="text-gray-400">{t('table.values.noDueDate', { defaultValue: 'No due date' })}</span>
           )}
         </div>
       ),
     },
     {
-      title: 'Actions',
+      title: t('table.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'actions',
       width: '5%',
       sortable: false,
@@ -217,7 +221,7 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
         />
       ),
     },
-  ], [onActionComplete, onViewDetails]);  // Add dependencies that are used in the columns
+  ], [onActionComplete, onViewDetails, t]);  // Add dependencies that are used in the columns
 
   // Handle row click to view details - memoized to prevent unnecessary re-renders
   const handleRowClick = useCallback((record: Activity) => {

@@ -318,6 +318,11 @@
         "label": "Adres e-mail",
         "placeholder": "jan@acmeit.com",
         "help": "Będzie używany do logowania do konta."
+      },
+      "language": {
+        "label": "Język",
+        "placeholder": "Wybierz język",
+        "help": "Staje się domyślnym językiem organizacji dla wszystkich — personelu MSP i użytkowników portalu klienta. Poszczególni użytkownicy i klienci mogą go później nadpisać."
       }
     },
     "password": {

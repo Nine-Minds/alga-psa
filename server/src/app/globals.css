@@ -358,7 +358,7 @@ body {
     background-color: rgb(var(--color-border-50) / 0.74);
 }
 
-.dark {
+html.dark {
     --background: 0, 0, 0;
     --color-background: 0 0 0;
     --color-card: 22 28 48;
@@ -510,7 +510,7 @@ body {
 }
 
 
-.light {
+html.light {
     --background: 255, 255, 255;
     --color-background: 255 255 255;
     --color-card: 255 255 255;
@@ -662,8 +662,8 @@ body {
 
 }
 
-.light,
-.dark {
+html.light,
+html.dark {
     --alga-bg: rgb(var(--color-background));
     --alga-fg: rgb(var(--color-text-900));
     --alga-muted: rgb(var(--color-border-50));

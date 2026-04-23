@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@alga-psa/ui/components/Tabs';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -103,6 +104,16 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
   // Pagination state for configured services table
   const [servicesCurrentPage, setServicesCurrentPage] = useState(1);
   const [servicesPageSize, setServicesPageSize] = useState(10);
+
+  // Delete confirmation state
+  const [userToDelete, setUserToDelete] = useState<Omit<IUser, 'tenant'> | null>(null);
+  const [serviceToDelete, setServiceToDelete] = useState<IService | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Refs for scrolling edit forms into view
+  const userHoursFormRef = useRef<HTMLDivElement>(null);
+  const serviceRulesFormRef = useRef<HTMLDivElement>(null);
+
   const { enabled: isTeamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   const daysOfWeek = useMemo(() => ([
     { value: 0, label: t('availabilitySettings.days.sunday', { defaultValue: 'Sunday' }) },
@@ -551,6 +562,96 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
     }
   };
 
+  const handleEditUser = (userId: string) => {
+    setSelectedUserId(userId);
+    requestAnimationFrame(() => {
+      userHoursFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
+  const handleEditService = (serviceId: string) => {
+    setSelectedServiceId(serviceId);
+    requestAnimationFrame(() => {
+      serviceRulesFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
+  const handleConfirmDeleteUser = async () => {
+    if (!userToDelete) return;
+    setIsDeleting(true);
+    try {
+      const settingsResult = await getAvailabilitySettings({
+        setting_type: 'user_hours',
+        user_id: userToDelete.user_id
+      });
+
+      if (!settingsResult.success || !settingsResult.data) {
+        toast.error(settingsResult.error || t('availabilitySettings.userHours.feedback.deleteError', { defaultValue: 'Failed to delete user availability' }));
+        return;
+      }
+
+      for (const setting of settingsResult.data) {
+        const deleteResult = await deleteAvailabilitySetting(setting.availability_setting_id);
+        if (!deleteResult.success) {
+          toast.error(deleteResult.error || t('availabilitySettings.userHours.feedback.deleteError', { defaultValue: 'Failed to delete user availability' }));
+          return;
+        }
+      }
+
+      toast.success(t('availabilitySettings.userHours.feedback.deleteSuccess', { defaultValue: 'User availability deleted' }));
+
+      // Clear selection if the deleted user was being edited
+      if (selectedUserId === userToDelete.user_id) {
+        setSelectedUserId('');
+        setUserHours({});
+      }
+
+      await loadConfiguredUsers();
+      setUserToDelete(null);
+    } catch (error) {
+      handleError(error, t('availabilitySettings.userHours.feedback.deleteError', { defaultValue: 'Failed to delete user availability' }));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleConfirmDeleteService = async () => {
+    if (!serviceToDelete) return;
+    setIsDeleting(true);
+    try {
+      const setting = serviceSettings[serviceToDelete.service_id];
+      if (!setting) {
+        setServiceToDelete(null);
+        return;
+      }
+
+      const result = await deleteAvailabilitySetting(setting.availability_setting_id);
+      if (result.success) {
+        toast.success(t('availabilitySettings.serviceRules.feedback.deleteSuccess', { defaultValue: 'Service rules deleted' }));
+
+        // Remove from local state
+        setServiceSettings(prev => {
+          const next = { ...prev };
+          delete next[serviceToDelete.service_id];
+          return next;
+        });
+
+        // Clear selection if the deleted service was being edited
+        if (selectedServiceId === serviceToDelete.service_id) {
+          setSelectedServiceId('');
+        }
+
+        setServiceToDelete(null);
+      } else {
+        toast.error(result.error || t('availabilitySettings.serviceRules.feedback.deleteError', { defaultValue: 'Failed to delete service rules' }));
+      }
+    } catch (error) {
+      handleError(error, t('availabilitySettings.serviceRules.feedback.deleteError', { defaultValue: 'Failed to delete service rules' }));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const userOptions: SelectOption[] = useMemo(() =>
     users.map(user => ({
       value: user.user_id,
@@ -583,14 +684,25 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       title: t('availabilitySettings.common.columns.action', { defaultValue: 'Action' }),
       dataIndex: 'user_id' as any,
       render: (_, user: Omit<IUser, 'tenant'>) => (
-        <Button
-          id={`edit-user-${user.user_id}`}
-          variant="ghost"
-          size="sm"
-          onClick={() => setSelectedUserId(user.user_id)}
-        >
-          {t('availabilitySettings.common.actions.edit', { defaultValue: 'Edit' })}
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            id={`edit-user-${user.user_id}`}
+            variant="ghost"
+            size="sm"
+            onClick={() => handleEditUser(user.user_id)}
+          >
+            {t('availabilitySettings.common.actions.edit', { defaultValue: 'Edit' })}
+          </Button>
+          <Button
+            id={`delete-user-${user.user_id}`}
+            variant="ghost"
+            size="sm"
+            onClick={() => setUserToDelete(user)}
+            aria-label={t('availabilitySettings.common.actions.delete', { defaultValue: 'Delete' })}
+          >
+            <Trash2 className="h-4 w-4 text-red-600" />
+          </Button>
+        </div>
       )
     }
   ], [t]);
@@ -620,14 +732,25 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       title: t('availabilitySettings.common.columns.action', { defaultValue: 'Action' }),
       dataIndex: 'service_id' as any,
       render: (_, service: IService) => (
-        <Button
-          id={`edit-service-${service.service_id}`}
-          variant="ghost"
-          size="sm"
-          onClick={() => setSelectedServiceId(service.service_id)}
-        >
-          {t('availabilitySettings.common.actions.edit', { defaultValue: 'Edit' })}
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            id={`edit-service-${service.service_id}`}
+            variant="ghost"
+            size="sm"
+            onClick={() => handleEditService(service.service_id)}
+          >
+            {t('availabilitySettings.common.actions.edit', { defaultValue: 'Edit' })}
+          </Button>
+          <Button
+            id={`delete-service-${service.service_id}`}
+            variant="ghost"
+            size="sm"
+            onClick={() => setServiceToDelete(service)}
+            aria-label={t('availabilitySettings.common.actions.delete', { defaultValue: 'Delete' })}
+          >
+            <Trash2 className="h-4 w-4 text-red-600" />
+          </Button>
+        </div>
       )
     }
   ], [serviceSettings, t]);
@@ -816,7 +939,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
             </div>
 
             {selectedUserId && (
-              <>
+              <div ref={userHoursFormRef} className="space-y-4 scroll-mt-4">
                 <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
                   <h3 className="text-sm font-semibold">{t('availabilitySettings.userHours.appointmentSettings.title', { defaultValue: 'Appointment Settings' })}</h3>
                   <div className="grid grid-cols-2 gap-4">
@@ -946,7 +1069,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                   <Save className="h-4 w-4 mr-2" />
                   {t('availabilitySettings.userHours.actions.save', { defaultValue: 'Save User Hours' })}
                 </Button>
-              </>
+              </div>
             )}
 
             {/* Configured Users Table */}
@@ -988,7 +1111,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
             </div>
 
             {selectedServiceId && (
-              <>
+              <div ref={serviceRulesFormRef} className="scroll-mt-4">
                 <div className="border-t pt-4 mt-4">
                   <h3 className="text-lg font-semibold mb-4">
                     {t('availabilitySettings.serviceRules.editor.title', {
@@ -1064,7 +1187,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                     {t('availabilitySettings.serviceRules.actions.save', { defaultValue: 'Save Service Rules' })}
                   </Button>
                 </div>
-              </>
+              </div>
             )}
 
             {/* Configured Services Table */}
@@ -1211,6 +1334,38 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
         </Tabs>
         </div>
       )}
+
+      <ConfirmationDialog
+        isOpen={!!userToDelete}
+        onClose={() => {
+          if (!isDeleting) setUserToDelete(null);
+        }}
+        onConfirm={handleConfirmDeleteUser}
+        title={t('availabilitySettings.userHours.deleteDialog.title', { defaultValue: 'Delete User Availability' })}
+        message={t('availabilitySettings.userHours.deleteDialog.message', {
+          defaultValue: 'Are you sure you want to delete availability settings for {{userName}}? This will remove all their configured working hours. This action cannot be undone.',
+          userName: userToDelete ? `${userToDelete.first_name} ${userToDelete.last_name}` : ''
+        })}
+        confirmLabel={isDeleting
+          ? t('availabilitySettings.common.actions.deleting', { defaultValue: 'Deleting...' })
+          : t('availabilitySettings.common.actions.delete', { defaultValue: 'Delete' })}
+      />
+
+      <ConfirmationDialog
+        isOpen={!!serviceToDelete}
+        onClose={() => {
+          if (!isDeleting) setServiceToDelete(null);
+        }}
+        onConfirm={handleConfirmDeleteService}
+        title={t('availabilitySettings.serviceRules.deleteDialog.title', { defaultValue: 'Delete Service Rules' })}
+        message={t('availabilitySettings.serviceRules.deleteDialog.message', {
+          defaultValue: 'Are you sure you want to delete the rules for {{serviceName}}? This action cannot be undone.',
+          serviceName: serviceToDelete?.service_name || ''
+        })}
+        confirmLabel={isDeleting
+          ? t('availabilitySettings.common.actions.deleting', { defaultValue: 'Deleting...' })
+          : t('availabilitySettings.common.actions.delete', { defaultValue: 'Delete' })}
+      />
     </Dialog>
   );
 }

@@ -41,20 +41,29 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
   try {
     const db = await getConnection(tenantId);
 
-    // Get ticket details including contact
+    // Get ticket details including contact and the board's default team so we
+    // can notify dispatchers when the ticket lands unassigned (e.g. from an
+    // inbound email hitting a board with no default agent).
     const ticket = await db('tickets as t')
       .select(
         't.ticket_id',
         't.ticket_number',
         't.title',
         't.assigned_to',
+        't.assigned_team_id',
+        't.board_id',
         't.contact_name_id',
         't.client_id',
-        'c.client_name'
+        'c.client_name',
+        'b.default_assigned_team_id as board_default_team_id'
       )
       .leftJoin('clients as c', function() {
         this.on('t.client_id', 'c.client_id')
             .andOn('t.tenant', 'c.tenant');
+      })
+      .leftJoin('boards as b', function() {
+        this.on('t.board_id', 'b.board_id')
+            .andOn('t.tenant', 'b.tenant');
       })
       .where('t.ticket_id', ticketId)
       .first();
@@ -74,27 +83,64 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       ticketNumber: ticket.ticket_number
     });
 
-    // Create notification for assigned MSP user if ticket is assigned
-    if (ticket.assigned_to) {
+    const baseData = {
+      ticketId: ticket.ticket_number || 'New Ticket',
+      ticketTitle: ticket.title,
+      clientName: ticket.client_name || 'Unknown'
+    };
+
+    const notifyMspUser = async (userId: string) => {
       await createNotificationFromTemplateInternal(db, {
         tenant: tenantId,
-        user_id: ticket.assigned_to,
+        user_id: userId,
         template_name: 'ticket-created',
         type: 'info',
         category: 'tickets',
         link: internalUrl,
-        data: {
-          ticketId: ticket.ticket_number || 'New Ticket',
-          ticketTitle: ticket.title,
-          clientName: ticket.client_name || 'Unknown'
-        }
+        data: baseData
       });
+    };
 
-      logger.info('[InternalNotificationSubscriber] Created notification for ticket created (MSP user)', {
+    if (ticket.assigned_to) {
+      // Primary assignee — single, direct notification.
+      await notifyMspUser(ticket.assigned_to);
+
+      logger.info('[InternalNotificationSubscriber] Created notification for ticket created (MSP assignee)', {
         ticketId,
         userId: ticket.assigned_to,
         tenantId
       });
+    } else {
+      // Unassigned at creation time: notify the dispatch team so someone picks
+      // it up. Without this, tickets arriving from inbound email to a board
+      // with no default agent produce zero MSP-side notifications — they
+      // languish until someone manually scans the board.
+      const teamId = ticket.assigned_team_id || ticket.board_default_team_id;
+      if (teamId) {
+        const teamMembers = await db('team_members')
+          .select('user_id')
+          .where({ team_id: teamId, tenant: tenantId });
+
+        await Promise.all(
+          teamMembers
+            .map((row: { user_id: string }) => row.user_id)
+            .filter(Boolean)
+            .map(notifyMspUser)
+        );
+
+        logger.info('[InternalNotificationSubscriber] Notified team for unassigned ticket', {
+          ticketId,
+          teamId,
+          memberCount: teamMembers.length,
+          tenantId
+        });
+      } else {
+        logger.info('[InternalNotificationSubscriber] Unassigned ticket has no team — no MSP notification dispatched', {
+          ticketId,
+          boardId: ticket.board_id,
+          tenantId
+        });
+      }
     }
 
     // Create notification for client contact if they have portal access
@@ -216,17 +262,25 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
   try {
     const db = await getConnection(tenantId);
 
-    // Get ticket details including priority
+    // Get ticket details including priority + creation time + contact so we
+    // can decide whether to also post a client-portal notification.
     const ticket = await db('tickets as t')
       .select(
         't.ticket_number',
         't.title',
         't.assigned_to',
-        'p.priority_name as priority'
+        't.entered_at',
+        't.contact_name_id',
+        'p.priority_name as priority',
+        db.raw("TRIM(CONCAT(COALESCE(au.first_name, ''), ' ', COALESCE(au.last_name, ''))) as assigned_to_name")
       )
       .leftJoin('priorities as p', function() {
         this.on('t.priority_id', 'p.priority_id')
             .andOn('t.tenant', 'p.tenant');
+      })
+      .leftJoin('users as au', function() {
+        this.on('t.assigned_to', 'au.user_id')
+            .andOn('t.tenant', 'au.tenant');
       })
       .where({ 't.ticket_id': ticketId, 't.tenant': tenantId })
       .first();
@@ -250,7 +304,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       : 'Someone';
 
     // Resolve notification link
-    const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
+    const { internalUrl, portalUrl } = await resolveNotificationLinks(db, tenantId, {
       type: 'ticket',
       ticketId,
       ticketNumber: ticket.ticket_number
@@ -272,6 +326,58 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
         performedByName
       }
     });
+
+    // Client-portal in-app notification — mirror the email-side rules in
+    // ticketEmailSubscriber.handleTicketAssigned: fire only for first
+    // individual agent assignments that happen AFTER ticket creation. The
+    // ticket-created-client notification already covers creation time.
+    const assignedTeamIdCheck = (event.payload as any).changes?.assigned_team_id as string | undefined;
+    const previousAssigneeId = (event.payload as any).previousAssigneeId as string | undefined;
+    const previousAssigneeType = (event.payload as any).previousAssigneeType as 'user' | 'team' | undefined;
+    const isFirstIndividualAssignment = !previousAssigneeId || previousAssigneeType === 'team';
+    const enteredAtMs = ticket.entered_at ? new Date(ticket.entered_at).getTime() : 0;
+    const CREATION_WINDOW_MS = 30_000;
+    const isCreationTimeAssignment = enteredAtMs > 0 && (Date.now() - enteredAtMs) <= CREATION_WINDOW_MS;
+
+    if (
+      !assignedTeamIdCheck &&
+      ticket.contact_name_id &&
+      portalUrl &&
+      isFirstIndividualAssignment &&
+      !isCreationTimeAssignment
+    ) {
+      const contactUser = await db('users')
+        .select('user_id')
+        .where({
+          contact_id: ticket.contact_name_id,
+          tenant: tenantId,
+          user_type: 'client'
+        })
+        .first();
+
+      if (contactUser) {
+        await createNotificationFromTemplateInternal(db, {
+          tenant: tenantId,
+          user_id: contactUser.user_id,
+          template_name: 'ticket-agent-assigned-client',
+          type: 'info',
+          category: 'tickets',
+          link: portalUrl,
+          data: {
+            ticketId: ticket.ticket_number,
+            ticketNumber: ticket.ticket_number,
+            ticketTitle: ticket.title,
+            assignedToName: ticket.assigned_to_name || 'An agent'
+          }
+        });
+
+        logger.info('[InternalNotificationSubscriber] Created client-portal notification for agent assignment', {
+          ticketId,
+          contactUserId: contactUser.user_id,
+          tenantId
+        });
+      }
+    }
 
     logger.info('[InternalNotificationSubscriber] Created notification for ticket assigned', {
       ticketId,

@@ -7,6 +7,7 @@ import { useModality } from './ModalityContext';
 import { AutomationProps } from '../ui-reflection/types';
 import { Button } from './Button';
 import Spinner from './Spinner';
+import { useTranslation } from '../lib/i18n/client';
 
 // Hook to detect if we're on the client (after hydration)
 const emptySubscribe = () => () => {};
@@ -72,6 +73,7 @@ function TreeSelect<T extends string>({
   onAddNew,
   addNewLabel = 'Add new',
 }: TreeSelectProps<T>): React.JSX.Element {
+  const { t } = useTranslation();
   const { modal: parentModal } = useModality();
   const isClient = useIsClient();
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
@@ -454,7 +456,7 @@ function TreeSelect<T extends string>({
                   }}
                   className="p-1 hover:bg-gray-100 rounded-full cursor-pointer"
                   role="button"
-                  aria-label="Clear selection"
+                  aria-label={t('form.clearSelection', { defaultValue: 'Clear selection' })}
                 >
                   <X className="w-4 h-4 text-gray-500" />
                 </div>
@@ -484,7 +486,7 @@ function TreeSelect<T extends string>({
                     `}
                     onClick={handleReset}
                   >
-                    Clear selection
+                    {t('form.clearSelection', { defaultValue: 'Clear selection' })}
                   </div>
                 )}
                 {options.flatMap((option: TreeSelectOption<T>) => renderOption(option))}

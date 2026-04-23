@@ -118,7 +118,33 @@
       "accountReady": "Cuenta lista. Inicia sesión.",
       "accountCreatedSuccess": "Cuenta creada con éxito. Inicia sesión.",
       "welcome": "¡Bienvenido al portal del cliente!",
-      "createFailed": "No se pudo crear la cuenta"
+      "createFailed": "No se pudo crear la cuenta",
+      "errors": {
+        "tokenRequired": "Se requiere un token de invitación válido.",
+        "tokenAndPasswordRequired": "Se requieren un token y una contraseña para completar la configuración.",
+        "passwordTooShort": "La contraseña debe tener al menos 8 caracteres.",
+        "invalidOrExpiredToken": "Este enlace de invitación no es válido o ha caducado.",
+        "tenantContextRequired": "Falta el contexto de la organización. Vuelve a abrir el enlace de invitación.",
+        "resetPasswordFailed": "No pudimos restablecer la contraseña de la cuenta existente. Inténtalo de nuevo.",
+        "createUserFailed": "No pudimos crear tu cuenta de usuario. Inténtalo de nuevo.",
+        "setupFailed": "No pudimos completar la configuración del portal. Inténtalo de nuevo.",
+        "verificationFailed": "No pudimos verificar tu token de invitación. Inténtalo de nuevo.",
+        "invitationFailed": "No pudimos enviar la invitación. Inténtalo de nuevo.",
+        "permissionDeniedInvite": "No tienes permiso para enviar invitaciones al portal.",
+        "permissionDeniedCreate": "No tienes permiso para crear cuentas de usuario del portal.",
+        "emailNotConfigured": "El servicio de correo electrónico no está configurado. Contacta con tu administrador.",
+        "contactNotFound": "Contacto no encontrado.",
+        "contactMissingEmail": "El contacto no tiene una dirección de correo electrónico.",
+        "contactInvalidEmail": "El contacto tiene una dirección de correo electrónico no válida.",
+        "userExistsForContact": "Ya existe una cuenta de usuario para este contacto.",
+        "portalUserAlreadyExists": "Ya existe un usuario del portal para este contacto.",
+        "noDefaultClient": "No hay un cliente predeterminado configurado para este inquilino.",
+        "noDefaultLocation": "El cliente predeterminado no tiene una ubicación predeterminada configurada.",
+        "noLocationEmail": "La ubicación del cliente no tiene un correo de contacto configurado.",
+        "baseUrlNotConfigured": "La URL base de la aplicación no está configurada.",
+        "invitationNotFound": "Invitación no encontrada.",
+        "revokeFailed": "No se pudo revocar la invitación. Inténtalo de nuevo."
+      }
     },
     "features": {
       "submitTickets": {

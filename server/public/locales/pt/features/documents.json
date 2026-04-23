@@ -258,5 +258,14 @@
       "troubleshooting": "Troubleshooting",
       "reference": "Reference"
     }
+  },
+  "documents": {
+    "messages": {
+      "error": {
+        "noPermission": "Não tem permissão para ver os documentos",
+        "invalidData": "Dados de documento inválidos recebidos",
+        "fetchFailed": "Falha ao obter os documentos"
+      }
+    }
   }
 }

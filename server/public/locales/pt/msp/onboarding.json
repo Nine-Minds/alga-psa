@@ -318,6 +318,11 @@
         "label": "Email Address",
         "placeholder": "john@acmeit.com",
         "help": "This will be used for signing in to your account."
+      },
+      "language": {
+        "label": "Idioma",
+        "placeholder": "Selecione um idioma",
+        "help": "Torna-se o padrão da organização para todos — equipe MSP e usuários do portal do cliente. Usuários individuais e clientes podem substituí-lo depois."
       }
     },
     "password": {

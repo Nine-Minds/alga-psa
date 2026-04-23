@@ -678,7 +678,7 @@
   "clientLanguagePreference": {
     "title": "Client-Spracheinstellungen",
     "label": "Standardsprache für Kontakte",
-    "description": "Legen Sie die Standardsprache für alle Kontakte in {{clientName}} fest. Einzelne Benutzer können dies in ihren persönlichen Einstellungen überschreiben.",
+    "description": "Gilt für jeden Portalbenutzer von {{clientName}}, sofern dieser keine eigene Präferenz im Profil festgelegt hat.",
     "selectPlaceholder": "Wählen Sie eine Sprache aus",
     "updating": "Spracheinstellung wird aktualisiert...",
     "loadError": "Die Spracheinstellung des Clients konnte nicht geladen werden:",
@@ -1089,5 +1089,11 @@
     "error": "Fehler",
     "saving": "Speichern...",
     "success": "Erfolg"
+  },
+  "notes": {
+    "messages": {
+      "saveSuccess": "Notizen gespeichert",
+      "saveFailed": "Notizen konnten nicht gespeichert werden"
+    }
   }
 }

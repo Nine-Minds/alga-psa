@@ -97,6 +97,30 @@
   "fields": {
     "notes": "Note"
   },
+  "auth": {
+    "messages": {
+      "handoffMissingToken": "Il token di trasferimento dell'accesso è mancante o non valido. Accedi di nuovo.",
+      "handoffFinalizeFailed": "Non siamo riusciti a finalizzare il tuo accesso. Prova ad accedere di nuovo.",
+      "handoffNetworkIssue": "Problema di rete rilevato durante la finalizzazione dell'accesso. Riprova."
+    },
+    "checkEmail": {
+      "resendSuccess": "E-mail inviata! Controlla la tua casella di posta.",
+      "resendFailed": "Impossibile inviare nuovamente l'e-mail. Riprova."
+    }
+  },
+  "share": {
+    "errors": {
+      "loadFailed": "Impossibile caricare il link di condivisione",
+      "connectionFailed": "Impossibile connettersi al server",
+      "passwordRequired": "Password richiesta",
+      "invalidPassword": "Password non valida",
+      "downloadFailedRetry": "Download non riuscito. Riprova.",
+      "downloadFailed": "Download non riuscito",
+      "linkNotAvailable": "Link non disponibile",
+      "linkExpired": "Questo link di condivisione è scaduto.",
+      "downloadLimitReached": "Il limite di download è stato raggiunto."
+    }
+  },
   "tickets": {
     "responseSource": {
       "clientPortal": "Ricevuto tramite Portale Clienti",
@@ -144,6 +168,43 @@
         "client": "predefinito del cliente",
         "tenant": "predefinito del tenant",
         "system": "predefinito del sistema"
+      }
+    },
+    "hierarchyTable": {
+      "title": "Gerarchia delle preferenze linguistiche",
+      "description": "Nel determinare quale lingua utilizzare per l'interfaccia e le notifiche via email, Alga controlla questi elementi nell'ordine e si ferma alla prima corrispondenza.",
+      "columns": {
+        "priority": "Priorità",
+        "source": "Origine della lingua",
+        "appliesTo": "Si applica a",
+        "whereSet": "Dove impostare"
+      },
+      "rows": {
+        "userPreference": {
+          "source": "Preferenza individuale dell'utente",
+          "appliesTo": "Tutti gli utenti",
+          "whereSet": "Profilo utente"
+        },
+        "clientUserLanguage": {
+          "source": "Lingua specifica del cliente",
+          "appliesTo": "Utenti del portale cliente (per cliente specifico)",
+          "whereSet": "Dettagli del cliente"
+        },
+        "clientPortalDefault": {
+          "source": "Impostazione predefinita del portale cliente",
+          "appliesTo": "Tutti gli utenti del portale cliente",
+          "whereSet": "Impostazioni MSP → Portale cliente"
+        },
+        "organizationDefault": {
+          "source": "Impostazione predefinita dell'organizzazione",
+          "appliesTo": "Tutti gli utenti (personale MSP e portale cliente)",
+          "whereSet": "Impostazioni MSP → Lingua"
+        },
+        "systemDefault": {
+          "source": "Impostazione predefinita del sistema (inglese)",
+          "appliesTo": "Fallback",
+          "whereSet": "Definito dal sistema"
+        }
       }
     }
   },
@@ -935,11 +996,37 @@
       "ai_assistant": "Sblocca la chat AI, l'assistenza ai documenti, l'aiuto nella barra laterale e gli strumenti AI per i flussi di lavoro del tuo team."
     }
   },
-  "auth": {
-    "messages": {
-      "handoffMissingToken": "Il token di trasferimento dell'accesso è mancante o non valido. Accedi di nuovo.",
-      "handoffFinalizeFailed": "Non siamo riusciti a finalizzare il tuo accesso. Prova ad accedere di nuovo.",
-      "handoffNetworkIssue": "Problema di rete rilevato durante la finalizzazione dell'accesso. Riprova."
+  "form": {
+    "selectPlaceholder": "Seleziona...",
+    "clearSelection": "Cancella selezione",
+    "fromDate": "Dal",
+    "toDate": "Al",
+    "noResults": "Nessun risultato trovato",
+    "searchPlaceholder": "Cerca..."
+  },
+  "tagFilter": {
+    "placeholder": "Filtra per tag...",
+    "filter": "Filtra",
+    "selectedCount": "{{count}} selezionati",
+    "clearAll": "Cancella tutto"
+  },
+  "timezonePicker": {
+    "selectPlaceholder": "Seleziona fuso orario...",
+    "searchPlaceholder": "Cerca fusi orari o abbreviazioni (es. EST)...",
+    "noResults": "Nessun fuso orario trovato",
+    "matchingGroup": "Corrispondenze per \"{{query}}\"",
+    "regions": {
+      "Africa": "Africa",
+      "America": "America",
+      "Antarctica": "Antartide",
+      "Arctic": "Artico",
+      "Asia": "Asia",
+      "Atlantic": "Atlantico",
+      "Australia": "Australia",
+      "Europe": "Europa",
+      "Indian": "Oceano Indiano",
+      "Pacific": "Pacifico",
+      "Etc": "Altro"
     }
   }
 }

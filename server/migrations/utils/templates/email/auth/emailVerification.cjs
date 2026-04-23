@@ -303,6 +303,29 @@ const STYLED_COPY = {
     textDidntRequest: 'Non hai richiesto questa email? Puoi ignorarla tranquillamente. Il tuo indirizzo email non verr\u00e0 aggiunto al nostro sistema a meno che tu non faccia clic sul link di verifica qui sopra.',
     textFooter: 'Questa \u00e8 un\'email di sicurezza automatica.\n\u00a9 {{currentYear}} {{tenantClientName}}. Tutti i diritti riservati.',
   },
+  pl: {
+    subject: 'Zweryfikuj sw\u00f3j adres email{{#if registrationClientName}} dla {{registrationClientName}}{{/if}}',
+    headerTitle: 'Weryfikacja adresu email',
+    headerSubtitle: 'Potwierd\u017a sw\u00f3j adres email, aby rozpocz\u0105\u0107',
+    greeting: 'Witaj,',
+    intro: 'Witamy! Prosimy o zweryfikowanie adresu email, aby aktywowa\u0107 konto{{#if registrationClientName}} dla <strong>{{registrationClientName}}</strong>{{/if}}.',
+    whyTitle: '\u2709\ufe0f Dlaczego warto zweryfikowa\u0107 adres email?',
+    why1: '\u2713 Zapewnia bezpiecze\u0144stwo konta i mo\u017cliwo\u015b\u0107 odzyskiwania',
+    why2: '\u2713 Umo\u017cliwia przesy\u0142anie wa\u017cnych powiadomie\u0144 i aktualizacji',
+    why3: '\u2713 Potwierdza, \u017ce jeste\u015b w\u0142a\u015bcicielem konta',
+    buttonText: 'Zweryfikuj adres email',
+    linkInstructions: 'Lub skopiuj i wklej ten link do przegl\u0105darki:',
+    warningTitle: '\u23f0 Weryfikacja z ograniczeniem czasowym',
+    warningText: 'Ten link weryfikacyjny wyga\u015bnie za <strong>{{expirationTime}}</strong>. Prosz\u0119 uko\u0144czy\u0107 weryfikacj\u0119 przed tym czasem.',
+    didntRequest: '<strong>Nie prosi\u0142e\u015b(a\u015b) o t\u0119 wiadomo\u015b\u0107?</strong> Mo\u017cesz j\u0105 bezpiecznie zignorowa\u0107. Tw\u00f3j adres email nie zostanie dodany do naszego systemu, chyba \u017ce klikniesz link weryfikacyjny powy\u017cej.',
+    footer1: 'To jest zautomatyzowana wiadomo\u015b\u0107 bezpiecze\u0144stwa.',
+    footer2: '\u00a9 {{currentYear}} {{tenantClientName}}. Wszelkie prawa zastrze\u017cone.',
+    textWhy: '\u2709\ufe0f Dlaczego warto zweryfikowa\u0107 adres email?\n\u2713 Zapewnia bezpiecze\u0144stwo konta i mo\u017cliwo\u015b\u0107 odzyskiwania\n\u2713 Umo\u017cliwia przesy\u0142anie wa\u017cnych powiadomie\u0144 i aktualizacji\n\u2713 Potwierdza, \u017ce jeste\u015b w\u0142a\u015bcicielem konta',
+    textButton: 'Zweryfikuj adres email: {{verificationUrl}}',
+    textWarning: '\u23f0 Weryfikacja z ograniczeniem czasowym\nTen link weryfikacyjny wyga\u015bnie za {{expirationTime}}. Prosz\u0119 uko\u0144czy\u0107 weryfikacj\u0119 przed tym czasem.',
+    textDidntRequest: 'Nie prosi\u0142e\u015b(a\u015b) o t\u0119 wiadomo\u015b\u0107? Mo\u017cesz j\u0105 bezpiecznie zignorowa\u0107. Tw\u00f3j adres email nie zostanie dodany do naszego systemu, chyba \u017ce klikniesz link weryfikacyjny powy\u017cej.',
+    textFooter: 'To jest zautomatyzowana wiadomo\u015b\u0107 bezpiecze\u0144stwa.\n\u00a9 {{currentYear}} {{tenantClientName}}. Wszelkie prawa zastrze\u017cone.',
+  },
 };
 /* eslint-enable max-len */
 
@@ -384,72 +407,10 @@ ${c.textDidntRequest}
 ${c.textFooter}`;
 }
 
-/* ------------------------------------------------------------------ */
-/*  Polish styled version (from migration 20251228123000)             */
-/* ------------------------------------------------------------------ */
-function buildPolishHtml() {
-  return `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Weryfikacja adresu email</title>
-  <style>
-    body { font-family: Inter, system-ui, sans-serif; line-height: 1.6; color: #0f172a; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc; }
-    .header { background: linear-gradient(135deg, #8A4DEA, #40CFF9); color: white; padding: 32px 24px; border-radius: 12px 12px 0 0; text-align: center; }
-    .header h1 { font-family: Poppins, system-ui, sans-serif; font-weight: 700; font-size: 28px; margin: 0 0 8px 0; color: white; }
-    .content { background: #ffffff; padding: 32px; border: 1px solid #e2e8f0; border-top: none; border-bottom: none; }
-    .footer { background: #1e293b; color: #cbd5e1; padding: 24px; border-radius: 0 0 12px 12px; text-align: center; font-size: 14px; }
-    .action-button { display: inline-block; background: #8A4DEA; color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px; margin: 20px 0; }
-    .warning { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 16px; margin: 24px 0; }
-    .link-text { background: #f1f5f9; padding: 12px 16px; border-radius: 6px; font-family: monospace; font-size: 13px; word-break: break-all; color: #475569; margin: 16px 0; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>Zweryfikuj sw\u00f3j adres email</h1>
-    <p>Jeszcze jeden krok do uko\u0144czenia rejestracji</p>
-  </div>
-  <div class="content">
-    <h2>Witaj{{#if contactName}} {{contactName}}{{/if}},</h2>
-    <p>Dzi\u0119kujemy za rejestracj\u0119! Prosz\u0119 zweryfikowa\u0107 sw\u00f3j adres email, klikaj\u0105c poni\u017cszy przycisk:</p>
-    <div style="text-align: center;">
-      <a href="{{verificationLink}}" class="action-button">Zweryfikuj adres email</a>
-    </div>
-    <p style="text-align: center; color: #64748b; font-size: 14px;">Lub skopiuj i wklej ten link do przegl\u0105darki:</p>
-    <div class="link-text">{{verificationLink}}</div>
-    <div class="warning">
-      <h4>\u23f0 Link ograniczony czasowo</h4>
-      <p>Ten link weryfikacyjny wyga\u015bnie za {{expirationTime}}. Je\u015bli link wyga\u015bnie, mo\u017cesz poprosi\u0107 o nowy na stronie logowania.</p>
-    </div>
-    <p style="color: #64748b; font-size: 14px;">Je\u015bli nie zak\u0142ada\u0142e\u015b(a\u015b) konta, mo\u017cesz bezpiecznie zignorowa\u0107 t\u0119 wiadomo\u015b\u0107.</p>
-  </div>
-  <div class="footer">
-    <p>Ta wiadomo\u015b\u0107 zosta\u0142a wys\u0142ana automatycznie. Prosimy nie odpowiada\u0107 na ni\u0105.</p>
-  </div>
-</body>
-</html>`;
-}
-
-function buildPolishText() {
-  return `Zweryfikuj sw\u00f3j adres email
-
-Witaj{{#if contactName}} {{contactName}}{{/if}},
-
-Dzi\u0119kujemy za rejestracj\u0119! Prosz\u0119 zweryfikowa\u0107 sw\u00f3j adres email, klikaj\u0105c poni\u017cszy link:
-
-{{verificationLink}}
-
-\u23f0 Link ograniczony czasowo
-Ten link weryfikacyjny wyga\u015bnie za {{expirationTime}}. Je\u015bli link wyga\u015bnie, mo\u017cesz poprosi\u0107 o nowy na stronie logowania.
-
-Je\u015bli nie zak\u0142ada\u0142e\u015b(a\u015b) konta, mo\u017cesz bezpiecznie zignorowa\u0107 t\u0119 wiadomo\u015b\u0107.`;
-}
-
 function getTemplate() {
   const translations = [];
 
-  // Styled versions for en, fr, es, de, nl, it
+  // Styled versions for all supported locales (en, fr, es, de, nl, it, pl)
   for (const [lang, copy] of Object.entries(STYLED_COPY)) {
     translations.push({
       language: lang,
@@ -458,14 +419,6 @@ function getTemplate() {
       textContent: buildStyledText(copy),
     });
   }
-
-  // Polish - own styled version
-  translations.push({
-    language: 'pl',
-    subject: 'Zweryfikuj sw\u00f3j adres email{{#if registrationClientName}} dla {{registrationClientName}}{{/if}}',
-    htmlContent: buildPolishHtml(),
-    textContent: buildPolishText(),
-  });
 
   return {
     templateName: TEMPLATE_NAME,

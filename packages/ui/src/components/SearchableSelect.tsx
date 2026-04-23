@@ -8,6 +8,7 @@ import { cn } from '../lib/utils';
 import { Button } from './Button';
 import { FormFieldComponent, AutomationProps } from '../ui-reflection/types';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
+import { useTranslation } from '../lib/i18n/client';
 
 export interface SelectOption {
   value: string;
@@ -69,13 +70,13 @@ export function SearchableSelect({
   options,
   value,
   onChange,
-  placeholder = 'Select...',
+  placeholder,
   className = '',
   disabled = false,
   label,
   id,
   required = false,
-  emptyMessage = 'No results found',
+  emptyMessage,
   dropdownMode = 'inline',
   searchPlaceholder,
   autoFocusSearch = true,
@@ -85,6 +86,9 @@ export function SearchableSelect({
   allowCustomValue = false,
   customValueLabel,
 }: SearchableSelectProps & AutomationProps): React.JSX.Element {
+  const { t } = useTranslation();
+  const resolvedPlaceholder = placeholder ?? t('form.selectPlaceholder', { defaultValue: 'Select...' });
+  const resolvedEmptyMessage = emptyMessage ?? t('form.noResults', { defaultValue: 'No results found' });
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -154,8 +158,7 @@ export function SearchableSelect({
   const inputId = `${automationIdProps.id}-search`;
 
   const resolvedSearchPlaceholder =
-    searchPlaceholder ??
-    (placeholder ? `Search ${placeholder.replace(/\.\.\.$/, '').toLowerCase()}...` : 'Search...');
+    searchPlaceholder ?? t('form.searchPlaceholder', { defaultValue: 'Search...' });
 
   const getResolvedPortalContainer = useCallback((): Element | null => {
     if (typeof document === 'undefined') return null;
@@ -266,7 +269,7 @@ export function SearchableSelect({
         <Command.List
           id={listboxId}
           role="listbox"
-          aria-label={label ?? placeholder}
+          aria-label={label ?? resolvedPlaceholder}
           className="overflow-y-auto p-1"
           style={{ maxHeight: maxListHeight }}
         >
@@ -294,7 +297,7 @@ export function SearchableSelect({
             ))
           ) : (
             <div className="py-6 text-center text-sm text-muted-foreground">
-              {emptyMessage}
+              {resolvedEmptyMessage}
             </div>
           )}
           {showCustomValueOption && (
@@ -366,7 +369,7 @@ export function SearchableSelect({
           {...automationIdProps}
         >
           <span className={cn("truncate", !selectedOption && "text-muted-foreground")}>
-            {selectedOption ? selectedOption.label : value || placeholder}
+            {selectedOption ? selectedOption.label : value || resolvedPlaceholder}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>

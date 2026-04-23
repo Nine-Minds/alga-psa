@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Platform, Text, View } from "react-native";
+import * as AppleAuthentication from "expo-apple-authentication";
 import * as WebBrowser from "expo-web-browser";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -9,8 +10,15 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "../ui/ThemeContext";
 import { PrimaryButton } from "../ui/components/PrimaryButton";
 import { buildWebSignInUrl, createPendingMobileAuth, getAuthCallbackRedirectUri, parseAuthCallback } from "../auth/mobileAuth";
+import {
+  AppleSignInCancelledError,
+  AppleSignInUnavailableError,
+  isAppleSignInAvailable,
+  signInWithApple,
+} from "../auth/appleSignIn";
 import { createApiClient } from "../api";
 import { getAuthCapabilities, type MobileAuthCapabilities } from "../api/mobileAuth";
+import { signInWithAppleOnServer } from "../api/appleAuth";
 import { analytics } from "../analytics/analytics";
 import { MobileAnalyticsEvents } from "../analytics/events";
 import type { RootStackParamList } from "../navigation/types";
@@ -20,11 +28,23 @@ export function SignInScreen() {
   const theme = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const config = useMemo(() => getAppConfig(), []);
-  const [status, setStatus] = useState<"idle" | "opening">("idle");
+  const [status, setStatus] = useState<"idle" | "opening" | "apple">("idle");
   const [error, setError] = useState<string | null>(null);
   const [capabilities, setCapabilities] = useState<MobileAuthCapabilities | null>(null);
   const [capabilitiesError, setCapabilitiesError] = useState<string | null>(null);
   const [capabilitiesLoading, setCapabilitiesLoading] = useState(false);
+  const [appleAvailable, setAppleAvailable] = useState(false);
+
+  useEffect(() => {
+    if (Platform.OS !== "ios") return;
+    let active = true;
+    void isAppleSignInAvailable().then((available) => {
+      if (active) setAppleAvailable(available);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const baseUrl = config.ok ? config.baseUrl : null;
   const baseHost = useMemo(() => {
@@ -78,6 +98,70 @@ export function SignInScreen() {
   useEffect(() => {
     void fetchCapabilities();
   }, [fetchCapabilities]);
+
+  const onAppleSignIn = async () => {
+    if (!baseUrl) {
+      setError(t("signIn.errors.missingConfig"));
+      return;
+    }
+    if (!hostAllowed) {
+      setError(t("signIn.errors.hostNotAllowed"));
+      return;
+    }
+    setError(null);
+    setStatus("apple");
+    try {
+      analytics.trackEvent(MobileAnalyticsEvents.authAppleStart);
+      const credential = await signInWithApple();
+      const pending = await createPendingMobileAuth();
+
+      const client = createApiClient({
+        baseUrl,
+        getUserAgentTag: () => `mobile/${Platform.OS}/apple-signin`,
+      });
+      const result = await signInWithAppleOnServer(client, {
+        identityToken: credential.identityToken,
+        authorizationCode: credential.authorizationCode ?? undefined,
+        firstName: credential.fullName?.givenName ?? undefined,
+        lastName: credential.fullName?.familyName ?? undefined,
+        state: pending.state,
+      });
+
+      if (!result.ok) {
+        if (result.status === 404) {
+          analytics.trackEvent(MobileAnalyticsEvents.authAppleNoAccount);
+          setError(t("signIn.errors.appleNoAccount"));
+        } else {
+          analytics.trackEvent(MobileAnalyticsEvents.authAppleFailed, {
+            status: result.status ?? null,
+            errorKind: result.error.kind,
+          });
+          setError(t("signIn.errors.appleFailed"));
+        }
+        return;
+      }
+
+      analytics.trackEvent(MobileAnalyticsEvents.authAppleSucceeded);
+      navigation.navigate("AuthCallback", {
+        ott: result.data.ott,
+        state: pending.state,
+      });
+    } catch (e) {
+      if (e instanceof AppleSignInCancelledError) {
+        analytics.trackEvent(MobileAnalyticsEvents.authAppleCancelled);
+        return;
+      }
+      if (e instanceof AppleSignInUnavailableError) {
+        setAppleAvailable(false);
+        return;
+      }
+      logger.error("Apple sign-in failed", { error: e });
+      analytics.trackEvent(MobileAnalyticsEvents.authAppleFailed, { reason: "exception" });
+      setError(t("signIn.errors.appleFailed"));
+    } finally {
+      setStatus("idle");
+    }
+  };
 
   const onSignIn = async () => {
     if (!baseUrl) {
@@ -140,7 +224,7 @@ export function SignInScreen() {
         <PrimaryButton
           onPress={() => void onSignIn()}
           disabled={
-            status === "opening" ||
+            status !== "idle" ||
             !baseUrl ||
             !hostAllowed
           }
@@ -150,6 +234,41 @@ export function SignInScreen() {
           {status === "opening" ? t("signIn.opening") : t("signIn.cta")}
         </PrimaryButton>
       </View>
+
+      {Platform.OS === "ios" && appleAvailable ? (
+        <View style={{ marginTop: theme.spacing.md, alignItems: "center" }}>
+          <AppleAuthentication.AppleAuthenticationButton
+            buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+            buttonStyle={
+              theme.colors.background === "#000000" || theme.colors.background?.toLowerCase?.() === "#000"
+                ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+            }
+            cornerRadius={8}
+            style={{
+              width: 260,
+              height: 44,
+              opacity: status === "idle" && baseUrl && hostAllowed ? 1 : 0.5,
+            }}
+            onPress={() => {
+              if (status !== "idle" || !baseUrl || !hostAllowed) return;
+              void onAppleSignIn();
+            }}
+          />
+          {status === "apple" ? (
+            <Text
+              style={{
+                ...theme.typography.caption,
+                marginTop: theme.spacing.sm,
+                textAlign: "center",
+                color: theme.colors.textSecondary,
+              }}
+            >
+              {t("signIn.appleSigningIn")}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
 
       {Platform.OS === "ios" ? (
         <View style={{ marginTop: theme.spacing.md, alignItems: "center" }}>

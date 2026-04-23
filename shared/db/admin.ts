@@ -1,1 +1,1 @@
-export { getAdminConnection, destroyAdminConnection } from '@alga-psa/db';
+export { getAdminConnection, destroyAdminConnection, refreshAdminConnection } from '@alga-psa/db';

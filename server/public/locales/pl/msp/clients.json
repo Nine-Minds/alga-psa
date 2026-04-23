@@ -678,7 +678,7 @@
   "clientLanguagePreference": {
     "title": "Ustawienia języka klienta",
     "label": "Domyślny język kontaktów",
-    "description": "Ustaw domyślny język dla wszystkich kontaktów w {{clientName}}. Użytkownicy indywidualni mogą to zmienić w swoich ustawieniach osobistych.",
+    "description": "Dotyczy każdego użytkownika portalu z {{clientName}}, chyba że ustawił własną preferencję w swoim profilu.",
     "selectPlaceholder": "Wybierz język",
     "updating": "Aktualizuję preferencje językowe...",
     "loadError": "Nie udało się załadować preferencji języka klienta:",
@@ -1089,5 +1089,11 @@
     "error": "Błąd",
     "saving": "Zapisywanie...",
     "success": "Sukces"
+  },
+  "notes": {
+    "messages": {
+      "saveSuccess": "Notatki zapisane",
+      "saveFailed": "Nie udało się zapisać notatek"
+    }
   }
 }

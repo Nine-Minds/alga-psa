@@ -19,16 +19,10 @@ import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import TreeSelect, { TreeSelectOption } from "@alga-psa/ui/components/TreeSelect";
 import { TagFilter } from "@alga-psa/ui/components";
 import { RotateCcw } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { DEFAULT_TABLE_TYPES } from '../constants';
 
 const PRIORITY_FILTERABLE_TYPES = new Set([ActivityType.TICKET, ActivityType.PROJECT_TASK]);
-
-const ACTIVITY_TYPE_OPTIONS = [
-  { value: ActivityType.SCHEDULE, label: 'Schedule' },
-  { value: ActivityType.PROJECT_TASK, label: 'Project Tasks' },
-  { value: ActivityType.TICKET, label: 'Tickets' },
-  { value: ActivityType.WORKFLOW_TASK, label: 'Workflow Tasks' },
-];
 
 type ProjectNodeType = 'project' | 'phase' | 'status';
 
@@ -80,6 +74,13 @@ export function ActivitiesTableFilters({
   ticketTags = [],
   projectTaskTags = [],
 }: ActivitiesTableFiltersProps) {
+  const { t } = useTranslation('msp/user-activities');
+  const ACTIVITY_TYPE_OPTIONS = [
+    { value: ActivityType.SCHEDULE, label: t('filters.activityTypeOptions.schedule', { defaultValue: 'Schedule' }) },
+    { value: ActivityType.PROJECT_TASK, label: t('filters.activityTypeOptions.projectTask', { defaultValue: 'Project Tasks' }) },
+    { value: ActivityType.TICKET, label: t('filters.activityTypeOptions.ticket', { defaultValue: 'Tickets' }) },
+    { value: ActivityType.WORKFLOW_TASK, label: t('filters.activityTypeOptions.workflowTask', { defaultValue: 'Workflow Tasks' }) },
+  ];
   const [selectedPriorityId, setSelectedPriorityId] = useState<string>(
     filters.priorityIds?.[0] || 'all'
   );
@@ -359,13 +360,13 @@ export function ActivitiesTableFilters({
         selected: selectedPhaseIds.has(phase.phase_id),
         children: (phase.statuses || []).map((st) => ({
           value: st.mapping_id,
-          label: st.name + (st.is_closed ? ' (closed)' : ''),
+          label: st.name + (st.is_closed ? t('filters.statusClosedSuffix', { defaultValue: ' (closed)' }) : ''),
           type: 'status' as const,
           selected: selectedMappingIds.has(st.mapping_id),
         })),
       })),
     }));
-  }, [projects, filters.projectIds, filters.phaseIds, filters.projectStatusMappingIds]);
+  }, [projects, filters.projectIds, filters.phaseIds, filters.projectStatusMappingIds, t]);
 
   // -------- Project task tags (TagFilter) -----------------------------------
 
@@ -409,7 +410,7 @@ export function ActivitiesTableFilters({
     <div className="border-b border-border pb-4 mb-4 space-y-3">
       {/* Row 1: Activity types */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <Label className="text-sm font-semibold whitespace-nowrap">Types:</Label>
+        <Label className="text-sm font-semibold whitespace-nowrap">{t('filters.labels.types', { defaultValue: 'Types:' })}</Label>
         {ACTIVITY_TYPE_OPTIONS.map((option) => (
           <Checkbox
             key={option.value}
@@ -427,7 +428,7 @@ export function ActivitiesTableFilters({
       {hasTickets && (
         <div className="flex flex-wrap items-end gap-x-3 gap-y-2 pl-4 border-l-2 border-primary-300">
           <Label className="text-xs font-semibold text-primary-600 self-center whitespace-nowrap">
-            Tickets:
+            {t('filters.labels.tickets', { defaultValue: 'Tickets:' })}
           </Label>
 
           {boardTreeOptions.length > 0 && (
@@ -436,7 +437,7 @@ export function ActivitiesTableFilters({
                 options={boardTreeOptions}
                 value=""
                 onValueChange={handleBoardToggle}
-                placeholder="All Boards"
+                placeholder={t('filters.placeholders.allBoards', { defaultValue: 'All Boards' })}
                 multiSelect
                 showReset
                 allowEmpty
@@ -450,7 +451,7 @@ export function ActivitiesTableFilters({
                 options={ticketStatusTreeOptions}
                 value=""
                 onValueChange={handleTicketStatusToggle}
-                placeholder="All Statuses"
+                placeholder={t('filters.placeholders.allStatuses', { defaultValue: 'All Statuses' })}
                 multiSelect
                 showReset
                 allowEmpty
@@ -473,7 +474,7 @@ export function ActivitiesTableFilters({
       {hasProjectTasks && (
         <div className="flex flex-wrap items-end gap-x-3 gap-y-2 pl-4 border-l-2" style={{ borderColor: 'rgb(var(--color-secondary-500))' }}>
           <Label className="text-xs font-semibold self-center whitespace-nowrap" style={{ color: 'rgb(var(--color-secondary-500))' }}>
-            Tasks:
+            {t('filters.labels.tasks', { defaultValue: 'Tasks:' })}
           </Label>
 
           {projects.length > 0 && (
@@ -482,7 +483,7 @@ export function ActivitiesTableFilters({
                 options={projectTreeOptions}
                 value=""
                 onValueChange={handleProjectTreeToggle}
-                placeholder="All Projects"
+                placeholder={t('filters.placeholders.allProjects', { defaultValue: 'All Projects' })}
                 multiSelect
                 showReset
                 allowEmpty
@@ -508,14 +509,14 @@ export function ActivitiesTableFilters({
         {isPriorityFilterAvailable && priorities.length > 0 && (
           <div className="min-w-[180px]">
             <Label htmlFor="priority-select" className="text-sm font-semibold mb-1 block">
-              Priority
+              {t('filters.labels.priority', { defaultValue: 'Priority' })}
             </Label>
             <CustomSelect
               id="priority-select"
               value={selectedPriorityId}
               onValueChange={handlePriorityChange}
               options={[
-                { value: 'all', label: 'All Priorities' },
+                { value: 'all', label: t('filters.placeholders.allPriorities', { defaultValue: 'All Priorities' }) },
                 ...priorities.map((p) => ({
                   value: p.priority_id,
                   label: (
@@ -530,14 +531,14 @@ export function ActivitiesTableFilters({
                   textValue: p.priority_name,
                 })),
               ]}
-              placeholder="Select Priority..."
+              placeholder={t('filters.placeholders.selectPriority', { defaultValue: 'Select Priority...' })}
               size="sm"
             />
           </div>
         )}
 
         <div className="min-w-[240px]">
-          <Label className="text-sm font-semibold mb-1 block">Due Date</Label>
+          <Label className="text-sm font-semibold mb-1 block">{t('filters.labels.dueDate', { defaultValue: 'Due Date' })}</Label>
           <StringDateRangePicker
             id="activities-due-date-range"
             value={{
@@ -555,7 +556,7 @@ export function ActivitiesTableFilters({
         <div className="flex items-center pb-0.5">
           <Checkbox
             id="show-closed"
-            label="Show closed"
+            label={t('filters.labels.showClosed', { defaultValue: 'Show closed' })}
             checked={filters.isClosed}
             onChange={handleClosedToggle}
             containerClassName="mb-0"
@@ -572,7 +573,7 @@ export function ActivitiesTableFilters({
             onClick={handleReset}
           >
             <RotateCcw className="h-3.5 w-3.5 mr-1" />
-            Reset
+            {t('filters.actions.reset', { defaultValue: 'Reset' })}
           </Button>
         </div>
       </div>

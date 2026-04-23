@@ -1,0 +1,74 @@
+[
+  {
+    "id": "F001",
+    "description": "Replace legacy `tickets.create` assignment inputs with canonical top-level `assignment` schema",
+    "implemented": true,
+    "prdRefs": ["Action-specific requirements"]
+  },
+  {
+    "id": "F002",
+    "description": "Replace legacy `tickets.update_fields.patch.assigned_to` with canonical `patch.assignment` schema",
+    "implemented": true,
+    "prdRefs": ["Action-specific requirements"]
+  },
+  {
+    "id": "F003",
+    "description": "Replace legacy `tickets.assign.assignee` input with canonical top-level `assignment` schema",
+    "implemented": true,
+    "prdRefs": ["Action-specific requirements"]
+  },
+  {
+    "id": "F004",
+    "description": "Implement a shared workflow ticket assignment resolver for user, team, and queue primary assignment",
+    "implemented": true,
+    "prdRefs": ["Technical design"]
+  },
+  {
+    "id": "F005",
+    "description": "Implement shared workflow ticket resource reconciliation with replace semantics for `additional_user_ids`",
+    "implemented": true,
+    "prdRefs": ["Technical design", "Validation rules"]
+  },
+  {
+    "id": "F006",
+    "description": "Enforce create/update/assign validation rules for active internal users, valid team leads, and primary-vs-additional de-duplication",
+    "implemented": true,
+    "prdRefs": ["Validation rules"]
+  },
+  {
+    "id": "F007",
+    "description": "Use union semantics for team/queue assignment plus explicit `additional_user_ids` in `tickets.assign`",
+    "implemented": true,
+    "prdRefs": ["Goals", "Action-specific requirements"]
+  },
+  {
+    "id": "F008",
+    "description": "Preserve workflow picker metadata when nullable `anyOf` schemas are resolved in the workflow designer field extraction path",
+    "implemented": true,
+    "prdRefs": ["Workflow editor requirements", "Technical design"]
+  },
+  {
+    "id": "F009",
+    "description": "Render `assignment.primary.id` as a dependency-aware picker in the workflow editor",
+    "implemented": true,
+    "prdRefs": ["Workflow editor requirements"]
+  },
+  {
+    "id": "F010",
+    "description": "Render `assignment.additional_user_ids` as a multi-user picker in the workflow editor fixed-value editor",
+    "implemented": true,
+    "prdRefs": ["Workflow editor requirements"]
+  },
+  {
+    "id": "F011",
+    "description": "Update workflow picker metadata tests to assert the canonical nested assignment model and removal of legacy fields",
+    "implemented": true,
+    "prdRefs": ["Acceptance criteria"]
+  },
+  {
+    "id": "F012",
+    "description": "Update workflow designer mapping tests to cover nested primary assignment picker and multi-user additional assignment picker rendering",
+    "implemented": true,
+    "prdRefs": ["Acceptance criteria", "Workflow editor requirements"]
+  }
+]

@@ -129,6 +129,43 @@
         "tenant": "tenantstandaard",
         "system": "systeemstandaard"
       }
+    },
+    "hierarchyTable": {
+      "title": "Taalvoorkeurshiërarchie",
+      "description": "Bij het bepalen welke taal gebruikt moet worden voor de interface en e-mailmeldingen, controleert Alga deze in volgorde en stopt bij de eerste overeenkomst.",
+      "columns": {
+        "priority": "Prioriteit",
+        "source": "Taalbron",
+        "appliesTo": "Van toepassing op",
+        "whereSet": "Waar ingesteld"
+      },
+      "rows": {
+        "userPreference": {
+          "source": "Individuele gebruikersvoorkeur",
+          "appliesTo": "Alle gebruikers",
+          "whereSet": "Gebruikersprofiel"
+        },
+        "clientUserLanguage": {
+          "source": "Klantspecifieke taal",
+          "appliesTo": "Klantportaalgebruikers (per specifieke klant)",
+          "whereSet": "Klantgegevens"
+        },
+        "clientPortalDefault": {
+          "source": "Standaard klantportaal",
+          "appliesTo": "Alle klantportaalgebruikers",
+          "whereSet": "MSP-instellingen → Klantportaal"
+        },
+        "organizationDefault": {
+          "source": "Organisatiestandaard",
+          "appliesTo": "Alle gebruikers (MSP-personeel en klantportaal)",
+          "whereSet": "MSP-instellingen → Taal"
+        },
+        "systemDefault": {
+          "source": "Systeemstandaard (Engels)",
+          "appliesTo": "Fallback",
+          "whereSet": "Systeemgedefinieerd"
+        }
+      }
     }
   },
   "yes": "Ja",
@@ -501,6 +538,30 @@
   },
   "fields": {
     "notes": "Notities"
+  },
+  "auth": {
+    "messages": {
+      "handoffMissingToken": "Het login-overdrachtstoken ontbreekt of is ongeldig. Log opnieuw in.",
+      "handoffFinalizeFailed": "We konden uw inloggen niet voltooien. Probeer opnieuw in te loggen.",
+      "handoffNetworkIssue": "Netwerkprobleem gedetecteerd bij het voltooien van uw inloggen. Probeer het opnieuw."
+    },
+    "checkEmail": {
+      "resendSuccess": "E-mail verzonden! Controleer je inbox.",
+      "resendFailed": "E-mail opnieuw verzenden is mislukt. Probeer het opnieuw."
+    }
+  },
+  "share": {
+    "errors": {
+      "loadFailed": "Kan de deellink niet laden",
+      "connectionFailed": "Verbinding met server mislukt",
+      "passwordRequired": "Wachtwoord vereist",
+      "invalidPassword": "Ongeldig wachtwoord",
+      "downloadFailedRetry": "Download mislukt. Probeer het opnieuw.",
+      "downloadFailed": "Download mislukt",
+      "linkNotAvailable": "Link niet beschikbaar",
+      "linkExpired": "Deze deellink is verlopen.",
+      "downloadLimitReached": "De downloadlimiet is bereikt."
+    }
   },
   "tickets": {
     "responseSource": {
@@ -935,11 +996,37 @@
       "ai_assistant": "Ontgrendel AI-chat, documenthulp, zijbalk-assistentie en workflow-AI-tools voor je team."
     }
   },
-  "auth": {
-    "messages": {
-      "handoffMissingToken": "Het login-overdrachtstoken ontbreekt of is ongeldig. Log opnieuw in.",
-      "handoffFinalizeFailed": "We konden uw inloggen niet voltooien. Probeer opnieuw in te loggen.",
-      "handoffNetworkIssue": "Netwerkprobleem gedetecteerd bij het voltooien van uw inloggen. Probeer het opnieuw."
+  "form": {
+    "selectPlaceholder": "Selecteren...",
+    "clearSelection": "Selectie wissen",
+    "fromDate": "Van",
+    "toDate": "Tot",
+    "noResults": "Geen resultaten gevonden",
+    "searchPlaceholder": "Zoeken..."
+  },
+  "tagFilter": {
+    "placeholder": "Filter op tags...",
+    "filter": "Filteren",
+    "selectedCount": "{{count}} geselecteerd",
+    "clearAll": "Alles wissen"
+  },
+  "timezonePicker": {
+    "selectPlaceholder": "Tijdzone selecteren...",
+    "searchPlaceholder": "Tijdzones of afkortingen zoeken (bijv. EST)...",
+    "noResults": "Geen tijdzones gevonden",
+    "matchingGroup": "Overeenkomsten met \"{{query}}\"",
+    "regions": {
+      "Africa": "Afrika",
+      "America": "Amerika",
+      "Antarctica": "Antarctica",
+      "Arctic": "Arctisch gebied",
+      "Asia": "Azië",
+      "Atlantic": "Atlantische Oceaan",
+      "Australia": "Australië",
+      "Europe": "Europa",
+      "Indian": "Indische Oceaan",
+      "Pacific": "Stille Oceaan",
+      "Etc": "Overig"
     }
   }
 }

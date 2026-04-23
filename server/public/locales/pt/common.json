@@ -97,6 +97,30 @@
   "fields": {
     "notes": "Notes"
   },
+  "auth": {
+    "messages": {
+      "handoffMissingToken": "O token de transferência de login está ausente ou é inválido. Faça login novamente.",
+      "handoffFinalizeFailed": "Não foi possível finalizar seu login. Tente fazer login novamente.",
+      "handoffNetworkIssue": "Problema de rede detectado ao finalizar seu login. Tente novamente."
+    },
+    "checkEmail": {
+      "resendSuccess": "E-mail enviado! Verifique a sua caixa de entrada.",
+      "resendFailed": "Falha ao reenviar o e-mail. Tente novamente."
+    }
+  },
+  "share": {
+    "errors": {
+      "loadFailed": "Falha ao carregar o link de partilha",
+      "connectionFailed": "Falha ao ligar ao servidor",
+      "passwordRequired": "Palavra-passe necessária",
+      "invalidPassword": "Palavra-passe inválida",
+      "downloadFailedRetry": "Falha no download. Tente novamente.",
+      "downloadFailed": "Falha no download",
+      "linkNotAvailable": "Link indisponível",
+      "linkExpired": "Este link de partilha expirou.",
+      "downloadLimitReached": "O limite de downloads foi atingido."
+    }
+  },
   "tickets": {
     "origin": {
       "internal": "Created Internally",
@@ -144,6 +168,43 @@
         "client": "client default",
         "tenant": "tenant default",
         "system": "system default"
+      }
+    },
+    "hierarchyTable": {
+      "title": "Hierarquia de preferência de idioma",
+      "description": "Ao determinar qual idioma usar para a interface e notificações por email, o Alga verifica estes itens em ordem e para na primeira correspondência.",
+      "columns": {
+        "priority": "Prioridade",
+        "source": "Origem do idioma",
+        "appliesTo": "Aplica-se a",
+        "whereSet": "Onde configurar"
+      },
+      "rows": {
+        "userPreference": {
+          "source": "Preferência individual do usuário",
+          "appliesTo": "Todos os usuários",
+          "whereSet": "Perfil do usuário"
+        },
+        "clientUserLanguage": {
+          "source": "Idioma específico do cliente",
+          "appliesTo": "Usuários do portal do cliente (por cliente específico)",
+          "whereSet": "Detalhes do cliente"
+        },
+        "clientPortalDefault": {
+          "source": "Padrão do portal do cliente",
+          "appliesTo": "Todos os usuários do portal do cliente",
+          "whereSet": "Configurações MSP → Portal do cliente"
+        },
+        "organizationDefault": {
+          "source": "Padrão da organização",
+          "appliesTo": "Todos os usuários (equipe MSP e portal do cliente)",
+          "whereSet": "Configurações MSP → Idioma"
+        },
+        "systemDefault": {
+          "source": "Padrão do sistema (inglês)",
+          "appliesTo": "Alternativa",
+          "whereSet": "Definido pelo sistema"
+        }
       }
     }
   },
@@ -935,11 +996,37 @@
       "ai_assistant": "Unlock AI chat, document assistance, sidebar help, and workflow AI tools for your team."
     }
   },
-  "auth": {
-    "messages": {
-      "handoffMissingToken": "O token de transferência de login está ausente ou é inválido. Faça login novamente.",
-      "handoffFinalizeFailed": "Não foi possível finalizar seu login. Tente fazer login novamente.",
-      "handoffNetworkIssue": "Problema de rede detectado ao finalizar seu login. Tente novamente."
+  "form": {
+    "selectPlaceholder": "Selecionar...",
+    "clearSelection": "Limpar seleção",
+    "fromDate": "De",
+    "toDate": "Até",
+    "noResults": "Nenhum resultado encontrado",
+    "searchPlaceholder": "Pesquisar..."
+  },
+  "tagFilter": {
+    "placeholder": "Filtrar por etiquetas...",
+    "filter": "Filtrar",
+    "selectedCount": "{{count}} selecionado(s)",
+    "clearAll": "Limpar tudo"
+  },
+  "timezonePicker": {
+    "selectPlaceholder": "Selecionar fuso horário...",
+    "searchPlaceholder": "Pesquisar fusos horários ou abreviaturas (p. ex. EST)...",
+    "noResults": "Nenhum fuso horário encontrado",
+    "matchingGroup": "Correspondências a \"{{query}}\"",
+    "regions": {
+      "Africa": "África",
+      "America": "América",
+      "Antarctica": "Antártida",
+      "Arctic": "Ártico",
+      "Asia": "Ásia",
+      "Atlantic": "Atlântico",
+      "Australia": "Austrália",
+      "Europe": "Europa",
+      "Indian": "Oceano Índico",
+      "Pacific": "Pacífico",
+      "Etc": "Outro"
     }
   }
 }

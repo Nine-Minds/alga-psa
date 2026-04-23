@@ -7,6 +7,8 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@alga-psa/ui/components/Card';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Download, Lock, FileText, AlertCircle, CheckCircle } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { I18nWrapper } from '@alga-psa/tenancy/components';
 
 interface ShareInfo {
   documentName: string;
@@ -39,7 +41,8 @@ function getFileIcon(mimeType: string): string {
   return 'file';
 }
 
-export default function ShareLandingPage() {
+function ShareLandingContent() {
+  const { t } = useTranslation();
   const params = useParams();
   const token = params?.token as string;
 
@@ -63,13 +66,13 @@ export default function ShareLandingPage() {
         const data = await response.json();
 
         if (!response.ok) {
-          setError(data.error || 'Failed to load share link');
+          setError(data.error || t('share.errors.loadFailed', 'Failed to load share link'));
           return;
         }
 
         setShareInfo(data);
       } catch (err) {
-        setError('Failed to connect to server');
+        setError(t('share.errors.connectionFailed', 'Failed to connect to server'));
       } finally {
         setIsLoading(false);
       }
@@ -95,11 +98,11 @@ export default function ShareLandingPage() {
 
       if (!response.ok) {
         if (response.status === 401) {
-          setDownloadError('Password required');
+          setDownloadError(t('share.errors.passwordRequired', 'Password required'));
         } else if (response.status === 403) {
-          setDownloadError('Invalid password');
+          setDownloadError(t('share.errors.invalidPassword', 'Invalid password'));
         } else {
-          setDownloadError('Download failed. Please try again.');
+          setDownloadError(t('share.errors.downloadFailedRetry', 'Download failed. Please try again.'));
         }
         return;
       }
@@ -125,7 +128,7 @@ export default function ShareLandingPage() {
         setShareInfo(data);
       }
     } catch (err) {
-      setDownloadError('Download failed');
+      setDownloadError(t('share.errors.downloadFailed', 'Download failed'));
     } finally {
       setIsDownloading(false);
     }
@@ -150,7 +153,7 @@ export default function ShareLandingPage() {
         <Card className="w-full max-w-md">
           <CardContent className="py-12 text-center">
             <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-            <h2 className="text-xl font-semibold mb-2">Link Not Available</h2>
+            <h2 className="text-xl font-semibold mb-2">{t('share.errors.linkNotAvailable', 'Link Not Available')}</h2>
             <p className="text-muted-foreground">{error}</p>
           </CardContent>
         </Card>
@@ -183,14 +186,14 @@ export default function ShareLandingPage() {
           {isExpired && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>This share link has expired.</AlertDescription>
+              <AlertDescription>{t('share.errors.linkExpired', 'This share link has expired.')}</AlertDescription>
             </Alert>
           )}
 
           {isDownloadLimitReached && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>Download limit has been reached.</AlertDescription>
+              <AlertDescription>{t('share.errors.downloadLimitReached', 'Download limit has been reached.')}</AlertDescription>
             </Alert>
           )}
 
@@ -276,5 +279,13 @@ export default function ShareLandingPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function ShareLandingPage() {
+  return (
+    <I18nWrapper portal="client">
+      <ShareLandingContent />
+    </I18nWrapper>
   );
 }

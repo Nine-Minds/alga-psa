@@ -225,5 +225,12 @@
   "rightSidebar": {
     "title": "11111",
     "enterpriseOnly": "11111"
+  },
+  "notifications": {
+    "messages": {
+      "error": {
+        "loadFailed": "11111"
+      }
+    }
   }
 }

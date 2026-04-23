@@ -678,7 +678,7 @@
   "clientLanguagePreference": {
     "title": "Configuración de idioma del cliente",
     "label": "Idioma predeterminado para contactos",
-    "description": "Establezca el idioma predeterminado para todos los contactos en {{clientName}}. Los usuarios individuales pueden anular esto en su configuración personal.",
+    "description": "Se aplica a cada usuario del portal de {{clientName}} a menos que haya establecido su propia preferencia en su perfil.",
     "selectPlaceholder": "Seleccione un idioma",
     "updating": "Actualizando preferencia de idioma...",
     "loadError": "No se pudo cargar la preferencia de idioma del cliente:",
@@ -1089,5 +1089,11 @@
     "error": "Error",
     "saving": "Guardando...",
     "success": "Éxito"
+  },
+  "notes": {
+    "messages": {
+      "saveSuccess": "Notas guardadas",
+      "saveFailed": "No se pudieron guardar las notas"
+    }
   }
 }

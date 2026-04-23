@@ -678,7 +678,7 @@
   "clientLanguagePreference": {
     "title": "Client Language Settings",
     "label": "Default Language for Contacts",
-    "description": "Set the default language for all contacts in {{clientName}}. Individual users can override this in their personal settings.",
+    "description": "Aplica-se a todos os usuários do portal de {{clientName}}, a menos que tenham definido sua própria preferência no perfil.",
     "selectPlaceholder": "Select a language",
     "updating": "Updating language preference...",
     "loadError": "Failed to load client language preference:",
@@ -1089,5 +1089,11 @@
     "error": "Error",
     "saving": "Saving...",
     "success": "Success"
+  },
+  "notes": {
+    "messages": {
+      "saveSuccess": "Notas guardadas",
+      "saveFailed": "Falha ao guardar as notas"
+    }
   }
 }

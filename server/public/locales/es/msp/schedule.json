@@ -219,7 +219,9 @@
         "action": "Acción"
       },
       "actions": {
-        "edit": "Editar"
+        "edit": "Editar",
+        "delete": "Eliminar",
+        "deleting": "Eliminando..."
       },
       "defaultApprover": {
         "placeholder": "Seleccione un aprobador"
@@ -323,7 +325,13 @@
       "feedback": {
         "selectUserError": "Por favor seleccione un usuario",
         "saveSuccess": "Horas de usuario guardadas",
-        "saveError": "No se pudieron guardar las horas del usuario"
+        "saveError": "No se pudieron guardar las horas del usuario",
+        "deleteSuccess": "Disponibilidad del usuario eliminada",
+        "deleteError": "No se pudo eliminar la disponibilidad del usuario"
+      },
+      "deleteDialog": {
+        "title": "Eliminar disponibilidad del usuario",
+        "message": "¿Está seguro de que desea eliminar la configuración de disponibilidad de {{userName}}? Esto eliminará todas sus horas de trabajo configuradas. Esta acción no se puede deshacer."
       }
     },
     "serviceRules": {
@@ -365,7 +373,13 @@
       "feedback": {
         "selectServiceError": "Por favor seleccione un servicio",
         "saveSuccess": "Reglas de servicio guardadas",
-        "saveError": "No se pudieron guardar las reglas del servicio"
+        "saveError": "No se pudieron guardar las reglas del servicio",
+        "deleteSuccess": "Reglas de servicio eliminadas",
+        "deleteError": "No se pudieron eliminar las reglas del servicio"
+      },
+      "deleteDialog": {
+        "title": "Eliminar reglas del servicio",
+        "message": "¿Está seguro de que desea eliminar las reglas de {{serviceName}}? Esta acción no se puede deshacer."
       }
     },
     "exceptions": {

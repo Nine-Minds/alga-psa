@@ -225,5 +225,12 @@
   "rightSidebar": {
     "title": "Czat",
     "enterpriseOnly": "Funkcja czatu jest dostępna tylko w edycji Enterprise."
+  },
+  "notifications": {
+    "messages": {
+      "error": {
+        "loadFailed": "Nie udało się załadować powiadomień"
+      }
+    }
   }
 }

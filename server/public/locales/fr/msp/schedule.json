@@ -219,7 +219,9 @@
         "action": "Action"
       },
       "actions": {
-        "edit": "Modifier"
+        "edit": "Modifier",
+        "delete": "Supprimer",
+        "deleting": "Suppression..."
       },
       "defaultApprover": {
         "placeholder": "Sélectionnez un approbateur"
@@ -323,7 +325,13 @@
       "feedback": {
         "selectUserError": "Veuillez sélectionner un utilisateur",
         "saveSuccess": "Heures utilisateur économisées",
-        "saveError": "Échec de l'enregistrement des heures utilisateur"
+        "saveError": "Échec de l'enregistrement des heures utilisateur",
+        "deleteSuccess": "Disponibilité de l'utilisateur supprimée",
+        "deleteError": "Échec de la suppression de la disponibilité de l'utilisateur"
+      },
+      "deleteDialog": {
+        "title": "Supprimer la disponibilité de l'utilisateur",
+        "message": "Êtes-vous sûr de vouloir supprimer les paramètres de disponibilité pour {{userName}} ? Cela supprimera toutes les heures de travail configurées. Cette action est irréversible."
       }
     },
     "serviceRules": {
@@ -365,7 +373,13 @@
       "feedback": {
         "selectServiceError": "Veuillez sélectionner un service",
         "saveSuccess": "Règles de service enregistrées",
-        "saveError": "Échec de l'enregistrement des règles de service"
+        "saveError": "Échec de l'enregistrement des règles de service",
+        "deleteSuccess": "Règles de service supprimées",
+        "deleteError": "Échec de la suppression des règles de service"
+      },
+      "deleteDialog": {
+        "title": "Supprimer les règles de service",
+        "message": "Êtes-vous sûr de vouloir supprimer les règles pour {{serviceName}} ? Cette action est irréversible."
       }
     },
     "exceptions": {

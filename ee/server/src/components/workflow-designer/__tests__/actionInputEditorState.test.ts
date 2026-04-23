@@ -176,6 +176,62 @@ describe('action input editor state', () => {
     expect(nextState.actionInputFields.map((field) => field.name)).toEqual(['ticket_id', 'summary']);
   });
 
+  it('T006: nullable anyOf wrappers preserve picker metadata when action input fields are extracted', () => {
+    const nullablePickerRegistry: WorkflowDesignerActionRegistryItem[] = [
+      {
+        id: 'tickets.assignment_test',
+        version: 1,
+        inputSchema: {
+          type: 'object',
+          properties: {
+            assignment_target: {
+              anyOf: [
+                { type: 'string', format: 'uuid' },
+                { type: 'null' },
+              ],
+              'x-workflow-picker-kind': 'user',
+              'x-workflow-picker-dependencies': ['assignment.primary.type'],
+              'x-workflow-picker-fixed-value-hint': 'Search users',
+              'x-workflow-picker-allow-dynamic-reference': true,
+            },
+          },
+        },
+        outputSchema: {
+          type: 'object',
+          properties: {
+            ok: { type: 'boolean' },
+          },
+        },
+      },
+    ];
+
+    const step: NodeStep = {
+      id: 'step-nullable-picker',
+      type: 'action.call',
+      name: 'Assignment Test',
+      config: {
+        actionId: 'tickets.assignment_test',
+        version: 1,
+      },
+    };
+
+    const state = buildActionInputEditorState(step, nullablePickerRegistry);
+    expect(state.actionInputFields.find((field) => field.name === 'assignment_target')).toMatchObject({
+      type: 'string',
+      nullable: true,
+      editor: {
+        kind: 'picker',
+        inline: { mode: 'picker-summary' },
+        dependencies: ['assignment.primary.type'],
+        fixedValueHint: 'Search users',
+        allowsDynamicReference: true,
+        picker: {
+          resource: 'user',
+        },
+      },
+    });
+  });
+
   it('T091/T092: choosing an action updates picker metadata and field types used by the grouped editor', () => {
     const step: NodeStep = {
       id: 'step-3',

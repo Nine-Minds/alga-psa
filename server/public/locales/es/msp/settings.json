@@ -223,7 +223,18 @@
         "portalUserExistsForContact": "Ya existe un usuario del portal para este contacto. Utilice el restablecimiento de contraseña para el usuario existente.",
         "selectAppropriateRole": "Seleccione un rol apropiado para este tipo de usuario",
         "contactMissingEmail": "El contacto \"{{name}}\" no tiene dirección de correo electrónico. Actualice el correo electrónico del contacto antes de enviar una invitación.",
-        "licenseLimit": "No se puede activar el usuario: se alcanzó el límite de licencias. Desactive otro usuario o actualice su licencia."
+        "licenseLimit": "No se puede activar el usuario: se alcanzó el límite de licencias. Desactive otro usuario o actualice su licencia.",
+        "permissionDeniedInvite": "No tienes permiso para invitar usuarios.",
+        "permissionDeniedCreate": "No tienes permiso para crear usuarios.",
+        "emailNotConfigured": "El servicio de correo electrónico está deshabilitado o no está configurado.",
+        "contactNotFound": "Contacto no encontrado.",
+        "contactMissingEmailGeneric": "El contacto no tiene dirección de correo electrónico. Agrega una dirección de correo al contacto antes de enviar una invitación.",
+        "contactInvalidEmail": "El contacto tiene una dirección de correo electrónico no válida. Actualiza el contacto con una dirección válida antes de enviar una invitación.",
+        "noDefaultClient": "No hay un cliente predeterminado configurado para este tenant. Configura un cliente predeterminado en Configuración General.",
+        "noDefaultLocation": "El cliente predeterminado debe tener una ubicación predeterminada configurada para enviar invitaciones al portal.",
+        "noLocationEmail": "La ubicación del cliente predeterminado debe tener un correo electrónico de contacto configurado.",
+        "noBaseUrl": "La URL base no está configurada para las invitaciones al portal.",
+        "passwordTooShort": "La contraseña debe tener al menos 8 caracteres."
       }
     }
   },
@@ -343,7 +354,9 @@
         "loadFailed": "Error al cargar los equipos. Inténtelo de nuevo.",
         "fetchUsers": "Error al obtener los usuarios",
         "createFailed": "Error al crear el equipo: {{error}}",
-        "deleteFailed": "Error al eliminar el equipo"
+        "deleteFailed": "Error al eliminar el equipo",
+        "updateName": "No se pudo actualizar el nombre del equipo",
+        "saveChanges": "No se pudieron guardar los cambios. Inténtalo de nuevo."
       }
     }
   },
@@ -398,7 +411,10 @@
         "error": {
           "noSettings": "No se encontró la configuración de numeración de tickets. Comuníquese con su administrador.",
           "loadFailed": "Error al cargar la configuración de numeración de tickets",
-          "updateFailed": "Error al actualizar la configuración"
+          "updateFailed": "Error al actualizar la configuración",
+          "updatePaddingFailed": "No se pudo actualizar la longitud de relleno",
+          "updateLastNumberFailed": "No se pudo actualizar el último número",
+          "updateInitialValueFailed": "No se pudo actualizar el valor inicial"
         },
         "success": {
           "updated": "Configuración de numeración de tickets actualizada correctamente"
@@ -428,6 +444,7 @@
         "edit": "Editar",
         "delete": "Eliminar"
       },
+      "retiredAlert": "Los estados de tickets ahora se gestionan dentro de cada tablero. Use la pestaña Tableros para editar los ciclos de vida de tickets de un tablero específico.",
       "messages": {
         "success": {
           "deleted": "Estado eliminado correctamente",
@@ -468,7 +485,11 @@
         "close": "Cerrar",
         "create": "Crear",
         "update": "Actualizar",
-        "importSelected": "Importar selección"
+        "importSelected": "Importar selección",
+        "up": "Subir",
+        "down": "Bajar",
+        "remove": "Eliminar",
+        "addStatus": "Agregar estado"
       },
       "fields": {
         "boardName": {
@@ -508,6 +529,46 @@
           "placeholder": "Seleccione la política SLA",
           "help": "La política SLA que se aplicará a los tickets de este tablero",
           "none": "Ninguna"
+        },
+        "ticketStatusSetup": {
+          "label": "Configuración de estados de tickets",
+          "help": "Elija si este tablero comienza desde un ciclo de vida existente o desde una nueva lista de estados en línea.",
+          "copyExisting": "Copiar desde tablero existente",
+          "createInline": "Crear estados en línea"
+        },
+        "copyTicketStatuses": {
+          "label": "Copiar estados de tickets desde",
+          "help": "Los tableros nuevos clonan su ciclo de vida de tickets desde un tablero existente.",
+          "selectSource": "Seleccionar un tablero de origen",
+          "noSourceAvailable": "No hay tableros de origen disponibles",
+          "unnamedBoard": "Tablero sin nombre"
+        },
+        "ticketStatuses": {
+          "labelEditing": "Estados de tickets del tablero",
+          "labelCopied": "Estados de tickets copiados",
+          "labelInline": "Estados de tickets en línea",
+          "helpEditing": "Edite el ciclo de vida de tickets solo para este tablero.",
+          "helpCopied": "Revise y ajuste el ciclo de vida copiado antes de guardar el nuevo tablero.",
+          "helpInline": "Cree el ciclo de vida inicial de tickets del tablero antes de guardar.",
+          "loading": "Cargando estados de tickets del tablero…",
+          "statusName": "Nombre del estado",
+          "closed": "Cerrado",
+          "default": "Predeterminado"
+        },
+        "inboundReplyReopen": {
+          "enabledLabel": "Reabrir tickets cerrados con respuestas entrantes",
+          "enabledHelp": "Se aplica a las respuestas en hilo coincidentes con tickets ya cerrados en este tablero.",
+          "cutoffHoursLabel": "Límite de reapertura (horas)",
+          "cutoffHoursHelp": "Las respuestas recibidas después de este plazo crean nuevos tickets en lugar de reabrir los antiguos.",
+          "statusLabel": "Estado al reabrir (opcional)",
+          "statusPlaceholder": "Seleccionar estado de reapertura",
+          "statusUseDefault": "Usar el estado abierto predeterminado del tablero",
+          "suppressAiLabel": "Suprimir reapertura para respuestas ACK cortas (IA)",
+          "suppressAiHelp": "Solo complemento Enterprise AI Assistant. Si no está disponible, las respuestas reabren normalmente."
+        },
+        "liveTimer": {
+          "label": "Activar temporizador de tickets en vivo",
+          "help": "Muestra el temporizador en vivo y los intervalos registrados en los tickets de este tablero. La entrada manual de tiempo sigue disponible."
         }
       },
       "dialog": {
@@ -556,8 +617,98 @@
           "fetchAvailableFailed": "Error al obtener los tableros disponibles para importar",
           "nameRequired": "El nombre del tablero es obligatorio",
           "saveFailed": "Error al guardar el tablero",
-          "lastDefault": "No se puede eliminar el último tablero predeterminado"
+          "lastDefault": "No se puede eliminar el último tablero predeterminado",
+          "statusRequired": "Agrega al menos un estado de ticket antes de guardar el tablero.",
+          "duplicateStatusName": "Los nombres de estado de ticket deben ser únicos dentro de un tablero.",
+          "invalidOpenDefault": "Selecciona exactamente un estado de ticket abierto predeterminado antes de guardar el tablero.",
+          "nameAlreadyExists": "Ya existe un tablero con este nombre.",
+          "selectBoardToCopy": "Selecciona un tablero existente desde el cual copiar los estados de ticket.",
+          "fetchStatusesFailed": "No se pudieron cargar los estados de ticket del tablero.",
+          "deleteFailed": "No se pudo eliminar el tablero",
+          "importFailed": "No se pudieron importar los tableros",
+          "updateStatusFailed": "No se pudo actualizar el estado del tablero",
+          "updateDefaultFailed": "No se pudo actualizar el tablero predeterminado"
         }
+      }
+    },
+    "priorities": {
+      "title": {
+        "ticket": "Prioridades de tickets",
+        "projectTask": "Prioridades de tareas de proyecto"
+      },
+      "alert": {
+        "header": "Gestión de prioridades:",
+        "description": "Cree prioridades personalizadas para su organización o importe desde plantillas estándar.",
+        "itilNote": "Las prioridades estándar ITIL no se pueden editar ni eliminar.",
+        "nonItilNote": "Todas las prioridades se pueden editar o eliminar para adaptarse a su flujo de trabajo."
+      },
+      "table": {
+        "name": "Nombre",
+        "type": "Tipo",
+        "color": "Color",
+        "order": "Orden",
+        "actions": "Acciones",
+        "standardTag": "(Estándar)",
+        "itilProtected": "Protegido"
+      },
+      "itemTypes": {
+        "ticket": "Ticket",
+        "projectTask": "Tarea de proyecto"
+      },
+      "actions": {
+        "addPriority": "Agregar prioridad",
+        "importStandard": "Importar desde prioridades estándar",
+        "openMenu": "Abrir menú",
+        "edit": "Editar",
+        "delete": "Eliminar",
+        "cancel": "Cancelar"
+      },
+      "dialog": {
+        "addTitle": "Agregar nueva prioridad",
+        "editTitle": "Editar prioridad",
+        "submitAdd": "Agregar prioridad",
+        "submitUpdate": "Actualizar prioridad"
+      },
+      "fields": {
+        "priorityName": {
+          "label": "Nombre de la prioridad",
+          "placeholder": "p. ej., Urgente"
+        },
+        "orderNumber": {
+          "label": "Número de orden (1-100, los números más altos aparecen primero)",
+          "help": "Controla el orden en que las prioridades aparecen en los menús desplegables de la plataforma. Los números más altos aparecen primero para las prioridades.",
+          "used": "Números de orden usados: {{numbers}}",
+          "noneUsed": "Aún no se han usado números de orden"
+        },
+        "color": {
+          "label": "Color",
+          "chooseButton": "Elegir color"
+        }
+      },
+      "import": {
+        "title": "Importar prioridades estándar",
+        "submit": "Importar ({{count}})",
+        "allImportedTicket": "Todas las prioridades estándar ya se han importado para los tickets.",
+        "allImportedProjectTask": "Todas las prioridades estándar ya se han importado para las tareas de proyecto.",
+        "instructions": "Seleccione las prioridades estándar que desea importar. Se copiarán a las prioridades de su organización."
+      },
+      "messages": {
+        "success": {
+          "deleted": "Prioridad eliminada correctamente",
+          "imported": "{{count}} prioridades importadas correctamente",
+          "skipped": "{{count}} prioridades omitidas (ya existen)"
+        },
+        "error": {
+          "orderTaken": "El número de orden {{order}} ya está en uso por «{{name}}». Elija un número de orden diferente.",
+          "uniqueConstraint": "Este número de orden ya está en uso. Elija un número de orden diferente.",
+          "saveFailed": "No se pudo guardar la prioridad",
+          "deleteFailed": "No se pudo eliminar la prioridad",
+          "deleteValidationFailed": "No se pudo validar la eliminación. Inténtelo de nuevo.",
+          "importFailed": "No se pudieron importar las prioridades"
+        }
+      },
+      "entity": {
+        "fallback": "esta prioridad"
       }
     }
   },
@@ -643,7 +794,9 @@
         },
         "error": {
           "lastClosed": "Al menos un estado debe permanecer marcado como cerrado",
-          "deleteLastClosed": "No se puede eliminar el último estado cerrado para este tipo."
+          "deleteLastClosed": "No se puede eliminar el último estado cerrado para este tipo.",
+          "skipped": "Se omitieron {{count}} estados ({{reason}})",
+          "importFailed": "No se pudieron importar los estados"
         }
       }
     },
@@ -685,27 +838,6 @@
     }
   },
   "clientPortal": {
-    "language": {
-      "title": "Configuración de idioma",
-      "description": "Configure los ajustes de idioma predeterminados para su portal del cliente. Estos ajustes se aplican a todos los usuarios y clientes a menos que se anulen.",
-      "fields": {
-        "defaultLanguage": "Idioma predeterminado",
-        "availableLanguages": "Idiomas disponibles"
-      },
-      "help": {
-        "defaultLanguage": "Este será el idioma predeterminado para todos los usuarios del portal del cliente y las notificaciones por correo electrónico, a menos que se anule por la configuración del cliente o las preferencias individuales del usuario",
-        "availableLanguages": "Seleccione qué idiomas estarán disponibles para que los usuarios elijan"
-      },
-      "hierarchy": {
-        "title": "Jerarquía de preferencia de idioma",
-        "description": "Esta jerarquía se aplica tanto a la interfaz del portal del cliente como a las notificaciones por correo electrónico enviadas a los usuarios del portal del cliente:",
-        "userPreference": "Preferencia individual del usuario (prioridad más alta)",
-        "clientDefault": "Idioma predeterminado del cliente",
-        "orgDefault": "Predeterminado de la organización (configurado aquí)",
-        "systemDefault": "Predeterminado del sistema (inglés)",
-        "note": "Nota: los usuarios internos de MSP siempre reciben correos electrónicos en inglés"
-      }
-    },
     "branding": {
       "title": "Marca y apariencia",
       "description": "Personalice la apariencia de su portal del cliente con la marca de su empresa.",
@@ -791,21 +923,15 @@
     }
   },
   "mspLanguage": {
-    "title": "Idioma",
-    "description": "Configure los ajustes de idioma predeterminados para el portal de MSP. Estos ajustes se aplican a todos los usuarios de MSP a menos que se anulen por preferencias individuales.",
+    "title": "Idioma de la organización",
+    "description": "Establezca el idioma predeterminado para toda la organización: personal MSP, usuarios del portal del cliente y notificaciones por correo electrónico. Cada usuario o cliente puede anularlo individualmente.",
     "fields": {
       "defaultLanguage": "Idioma predeterminado",
       "availableLanguages": "Idiomas disponibles"
     },
     "help": {
-      "defaultLanguage": "Este será el idioma predeterminado para todos los usuarios del portal de MSP a menos que se anule por su preferencia personal.",
-      "availableLanguages": "Seleccione qué idiomas estarán disponibles para que los usuarios de MSP elijan"
-    },
-    "hierarchy": {
-      "title": "Jerarquía de preferencia de idioma",
-      "userPreference": "Preferencia individual del usuario (prioridad más alta)",
-      "orgDefault": "Predeterminado de la organización (configurado aquí)",
-      "systemDefault": "Predeterminado del sistema (inglés)"
+      "defaultLanguage": "Se aplica en todas partes salvo que lo anule la preferencia personal de un usuario o el idioma configurado para un cliente específico.",
+      "availableLanguages": "Seleccione entre qué idiomas pueden elegir los usuarios."
     }
   },
   "notifications": {
@@ -1050,6 +1176,16 @@
         "noValues": "Sin valores"
       },
       "truncated": "Mostrando los primeros {{count}} registros. Descargue los resultados del trabajo para el historial completo."
+    },
+    "messages": {
+      "error": {
+        "loadImportData": "No se pudieron cargar los datos de importación",
+        "createPreview": "No se pudo crear la vista previa",
+        "selectPreviewFirst": "Selecciona una vista previa para aprobar antes de importar.",
+        "startImportJob": "No se pudo iniciar el trabajo de importación",
+        "loadJobDetails": "No se pudieron cargar los detalles del trabajo",
+        "refreshHistory": "No se pudo actualizar el historial de importación"
+      }
     }
   },
   "email": {
@@ -1367,5 +1503,19 @@
       "holidayAdded": "Festivo añadido correctamente",
       "holidayDeleted": "Festivo eliminado correctamente"
     }
+  },
+  "clientPortalLanguage": {
+    "title": "Idioma del portal del cliente",
+    "description": "Anule el idioma predeterminado solo para los usuarios del portal del cliente. El personal MSP mantiene el predeterminado de la organización.",
+    "fields": {
+      "defaultLanguage": "Idioma predeterminado"
+    },
+    "help": {
+      "defaultLanguage": "Cuando se define, los usuarios del portal del cliente ven este idioma, a menos que lo anule su preferencia individual o el idioma configurado para su cliente."
+    },
+    "placeholder": "Seleccione un idioma",
+    "inheritOption": "Usar el predeterminado de la organización ({{language}})",
+    "unsetHint": "Para eliminar la anulación del portal del cliente, cambie el predeterminado de la organización en Configuración → Idioma.",
+    "updated": "Idioma predeterminado del portal del cliente actualizado a {{language}}"
   }
 }

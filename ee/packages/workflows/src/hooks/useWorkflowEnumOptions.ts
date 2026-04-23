@@ -61,6 +61,7 @@ function useEnumOptions<V extends string>(
     value,
     label: t(`${keyRoot}.${value}`, {
       defaultValue: labelDefaults[value],
+      nsSeparator: false,
     }),
   }));
 }
@@ -73,7 +74,7 @@ function useEnumFormatter<V extends string>(
 
   return (value: string) => {
     const fallback = labelDefaults[value as V] ?? value;
-    return t(`${keyRoot}.${value}`, { defaultValue: fallback });
+    return t(`${keyRoot}.${value}`, { defaultValue: fallback, nsSeparator: false });
   };
 }
 

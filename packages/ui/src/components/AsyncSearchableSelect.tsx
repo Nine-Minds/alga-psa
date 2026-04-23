@@ -8,6 +8,7 @@ import { cn } from '../lib/utils';
 import { Button } from './Button';
 import { FormFieldComponent, AutomationProps } from '../ui-reflection/types';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
+import { useTranslation } from '../lib/i18n/client';
 
 export interface SelectOption {
   value: string;
@@ -52,14 +53,14 @@ export function AsyncSearchableSelect({
   onChange,
   loadOptions,
   limit = 10,
-  placeholder = 'Select...',
+  placeholder,
   selectedLabel,
   className = '',
   disabled = false,
   label,
   id,
   required = false,
-  emptyMessage = 'No results found',
+  emptyMessage,
   dropdownMode = 'inline',
   searchPlaceholder,
   autoFocusSearch = true,
@@ -69,6 +70,9 @@ export function AsyncSearchableSelect({
   showMoreIndicator = true,
   footerContent,
 }: AsyncSearchableSelectProps & AutomationProps): React.JSX.Element {
+  const { t } = useTranslation();
+  const resolvedPlaceholder = placeholder ?? t('form.selectPlaceholder', { defaultValue: 'Select...' });
+  const resolvedEmptyMessage = emptyMessage ?? t('form.noResults', { defaultValue: 'No results found' });
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [options, setOptions] = useState<SelectOption[]>([]);
@@ -89,8 +93,7 @@ export function AsyncSearchableSelect({
   }, [options, value]);
 
   const resolvedSearchPlaceholder =
-    searchPlaceholder ??
-    (placeholder ? `Search ${placeholder.replace(/\.\.\.$/, '').toLowerCase()}...` : 'Search...');
+    searchPlaceholder ?? t('form.searchPlaceholder', { defaultValue: 'Search...' });
 
   const { automationIdProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
     type: 'formField',
@@ -331,7 +334,7 @@ export function AsyncSearchableSelect({
               )}
             </>
           ) : (
-            <div className="py-6 text-center text-sm text-[rgb(var(--color-text-400))]">{emptyMessage}</div>
+            <div className="py-6 text-center text-sm text-[rgb(var(--color-text-400))]">{resolvedEmptyMessage}</div>
           )}
         </Command.List>
 
@@ -361,7 +364,7 @@ export function AsyncSearchableSelect({
           {...automationIdProps}
         >
           <span className={cn('truncate', !value && 'text-[rgb(var(--color-text-300))]')}>
-            {selectedOption?.label ?? selectedLabel ?? (value ? value : placeholder)}
+            {selectedOption?.label ?? selectedLabel ?? (value ? value : resolvedPlaceholder)}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>

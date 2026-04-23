@@ -1278,6 +1278,8 @@
   },
   "clientPortal": {
     "clientsWillSee": "Clients will see:",
+    "showBudgetHours": "Show Budget Hours",
+    "showBudgetHoursDescription": "Clients will see the project-level Budget Hours card with spent vs. budgeted hours and % of budget used.",
     "showPhases": "Show Phases",
     "showPhasesDescription": "Clients will see phase cards with names, descriptions, and date ranges. They can select phases to view associated tasks.",
     "showCompletion": "Show Completion %",
@@ -1289,6 +1291,7 @@
     "required": "(required)",
     "summary": {
       "projectInfo": "Project name, description, dates, and overall progress",
+      "budgetHours": "Budget hours: spent vs. budgeted totals and % used",
       "phaseInfo": "Phase names, descriptions, and date ranges",
       "phaseCompletion": "Completion percentage for each phase",
       "taskDetails": "Task details: {{fields}}",

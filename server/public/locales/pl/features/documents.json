@@ -258,5 +258,14 @@
       "troubleshooting": "Rozwiązywanie problemów",
       "reference": "Odniesienie"
     }
+  },
+  "documents": {
+    "messages": {
+      "error": {
+        "noPermission": "Nie masz uprawnień do przeglądania dokumentów",
+        "invalidData": "Otrzymano nieprawidłowe dane dokumentu",
+        "fetchFailed": "Nie udało się pobrać dokumentów"
+      }
+    }
   }
 }

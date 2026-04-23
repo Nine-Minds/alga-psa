@@ -1,0 +1,21 @@
+# Scratchpad
+
+- 2026-04-20: User approved replacing the legacy ticket workflow assignment inputs with a canonical `assignment` object.
+- 2026-04-20: Chosen canonical shape:
+  - `assignment.primary: { type, id } | null`
+  - `assignment.additional_user_ids: string[]`
+- 2026-04-20: `tickets.update_fields.patch.assignment` should be atomic replacement, not piecemeal patching.
+- 2026-04-20: `tickets.assign` should support union semantics for team assignment plus explicit additional users.
+- 2026-04-20: System is new, so legacy workflow assignment fields can be removed with a hard break.
+- 2026-04-20: Existing workflow editor issue likely involves nullable `anyOf` schema resolution dropping `x-workflow-picker-*` metadata during field extraction.
+- 2026-04-20: Existing app support for additional ticket assignees is backed by `ticket_resources.additional_user_id`.
+- 2026-04-20: Existing team assignment behavior already expands members into `ticket_resources`; workflow implementation should centralize and reuse that semantic.
+- 2026-04-20: Implemented canonical workflow ticket assignment model in `shared/workflow/runtime/actions/businessOperations/tickets.ts` using `assignment.primary` + `assignment.additional_user_ids`.
+- 2026-04-20: Implemented workflow-editor support for array-backed user pickers via `WorkflowActionInputFixedMultiPicker` and `InputMappingEditor`.
+- 2026-04-20: Implemented nullable-schema metadata preservation in `ee/server/src/components/workflow-designer/actionInputEditorState.ts` and `WorkflowDesigner.tsx`.
+- 2026-04-20: Validation runbook:
+  - `cd server && npx tsc -p tsconfig.json --noEmit --pretty false --incremental false`
+  - `cd server && npx vitest run src/test/unit/workflowTicketAssignmentModelRuntime.test.ts --coverage.enabled false`
+  - `cd server && npx vitest run --dir ../ee/server src/components/workflow-designer/__tests__/actionInputEditorState.test.ts --coverage.enabled false`
+  - `cd server && npx vitest run --dir ../ee/server src/components/workflow-designer/__tests__/InputMappingEditorPickerFields.test.tsx --coverage.enabled false`
+  - `cd server && npx vitest run src/test/unit/teams-v2-plan.test.ts -t "canonical ticket assignment model" --coverage.enabled false`

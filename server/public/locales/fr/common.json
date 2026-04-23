@@ -129,6 +129,43 @@
         "tenant": "paramètre par défaut du locataire",
         "system": "paramètre par défaut du système"
       }
+    },
+    "hierarchyTable": {
+      "title": "Hiérarchie des préférences de langue",
+      "description": "Lors de la résolution de la langue à utiliser pour l'interface et les notifications par email, Alga vérifie ces éléments dans l'ordre et s'arrête à la première correspondance.",
+      "columns": {
+        "priority": "Priorité",
+        "source": "Source de la langue",
+        "appliesTo": "S'applique à",
+        "whereSet": "Où le configurer"
+      },
+      "rows": {
+        "userPreference": {
+          "source": "Préférence individuelle de l'utilisateur",
+          "appliesTo": "Tous les utilisateurs",
+          "whereSet": "Profil utilisateur"
+        },
+        "clientUserLanguage": {
+          "source": "Langue spécifique au client",
+          "appliesTo": "Utilisateurs du portail client (par client spécifique)",
+          "whereSet": "Détails du client"
+        },
+        "clientPortalDefault": {
+          "source": "Valeur par défaut du portail client",
+          "appliesTo": "Tous les utilisateurs du portail client",
+          "whereSet": "Paramètres MSP → Portail client"
+        },
+        "organizationDefault": {
+          "source": "Valeur par défaut de l'organisation",
+          "appliesTo": "Tous les utilisateurs (personnel MSP et portail client)",
+          "whereSet": "Paramètres MSP → Langue"
+        },
+        "systemDefault": {
+          "source": "Valeur par défaut du système (anglais)",
+          "appliesTo": "Par défaut",
+          "whereSet": "Défini par le système"
+        }
+      }
     }
   },
   "yes": "Oui",
@@ -501,6 +538,30 @@
   },
   "fields": {
     "notes": "Notes"
+  },
+  "auth": {
+    "messages": {
+      "handoffMissingToken": "Le jeton de transfert de connexion est manquant ou invalide. Veuillez vous reconnecter.",
+      "handoffFinalizeFailed": "Nous n'avons pas pu finaliser votre connexion. Veuillez réessayer.",
+      "handoffNetworkIssue": "Problème réseau détecté lors de la finalisation de votre connexion. Veuillez réessayer."
+    },
+    "checkEmail": {
+      "resendSuccess": "E-mail envoyé ! Veuillez consulter votre boîte de réception.",
+      "resendFailed": "Échec de l'envoi de l'e-mail. Veuillez réessayer."
+    }
+  },
+  "share": {
+    "errors": {
+      "loadFailed": "Échec du chargement du lien de partage",
+      "connectionFailed": "Échec de la connexion au serveur",
+      "passwordRequired": "Mot de passe requis",
+      "invalidPassword": "Mot de passe invalide",
+      "downloadFailedRetry": "Échec du téléchargement. Veuillez réessayer.",
+      "downloadFailed": "Échec du téléchargement",
+      "linkNotAvailable": "Lien indisponible",
+      "linkExpired": "Ce lien de partage a expiré.",
+      "downloadLimitReached": "La limite de téléchargements a été atteinte."
+    }
   },
   "tickets": {
     "responseSource": {
@@ -935,11 +996,37 @@
       "ai_assistant": "Débloquez le chat IA, l'assistance documentaire, l'aide en barre latérale et les outils IA de flux de travail pour votre équipe."
     }
   },
-  "auth": {
-    "messages": {
-      "handoffMissingToken": "Le jeton de transfert de connexion est manquant ou invalide. Veuillez vous reconnecter.",
-      "handoffFinalizeFailed": "Nous n'avons pas pu finaliser votre connexion. Veuillez réessayer.",
-      "handoffNetworkIssue": "Problème réseau détecté lors de la finalisation de votre connexion. Veuillez réessayer."
+  "form": {
+    "selectPlaceholder": "Sélectionner...",
+    "clearSelection": "Effacer la sélection",
+    "fromDate": "Du",
+    "toDate": "Au",
+    "noResults": "Aucun résultat trouvé",
+    "searchPlaceholder": "Rechercher..."
+  },
+  "tagFilter": {
+    "placeholder": "Filtrer par étiquettes...",
+    "filter": "Filtrer",
+    "selectedCount": "{{count}} sélectionné(s)",
+    "clearAll": "Tout effacer"
+  },
+  "timezonePicker": {
+    "selectPlaceholder": "Sélectionner un fuseau horaire...",
+    "searchPlaceholder": "Rechercher des fuseaux horaires ou des abréviations (par ex. EST)...",
+    "noResults": "Aucun fuseau horaire trouvé",
+    "matchingGroup": "Correspondant à « {{query}} »",
+    "regions": {
+      "Africa": "Afrique",
+      "America": "Amérique",
+      "Antarctica": "Antarctique",
+      "Arctic": "Arctique",
+      "Asia": "Asie",
+      "Atlantic": "Atlantique",
+      "Australia": "Australie",
+      "Europe": "Europe",
+      "Indian": "Océan Indien",
+      "Pacific": "Pacifique",
+      "Etc": "Autre"
     }
   }
 }

@@ -225,5 +225,12 @@
   "rightSidebar": {
     "title": "Chat",
     "enterpriseOnly": "Die Chatfunktion ist nur in der Enterprise Edition verfügbar."
+  },
+  "notifications": {
+    "messages": {
+      "error": {
+        "loadFailed": "Benachrichtigungen konnten nicht geladen werden"
+      }
+    }
   }
 }

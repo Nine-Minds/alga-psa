@@ -10,6 +10,7 @@ import {
   getImportSources,
   listImportJobs,
 } from '@/lib/imports/importActions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ImportSourceDTO {
   import_source_id: string;
@@ -45,6 +46,7 @@ const UI_FIELD_DEFINITIONS = [
 ] as const;
 
 export const useImportActions = () => {
+  const { t } = useTranslation('msp/settings');
   const [isLoading, setIsLoading] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [sources, setSources] = useState<ImportSourceDTO[]>([]);
@@ -76,7 +78,7 @@ export const useImportActions = () => {
       }
     } catch (error) {
       console.error('[ImportActions] fetchData error', error);
-      setError(error instanceof Error ? error.message : 'Failed to load import data');
+      setError(error instanceof Error ? error.message : t('importExport.messages.error.loadImportData'));
     } finally {
       setIsLoading(false);
     }
@@ -129,7 +131,7 @@ export const useImportActions = () => {
         await fetchData();
       } catch (error) {
         console.error('[ImportActions] createPreview error', error);
-        setError(error instanceof Error ? error.message : 'Failed to create preview');
+        setError(error instanceof Error ? error.message : t('importExport.messages.error.createPreview'));
       } finally {
         setIsLoading(false);
       }
@@ -140,7 +142,7 @@ export const useImportActions = () => {
   const handleApproveImport = useCallback(
     async (importJobId: string) => {
       if (!importJobId) {
-        setError('Select a preview to approve before importing.');
+        setError(t('importExport.messages.error.selectPreviewFirst'));
         return;
       }
 
@@ -152,7 +154,7 @@ export const useImportActions = () => {
         await fetchData();
       } catch (error) {
         console.error('[ImportActions] approveImport error', error);
-        setError(error instanceof Error ? error.message : 'Failed to start import job');
+        setError(error instanceof Error ? error.message : t('importExport.messages.error.startImportJob'));
       } finally {
         setIsApproving(false);
       }
@@ -169,7 +171,7 @@ export const useImportActions = () => {
         setSelectedJobDetails(details);
       } catch (error) {
         console.error('[ImportActions] getImportJobDetails error', error);
-        setDetailsError(error instanceof Error ? error.message : 'Failed to load job details');
+        setDetailsError(error instanceof Error ? error.message : t('importExport.messages.error.loadJobDetails'));
         setSelectedJobDetails(null);
       } finally {
         setIsLoadingDetails(false);
@@ -194,7 +196,7 @@ export const useImportActions = () => {
       }
     } catch (error) {
       console.error('[ImportActions] refreshHistory error', error);
-      setError(error instanceof Error ? error.message : 'Failed to refresh import history');
+      setError(error instanceof Error ? error.message : t('importExport.messages.error.refreshHistory'));
     } finally {
       setIsRefreshingHistory(false);
     }

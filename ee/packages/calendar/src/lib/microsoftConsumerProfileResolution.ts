@@ -39,6 +39,12 @@ interface MicrosoftConsumerBindingRow {
 
 type ResolverStatus = 'ready' | 'not_configured' | 'invalid_profile';
 
+export type MicrosoftConsumerProfileReasonCode =
+  | 'unsupported_consumer'
+  | 'binding_not_configured'
+  | 'profile_missing'
+  | 'profile_credentials_missing';
+
 export interface MicrosoftConsumerProfileResolution {
   status: ResolverStatus;
   tenantId: string;
@@ -48,6 +54,7 @@ export interface MicrosoftConsumerProfileResolution {
   clientSecret?: string;
   microsoftTenantId?: string;
   message?: string;
+  reasonCode?: MicrosoftConsumerProfileReasonCode;
 }
 
 function normalizeTenantId(value?: string | null): string {
@@ -315,6 +322,7 @@ export async function resolveMicrosoftConsumerProfileConfig(
       status: 'not_configured',
       tenantId,
       consumerType,
+      reasonCode: 'unsupported_consumer',
       message: 'Unsupported Microsoft consumer type',
     };
   }
@@ -328,6 +336,7 @@ export async function resolveMicrosoftConsumerProfileConfig(
       status: 'not_configured',
       tenantId,
       consumerType,
+      reasonCode: 'binding_not_configured',
       message: `${getConsumerLabel(consumerType)} Microsoft profile binding is not configured`,
     };
   }
@@ -339,6 +348,7 @@ export async function resolveMicrosoftConsumerProfileConfig(
       tenantId,
       consumerType,
       profileId: binding.profile_id,
+      reasonCode: 'profile_missing',
       message: `Selected ${getConsumerLabel(consumerType)} Microsoft profile is missing or archived`,
     };
   }
@@ -350,6 +360,7 @@ export async function resolveMicrosoftConsumerProfileConfig(
       tenantId,
       consumerType,
       profileId: profile.profile_id,
+      reasonCode: 'profile_credentials_missing',
       message: `Selected ${getConsumerLabel(consumerType)} Microsoft profile is missing required credentials`,
     };
   }

@@ -171,6 +171,7 @@ export interface DeleteTenantDataResult {
   error?: string;
   deletedRecords?: number;
   tablesAffected?: number;
+  tableErrors?: string[];
 }
 
 export interface SendCancellationEmailResult {

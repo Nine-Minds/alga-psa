@@ -219,7 +219,9 @@
         "action": "Działanie"
       },
       "actions": {
-        "edit": "Edytuj"
+        "edit": "Edytuj",
+        "delete": "Usuń",
+        "deleting": "Usuwanie..."
       },
       "defaultApprover": {
         "placeholder": "Wybierz osobę zatwierdzającą"
@@ -323,7 +325,13 @@
       "feedback": {
         "selectUserError": "Wybierz użytkownika",
         "saveSuccess": "Zapisano godziny użytkownika",
-        "saveError": "Nie udało się zapisać godzin użytkownika"
+        "saveError": "Nie udało się zapisać godzin użytkownika",
+        "deleteSuccess": "Dostępność użytkownika została usunięta",
+        "deleteError": "Nie udało się usunąć dostępności użytkownika"
+      },
+      "deleteDialog": {
+        "title": "Usuń dostępność użytkownika",
+        "message": "Czy na pewno chcesz usunąć ustawienia dostępności dla {{userName}}? Spowoduje to usunięcie wszystkich skonfigurowanych godzin pracy. Tej operacji nie można cofnąć."
       }
     },
     "serviceRules": {
@@ -365,7 +373,13 @@
       "feedback": {
         "selectServiceError": "Wybierz usługę",
         "saveSuccess": "Regulamin usługi został zapisany",
-        "saveError": "Nie udało się zapisać reguł usługi"
+        "saveError": "Nie udało się zapisać reguł usługi",
+        "deleteSuccess": "Reguły usługi zostały usunięte",
+        "deleteError": "Nie udało się usunąć reguł usługi"
+      },
+      "deleteDialog": {
+        "title": "Usuń reguły usługi",
+        "message": "Czy na pewno chcesz usunąć reguły dla {{serviceName}}? Tej operacji nie można cofnąć."
       }
     },
     "exceptions": {

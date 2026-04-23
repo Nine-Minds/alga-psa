@@ -1278,6 +1278,8 @@
   },
   "clientPortal": {
     "clientsWillSee": "55555",
+    "showBudgetHours": "55555",
+    "showBudgetHoursDescription": "55555",
     "showPhases": "55555",
     "showPhasesDescription": "55555",
     "showCompletion": "55555",
@@ -1289,6 +1291,7 @@
     "required": "55555",
     "summary": {
       "projectInfo": "55555",
+      "budgetHours": "55555",
       "phaseInfo": "55555",
       "phaseCompletion": "55555",
       "taskDetails": "55555 {{fields}} 55555",

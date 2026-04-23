@@ -223,7 +223,18 @@
         "portalUserExistsForContact": "Un utilisateur du portail existe déjà pour ce contact. Utilisez la réinitialisation du mot de passe pour l'utilisateur existant.",
         "selectAppropriateRole": "Veuillez sélectionner un rôle approprié pour ce type d'utilisateur",
         "contactMissingEmail": "Le contact « {{name}} » ne possède pas d'adresse courriel. Veuillez mettre à jour l'adresse courriel du contact avant d'envoyer une invitation.",
-        "licenseLimit": "Impossible d'activer l'utilisateur : limite de licences atteinte. Veuillez désactiver un autre utilisateur ou mettre à niveau votre licence."
+        "licenseLimit": "Impossible d'activer l'utilisateur : limite de licences atteinte. Veuillez désactiver un autre utilisateur ou mettre à niveau votre licence.",
+        "permissionDeniedInvite": "Vous n'avez pas la permission d'inviter des utilisateurs.",
+        "permissionDeniedCreate": "Vous n'avez pas la permission de créer des utilisateurs.",
+        "emailNotConfigured": "Le service de messagerie est désactivé ou n'est pas configuré.",
+        "contactNotFound": "Contact introuvable.",
+        "contactMissingEmailGeneric": "Le contact n'a pas d'adresse e-mail. Ajoutez une adresse e-mail au contact avant d'envoyer une invitation.",
+        "contactInvalidEmail": "Le contact a une adresse e-mail invalide. Mettez à jour le contact avec une adresse e-mail valide avant d'envoyer une invitation.",
+        "noDefaultClient": "Aucun client par défaut n'est configuré pour ce tenant. Veuillez définir un client par défaut dans les paramètres généraux.",
+        "noDefaultLocation": "Le client par défaut doit avoir un emplacement par défaut configuré pour envoyer des invitations au portail.",
+        "noLocationEmail": "L'emplacement du client par défaut doit avoir une adresse e-mail de contact configurée.",
+        "noBaseUrl": "L'URL de base n'est pas configurée pour les invitations au portail.",
+        "passwordTooShort": "Le mot de passe doit contenir au moins 8 caractères."
       }
     }
   },
@@ -343,7 +354,9 @@
         "loadFailed": "Échec du chargement des équipes. Veuillez réessayer.",
         "fetchUsers": "Échec de la récupération des utilisateurs",
         "createFailed": "Échec de la création de l'équipe : {{error}}",
-        "deleteFailed": "Échec de la suppression de l'équipe"
+        "deleteFailed": "Échec de la suppression de l'équipe",
+        "updateName": "Échec de la mise à jour du nom de l'équipe",
+        "saveChanges": "Échec de l'enregistrement des modifications. Veuillez réessayer."
       }
     }
   },
@@ -398,7 +411,10 @@
         "error": {
           "noSettings": "Aucun paramètre de numérotation des tickets trouvé. Veuillez contacter votre administrateur.",
           "loadFailed": "Échec du chargement des paramètres de numérotation des tickets",
-          "updateFailed": "Échec de la mise à jour des paramètres"
+          "updateFailed": "Échec de la mise à jour des paramètres",
+          "updatePaddingFailed": "Échec de la mise à jour de la longueur de remplissage",
+          "updateLastNumberFailed": "Échec de la mise à jour du dernier numéro",
+          "updateInitialValueFailed": "Échec de la mise à jour de la valeur initiale"
         },
         "success": {
           "updated": "Paramètres de numérotation des tickets mis à jour avec succès"
@@ -428,6 +444,7 @@
         "edit": "Modifier",
         "delete": "Supprimer"
       },
+      "retiredAlert": "Les statuts de tickets sont désormais gérés dans chaque tableau. Utilisez l'onglet Tableaux pour modifier les cycles de vie des tickets d'un tableau spécifique.",
       "messages": {
         "success": {
           "deleted": "Statut supprimé avec succès",
@@ -468,7 +485,11 @@
         "close": "Fermer",
         "create": "Créer",
         "update": "Mettre à jour",
-        "importSelected": "Importer la sélection"
+        "importSelected": "Importer la sélection",
+        "up": "Monter",
+        "down": "Descendre",
+        "remove": "Supprimer",
+        "addStatus": "Ajouter un statut"
       },
       "fields": {
         "boardName": {
@@ -508,6 +529,46 @@
           "placeholder": "Sélectionner la politique SLA",
           "help": "La politique SLA à appliquer aux tickets de ce tableau",
           "none": "Aucune"
+        },
+        "ticketStatusSetup": {
+          "label": "Configuration des statuts de tickets",
+          "help": "Choisissez si ce tableau démarre à partir d'un cycle de vie existant ou d'une nouvelle liste de statuts en ligne.",
+          "copyExisting": "Copier depuis un tableau existant",
+          "createInline": "Créer des statuts en ligne"
+        },
+        "copyTicketStatuses": {
+          "label": "Copier les statuts de tickets depuis",
+          "help": "Les nouveaux tableaux clonent leur cycle de vie des tickets depuis un tableau existant.",
+          "selectSource": "Sélectionner un tableau source",
+          "noSourceAvailable": "Aucun tableau source disponible",
+          "unnamedBoard": "Tableau sans nom"
+        },
+        "ticketStatuses": {
+          "labelEditing": "Statuts de tickets du tableau",
+          "labelCopied": "Statuts de tickets copiés",
+          "labelInline": "Statuts de tickets en ligne",
+          "helpEditing": "Modifiez le cycle de vie des tickets pour ce tableau uniquement.",
+          "helpCopied": "Vérifiez et ajustez le cycle de vie copié avant d'enregistrer le nouveau tableau.",
+          "helpInline": "Créez le cycle de vie initial des tickets du tableau avant d'enregistrer.",
+          "loading": "Chargement des statuts de tickets du tableau…",
+          "statusName": "Nom du statut",
+          "closed": "Fermé",
+          "default": "Par défaut"
+        },
+        "inboundReplyReopen": {
+          "enabledLabel": "Rouvrir les tickets fermés lors des réponses entrantes",
+          "enabledHelp": "S'applique aux réponses groupées correspondant à des tickets déjà fermés sur ce tableau.",
+          "cutoffHoursLabel": "Délai de réouverture (heures)",
+          "cutoffHoursHelp": "Les réponses reçues après cette période créent de nouveaux tickets au lieu de rouvrir les anciens.",
+          "statusLabel": "Statut à la réouverture (facultatif)",
+          "statusPlaceholder": "Sélectionner un statut de réouverture",
+          "statusUseDefault": "Utiliser le statut ouvert par défaut du tableau",
+          "suppressAiLabel": "Ignorer la réouverture pour les courtes réponses d'accusé de réception (IA)",
+          "suppressAiHelp": "Module complémentaire Enterprise AI Assistant uniquement. Si indisponible, les réponses rouvrent normalement."
+        },
+        "liveTimer": {
+          "label": "Activer le minuteur de ticket en direct",
+          "help": "Affiche le minuteur en direct et les intervalles suivis sur les tickets de ce tableau. La saisie manuelle du temps reste disponible."
         }
       },
       "dialog": {
@@ -556,8 +617,98 @@
           "fetchAvailableFailed": "Échec de la récupération des tableaux disponibles à l'import",
           "nameRequired": "Le nom du tableau est requis",
           "saveFailed": "Échec de l'enregistrement du tableau",
-          "lastDefault": "Impossible de supprimer le dernier tableau par défaut"
+          "lastDefault": "Impossible de supprimer le dernier tableau par défaut",
+          "statusRequired": "Ajoutez au moins un statut de ticket avant d'enregistrer le tableau.",
+          "duplicateStatusName": "Les noms des statuts de ticket doivent être uniques dans un tableau.",
+          "invalidOpenDefault": "Sélectionnez exactement un statut de ticket ouvert par défaut avant d'enregistrer le tableau.",
+          "nameAlreadyExists": "Un tableau portant ce nom existe déjà.",
+          "selectBoardToCopy": "Sélectionnez un tableau existant depuis lequel copier les statuts de ticket.",
+          "fetchStatusesFailed": "Échec du chargement des statuts de ticket du tableau.",
+          "deleteFailed": "Échec de la suppression du tableau",
+          "importFailed": "Échec de l'importation des tableaux",
+          "updateStatusFailed": "Échec de la mise à jour du statut du tableau",
+          "updateDefaultFailed": "Échec de la mise à jour du tableau par défaut"
         }
+      }
+    },
+    "priorities": {
+      "title": {
+        "ticket": "Priorités des tickets",
+        "projectTask": "Priorités des tâches de projet"
+      },
+      "alert": {
+        "header": "Gestion des priorités :",
+        "description": "Créez des priorités personnalisées pour votre organisation ou importez depuis des modèles standard.",
+        "itilNote": "Les priorités standard ITIL ne peuvent pas être modifiées ou supprimées.",
+        "nonItilNote": "Toutes les priorités peuvent être modifiées ou supprimées selon votre flux de travail."
+      },
+      "table": {
+        "name": "Nom",
+        "type": "Type",
+        "color": "Couleur",
+        "order": "Ordre",
+        "actions": "Actions",
+        "standardTag": "(Standard)",
+        "itilProtected": "Protégé"
+      },
+      "itemTypes": {
+        "ticket": "Ticket",
+        "projectTask": "Tâche de projet"
+      },
+      "actions": {
+        "addPriority": "Ajouter une priorité",
+        "importStandard": "Importer depuis les priorités standard",
+        "openMenu": "Ouvrir le menu",
+        "edit": "Modifier",
+        "delete": "Supprimer",
+        "cancel": "Annuler"
+      },
+      "dialog": {
+        "addTitle": "Ajouter une nouvelle priorité",
+        "editTitle": "Modifier la priorité",
+        "submitAdd": "Ajouter la priorité",
+        "submitUpdate": "Mettre à jour la priorité"
+      },
+      "fields": {
+        "priorityName": {
+          "label": "Nom de la priorité",
+          "placeholder": "ex. : Urgent"
+        },
+        "orderNumber": {
+          "label": "Numéro d'ordre (1-100, les numéros les plus élevés apparaissent en premier)",
+          "help": "Contrôle l'ordre dans lequel les priorités apparaissent dans les menus déroulants de la plateforme. Les numéros les plus élevés apparaissent en premier pour les priorités.",
+          "used": "Numéros d'ordre utilisés : {{numbers}}",
+          "noneUsed": "Aucun numéro d'ordre utilisé pour le moment"
+        },
+        "color": {
+          "label": "Couleur",
+          "chooseButton": "Choisir une couleur"
+        }
+      },
+      "import": {
+        "title": "Importer des priorités standard",
+        "submit": "Importer ({{count}})",
+        "allImportedTicket": "Toutes les priorités standard ont déjà été importées pour les tickets.",
+        "allImportedProjectTask": "Toutes les priorités standard ont déjà été importées pour les tâches de projet.",
+        "instructions": "Sélectionnez les priorités standard à importer. Elles seront copiées dans les priorités de votre organisation."
+      },
+      "messages": {
+        "success": {
+          "deleted": "Priorité supprimée avec succès",
+          "imported": "{{count}} priorités importées avec succès",
+          "skipped": "{{count}} priorités ignorées (existent déjà)"
+        },
+        "error": {
+          "orderTaken": "Le numéro d'ordre {{order}} est déjà utilisé par « {{name}} ». Veuillez choisir un autre numéro d'ordre.",
+          "uniqueConstraint": "Ce numéro d'ordre est déjà utilisé. Veuillez choisir un autre numéro d'ordre.",
+          "saveFailed": "Échec de l'enregistrement de la priorité",
+          "deleteFailed": "Échec de la suppression de la priorité",
+          "deleteValidationFailed": "Échec de la validation de la suppression. Veuillez réessayer.",
+          "importFailed": "Échec de l'importation des priorités"
+        }
+      },
+      "entity": {
+        "fallback": "cette priorité"
       }
     }
   },
@@ -643,7 +794,9 @@
         },
         "error": {
           "lastClosed": "Au moins un statut doit rester marqué comme fermé",
-          "deleteLastClosed": "Impossible de supprimer le dernier statut fermé pour ce type."
+          "deleteLastClosed": "Impossible de supprimer le dernier statut fermé pour ce type.",
+          "skipped": "{{count}} statuts ignorés ({{reason}})",
+          "importFailed": "Échec de l'importation des statuts"
         }
       }
     },
@@ -685,27 +838,6 @@
     }
   },
   "clientPortal": {
-    "language": {
-      "title": "Paramètres de langue",
-      "description": "Configurez les paramètres de langue par défaut de votre portail client. Ces paramètres s'appliquent à tous les utilisateurs et clients, sauf s'ils sont remplacés.",
-      "fields": {
-        "defaultLanguage": "Langue par défaut",
-        "availableLanguages": "Langues disponibles"
-      },
-      "help": {
-        "defaultLanguage": "Ce sera la langue par défaut pour tous les utilisateurs du portail client et les notifications par courriel, sauf si elle est remplacée par le paramètre du client ou les préférences individuelles de l'utilisateur",
-        "availableLanguages": "Sélectionnez les langues disponibles parmi lesquelles les utilisateurs peuvent choisir"
-      },
-      "hierarchy": {
-        "title": "Hiérarchie des préférences de langue",
-        "description": "Cette hiérarchie s'applique à la fois à l'interface du portail client et aux notifications par courriel envoyées aux utilisateurs du portail client :",
-        "userPreference": "Préférence individuelle de l'utilisateur (priorité la plus élevée)",
-        "clientDefault": "Langue par défaut du client",
-        "orgDefault": "Langue par défaut de l'organisation (configurée ici)",
-        "systemDefault": "Langue par défaut du système (anglais)",
-        "note": "Remarque : les utilisateurs internes MSP reçoivent toujours les courriels en anglais"
-      }
-    },
     "branding": {
       "title": "Image de marque et apparence",
       "description": "Personnalisez l'apparence de votre portail client avec l'image de marque de votre entreprise.",
@@ -791,21 +923,15 @@
     }
   },
   "mspLanguage": {
-    "title": "Langue",
-    "description": "Configurez les paramètres de langue par défaut du portail MSP. Ces paramètres s'appliquent à tous les utilisateurs MSP, sauf s'ils sont remplacés par les préférences individuelles.",
+    "title": "Langue de l’organisation",
+    "description": "Définissez la langue par défaut pour toute l’organisation — personnel MSP, utilisateurs du portail client et notifications par email. Chaque utilisateur ou client peut ensuite la remplacer individuellement.",
     "fields": {
       "defaultLanguage": "Langue par défaut",
       "availableLanguages": "Langues disponibles"
     },
     "help": {
-      "defaultLanguage": "Ce sera la langue par défaut pour tous les utilisateurs du portail MSP, sauf si elle est remplacée par leur préférence personnelle.",
-      "availableLanguages": "Sélectionnez les langues disponibles parmi lesquelles les utilisateurs MSP peuvent choisir"
-    },
-    "hierarchy": {
-      "title": "Hiérarchie des préférences de langue",
-      "userPreference": "Préférence individuelle de l'utilisateur (priorité la plus élevée)",
-      "orgDefault": "Langue par défaut de l'organisation (configurée ici)",
-      "systemDefault": "Langue par défaut du système (anglais)"
+      "defaultLanguage": "Appliquée partout, sauf si une préférence personnelle d'un utilisateur ou la langue configurée pour un client spécifique la remplace.",
+      "availableLanguages": "Sélectionnez les langues parmi lesquelles les utilisateurs peuvent choisir."
     }
   },
   "notifications": {
@@ -1050,6 +1176,16 @@
         "noValues": "Aucune valeur"
       },
       "truncated": "Affichage des {{count}} premiers enregistrements. Téléchargez les résultats de la tâche pour l'historique complet."
+    },
+    "messages": {
+      "error": {
+        "loadImportData": "Échec du chargement des données d'importation",
+        "createPreview": "Échec de la création de l'aperçu",
+        "selectPreviewFirst": "Sélectionnez un aperçu à approuver avant d'importer.",
+        "startImportJob": "Échec du démarrage de la tâche d'importation",
+        "loadJobDetails": "Échec du chargement des détails de la tâche",
+        "refreshHistory": "Échec de l'actualisation de l'historique d'importation"
+      }
     }
   },
   "email": {
@@ -1367,5 +1503,19 @@
       "holidayAdded": "Jour férié ajouté avec succès",
       "holidayDeleted": "Jour férié supprimé avec succès"
     }
+  },
+  "clientPortalLanguage": {
+    "title": "Langue du portail client",
+    "description": "Remplacez la langue par défaut uniquement pour les utilisateurs du portail client. Le personnel MSP conserve la langue par défaut de l’organisation.",
+    "fields": {
+      "defaultLanguage": "Langue par défaut"
+    },
+    "help": {
+      "defaultLanguage": "Lorsqu'elle est définie, les utilisateurs du portail client voient cette langue, sauf si leur préférence individuelle ou celle configurée pour leur client la remplace."
+    },
+    "placeholder": "Sélectionnez une langue",
+    "inheritOption": "Utiliser la valeur par défaut de l'organisation ({{language}})",
+    "unsetHint": "Pour supprimer le remplacement du portail client, modifiez la valeur par défaut de l'organisation dans Paramètres → Langue.",
+    "updated": "Langue par défaut du portail client mise à jour sur {{language}}"
   }
 }

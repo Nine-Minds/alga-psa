@@ -318,6 +318,11 @@
         "label": "Dirección de correo",
         "placeholder": "john@acmeit.com",
         "help": "Se utilizará para iniciar sesión en tu cuenta."
+      },
+      "language": {
+        "label": "Idioma",
+        "placeholder": "Seleccione un idioma",
+        "help": "Se convierte en el idioma predeterminado de la organización para todos: personal MSP y usuarios del portal del cliente. Los usuarios individuales y los clientes pueden anularlo más tarde."
       }
     },
     "password": {

@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { LOCALE_CONFIG, type SupportedLocale } from '@alga-psa/core/i18n/config';
+import { LOCALE_CONFIG, filterPseudoLocales, type SupportedLocale } from '@alga-psa/core/i18n/config';
 import { updateClientLocaleAction, getClientLocaleAction } from '@alga-psa/clients/actions';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 interface ClientLanguagePreferenceProps {
   /** Client ID */
@@ -33,17 +34,22 @@ export function ClientLanguagePreference({
   onSave,
 }: ClientLanguagePreferenceProps) {
   const { t } = useTranslation('msp/clients');
+  const { enabled: isMspI18nEnabled } = useFeatureFlag('msp-i18n-enabled', { defaultValue: false });
   const [currentLocale, setCurrentLocale] = useState<SupportedLocale | undefined>();
   const [loading, setLoading] = useState(true);
   const [isChanging, setIsChanging] = useState(false);
 
-  // Convert locale config to SelectOption format
+  const visibleLocales = useMemo(
+    () => filterPseudoLocales(LOCALE_CONFIG.supportedLocales, !!isMspI18nEnabled),
+    [isMspI18nEnabled],
+  );
+
   const languageOptions = useMemo((): SelectOption[] => {
-    return LOCALE_CONFIG.supportedLocales.map((locale) => ({
+    return visibleLocales.map((locale) => ({
       value: locale,
       label: `${LOCALE_CONFIG.localeNames[locale]} (${locale.toUpperCase()})`,
     }));
-  }, []);
+  }, [visibleLocales]);
 
   useEffect(() => {
     const loadClientLocale = async () => {
@@ -98,7 +104,7 @@ export function ClientLanguagePreference({
       />
       <p className="mt-1 text-sm text-gray-500">
         {t('clientLanguagePreference.description', {
-          defaultValue: 'This will be the default language for all contacts from {{clientName}}. Individual users can override this in their personal settings.',
+          defaultValue: 'Applies to every portal user from {{clientName}} unless they have set their own preference in their profile.',
           clientName: clientName || t('clientLanguagePreference.thisClient', { defaultValue: 'this client' })
         })}
       </p>

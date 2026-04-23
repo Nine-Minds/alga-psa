@@ -219,7 +219,9 @@
         "action": "Azione"
       },
       "actions": {
-        "edit": "Modifica"
+        "edit": "Modifica",
+        "delete": "Elimina",
+        "deleting": "Eliminazione..."
       },
       "defaultApprover": {
         "placeholder": "Seleziona un approvatore"
@@ -323,7 +325,13 @@
       "feedback": {
         "selectUserError": "Seleziona un utente",
         "saveSuccess": "Ore utente salvate",
-        "saveError": "Impossibile salvare le ore utente"
+        "saveError": "Impossibile salvare le ore utente",
+        "deleteSuccess": "Disponibilità utente eliminata",
+        "deleteError": "Impossibile eliminare la disponibilità dell'utente"
+      },
+      "deleteDialog": {
+        "title": "Elimina disponibilità utente",
+        "message": "Sei sicuro di voler eliminare le impostazioni di disponibilità per {{userName}}? Verranno rimossi tutti gli orari di lavoro configurati. Questa azione non può essere annullata."
       }
     },
     "serviceRules": {
@@ -365,7 +373,13 @@
       "feedback": {
         "selectServiceError": "Seleziona un servizio",
         "saveSuccess": "Regole del servizio salvate",
-        "saveError": "Impossibile salvare le regole del servizio"
+        "saveError": "Impossibile salvare le regole del servizio",
+        "deleteSuccess": "Regole del servizio eliminate",
+        "deleteError": "Impossibile eliminare le regole del servizio"
+      },
+      "deleteDialog": {
+        "title": "Elimina regole del servizio",
+        "message": "Sei sicuro di voler eliminare le regole per {{serviceName}}? Questa azione non può essere annullata."
       }
     },
     "exceptions": {

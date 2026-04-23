@@ -225,5 +225,12 @@
   "rightSidebar": {
     "title": "Chat",
     "enterpriseOnly": "De chatfunctie is alleen beschikbaar in de Enterprise Edition."
+  },
+  "notifications": {
+    "messages": {
+      "error": {
+        "loadFailed": "Kan meldingen niet laden"
+      }
+    }
   }
 }

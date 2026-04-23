@@ -258,5 +258,14 @@
       "troubleshooting": "Problemen oplossen",
       "reference": "Referentie"
     }
+  },
+  "documents": {
+    "messages": {
+      "error": {
+        "noPermission": "Je hebt geen toestemming om documenten te bekijken",
+        "invalidData": "Ongeldige documentgegevens ontvangen",
+        "fetchFailed": "Kan documenten niet ophalen"
+      }
+    }
   }
 }

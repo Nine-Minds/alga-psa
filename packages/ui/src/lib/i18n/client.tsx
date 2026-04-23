@@ -188,8 +188,8 @@ export function useI18n() {
 /**
  * Hook for translations (wrapper around react-i18next)
  */
-export function useTranslation(namespace?: string) {
-  return useI18nextTranslation(namespace);
+export function useTranslation(namespace?: string | string[]) {
+  return useI18nextTranslation(namespace as any);
 }
 
 /**

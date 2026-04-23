@@ -22,6 +22,7 @@ import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DeleteEntityDialog } from '@alga-psa/ui';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface PrioritySettingsProps {
   onShowConflictDialog?: (conflicts: ImportConflict[], type: 'priorities' | 'statuses', resolutions: Record<string, any>) => void;
@@ -29,6 +30,7 @@ interface PrioritySettingsProps {
 }
 
 const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: PrioritySettingsProps): React.JSX.Element => {
+  const { t } = useTranslation('msp/settings');
   const [priorities, setPriorities] = useState<(IPriority | IStandardPriority)[]>([]);
   const [selectedPriorityType] = useState<'ticket' | 'project_task'>(() => {
     // Use initialPriorityType, default to 'ticket' if not provided
@@ -43,7 +45,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
   const [availableReferencePriorities, setAvailableReferencePriorities] = useState<IStandardPriority[]>([]);
   const [selectedImportPriorities, setSelectedImportPriorities] = useState<string[]>([]);
   const [priorityColor, setPriorityColor] = useState('#6B7280');
-  
+
   // Delete dialog state
   const [priorityToDelete, setPriorityToDelete] = useState<IPriority | null>(null);
   const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
@@ -101,14 +103,14 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
       setDeleteValidation({
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: 'Failed to validate deletion. Please try again.',
+        message: t('ticketing.priorities.messages.error.deleteValidationFailed'),
         dependencies: [],
         alternatives: []
       });
     } finally {
       setIsDeleteValidating(false);
     }
-  }, []);
+  }, [t]);
 
   const handleDeletePriorityRequest = (priorityId: string): void => {
     const priority = priorities.find(p => p.priority_id === priorityId);
@@ -130,14 +132,14 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
       }
 
       setPriorities(priorities.filter(p => p.priority_id !== priorityToDelete.priority_id));
-      toast.success('Priority deleted successfully');
+      toast.success(t('ticketing.priorities.messages.success.deleted'));
       resetDeleteState();
     } catch (error) {
       console.error('Error deleting priority:', error);
       setDeleteValidation({
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: error instanceof Error ? error.message : 'Failed to delete priority',
+        message: error instanceof Error ? error.message : t('ticketing.priorities.messages.error.deleteFailed'),
         dependencies: [],
         alternatives: []
       });
@@ -161,7 +163,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
         selectedImportPriorities,
         { item_type: selectedPriorityType }
       );
-      
+
       if (conflicts.length > 0 && onShowConflictDialog) {
         // Use parent's conflict dialog if provided
         onShowConflictDialog(conflicts, 'priorities', {});
@@ -173,34 +175,34 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
           selectedImportPriorities,
           { item_type: selectedPriorityType }
         );
-        
+
         if (result.imported.length > 0) {
-          toast.success(`Successfully imported ${result.imported.length} priorities`);
+          toast.success(t('ticketing.priorities.messages.success.imported', { count: result.imported.length }));
           // Refresh priorities list
           const updatedPriorities = await getAllPriorities();
           setPriorities(updatedPriorities);
         }
-        
+
         if (result.skipped.length > 0) {
-          toast.error(`Skipped ${result.skipped.length} priorities (already exist)`);
+          toast.error(t('ticketing.priorities.messages.success.skipped', { count: result.skipped.length }));
         }
-        
+
         setShowImportDialog(false);
         setSelectedImportPriorities([]);
       }
     } catch (error) {
-      handleError(error, 'Failed to import priorities');
+      handleError(error, t('ticketing.priorities.messages.error.importFailed'));
     }
   };
 
   const priorityColumns: ColumnDefinition<IPriority | IStandardPriority>[] = [
     {
-      title: 'Name',
+      title: t('ticketing.priorities.table.name'),
       dataIndex: 'priority_name',
       render: (value, record) => (
         <div className="flex items-center gap-2">
-          <div 
-            className="w-4 h-4 rounded-full" 
+          <div
+            className="w-4 h-4 rounded-full"
             style={{ backgroundColor: record.color }}
           />
           <span>{value}</span>
@@ -208,25 +210,25 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
             <span className="ml-1 px-1.5 py-0.5 text-xs font-medium bg-blue-500/15 text-blue-600 rounded">ITIL</span>
           )}
           {'tenant' in record ? null : (
-            !('is_from_itil_standard' in record && record.is_from_itil_standard) && <span className="text-xs text-gray-500 italic">(Standard)</span>
+            !('is_from_itil_standard' in record && record.is_from_itil_standard) && <span className="text-xs text-gray-500 italic">{t('ticketing.priorities.table.standardTag')}</span>
           )}
         </div>
       ),
     },
     {
-      title: 'Type',
+      title: t('ticketing.priorities.table.type'),
       dataIndex: 'item_type',
       render: (value) => (
-        <span className="capitalize">{value === 'project_task' ? 'Project Task' : 'Ticket'}</span>
+        <span className="capitalize">{value === 'project_task' ? t('ticketing.priorities.itemTypes.projectTask') : t('ticketing.priorities.itemTypes.ticket')}</span>
       ),
     },
     {
-      title: 'Color',
+      title: t('ticketing.priorities.table.color'),
       dataIndex: 'color',
       render: (value) => (
         <div className="flex items-center gap-2">
-          <div 
-            className="w-6 h-6 rounded border border-gray-300" 
+          <div
+            className="w-6 h-6 rounded border border-gray-300"
             style={{ backgroundColor: value }}
           />
           <span className="text-xs text-gray-500">{value}</span>
@@ -234,7 +236,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
       ),
     },
     {
-      title: 'Order',
+      title: t('ticketing.priorities.table.order'),
       dataIndex: 'order_number',
       render: (value) => value,
     },
@@ -246,17 +248,17 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
       <div className="bg-white p-6 rounded-lg shadow-sm">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-gray-800">
-            {selectedPriorityType === 'project_task' ? 'Project Task Priorities' : 'Ticket Priorities'}
+            {selectedPriorityType === 'project_task' ? t('ticketing.priorities.title.projectTask') : t('ticketing.priorities.title.ticket')}
           </h3>
         </div>
-        
+
         {/* Info box about priorities */}
         <Alert variant="info" className="mb-4">
           <AlertDescription>
-            <strong>Priority Management:</strong> Create custom priorities for your organization or import from standard templates.
+            <strong>{t('ticketing.priorities.alert.header')}</strong> {t('ticketing.priorities.alert.description')}
             {priorities.some(p => 'is_from_itil_standard' in p && p.is_from_itil_standard && p.item_type === selectedPriorityType) ?
-              ' ITIL standard priorities cannot be edited or deleted.' :
-              ' All priorities can be edited or deleted to fit your workflow.'}
+              ` ${t('ticketing.priorities.alert.itilNote')}` :
+              ` ${t('ticketing.priorities.alert.nonItilNote')}`}
           </AlertDescription>
         </Alert>
 
@@ -267,14 +269,14 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
             .sort((a, b) => (a.order_number || 0) - (b.order_number || 0))
           }
           columns={[...priorityColumns, {
-            title: 'Actions',
+            title: t('ticketing.priorities.table.actions'),
             dataIndex: 'action',
             width: '5%',
             render: (_, item) => {
               // ITIL imported priorities cannot be edited or deleted
               if ('is_from_itil_standard' in item && item.is_from_itil_standard) {
                 return (
-                  <span className="text-xs text-gray-400">Protected</span>
+                  <span className="text-xs text-gray-400">{t('ticketing.priorities.table.itilProtected')}</span>
                 );
               }
 
@@ -287,7 +289,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
                       id={`priority-actions-menu-${item.priority_id}`}
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <span className="sr-only">Open menu</span>
+                      <span className="sr-only">{t('ticketing.priorities.actions.openMenu')}</span>
                       <MoreVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -301,7 +303,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
                         setShowPriorityDialog(true);
                       }}
                     >
-                      Edit
+                      {t('ticketing.priorities.actions.edit')}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       id={`delete-priority-${item.priority_id}`}
@@ -311,7 +313,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
                         handleDeletePriorityRequest(item.priority_id);
                       }}
                     >
-                      Delete
+                      {t('ticketing.priorities.actions.delete')}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -324,25 +326,25 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
           pageSize={pageSize}
           onItemsPerPageChange={handlePageSizeChange}
         />
-        
+
         <div className="mt-4 flex gap-2">
-          <Button 
-            id='add-priority-button' 
+          <Button
+            id='add-priority-button'
             onClick={() => {
               setEditingPriority(null);
               setPriorityColor('#6B7280');
               setShowPriorityDialog(true);
-            }} 
+            }}
             className="bg-primary-500 text-white hover:bg-primary-600"
           >
-            <Plus className="h-4 w-4 mr-2" /> Add Priority
+            <Plus className="h-4 w-4 mr-2" /> {t('ticketing.priorities.actions.addPriority')}
           </Button>
-          <Button 
-            id='import-priorities-button' 
-            onClick={handleImportPriorities} 
+          <Button
+            id='import-priorities-button'
+            onClick={handleImportPriorities}
             variant="outline"
           >
-            Import from Standard Priorities
+            {t('ticketing.priorities.actions.importStandard')}
           </Button>
         </div>
       </div>
@@ -351,7 +353,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
       <Dialog
         isOpen={showPriorityDialog}
         onClose={() => setShowPriorityDialog(false)}
-        title={editingPriority ? 'Edit Priority' : 'Add New Priority'}
+        title={editingPriority ? t('ticketing.priorities.dialog.editTitle') : t('ticketing.priorities.dialog.addTitle')}
         className="max-w-lg max-w-[90vw]"
         id="priority-dialog"
         footer={
@@ -366,7 +368,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
                 setPriorityColor('#6B7280');
               }}
             >
-              Cancel
+              {t('ticketing.priorities.actions.cancel')}
             </Button>
             <Button
               id="submit-priority-dialog"
@@ -374,7 +376,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
               variant="default"
               onClick={() => (document.getElementById('priority-dialog-form') as HTMLFormElement | null)?.requestSubmit()}
             >
-              {editingPriority ? 'Update' : 'Add'} Priority
+              {editingPriority ? t('ticketing.priorities.dialog.submitUpdate') : t('ticketing.priorities.dialog.submitAdd')}
             </Button>
           </div>
         }
@@ -385,21 +387,21 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
             const formData = new FormData(e.currentTarget);
             const name = formData.get('name') as string;
             const level = parseInt(formData.get('level') as string);
-            
+
             try {
               // Check if order number is already taken
-              const existingWithOrder = priorities.find(p => 
+              const existingWithOrder = priorities.find(p =>
                 'item_type' in p &&
-                p.item_type === selectedPriorityType && 
+                p.item_type === selectedPriorityType &&
                 p.order_number === level &&
                 p.priority_id !== editingPriority?.priority_id
               );
-              
+
               if (existingWithOrder) {
-                toast.error(`Order number ${level} is already taken by "${existingWithOrder.priority_name}". Please choose a different order number.`);
+                toast.error(t('ticketing.priorities.messages.error.orderTaken', { order: level, name: existingWithOrder.priority_name }));
                 return;
               }
-              
+
               if (editingPriority) {
                 await updatePriorityItem({
                   ...editingPriority,
@@ -415,38 +417,38 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
                   item_type: selectedPriorityType
                 });
               }
-              
+
               // Refresh priorities list
               const updatedPriorities = await getAllPriorities();
               setPriorities(updatedPriorities);
-              
+
               setShowPriorityDialog(false);
               setEditingPriority(null);
               setPriorityColor('#6B7280');
             } catch (error) {
               if (error instanceof Error && error.message.includes('unique constraint')) {
-                handleError(error, 'This order number is already in use. Please choose a different order number.');
+                handleError(error, t('ticketing.priorities.messages.error.uniqueConstraint'));
               } else {
-                handleError(error, 'Failed to save priority');
+                handleError(error, t('ticketing.priorities.messages.error.saveFailed'));
               }
             }
           }}>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Priority Name
+                  {t('ticketing.priorities.fields.priorityName.label')}
                 </label>
                 <Input
                   name="name"
                   defaultValue={editingPriority?.priority_name || ''}
                   required
-                  placeholder="e.g., Urgent"
+                  placeholder={t('ticketing.priorities.fields.priorityName.placeholder')}
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Order Number (1-100, higher numbers appear first)
+                  {t('ticketing.priorities.fields.orderNumber.label')}
                 </label>
                 <Input
                   name="level"
@@ -455,7 +457,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
                   max="100"
                   defaultValue={editingPriority?.order_number || (() => {
                     // Suggest next available order number
-                    const prioritiesOfType = priorities.filter(p => 
+                    const prioritiesOfType = priorities.filter(p =>
                       'item_type' in p && p.item_type === selectedPriorityType
                     );
                     const maxOrder = Math.max(...prioritiesOfType.map(p => p.order_number || 0), 0);
@@ -464,11 +466,11 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
                   required
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Controls the order in which priorities appear in dropdown menus throughout the platform. Higher numbers appear first for priorities.
+                  {t('ticketing.priorities.fields.orderNumber.help')}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
                   {(() => {
-                    const prioritiesOfType = priorities.filter(p => 
+                    const prioritiesOfType = priorities.filter(p =>
                       'item_type' in p && p.item_type === selectedPriorityType
                     );
                     const usedOrders = prioritiesOfType
@@ -477,20 +479,20 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
                       .filter(n => n !== null && n !== undefined)
                       .sort((a, b) => a - b);
                     if (usedOrders.length > 0) {
-                      return `Used order numbers: ${usedOrders.join(', ')}`;
+                      return t('ticketing.priorities.fields.orderNumber.used', { numbers: usedOrders.join(', ') });
                     }
-                    return 'No order numbers used yet';
+                    return t('ticketing.priorities.fields.orderNumber.noneUsed');
                   })()}
                 </p>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Color
+                  {t('ticketing.priorities.fields.color.label')}
                 </label>
                 <div className="flex items-center gap-2">
-                  <div 
-                    className="w-10 h-10 rounded border border-gray-300" 
+                  <div
+                    className="w-10 h-10 rounded border border-gray-300"
                     style={{ backgroundColor: priorityColor }}
                   />
                   <ColorPicker
@@ -512,7 +514,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
                         size="sm"
                         className="flex items-center gap-2">
                         <Palette className="h-4 w-4" />
-                        <span>Choose Color</span>
+                        <span>{t('ticketing.priorities.fields.color.chooseButton')}</span>
                       </Button>
                     }
                   />
@@ -528,7 +530,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
       <Dialog
         isOpen={showImportDialog}
         onClose={() => setShowImportDialog(false)}
-        title="Import Standard Priorities"
+        title={t('ticketing.priorities.import.title')}
         className="max-w-lg"
         id="import-priorities-dialog"
         footer={
@@ -541,7 +543,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
                 setSelectedImportPriorities([]);
               }}
             >
-              Cancel
+              {t('ticketing.priorities.actions.cancel')}
             </Button>
             <Button
               id="import-selected-priorities"
@@ -549,7 +551,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
               disabled={selectedImportPriorities.length === 0}
               onClick={handleImportSelected}
             >
-              Import ({selectedImportPriorities.length})
+              {t('ticketing.priorities.import.submit', { count: selectedImportPriorities.length })}
             </Button>
           </div>
         }
@@ -557,14 +559,14 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
         <DialogContent>
           {availableReferencePriorities.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-gray-500">All standard priorities have already been imported for {selectedPriorityType === 'ticket' ? 'tickets' : 'project tasks'}.</p>
+              <p className="text-gray-500">{selectedPriorityType === 'ticket' ? t('ticketing.priorities.import.allImportedTicket') : t('ticketing.priorities.import.allImportedProjectTask')}</p>
             </div>
           ) : (
             <div>
               <p className="text-sm text-gray-600 mb-4">
-                Select the standard priorities you want to import. These will be copied to your organization's priorities.
+                {t('ticketing.priorities.import.instructions')}
               </p>
-              
+
               <div className="border rounded-md">
                 {/* Table Header */}
                 <div className="flex items-center space-x-2 p-2 bg-muted/50 font-medium text-sm border-b">
@@ -582,8 +584,8 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
                     />
                   </div>
                   <div className="w-12"></div> {/* Color column */}
-                  <div className="flex-1">Name</div>
-                  <div className="w-16 text-center">Order</div>
+                  <div className="flex-1">{t('ticketing.priorities.table.name')}</div>
+                  <div className="w-16 text-center">{t('ticketing.priorities.table.order')}</div>
                 </div>
                 {/* Table Body */}
                 <div className="max-h-96 overflow-y-auto">
@@ -619,7 +621,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
                   ))}
                 </div>
               </div>
-              
+
             </div>
           )}
         </DialogContent>
@@ -630,7 +632,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
         isOpen={Boolean(priorityToDelete)}
         onClose={resetDeleteState}
         onConfirmDelete={confirmDeletePriority}
-        entityName={priorityToDelete?.priority_name || 'this priority'}
+        entityName={priorityToDelete?.priority_name || t('ticketing.priorities.entity.fallback')}
         validationResult={deleteValidation}
         isValidating={isDeleteValidating}
         isDeleting={isDeleteProcessing}

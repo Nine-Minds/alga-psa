@@ -219,7 +219,9 @@
         "action": "Aktion"
       },
       "actions": {
-        "edit": "Bearbeiten"
+        "edit": "Bearbeiten",
+        "delete": "Löschen",
+        "deleting": "Wird gelöscht..."
       },
       "defaultApprover": {
         "placeholder": "Wählen Sie einen Genehmiger aus"
@@ -323,7 +325,13 @@
       "feedback": {
         "selectUserError": "Bitte wählen Sie einen Benutzer aus",
         "saveSuccess": "Benutzerstunden gespeichert",
-        "saveError": "Benutzerstunden konnten nicht gespeichert werden"
+        "saveError": "Benutzerstunden konnten nicht gespeichert werden",
+        "deleteSuccess": "Benutzerverfügbarkeit gelöscht",
+        "deleteError": "Benutzerverfügbarkeit konnte nicht gelöscht werden"
+      },
+      "deleteDialog": {
+        "title": "Benutzerverfügbarkeit löschen",
+        "message": "Möchten Sie die Verfügbarkeitseinstellungen für {{userName}} wirklich löschen? Dadurch werden alle konfigurierten Arbeitszeiten entfernt. Diese Aktion kann nicht rückgängig gemacht werden."
       }
     },
     "serviceRules": {
@@ -365,7 +373,13 @@
       "feedback": {
         "selectServiceError": "Bitte wählen Sie eine Dienstleistung aus",
         "saveSuccess": "Serviceregeln gespeichert",
-        "saveError": "Dienstregeln konnten nicht gespeichert werden"
+        "saveError": "Dienstregeln konnten nicht gespeichert werden",
+        "deleteSuccess": "Serviceregeln gelöscht",
+        "deleteError": "Serviceregeln konnten nicht gelöscht werden"
+      },
+      "deleteDialog": {
+        "title": "Serviceregeln löschen",
+        "message": "Möchten Sie die Regeln für {{serviceName}} wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
       }
     },
     "exceptions": {

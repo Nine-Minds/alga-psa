@@ -15,12 +15,14 @@ import { TicketSectionFiltersDialog } from "./filters/TicketSectionFiltersDialog
 import { Filter, XCircle } from 'lucide-react';
 import { useActivityDrawer } from "./ActivityDrawerProvider";
 import { useActivityCrossFeature } from "@alga-psa/ui/context";
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 interface TicketsSectionProps {
   limit?: number;
   onViewAll?: () => void;
 }
 
 export function TicketsSection({ limit = 5, onViewAll }: TicketsSectionProps) {
+  const { t } = useTranslation('msp/user-activities');
   const [activities, setActivities] = useState<TicketActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const { openActivityDrawer } = useActivityDrawer();
@@ -68,7 +70,7 @@ export function TicketsSection({ limit = 5, onViewAll }: TicketsSectionProps) {
       setActivities(sortedActivities.slice(0, limit));
     } catch (err) {
       console.error('Error loading ticket activities:', err);
-      setError('Failed to load ticket activities. Please try again later.');
+      setError(t('sections.tickets.errors.loadFailed', { defaultValue: 'Failed to load ticket activities. Please try again later.' }));
     } finally {
       setLoading(false);
     }
@@ -145,7 +147,7 @@ export function TicketsSection({ limit = 5, onViewAll }: TicketsSectionProps) {
   return (
     <Card id="tickets-activities-card">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle>Tickets</CardTitle>
+        <CardTitle>{t('sections.tickets.title', { defaultValue: 'Tickets' })}</CardTitle>
         <div className="flex items-center gap-2">
           <Button
             id="refresh-tickets-button"
@@ -153,9 +155,9 @@ export function TicketsSection({ limit = 5, onViewAll }: TicketsSectionProps) {
             size="sm"
             onClick={handleRefresh}
             disabled={loading}
-            aria-label="Refresh Tickets"
+            aria-label={t('sections.tickets.ariaLabels.refresh', { defaultValue: 'Refresh Tickets' })}
           >
-            Refresh
+            {t('sections.tickets.actions.refresh', { defaultValue: 'Refresh' })}
           </Button>
           {isFiltersActive() ? (
              <Button
@@ -167,7 +169,7 @@ export function TicketsSection({ limit = 5, onViewAll }: TicketsSectionProps) {
                className="gap-1"
              >
               <XCircle className="h-4 w-4" />
-              Reset
+              {t('sections.tickets.actions.reset', { defaultValue: 'Reset' })}
             </Button>
            ) : (
              <Button
@@ -176,25 +178,25 @@ export function TicketsSection({ limit = 5, onViewAll }: TicketsSectionProps) {
                size="sm"
                onClick={() => setIsFilterDialogOpen(true)}
                disabled={filterDataLoading || loading}
-               aria-label="Filter Tickets"
+               aria-label={t('sections.tickets.ariaLabels.filter', { defaultValue: 'Filter Tickets' })}
              >
-               <Filter size={16} className="mr-1" /> Filter
+               <Filter size={16} className="mr-1" /> {t('sections.tickets.actions.filter', { defaultValue: 'Filter' })}
              </Button>
            )}
-          <Button 
+          <Button
             id="view-all-tickets-button"
             variant="outline"
             size="sm"
             onClick={onViewAll}
           >
-            View All
+            {t('sections.tickets.actions.viewAll', { defaultValue: 'View All' })}
           </Button>
         </div>
       </CardHeader>
       <CardContent>
         {loading ? (
           <div className="flex justify-center items-center h-40">
-            <p className="text-gray-500">Loading ticket activities...</p>
+            <p className="text-gray-500">{t('sections.tickets.states.loading', { defaultValue: 'Loading ticket activities...' })}</p>
           </div>
         ) : error ? (
           <div className="flex justify-center items-center h-40">
@@ -202,7 +204,7 @@ export function TicketsSection({ limit = 5, onViewAll }: TicketsSectionProps) {
           </div>
         ) : activities.length === 0 ? (
           <div className="flex justify-center items-center h-40">
-            <p className="text-gray-500">No ticket activities found</p>
+            <p className="text-gray-500">{t('sections.tickets.states.empty', { defaultValue: 'No ticket activities found' })}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4">

@@ -29,8 +29,10 @@ import {
 } from '@alga-psa/integrations/actions';
 import type { IClient } from '@alga-psa/types';
 import { getIntegrationClients } from '../../../actions/clientLookupActions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export function TacticalRmmIntegrationSettings() {
+  const { t } = useTranslation('msp/integrations');
   const { toast } = useToast();
 
   const [loading, setLoading] = React.useState(true);
@@ -85,7 +87,7 @@ export function TacticalRmmIntegrationSettings() {
         getTacticalRmmConnectionSummary(),
       ]);
       if (!res.success) {
-        setError(res.error || 'Failed to load Tactical RMM settings');
+        setError(t('integrations.rmm.tactical.errors.loadSettings', { defaultValue: 'Failed to load Tactical RMM settings' }));
         return;
       }
 
@@ -98,16 +100,16 @@ export function TacticalRmmIntegrationSettings() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   const loadOrgMappings = React.useCallback(async () => {
     const res = await listTacticalRmmOrganizationMappings();
     if (!res.success) {
-      setError(res.error || 'Failed to load organization mappings');
+      setError(t('integrations.rmm.tactical.errors.loadOrgMappings', { defaultValue: 'Failed to load organization mappings' }));
       return;
     }
     setOrgMappings(res.mappings || []);
-  }, []);
+  }, [t]);
 
   React.useEffect(() => {
     load();
@@ -162,13 +164,13 @@ export function TacticalRmmIntegrationSettings() {
         password: authMode === 'knox' ? password : undefined,
       });
       if (!res.success) {
-        setError(res.error || 'Failed to save Tactical RMM configuration');
-        toast({ title: 'Save failed', description: res.error || 'Unknown error', variant: 'destructive' });
+        setError(t('integrations.rmm.tactical.errors.saveConfig', { defaultValue: 'Failed to save Tactical RMM configuration' }));
+        toast({ title: t('integrations.rmm.tactical.toasts.saveFailedTitle', { defaultValue: 'Save failed' }), description: t('integrations.rmm.tactical.toasts.unknownError', { defaultValue: 'Unknown error' }), variant: 'destructive' });
         return;
       }
 
-      setSuccess('Tactical RMM configuration saved.');
-      toast({ title: 'Saved', description: 'Tactical RMM configuration updated.' });
+      setSuccess(t('integrations.rmm.tactical.success.saved', { defaultValue: 'Tactical RMM configuration saved.' }));
+      toast({ title: t('integrations.rmm.tactical.toasts.savedTitle', { defaultValue: 'Saved' }), description: t('integrations.rmm.tactical.toasts.savedDescription', { defaultValue: 'Tactical RMM configuration updated.' }) });
 
       // Clear sensitive fields after save; status will reflect what is stored.
       setApiKey('');
@@ -188,18 +190,18 @@ export function TacticalRmmIntegrationSettings() {
       if (!res.success) {
         if (res.totpRequired) {
           setTotpRequired(true);
-          setError('TOTP is required. Enter your current code and test again.');
+          setError(t('integrations.rmm.tactical.errors.totpRequired', { defaultValue: 'TOTP is required. Enter your current code and test again.' }));
           return;
         }
-        setError(res.error || 'Connection test failed');
-        toast({ title: 'Connection failed', description: res.error || 'Unknown error', variant: 'destructive' });
+        setError(t('integrations.rmm.tactical.errors.connectionTest', { defaultValue: 'Connection test failed' }));
+        toast({ title: t('integrations.rmm.tactical.toasts.connectionFailedTitle', { defaultValue: 'Connection failed' }), description: t('integrations.rmm.tactical.toasts.unknownError', { defaultValue: 'Unknown error' }), variant: 'destructive' });
         return;
       }
 
       setTotpRequired(false);
       setTotpCode('');
-      setSuccess('Connection successful.');
-      toast({ title: 'Connected', description: 'Tactical RMM connection verified.' });
+      setSuccess(t('integrations.rmm.tactical.success.connection', { defaultValue: 'Connection successful.' }));
+      toast({ title: t('integrations.rmm.tactical.toasts.connectedTitle', { defaultValue: 'Connected' }), description: t('integrations.rmm.tactical.toasts.connectedDescription', { defaultValue: 'Tactical RMM connection verified.' }) });
       await load();
     } finally {
       setTesting(false);
@@ -214,12 +216,12 @@ export function TacticalRmmIntegrationSettings() {
     try {
       const res = await disconnectTacticalRmmIntegration();
       if (!res.success) {
-        setError(res.error || 'Disconnect failed');
-        toast({ title: 'Disconnect failed', description: res.error || 'Unknown error', variant: 'destructive' });
+        setError(t('integrations.rmm.tactical.errors.disconnect', { defaultValue: 'Disconnect failed' }));
+        toast({ title: t('integrations.rmm.tactical.toasts.disconnectFailedTitle', { defaultValue: 'Disconnect failed' }), description: t('integrations.rmm.tactical.toasts.unknownError', { defaultValue: 'Unknown error' }), variant: 'destructive' });
         return;
       }
-      setSuccess('Disconnected.');
-      toast({ title: 'Disconnected', description: 'Tactical RMM credentials cleared.' });
+      setSuccess(t('integrations.rmm.tactical.success.disconnected', { defaultValue: 'Disconnected.' }));
+      toast({ title: t('integrations.rmm.tactical.toasts.disconnectedTitle', { defaultValue: 'Disconnected' }), description: t('integrations.rmm.tactical.toasts.disconnectedDescription', { defaultValue: 'Tactical RMM credentials cleared.' }) });
       setApiKey('');
       setPassword('');
       setTotpCode('');
@@ -236,17 +238,17 @@ export function TacticalRmmIntegrationSettings() {
     try {
       const res = await syncTacticalRmmOrganizations();
       if (!res.success) {
-        setError(res.error || 'Organization sync failed');
-        toast({ title: 'Sync failed', description: res.error || 'Unknown error', variant: 'destructive' });
+        setError(t('integrations.rmm.tactical.errors.syncOrgs', { defaultValue: 'Organization sync failed' }));
+        toast({ title: t('integrations.rmm.tactical.toasts.syncFailedTitle', { defaultValue: 'Sync failed' }), description: t('integrations.rmm.tactical.toasts.unknownError', { defaultValue: 'Unknown error' }), variant: 'destructive' });
         return;
       }
       setSuccess(
-        `Organization sync completed. Processed: ${res.items_processed}, Created: ${res.items_created}, Updated: ${res.items_updated}, Failed: ${res.items_failed}`
+        t('integrations.rmm.tactical.success.orgSyncCompleted', { defaultValue: 'Organization sync completed. Processed: {{processed}}, Created: {{created}}, Updated: {{updated}}, Failed: {{failed}}', processed: res.items_processed, created: res.items_created, updated: res.items_updated, failed: res.items_failed })
       );
       if (res.errors?.length) {
-        setError(`Some organizations failed to sync: ${res.errors.slice(0, 3).join('; ')}`);
+        setError(t('integrations.rmm.tactical.errors.someOrgsFailed', { defaultValue: 'Some organizations failed to sync: {{errors}}', errors: res.errors.slice(0, 3).join('; ') }));
       }
-      toast({ title: 'Organizations synced', description: 'Tactical clients have been synced into org mappings.' });
+      toast({ title: t('integrations.rmm.tactical.toasts.orgsSyncedTitle', { defaultValue: 'Organizations synced' }), description: t('integrations.rmm.tactical.toasts.orgsSyncedDescription', { defaultValue: 'Tactical clients have been synced into org mappings.' }) });
       await load();
     } finally {
       setSyncingOrgs(false);
@@ -260,17 +262,17 @@ export function TacticalRmmIntegrationSettings() {
     try {
       const res = await syncTacticalRmmDevices();
       if (!res.success) {
-        setError(res.error || 'Device sync failed');
-        toast({ title: 'Sync failed', description: res.error || 'Unknown error', variant: 'destructive' });
+        setError(t('integrations.rmm.tactical.errors.syncDevices', { defaultValue: 'Device sync failed' }));
+        toast({ title: t('integrations.rmm.tactical.toasts.syncFailedTitle', { defaultValue: 'Sync failed' }), description: t('integrations.rmm.tactical.toasts.unknownError', { defaultValue: 'Unknown error' }), variant: 'destructive' });
         return;
       }
       setSuccess(
-        `Device sync completed. Processed: ${res.items_processed}, Created: ${res.items_created}, Updated: ${res.items_updated}, Deleted: ${res.items_deleted}, Failed: ${res.items_failed}`
+        t('integrations.rmm.tactical.success.deviceSyncCompleted', { defaultValue: 'Device sync completed. Processed: {{processed}}, Created: {{created}}, Updated: {{updated}}, Deleted: {{deleted}}, Failed: {{failed}}', processed: res.items_processed, created: res.items_created, updated: res.items_updated, deleted: res.items_deleted, failed: res.items_failed })
       );
       if (res.errors?.length) {
-        setError(`Some devices failed to sync: ${res.errors.slice(0, 3).join('; ')}`);
+        setError(t('integrations.rmm.tactical.errors.someDevicesFailed', { defaultValue: 'Some devices failed to sync: {{errors}}', errors: res.errors.slice(0, 3).join('; ') }));
       }
-      toast({ title: 'Devices synced', description: 'Tactical agents have been synced into assets.' });
+      toast({ title: t('integrations.rmm.tactical.toasts.devicesSyncedTitle', { defaultValue: 'Devices synced' }), description: t('integrations.rmm.tactical.toasts.devicesSyncedDescription', { defaultValue: 'Tactical agents have been synced into assets.' }) });
       await load();
     } finally {
       setSyncingDevices(false);
@@ -285,8 +287,8 @@ export function TacticalRmmIntegrationSettings() {
       autoSyncAssets: patch.autoSyncAssets,
     });
     if (!res.success) {
-      setError(res.error || 'Failed to update mapping');
-      toast({ title: 'Update failed', description: res.error || 'Unknown error', variant: 'destructive' });
+      setError(t('integrations.rmm.tactical.errors.updateMapping', { defaultValue: 'Failed to update mapping' }));
+      toast({ title: t('integrations.rmm.tactical.toasts.updateFailedTitle', { defaultValue: 'Update failed' }), description: t('integrations.rmm.tactical.toasts.unknownError', { defaultValue: 'Unknown error' }), variant: 'destructive' });
       return;
     }
     await loadOrgMappings();
@@ -299,17 +301,17 @@ export function TacticalRmmIntegrationSettings() {
     try {
       const res = await backfillTacticalRmmAlerts();
       if (!res.success) {
-        setError(res.error || 'Alert backfill failed');
-        toast({ title: 'Backfill failed', description: res.error || 'Unknown error', variant: 'destructive' });
+        setError(t('integrations.rmm.tactical.errors.backfillAlerts', { defaultValue: 'Alert backfill failed' }));
+        toast({ title: t('integrations.rmm.tactical.toasts.backfillFailedTitle', { defaultValue: 'Backfill failed' }), description: t('integrations.rmm.tactical.toasts.unknownError', { defaultValue: 'Unknown error' }), variant: 'destructive' });
         return;
       }
       setSuccess(
-        `Alert backfill completed. Processed: ${res.items_processed}, Created: ${res.items_created}, Updated: ${res.items_updated}, Failed: ${res.items_failed}`
+        t('integrations.rmm.tactical.success.alertBackfillCompleted', { defaultValue: 'Alert backfill completed. Processed: {{processed}}, Created: {{created}}, Updated: {{updated}}, Failed: {{failed}}', processed: res.items_processed, created: res.items_created, updated: res.items_updated, failed: res.items_failed })
       );
       if (res.errors?.length) {
-        setError(`Some alerts failed to upsert: ${res.errors.slice(0, 3).join('; ')}`);
+        setError(t('integrations.rmm.tactical.errors.someAlertsFailed', { defaultValue: 'Some alerts failed to upsert: {{errors}}', errors: res.errors.slice(0, 3).join('; ') }));
       }
-      toast({ title: 'Alerts synced', description: 'Tactical alerts have been backfilled.' });
+      toast({ title: t('integrations.rmm.tactical.toasts.alertsSyncedTitle', { defaultValue: 'Alerts synced' }), description: t('integrations.rmm.tactical.toasts.alertsSyncedDescription', { defaultValue: 'Tactical alerts have been backfilled.' }) });
       await load();
     } finally {
       setBackfillingAlerts(false);
@@ -323,17 +325,17 @@ export function TacticalRmmIntegrationSettings() {
     try {
       const res = await ingestTacticalRmmSoftwareInventory();
       if (!res.success) {
-        setError(res.error || 'Software ingestion failed');
-        toast({ title: 'Ingestion failed', description: res.error || 'Unknown error', variant: 'destructive' });
+        setError(t('integrations.rmm.tactical.errors.ingestSoftware', { defaultValue: 'Software ingestion failed' }));
+        toast({ title: t('integrations.rmm.tactical.toasts.ingestionFailedTitle', { defaultValue: 'Ingestion failed' }), description: t('integrations.rmm.tactical.toasts.unknownError', { defaultValue: 'Unknown error' }), variant: 'destructive' });
         return;
       }
       setSuccess(
-        `Software ingestion completed. Processed: ${res.items_processed}, Installed/Updated: ${res.items_created}, Assets Updated: ${res.items_updated}, Failed: ${res.items_failed}`
+        t('integrations.rmm.tactical.success.softwareIngestionCompleted', { defaultValue: 'Software ingestion completed. Processed: {{processed}}, Installed/Updated: {{created}}, Assets Updated: {{updated}}, Failed: {{failed}}', processed: res.items_processed, created: res.items_created, updated: res.items_updated, failed: res.items_failed })
       );
       if (res.errors?.length) {
-        setError(`Some software rows failed to ingest: ${res.errors.slice(0, 3).join('; ')}`);
+        setError(t('integrations.rmm.tactical.errors.someSoftwareFailed', { defaultValue: 'Some software rows failed to ingest: {{errors}}', errors: res.errors.slice(0, 3).join('; ') }));
       }
-      toast({ title: 'Software ingested', description: 'Cached Tactical software inventory has been ingested.' });
+      toast({ title: t('integrations.rmm.tactical.toasts.softwareIngestedTitle', { defaultValue: 'Software ingested' }), description: t('integrations.rmm.tactical.toasts.softwareIngestedDescription', { defaultValue: 'Cached Tactical software inventory has been ingested.' }) });
       await load();
     } finally {
       setIngestingSoftware(false);
@@ -343,9 +345,9 @@ export function TacticalRmmIntegrationSettings() {
   return (
     <Card id="tacticalrmm-integration-settings-card">
       <CardHeader>
-        <CardTitle>Tactical RMM</CardTitle>
+        <CardTitle>{t('integrations.rmm.tactical.title', { defaultValue: 'Tactical RMM' })}</CardTitle>
         <CardDescription>
-          Connect Tactical RMM to sync assets and ingest alerts.
+          {t('integrations.rmm.tactical.description', { defaultValue: 'Connect Tactical RMM to sync assets and ingest alerts.' })}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -365,11 +367,15 @@ export function TacticalRmmIntegrationSettings() {
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-1">
                 <div className="text-sm font-medium">
-                  {connectionSummary?.isActive ? 'Connected' : 'Disconnected'}
+                  {connectionSummary?.isActive
+                    ? t('integrations.rmm.tactical.status.connected', { defaultValue: 'Connected' })
+                    : t('integrations.rmm.tactical.status.disconnected', { defaultValue: 'Disconnected' })}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {connectionSummary?.instanceUrl ? connectionSummary.instanceUrl : 'Instance URL not set'}
-                  {connectionSummary?.authMode ? ` • Auth: ${connectionSummary.authMode === 'api_key' ? 'API key' : 'Knox'}` : null}
+                  {connectionSummary?.instanceUrl ? connectionSummary.instanceUrl : t('integrations.rmm.tactical.status.instanceUrlNotSet', { defaultValue: 'Instance URL not set' })}
+                  {connectionSummary?.authMode
+                    ? ` • ${t('integrations.rmm.tactical.status.authPrefix', { defaultValue: 'Auth:' })} ${connectionSummary.authMode === 'api_key' ? t('integrations.rmm.tactical.auth.apiKey', { defaultValue: 'API key' }) : t('integrations.rmm.tactical.auth.knox', { defaultValue: 'Knox' })}`
+                    : null}
                 </div>
               </div>
               <Button
@@ -381,28 +387,28 @@ export function TacticalRmmIntegrationSettings() {
                 disabled={loading || saving || testing || disconnecting}
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
+                {t('integrations.rmm.tactical.actions.refresh', { defaultValue: 'Refresh' })}
               </Button>
             </div>
 
             {connectionSummary && (
               <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
                 <div className="rounded border bg-background p-2">
-                  <div className="text-muted-foreground">Mapped Orgs</div>
+                  <div className="text-muted-foreground">{t('integrations.rmm.tactical.counts.mappedOrgs', { defaultValue: 'Mapped Orgs' })}</div>
                   <div className="text-sm font-semibold">{connectionSummary.counts.mappedOrganizations}</div>
                 </div>
                 <div className="rounded border bg-background p-2">
-                  <div className="text-muted-foreground">Synced Devices</div>
+                  <div className="text-muted-foreground">{t('integrations.rmm.tactical.counts.syncedDevices', { defaultValue: 'Synced Devices' })}</div>
                   <div className="text-sm font-semibold">{connectionSummary.counts.syncedDevices}</div>
                 </div>
                 <div className="rounded border bg-background p-2">
-                  <div className="text-muted-foreground">Active Alerts</div>
+                  <div className="text-muted-foreground">{t('integrations.rmm.tactical.counts.activeAlerts', { defaultValue: 'Active Alerts' })}</div>
                   <div className="text-sm font-semibold">{connectionSummary.counts.activeAlerts}</div>
                 </div>
                 <div className="rounded border bg-background p-2">
-                  <div className="text-muted-foreground">Last Sync</div>
+                  <div className="text-muted-foreground">{t('integrations.rmm.tactical.counts.lastSync', { defaultValue: 'Last Sync' })}</div>
                   <div className="text-sm font-semibold">
-                    {connectionSummary.lastSyncAt ? new Date(connectionSummary.lastSyncAt).toLocaleString() : 'Never'}
+                    {connectionSummary.lastSyncAt ? new Date(connectionSummary.lastSyncAt).toLocaleString() : t('integrations.rmm.tactical.counts.never', { defaultValue: 'Never' })}
                   </div>
                 </div>
               </div>
@@ -410,13 +416,13 @@ export function TacticalRmmIntegrationSettings() {
 
             {connectionSummary?.syncError && (
               <div className="mt-3 text-xs text-destructive">
-                Last error: {connectionSummary.syncError}
+                {t('integrations.rmm.tactical.lastError', { defaultValue: 'Last error: {{error}}', error: connectionSummary.syncError })}
               </div>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="tacticalrmm-instance-url">Instance URL</Label>
+            <Label htmlFor="tacticalrmm-instance-url">{t('integrations.rmm.tactical.fields.instanceUrl', { defaultValue: 'Instance URL' })}</Label>
             <Input
               id="tacticalrmm-instance-url"
               placeholder="https://rmm.example.com"
@@ -425,16 +431,16 @@ export function TacticalRmmIntegrationSettings() {
               disabled={loading || saving || disconnecting}
             />
             <div className="text-xs text-muted-foreground">
-              Use your Tactical base URL (no trailing <code>/api</code>).
+              {t('integrations.rmm.tactical.fields.instanceUrlHelp', { defaultValue: 'Use your Tactical base URL (no trailing /api).' })}
             </div>
           </div>
 
           <div className="rounded-md border bg-background p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-1">
-                <div className="text-sm font-medium">Organizations</div>
+                <div className="text-sm font-medium">{t('integrations.rmm.tactical.sections.organizations', { defaultValue: 'Organizations' })}</div>
                 <div className="text-xs text-muted-foreground">
-                  Sync Tactical Clients into Alga org mappings, then map them to Alga Clients.
+                  {t('integrations.rmm.tactical.sections.organizationsDescription', { defaultValue: 'Sync Tactical Clients into Alga org mappings, then map them to Alga Clients.' })}
                 </div>
               </div>
               <Button
@@ -444,7 +450,9 @@ export function TacticalRmmIntegrationSettings() {
                 disabled={syncingOrgs || loading || saving || testing || disconnecting}
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${syncingOrgs ? 'animate-spin' : ''}`} />
-                {syncingOrgs ? 'Syncing...' : 'Sync Clients'}
+                {syncingOrgs
+                  ? t('integrations.rmm.tactical.actions.syncing', { defaultValue: 'Syncing...' })
+                  : t('integrations.rmm.tactical.actions.syncClients', { defaultValue: 'Sync Clients' })}
               </Button>
             </div>
           </div>
@@ -452,9 +460,9 @@ export function TacticalRmmIntegrationSettings() {
           <div className="rounded-md border bg-background p-4 space-y-3">
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-1">
-                <div className="text-sm font-medium">Organization Mapping</div>
+                <div className="text-sm font-medium">{t('integrations.rmm.tactical.sections.orgMapping', { defaultValue: 'Organization Mapping' })}</div>
                 <div className="text-xs text-muted-foreground">
-                  Assign each Tactical Client to an Alga Client and control auto-sync per org.
+                  {t('integrations.rmm.tactical.sections.orgMappingDescription', { defaultValue: 'Assign each Tactical Client to an Alga Client and control auto-sync per org.' })}
                 </div>
               </div>
               <Button
@@ -466,13 +474,13 @@ export function TacticalRmmIntegrationSettings() {
                 disabled={loading || syncingOrgs || syncingDevices || saving || testing || disconnecting}
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
+                {t('integrations.rmm.tactical.actions.refresh', { defaultValue: 'Refresh' })}
               </Button>
             </div>
 
             {orgMappings.length === 0 ? (
               <div className="text-sm text-muted-foreground">
-                No organizations found. Run "Sync Clients" first.
+                {t('integrations.rmm.tactical.sections.orgMappingEmpty', { defaultValue: 'No organizations found. Run "Sync Clients" first.' })}
               </div>
             ) : (
               <div className="space-y-2">
@@ -483,7 +491,7 @@ export function TacticalRmmIntegrationSettings() {
                         {m.external_organization_name || m.external_organization_id}
                       </div>
                       <div className="text-xs text-muted-foreground truncate">
-                        Tactical ID: {m.external_organization_id}
+                        {t('integrations.rmm.tactical.tacticalIdLabel', { defaultValue: 'Tactical ID: {{id}}', id: m.external_organization_id })}
                       </div>
                     </div>
 
@@ -497,7 +505,9 @@ export function TacticalRmmIntegrationSettings() {
                         onFilterStateChange={setClientFilterState}
                         clientTypeFilter={clientTypeFilter}
                         onClientTypeFilterChange={setClientTypeFilter}
-                        placeholder={clientsLoading ? 'Loading clients…' : 'Select client'}
+                        placeholder={clientsLoading
+                          ? t('integrations.rmm.tactical.client.loading', { defaultValue: 'Loading clients…' })
+                          : t('integrations.rmm.tactical.client.select', { defaultValue: 'Select client' })}
                         fitContent
                         triggerVariant="outline"
                         triggerSize="sm"
@@ -511,7 +521,7 @@ export function TacticalRmmIntegrationSettings() {
                         checked={Boolean(m.auto_sync_assets)}
                         onCheckedChange={(checked) => handleUpdateMapping(m.mapping_id, { autoSyncAssets: checked })}
                       />
-                      <span className="text-sm">Auto-sync</span>
+                      <span className="text-sm">{t('integrations.rmm.tactical.autoSync', { defaultValue: 'Auto-sync' })}</span>
                     </div>
                   </div>
                 ))}
@@ -522,9 +532,9 @@ export function TacticalRmmIntegrationSettings() {
           <div className="rounded-md border bg-background p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-1">
-                <div className="text-sm font-medium">Devices</div>
+                <div className="text-sm font-medium">{t('integrations.rmm.tactical.sections.devices', { defaultValue: 'Devices' })}</div>
                 <div className="text-xs text-muted-foreground">
-                  Sync Tactical Agents into Alga Assets for mapped organizations.
+                  {t('integrations.rmm.tactical.sections.devicesDescription', { defaultValue: 'Sync Tactical Agents into Alga Assets for mapped organizations.' })}
                 </div>
               </div>
               <Button
@@ -534,7 +544,9 @@ export function TacticalRmmIntegrationSettings() {
                 disabled={syncingDevices || loading || saving || testing || disconnecting || backfillingAlerts}
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${syncingDevices ? 'animate-spin' : ''}`} />
-                {syncingDevices ? 'Syncing...' : 'Sync Devices'}
+                {syncingDevices
+                  ? t('integrations.rmm.tactical.actions.syncing', { defaultValue: 'Syncing...' })
+                  : t('integrations.rmm.tactical.actions.syncDevices', { defaultValue: 'Sync Devices' })}
               </Button>
             </div>
           </div>
@@ -542,9 +554,9 @@ export function TacticalRmmIntegrationSettings() {
           <div className="rounded-md border bg-background p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-1">
-                <div className="text-sm font-medium">Alerts</div>
+                <div className="text-sm font-medium">{t('integrations.rmm.tactical.sections.alerts', { defaultValue: 'Alerts' })}</div>
                 <div className="text-xs text-muted-foreground">
-                  Optional: backfill historical or active alerts from Tactical into Alga.
+                  {t('integrations.rmm.tactical.sections.alertsDescription', { defaultValue: 'Optional: backfill historical or active alerts from Tactical into Alga.' })}
                 </div>
               </div>
               <Button
@@ -555,7 +567,9 @@ export function TacticalRmmIntegrationSettings() {
                 disabled={backfillingAlerts || loading || saving || testing || disconnecting || syncingOrgs || syncingDevices}
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${backfillingAlerts ? 'animate-spin' : ''}`} />
-                {backfillingAlerts ? 'Syncing...' : 'Sync Alerts'}
+                {backfillingAlerts
+                  ? t('integrations.rmm.tactical.actions.syncing', { defaultValue: 'Syncing...' })
+                  : t('integrations.rmm.tactical.actions.syncAlerts', { defaultValue: 'Sync Alerts' })}
               </Button>
             </div>
           </div>
@@ -563,9 +577,9 @@ export function TacticalRmmIntegrationSettings() {
           <div className="rounded-md border bg-background p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-1">
-                <div className="text-sm font-medium">Software Inventory</div>
+                <div className="text-sm font-medium">{t('integrations.rmm.tactical.sections.softwareInventory', { defaultValue: 'Software Inventory' })}</div>
                 <div className="text-xs text-muted-foreground">
-                  Optional: ingest cached software inventory via Tactical <code>/api/software/</code> (no per-agent refresh calls).
+                  {t('integrations.rmm.tactical.sections.softwareInventoryDescription', { defaultValue: 'Optional: ingest cached software inventory via Tactical /api/software/ (no per-agent refresh calls).' })}
                 </div>
               </div>
               <Button
@@ -576,7 +590,9 @@ export function TacticalRmmIntegrationSettings() {
                 disabled={ingestingSoftware || loading || saving || testing || disconnecting || syncingOrgs || syncingDevices || backfillingAlerts}
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${ingestingSoftware ? 'animate-spin' : ''}`} />
-                {ingestingSoftware ? 'Ingesting...' : 'Ingest Software'}
+                {ingestingSoftware
+                  ? t('integrations.rmm.tactical.actions.ingesting', { defaultValue: 'Ingesting...' })
+                  : t('integrations.rmm.tactical.actions.ingestSoftware', { defaultValue: 'Ingest Software' })}
               </Button>
             </div>
           </div>
@@ -584,9 +600,9 @@ export function TacticalRmmIntegrationSettings() {
           <div className="rounded-md border bg-background p-4 space-y-3">
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-1">
-                <div className="text-sm font-medium">Webhooks (Alerts)</div>
+                <div className="text-sm font-medium">{t('integrations.rmm.tactical.sections.webhooks', { defaultValue: 'Webhooks (Alerts)' })}</div>
                 <div className="text-xs text-muted-foreground">
-                  Configure a Tactical alert action webhook using the shared secret header below.
+                  {t('integrations.rmm.tactical.sections.webhooksDescription', { defaultValue: 'Configure a Tactical alert action webhook using the shared secret header below.' })}
                 </div>
               </div>
               <Button
@@ -598,14 +614,14 @@ export function TacticalRmmIntegrationSettings() {
                 disabled={loading || saving || testing || disconnecting}
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
+                {t('integrations.rmm.tactical.actions.refresh', { defaultValue: 'Refresh' })}
               </Button>
             </div>
 
             {webhookInfo ? (
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <Label htmlFor="tacticalrmm-webhook-url">Webhook URL</Label>
+                  <Label htmlFor="tacticalrmm-webhook-url">{t('integrations.rmm.tactical.webhook.url', { defaultValue: 'Webhook URL' })}</Label>
                   <div className="flex items-center gap-2">
                     <Input id="tacticalrmm-webhook-url" value={webhookInfo.url} readOnly />
                     <Button
@@ -614,21 +630,21 @@ export function TacticalRmmIntegrationSettings() {
                       variant="outline"
                       onClick={async () => {
                         await navigator.clipboard.writeText(webhookInfo.url);
-                        toast({ title: 'Copied', description: 'Webhook URL copied to clipboard.' });
+                        toast({ title: t('integrations.rmm.tactical.webhook.copiedTitle', { defaultValue: 'Copied' }), description: t('integrations.rmm.tactical.webhook.urlCopied', { defaultValue: 'Webhook URL copied to clipboard.' }) });
                       }}
                     >
-                      Copy
+                      {t('integrations.rmm.tactical.webhook.copy', { defaultValue: 'Copy' })}
                     </Button>
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <Label htmlFor="tacticalrmm-webhook-header-name">Header Name</Label>
+                  <Label htmlFor="tacticalrmm-webhook-header-name">{t('integrations.rmm.tactical.webhook.headerName', { defaultValue: 'Header Name' })}</Label>
                   <Input id="tacticalrmm-webhook-header-name" value={webhookInfo.headerName} readOnly />
                 </div>
 
                 <div className="space-y-1">
-                  <Label htmlFor="tacticalrmm-webhook-secret">Header Secret</Label>
+                  <Label htmlFor="tacticalrmm-webhook-secret">{t('integrations.rmm.tactical.webhook.secret', { defaultValue: 'Header Secret' })}</Label>
                   <div className="flex items-center gap-2">
                     <Input
                       id="tacticalrmm-webhook-secret"
@@ -650,28 +666,28 @@ export function TacticalRmmIntegrationSettings() {
                       variant="outline"
                       onClick={async () => {
                         await navigator.clipboard.writeText(webhookInfo.secret);
-                        toast({ title: 'Copied', description: 'Webhook secret copied to clipboard.' });
+                        toast({ title: t('integrations.rmm.tactical.webhook.copiedTitle', { defaultValue: 'Copied' }), description: t('integrations.rmm.tactical.webhook.secretCopied', { defaultValue: 'Webhook secret copied to clipboard.' }) });
                       }}
                     >
-                      Copy
+                      {t('integrations.rmm.tactical.webhook.copy', { defaultValue: 'Copy' })}
                     </Button>
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <Label htmlFor="tacticalrmm-webhook-payload-template">Payload Template</Label>
+                  <Label htmlFor="tacticalrmm-webhook-payload-template">{t('integrations.rmm.tactical.webhook.payloadTemplate', { defaultValue: 'Payload Template' })}</Label>
                   <TextArea id="tacticalrmm-webhook-payload-template" value={webhookInfo.payloadTemplate} readOnly rows={10} />
                 </div>
               </div>
             ) : (
               <div className="text-sm text-muted-foreground">
-                Webhook information unavailable. (Requires settings read permission.)
+                {t('integrations.rmm.tactical.webhook.unavailable', { defaultValue: 'Webhook information unavailable. (Requires settings read permission.)' })}
               </div>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="tacticalrmm-auth-mode">Authentication</Label>
+            <Label htmlFor="tacticalrmm-auth-mode">{t('integrations.rmm.tactical.auth.mode', { defaultValue: 'Authentication' })}</Label>
             <CustomSelect
               id="tacticalrmm-auth-mode"
               value={authMode}
@@ -683,22 +699,22 @@ export function TacticalRmmIntegrationSettings() {
                 setSuccess(null);
               }}
               options={[
-                { value: 'api_key', label: 'API key' },
-                { value: 'knox', label: 'Username/password (Knox token)' },
+                { value: 'api_key', label: t('integrations.rmm.tactical.auth.apiKey', { defaultValue: 'API key' }) },
+                { value: 'knox', label: t('integrations.rmm.tactical.auth.knoxOption', { defaultValue: 'Username/password (Knox token)' }) },
               ]}
             />
           </div>
 
           {authMode === 'api_key' ? (
             <div className="space-y-2">
-              <Label htmlFor="tacticalrmm-api-key">API key</Label>
+              <Label htmlFor="tacticalrmm-api-key">{t('integrations.rmm.tactical.auth.apiKey', { defaultValue: 'API key' })}</Label>
               <div className="flex items-center gap-2">
                 <Input
                   id="tacticalrmm-api-key"
                   type={showApiKey ? 'text' : 'password'}
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  placeholder={credentialsStatus?.apiKeyMasked ? credentialsStatus.apiKeyMasked : 'Enter API key'}
+                  placeholder={credentialsStatus?.apiKeyMasked ? credentialsStatus.apiKeyMasked : t('integrations.rmm.tactical.auth.enterApiKey', { defaultValue: 'Enter API key' })}
                   disabled={loading || saving || disconnecting}
                 />
                 <Button
@@ -713,31 +729,33 @@ export function TacticalRmmIntegrationSettings() {
               </div>
               {credentialsStatus?.hasApiKey && (
                 <div className="text-xs text-muted-foreground">
-                  Saved: {credentialsStatus.apiKeyMasked}
+                  {t('integrations.rmm.tactical.auth.saved', { defaultValue: 'Saved: {{value}}', value: credentialsStatus.apiKeyMasked })}
                 </div>
               )}
             </div>
           ) : (
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="tacticalrmm-username">Username</Label>
+                <Label htmlFor="tacticalrmm-username">{t('integrations.rmm.tactical.auth.username', { defaultValue: 'Username' })}</Label>
                 <Input
                   id="tacticalrmm-username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter username"
+                  placeholder={t('integrations.rmm.tactical.auth.enterUsername', { defaultValue: 'Enter username' })}
                   disabled={loading || saving || disconnecting}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="tacticalrmm-password">Password</Label>
+                <Label htmlFor="tacticalrmm-password">{t('integrations.rmm.tactical.auth.password', { defaultValue: 'Password' })}</Label>
                 <div className="flex items-center gap-2">
                   <Input
                     id="tacticalrmm-password"
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder={credentialsStatus?.hasKnoxCredentials ? 'Saved (enter to update)' : 'Enter password'}
+                    placeholder={credentialsStatus?.hasKnoxCredentials
+                      ? t('integrations.rmm.tactical.auth.savedEnterToUpdate', { defaultValue: 'Saved (enter to update)' })
+                      : t('integrations.rmm.tactical.auth.enterPassword', { defaultValue: 'Enter password' })}
                     disabled={loading || saving || disconnecting}
                   />
                   <Button
@@ -753,7 +771,7 @@ export function TacticalRmmIntegrationSettings() {
               </div>
               {totpRequired && (
                 <div className="space-y-2">
-                  <Label htmlFor="tacticalrmm-totp">TOTP code</Label>
+                  <Label htmlFor="tacticalrmm-totp">{t('integrations.rmm.tactical.auth.totp', { defaultValue: 'TOTP code' })}</Label>
                   <Input
                     id="tacticalrmm-totp"
                     value={totpCode}
@@ -766,7 +784,7 @@ export function TacticalRmmIntegrationSettings() {
 
               {credentialsStatus?.hasKnoxToken && (
                 <div className="text-xs text-muted-foreground">
-                  Knox token saved: {credentialsStatus.knoxTokenMasked}
+                  {t('integrations.rmm.tactical.auth.knoxTokenSaved', { defaultValue: 'Knox token saved: {{value}}', value: credentialsStatus.knoxTokenMasked })}
                 </div>
               )}
             </div>
@@ -780,7 +798,9 @@ export function TacticalRmmIntegrationSettings() {
               disabled={!canSave || saving || loading || disconnecting}
             >
               <Save className="h-4 w-4 mr-2" />
-              {saving ? 'Saving...' : 'Save'}
+              {saving
+                ? t('integrations.rmm.tactical.actions.saving', { defaultValue: 'Saving...' })
+                : t('integrations.rmm.tactical.actions.save', { defaultValue: 'Save' })}
             </Button>
 
             <Button
@@ -791,7 +811,9 @@ export function TacticalRmmIntegrationSettings() {
               disabled={testing || loading || disconnecting || (totpRequired && !totpCode.trim())}
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${testing ? 'animate-spin' : ''}`} />
-              {testing ? 'Testing...' : 'Test Connection'}
+              {testing
+                ? t('integrations.rmm.tactical.actions.testing', { defaultValue: 'Testing...' })
+                : t('integrations.rmm.tactical.actions.testConnection', { defaultValue: 'Test Connection' })}
             </Button>
 
             <Button
@@ -802,20 +824,24 @@ export function TacticalRmmIntegrationSettings() {
               disabled={disconnecting || loading}
             >
               <Unlink className="h-4 w-4 mr-2" />
-              {disconnecting ? 'Disconnecting...' : 'Disconnect'}
+              {disconnecting
+                ? t('integrations.rmm.tactical.actions.disconnecting', { defaultValue: 'Disconnecting...' })
+                : t('integrations.rmm.tactical.actions.disconnect', { defaultValue: 'Disconnect' })}
             </Button>
           </div>
 
           {!loading && credentialsStatus && (
             <div className="text-xs text-muted-foreground">
-              Status: {credentialsStatus.hasApiKey || credentialsStatus.hasKnoxCredentials ? 'Configured' : 'Not configured'}
+              {credentialsStatus.hasApiKey || credentialsStatus.hasKnoxCredentials
+                ? t('integrations.rmm.tactical.statusLine.configured', { defaultValue: 'Status: Configured' })
+                : t('integrations.rmm.tactical.statusLine.notConfigured', { defaultValue: 'Status: Not configured' })}
             </div>
           )}
 
           {loading && (
             <div className="text-sm text-muted-foreground flex items-center gap-2">
               <RefreshCw className="h-4 w-4 animate-spin" />
-              Loading Tactical RMM settings...
+              {t('integrations.rmm.tactical.loadingSettings', { defaultValue: 'Loading Tactical RMM settings...' })}
             </div>
           )}
         </div>

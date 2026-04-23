@@ -678,7 +678,7 @@
   "clientLanguagePreference": {
     "title": "Taalinstellingen van de client",
     "label": "Standaardtaal voor contacten",
-    "description": "Stel de standaardtaal in voor alle contacten in {{clientName}}. Individuele gebruikers kunnen dit in hun persoonlijke instellingen overschrijven.",
+    "description": "Van toepassing op elke portaalgebruiker van {{clientName}}, tenzij deze in hun profiel een eigen voorkeur heeft ingesteld.",
     "selectPlaceholder": "Selecteer een taal",
     "updating": "Taalvoorkeur bijwerken...",
     "loadError": "Kan de taalvoorkeur van de client niet laden:",
@@ -1089,5 +1089,11 @@
     "error": "Fout",
     "saving": "Opslaan...",
     "success": "Succes"
+  },
+  "notes": {
+    "messages": {
+      "saveSuccess": "Notities opgeslagen",
+      "saveFailed": "Notities opslaan is mislukt"
+    }
   }
 }

@@ -9,7 +9,8 @@ import {
 import type { IUser } from '@alga-psa/types';
 import type {
   SendInvitationResult,
-  InvitationHistoryItem
+  InvitationHistoryItem,
+  PortalInvitationErrorCode
 } from '@alga-psa/portal-shared/types';
 
 export async function sendPortalInvitation(contactId: string): Promise<SendInvitationResult> {
@@ -20,7 +21,9 @@ export async function getPortalInvitations(contactId: string): Promise<Invitatio
   return getPortalInvitationsAction(contactId);
 }
 
-export async function revokePortalInvitation(invitationId: string): Promise<{ success: boolean; error?: string }> {
+export async function revokePortalInvitation(
+  invitationId: string
+): Promise<{ success: boolean; error?: string; errorCode?: PortalInvitationErrorCode }> {
   return revokePortalInvitationAction(invitationId);
 }
 

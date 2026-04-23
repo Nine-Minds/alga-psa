@@ -258,5 +258,14 @@
       "troubleshooting": "Fehlerbehebung",
       "reference": "Referenz"
     }
+  },
+  "documents": {
+    "messages": {
+      "error": {
+        "noPermission": "Du hast keine Berechtigung, Dokumente anzuzeigen",
+        "invalidData": "Ungültige Dokumentdaten erhalten",
+        "fetchFailed": "Dokumente konnten nicht abgerufen werden"
+      }
+    }
   }
 }

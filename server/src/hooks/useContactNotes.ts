@@ -2,11 +2,13 @@ import useSWR from 'swr';
 import { useState, useCallback } from 'react';
 import { getContactNoteContent, saveContactNote } from '@alga-psa/clients/actions';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Type for BlockNote content (simplified)
 type PartialBlock = unknown;
 
 export function useContactNotes(contactId: string) {
+  const { t } = useTranslation('msp/contacts');
   // Fetch note content
   const {
     data: noteContent,
@@ -37,15 +39,15 @@ export function useContactNotes(contactId: string) {
       // Revalidate
       await mutateNotes();
 
-      toast.success('Notes saved');
+      toast.success(t('notes.messages.saveSuccess', 'Notes saved'));
     } catch (error) {
       console.error('Error saving notes:', error);
-      toast.error('Failed to save notes');
+      toast.error(t('notes.messages.saveFailed', 'Failed to save notes'));
       throw error;
     } finally {
       setIsSaving(false);
     }
-  }, [contactId, mutateNotes]);
+  }, [contactId, mutateNotes, t]);
 
   return {
     noteContent: noteContent?.blockData,

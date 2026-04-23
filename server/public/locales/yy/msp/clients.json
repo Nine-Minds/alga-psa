@@ -1089,5 +1089,11 @@
     "error": "55555",
     "saving": "55555",
     "success": "55555"
+  },
+  "notes": {
+    "messages": {
+      "saveSuccess": "55555",
+      "saveFailed": "55555"
+    }
   }
 }

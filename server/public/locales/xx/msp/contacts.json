@@ -370,7 +370,20 @@
       "updateStatusPermissionDenied": "11111",
       "userActivated": "11111",
       "userDeactivated": "11111",
-      "updateUserStatusFailed": "11111"
+      "updateUserStatusFailed": "11111",
+      "errors": {
+        "permissionDeniedInvite": "11111",
+        "emailNotConfigured": "11111",
+        "contactNotFound": "11111",
+        "contactMissingEmail": "11111",
+        "contactInvalidEmail": "11111",
+        "userExistsForContact": "11111",
+        "noDefaultClient": "11111",
+        "noDefaultLocation": "11111",
+        "noLocationEmail": "11111",
+        "noBaseUrl": "11111",
+        "invitationNotFound": "11111"
+      }
     }
   },
   "quickAddContact": {
@@ -577,5 +590,11 @@
       "unknown": "11111"
     },
     "lastUpdated": "11111 {{date}} 11111"
+  },
+  "notes": {
+    "messages": {
+      "saveSuccess": "11111",
+      "saveFailed": "11111"
+    }
   }
 }

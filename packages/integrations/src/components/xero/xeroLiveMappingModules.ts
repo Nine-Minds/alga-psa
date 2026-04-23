@@ -30,21 +30,25 @@ type MappingLoadConfig<TAlga> = {
   mapAlga: (entity: TAlga) => { id: string; name: string };
 };
 
-export function createXeroLiveMappingModules(): AccountingMappingModule[] {
+type TFn = (key: string, options?: Record<string, unknown>) => string;
+
+export function createXeroLiveMappingModules(t?: TFn): AccountingMappingModule[] {
+  const tab = (key: string, fallback: string) =>
+    t ? t(`integrations.accounting.modules.tabs.${key}`, { defaultValue: fallback }) : fallback;
   return [
-    createServiceModule(),
-    createTaxCodeModule()
+    createServiceModule(tab('itemsServices', 'Items / Services')),
+    createTaxCodeModule(tab('taxCodes', 'Tax Codes'))
   ];
 }
 
-function createServiceModule(): AccountingMappingModule {
+function createServiceModule(tabLabel: string): AccountingMappingModule {
   return {
     id: 'xero-live-service-mappings',
     adapterType: ADAPTER_TYPE,
     algaEntityType: 'service',
     externalEntityType: 'Item',
     labels: {
-      tab: 'Items / Services',
+      tab: tabLabel,
       description:
         'Map Alga services to Xero item codes. Revenue accounts and tracking categories are loaded from the default connected Xero organisation and can be referenced in the metadata JSON as `accountCode` and `tracking`.',
       addButton: 'Add Item Mapping',
@@ -134,14 +138,14 @@ function createServiceModule(): AccountingMappingModule {
   };
 }
 
-function createTaxCodeModule(): AccountingMappingModule {
+function createTaxCodeModule(tabLabel: string): AccountingMappingModule {
   return {
     id: 'xero-live-tax-code-mappings',
     adapterType: ADAPTER_TYPE,
     algaEntityType: 'tax_code',
     externalEntityType: 'TaxRate',
     labels: {
-      tab: 'Tax Codes',
+      tab: tabLabel,
       description:
         'Map Alga tax regions to Xero tax types from the default connected Xero organisation.',
       addButton: 'Add Tax Code Mapping',

@@ -223,7 +223,18 @@
         "portalUserExistsForContact": "Użytkownik portalu już istnieje dla tego kontaktu. Proszę użyć resetowania hasła dla istniejącego użytkownika.",
         "selectAppropriateRole": "Proszę wybrać odpowiednią rolę dla tego typu użytkownika",
         "contactMissingEmail": "Kontakt \"{{name}}\" nie ma adresu e-mail. Proszę zaktualizować adres e-mail kontaktu przed wysłaniem zaproszenia.",
-        "licenseLimit": "Nie można aktywować użytkownika: osiągnięto limit licencji. Proszę dezaktywować innego użytkownika lub zaktualizować licencję."
+        "licenseLimit": "Nie można aktywować użytkownika: osiągnięto limit licencji. Proszę dezaktywować innego użytkownika lub zaktualizować licencję.",
+        "permissionDeniedInvite": "Nie masz uprawnień do zapraszania użytkowników.",
+        "permissionDeniedCreate": "Nie masz uprawnień do tworzenia użytkowników.",
+        "emailNotConfigured": "Usługa e-mail jest wyłączona lub nie jest skonfigurowana.",
+        "contactNotFound": "Kontakt nie został znaleziony.",
+        "contactMissingEmailGeneric": "Kontakt nie ma adresu e-mail. Przed wysłaniem zaproszenia dodaj adres e-mail do kontaktu.",
+        "contactInvalidEmail": "Kontakt ma nieprawidłowy adres e-mail. Przed wysłaniem zaproszenia zaktualizuj kontakt, podając prawidłowy adres e-mail.",
+        "noDefaultClient": "Brak domyślnego klienta skonfigurowanego dla tego tenanta. Ustaw domyślnego klienta w ustawieniach ogólnych.",
+        "noDefaultLocation": "Domyślny klient musi mieć skonfigurowaną domyślną lokalizację, aby wysyłać zaproszenia do portalu.",
+        "noLocationEmail": "Lokalizacja domyślnego klienta musi mieć skonfigurowany kontaktowy adres e-mail.",
+        "noBaseUrl": "Podstawowy adres URL nie jest skonfigurowany dla zaproszeń do portalu.",
+        "passwordTooShort": "Hasło musi mieć co najmniej 8 znaków."
       }
     }
   },
@@ -343,7 +354,9 @@
         "loadFailed": "Nie udało się załadować zespołów. Proszę spróbować ponownie.",
         "fetchUsers": "Nie udało się pobrać użytkowników",
         "createFailed": "Nie udało się utworzyć zespołu: {{error}}",
-        "deleteFailed": "Nie udało się usunąć zespołu"
+        "deleteFailed": "Nie udało się usunąć zespołu",
+        "updateName": "Nie udało się zaktualizować nazwy zespołu",
+        "saveChanges": "Nie udało się zapisać zmian. Spróbuj ponownie."
       }
     }
   },
@@ -398,7 +411,10 @@
         "error": {
           "noSettings": "Nie znaleziono ustawień numeracji zgłoszeń. Proszę skontaktować się z administratorem.",
           "loadFailed": "Nie udało się załadować ustawień numeracji zgłoszeń",
-          "updateFailed": "Nie udało się zaktualizować ustawień"
+          "updateFailed": "Nie udało się zaktualizować ustawień",
+          "updatePaddingFailed": "Nie udało się zaktualizować długości wypełnienia",
+          "updateLastNumberFailed": "Nie udało się zaktualizować ostatniego numeru",
+          "updateInitialValueFailed": "Nie udało się zaktualizować wartości początkowej"
         },
         "success": {
           "updated": "Ustawienia numeracji zgłoszeń zostały pomyślnie zaktualizowane"
@@ -428,6 +444,7 @@
         "edit": "Edytuj",
         "delete": "Usuń"
       },
+      "retiredAlert": "Statusy zgłoszeń są teraz zarządzane w obrębie każdej tablicy. Użyj zakładki Tablice, aby edytować cykle życia zgłoszeń dla konkretnej tablicy.",
       "messages": {
         "success": {
           "deleted": "Status został usunięty pomyślnie",
@@ -468,7 +485,11 @@
         "close": "Zamknij",
         "create": "Utwórz",
         "update": "Zaktualizuj",
-        "importSelected": "Importuj zaznaczone"
+        "importSelected": "Importuj zaznaczone",
+        "up": "W górę",
+        "down": "W dół",
+        "remove": "Usuń",
+        "addStatus": "Dodaj status"
       },
       "fields": {
         "boardName": {
@@ -508,6 +529,46 @@
           "placeholder": "Wybierz politykę SLA",
           "help": "Polityka SLA stosowana do zgłoszeń na tej tablicy",
           "none": "Brak"
+        },
+        "ticketStatusSetup": {
+          "label": "Konfiguracja statusów zgłoszeń",
+          "help": "Wybierz, czy ta tablica rozpoczyna się od istniejącego cyklu życia, czy od nowej listy statusów inline.",
+          "copyExisting": "Kopiuj z istniejącej tablicy",
+          "createInline": "Utwórz statusy inline"
+        },
+        "copyTicketStatuses": {
+          "label": "Kopiuj statusy zgłoszeń z",
+          "help": "Nowe tablice klonują swój cykl życia zgłoszeń z istniejącej tablicy.",
+          "selectSource": "Wybierz tablicę źródłową",
+          "noSourceAvailable": "Brak dostępnych tablic źródłowych",
+          "unnamedBoard": "Tablica bez nazwy"
+        },
+        "ticketStatuses": {
+          "labelEditing": "Statusy zgłoszeń tablicy",
+          "labelCopied": "Skopiowane statusy zgłoszeń",
+          "labelInline": "Statusy zgłoszeń inline",
+          "helpEditing": "Edytuj cykl życia zgłoszeń tylko dla tej tablicy.",
+          "helpCopied": "Przejrzyj i dostosuj skopiowany cykl życia przed zapisaniem nowej tablicy.",
+          "helpInline": "Utwórz początkowy cykl życia zgłoszeń tablicy przed zapisaniem.",
+          "loading": "Ładowanie statusów zgłoszeń tablicy…",
+          "statusName": "Nazwa statusu",
+          "closed": "Zamknięte",
+          "default": "Domyślne"
+        },
+        "inboundReplyReopen": {
+          "enabledLabel": "Otwórz ponownie zamknięte zgłoszenia przy przychodzących odpowiedziach",
+          "enabledHelp": "Dotyczy odpowiedzi w wątkach dopasowanych do już zamkniętych zgłoszeń na tej tablicy.",
+          "cutoffHoursLabel": "Próg ponownego otwarcia (godziny)",
+          "cutoffHoursHelp": "Odpowiedzi otrzymane po tym okresie tworzą nowe zgłoszenia zamiast otwierać ponownie stare.",
+          "statusLabel": "Status po otwarciu (opcjonalnie)",
+          "statusPlaceholder": "Wybierz status ponownego otwarcia",
+          "statusUseDefault": "Użyj domyślnego statusu otwartego tablicy",
+          "suppressAiLabel": "Pomiń ponowne otwieranie dla krótkich odpowiedzi potwierdzających (AI)",
+          "suppressAiHelp": "Tylko dodatek Enterprise AI Assistant. Jeśli niedostępny, odpowiedzi otwierają zgłoszenia normalnie."
+        },
+        "liveTimer": {
+          "label": "Włącz stoper zgłoszeń na żywo",
+          "help": "Pokazuje stoper na żywo i rejestrowane interwały na zgłoszeniach tej tablicy. Ręczne wprowadzanie czasu pozostaje dostępne."
         }
       },
       "dialog": {
@@ -556,8 +617,98 @@
           "fetchAvailableFailed": "Nie udało się pobrać dostępnych tablic do importu",
           "nameRequired": "Nazwa tablicy jest wymagana",
           "saveFailed": "Nie udało się zapisać tablicy",
-          "lastDefault": "Nie można usunąć ostatniej domyślnej tablicy"
+          "lastDefault": "Nie można usunąć ostatniej domyślnej tablicy",
+          "statusRequired": "Dodaj co najmniej jeden status zgłoszenia przed zapisaniem tablicy.",
+          "duplicateStatusName": "Nazwy statusów zgłoszeń muszą być unikalne w obrębie tablicy.",
+          "invalidOpenDefault": "Wybierz dokładnie jeden otwarty domyślny status zgłoszenia przed zapisaniem tablicy.",
+          "nameAlreadyExists": "Tablica o tej nazwie już istnieje.",
+          "selectBoardToCopy": "Wybierz istniejącą tablicę, z której skopiować statusy zgłoszeń.",
+          "fetchStatusesFailed": "Nie udało się załadować statusów zgłoszeń tablicy.",
+          "deleteFailed": "Nie udało się usunąć tablicy",
+          "importFailed": "Nie udało się zaimportować tablic",
+          "updateStatusFailed": "Nie udało się zaktualizować statusu tablicy",
+          "updateDefaultFailed": "Nie udało się zaktualizować domyślnej tablicy"
         }
+      }
+    },
+    "priorities": {
+      "title": {
+        "ticket": "Priorytety zgłoszeń",
+        "projectTask": "Priorytety zadań projektu"
+      },
+      "alert": {
+        "header": "Zarządzanie priorytetami:",
+        "description": "Utwórz niestandardowe priorytety dla swojej organizacji lub zaimportuj ze standardowych szablonów.",
+        "itilNote": "Standardowych priorytetów ITIL nie można edytować ani usuwać.",
+        "nonItilNote": "Wszystkie priorytety można edytować lub usuwać, aby dopasować je do przepływu pracy."
+      },
+      "table": {
+        "name": "Nazwa",
+        "type": "Typ",
+        "color": "Kolor",
+        "order": "Kolejność",
+        "actions": "Akcje",
+        "standardTag": "(Standardowy)",
+        "itilProtected": "Chroniony"
+      },
+      "itemTypes": {
+        "ticket": "Zgłoszenie",
+        "projectTask": "Zadanie projektu"
+      },
+      "actions": {
+        "addPriority": "Dodaj priorytet",
+        "importStandard": "Importuj ze standardowych priorytetów",
+        "openMenu": "Otwórz menu",
+        "edit": "Edytuj",
+        "delete": "Usuń",
+        "cancel": "Anuluj"
+      },
+      "dialog": {
+        "addTitle": "Dodaj nowy priorytet",
+        "editTitle": "Edytuj priorytet",
+        "submitAdd": "Dodaj priorytet",
+        "submitUpdate": "Zaktualizuj priorytet"
+      },
+      "fields": {
+        "priorityName": {
+          "label": "Nazwa priorytetu",
+          "placeholder": "np. Pilne"
+        },
+        "orderNumber": {
+          "label": "Numer kolejności (1-100, wyższe numery pojawiają się pierwsze)",
+          "help": "Kontroluje kolejność, w której priorytety pojawiają się w menu rozwijanych w platformie. Wyższe numery pojawiają się pierwsze dla priorytetów.",
+          "used": "Używane numery kolejności: {{numbers}}",
+          "noneUsed": "Nie użyto jeszcze żadnych numerów kolejności"
+        },
+        "color": {
+          "label": "Kolor",
+          "chooseButton": "Wybierz kolor"
+        }
+      },
+      "import": {
+        "title": "Importuj standardowe priorytety",
+        "submit": "Importuj ({{count}})",
+        "allImportedTicket": "Wszystkie standardowe priorytety zostały już zaimportowane dla zgłoszeń.",
+        "allImportedProjectTask": "Wszystkie standardowe priorytety zostały już zaimportowane dla zadań projektu.",
+        "instructions": "Wybierz standardowe priorytety do zaimportowania. Zostaną skopiowane do priorytetów Twojej organizacji."
+      },
+      "messages": {
+        "success": {
+          "deleted": "Priorytet został usunięty pomyślnie",
+          "imported": "Pomyślnie zaimportowano {{count}} priorytetów",
+          "skipped": "Pominięto {{count}} priorytetów (już istnieją)"
+        },
+        "error": {
+          "orderTaken": "Numer kolejności {{order}} jest już zajęty przez „{{name}}”. Wybierz inny numer kolejności.",
+          "uniqueConstraint": "Ten numer kolejności jest już używany. Wybierz inny numer kolejności.",
+          "saveFailed": "Nie udało się zapisać priorytetu",
+          "deleteFailed": "Nie udało się usunąć priorytetu",
+          "deleteValidationFailed": "Nie udało się zweryfikować usunięcia. Spróbuj ponownie.",
+          "importFailed": "Nie udało się zaimportować priorytetów"
+        }
+      },
+      "entity": {
+        "fallback": "ten priorytet"
       }
     }
   },
@@ -643,7 +794,9 @@
         },
         "error": {
           "lastClosed": "Co najmniej jeden status musi pozostać oznaczony jako zamknięty",
-          "deleteLastClosed": "Nie można usunąć ostatniego zamkniętego statusu dla tego typu."
+          "deleteLastClosed": "Nie można usunąć ostatniego zamkniętego statusu dla tego typu.",
+          "skipped": "Pominięto {{count}} statusów ({{reason}})",
+          "importFailed": "Nie udało się zaimportować statusów"
         }
       }
     },
@@ -685,27 +838,6 @@
     }
   },
   "clientPortal": {
-    "language": {
-      "title": "Ustawienia języka",
-      "description": "Konfiguracja domyślnych ustawień językowych portalu klienta. Te ustawienia dotyczą wszystkich użytkowników i klientów, chyba że zostaną nadpisane.",
-      "fields": {
-        "defaultLanguage": "Język domyślny",
-        "availableLanguages": "Dostępne języki"
-      },
-      "help": {
-        "defaultLanguage": "To będzie domyślny język dla wszystkich użytkowników portalu klienta i powiadomień e-mail, chyba że zostanie nadpisany przez ustawienia klienta lub indywidualne preferencje użytkownika",
-        "availableLanguages": "Wybierz, które języki są dostępne do wyboru przez użytkowników"
-      },
-      "hierarchy": {
-        "title": "Hierarchia preferencji językowych",
-        "description": "Ta hierarchia dotyczy zarówno interfejsu portalu klienta, jak i powiadomień e-mail wysyłanych do użytkowników portalu klienta:",
-        "userPreference": "Indywidualne preferencje użytkownika (najwyższy priorytet)",
-        "clientDefault": "Domyślny język klienta",
-        "orgDefault": "Domyślny język organizacji (konfigurowany tutaj)",
-        "systemDefault": "Domyślny język systemu (angielski)",
-        "note": "Uwaga: Wewnętrzni użytkownicy MSP zawsze otrzymują wiadomości e-mail w języku angielskim"
-      }
-    },
     "branding": {
       "title": "Branding i wygląd",
       "description": "Dostosuj wygląd portalu klienta za pomocą identyfikacji wizualnej Państwa firmy.",
@@ -791,21 +923,15 @@
     }
   },
   "mspLanguage": {
-    "title": "Język",
-    "description": "Konfiguracja domyślnych ustawień językowych portalu MSP. Te ustawienia dotyczą wszystkich użytkowników MSP, chyba że zostaną nadpisane przez indywidualne preferencje.",
+    "title": "Język organizacji",
+    "description": "Ustaw domyślny język dla całej organizacji — personelu MSP, użytkowników portalu klienta i powiadomień e-mail. Poszczególni użytkownicy i klienci mogą nadpisać go dla siebie.",
     "fields": {
       "defaultLanguage": "Język domyślny",
       "availableLanguages": "Dostępne języki"
     },
     "help": {
-      "defaultLanguage": "To będzie domyślny język dla wszystkich użytkowników portalu MSP, chyba że zostanie nadpisany przez ich osobiste preferencje.",
-      "availableLanguages": "Wybierz, które języki są dostępne do wyboru przez użytkowników MSP"
-    },
-    "hierarchy": {
-      "title": "Hierarchia preferencji językowych",
-      "userPreference": "Indywidualne preferencje użytkownika (najwyższy priorytet)",
-      "orgDefault": "Domyślny język organizacji (konfigurowany tutaj)",
-      "systemDefault": "Domyślny język systemu (angielski)"
+      "defaultLanguage": "Stosowany wszędzie, chyba że nadpisany przez osobistą preferencję użytkownika lub język skonfigurowany dla konkretnego klienta.",
+      "availableLanguages": "Wybierz, spośród których języków mogą wybierać użytkownicy."
     }
   },
   "notifications": {
@@ -1050,6 +1176,16 @@
         "noValues": "Brak wartości"
       },
       "truncated": "Wyświetlanie pierwszych {{count}} rekordów. Pobierz wyniki zadania, aby uzyskać pełną historię."
+    },
+    "messages": {
+      "error": {
+        "loadImportData": "Nie udało się załadować danych importu",
+        "createPreview": "Nie udało się utworzyć podglądu",
+        "selectPreviewFirst": "Wybierz podgląd do zatwierdzenia przed importem.",
+        "startImportJob": "Nie udało się uruchomić zadania importu",
+        "loadJobDetails": "Nie udało się załadować szczegółów zadania",
+        "refreshHistory": "Nie udało się odświeżyć historii importu"
+      }
     }
   },
   "email": {
@@ -1367,5 +1503,19 @@
       "holidayAdded": "Święto dodane pomyślnie",
       "holidayDeleted": "Święto usunięte pomyślnie"
     }
+  },
+  "clientPortalLanguage": {
+    "title": "Język portalu klienta",
+    "description": "Nadpisz domyślny język tylko dla użytkowników portalu klienta. Personel MSP zachowuje domyślny język organizacji.",
+    "fields": {
+      "defaultLanguage": "Język domyślny"
+    },
+    "help": {
+      "defaultLanguage": "Gdy ustawiony, użytkownicy portalu klienta widzą ten język, chyba że nadpisze go ich indywidualna preferencja lub język skonfigurowany dla ich klienta."
+    },
+    "placeholder": "Wybierz język",
+    "inheritOption": "Użyj domyślnego języka organizacji ({{language}})",
+    "unsetHint": "Aby usunąć nadpisanie portalu klienta, zmień domyślny język organizacji w Ustawienia → Język.",
+    "updated": "Domyślny język portalu klienta zaktualizowany na {{language}}"
   }
 }

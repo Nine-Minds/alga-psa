@@ -12,6 +12,7 @@ import { useDrawer } from '@alga-psa/ui';
 import { WorkflowTasksSectionFiltersDialog } from './filters/WorkflowTasksSectionFiltersDialog';
 import { Filter, XCircle } from 'lucide-react';
 import { useActivityDrawer } from './ActivityDrawerProvider';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface WorkflowTasksSectionProps {
   limit?: number;
@@ -19,6 +20,7 @@ interface WorkflowTasksSectionProps {
 }
 
 export function WorkflowTasksSection({ limit = 5, onViewAll }: WorkflowTasksSectionProps) {
+  const { t } = useTranslation('msp/user-activities');
   const [activities, setActivities] = useState<WorkflowTaskActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +41,7 @@ export function WorkflowTasksSection({ limit = 5, onViewAll }: WorkflowTasksSect
       setActivities(result);
     } catch (err) {
       console.error('Error loading workflow task activities:', err);
-      setError('Failed to load workflow task activities. Please try again later.');
+      setError(t('sections.workflowTasks.errors.loadFailed', { defaultValue: 'Failed to load workflow task activities. Please try again later.' }));
     } finally {
       setLoading(false);
     }
@@ -127,7 +129,7 @@ export function WorkflowTasksSection({ limit = 5, onViewAll }: WorkflowTasksSect
 
     drawer.openListDrawer(
       ActivityType.WORKFLOW_TASK,
-      'Workflow Tasks',
+      t('sections.workflowTasks.drawerTitle', { defaultValue: 'Workflow Tasks' }),
       <WorkflowTaskListDrawer
         onSelectTask={(task) => {
           // First close the list drawer
@@ -145,7 +147,7 @@ export function WorkflowTasksSection({ limit = 5, onViewAll }: WorkflowTasksSect
   return (
     <Card id="workflow-tasks-activities-card" className="col-span-1 md:col-span-2">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle>Workflow Tasks</CardTitle>
+        <CardTitle>{t('sections.workflowTasks.title', { defaultValue: 'Workflow Tasks' })}</CardTitle>
         <div className="flex items-center gap-2">
           <Button
             id="refresh-workflow-tasks-button"
@@ -153,9 +155,9 @@ export function WorkflowTasksSection({ limit = 5, onViewAll }: WorkflowTasksSect
             size="sm"
             onClick={handleRefresh}
             disabled={loading}
-            aria-label="Refresh Workflow Tasks"
+            aria-label={t('sections.workflowTasks.ariaLabels.refresh', { defaultValue: 'Refresh Workflow Tasks' })}
           >
-            Refresh
+            {t('sections.workflowTasks.actions.refresh', { defaultValue: 'Refresh' })}
           </Button>
           {isFiltersActive() ? (
             <Button
@@ -167,7 +169,7 @@ export function WorkflowTasksSection({ limit = 5, onViewAll }: WorkflowTasksSect
               className="gap-1"
             >
               <XCircle className="h-4 w-4" />
-              Reset
+              {t('sections.workflowTasks.actions.reset', { defaultValue: 'Reset' })}
             </Button>
           ) : (
             <Button
@@ -176,9 +178,9 @@ export function WorkflowTasksSection({ limit = 5, onViewAll }: WorkflowTasksSect
               size="sm"
               onClick={() => setIsFilterDialogOpen(true)}
               disabled={filterDataLoading || loading}
-              aria-label="Filter Workflow Tasks"
+              aria-label={t('sections.workflowTasks.ariaLabels.filter', { defaultValue: 'Filter Workflow Tasks' })}
             >
-              <Filter size={16} className="mr-1" /> Filter
+              <Filter size={16} className="mr-1" /> {t('sections.workflowTasks.actions.filter', { defaultValue: 'Filter' })}
             </Button>
           )}
           <Button
@@ -187,14 +189,14 @@ export function WorkflowTasksSection({ limit = 5, onViewAll }: WorkflowTasksSect
             size="sm"
             onClick={handleViewAll}
           >
-            View All
+            {t('sections.workflowTasks.actions.viewAll', { defaultValue: 'View All' })}
           </Button>
         </div>
       </CardHeader>
       <CardContent>
         {loading ? (
           <div className="flex justify-center items-center h-40">
-            <p className="text-gray-500">Loading workflow task activities...</p>
+            <p className="text-gray-500">{t('sections.workflowTasks.states.loading', { defaultValue: 'Loading workflow task activities...' })}</p>
           </div>
         ) : error ? (
           <div className="flex justify-center items-center h-40">
@@ -202,7 +204,7 @@ export function WorkflowTasksSection({ limit = 5, onViewAll }: WorkflowTasksSect
           </div>
         ) : activities.length === 0 ? (
           <div className="flex justify-center items-center h-40">
-            <p className="text-gray-500">No workflow task activities found</p>
+            <p className="text-gray-500">{t('sections.workflowTasks.states.empty', { defaultValue: 'No workflow task activities found' })}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

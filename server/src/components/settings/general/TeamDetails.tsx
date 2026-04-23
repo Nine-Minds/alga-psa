@@ -136,7 +136,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
         setError(null);
       } catch (err) {
         console.error('Error updating team name:', err);
-        setError('Failed to update team name');
+        setError(t('teams.messages.error.updateName'));
       }
     }
     setIsEditingName(false);
@@ -206,7 +206,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
       await fetchTeamDetails();
     } catch (err) {
       console.error('Error saving team changes:', err);
-      setError('Failed to save changes. Please try again.');
+      setError(t('teams.messages.error.saveChanges'));
     } finally {
       setIsSaving(false);
     }

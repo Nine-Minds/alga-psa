@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, Text, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import EmojiPicker from "rn-emoji-keyboard";
@@ -13,6 +13,7 @@ import { Badge } from "../../../ui/components/Badge";
 import { getAppConfig } from "../../../config/appConfig";
 import { getClientMetadataHeaders } from "../../../device/clientMetadata";
 import { formatDateTimeWithRelative } from "../../../ui/formatters/dateTime";
+import { useModeration } from "../../moderation/useModeration";
 import {
   extractPlainTextFromSerializedRichEditorContent,
   isMalformedRichEditorContent,
@@ -47,12 +48,22 @@ export function CommentsSection({
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("tickets");
   const { session } = useAuth();
+  const moderation = useModeration();
   // Sort order: "newest" shows latest first, "oldest" shows oldest first (API default)
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
 
+  // Filter comments from muted authors, preserving system events (kind === "event").
+  const visibleComments = useMemo(
+    () =>
+      comments.filter((c) => {
+        if (c.kind === "event" || typeof c.event_type === "string") return true;
+        return !moderation.isMuted(c.created_by ?? null);
+      }),
+    [comments, moderation],
+  );
   const sorted = useMemo(
-    () => sortOrder === "newest" ? [...comments].reverse() : comments,
-    [comments, sortOrder],
+    () => sortOrder === "newest" ? [...visibleComments].reverse() : visibleComments,
+    [visibleComments, sortOrder],
   );
   const visible = sorted.slice(0, visibleCount);
   const remainingCount = Math.max(0, sorted.length - visibleCount);
@@ -89,6 +100,93 @@ export function CommentsSection({
     setEditingCommentId(null);
     setEditError(null);
   };
+
+  const confirmReport = useCallback(
+    (comment: TicketComment) => {
+      if (!comment.comment_id) return;
+      void (async () => {
+        const ok = await moderation.report({
+          contentType: "ticket_comment",
+          contentId: comment.comment_id,
+          contentAuthorUserId: comment.created_by ?? undefined,
+        });
+        Alert.alert(
+          ok ? t("comments.moderation.reportedTitle") : t("comments.moderation.reportFailedTitle"),
+          ok
+            ? t("comments.moderation.reportedBody")
+            : t("comments.moderation.reportFailedBody"),
+          [{ text: t("common:ok") }],
+        );
+      })();
+    },
+    [moderation, t],
+  );
+
+  const confirmMute = useCallback(
+    (comment: TicketComment) => {
+      const authorId = comment.created_by;
+      const authorName = comment.created_by_name ?? t("common:unknown");
+      if (!authorId) return;
+      Alert.alert(
+        t("comments.moderation.muteTitle", { name: authorName }),
+        t("comments.moderation.muteBody"),
+        [
+          { text: t("common:cancel"), style: "cancel" },
+          {
+            text: t("comments.moderation.muteConfirm"),
+            style: "destructive",
+            onPress: () => {
+              void moderation.mute(authorId);
+            },
+          },
+        ],
+      );
+    },
+    [moderation, t],
+  );
+
+  const openModerationMenu = useCallback(
+    (comment: TicketComment) => {
+      const authorId = comment.created_by;
+      const isOwn = Boolean(meUserId && authorId === meUserId);
+
+      const options: { text: string; style?: "cancel" | "destructive"; onPress?: () => void }[] = [
+        {
+          text: t("comments.moderation.reportAction"),
+          onPress: () => {
+            Alert.alert(
+              t("comments.moderation.reportConfirmTitle"),
+              t("comments.moderation.reportConfirmBody"),
+              [
+                { text: t("common:cancel"), style: "cancel" },
+                {
+                  text: t("comments.moderation.reportConfirm"),
+                  style: "destructive",
+                  onPress: () => confirmReport(comment),
+                },
+              ],
+            );
+          },
+        },
+      ];
+
+      if (!isOwn && authorId) {
+        options.push({
+          text: t("comments.moderation.muteAction"),
+          onPress: () => confirmMute(comment),
+        });
+      }
+
+      options.push({ text: t("common:cancel"), style: "cancel" });
+
+      Alert.alert(
+        t("comments.moderation.menuTitle"),
+        undefined,
+        options.map((o) => ({ text: o.text, style: o.style, onPress: o.onPress })),
+      );
+    },
+    [confirmReport, confirmMute, meUserId, t],
+  );
 
   const saveComment = async (commentId: string) => {
     if (!client || !session || !editDraft.trim()) return;
@@ -305,16 +403,30 @@ export function CommentsSection({
                         )}
                       </Pressable>
                     </View>
-                  ) : canEdit ? (
-                    <Pressable
-                      onPress={() => startEditing(c)}
-                      accessibilityRole="button"
-                      accessibilityLabel={t("comments.editComment")}
-                      style={{ padding: spacing.xs }}
-                    >
-                      <Feather name="edit-2" size={16} color={colors.textSecondary} />
-                    </Pressable>
-                  ) : null}
+                  ) : (
+                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                      {canEdit ? (
+                        <Pressable
+                          onPress={() => startEditing(c)}
+                          accessibilityRole="button"
+                          accessibilityLabel={t("comments.editComment")}
+                          style={{ padding: spacing.xs }}
+                        >
+                          <Feather name="edit-2" size={16} color={colors.textSecondary} />
+                        </Pressable>
+                      ) : null}
+                      {!isSystemEvent && !isOptimistic ? (
+                        <Pressable
+                          onPress={() => openModerationMenu(c)}
+                          accessibilityRole="button"
+                          accessibilityLabel={t("comments.moderation.menuAccessibility")}
+                          style={{ padding: spacing.xs }}
+                        >
+                          <Feather name="more-vertical" size={16} color={colors.textSecondary} />
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  )}
                 </View>
                 {isEditingThis ? (
                   <>

@@ -6,7 +6,12 @@ import HoursProgressBar from '@alga-psa/projects/components/HoursProgressBar';
 import { calculateProjectCompletion, type ProjectCompletionMetrics } from '@alga-psa/projects/lib/projectUtils';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
-export function ClientPortalProjectMetrics({ projectId }: { projectId: string }) {
+interface ClientPortalProjectMetricsProps {
+  projectId: string;
+  showBudgetHours?: boolean;
+}
+
+export function ClientPortalProjectMetrics({ projectId, showBudgetHours = false }: ClientPortalProjectMetricsProps) {
   const { t } = useTranslation('features/projects');
   const [metrics, setMetrics] = useState<ProjectCompletionMetrics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -26,17 +31,21 @@ export function ClientPortalProjectMetrics({ projectId }: { projectId: string })
     fetchMetrics();
   }, [projectId]);
 
+  const gridClass = showBudgetHours
+    ? 'grid grid-cols-1 md:grid-cols-2 gap-6 mb-6'
+    : 'grid grid-cols-1 gap-6 mb-6';
+
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      <div className={gridClass}>
         <div className="bg-gray-50 p-4 rounded-lg animate-pulse h-36" />
-        <div className="bg-gray-50 p-4 rounded-lg animate-pulse h-36" />
+        {showBudgetHours && <div className="bg-gray-50 p-4 rounded-lg animate-pulse h-36" />}
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div className={gridClass}>
       <div className="bg-gray-50 p-4 rounded-lg">
         <h3 className="text-lg font-semibold mb-4">{t('taskCompletion', 'Task Completion')}</h3>
         <div className="flex items-center">
@@ -60,44 +69,46 @@ export function ClientPortalProjectMetrics({ projectId }: { projectId: string })
         </div>
       </div>
 
-      <div className="bg-gray-50 p-4 rounded-lg">
-        <h3 className="text-lg font-semibold mb-4">{t('budgetHours', 'Budget Hours')}</h3>
-        <div className="flex flex-col">
-          <div className="flex flex-col mb-1">
-            <p className="font-medium">
-              {t('budgetUsed', '{{percent}}% of Budget Used', { percent: Math.round(metrics?.hoursCompletionPercentage || 0) })}
-            </p>
-            <p className="text-sm text-gray-600">
-              {t('hoursUsed', '{{spent}} of {{budgeted}} hours', {
-                spent: (metrics?.spentHours || 0).toFixed(1),
-                budgeted: (metrics?.budgetedHours || 0).toFixed(1),
-              })}
-            </p>
+      {showBudgetHours && (
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <h3 className="text-lg font-semibold mb-4">{t('budgetHours', 'Budget Hours')}</h3>
+          <div className="flex flex-col">
+            <div className="flex flex-col mb-1">
+              <p className="font-medium">
+                {t('budgetUsed', '{{percent}}% of Budget Used', { percent: Math.round(metrics?.hoursCompletionPercentage || 0) })}
+              </p>
+              <p className="text-sm text-gray-600">
+                {t('hoursUsed', '{{spent}} of {{budgeted}} hours', {
+                  spent: (metrics?.spentHours || 0).toFixed(1),
+                  budgeted: (metrics?.budgetedHours || 0).toFixed(1),
+                })}
+              </p>
+            </div>
+            <HoursProgressBar
+              percentage={metrics?.hoursCompletionPercentage || 0}
+              width={'100%'}
+              height={8}
+              showTooltip={true}
+              tooltipContent={
+                <div className="p-2">
+                  <p className="font-medium">{t('hoursUsage', 'Hours Usage')}</p>
+                  <p className="text-sm">
+                    {t('hoursUsedDetail', '{{spent}} of {{budgeted}} hours used', {
+                      spent: (metrics?.spentHours || 0).toFixed(1),
+                      budgeted: (metrics?.budgetedHours || 0).toFixed(1),
+                    })}
+                  </p>
+                  <p className="text-sm">
+                    {t('hoursRemaining', '{{remaining}} hours remaining', {
+                      remaining: (metrics?.remainingHours || 0).toFixed(1),
+                    })}
+                  </p>
+                </div>
+              }
+            />
           </div>
-          <HoursProgressBar
-            percentage={metrics?.hoursCompletionPercentage || 0}
-            width={'100%'}
-            height={8}
-            showTooltip={true}
-            tooltipContent={
-              <div className="p-2">
-                <p className="font-medium">{t('hoursUsage', 'Hours Usage')}</p>
-                <p className="text-sm">
-                  {t('hoursUsedDetail', '{{spent}} of {{budgeted}} hours used', {
-                    spent: (metrics?.spentHours || 0).toFixed(1),
-                    budgeted: (metrics?.budgetedHours || 0).toFixed(1),
-                  })}
-                </p>
-                <p className="text-sm">
-                  {t('hoursRemaining', '{{remaining}} hours remaining', {
-                    remaining: (metrics?.remainingHours || 0).toFixed(1),
-                  })}
-                </p>
-              </div>
-            }
-          />
         </div>
-      </div>
+      )}
     </div>
   );
 }
