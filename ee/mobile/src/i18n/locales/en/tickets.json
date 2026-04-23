@@ -201,6 +201,22 @@
     "seeLess": "See less",
     "loadMore": "Load more ({{count}} remaining)",
     "loadMoreAccessibility": "Load more comments",
+    "moderation": {
+      "menuTitle": "Comment actions",
+      "menuAccessibility": "More actions for this comment",
+      "reportAction": "Report comment",
+      "reportConfirmTitle": "Report this comment?",
+      "reportConfirmBody": "We'll review this comment for content that violates our policies. The reporter's identity is kept confidential.",
+      "reportConfirm": "Report",
+      "reportedTitle": "Thanks for letting us know",
+      "reportedBody": "We'll review this comment. You can also email abuse@nineminds.com with more context.",
+      "reportFailedTitle": "Couldn't submit report",
+      "reportFailedBody": "Please check your connection and try again, or email abuse@nineminds.com.",
+      "muteAction": "Mute this user",
+      "muteTitle": "Mute {{name}}?",
+      "muteBody": "Their comments will be hidden from your view in the mobile app. You can unmute them from Settings.",
+      "muteConfirm": "Mute"
+    },
     "offlineDraftSaved": "Offline \u2014 your draft is saved. Reconnect to send.",
     "offlineToast": "Offline \u2014 draft saved",
     "errors": {

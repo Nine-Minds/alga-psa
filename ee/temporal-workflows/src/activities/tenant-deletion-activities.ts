@@ -110,10 +110,16 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'role_permissions', 'user_roles', 'user_auth_accounts',
   'mobile_push_tokens',
 
+  // Content moderation (App Store guideline 1.2). Both reference users via
+  // tenant-scoped columns, so they must be deleted before users.
+  'content_reports', 'user_content_mutes',
+
   // Apple IAP billing (apple_iap_subscriptions is distributed by tenant;
   // apple_iap_notifications is a reference table — DELETE WHERE tenant=? still
-  // works, and rows whose tenant never resolved stay as audit history)
-  'apple_iap_subscriptions', 'apple_iap_notifications',
+  // works, and rows whose tenant never resolved stay as audit history).
+  // apple_user_identities is a reference table (Sign in with Apple sub → user);
+  // DELETE WHERE tenant=? still works for per-tenant cleanup.
+  'apple_iap_subscriptions', 'apple_iap_notifications', 'apple_user_identities',
 
   // Schedule and team
   'schedule_entry_assignees', 'schedule_conflicts', 'team_members',

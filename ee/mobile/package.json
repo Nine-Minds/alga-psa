@@ -28,6 +28,7 @@
     "@tiptap/starter-kit": "^3.20.0",
     "expo": "~54.0.33",
     "expo-application": "~7.0.8",
+    "expo-apple-authentication": "~8.0.8",
     "expo-clipboard": "~8.0.8",
     "expo-dev-client": "~6.0.20",
     "expo-document-picker": "~14.0.8",

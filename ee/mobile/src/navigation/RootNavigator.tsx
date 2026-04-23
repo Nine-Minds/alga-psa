@@ -9,6 +9,7 @@ import { CreateTicketScreen } from "../screens/CreateTicketScreen";
 import { AuthCallbackScreen } from "../screens/AuthCallbackScreen";
 import { CreateWorkspaceScreen } from "../screens/CreateWorkspaceScreen";
 import { AccountDeletionScreen } from "../screens/AccountDeletionScreen";
+import { MutedUsersScreen } from "../screens/MutedUsersScreen";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../ui/ThemeContext";
 import { useNotifications } from "../notifications/useNotifications";
@@ -19,6 +20,7 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
   const theme = useTheme();
   const { t: tAuth } = useTranslation("auth");
   const { t: tTickets } = useTranslation("tickets");
+  const { t: tSettings } = useTranslation("settings");
 
   // Register push token and handle notification taps (no-op when feature flag is off)
   useNotifications();
@@ -50,6 +52,11 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
             name="AccountDeletion"
             component={AccountDeletionScreen}
             options={{ title: tAuth("accountDeletion.title", "Delete Account") }}
+          />
+          <Stack.Screen
+            name="MutedUsers"
+            component={MutedUsersScreen}
+            options={{ title: tSettings("mutedUsers.title", "Muted users") }}
           />
           <Stack.Screen
             name="CreateTicket"

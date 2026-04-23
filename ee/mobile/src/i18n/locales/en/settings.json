@@ -31,6 +31,16 @@
     "invalid": "invalid",
     "missing": "missing"
   },
+  "mutedUsers": {
+    "title": "Muted users",
+    "body": "People you've muted won't appear in your comment view on mobile. Tap to unmute.",
+    "empty": "You haven't muted anyone.",
+    "nameLookupFailed": "Couldn't look up names for the users you've muted. You can still unmute by visiting this screen again when you have a connection.",
+    "unmuteTitle": "Unmute {{name}}?",
+    "unmuteBody": "Their comments will be visible in the mobile app again.",
+    "unmuteConfirm": "Unmute",
+    "unmuteAccessibility": "Unmute {{name}}"
+  },
   "security": {
     "biometricLock": "Biometric lock",
     "biometricNotSetUp": "Biometrics are not set up on this device.",

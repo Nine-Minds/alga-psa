@@ -13,7 +13,7 @@ export default function MasterTerms() {
       <div className="bg-white p-8 rounded-lg shadow-lg max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold text-primary-600 mb-2">NINE MINDS</h1>
         <h2 className="text-2xl font-bold text-gray-800 mb-4">MASTER TERMS</h2>
-        <p className="text-sm text-gray-500 mb-8">Last Updated: April 3, 2026</p>
+        <p className="text-sm text-gray-500 mb-8">Last Updated: April 22, 2026</p>
 
         <div className="prose prose-gray max-w-none text-gray-700 space-y-6">
           <p>
@@ -101,6 +101,7 @@ export default function MasterTerms() {
               <li><strong>Device Permissions.</strong> The Mobile App may request access to certain features or data on Your device, such as Your device&apos;s camera, photo library, file storage, and push notification services. You may grant or deny these permissions through Your device&apos;s settings. Denying certain permissions may limit the functionality of the Mobile App.</li>
               <li><strong>Biometric Authentication.</strong> The Mobile App may offer biometric authentication features (such as Face ID or fingerprint recognition) as a convenience. Biometric authentication is processed entirely on Your device using Your device&apos;s built-in capabilities. We do not collect, store, or transmit any biometric data. You are solely responsible for maintaining the security of the biometric credentials registered on Your device.</li>
               <li><strong>Push Notifications.</strong> The Mobile App may send push notifications to Your device regarding tickets, tasks, and other activity relevant to Your account. You may disable push notifications at any time through Your device&apos;s settings. See Our Privacy Policy for information about how we handle push notification tokens.</li>
+              <li><strong>Content Moderation.</strong> The Mobile App lets You report objectionable content via the comment overflow menu and mute specific users so that their comments are hidden from Your view. See Section 5(f) for Our acceptable use policy, reporting process, and consequences for users who violate it.</li>
               <li><strong>Connectivity.</strong> The Mobile App requires an active internet connection to function. We are not responsible for the Mobile App&apos;s unavailability due to the absence or interruption of Your internet service or mobile data connection.</li>
               <li><strong>App Store Terms.</strong> Your download, installation, and use of the Mobile App are also subject to the terms and conditions of the application distribution platform from which You obtained it (e.g., the Apple App Store or Google Play Store). In the event of any conflict between these Terms and the applicable app store terms with respect to Your use of the Mobile App, the more restrictive terms shall govern.</li>
             </ul>
@@ -143,6 +144,12 @@ export default function MasterTerms() {
 
           <p>
             <strong>e. Compliance with Laws.</strong> You acknowledge and agree that the Services (including, without limitation, the Platform) do not guaranty Your compliance with applicable Laws, including, without limitation, Laws relating to privacy of consumer information, and that Your compliance with applicable Laws is ultimately Your sole and exclusive responsibility. Without limiting the generality of the foregoing, You acknowledge that We do not and will not provide any legal or technical advice, and that any feedback, content, output or materials provided by Us or the Services (including, without limitation, the Platform) as part of or in connection with the Services (including, without limitation, the Platform) (including any support thereof) do not constitute legal or other professional advice, and that You are solely responsible for determining the legality, validity and enforceability of all of Your Materials, Your use of the Services (including, without limitation, the Platform), Your Services, and the accuracy, accessibility, safety and reliability of any language contained within all of Your Materials and/or Your Services.
+          </p>
+
+          <p>
+            <strong>f. Objectionable Content; Reporting Abuse.</strong> We have zero tolerance for objectionable content or abusive behavior on the Services, including in the Mobile App. You will not upload, post, transmit, or otherwise make available any content that is unlawful, harassing, threatening, defamatory, obscene, hateful, that depicts or encourages violence, that sexualizes minors, or that infringes any third party&apos;s intellectual property or privacy rights. You will not use the Services to harass, stalk, impersonate, or abuse any other person. If You encounter content or user behavior that violates this policy, You may: (i) use the in-app &ldquo;Report&rdquo; action on the affected comment (Mobile App); or (ii) email{' '}
+            <a href="mailto:abuse@nineminds.com" className="text-primary-600 hover:underline">abuse@nineminds.com</a>
+            {' '}with details. We will review reports and take appropriate action in Our sole discretion, which may include removing content, restricting Your or any Representative&apos;s use of features, and suspending or terminating access to the Services for any user or account We determine has violated this policy. The Mobile App also provides a mute feature that lets You hide a specific user&apos;s comments from Your own view; muting is applied only to Your device and does not affect other users. This Section 5(f) supplements, and does not limit, any other provision of these Terms.
           </p>
 
           {/* Section 6 */}
