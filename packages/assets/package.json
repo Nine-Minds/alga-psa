@@ -42,6 +42,7 @@
   },
   "dependencies": {
     "@alga-psa/block-content": "*",
+    "@alga-psa/authorization": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/types": "*",

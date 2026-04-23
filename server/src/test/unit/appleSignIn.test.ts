@@ -266,3 +266,100 @@ describe('appleSignIn — config loading', () => {
     await expect(getAppleSignInConfig()).rejects.toThrow(/APPLE_SIGN_IN_BUNDLE_ID/);
   });
 });
+
+describe('appleSignIn — verifyAppleServerNotification', () => {
+  it('verifies a signed JWS and parses the inner events JSON string', async () => {
+    const kp = makeRsaKeypair('s2s-key-1');
+    mockJwksFetch([kp.jwk]);
+
+    const eventTime = Math.floor(Date.now() / 1000);
+    const token = signAppleStyleToken(
+      {
+        jti: 'notif-1',
+        events: JSON.stringify({
+          type: 'consent-revoked',
+          sub: '001234.user',
+          email: 'ada@privaterelay.appleid.com',
+          is_private_email: 'true',
+          event_time: eventTime,
+        }),
+      },
+      kp,
+    );
+
+    const { verifyAppleServerNotification } = await import('@/lib/mobileAuth/appleSignIn');
+    const out = await verifyAppleServerNotification(token);
+
+    expect(out.iss).toBe('https://appleid.apple.com');
+    expect(out.aud).toBe(BUNDLE_ID);
+    expect(out.jti).toBe('notif-1');
+    expect(out.events.type).toBe('consent-revoked');
+    expect(out.events.sub).toBe('001234.user');
+    expect(out.events.email).toBe('ada@privaterelay.appleid.com');
+    expect(out.events.is_private_email).toBe('true');
+    expect(out.events.event_time).toBe(eventTime);
+  });
+
+  it('rejects when the audience is wrong (a different bundle)', async () => {
+    const kp = makeRsaKeypair('s2s-key-2');
+    mockJwksFetch([kp.jwk]);
+    const token = jwt.sign(
+      {
+        iss: 'https://appleid.apple.com',
+        aud: 'com.some.other.app',
+        iat: Math.floor(Date.now() / 1000),
+        jti: 'x',
+        events: JSON.stringify({ type: 'consent-revoked', sub: 'x', event_time: 0 }),
+      },
+      kp.privatePem,
+      { algorithm: 'RS256', header: { alg: 'RS256', kid: kp.jwk.kid } },
+    );
+
+    const { verifyAppleServerNotification } = await import('@/lib/mobileAuth/appleSignIn');
+    await expect(verifyAppleServerNotification(token)).rejects.toThrow();
+  });
+
+  it('rejects a signature that does not match any published Apple key', async () => {
+    const goodKp = makeRsaKeypair('good-key');
+    const wrongKp = makeRsaKeypair('good-key'); // same kid, different key material
+    mockJwksFetch([goodKp.jwk]);
+
+    const token = signAppleStyleToken(
+      { jti: 'n', events: JSON.stringify({ type: 'consent-revoked', sub: 'x', event_time: 0 }) },
+      wrongKp,
+    );
+
+    const { verifyAppleServerNotification } = await import('@/lib/mobileAuth/appleSignIn');
+    await expect(verifyAppleServerNotification(token)).rejects.toThrow();
+  });
+
+  it('rejects when the inner events claim is missing', async () => {
+    const kp = makeRsaKeypair('s2s-key-3');
+    mockJwksFetch([kp.jwk]);
+    const token = signAppleStyleToken({ jti: 'n' }, kp);
+
+    const { verifyAppleServerNotification } = await import('@/lib/mobileAuth/appleSignIn');
+    await expect(verifyAppleServerNotification(token)).rejects.toThrow(/events/i);
+  });
+
+  it('rejects when the events claim is not valid JSON', async () => {
+    const kp = makeRsaKeypair('s2s-key-4');
+    mockJwksFetch([kp.jwk]);
+    const token = signAppleStyleToken({ jti: 'n', events: 'not-json{{' }, kp);
+
+    const { verifyAppleServerNotification } = await import('@/lib/mobileAuth/appleSignIn');
+    await expect(verifyAppleServerNotification(token)).rejects.toThrow();
+  });
+
+  it('rejects when the events payload has no type or sub', async () => {
+    const kp = makeRsaKeypair('s2s-key-5');
+    mockJwksFetch([kp.jwk]);
+    const token = signAppleStyleToken(
+      { jti: 'n', events: JSON.stringify({ foo: 'bar' }) },
+      kp,
+    );
+
+    const { verifyAppleServerNotification } = await import('@/lib/mobileAuth/appleSignIn');
+    await expect(verifyAppleServerNotification(token)).rejects.toThrow();
+  });
+});

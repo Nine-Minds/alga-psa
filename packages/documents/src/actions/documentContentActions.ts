@@ -2,12 +2,13 @@
 
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
-import { withAuth } from '@alga-psa/auth';
+import { withAuth, hasPermission } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import type { IDocumentContent, UpdateDocumentContentInput } from '@alga-psa/types';
-import { addDocument } from './documentActions';
-import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { addDocument, getAuthorizedDocumentById } from './documentActions';
+import { isActionPermissionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 // Create a new content document
 export const createContentDocument = withAuth(async (
@@ -60,18 +61,31 @@ export const createContentDocument = withAuth(async (
 
 // Get document content
 export const getDocumentContent = withAuth(async (
-    _user,
+    user,
     { tenant },
     documentId: string
-): Promise<IDocumentContent | null> => {
+): Promise<IDocumentContent | null | ActionPermissionError> => {
     try {
+        if (!await hasPermission(user, 'document', 'read')) {
+            return permissionError('Permission denied: Cannot read documents');
+        }
+
         const { knex } = await createTenantKnex();
 
         const content = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            return await trx('document_content')
+            const authorizedDocument = await getAuthorizedDocumentById(trx, tenant, user, documentId);
+            if (!authorizedDocument) {
+                return permissionError('Permission denied: Cannot read documents');
+            }
+
+            return trx('document_content')
                 .where({ document_id: documentId, tenant })
                 .first();
         });
+
+        if (isActionPermissionError(content)) {
+            return content;
+        }
 
         return content || null;
     } catch (error) {
@@ -82,15 +96,24 @@ export const getDocumentContent = withAuth(async (
 
 // Update document content
 export const updateDocumentContent = withAuth(async (
-    _user,
+    user,
     { tenant },
     documentId: string,
     data: UpdateDocumentContentInput
-): Promise<void> => {
+): Promise<void | ActionPermissionError> => {
     try {
+        if (!await hasPermission(user, 'document', 'update')) {
+            return permissionError('Permission denied: Cannot update documents');
+        }
+
         const { knex } = await createTenantKnex();
 
-        await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const updateResult = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            const authorizedDocument = await getAuthorizedDocumentById(trx, tenant, user, documentId);
+            if (!authorizedDocument) {
+                return permissionError('Permission denied: Cannot update documents');
+            }
+
             const existingContent = await trx('document_content')
                 .where({ document_id: documentId, tenant })
                 .first();
@@ -116,6 +139,10 @@ export const updateDocumentContent = withAuth(async (
                 });
             }
         });
+
+        if (isActionPermissionError(updateResult)) {
+            return updateResult;
+        }
     } catch (error) {
         console.error('Error updating document content:', error);
         throw new Error('Failed to update document content');
@@ -124,18 +151,31 @@ export const updateDocumentContent = withAuth(async (
 
 // Delete document content
 export const deleteDocumentContent = withAuth(async (
-    _user,
+    user,
     { tenant },
     documentId: string
-): Promise<void> => {
+): Promise<void | ActionPermissionError> => {
     try {
+        if (!await hasPermission(user, 'document', 'delete')) {
+            return permissionError('Permission denied: Cannot delete documents');
+        }
+
         const { knex } = await createTenantKnex();
 
-        await withTransaction(knex, async (trx: Knex.Transaction) => {
-            return await trx('document_content')
+        const deletionResult = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            const authorizedDocument = await getAuthorizedDocumentById(trx, tenant, user, documentId);
+            if (!authorizedDocument) {
+                return permissionError('Permission denied: Cannot delete documents');
+            }
+
+            return trx('document_content')
                 .where({ document_id: documentId, tenant })
                 .delete();
         });
+
+        if (isActionPermissionError(deletionResult)) {
+            return deletionResult;
+        }
     } catch (error) {
         console.error('Error deleting document content:', error);
         throw new Error('Failed to delete document content');

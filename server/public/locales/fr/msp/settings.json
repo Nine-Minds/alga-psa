@@ -234,7 +234,11 @@
         "noDefaultLocation": "Le client par défaut doit avoir un emplacement par défaut configuré pour envoyer des invitations au portail.",
         "noLocationEmail": "L'emplacement du client par défaut doit avoir une adresse e-mail de contact configurée.",
         "noBaseUrl": "L'URL de base n'est pas configurée pour les invitations au portail.",
-        "passwordTooShort": "Le mot de passe doit contenir au moins 8 caractères."
+        "passwordTooShort": "Le mot de passe doit contenir au moins 8 caractères.",
+        "roleRequired": "Le rôle est requis",
+        "invalidRole": "Le rôle sélectionné est invalide",
+        "licenseLimitReached": "Vous avez atteint la limite de licences utilisateur MSP.",
+        "soloPlanLimit": "Le plan Solo est limité à 1 utilisateur. Passez à Pro pour ajouter d'autres utilisateurs."
       }
     }
   },
@@ -295,7 +299,10 @@
         "updateFailed": "Échec de la mise à jour de l'utilisateur. Veuillez réessayer.",
         "passwordTooShort": "Le mot de passe doit contenir au moins 8 caractères",
         "passwordChangeFailed": "Échec de la modification du mot de passe",
-        "passwordChangeError": "Une erreur est survenue lors de la modification du mot de passe"
+        "passwordChangeError": "Une erreur est survenue lors de la modification du mot de passe",
+        "emailAlreadyExists": "Un utilisateur avec cette adresse e-mail existe déjà",
+        "reportsToSelf": "Un utilisateur ne peut pas être son propre responsable",
+        "reportsToCycle": "Cela créerait une chaîne hiérarchique circulaire"
       }
     }
   },
@@ -1359,7 +1366,11 @@
       },
       "error": {
         "userNotFound": "Utilisateur introuvable",
-        "fillRequiredFields": "Veuillez remplir tous les champs obligatoires"
+        "fillRequiredFields": "Veuillez remplir tous les champs obligatoires",
+        "saveFailed": "Échec de l'enregistrement du profil",
+        "emailAlreadyExists": "Un utilisateur avec cette adresse e-mail existe déjà",
+        "reportsToSelf": "Un utilisateur ne peut pas être son propre responsable",
+        "reportsToCycle": "Cela créerait une chaîne hiérarchique circulaire"
       }
     },
     "validation": {

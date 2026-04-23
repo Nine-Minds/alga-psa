@@ -86,6 +86,12 @@
         "../packages/auth/src/*",
         "../packages/auth/src/lib/*"
       ],
+      "@alga-psa/authorization": [
+        "../packages/authorization/src"
+      ],
+      "@alga-psa/authorization/*": [
+        "../packages/authorization/src/*"
+      ],
       "@alga-psa/analytics": [
         "../packages/analytics/src"
       ],

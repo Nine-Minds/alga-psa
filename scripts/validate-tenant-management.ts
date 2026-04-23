@@ -42,6 +42,7 @@ const EXCLUDED_TABLES: string[] = [
 // referencing column before deletion begins. Add entries by constraint name.
 const EXEMPT_FK_CONSTRAINTS: Set<string> = new Set([
   'statuses_tenant_board_id_fk', // NULL'd via breakCircularDependencies (statuses.board_id)
+  'authorization_bundles_tenant_published_revision_id_foreign', // NULL'd via breakCircularDependencies (authorization_bundles.published_revision_id)
 ]);
 
 interface FkOrderingViolation {

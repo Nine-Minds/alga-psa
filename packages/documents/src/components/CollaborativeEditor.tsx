@@ -21,6 +21,7 @@ import {
 import type { EmojiSuggestionState, MentionSuggestionState, MentionSuggestionUser } from '@alga-psa/ui/editor';
 import AvatarIcon from '@alga-psa/ui/components/AvatarIcon';
 import { Card } from '@alga-psa/ui/components/Card';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { EditorToolbar } from './EditorToolbar';
 import { handleMarkdownPaste } from './markdownPaste';
 import styles from './CollaborativeEditor.module.css';
@@ -338,14 +339,16 @@ export function CollaborativeEditor({
 
       try {
         // Use pre-loaded content when available; otherwise fetch from DB
-        const blockData = initialContentRef.current !== undefined
-          ? initialContentRef.current
-          : (await getBlockContent(documentId))?.block_data ?? null;
+        let resolvedBlockData = initialContentRef.current;
+        if (resolvedBlockData === undefined) {
+          const content = await getBlockContent(documentId);
+          resolvedBlockData = content && !isActionPermissionError(content) ? content.block_data : null;
+        }
 
-        if (blockData) {
-          const format = detectBlockContentFormat(blockData);
+        if (resolvedBlockData) {
+          const format = detectBlockContentFormat(resolvedBlockData);
           if (format === 'blocknote') {
-            const converted = blockNoteJsonToProsemirrorJson(blockData);
+            const converted = blockNoteJsonToProsemirrorJson(resolvedBlockData);
             prosemirrorJSONToYXmlFragment(editor.schema, converted, fragment);
             try {
               await updateBlockContent(documentId, {
@@ -356,7 +359,7 @@ export function CollaborativeEditor({
               console.error('[CollaborativeEditor] Failed to persist converted block content:', persistError);
             }
           } else if (format === 'prosemirror') {
-            let parsed = normalizeProsemirrorJson(parseBlockContent(blockData));
+            let parsed = normalizeProsemirrorJson(parseBlockContent(resolvedBlockData));
             if (isRawMarkdownInProsemirror(parsed)) {
               parsed = convertRawMarkdownProsemirror(parsed);
               try {

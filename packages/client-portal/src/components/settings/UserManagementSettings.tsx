@@ -245,9 +245,19 @@ export function UserManagementSettings() {
 
     setIsDeleteProcessing(true);
     try {
-      const updatedUser = await updateUser(userToDelete.user_id, { is_inactive: true });
-      if (updatedUser) {
-        setUsers(prev => prev.map(user => user.user_id === updatedUser.user_id ? updatedUser : user));
+      const result = await updateUser(userToDelete.user_id, { is_inactive: true });
+      if (!result.success) {
+        const errorKeys: Record<typeof result.code, string> = {
+          EMAIL_ALREADY_EXISTS: 'clientSettings.users.emailAlreadyExists',
+          REPORTS_TO_SELF: 'clientSettings.users.reportsToSelf',
+          REPORTS_TO_CYCLE: 'clientSettings.users.reportsToCycle',
+        };
+        setError(tProfile(errorKeys[result.code], { defaultValue: result.error }));
+        return;
+      }
+      if (result.user) {
+        const updated = result.user;
+        setUsers(prev => prev.map(user => user.user_id === updated.user_id ? updated : user));
       }
       resetDeleteState();
     } catch (error) {

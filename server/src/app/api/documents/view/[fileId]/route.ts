@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex } from 'server/src/lib/db';
+import { withTransaction } from '@alga-psa/db';
 import { getConnection } from '@/lib/db/db';
 import { StorageProviderFactory } from '@alga-psa/storage';
 import { FileStoreModel } from 'server/src/models/storage';
@@ -7,6 +8,7 @@ import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { ApiKeyServiceForApi } from 'server/src/lib/services/apiKeyServiceForApi';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { runWithTenant } from 'server/src/lib/db';
+import { getAuthorizedDocumentByFileId } from '@alga-psa/documents/actions/documentActions';
 
 export async function GET(
   request: NextRequest,
@@ -109,230 +111,16 @@ export async function GET(
     }
 
     // --- Permission Check ---
-    let hasPermission = false;
-    let associatedClientId: string | null = null;
-    let userClientId: string | null = null;
-    let associatedContactId: string | null = null;
-    let associatedUserId: string | null = null;
-    let associatedTenantId: string | null = null;
-    let associatedProjectTaskId: string | null = null;
-    let associatedContractId: string | null = null;
-    const associatedTicketIds = new Set<string>();
-
-    // 0. If it's a tenant logo, grant public access
-    if (isTenantLogo) {
-        hasPermission = true;
-    }
-    // 1. Check if user is internal - they have full access
-    else if (user && user.user_type === 'internal') {
-        hasPermission = true;
-        // Internal user has full access
-    } else if (user) {
-        // 2. Find the document record linked to this file_id
-        const documentRecord = await knex('documents')
-          .select('document_id', 'is_client_visible')
-          .where({ file_id: fileId, tenant })
-          .first();
-
-        if (documentRecord) {
-          // For client users accessing via Documents Hub (not inline ticket display),
-          // require is_client_visible = true
-          const isClientUser = user.user_type === 'client';
-
-          // Find all associations for this document
-          const associations = await knex('document_associations')
-            .select('entity_id', 'entity_type')
-            .where({
-              document_id: documentRecord.document_id,
-              tenant: tenant
-            });
-
-          // Check each association
-          for (const assoc of associations) {
-            if (assoc.entity_type === 'client') {
-              associatedClientId = assoc.entity_id;
-            } else if (assoc.entity_type === 'contact') {
-              associatedContactId = assoc.entity_id;
-            } else if (assoc.entity_type === 'user') {
-              associatedUserId = assoc.entity_id;
-            } else if (assoc.entity_type === 'tenant') {
-              associatedTenantId = assoc.entity_id;
-            } else if (assoc.entity_type === 'project_task') {
-              associatedProjectTaskId = assoc.entity_id;
-            } else if (assoc.entity_type === 'contract') {
-              associatedContractId = assoc.entity_id;
-            } else if (assoc.entity_type === 'ticket' && assoc.entity_id) {
-              associatedTicketIds.add(assoc.entity_id);
-            }
-          }
-
-          // Check if this is a tenant logo - all users in the tenant can view it
-          if (associatedTenantId === user.tenant) {
-            hasPermission = true;
-            // User accessing tenant logo
-          }
-          // Check if this is the user's own avatar
-          else if (associatedUserId === user.user_id) {
-            hasPermission = true;
-            // User accessing their own avatar
-          }
-          // Check if this is the user's own contact avatar
-          else if (associatedContactId === user.contact_id) {
-            hasPermission = true;
-            // User accessing their linked contact avatar
-          }
-          // Check client association
-          else if (associatedClientId && user.contact_id) {
-            // Fetch the user's client_id via their contact record
-            const contactRecord = await knex('contacts')
-              .select('client_id')
-              .where({ contact_name_id: user.contact_id, tenant })
-              .first();
-
-            userClientId = contactRecord?.client_id ?? null;
-
-            // Allow access if the user's client matches the document's associated client
-            // For client users, also require is_client_visible = true
-            if (userClientId === associatedClientId) {
-              if (!isClientUser || documentRecord.is_client_visible) {
-                hasPermission = true;
-                // Access granted via client association
-              }
-            }
-          }
-
-          // New permission check: Allow any user within the same tenant to view user avatars
-          if (!hasPermission && associatedUserId) {
-              const associatedUser = await knex('users')
-                  .select('tenant')
-                  .where({ user_id: associatedUserId })
-                  .first();
-
-              if (associatedUser && associatedUser.tenant === user.tenant) {
-                  hasPermission = true;
-                  // Access granted for user avatar within same tenant
-              }
-          }
-
-          // Allow any user within the same tenant to view team avatars
-          if (!hasPermission) {
-              const teamAssoc = associations.find((a: { entity_type: string }) => a.entity_type === 'team');
-              if (teamAssoc) {
-                  const associatedTeam = await knex('teams')
-                      .select('tenant')
-                      .where({ team_id: teamAssoc.entity_id })
-                      .first();
-
-                  if (associatedTeam && associatedTeam.tenant === user.tenant) {
-                      hasPermission = true;
-                      console.log(`User ${user.user_id} granted access to team avatar ${fileId} within the same tenant`);
-                  }
-              }
-          }
-
-          // Check project_task association - verify client owns the project
-          if (!hasPermission && associatedProjectTaskId && user.contact_id) {
-              // Get user's client_id if not already fetched
-              if (!userClientId) {
-                  const contactRecord = await knex('contacts')
-                      .select('client_id')
-                      .where({ contact_name_id: user.contact_id, tenant })
-                      .first();
-                  userClientId = contactRecord?.client_id ?? null;
-              }
-
-              if (userClientId) {
-                  // Check if this task belongs to a project owned by the user's client
-                  const projectCheck = await knex('project_tasks as pt')
-                      .join('project_phases as pp', function() {
-                          this.on('pt.phase_id', 'pp.phase_id').andOn('pt.tenant', 'pp.tenant');
-                      })
-                      .join('projects as p', function() {
-                          this.on('pp.project_id', 'p.project_id').andOn('pp.tenant', 'p.tenant');
-                      })
-                      .where({
-                          'pt.task_id': associatedProjectTaskId,
-                          'pt.tenant': tenant,
-                          'p.client_id': userClientId
-                      })
-                      .first();
-
-                  if (projectCheck) {
-                      // For client users, also require is_client_visible = true
-                      if (!isClientUser || documentRecord.is_client_visible) {
-                          hasPermission = true;
-                          // Access granted via project task association
-                      }
-                  }
-              }
-          }
-
-          // Check contract association - verify client owns the contract (billing_plan)
-          if (!hasPermission && associatedContractId && user.contact_id) {
-              // Get user's client_id if not already fetched
-              if (!userClientId) {
-                  const contactRecord = await knex('contacts')
-                      .select('client_id')
-                      .where({ contact_name_id: user.contact_id, tenant })
-                      .first();
-                  userClientId = contactRecord?.client_id ?? null;
-              }
-
-              if (userClientId) {
-                  // Check if this contract (billing_plan) belongs to the user's client
-                  const contractCheck = await knex('billing_plans')
-                      .where({
-                          plan_id: associatedContractId,
-                          tenant: tenant,
-                          company_id: userClientId
-                      })
-                      .first();
-
-                  if (contractCheck) {
-                      // For client users, also require is_client_visible = true
-                      if (!isClientUser || documentRecord.is_client_visible) {
-                          hasPermission = true;
-                          // Access granted via contract association
-                      }
-                  }
-              }
-          }
-
-          // Check ticket association - allow contact/client users when ticket belongs to them
-          // For client users, require is_client_visible = true
-          if (!hasPermission && associatedTicketIds.size > 0 && user.contact_id) {
-              // Get user's client_id if not already fetched
-              if (!userClientId) {
-                  const contactRecord = await knex('contacts')
-                      .select('client_id')
-                      .where({ contact_name_id: user.contact_id, tenant })
-                      .first();
-                  userClientId = contactRecord?.client_id ?? null;
-              }
-
-              const ticketAccessQuery = knex('tickets')
-                .where({ tenant })
-                .whereIn('ticket_id', Array.from(associatedTicketIds))
-                .andWhere(function ticketPermissionScope() {
-                  this.where('contact_name_id', user.contact_id);
-                  if (userClientId) {
-                    this.orWhere('client_id', userClientId);
-                  }
-                })
-                .first('ticket_id');
-
-              const ticketAccess = await ticketAccessQuery;
-              if (ticketAccess?.ticket_id) {
-                  if (!isClientUser || documentRecord.is_client_visible) {
-                      hasPermission = true;
-                  }
-              }
-          }
-        }
-    }
-
-    if (!hasPermission) {
-      return new NextResponse('Forbidden', { status: 403 });
+    if (!isTenantLogo) {
+      if (!user || !tenant) {
+        return new NextResponse('Unauthorized', { status: 401 });
+      }
+      const authorizedDocument = await withTransaction(knex, async (trx) =>
+        getAuthorizedDocumentByFileId(trx, tenant, user, fileId)
+      );
+      if (!authorizedDocument) {
+        return new NextResponse('Forbidden', { status: 403 });
+      }
     }
 
     // Check if it's a viewable file type (images, videos, PDFs)

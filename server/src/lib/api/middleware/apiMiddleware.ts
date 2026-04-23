@@ -16,6 +16,7 @@ export interface ApiContext {
   userId: string;
   tenant: string;
   user?: any;
+  apiKeyId?: string;
   kind?: 'system' | 'user';
 }
 

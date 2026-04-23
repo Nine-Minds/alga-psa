@@ -241,6 +241,14 @@ export class QuoteService extends BaseService<IQuote> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      const item = await trx('quote_items')
+        .where({ tenant: context.tenant, quote_item_id: itemId })
+        .first<{ quote_id: string }>('quote_id');
+
+      if (!item || item.quote_id !== quoteId) {
+        throw new Error(`Quote item ${itemId} was not found for quote ${quoteId}`);
+      }
+
       // QuoteItem.update handles recalculation internally
       return QuoteItem.update(trx, context.tenant, itemId, {
         ...data,
@@ -253,6 +261,14 @@ export class QuoteService extends BaseService<IQuote> {
     const { knex } = await this.getKnex();
 
     await withTransaction(knex, async (trx) => {
+      const item = await trx('quote_items')
+        .where({ tenant: context.tenant, quote_item_id: itemId })
+        .first<{ quote_id: string }>('quote_id');
+
+      if (!item || item.quote_id !== quoteId) {
+        throw new Error(`Quote item ${itemId} was not found for quote ${quoteId}`);
+      }
+
       // QuoteItem.delete handles reordering and recalculation internally
       await QuoteItem.delete(trx, context.tenant, itemId);
     });

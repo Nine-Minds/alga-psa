@@ -1,0 +1,146 @@
+[
+  {
+    "id": "F001",
+    "description": "Document this plan as a follow-up remediation to `2026-04-21-premium-abac-authorization-kernel` and map each remediation item back to the original feature/test IDs it corrects.",
+    "implemented": true,
+    "prdRefs": ["Summary", "Data / API / Integrations", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F002",
+    "description": "Change draft-editor read flows so they do not create draft revisions or any other write-side effects for read-only users.",
+    "implemented": true,
+    "prdRefs": ["Problem", "UX / UI Notes", "Functional Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F003",
+    "description": "Scope bundle rule updates to the target tenant, bundle, and active draft revision so published or unrelated rules cannot be mutated through draft actions.",
+    "implemented": true,
+    "prdRefs": ["Problem", "Functional Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F004",
+    "description": "Scope bundle rule deletes to the target tenant, bundle, and active draft revision so published or unrelated rules cannot be removed through draft actions.",
+    "implemented": true,
+    "prdRefs": ["Problem", "Functional Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F005",
+    "description": "Add or tighten data-model integrity constraints needed to support draft/publish isolation where the current schema does not fully enforce revision/bundle consistency.",
+    "implemented": true,
+    "prdRefs": ["Problem", "Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F006",
+    "description": "Persist, normalize, and load `selectedClientIds` from bundle rule config into runtime bundle-rule evaluation.",
+    "implemented": true,
+    "prdRefs": ["Problem", "Functional Requirements"]
+  },
+  {
+    "id": "F007",
+    "description": "Persist, normalize, and load `selectedBoardIds` from bundle rule config into runtime bundle-rule evaluation.",
+    "implemented": true,
+    "prdRefs": ["Problem", "Functional Requirements"]
+  },
+  {
+    "id": "F008",
+    "description": "Update bundle-provider evaluation so `selected_clients` and `selected_boards` templates use rule-level configured IDs during runtime authorization decisions.",
+    "implemented": true,
+    "prdRefs": ["Problem", "Functional Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F009",
+    "description": "Publish the initial revision when seeding starter bundles so seeded bundles are immediately enforceable through the normal published-revision path.",
+    "implemented": true,
+    "prdRefs": ["Problem", "Functional Requirements", "UX / UI Notes"]
+  },
+  {
+    "id": "F010",
+    "description": "Align migrated time/delegation premium bundle evaluation with the configured Time resource key used by the bundle catalog/editor.",
+    "implemented": true,
+    "prdRefs": ["Problem", "Functional Requirements"]
+  },
+  {
+    "id": "F011",
+    "description": "Correct simulator billing-record lookup so it uses the same record family as the migrated billing authorization path under review.",
+    "implemented": true,
+    "prdRefs": ["Problem", "Functional Requirements"]
+  },
+  {
+    "id": "F012",
+    "description": "Improve simulator fidelity so supported resource-family simulations include the relevant builtin resource-specific invariants rather than only RBAC plus bundle overlays.",
+    "implemented": true,
+    "prdRefs": ["Problem", "Functional Requirements", "Non-functional Requirements"]
+  },
+  {
+    "id": "F013",
+    "description": "If builtin simulator fidelity cannot be fully implemented for some resource families in this follow-up, explicitly constrain simulator support so unsupported scenarios are not presented as trustworthy.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Open Questions", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F014",
+    "description": "Normalize API authorization subject shaping so client and portfolio identifiers are read consistently from the API user context used in kernel evaluation.",
+    "implemented": true,
+    "prdRefs": ["Problem", "Functional Requirements"]
+  },
+  {
+    "id": "F015",
+    "description": "Remediate migrated API ticket list pagination so authorization narrowing does not produce misleading totals or unreachable authorized records.",
+    "implemented": true,
+    "prdRefs": ["Problem", "Functional Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F016",
+    "description": "Remediate migrated API project list pagination so authorization narrowing does not produce misleading totals or unreachable authorized records.",
+    "implemented": true,
+    "prdRefs": ["Problem", "Functional Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F017",
+    "description": "Remediate migrated API quote list pagination so authorization narrowing does not produce misleading totals or unreachable authorized records.",
+    "implemented": true,
+    "prdRefs": ["Problem", "Functional Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F018",
+    "description": "Preserve fail-closed behavior while fixing API pagination semantics; remediation must not broaden access or leak unauthorized totals.",
+    "implemented": true,
+    "prdRefs": ["Security / Permissions", "Non-functional Requirements"]
+  },
+  {
+    "id": "F019",
+    "description": "Add regression coverage proving draft-only rule mutations cannot touch published or out-of-scope rules.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F020",
+    "description": "Add regression coverage proving selected-client and selected-board configured rule values are honored by runtime bundle evaluation.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F021",
+    "description": "Add regression coverage proving seeded starter bundles create enforceable published revisions.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Functional Requirements"]
+  },
+  {
+    "id": "F022",
+    "description": "Add regression coverage proving premium Time bundle rules match and narrow the migrated time/delegation paths as intended.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Functional Requirements"]
+  },
+  {
+    "id": "F023",
+    "description": "Add regression coverage proving simulator billing lookup and builtin-rule fidelity are aligned with supported runtime behavior.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Functional Requirements", "Non-functional Requirements"]
+  },
+  {
+    "id": "F024",
+    "description": "Add regression coverage proving migrated API list pagination semantics remain coherent under authorization narrowing for tickets, projects, and quotes.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  }
+]

@@ -55,7 +55,9 @@ jobs:
           NEXT_PUBLIC_EDITION: enterprise
           NODE_OPTIONS: '--max-old-space-size=8192'
           USE_PREBUILT: 'true'
-        run: npx nx build server --output-style=static
+        run: |
+          npx nx build-deps server --output-style=static
+          npx nx build server --output-style=static
 
       - name: "Guard: legacy workflows shims removed"
         run: node scripts/guard-no-legacy-workflows-shims.mjs

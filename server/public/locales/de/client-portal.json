@@ -346,7 +346,10 @@
       "userNotFound": "Benutzer nicht gefunden",
       "loadError": "Profil konnte nicht geladen werden",
       "loading": "Profil wird geladen...",
-      "avatarDescription": "Dieses Avatar wird dem MSP-Team angezeigt, wenn es deine Kontaktinformationen ansieht."
+      "avatarDescription": "Dieses Avatar wird dem MSP-Team angezeigt, wenn es deine Kontaktinformationen ansieht.",
+      "emailAlreadyExists": "Ein Benutzer mit dieser E-Mail-Adresse existiert bereits",
+      "reportsToSelf": "Ein Benutzer kann sich nicht selbst als Vorgesetzten zuweisen",
+      "reportsToCycle": "Dies würde eine zirkuläre Berichtskette erzeugen"
     },
     "imageUpload": {
       "uploadAvatar": "Avatar hochladen",
@@ -447,7 +450,10 @@
       "loadError": "Benutzer konnten nicht geladen werden",
       "emailExists": "Ein Kontakt mit dieser E-Mail-Adresse existiert bereits",
       "createError": "Benutzer konnte nicht erstellt werden",
-      "deleteError": "Benutzer konnte nicht gelöscht werden"
+      "deleteError": "Benutzer konnte nicht gelöscht werden",
+      "emailAlreadyExists": "Ein Benutzer mit dieser E-Mail-Adresse existiert bereits",
+      "reportsToSelf": "Ein Benutzer kann sich nicht selbst als Vorgesetzten zuweisen",
+      "reportsToCycle": "Dies würde eine zirkuläre Berichtskette erzeugen"
     },
     "visibilityGroups": {
       "title": "Sichtbarkeitsgruppen",

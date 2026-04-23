@@ -19,6 +19,7 @@ import {
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { EditorToolbar } from './EditorToolbar';
 import styles from './DocumentEditor.module.css';
 
@@ -134,7 +135,7 @@ export function DocumentEditor({
           blockData = initialContentRef.current;
         } else {
           const content = await getBlockContent(documentId);
-          blockData = content?.block_data ?? null;
+          blockData = content && !isActionPermissionError(content) ? content.block_data : null;
         }
 
         if (blockData) {

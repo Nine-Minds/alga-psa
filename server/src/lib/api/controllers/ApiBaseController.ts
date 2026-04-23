@@ -79,7 +79,8 @@ export abstract class ApiBaseController {
     apiRequest.context = {
       userId: keyRecord.user_id,
       tenant: keyRecord.tenant,
-      user
+      user,
+      apiKeyId: keyRecord.api_key_id,
     };
 
     return apiRequest;

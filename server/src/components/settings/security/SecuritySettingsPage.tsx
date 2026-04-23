@@ -45,7 +45,7 @@ function PoliciesLoading() {
   return <SettingsTabSkeleton title={t('security.tabs.policies', { defaultValue: 'Policies' })} description={t('security.loading.policies', { defaultValue: 'Loading policy configuration...' })} showTextArea={true} showTable={true} noCard={true} />;
 }
 
-const PolicyManagement = dynamic(() => import('@alga-psa/auth/components/settings/policy/PolicyManagement'), {
+const PolicyManagement = dynamic(() => import('@enterprise/components/settings/policy/PolicyManagement'), {
   loading: PoliciesLoading,
   ssr: false
 });

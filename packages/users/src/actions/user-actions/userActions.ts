@@ -23,27 +23,27 @@ interface ActionResult {
   error?: string;
 }
 
+export type AddUserErrorCode =
+  | 'ROLE_REQUIRED'
+  | 'INVALID_ROLE'
+  | 'ROLE_MSP_NOT_ALLOWED_FOR_CLIENT'
+  | 'ROLE_CLIENT_NOT_ALLOWED_FOR_MSP'
+  | 'EMAIL_ALREADY_EXISTS'
+  | 'LICENSE_LIMIT_REACHED'
+  | 'SOLO_PLAN_LIMIT';
+
 type AddUserResult =
   | { success: true; user: IUser }
-  | { success: false; error: string };
+  | { success: false; code: AddUserErrorCode; error: string };
 
-const SOLO_USER_LIMIT_MESSAGE = 'Solo plan is limited to 1 user. Upgrade to Pro to add more users.';
+export type UpdateUserErrorCode =
+  | 'EMAIL_ALREADY_EXISTS'
+  | 'REPORTS_TO_SELF'
+  | 'REPORTS_TO_CYCLE';
 
-const ADD_USER_VALIDATION_ERRORS = new Set([
-  'Role is required',
-  'Invalid role',
-  'Cannot assign MSP role to client portal user',
-  'Cannot assign client portal role to MSP user',
-  'A user with this email address already exists',
-  "You've reached your MSP user license limit.",
-  SOLO_USER_LIMIT_MESSAGE,
-]);
-
-const UPDATE_USER_VALIDATION_ERRORS = new Set([
-  'A user with this email address already exists',
-  'reports_to cannot reference the user itself',
-  'reports_to would create a circular reporting chain',
-]);
+export type UpdateUserResult =
+  | { success: true; user: IUserWithRoles | null }
+  | { success: false; code: UpdateUserErrorCode; error: string };
 
 const getErrorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : '';
@@ -118,7 +118,7 @@ export const addUser = withAuth(async (
       }
 
       if (!userData.roleId) {
-        return { success: false, error: 'Role is required' };
+        return { success: false, code: 'ROLE_REQUIRED', error: 'Role is required' };
       }
 
       // Validate that the role exists
@@ -127,22 +127,34 @@ export const addUser = withAuth(async (
         .first();
 
       if (!role) {
-        return { success: false, error: 'Invalid role' };
+        return { success: false, code: 'INVALID_ROLE', error: 'Invalid role' };
       }
 
       // Validate role matches user type
       const isClientUser = userData.userType === 'client';
       if (isClientUser && !role.client) {
-        return { success: false, error: 'Cannot assign MSP role to client portal user' };
+        return {
+          success: false,
+          code: 'ROLE_MSP_NOT_ALLOWED_FOR_CLIENT',
+          error: 'Cannot assign MSP role to client portal user',
+        };
       }
       if (!isClientUser && !role.msp) {
-        return { success: false, error: 'Cannot assign client portal role to MSP user' };
+        return {
+          success: false,
+          code: 'ROLE_CLIENT_NOT_ALLOWED_FOR_MSP',
+          error: 'Cannot assign client portal role to MSP user',
+        };
       }
 
       // Check if email already exists globally
       const emailExists = await checkEmailExistsGlobally(userData.email);
       if (emailExists) {
-        return { success: false, error: 'A user with this email address already exists' };
+        return {
+          success: false,
+          code: 'EMAIL_ALREADY_EXISTS',
+          error: 'A user with this email address already exists',
+        };
       }
 
       // Check license limits for  MSP (internal) users
@@ -168,11 +180,19 @@ export const addUser = withAuth(async (
         const plan = tenantRow.plan as string | null | undefined;
 
         if (plan === 'solo' && used >= 1) {
-          return { success: false, error: SOLO_USER_LIMIT_MESSAGE };
+          return {
+            success: false,
+            code: 'SOLO_PLAN_LIMIT',
+            error: 'Solo plan is limited to 1 user. Upgrade to Pro to add more users.',
+          };
         }
 
         if (limit !== null && used >= limit) {
-          return { success: false, error: "You've reached your MSP user license limit." };
+          return {
+            success: false,
+            code: 'LICENSE_LIMIT_REACHED',
+            error: "You've reached your MSP user license limit.",
+          };
         }
 
       }
@@ -211,9 +231,6 @@ export const addUser = withAuth(async (
   } catch (error: unknown) {
     logger.error('Error adding user:', error);
     const message = getErrorMessage(error);
-    if (ADD_USER_VALIDATION_ERRORS.has(message)) {
-      return { success: false, error: message };
-    }
     if (message === 'Permission denied: Cannot create user') {
       throw error;
     }
@@ -310,10 +327,10 @@ export const updateUser = withAuth(async (
   { tenant },
   userId: string,
   userData: Partial<IUser>
-): Promise<IUserWithRoles | null> => {
+): Promise<UpdateUserResult> => {
   try {
     const { knex } = await createTenantKnex();
-    return await withTransaction(knex, async (trx) => {
+    return await withTransaction(knex, async (trx): Promise<UpdateUserResult> => {
       // Permission Check: User can update their own profile OR have user:update permission
       const isOwnProfile = currentUser.user_id === userId;
 
@@ -332,13 +349,21 @@ export const updateUser = withAuth(async (
 
       if (userData.reports_to !== undefined) {
         if (userData.reports_to === userId) {
-          throw new Error('reports_to cannot reference the user itself');
+          return {
+            success: false,
+            code: 'REPORTS_TO_SELF',
+            error: 'reports_to cannot reference the user itself',
+          };
         }
 
         if (userData.reports_to) {
           const wouldCreateCycle = await User.isInReportsToChain(trx, userId, userData.reports_to);
           if (wouldCreateCycle) {
-            throw new Error('reports_to would create a circular reporting chain');
+            return {
+              success: false,
+              code: 'REPORTS_TO_CYCLE',
+              error: 'reports_to would create a circular reporting chain',
+            };
           }
         }
       }
@@ -351,7 +376,11 @@ export const updateUser = withAuth(async (
         });
 
         if (existingUser) {
-          throw new Error('A user with this email address already exists');
+          return {
+            success: false,
+            code: 'EMAIL_ALREADY_EXISTS',
+            error: 'A user with this email address already exists',
+          };
         }
 
         normalizedUserData = {
@@ -362,15 +391,12 @@ export const updateUser = withAuth(async (
 
       await User.update(trx, userId, normalizedUserData);
       const updatedUser = await User.getUserWithRoles(trx, userId);
-      return updatedUser || null;
+      return { success: true, user: updatedUser || null };
     });
   } catch (error) {
     logger.error(`Failed to update user with id ${userId}:`, error);
     const message = getErrorMessage(error);
-    if (
-      UPDATE_USER_VALIDATION_ERRORS.has(message) ||
-      message === 'Permission denied: Cannot update user'
-    ) {
+    if (message === 'Permission denied: Cannot update user') {
       throw error;
     }
     throw new Error('Failed to update user');

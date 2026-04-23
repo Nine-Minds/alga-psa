@@ -14,17 +14,28 @@ const getConnectionMock = vi.hoisted(() => vi.fn());
 const getCurrentUserMock = vi.hoisted(() => vi.fn());
 const createProviderMock = vi.hoisted(() => vi.fn());
 const fileStoreFindByIdMock = vi.hoisted(() => vi.fn());
+const getAuthorizedDocumentByFileIdMock = vi.hoisted(() => vi.fn());
 
 vi.mock('server/src/lib/db', () => ({
   createTenantKnex: createTenantKnexMock,
+  withTransaction: async (knex: any, callback: (trx: any) => Promise<unknown>) => callback(knex),
+  runWithTenant: async (_tenant: string, callback: () => Promise<unknown>) => callback(),
 }));
 
 vi.mock('@/lib/db/db', () => ({
   getConnection: getConnectionMock,
 }));
 
-vi.mock('@alga-psa/users/actions', () => ({
+vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: getCurrentUserMock,
+}));
+
+vi.mock('@alga-psa/documents/actions/documentActions', () => ({
+  getAuthorizedDocumentByFileId: getAuthorizedDocumentByFileIdMock,
+}));
+
+vi.mock('@alga-psa/db', () => ({
+  withTransaction: async (knex: any, callback: (trx: any) => Promise<unknown>) => callback(knex),
 }));
 
 vi.mock('@alga-psa/storage', () => ({
@@ -167,6 +178,16 @@ describe('documents view route ticket authorization contract', () => {
       tenant: 'tenant-1',
       knex: makeKnexMock(scenario),
     });
+    getAuthorizedDocumentByFileIdMock.mockImplementation(async () => (
+      scenario.allowTicketAccess
+        ? {
+            document_id: 'doc-1',
+            file_id: 'file-1',
+            document_name: 'Ticket screenshot',
+            is_client_visible: true,
+          }
+        : null
+    ));
     createProviderMock.mockResolvedValue({
       getReadStream: vi.fn().mockResolvedValue(makeReadableStream()),
     });

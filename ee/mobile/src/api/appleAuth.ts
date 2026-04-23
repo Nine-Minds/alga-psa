@@ -34,3 +34,58 @@ export function signInWithAppleOnServer(
     timeoutMs: 15_000,
   });
 }
+
+/**
+ * Link / unlink an Apple ID to the currently signed-in Alga user. Used from
+ * Settings when the Apple email and Alga email differ, so the unauthenticated
+ * sign-in path can't auto-link by email.
+ */
+
+export type AppleLinkStatus = {
+  linked: boolean;
+  email?: string | null;
+  isPrivateEmail?: boolean;
+};
+
+export function getAppleLinkStatus(
+  client: ApiClient,
+  signal?: AbortSignal,
+): Promise<ApiResult<AppleLinkStatus>> {
+  return client.request<AppleLinkStatus>({
+    method: "GET",
+    path: "/api/v1/mobile/auth/apple/link",
+    signal,
+    timeoutMs: 10_000,
+  });
+}
+
+export type LinkAppleIdRequest = {
+  identityToken: string;
+  authorizationCode?: string;
+};
+
+export function linkAppleId(
+  client: ApiClient,
+  body: LinkAppleIdRequest,
+  signal?: AbortSignal,
+): Promise<ApiResult<AppleLinkStatus>> {
+  return client.request<AppleLinkStatus>({
+    method: "POST",
+    path: "/api/v1/mobile/auth/apple/link",
+    body,
+    signal,
+    timeoutMs: 15_000,
+  });
+}
+
+export function unlinkAppleId(
+  client: ApiClient,
+  signal?: AbortSignal,
+): Promise<ApiResult<{ linked: false }>> {
+  return client.request<{ linked: false }>({
+    method: "DELETE",
+    path: "/api/v1/mobile/auth/apple/link",
+    signal,
+    timeoutMs: 15_000,
+  });
+}

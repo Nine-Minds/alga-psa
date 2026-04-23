@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@alga-psa/authorization": "*",
     "google-auth-library": "^10.6.1",
     "openai": "^4.104.0"
   }

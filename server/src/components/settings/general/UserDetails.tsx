@@ -237,9 +237,18 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
           updatedUserData.reports_to = reportsTo || null;
         }
         
-        const updatedUser = await updateUser(user.user_id, updatedUserData);
-        if (updatedUser) {
-          setUser(updatedUser);
+        const result = await updateUser(user.user_id, updatedUserData);
+        if (!result.success) {
+          const errorKeys: Record<typeof result.code, string> = {
+            EMAIL_ALREADY_EXISTS: 'userDetails.messages.error.emailAlreadyExists',
+            REPORTS_TO_SELF: 'userDetails.messages.error.reportsToSelf',
+            REPORTS_TO_CYCLE: 'userDetails.messages.error.reportsToCycle',
+          };
+          toast.error(t(errorKeys[result.code], { defaultValue: result.error }));
+          return;
+        }
+        if (result.user) {
+          setUser(result.user);
           onUpdate();
           closeDrawer();
           toast.success(t('userDetails.messages.success.userUpdated'));

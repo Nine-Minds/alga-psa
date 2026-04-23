@@ -3,6 +3,8 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { StorageError, StorageProviderFactory } from '@alga-psa/storage';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
+import { withTransaction } from '@alga-psa/db';
+import { getAuthorizedDocumentById } from '@alga-psa/documents/actions/documentActions';
 
 /**
  * GET /api/documents/[documentId]/thumbnail
@@ -38,11 +40,9 @@ export async function GET(
       return new NextResponse('No tenant found', { status: 400 });
     }
 
-    // Get document with thumbnail_file_id
-    const document = await knex('documents')
-      .where({ document_id: documentId, tenant })
-      .select('thumbnail_file_id', 'preview_generated_at', 'mime_type', 'file_id')
-      .first();
+    const document = await withTransaction(knex, async (trx) =>
+      getAuthorizedDocumentById(trx, tenant, currentUser as any, documentId)
+    );
 
     if (!document) {
       return new NextResponse('Document not found', { status: 404 });

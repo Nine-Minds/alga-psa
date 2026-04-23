@@ -346,7 +346,10 @@
       "userNotFound": "11111",
       "loadError": "11111",
       "loading": "11111",
-      "avatarDescription": "11111"
+      "avatarDescription": "11111",
+      "emailAlreadyExists": "11111",
+      "reportsToSelf": "11111",
+      "reportsToCycle": "11111"
     },
     "imageUpload": {
       "uploadAvatar": "11111",
@@ -447,7 +450,10 @@
       "loadError": "11111",
       "emailExists": "11111",
       "createError": "11111",
-      "deleteError": "11111"
+      "deleteError": "11111",
+      "emailAlreadyExists": "11111",
+      "reportsToSelf": "11111",
+      "reportsToCycle": "11111"
     },
     "messages": {
       "saveChanges": "11111",

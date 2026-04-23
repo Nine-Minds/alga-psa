@@ -64,6 +64,7 @@ const FEATURE_DISPLAY_NAMES: Record<TIER_FEATURES, string> = {
   [TIER_FEATURES.ENTRA_SYNC]: 'Microsoft Entra Sync — auto-discover tenants and sync contacts from Entra ID',
   [TIER_FEATURES.CIPP]: 'CIPP Integration — connect your CIPP instance for multi-tenant Entra management',
   [TIER_FEATURES.TEAMS_INTEGRATION]: 'Microsoft Teams — meetings integration and Teams bot for ticket notifications',
+  [TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES]: 'Advanced Authorization Bundles — create and manage premium ABAC narrowing bundles',
 };
 
 export default function AccountManagement() {

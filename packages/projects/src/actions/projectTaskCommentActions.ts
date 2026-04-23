@@ -8,6 +8,64 @@ import { publishEvent } from '@alga-psa/event-bus/publishers';
 import type { IProjectTaskComment, IProjectTaskCommentWithUser } from '@alga-psa/types';
 import { getEntityImageUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { Knex } from 'knex';
+import {
+  BuiltinAuthorizationKernelProvider,
+  RequestLocalAuthorizationCache,
+  createAuthorizationKernel,
+} from '@alga-psa/authorization/kernel';
+
+function buildCommentAuthorizationSubject(user: { user_id: string; user_type: 'internal' | 'client' }, tenant: string) {
+  return {
+    tenant,
+    userId: user.user_id,
+    userType: user.user_type,
+    roleIds: [],
+    teamIds: [],
+    managedUserIds: [],
+    portfolioClientIds: [],
+    clientId: null,
+  };
+}
+
+async function assertOwnCommentOrInternalUser(
+  trx: Knex.Transaction,
+  user: { user_id: string; user_type: 'internal' | 'client' },
+  tenant: string,
+  taskCommentId: string,
+  ownerUserId: string,
+  action: 'update' | 'delete'
+): Promise<void> {
+  if (user.user_type === 'internal') {
+    return;
+  }
+
+  const kernel = createAuthorizationKernel({
+    builtinProvider: new BuiltinAuthorizationKernelProvider({
+      relationshipRules: [{ template: 'own' }],
+    }),
+    rbacEvaluator: async () => true,
+  });
+
+  const decision = await kernel.authorizeResource({
+    subject: buildCommentAuthorizationSubject(user, tenant),
+    resource: {
+      type: 'project_task_comment',
+      action,
+      id: taskCommentId,
+    },
+    record: {
+      id: taskCommentId,
+      ownerUserId,
+    },
+    requestCache: new RequestLocalAuthorizationCache(),
+    knex: trx,
+  });
+
+  if (!decision.allowed) {
+    const verb = action === 'update' ? 'edit' : 'delete';
+    throw new Error(`You can only ${verb} your own comments`);
+  }
+}
 
 /**
  * Create a new task comment
@@ -149,16 +207,7 @@ export const updateTaskComment = withAuth(async (
       throw new Error('Comment not found');
     }
 
-    // Permission check: own comment OR internal user
-    if (existingComment.user_id !== userId) {
-      const userRecord = await trx('users')
-        .where({ user_id: userId, tenant })
-        .first();
-
-      if (!userRecord || userRecord.user_type !== 'internal') {
-        throw new Error('You can only edit your own comments');
-      }
-    }
+    await assertOwnCommentOrInternalUser(trx, user, tenant, taskCommentId, existingComment.user_id, 'update');
 
     // Convert updated note to markdown
     const markdownContent = convertBlockNoteToMarkdown(updates.note);
@@ -226,16 +275,7 @@ export const deleteTaskComment = withAuth(async (
       throw new Error('Comment not found');
     }
 
-    // Permission check: own comment OR internal user
-    if (existingComment.user_id !== userId) {
-      const userRecord = await trx('users')
-        .where({ user_id: userId, tenant })
-        .first();
-
-      if (!userRecord || userRecord.user_type !== 'internal') {
-        throw new Error('You can only delete your own comments');
-      }
-    }
+    await assertOwnCommentOrInternalUser(trx, user, tenant, taskCommentId, existingComment.user_id, 'delete');
 
     // Delete reactions before comment (CitusDB doesn't support ON DELETE CASCADE)
     await trx('project_task_comment_reactions')

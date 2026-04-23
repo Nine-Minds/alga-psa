@@ -6,6 +6,11 @@ import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { runWithTenant } from '@alga-psa/db';
+import { withTransaction } from '@alga-psa/db';
+import {
+  getAuthorizedDocumentByFileId,
+  getAuthorizedDocumentById,
+} from '@alga-psa/documents/actions/documentActions';
 
 export async function GET(
   _request: NextRequest,
@@ -61,13 +66,14 @@ export async function GET(
       }
 
       const { knex } = await createTenantKnex();
-      const document = await knex('documents')
-        .where({ tenant: tenantId })
-        .andWhere(function () {
-          this.where({ document_id: documentId }).orWhere({ file_id: documentId });
-        })
-        .select('file_id', 'document_name')
-        .first();
+      const document = await withTransaction(knex, async (trx) => {
+        const byDocumentId = await getAuthorizedDocumentById(trx, tenantId, currentUser as any, documentId);
+        if (byDocumentId) {
+          return byDocumentId;
+        }
+
+        return getAuthorizedDocumentByFileId(trx, tenantId, currentUser as any, documentId);
+      });
 
       if (!document || !document.file_id) {
         return NextResponse.json({ error: 'Document not found' }, { status: 404 });

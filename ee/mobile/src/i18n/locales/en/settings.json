@@ -45,7 +45,23 @@
     "biometricLock": "Biometric lock",
     "biometricNotSetUp": "Biometrics are not set up on this device.",
     "hideSensitiveNotifications": "Hide sensitive notifications",
-    "hideSensitiveHint": "Applies to future push notifications."
+    "hideSensitiveHint": "Applies to future push notifications.",
+    "appleId": {
+      "label": "Sign in with Apple",
+      "working": "Working…",
+      "connected": "Connected — tap to disconnect",
+      "notConnected": "Not connected — tap to connect",
+      "linkedTitle": "Apple ID connected",
+      "linkedBody": "You can now use Sign in with Apple to sign into this account.",
+      "disconnectTitle": "Disconnect Apple ID?",
+      "disconnectBody": "You'll no longer be able to use Sign in with Apple for this account.",
+      "disconnectConfirm": "Disconnect",
+      "errors": {
+        "linkFailed": "Unable to link your Apple ID. Please try again.",
+        "unlinkFailed": "Unable to disconnect your Apple ID. Please try again.",
+        "alreadyLinkedElsewhere": "This Apple ID is already linked to a different Alga PSA account."
+      }
+    }
   },
   "notifications": {
     "pushNotifications": "Push Notifications",

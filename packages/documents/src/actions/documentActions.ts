@@ -18,6 +18,7 @@ import {
     IDocument,
     IDocumentType,
     ISharedDocumentType,
+    IUser,
     DocumentFilters,
     PreviewResponse,
     DocumentInput,
@@ -30,12 +31,11 @@ import type { IDocumentAssociation, IDocumentAssociationInput, DocumentAssociati
 import { v4 as uuidv4 } from 'uuid';
 import { deleteFile } from './file-actions/fileActions';
 import { NextResponse } from 'next/server';
-import { deleteDocumentContent } from './documentContentActions';
-import { deleteBlockContent } from './documentBlockContentActions';
+// deleteDocumentContent and deleteBlockContent imports removed – content rows are
+// now deleted inline inside the deleteDocument transaction.
 import { deleteEntityWithValidation } from '@alga-psa/core';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { DocumentHandlerRegistry } from '@alga-psa/documents/handlers/DocumentHandlerRegistry';
-import { getEntityTypesForUser } from '../lib/documentPermissionUtils';
 import { generateDocumentPreviews } from '../lib/documentPreviewGenerator';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
@@ -44,6 +44,16 @@ import {
 } from '@alga-psa/workflow-streams';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  BuiltinAuthorizationKernelProvider,
+  BundleAuthorizationKernelProvider,
+  RequestLocalAuthorizationCache,
+  createAuthorizationKernel,
+  type AuthorizationRecord,
+  type AuthorizationSubject,
+  type RelationshipRule,
+} from '@alga-psa/authorization/kernel';
+import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 
 async function loadSharp() {
   try {
@@ -115,6 +125,496 @@ async function ensureEntityFoldersInitializedInternal(
   }
 }
 
+type UserWithOptionalRoles = IUser & { roles?: Array<{ role_id?: string } | string> };
+
+interface DocumentAssociationRow {
+  document_id: string;
+  entity_id: string;
+  entity_type: string;
+}
+
+interface DocumentAuthorizationInput {
+  document_id: string;
+  created_by?: string | null;
+  is_client_visible?: boolean | null;
+}
+
+function extractRoleIdsFromUser(user: UserWithOptionalRoles): string[] {
+  if (!Array.isArray(user.roles)) {
+    return [];
+  }
+
+  return user.roles
+    .map((role: { role_id?: string } | string) => {
+      if (typeof role === 'string') {
+        return role;
+      }
+      return typeof role?.role_id === 'string' ? role.role_id : null;
+    })
+    .filter((value: string | null): value is string => Boolean(value));
+}
+
+async function resolveAuthorizationSubjectForUser(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: UserWithOptionalRoles
+): Promise<AuthorizationSubject> {
+  let roleIds = extractRoleIdsFromUser(user);
+  if (roleIds.length === 0) {
+    try {
+      const roleRows = await trx('user_roles')
+        .where({ tenant, user_id: user.user_id })
+        .select<{ role_id: string }[]>('role_id');
+      roleIds = roleRows.map((row) => row.role_id);
+    } catch {
+      roleIds = [];
+    }
+  }
+
+  let teamRows: Array<{ team_id: string }> = [];
+  let managedRows: Array<{ user_id: string }> = [];
+  try {
+    teamRows = await trx('team_members')
+      .where({ tenant, user_id: user.user_id })
+      .select<{ team_id: string }[]>('team_id');
+  } catch {
+    teamRows = [];
+  }
+  try {
+    managedRows = await trx('users')
+      .where({ tenant, reports_to: user.user_id })
+      .select<{ user_id: string }[]>('user_id');
+  } catch {
+    managedRows = [];
+  }
+
+  return {
+    tenant,
+    userId: user.user_id,
+    userType: user.user_type,
+    roleIds,
+    teamIds: teamRows.map((row) => row.team_id),
+    managedUserIds: managedRows.map((row) => row.user_id),
+    clientId: user.clientId ?? null,
+    portfolioClientIds: user.clientId ? [user.clientId] : [],
+  };
+}
+
+function applyDocumentRedactions<T extends object>(document: T, redactedFields: string[]): T {
+  if (redactedFields.length === 0) {
+    return document;
+  }
+
+  const redacted = { ...document } as Record<string, unknown>;
+  for (const field of redactedFields) {
+    delete redacted[field];
+  }
+  return redacted as T;
+}
+
+function getDocumentBuiltinRelationshipRules(user: IUser): RelationshipRule[] {
+  if (user.user_type !== 'client') {
+    return [];
+  }
+
+  return [{ template: 'own' }, { template: 'same_client' }];
+}
+
+async function resolveDocumentAuthorizationRecords(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUser,
+  documents: DocumentAuthorizationInput[]
+): Promise<Map<string, AuthorizationRecord>> {
+  const documentIds = documents.map((doc) => doc.document_id);
+  const records = new Map<string, AuthorizationRecord>();
+  if (documentIds.length === 0) {
+    return records;
+  }
+
+  const associations = await trx('document_associations')
+    .where({ tenant })
+    .whereIn('document_id', documentIds)
+    .select<DocumentAssociationRow[]>('document_id', 'entity_id', 'entity_type');
+
+  const associationByDocument = new Map<string, DocumentAssociationRow[]>();
+  for (const association of associations) {
+    const existing = associationByDocument.get(association.document_id) ?? [];
+    existing.push(association);
+    associationByDocument.set(association.document_id, existing);
+  }
+
+  const contactIds = new Set<string>();
+  const ticketIds = new Set<string>();
+  const projectTaskIds = new Set<string>();
+  const contractIds = new Set<string>();
+
+  for (const association of associations) {
+    if (association.entity_type === 'contact') {
+      contactIds.add(association.entity_id);
+    }
+    if (association.entity_type === 'ticket') {
+      ticketIds.add(association.entity_id);
+    }
+    if (association.entity_type === 'project_task') {
+      projectTaskIds.add(association.entity_id);
+    }
+    if (association.entity_type === 'contract') {
+      contractIds.add(association.entity_id);
+    }
+  }
+
+  const [contactClientRows, ticketClientRows, projectTaskClientRows, contractClientRows] = await Promise.all([
+    contactIds.size > 0
+      ? trx('contacts')
+          .where({ tenant })
+          .whereIn('contact_name_id', Array.from(contactIds))
+          .select<{ contact_name_id: string; client_id: string | null }[]>('contact_name_id', 'client_id')
+      : Promise.resolve([]),
+    ticketIds.size > 0
+      ? trx('tickets')
+          .where({ tenant })
+          .whereIn('ticket_id', Array.from(ticketIds))
+          .select<{ ticket_id: string; client_id: string | null }[]>('ticket_id', 'client_id')
+      : Promise.resolve([]),
+    projectTaskIds.size > 0
+      ? trx('project_tasks as pt')
+          .join('project_phases as pp', function joinPhases() {
+            this.on('pt.phase_id', '=', 'pp.phase_id').andOn('pt.tenant', '=', 'pp.tenant');
+          })
+          .join('projects as p', function joinProjects() {
+            this.on('pp.project_id', '=', 'p.project_id').andOn('pp.tenant', '=', 'p.tenant');
+          })
+          .where('pt.tenant', tenant)
+          .whereIn('pt.task_id', Array.from(projectTaskIds))
+          .select<{ task_id: string; client_id: string | null }[]>('pt.task_id', 'p.client_id')
+      : Promise.resolve([]),
+    contractIds.size > 0
+      ? trx('billing_plans')
+          .where({ tenant })
+          .whereIn('plan_id', Array.from(contractIds))
+          .select<{ plan_id: string; company_id: string | null }[]>('plan_id', 'company_id')
+      : Promise.resolve([]),
+  ]);
+
+  const contactClientById = new Map<string, string | null>();
+  for (const row of contactClientRows) {
+    contactClientById.set(row.contact_name_id, row.client_id ?? null);
+  }
+  const ticketClientById = new Map<string, string | null>();
+  for (const row of ticketClientRows) {
+    ticketClientById.set(row.ticket_id, row.client_id ?? null);
+  }
+  const projectTaskClientById = new Map<string, string | null>();
+  for (const row of projectTaskClientRows) {
+    projectTaskClientById.set(row.task_id, row.client_id ?? null);
+  }
+  const contractClientById = new Map<string, string | null>();
+  for (const row of contractClientRows) {
+    contractClientById.set(row.plan_id, row.company_id ?? null);
+  }
+
+  for (const document of documents) {
+    const documentAssociations = associationByDocument.get(document.document_id) ?? [];
+    const directClientAssociation = documentAssociations.find((association) => association.entity_type === 'client');
+    const userAssociations = documentAssociations.filter((association) => association.entity_type === 'user');
+    const teamAssociations = documentAssociations.filter((association) => association.entity_type === 'team');
+    const contactAssociations = documentAssociations.filter((association) => association.entity_type === 'contact');
+    const ticketAssociations = documentAssociations.filter((association) => association.entity_type === 'ticket');
+    const projectTaskAssociations = documentAssociations.filter((association) => association.entity_type === 'project_task');
+    const contractAssociations = documentAssociations.filter((association) => association.entity_type === 'contract');
+
+    const ownerFromUserAssociation = userAssociations[0]?.entity_id ?? null;
+    const ownerViaContactMatch =
+      user.contact_id && contactAssociations.some((association) => association.entity_id === user.contact_id)
+        ? user.user_id
+        : null;
+
+    const clientFromContact =
+      contactAssociations
+        .map((association) => contactClientById.get(association.entity_id))
+        .find((clientId): clientId is string => typeof clientId === 'string') ?? null;
+    const clientFromTicket =
+      ticketAssociations
+        .map((association) => ticketClientById.get(association.entity_id))
+        .find((clientId): clientId is string => typeof clientId === 'string') ?? null;
+    const clientFromTask =
+      projectTaskAssociations
+        .map((association) => projectTaskClientById.get(association.entity_id))
+        .find((clientId): clientId is string => typeof clientId === 'string') ?? null;
+    const clientFromContract =
+      contractAssociations
+        .map((association) => contractClientById.get(association.entity_id))
+        .find((clientId): clientId is string => typeof clientId === 'string') ?? null;
+
+    const clientId =
+      directClientAssociation?.entity_id ??
+      clientFromContact ??
+      clientFromTicket ??
+      clientFromTask ??
+      clientFromContract ??
+      null;
+
+    records.set(document.document_id, {
+      id: document.document_id,
+      ownerUserId: ownerFromUserAssociation ?? ownerViaContactMatch ?? document.created_by ?? null,
+      assignedUserIds: Array.from(new Set(userAssociations.map((association) => association.entity_id))),
+      clientId,
+      teamIds: Array.from(new Set(teamAssociations.map((association) => association.entity_id))),
+      is_client_visible: document.is_client_visible === true,
+    });
+  }
+
+  return records;
+}
+
+export async function authorizeAndRedactDocuments<T extends IDocument>(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUser,
+  documents: T[]
+): Promise<T[]> {
+  if (documents.length === 0) {
+    return [];
+  }
+
+  const authorizationSubject = await resolveAuthorizationSubjectForUser(trx, tenant, user as UserWithOptionalRoles);
+  const relationshipRules = getDocumentBuiltinRelationshipRules(user);
+  const selectedClientIds = user.clientId ? [user.clientId] : undefined;
+  const authorizationKernel = createAuthorizationKernel({
+    builtinProvider: new BuiltinAuthorizationKernelProvider({
+      relationshipRules,
+    }),
+    bundleProvider: new BundleAuthorizationKernelProvider({
+      resolveRules: async (input) => {
+        try {
+          return await resolveBundleNarrowingRulesForEvaluation(trx, input);
+        } catch {
+          return [];
+        }
+      },
+    }),
+    rbacEvaluator: async () => true,
+  });
+  const requestCache = new RequestLocalAuthorizationCache();
+  const authorizationRecords = await resolveDocumentAuthorizationRecords(
+    trx,
+    tenant,
+    user,
+    documents.map((document) => ({
+      document_id: document.document_id,
+      created_by: document.created_by,
+      is_client_visible: document.is_client_visible,
+    }))
+  );
+
+  const decisions = await Promise.all(
+    documents.map(async (document) => {
+      const record = authorizationRecords.get(document.document_id) ?? {
+        id: document.document_id,
+        ownerUserId: document.created_by ?? null,
+        is_client_visible: document.is_client_visible === true,
+      };
+
+      const decision = await authorizationKernel.authorizeResource({
+        subject: authorizationSubject,
+        resource: {
+          type: 'document',
+          action: 'read',
+          id: document.document_id,
+        },
+        record,
+        selectedClientIds,
+        requestCache,
+        knex: trx,
+      });
+
+      const isClientVisible = record.is_client_visible === true;
+      const isOwnedBySubject = record.ownerUserId === authorizationSubject.userId;
+      const deniedByClientVisibility =
+        user.user_type === 'client' && !isOwnedBySubject && !isClientVisible;
+      const allowed = decision.allowed && !deniedByClientVisibility;
+
+      return {
+        allowed,
+        redactedFields: decision.redactedFields,
+      };
+    })
+  );
+
+  const authorizedDocuments: T[] = [];
+  for (let index = 0; index < documents.length; index += 1) {
+    const document = documents[index];
+    const decision = decisions[index];
+    if (!document || !decision?.allowed) {
+      continue;
+    }
+    authorizedDocuments.push(applyDocumentRedactions(document, decision.redactedFields));
+  }
+
+  return authorizedDocuments;
+}
+
+export async function getAuthorizedDocumentByFileId(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUser,
+  fileId: string
+): Promise<IDocument | null> {
+  const document = await trx('documents')
+    .where({ tenant, file_id: fileId })
+    .first();
+
+  if (!document) {
+    return null;
+  }
+
+  const [authorizedDocument] = await authorizeAndRedactDocuments(trx, tenant, user, [document as IDocument]);
+  return authorizedDocument ?? null;
+}
+
+export async function getAuthorizedDocumentById(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUser,
+  documentId: string
+): Promise<IDocument | null> {
+  const document = await trx('documents')
+    .where({ tenant, document_id: documentId })
+    .first();
+
+  if (!document) {
+    return null;
+  }
+
+  const [authorizedDocument] = await authorizeAndRedactDocuments(trx, tenant, user, [document as IDocument]);
+  return authorizedDocument ?? null;
+}
+
+function isActionPermissionErrorResult(value: unknown): value is ActionPermissionError {
+  return Boolean(value) && typeof value === 'object' && 'permissionError' in (value as Record<string, unknown>);
+}
+
+async function assertAuthorizedDocumentSetForMutation(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUser,
+  documentIds: string[],
+  deniedMessage: string = 'Permission denied: Cannot update documents'
+): Promise<IDocument[] | ActionPermissionError> {
+  const uniqueDocumentIds = Array.from(new Set(documentIds.filter((documentId) => typeof documentId === 'string' && documentId.length > 0)));
+  if (uniqueDocumentIds.length === 0) {
+    return [];
+  }
+
+  const documents = await trx('documents')
+    .where({ tenant })
+    .whereIn('document_id', uniqueDocumentIds)
+    .select('document_id', 'created_by', 'is_client_visible');
+
+  if (documents.length !== uniqueDocumentIds.length) {
+    return permissionError(deniedMessage);
+  }
+
+  const authorizedDocuments = await authorizeAndRedactDocuments(
+    trx,
+    tenant,
+    user,
+    documents as IDocument[]
+  );
+
+  if (authorizedDocuments.length !== uniqueDocumentIds.length) {
+    return permissionError(deniedMessage);
+  }
+
+  return authorizedDocuments;
+}
+
+function mapDocumentRowToDocument(doc: any): IDocument {
+  return {
+    document_id: doc.document_id,
+    document_name: doc.document_name,
+    type_id: doc.type_id,
+    shared_type_id: doc.shared_type_id,
+    user_id: doc.user_id ?? doc.created_by,
+    order_number: doc.order_number || 0,
+    created_by: doc.created_by,
+    tenant: doc.tenant,
+    file_id: doc.file_id,
+    storage_path: doc.storage_path,
+    mime_type: doc.mime_type,
+    file_size: doc.file_size,
+    is_client_visible: doc.is_client_visible,
+    created_by_full_name: doc.created_by_full_name,
+    type_name: doc.type_name,
+    type_icon: doc.type_icon,
+    entered_at: doc.entered_at,
+    updated_at: doc.updated_at,
+    edited_by: doc.edited_by,
+    thumbnail_file_id: doc.thumbnail_file_id,
+    preview_file_id: doc.preview_file_id,
+    preview_generated_at: doc.preview_generated_at,
+    folder_path: doc.folder_path,
+  };
+}
+
+async function paginateAuthorizedDocuments(input: {
+  trx: Knex.Transaction;
+  tenant: string;
+  user: IUser;
+  page: number;
+  limit: number;
+  scanLimit?: number;
+  fetchPage: (page: number, limit: number) => Promise<any[]>;
+}): Promise<PaginatedDocumentsResponse> {
+  const requestedPage = Number.isFinite(input.page) && input.page > 0 ? Math.floor(input.page) : 1;
+  const requestedLimit = Number.isFinite(input.limit) && input.limit > 0 ? Math.floor(input.limit) : 15;
+  const scanLimit = Math.max(1, input.scanLimit ?? requestedLimit);
+  const pageOffset = (requestedPage - 1) * requestedLimit;
+  const pageUpperBoundExclusive = pageOffset + requestedLimit;
+
+  const authorizedDocumentsForPage: IDocument[] = [];
+  let authorizedTotalCount = 0;
+  let sourcePage = 1;
+
+  for (;;) {
+    const rows = await input.fetchPage(sourcePage, scanLimit);
+    if (!Array.isArray(rows) || rows.length === 0) {
+      break;
+    }
+
+    const authorizedBatch = await authorizeAndRedactDocuments(
+      input.trx,
+      input.tenant,
+      input.user,
+      rows.map(mapDocumentRowToDocument)
+    );
+
+    for (const document of authorizedBatch) {
+      if (
+        authorizedTotalCount >= pageOffset &&
+        authorizedTotalCount < pageUpperBoundExclusive
+      ) {
+        authorizedDocumentsForPage.push(document);
+      }
+      authorizedTotalCount += 1;
+    }
+
+    if (rows.length < scanLimit) {
+      break;
+    }
+
+    sourcePage += 1;
+  }
+
+  return {
+    documents: authorizedDocumentsForPage,
+    totalCount: authorizedTotalCount,
+    currentPage: requestedPage,
+    totalPages: Math.ceil(authorizedTotalCount / requestedLimit),
+  };
+}
+
 // Add new document
 export const addDocument = withAuth(async (user, { tenant }, data: DocumentInput) => {
   try {
@@ -170,14 +670,25 @@ export const updateDocument = withAuth(async (user, { tenant }, documentId: stri
 
     const { knex } = await createTenantKnex();
 
-    await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const authorizationResult = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const authorizedDocument = await getAuthorizedDocumentById(trx, tenant, user, documentId);
+      if (!authorizedDocument) {
+        return permissionError('Permission denied: Cannot update documents');
+      }
+
       await trx('documents')
         .where({ document_id: documentId, tenant })
         .update({
           ...data,
           updated_at: new Date()
         });
+
+      return null;
     });
+
+    if (isActionPermissionErrorResult(authorizationResult)) {
+      return authorizationResult;
+    }
 
     // Invalidate the preview cache for this document if it exists
     const cache = CacheFactory.getPreviewCache(tenant);
@@ -206,7 +717,26 @@ export const deleteDocument = withAuth(async (
 
   try {
     const { knex } = await createTenantKnex();
+    const authorizedDocumentForDelete = await withTransaction(knex, async (trx: Knex.Transaction) =>
+      getAuthorizedDocumentById(trx, tenant, user, documentId)
+    );
+    if (!authorizedDocumentForDelete) {
+      return {
+        success: false,
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Permission denied: Cannot delete documents',
+        dependencies: [],
+        alternatives: []
+      };
+    }
+
     const result = await deleteEntityWithValidation('document', documentId, knex, tenant, async (trx, tenantId) => {
+      const authorizedDocument = await getAuthorizedDocumentById(trx, tenantId, user, documentId);
+      if (!authorizedDocument) {
+        throw new Error('Permission denied: Cannot delete documents');
+      }
+
       const document = await trx('documents')
         .where({ document_id: documentId, tenant: tenantId })
         .first();
@@ -255,6 +785,16 @@ export const deleteDocument = withAuth(async (
       }));
 
       await DocumentAssociation.deleteByDocument(trx, document.document_id);
+      // Delete associated content rows while the document still exists so that
+      // downstream auth checks in deleteDocumentContent/deleteBlockContent can
+      // resolve the parent document.  These rows would be orphaned if deleted
+      // after the document row is removed.
+      await trx('document_content')
+        .where({ document_id: documentId, tenant: tenantId })
+        .delete();
+      await trx('document_block_content')
+        .where({ document_id: documentId, tenant: tenantId })
+        .delete();
       await trx('documents').where({ document_id: documentId, tenant: tenantId }).delete();
       deletedDocument = document;
     });
@@ -330,10 +870,8 @@ export const deleteDocument = withAuth(async (
       await cache.delete(deletedDocument.file_id);
     }
 
-    await Promise.all([
-      deleteDocumentContent(documentId),
-      deleteBlockContent(documentId)
-    ]);
+    // Content rows (document_content, document_block_content) were already
+    // deleted inside the transaction above.
 
     return {
       ...result,
@@ -410,6 +948,7 @@ export const getDocument = withAuth(async (user, { tenant }, documentId: string)
       storage_path: document.storage_path,
       mime_type: document.mime_type,
       file_size: document.file_size,
+      is_client_visible: document.is_client_visible,
       created_by_full_name: document.created_by_full_name,
       type_name: document.type_name,
       type_icon: document.type_icon,
@@ -418,7 +957,15 @@ export const getDocument = withAuth(async (user, { tenant }, documentId: string)
       edited_by: document.edited_by
     };
 
-    return processedDoc;
+    const [authorizedDocument] = await withTransaction(knex, async (trx: Knex.Transaction) =>
+      authorizeAndRedactDocuments(trx, tenant, user, [processedDoc])
+    );
+
+    if (!authorizedDocument) {
+      return permissionError('Permission denied: Cannot read documents');
+    }
+
+    return authorizedDocument;
   } catch (error) {
     console.error(error);
     throw new Error("Failed to get the document");
@@ -467,7 +1014,7 @@ export const getDocumentByTicketId = withAuth(async (user, { tenant }, ticketId:
           `)
         )
         .orderBy('documents.updated_at', 'desc');
-      return documents;
+      return authorizeAndRedactDocuments(trx, tenant, user, documents as IDocument[]);
     });
   } catch (error) {
     console.error(error);
@@ -517,7 +1064,7 @@ export const getDocumentByClientId = withAuth(async (user, { tenant }, clientId:
           `)
         )
         .orderBy('documents.updated_at', 'desc');
-      return documents;
+      return authorizeAndRedactDocuments(trx, tenant, user, documents as IDocument[]);
     });
   } catch (error) {
     console.error(error);
@@ -538,6 +1085,11 @@ export const associateDocumentWithClient = withAuth(async (user, { tenant }, inp
     const { knex } = await createTenantKnex();
 
     const created = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const authorizedDocument = await getAuthorizedDocumentById(trx, tenant, user, input.document_id);
+      if (!authorizedDocument) {
+        return permissionError('Permission denied: Cannot associate documents');
+      }
+
       const association = await DocumentAssociation.create(trx, {
         ...input,
         entity_type: 'client',
@@ -546,6 +1098,10 @@ export const associateDocumentWithClient = withAuth(async (user, { tenant }, inp
 
       return association;
     });
+
+    if (isActionPermissionErrorResult(created)) {
+      return created;
+    }
 
     try {
       const occurredAt = new Date().toISOString();
@@ -618,7 +1174,7 @@ export const getDocumentByContactNameId = withAuth(async (user, { tenant }, cont
           `)
         )
         .orderBy('documents.updated_at', 'desc');
-      return documents;
+      return authorizeAndRedactDocuments(trx, tenant, user, documents as IDocument[]);
     });
   } catch (error) {
     console.error(error);
@@ -654,7 +1210,7 @@ export const getDocumentsByContractId = withAuth(async (user, { tenant }, contra
           'document_associations.tenant': tenant
         })
         .select('documents.*', 'document_associations.association_id');
-      return documents;
+      return authorizeAndRedactDocuments(trx, tenant, user, documents as IDocument[]);
     });
   } catch (error) {
     console.error(error);
@@ -678,6 +1234,11 @@ export const associateDocumentWithContract = withAuth(async (user, { tenant }, i
     const { knex } = await createTenantKnex();
 
     const created = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const authorizedDocument = await getAuthorizedDocumentById(trx, tenant, user, input.document_id);
+      if (!authorizedDocument) {
+        return permissionError('Permission denied: Cannot associate documents');
+      }
+
       const association = await DocumentAssociation.create(trx, {
         ...input,
         entity_type: 'contract',
@@ -686,6 +1247,10 @@ export const associateDocumentWithContract = withAuth(async (user, { tenant }, i
 
       return association;
     });
+
+    if (isActionPermissionErrorResult(created)) {
+      return created;
+    }
 
     try {
       const occurredAt = new Date().toISOString();
@@ -742,6 +1307,11 @@ export const removeDocumentFromContract = withAuth(async (user, { tenant }, asso
 
       if (!existing) return null;
 
+      const authorizedDocument = await getAuthorizedDocumentById(trx, tenant, user, existing.document_id);
+      if (!authorizedDocument) {
+        return permissionError('Permission denied: Cannot remove document associations');
+      }
+
       await trx('document_associations')
         .where({
           association_id: associationId,
@@ -752,6 +1322,10 @@ export const removeDocumentFromContract = withAuth(async (user, { tenant }, asso
 
       return existing;
     });
+
+    if (isActionPermissionErrorResult(removed)) {
+      return removed;
+    }
 
     if (removed) {
       try {
@@ -874,7 +1448,18 @@ export const getDocumentPreview = withAuth(async (
     if (!document) {
       console.log(`[getDocumentPreview] Document not found, treating identifier as file ID: ${identifier}`);
 
-      // Check cache for file ID
+      document = await withTransaction(knex, async (trx: Knex.Transaction) =>
+        getAuthorizedDocumentByFileId(trx, tenant, user, identifier)
+      );
+
+      if (!document) {
+        return {
+          success: false,
+          error: 'File not found or inaccessible'
+        };
+      }
+
+      // Check cache for file ID only after authorization succeeds
       const cache = CacheFactory.getPreviewCache(tenant);
       const cachedPreview = await cache.get(identifier);
       if (cachedPreview) {
@@ -888,39 +1473,20 @@ export const getDocumentPreview = withAuth(async (
           content: 'Cached Preview'
         };
       }
-
-      // Try to download the file to get metadata
-      try {
-        const downloadResult = await StorageService.downloadFile(identifier);
-        if (!downloadResult) {
-          console.error(`[getDocumentPreview] File not found in storage for ID: ${identifier}`);
-          return {
-            success: false,
-            error: 'File not found in storage'
-          };
-        }
-
-        // Create a temporary document object with file metadata
-        document = {
-          document_id: identifier,
-          document_name: downloadResult.metadata.original_name || 'Unknown',
-          type_id: null,
-          user_id: '',
-          order_number: 0,
-          created_by: '',
-          tenant,
-          file_id: identifier,
-          mime_type: downloadResult.metadata.mime_type,
-          type_name: downloadResult.metadata.mime_type
-        };
-      } catch (storageError) {
-        console.error(`[getDocumentPreview] Storage error for ID ${identifier}:`, storageError);
-        return {
-          success: false,
-          error: 'File not found or inaccessible'
-        };
-      }
     }
+
+    const [authorizedDocument] = await withTransaction(knex, async (trx: Knex.Transaction) =>
+      authorizeAndRedactDocuments(trx, tenant, user, [document as IDocument])
+    );
+
+    if (!authorizedDocument) {
+      return {
+        success: false,
+        error: 'Permission denied: Cannot read documents'
+      };
+    }
+
+    document = authorizedDocument;
 
     // NEW: Try cached preview first if available
     if (document.preview_file_id) {
@@ -961,6 +1527,14 @@ export const getDocumentDownloadUrl = withAuth(async (user, { tenant }, file_id:
       return permissionError('Permission denied: Cannot read documents');
     }
 
+    const { knex } = await createTenantKnex();
+    const authorizedDocument = await withTransaction(knex, async (trx: Knex.Transaction) =>
+      getAuthorizedDocumentByFileId(trx, tenant, user, file_id)
+    );
+    if (!authorizedDocument?.file_id) {
+      return permissionError('Permission denied: Cannot read documents');
+    }
+
     return `/api/documents/download/${file_id}`;
 });
 
@@ -980,15 +1554,12 @@ export const getDocumentThumbnailUrl = withAuth(async (user, { tenant }, documen
 
     const { knex } = await createTenantKnex();
 
-    // Get document
-    const document = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('documents')
-        .where({ document_id: documentId, tenant })
-        .first();
-    });
+    const document = await withTransaction(knex, async (trx: Knex.Transaction) =>
+      getAuthorizedDocumentById(trx, tenant, user, documentId)
+    );
 
     if (!document) {
-      console.warn(`[getDocumentThumbnailUrl] Document not found: ${documentId}`);
+      console.warn(`[getDocumentThumbnailUrl] Document not found or unauthorized: ${documentId}`);
       return null;
     }
 
@@ -1026,15 +1597,12 @@ export const getDocumentPreviewUrl = withAuth(async (user, { tenant }, documentI
 
     const { knex } = await createTenantKnex();
 
-    // Get document
-    const document = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('documents')
-        .where({ document_id: documentId, tenant })
-        .first();
-    });
+    const document = await withTransaction(knex, async (trx: Knex.Transaction) =>
+      getAuthorizedDocumentById(trx, tenant, user, documentId)
+    );
 
     if (!document) {
-      console.warn(`[getDocumentPreviewUrl] Document not found: ${documentId}`);
+      console.warn(`[getDocumentPreviewUrl] Document not found or unauthorized: ${documentId}`);
       return null;
     }
 
@@ -1081,8 +1649,15 @@ export const downloadDocument = withAuth(async (user, { tenant }, documentIdOrFi
             throw new Error('Document not found or has no associated file');
         }
 
+        const [authorizedDocument] = await withTransaction(knex, async (trx: Knex.Transaction) =>
+          authorizeAndRedactDocuments(trx, tenant, user, [document as IDocument])
+        );
+        if (!authorizedDocument) {
+          return permissionError('Permission denied: Cannot read documents');
+        }
+
         // Download file from storage
-        const result = await StorageService.downloadFile(document.file_id);
+        const result = await StorageService.downloadFile(authorizedDocument.file_id!);
         if (!result) {
             throw new Error('File not found in storage');
         }
@@ -1094,8 +1669,8 @@ export const downloadDocument = withAuth(async (user, { tenant }, documentIdOrFi
         headers.set('Content-Type', metadata.mime_type || 'application/octet-stream');
 
         // Properly encode filename to handle special characters
-        const encodedFilename = encodeURIComponent(document.document_name || 'download');
-        const asciiFilename = document.document_name?.replace(/[^\x00-\x7F]/g, '_') || 'download';
+        const encodedFilename = encodeURIComponent(authorizedDocument.document_name || 'download');
+        const asciiFilename = authorizedDocument.document_name?.replace(/[^\x00-\x7F]/g, '_') || 'download';
         headers.set('Content-Disposition', `attachment; filename="${asciiFilename}"; filename*=UTF-8''${encodedFilename}`);
         headers.set('Content-Length', buffer.length.toString());
 
@@ -1105,7 +1680,7 @@ export const downloadDocument = withAuth(async (user, { tenant }, documentIdOrFi
             // Cache images for 7 days, but revalidate after 1 day
             headers.set('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
             // Add ETag for conditional requests
-            headers.set('ETag', `"${document.file_id}"`);
+            headers.set('ETag', `"${authorizedDocument.file_id}"`);
         } else {
             // For non-images, use no-cache to ensure fresh content
             headers.set('Cache-Control', 'no-cache');
@@ -1131,25 +1706,64 @@ export const getDocumentCountsForEntities = withAuth(async (
   const { knex } = await createTenantKnex();
   
   try {
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const counts = await trx('document_associations')
-        .select('entity_id')
-        .count('document_id as count')
-        .where('tenant', tenant)
-        .whereIn('entity_id', entityIds)
-        .where('entity_type', entityType)
-        .groupBy('entity_id');
+    if (!await hasPermission(user, 'document', 'read')) {
+      return new Map(entityIds.map((entityId) => [entityId, 0]));
+    }
 
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const countMap = new Map<string, number>();
-      for (const row of counts) {
-        countMap.set(String(row.entity_id), Number(row.count));
+      for (const entityId of entityIds) {
+        countMap.set(entityId, 0);
       }
 
-      // Ensure all requested entities have a count (0 if no documents)
-      for (const entityId of entityIds) {
-        if (!countMap.has(entityId)) {
-          countMap.set(entityId, 0);
+      if (entityIds.length === 0) {
+        return countMap;
+      }
+
+      const rows = await trx('document_associations as da')
+        .join('documents as d', function joinDocuments() {
+          this.on('da.document_id', '=', 'd.document_id').andOn('da.tenant', '=', 'd.tenant');
+        })
+        .where('da.tenant', tenant)
+        .whereIn('da.entity_id', entityIds)
+        .where('da.entity_type', entityType)
+        .select('da.entity_id', 'd.document_id', 'd.created_by', 'd.is_client_visible');
+
+      if (rows.length === 0) {
+        return countMap;
+      }
+
+      const documentsById = new Map<string, IDocument>();
+      for (const row of rows as Array<{ document_id: string; created_by: string | null; is_client_visible: boolean | null }>) {
+        if (!documentsById.has(row.document_id)) {
+          documentsById.set(row.document_id, {
+            document_id: row.document_id,
+            created_by: row.created_by ?? undefined,
+            is_client_visible: row.is_client_visible ?? false,
+          } as IDocument);
         }
+      }
+
+      const authorizedDocuments = await authorizeAndRedactDocuments(
+        trx,
+        tenant,
+        user,
+        Array.from(documentsById.values())
+      );
+      const authorizedIds = new Set(authorizedDocuments.map((document) => document.document_id));
+      const countedByEntity = new Map<string, Set<string>>();
+
+      for (const row of rows as Array<{ entity_id: string; document_id: string }>) {
+        if (!authorizedIds.has(row.document_id)) {
+          continue;
+        }
+        const entitySet = countedByEntity.get(row.entity_id) ?? new Set<string>();
+        entitySet.add(row.document_id);
+        countedByEntity.set(row.entity_id, entitySet);
+      }
+
+      for (const entityId of entityIds) {
+        countMap.set(entityId, countedByEntity.get(entityId)?.size ?? 0);
       }
 
       return countMap;
@@ -1170,226 +1784,87 @@ export const getDocumentsByEntity = withAuth(async (
   limit: number = 15
 ): Promise<PaginatedDocumentsResponse | ActionPermissionError> => {
   try {
-    // Check permission for document reading
     if (!await hasPermission(user, 'document', 'read')) {
       return permissionError('Permission denied: Cannot read documents');
     }
 
     const { knex } = await createTenantKnex();
 
-    console.log('Getting documents for entity:', { entity_id, entity_type, filters, page, limit });
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const fetchPage = async (sourcePage: number, sourceLimit: number) => {
+        let query = trx('documents')
+          .join('document_associations', function() {
+            this.on('documents.document_id', '=', 'document_associations.document_id')
+                .andOn('document_associations.tenant', '=', trx.raw('?', [tenant]));
+          })
+          .leftJoin('users', function() {
+            this.on('documents.created_by', '=', 'users.user_id')
+                .andOn('users.tenant', '=', trx.raw('?', [tenant]));
+          })
+          .leftJoin('document_types as dt', function() {
+            this.on('documents.type_id', '=', 'dt.type_id')
+                .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
+          })
+          .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
+          .where('documents.tenant', tenant)
+          .where('document_associations.entity_id', entity_id)
+          .andWhere('document_associations.entity_type', entity_type)
+          .select(
+            'documents.*',
+            'users.first_name',
+            'users.last_name',
+            trx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
+            trx.raw(`
+              COALESCE(dt.type_name, sdt.type_name) as type_name,
+              COALESCE(dt.icon, sdt.icon) as type_icon
+            `),
+            trx.raw(`
+              CASE
+                WHEN documents.document_name ~ '^[0-9]'
+                THEN CAST(COALESCE(NULLIF(LEFT(regexp_replace(documents.document_name, '[^0-9].*$', ''), 18), ''), '0') AS BIGINT)
+                ELSE 0
+              END as document_name_sort_key
+            `)
+          )
+          .distinct('documents.document_id');
 
-    const offset = (page - 1) * limit;
-
-    // Base query structure, executed sequentially
-    const buildBaseQuery = () => {
-      let query = knex('documents')
-        .join('document_associations', function() {
-          this.on('documents.document_id', '=', 'document_associations.document_id')
-              .andOn('document_associations.tenant', '=', knex.raw('?', [tenant]));
-        })
-        .leftJoin('users', function() {
-          this.on('documents.created_by', '=', 'users.user_id')
-              .andOn('users.tenant', '=', knex.raw('?', [tenant]));
-        })
-        .leftJoin('document_types as dt', function() {
-          this.on('documents.type_id', '=', 'dt.type_id')
-              .andOn('dt.tenant', '=', knex.raw('?', [tenant]));
-        })
-        .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
-        .where('documents.tenant', tenant)
-        .where('document_associations.entity_id', entity_id)
-        .andWhere('document_associations.entity_type', entity_type);
-
-      if (filters) {
-        if (filters.searchTerm) {
-          query = query.whereRaw('LOWER(documents.document_name) LIKE ?',
-            [`%${filters.searchTerm.toLowerCase()}%`]);
+        if (filters?.searchTerm) {
+          query = query.whereRaw('LOWER(documents.document_name) LIKE ?', [`%${filters.searchTerm.toLowerCase()}%`]);
         }
-        if (filters.uploadedBy) {
+        if (filters?.uploadedBy) {
           query = query.where('documents.created_by', filters.uploadedBy);
         }
-        if (filters.updated_at_start) {
+        if (filters?.updated_at_start) {
           query = query.where('documents.updated_at', '>=', filters.updated_at_start);
         }
-        if (filters.updated_at_end) {
+        if (filters?.updated_at_end) {
           const endDate = new Date(filters.updated_at_end);
           endDate.setDate(endDate.getDate() + 1);
           query = query.where('documents.updated_at', '<', endDate.toISOString().split('T')[0]);
         }
-      }
-      return query;
-    };
 
-    // Execute count query first
-    const totalResult = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const buildBaseTrxQuery = () => {
-        let query = trx('documents')
-          .join('document_associations', function() {
-            this.on('documents.document_id', '=', 'document_associations.document_id')
-                .andOn('document_associations.tenant', '=', trx.raw('?', [tenant]));
-          })
-          .leftJoin('users', function() {
-            this.on('documents.created_by', '=', 'users.user_id')
-                .andOn('users.tenant', '=', trx.raw('?', [tenant]));
-          })
-          .leftJoin('document_types as dt', function() {
-            this.on('documents.type_id', '=', 'dt.type_id')
-                .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
-          })
-          .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
-          .where('documents.tenant', tenant)
-          .where('document_associations.entity_id', entity_id)
-          .andWhere('document_associations.entity_type', entity_type);
-
-        if (filters) {
-          if (filters.searchTerm) {
-            query = query.whereRaw('LOWER(documents.document_name) LIKE ?',
-              [`%${filters.searchTerm.toLowerCase()}%`]);
-          }
-          if (filters.uploadedBy) {
-            query = query.where('documents.created_by', filters.uploadedBy);
-          }
-          if (filters.updated_at_start) {
-            query = query.where('documents.updated_at', '>=', filters.updated_at_start);
-          }
-          if (filters.updated_at_end) {
-            const endDate = new Date(filters.updated_at_end);
-            endDate.setDate(endDate.getDate() + 1);
-            query = query.where('documents.updated_at', '<', endDate.toISOString().split('T')[0]);
-          }
-        }
-        return query;
-      };
-      return await buildBaseTrxQuery()
-        .countDistinct('documents.document_id as total')
-        .first();
-    });
-    const totalCount = totalResult ? Number(totalResult.total) : 0;
-
-    // Execute data query second
-    const documents = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const buildBaseTrxQuery = () => {
-        let query = trx('documents')
-          .join('document_associations', function() {
-            this.on('documents.document_id', '=', 'document_associations.document_id')
-                .andOn('document_associations.tenant', '=', trx.raw('?', [tenant]));
-          })
-          .leftJoin('users', function() {
-            this.on('documents.created_by', '=', 'users.user_id')
-                .andOn('users.tenant', '=', trx.raw('?', [tenant]));
-          })
-          .leftJoin('document_types as dt', function() {
-            this.on('documents.type_id', '=', 'dt.type_id')
-                .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
-          })
-          .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
-          .where('documents.tenant', tenant)
-          .where('document_associations.entity_id', entity_id)
-          .andWhere('document_associations.entity_type', entity_type);
-
-        if (filters) {
-          if (filters.searchTerm) {
-            query = query.whereRaw('LOWER(documents.document_name) LIKE ?',
-              [`%${filters.searchTerm.toLowerCase()}%`]);
-          }
-          if (filters.uploadedBy) {
-            query = query.where('documents.created_by', filters.uploadedBy);
-          }
-          if (filters.updated_at_start) {
-            query = query.where('documents.updated_at', '>=', filters.updated_at_start);
-          }
-          if (filters.updated_at_end) {
-            const endDate = new Date(filters.updated_at_end);
-            endDate.setDate(endDate.getDate() + 1);
-            query = query.where('documents.updated_at', '<', endDate.toISOString().split('T')[0]);
-          }
-        }
-        return query;
-      };
-      let query = buildBaseTrxQuery()
-        .select(
-          'documents.*',
-          'users.first_name',
-          'users.last_name',
-          trx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
-          trx.raw(`
-            COALESCE(dt.type_name, sdt.type_name) as type_name,
-            COALESCE(dt.icon, sdt.icon) as type_icon
-          `),
-          trx.raw(`
-            CASE
-              WHEN documents.document_name ~ '^[0-9]'
-              THEN CAST(COALESCE(NULLIF(LEFT(regexp_replace(documents.document_name, '[^0-9].*$', ''), 18), ''), '0') AS BIGINT)
-              ELSE 0
-            END as document_name_sort_key
-          `)
-        )
-        .distinct('documents.document_id');
-
-      // Apply sorting based on filters (before limit/offset)
-      if (filters?.sortBy) {
-        const sortField = filters.sortBy;
-        const sortOrder = filters.sortOrder || 'desc';
-
-        // Handle special case for created_by_full_name which is a computed field
-        if (sortField === 'created_by_full_name') {
-          query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${sortOrder}`);
-        } else if (sortField === 'document_name') {
-          // Natural sort for document_name: sort numerically by leading digits, then alphabetically
-          query = query.orderBy('document_name_sort_key', sortOrder).orderBy('documents.document_name', sortOrder);
+        if (filters?.sortBy === 'created_by_full_name') {
+          query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${filters.sortOrder || 'desc'}`);
+        } else if (filters?.sortBy === 'document_name') {
+          query = query.orderBy('document_name_sort_key', filters.sortOrder || 'desc').orderBy('documents.document_name', filters.sortOrder || 'desc');
+        } else if (filters?.sortBy) {
+          query = query.orderBy(`documents.${filters.sortBy}`, filters.sortOrder || 'desc');
         } else {
-          // For other fields, prefix with table name for clarity
-          query = query.orderBy(`documents.${sortField}`, sortOrder);
+          query = query.orderBy('documents.updated_at', 'desc');
         }
-      } else {
-        // Default sort by updated_at desc if no sort specified
-        query = query.orderBy('documents.updated_at', 'desc');
-      }
 
-      // Apply pagination after sorting
-      query = query.limit(limit).offset(offset);
-
-      return await query;
-    });
-
-    console.log('Raw documents from database:', documents);
-    console.log('Total count:', totalCount);
-
-    // Process the documents
-    const processedDocuments = documents.map((doc: any): IDocument => {
-      const processedDoc = {
-        document_id: doc.document_id,
-        document_name: doc.document_name,
-        type_id: doc.type_id,
-        shared_type_id: doc.shared_type_id,
-        user_id: doc.created_by,
-        order_number: doc.order_number || 0,
-        created_by: doc.created_by,
-        tenant: doc.tenant,
-        file_id: doc.file_id,
-        storage_path: doc.storage_path,
-        mime_type: doc.mime_type,
-        file_size: doc.file_size,
-        created_by_full_name: doc.created_by_full_name,
-        type_name: doc.type_name,
-        type_icon: doc.type_icon,
-        entered_at: doc.entered_at,
-        updated_at: doc.updated_at,
-        thumbnail_file_id: doc.thumbnail_file_id,
-        preview_file_id: doc.preview_file_id,
-        preview_generated_at: doc.preview_generated_at
+        return query.limit(sourceLimit).offset((sourcePage - 1) * sourceLimit);
       };
-      console.log('Processed document:', processedDoc);
-      return processedDoc;
-    });
 
-    return {
-      documents: processedDocuments,
-      totalCount,
-      currentPage: page,
-      totalPages: Math.ceil(totalCount / limit),
-    };
+      return paginateAuthorizedDocuments({
+        trx,
+        tenant,
+        user,
+        page,
+        limit,
+        fetchPage,
+      });
+    });
   } catch (error) {
     console.error('Error fetching documents by entity:', error);
     throw new Error('Failed to fetch documents');
@@ -1405,40 +1880,49 @@ export const getAllDocuments = withAuth(async (
   limit: number = 10
 ): Promise<PaginatedDocumentsResponse | ActionPermissionError> => {
   try {
-    // Check permission for document reading
     if (!await hasPermission(user, 'document', 'read')) {
       return permissionError('Permission denied: Cannot read documents');
     }
 
     const { knex } = await createTenantKnex();
 
-    console.log('Getting documents with filters:', { filters, page, limit });
-    const offset = (page - 1) * limit;
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const fetchPage = async (sourcePage: number, sourceLimit: number) => {
+        let query = trx('documents')
+          .where('documents.tenant', tenant)
+          .leftJoin('document_types as dt', function() {
+            this.on('documents.type_id', '=', 'dt.type_id')
+                .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
+          })
+          .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
+          .leftJoin('users', function() {
+            this.on('documents.created_by', '=', 'users.user_id')
+                .andOn('users.tenant', '=', trx.raw('?', [tenant]));
+          })
+          .select(
+            'documents.*',
+            'users.first_name',
+            'users.last_name',
+            trx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
+            trx.raw(`
+              COALESCE(dt.type_name, sdt.type_name) as type_name,
+              COALESCE(dt.icon, sdt.icon) as type_icon
+            `),
+            trx.raw(`
+              CASE
+                WHEN documents.document_name ~ '^[0-9]'
+                THEN CAST(COALESCE(NULLIF(LEFT(regexp_replace(documents.document_name, '[^0-9].*$', ''), 18), ''), '0') AS BIGINT)
+                ELSE 0
+              END as document_name_sort_key
+            `)
+          )
+          .distinct('documents.document_id');
 
-    // Base query structure, executed sequentially
-    const buildBaseQuery = () => {
-      let query = knex('documents')
-        .where('documents.tenant', tenant);
-
-      query = query
-        .leftJoin('document_types as dt', function() {
-          this.on('documents.type_id', '=', 'dt.type_id')
-              .andOn('dt.tenant', '=', knex.raw('?', [tenant]));
-        })
-        .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
-        .leftJoin('users', function() {
-          this.on('documents.created_by', '=', 'users.user_id')
-              .andOn('users.tenant', '=', knex.raw('?', [tenant]));
-        });
-
-      if (filters) {
-        if (filters.searchTerm) {
-          query = query.whereRaw('LOWER(documents.document_name) LIKE ?',
-            [`%${filters.searchTerm.toLowerCase()}%`]);
+        if (filters?.searchTerm) {
+          query = query.whereRaw('LOWER(documents.document_name) LIKE ?', [`%${filters.searchTerm.toLowerCase()}%`]);
         }
-
-        if (filters.type) {
-           if (filters.type === 'application/pdf') {
+        if (filters?.type) {
+          if (filters.type === 'application/pdf') {
             query = query.where(function() {
               this.where(function() {
                 this.where('dt.type_name', '=', 'application/pdf')
@@ -1453,7 +1937,7 @@ export const getAllDocuments = withAuth(async (
               }).whereNotNull('documents.file_id');
             });
           } else if (filters.type === 'text') {
-             query = query.where(function() {
+            query = query.where(function() {
               this.where('dt.type_name', 'like', 'text/%')
                   .orWhere('sdt.type_name', 'like', 'text/%')
                   .orWhere('dt.type_name', '=', 'application/msword')
@@ -1467,7 +1951,7 @@ export const getAllDocuments = withAuth(async (
                   .orWhereNull('documents.file_id');
             });
           } else if (filters.type === 'application') {
-             query = query.where(function() {
+            query = query.where(function() {
               this.where(function() {
                 this.where(function() {
                   this.where('dt.type_name', 'like', 'application/%')
@@ -1484,7 +1968,7 @@ export const getAllDocuments = withAuth(async (
                       .whereNot('sdt.type_name', 'like', 'application/vnd.ms-excel%')
                       .whereNot('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%');
                 });
-             }).whereNotNull('documents.file_id');
+              }).whereNotNull('documents.file_id');
             });
           } else {
             query = query.where(function() {
@@ -1493,21 +1977,18 @@ export const getAllDocuments = withAuth(async (
             });
           }
         }
-
-        if (filters.uploadedBy) {
+        if (filters?.uploadedBy) {
           query = query.where('documents.created_by', filters.uploadedBy);
         }
-
-        if (filters.updated_at_start) {
+        if (filters?.updated_at_start) {
           query = query.where('documents.updated_at', '>=', filters.updated_at_start);
         }
-        if (filters.updated_at_end) {
+        if (filters?.updated_at_end) {
           const endDate = new Date(filters.updated_at_end);
           endDate.setDate(endDate.getDate() + 1);
           query = query.where('documents.updated_at', '<', endDate.toISOString().split('T')[0]);
         }
-
-        if (filters.excludeEntityId && filters.excludeEntityType) {
+        if (filters?.excludeEntityId && filters?.excludeEntityType) {
           query = query.whereNotExists(function() {
             this.select('*')
                 .from('document_associations')
@@ -1517,384 +1998,47 @@ export const getAllDocuments = withAuth(async (
                 .andWhere('document_associations.tenant', tenant);
           });
         }
-
-        if (filters.entityType) {
+        if (filters?.entityType) {
           query = query
             .leftJoin('document_associations', function() {
               this.on('documents.document_id', '=', 'document_associations.document_id')
-                  .andOn('document_associations.tenant', '=', knex.raw('?', [tenant]));
+                  .andOn('document_associations.tenant', '=', trx.raw('?', [tenant]));
             })
             .where('document_associations.entity_type', filters.entityType);
         }
-
-        // Add folder filtering
-        if (filters.folder_path !== undefined && !filters.showAllDocuments) {
+        if (filters?.folder_path !== undefined && !filters.showAllDocuments) {
           if (filters.folder_path === null || filters.folder_path === '') {
-            // Root folder - documents with no folder_path
             query = query.whereNull('documents.folder_path');
           } else {
-            // Specific folder - match exact path or subfolders
             query = query.where(function() {
               this.where('documents.folder_path', filters.folder_path)
                 .orWhere('documents.folder_path', 'like', `${filters.folder_path}/%`);
             });
           }
         }
-        // If showAllDocuments is true, don't add any folder filtering - show all documents
-      }
-      return query;
-    };
 
-    // Execute count query first
-    const totalResult = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const buildBaseTrxQuery = () => {
-        let query = trx('documents')
-          .where('documents.tenant', tenant);
-
-        query = query
-          .leftJoin('document_types as dt', function() {
-            this.on('documents.type_id', '=', 'dt.type_id')
-                .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
-          })
-          .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
-          .leftJoin('users', function() {
-            this.on('documents.created_by', '=', 'users.user_id')
-                .andOn('users.tenant', '=', trx.raw('?', [tenant]));
-          });
-
-        if (filters) {
-          if (filters.searchTerm) {
-            query = query.whereRaw('LOWER(documents.document_name) LIKE ?',
-              [`%${filters.searchTerm.toLowerCase()}%`]);
-          }
-
-          if (filters.type) {
-             if (filters.type === 'application/pdf') {
-              query = query.where(function() {
-                this.where(function() {
-                  this.where('dt.type_name', '=', 'application/pdf')
-                      .orWhere('sdt.type_name', '=', 'application/pdf');
-                }).whereNotNull('documents.file_id');
-              });
-            } else if (filters.type === 'image') {
-              query = query.where(function() {
-                this.where(function() {
-                  this.where('dt.type_name', 'like', 'image/%')
-                      .orWhere('sdt.type_name', 'like', 'image/%');
-                }).whereNotNull('documents.file_id');
-              });
-            } else if (filters.type === 'text') {
-               query = query.where(function() {
-                this.where('dt.type_name', 'like', 'text/%')
-                    .orWhere('sdt.type_name', 'like', 'text/%')
-                    .orWhere('dt.type_name', '=', 'application/msword')
-                    .orWhere('sdt.type_name', '=', 'application/msword')
-                    .orWhere('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
-                    .orWhere('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
-                    .orWhere('dt.type_name', 'like', 'application/vnd.ms-excel%')
-                    .orWhere('sdt.type_name', 'like', 'application/vnd.ms-excel%')
-                    .orWhere('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%')
-                    .orWhere('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%')
-                    .orWhereNull('documents.file_id');
-              });
-            } else if (filters.type === 'application') {
-               query = query.where(function() {
-                this.where(function() {
-                  this.where(function() {
-                    this.where('dt.type_name', 'like', 'application/%')
-                        .whereNot('dt.type_name', '=', 'application/pdf')
-                        .whereNot('dt.type_name', '=', 'application/msword')
-                        .whereNot('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
-                        .whereNot('dt.type_name', 'like', 'application/vnd.ms-excel%')
-                        .whereNot('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%');
-                  }).orWhere(function() {
-                    this.where('sdt.type_name', 'like', 'application/%')
-                        .whereNot('sdt.type_name', '=', 'application/pdf')
-                        .whereNot('sdt.type_name', '=', 'application/msword')
-                        .whereNot('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
-                        .whereNot('sdt.type_name', 'like', 'application/vnd.ms-excel%')
-                        .whereNot('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%');
-                  });
-               }).whereNotNull('documents.file_id');
-              });
-            } else {
-              query = query.where(function() {
-                this.where('dt.type_name', 'like', `${filters.type}%`)
-                    .orWhere('sdt.type_name', 'like', `${filters.type}%`);
-              });
-            }
-          }
-
-          if (filters.uploadedBy) {
-            query = query.where('documents.created_by', filters.uploadedBy);
-          }
-
-          if (filters.updated_at_start) {
-            query = query.where('documents.updated_at', '>=', filters.updated_at_start);
-          }
-          if (filters.updated_at_end) {
-            const endDate = new Date(filters.updated_at_end);
-            endDate.setDate(endDate.getDate() + 1);
-            query = query.where('documents.updated_at', '<', endDate.toISOString().split('T')[0]);
-          }
-
-          if (filters.excludeEntityId && filters.excludeEntityType) {
-            query = query.whereNotExists(function() {
-              this.select('*')
-                  .from('document_associations')
-                  .whereRaw('document_associations.document_id = documents.document_id')
-                  .andWhere('document_associations.entity_id', filters.excludeEntityId)
-                  .andWhere('document_associations.entity_type', filters.excludeEntityType)
-                  .andWhere('document_associations.tenant', tenant);
-            });
-          }
-
-          if (filters.entityType) {
-            query = query
-              .leftJoin('document_associations', function() {
-                this.on('documents.document_id', '=', 'document_associations.document_id')
-                    .andOn('document_associations.tenant', '=', trx.raw('?', [tenant]));
-              })
-              .where('document_associations.entity_type', filters.entityType);
-          }
-
-          // Add folder filtering
-          if (filters.folder_path !== undefined && !filters.showAllDocuments) {
-            if (filters.folder_path === null || filters.folder_path === '') {
-              // Root folder - documents with no folder_path
-              query = query.whereNull('documents.folder_path');
-            } else {
-              // Specific folder - match exact path or subfolders
-              query = query.where(function() {
-                this.where('documents.folder_path', filters.folder_path)
-                  .orWhere('documents.folder_path', 'like', `${filters.folder_path}/%`);
-              });
-            }
-          }
-          // If showAllDocuments is true, don't add any folder filtering - show all documents
-        }
-        return query;
-      };
-      return await buildBaseTrxQuery()
-        .countDistinct('documents.document_id as total')
-        .first();
-    });
-    const totalCount = totalResult ? Number(totalResult.total) : 0;
-
-    // Execute data query second
-    const documents = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const buildBaseTrxQuery = () => {
-        let query = trx('documents')
-          .where('documents.tenant', tenant);
-
-        query = query
-          .leftJoin('document_types as dt', function() {
-            this.on('documents.type_id', '=', 'dt.type_id')
-                .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
-          })
-          .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
-          .leftJoin('users', function() {
-            this.on('documents.created_by', '=', 'users.user_id')
-                .andOn('users.tenant', '=', trx.raw('?', [tenant]));
-          });
-
-        if (filters) {
-          if (filters.searchTerm) {
-            query = query.whereRaw('LOWER(documents.document_name) LIKE ?',
-              [`%${filters.searchTerm.toLowerCase()}%`]);
-          }
-
-          if (filters.type) {
-             if (filters.type === 'application/pdf') {
-              query = query.where(function() {
-                this.where(function() {
-                  this.where('dt.type_name', '=', 'application/pdf')
-                      .orWhere('sdt.type_name', '=', 'application/pdf');
-                }).whereNotNull('documents.file_id');
-              });
-            } else if (filters.type === 'image') {
-              query = query.where(function() {
-                this.where(function() {
-                  this.where('dt.type_name', 'like', 'image/%')
-                      .orWhere('sdt.type_name', 'like', 'image/%');
-                }).whereNotNull('documents.file_id');
-              });
-            } else if (filters.type === 'text') {
-               query = query.where(function() {
-                this.where('dt.type_name', 'like', 'text/%')
-                    .orWhere('sdt.type_name', 'like', 'text/%')
-                    .orWhere('dt.type_name', '=', 'application/msword')
-                    .orWhere('sdt.type_name', '=', 'application/msword')
-                    .orWhere('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
-                    .orWhere('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
-                    .orWhere('dt.type_name', 'like', 'application/vnd.ms-excel%')
-                    .orWhere('sdt.type_name', 'like', 'application/vnd.ms-excel%')
-                    .orWhere('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%')
-                    .orWhere('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%')
-                    .orWhereNull('documents.file_id');
-              });
-            } else if (filters.type === 'application') {
-               query = query.where(function() {
-                this.where(function() {
-                  this.where(function() {
-                    this.where('dt.type_name', 'like', 'application/%')
-                        .whereNot('dt.type_name', '=', 'application/pdf')
-                        .whereNot('dt.type_name', '=', 'application/msword')
-                        .whereNot('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
-                        .whereNot('dt.type_name', 'like', 'application/vnd.ms-excel%')
-                        .whereNot('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%');
-                  }).orWhere(function() {
-                    this.where('sdt.type_name', 'like', 'application/%')
-                        .whereNot('sdt.type_name', '=', 'application/pdf')
-                        .whereNot('sdt.type_name', '=', 'application/msword')
-                        .whereNot('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
-                        .whereNot('sdt.type_name', 'like', 'application/vnd.ms-excel%')
-                        .whereNot('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%');
-                  });
-               }).whereNotNull('documents.file_id');
-              });
-            } else {
-              query = query.where(function() {
-                this.where('dt.type_name', 'like', `${filters.type}%`)
-                    .orWhere('sdt.type_name', 'like', `${filters.type}%`);
-              });
-            }
-          }
-
-          if (filters.uploadedBy) {
-            query = query.where('documents.created_by', filters.uploadedBy);
-          }
-
-          if (filters.updated_at_start) {
-            query = query.where('documents.updated_at', '>=', filters.updated_at_start);
-          }
-          if (filters.updated_at_end) {
-            const endDate = new Date(filters.updated_at_end);
-            endDate.setDate(endDate.getDate() + 1);
-            query = query.where('documents.updated_at', '<', endDate.toISOString().split('T')[0]);
-          }
-
-          if (filters.excludeEntityId && filters.excludeEntityType) {
-            query = query.whereNotExists(function() {
-              this.select('*')
-                  .from('document_associations')
-                  .whereRaw('document_associations.document_id = documents.document_id')
-                  .andWhere('document_associations.entity_id', filters.excludeEntityId)
-                  .andWhere('document_associations.entity_type', filters.excludeEntityType)
-                  .andWhere('document_associations.tenant', tenant);
-            });
-          }
-
-          if (filters.entityType) {
-            query = query
-              .leftJoin('document_associations', function() {
-                this.on('documents.document_id', '=', 'document_associations.document_id')
-                    .andOn('document_associations.tenant', '=', trx.raw('?', [tenant]));
-              })
-              .where('document_associations.entity_type', filters.entityType);
-          }
-
-          // Add folder filtering
-          if (filters.folder_path !== undefined && !filters.showAllDocuments) {
-            if (filters.folder_path === null || filters.folder_path === '') {
-              // Root folder - documents with no folder_path
-              query = query.whereNull('documents.folder_path');
-            } else {
-              // Specific folder - match exact path or subfolders
-              query = query.where(function() {
-                this.where('documents.folder_path', filters.folder_path)
-                  .orWhere('documents.folder_path', 'like', `${filters.folder_path}/%`);
-              });
-            }
-          }
-          // If showAllDocuments is true, don't add any folder filtering - show all documents
-        }
-        return query;
-      };
-
-      let query = buildBaseTrxQuery()
-        .select(
-          'documents.*',
-          'users.first_name',
-          'users.last_name',
-          trx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
-          trx.raw(`
-            COALESCE(dt.type_name, sdt.type_name) as type_name,
-            COALESCE(dt.icon, sdt.icon) as type_icon
-          `),
-          trx.raw(`
-            CASE
-              WHEN documents.document_name ~ '^[0-9]'
-              THEN CAST(COALESCE(NULLIF(LEFT(regexp_replace(documents.document_name, '[^0-9].*$', ''), 18), ''), '0') AS BIGINT)
-              ELSE 0
-            END as document_name_sort_key
-          `)
-        )
-        .distinct('documents.document_id');
-
-      // Apply sorting based on filters (before limit/offset)
-      if (filters?.sortBy) {
-        const sortField = filters.sortBy;
-        const sortOrder = filters.sortOrder || 'desc';
-
-        // Handle special case for created_by_full_name which is a computed field
-        if (sortField === 'created_by_full_name') {
-          query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${sortOrder}`);
-        } else if (sortField === 'document_name') {
-          // Natural sort for document_name: sort numerically by leading digits, then alphabetically
-          query = query.orderBy('document_name_sort_key', sortOrder).orderBy('documents.document_name', sortOrder);
+        if (filters?.sortBy === 'created_by_full_name') {
+          query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${filters.sortOrder || 'desc'}`);
+        } else if (filters?.sortBy === 'document_name') {
+          query = query.orderBy('document_name_sort_key', filters.sortOrder || 'desc').orderBy('documents.document_name', filters.sortOrder || 'desc');
+        } else if (filters?.sortBy) {
+          query = query.orderBy(`documents.${filters.sortBy}`, filters.sortOrder || 'desc');
         } else {
-          // For other fields, prefix with table name for clarity
-          query = query.orderBy(`documents.${sortField}`, sortOrder);
+          query = query.orderBy('documents.updated_at', 'desc');
         }
-      } else {
-        // Default sort by updated_at desc if no sort specified
-        query = query.orderBy('documents.updated_at', 'desc');
-      }
 
-      // Apply pagination after sorting
-      query = query.limit(limit).offset(offset);
-
-      return await query;
-    });
-
-    console.log('Raw documents from database:', documents);
-    console.log('Total count:', totalCount);
-
-    // Process the documents
-    const processedDocuments = documents.map((doc: any): IDocument => {
-      const processedDoc = {
-        document_id: doc.document_id,
-        document_name: doc.document_name,
-        type_id: doc.type_id,
-        shared_type_id: doc.shared_type_id,
-        user_id: doc.created_by,
-        order_number: doc.order_number || 0,
-        created_by: doc.created_by,
-        tenant: doc.tenant,
-        file_id: doc.file_id,
-        storage_path: doc.storage_path,
-        mime_type: doc.mime_type,
-        file_size: doc.file_size,
-        created_by_full_name: doc.created_by_full_name,
-        type_name: doc.type_name,
-        type_icon: doc.type_icon,
-        entered_at: doc.entered_at,
-        updated_at: doc.updated_at,
-        thumbnail_file_id: doc.thumbnail_file_id,
-        preview_file_id: doc.preview_file_id,
-        preview_generated_at: doc.preview_generated_at
+        return query.limit(sourceLimit).offset((sourcePage - 1) * sourceLimit);
       };
-      console.log('Processed document:', processedDoc);
-      return processedDoc;
-    });
 
-    return {
-      documents: processedDocuments,
-      totalCount,
-      currentPage: page,
-      totalPages: Math.ceil(totalCount / limit),
-    };
+      return paginateAuthorizedDocuments({
+        trx,
+        tenant,
+        user,
+        page,
+        limit,
+        fetchPage,
+      });
+    });
   } catch (error) {
     console.error('Error fetching documents:', error);
     throw error;
@@ -1926,12 +2070,27 @@ export const createDocumentAssociations = withAuth(async (
     }));
 
     const created = await withTransaction(db, async (trx: Knex.Transaction) => {
+      const authorizationResult = await assertAuthorizedDocumentSetForMutation(
+        trx,
+        tenant,
+        user,
+        document_ids,
+        'Permission denied: Cannot update document associations'
+      );
+      if (isActionPermissionErrorResult(authorizationResult)) {
+        return authorizationResult;
+      }
+
       return await Promise.all(
         associations.map((association): Promise<Pick<IDocumentAssociation, "association_id">> =>
           DocumentAssociation.create(trx, association)
         )
       );
     });
+
+    if (isActionPermissionErrorResult(created)) {
+      return created;
+    }
 
     const occurredAt = new Date().toISOString();
     await Promise.all(
@@ -1995,9 +2154,26 @@ export const removeDocumentAssociations = withAuth(async (
       }
 
       const rows = await query.clone().select('association_id', 'document_id');
+
+      const targetedDocumentIds = rows.map((row: { document_id: string }) => row.document_id);
+      const authorizationResult = await assertAuthorizedDocumentSetForMutation(
+        trx,
+        tenant,
+        user,
+        targetedDocumentIds,
+        'Permission denied: Cannot update document associations'
+      );
+      if (isActionPermissionErrorResult(authorizationResult)) {
+        return authorizationResult;
+      }
+
       await query.delete();
       return rows;
     });
+
+    if (isActionPermissionErrorResult(removed)) {
+      return removed;
+    }
 
     if (removed.length > 0) {
       const occurredAt = new Date().toISOString();
@@ -2505,6 +2681,14 @@ export const getImageUrl = withAuth(async (user, { tenant }, file_id: string): P
       return permissionError('Permission denied: Cannot read documents');
     }
 
+    const { knex } = await createTenantKnex();
+    const authorizedDocument = await withTransaction(knex, async (trx: Knex.Transaction) =>
+      getAuthorizedDocumentByFileId(trx, tenant, user, file_id)
+    );
+    if (!authorizedDocument) {
+      return null;
+    }
+
     return await getImageUrlCore(file_id, true);
   } catch (error) {
     console.error(`getImageUrl: Error generating URL for file_id ${file_id}:`, error);
@@ -2549,7 +2733,8 @@ export const getDistinctEntityTypes = withAuth(async (user, { tenant }): Promise
  * intended to be called from already-authenticated contexts.
  */
 async function _getFolderTreeInternal(
-  knex: Knex,
+  knex: Knex.Transaction,
+  user: IUser,
   tenant: string,
   entityId?: string | null,
   entityType?: string | null
@@ -2618,7 +2803,7 @@ async function _getFolderTreeInternal(
   const tree = buildFolderTreeFromPaths(allPaths, explicitFolderMetadata);
 
   // Get document counts for each folder (single query)
-  await enrichFolderTreeWithCounts(tree, knex, tenant, entityId, entityType);
+  await enrichFolderTreeWithCounts(tree, knex, tenant, user, entityId, entityType);
 
   return tree;
 }
@@ -2635,7 +2820,9 @@ export const getFolderTree = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  return _getFolderTreeInternal(knex, tenant, entityId, entityType);
+  return withTransaction(knex, async (trx: Knex.Transaction) =>
+    _getFolderTreeInternal(trx, user, tenant, entityId, entityType)
+  );
 });
 
 /**
@@ -2724,226 +2911,195 @@ export const getDocumentsByFolder = withAuth(async (
     return permissionError('Permission denied');
   }
 
-  // Build list of entity types user has permission for
-  const allowedEntityTypes = await getEntityTypesForUser(user);
-
   const { knex } = await createTenantKnex();
   const hasEntityScope = Boolean(entityId && entityType);
 
-  // Build base query with permission filtering at DB level
-  let query = knex('documents as d')
-    .where('d.tenant', tenant);
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const fetchPage = async (sourcePage: number, sourceLimit: number) => {
+      let query = trx('documents as d')
+        .where('d.tenant', tenant);
 
-  if (hasEntityScope) {
-    query = query.whereExists(function() {
-      this.select('*')
-        .from('document_associations as da')
-        .whereRaw('da.document_id = d.document_id')
-        .andWhere('da.tenant', tenant)
-        .andWhere('da.entity_id', entityId)
-        .andWhere('da.entity_type', entityType)
-        .whereIn('da.entity_type', allowedEntityTypes);
-    });
-  } else {
-    // Global view: show documents with no associations OR associations the user has permission for
-    query = query.where(function() {
-      this.whereNotExists(function() {
-        this.select('*')
-          .from('document_associations as da')
-          .whereRaw('da.document_id = d.document_id')
-          .andWhere('da.tenant', tenant);
-      })
-      .orWhereExists(function() {
-        this.select('*')
-          .from('document_associations as da')
-          .whereRaw('da.document_id = d.document_id')
-          .andWhere('da.tenant', tenant)
-          .whereIn('da.entity_type', allowedEntityTypes);
-      });
-    });
-  }
-
-  // Add folder filtering
-  if (folderPath) {
-    if (includeSubfolders) {
-      query = query.where(function() {
-        this.where('d.folder_path', folderPath)
-          .orWhere('d.folder_path', 'like', `${folderPath}/%`);
-      });
-    } else {
-      query = query.where('d.folder_path', folderPath);
-    }
-  } else if (!includeSubfolders) {
-    // Root folder - documents with no folder_path
-    // If includeSubfolders is true with null folderPath, show ALL documents (no folder filtering)
-    query = query.whereNull('d.folder_path');
-  }
-  // If folderPath is null and includeSubfolders is true, don't add any folder filtering - show all documents
-
-  // Add joins for filtering by document type
-  query = query
-    .leftJoin('document_types as dt', function() {
-      this.on('d.type_id', '=', 'dt.type_id')
-          .andOn('dt.tenant', '=', knex.raw('?', [tenant]));
-    })
-    .leftJoin('shared_document_types as sdt', 'd.shared_type_id', 'sdt.type_id');
-
-  // Apply additional filters if provided
-  if (filters) {
-    if (filters.searchTerm) {
-      query = query.whereRaw('LOWER(d.document_name) LIKE ?',
-        [`%${filters.searchTerm.toLowerCase()}%`]);
-    }
-
-    if (filters.type) {
-      if (filters.type === 'application/pdf') {
-        query = query.where(function() {
-          this.where(function() {
-            this.where('dt.type_name', '=', 'application/pdf')
-                .orWhere('sdt.type_name', '=', 'application/pdf');
-          }).whereNotNull('d.file_id');
-        });
-      } else if (filters.type === 'image') {
-        query = query.where(function() {
-          this.where(function() {
-            this.where('dt.type_name', 'like', 'image/%')
-                .orWhere('sdt.type_name', 'like', 'image/%');
-          }).whereNotNull('d.file_id');
-        });
-      } else if (filters.type === 'text') {
-        query = query.where(function() {
-          this.where('dt.type_name', 'like', 'text/%')
-              .orWhere('sdt.type_name', 'like', 'text/%')
-              .orWhere('dt.type_name', '=', 'application/msword')
-              .orWhere('sdt.type_name', '=', 'application/msword')
-              .orWhere('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
-              .orWhere('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
-              .orWhere('dt.type_name', 'like', 'application/vnd.ms-excel%')
-              .orWhere('sdt.type_name', 'like', 'application/vnd.ms-excel%')
-              .orWhere('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%')
-              .orWhere('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%')
-              .orWhereNull('d.file_id');
-        });
-      } else if (filters.type === 'application') {
-        query = query.where(function() {
-          this.where(function() {
-            this.where(function() {
-              this.where('dt.type_name', 'like', 'application/%')
-                  .whereNot('dt.type_name', '=', 'application/pdf')
-                  .whereNot('dt.type_name', '=', 'application/msword')
-                  .whereNot('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
-                  .whereNot('dt.type_name', 'like', 'application/vnd.ms-excel%')
-                  .whereNot('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%');
-            }).orWhere(function() {
-              this.where('sdt.type_name', 'like', 'application/%')
-                  .whereNot('sdt.type_name', '=', 'application/pdf')
-                  .whereNot('sdt.type_name', '=', 'application/msword')
-                  .whereNot('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
-                  .whereNot('sdt.type_name', 'like', 'application/vnd.ms-excel%')
-                  .whereNot('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%');
-            });
-          }).whereNotNull('d.file_id');
+      if (hasEntityScope) {
+        query = query.whereExists(function() {
+          this.select('*')
+            .from('document_associations as da')
+            .whereRaw('da.document_id = d.document_id')
+            .andWhere('da.tenant', tenant)
+            .andWhere('da.entity_id', entityId)
+            .andWhere('da.entity_type', entityType);
         });
       } else {
         query = query.where(function() {
-          this.where('dt.type_name', 'like', `${filters.type}%`)
-              .orWhere('sdt.type_name', 'like', `${filters.type}%`);
+          this.whereNotExists(function() {
+            this.select('*')
+              .from('document_associations as da')
+              .whereRaw('da.document_id = d.document_id')
+              .andWhere('da.tenant', tenant);
+          })
+          .orWhereExists(function() {
+            this.select('*')
+              .from('document_associations as da')
+              .whereRaw('da.document_id = d.document_id')
+              .andWhere('da.tenant', tenant);
+          });
         });
       }
-    }
 
-    if (filters.uploadedBy) {
-      query = query.where('d.created_by', filters.uploadedBy);
-    }
+      if (folderPath) {
+        if (includeSubfolders) {
+          query = query.where(function() {
+            this.where('d.folder_path', folderPath)
+              .orWhere('d.folder_path', 'like', `${folderPath}/%`);
+          });
+        } else {
+          query = query.where('d.folder_path', folderPath);
+        }
+      } else if (!includeSubfolders) {
+        query = query.whereNull('d.folder_path');
+      }
 
-    if (filters.updated_at_start) {
-      query = query.where('d.updated_at', '>=', filters.updated_at_start);
-    }
-
-    if (filters.updated_at_end) {
-      const endDate = new Date(filters.updated_at_end);
-      endDate.setDate(endDate.getDate() + 1);
-      query = query.where('d.updated_at', '<', endDate.toISOString().split('T')[0]);
-    }
-
-    if (filters.entityType) {
       query = query
-        .leftJoin('document_associations as da', function() {
-          this.on('d.document_id', '=', 'da.document_id')
-              .andOn('da.tenant', '=', knex.raw('?', [tenant]));
+        .leftJoin('document_types as dt', function() {
+          this.on('d.type_id', '=', 'dt.type_id')
+              .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
         })
-        .where('da.entity_type', filters.entityType);
-    }
+        .leftJoin('shared_document_types as sdt', 'd.shared_type_id', 'sdt.type_id');
 
-    if (filters.clientVisibility === 'visible') {
-      query = query.where('d.is_client_visible', true);
-    } else if (filters.clientVisibility === 'hidden') {
-      query = query.where(function() {
-        this.where('d.is_client_visible', false).orWhereNull('d.is_client_visible');
-      });
-    }
-  }
+      if (filters?.searchTerm) {
+        query = query.whereRaw('LOWER(d.document_name) LIKE ?', [`%${filters.searchTerm.toLowerCase()}%`]);
+      }
+      if (filters?.type) {
+        if (filters.type === 'application/pdf') {
+          query = query.where(function() {
+            this.where(function() {
+              this.where('dt.type_name', '=', 'application/pdf')
+                  .orWhere('sdt.type_name', '=', 'application/pdf');
+            }).whereNotNull('d.file_id');
+          });
+        } else if (filters.type === 'image') {
+          query = query.where(function() {
+            this.where(function() {
+              this.where('dt.type_name', 'like', 'image/%')
+                  .orWhere('sdt.type_name', 'like', 'image/%');
+            }).whereNotNull('d.file_id');
+          });
+        } else if (filters.type === 'text') {
+          query = query.where(function() {
+            this.where('dt.type_name', 'like', 'text/%')
+                .orWhere('sdt.type_name', 'like', 'text/%')
+                .orWhere('dt.type_name', '=', 'application/msword')
+                .orWhere('sdt.type_name', '=', 'application/msword')
+                .orWhere('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
+                .orWhere('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
+                .orWhere('dt.type_name', 'like', 'application/vnd.ms-excel%')
+                .orWhere('sdt.type_name', 'like', 'application/vnd.ms-excel%')
+                .orWhere('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%')
+                .orWhere('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%')
+                .orWhereNull('d.file_id');
+          });
+        } else if (filters.type === 'application') {
+          query = query.where(function() {
+            this.where(function() {
+              this.where(function() {
+                this.where('dt.type_name', 'like', 'application/%')
+                    .whereNot('dt.type_name', '=', 'application/pdf')
+                    .whereNot('dt.type_name', '=', 'application/msword')
+                    .whereNot('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
+                    .whereNot('dt.type_name', 'like', 'application/vnd.ms-excel%')
+                    .whereNot('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%');
+              }).orWhere(function() {
+                this.where('sdt.type_name', 'like', 'application/%')
+                    .whereNot('sdt.type_name', '=', 'application/pdf')
+                    .whereNot('sdt.type_name', '=', 'application/msword')
+                    .whereNot('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
+                    .whereNot('sdt.type_name', 'like', 'application/vnd.ms-excel%')
+                    .whereNot('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%');
+              });
+            }).whereNotNull('d.file_id');
+          });
+        } else {
+          query = query.where(function() {
+            this.where('dt.type_name', 'like', `${filters.type}%`)
+                .orWhere('sdt.type_name', 'like', `${filters.type}%`);
+          });
+        }
+      }
+      if (filters?.uploadedBy) {
+        query = query.where('d.created_by', filters.uploadedBy);
+      }
+      if (filters?.updated_at_start) {
+        query = query.where('d.updated_at', '>=', filters.updated_at_start);
+      }
+      if (filters?.updated_at_end) {
+        const endDate = new Date(filters.updated_at_end);
+        endDate.setDate(endDate.getDate() + 1);
+        query = query.where('d.updated_at', '<', endDate.toISOString().split('T')[0]);
+      }
+      if (filters?.entityType) {
+        query = query
+          .leftJoin('document_associations as da', function() {
+            this.on('d.document_id', '=', 'da.document_id')
+                .andOn('da.tenant', '=', trx.raw('?', [tenant]));
+          })
+          .where('da.entity_type', filters.entityType);
+      }
+      if (filters?.clientVisibility === 'visible') {
+        query = query.where('d.is_client_visible', true);
+      } else if (filters?.clientVisibility === 'hidden') {
+        query = query.where(function() {
+          this.where('d.is_client_visible', false).orWhereNull('d.is_client_visible');
+        });
+      }
 
-  // Get total count
-  const countResult = await query.clone().countDistinct('d.document_id as count');
-  const total = parseInt(countResult[0].count as string);
+      query = query
+        .leftJoin('users', function() {
+          this.on('d.created_by', '=', 'users.user_id')
+              .andOn('users.tenant', '=', trx.raw('?', [tenant]));
+        })
+        .select(
+          'd.*',
+          trx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
+          trx.raw(`
+            COALESCE(dt.type_name, sdt.type_name) as type_name,
+            COALESCE(dt.icon, sdt.icon) as type_icon
+          `),
+          trx.raw(`
+            CASE
+              WHEN d.document_name ~ '^[0-9]'
+              THEN CAST(COALESCE(NULLIF(regexp_replace(d.document_name, '[^0-9].*$', ''), ''), '0') AS INTEGER)
+              ELSE 0
+            END as numeric_prefix
+          `)
+        )
+        .distinct('d.document_id');
 
-  // Get paginated results with joins for sorting support
-  const offset = (page - 1) * limit;
+      if (filters?.sortBy === 'created_by_full_name') {
+        query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${filters.sortOrder || 'desc'}`);
+      } else if (filters?.sortBy === 'document_name') {
+        query = query.orderByRaw(`numeric_prefix ${filters.sortOrder || 'desc'}, d.document_name ${filters.sortOrder || 'desc'}`);
+      } else if (filters?.sortBy) {
+        query = query.orderBy(`d.${filters.sortBy}`, filters.sortOrder || 'desc');
+      } else {
+        query = query.orderByRaw('numeric_prefix ASC, d.document_name ASC');
+      }
 
-  // Add joins for computed fields used in sorting
-  query = query
-    .leftJoin('users', function() {
-      this.on('d.created_by', '=', 'users.user_id')
-          .andOn('users.tenant', '=', knex.raw('?', [tenant]));
-    })
-    .select(
-      'd.*',
-      knex.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
-      knex.raw(`
-        COALESCE(dt.type_name, sdt.type_name) as type_name,
-        COALESCE(dt.icon, sdt.icon) as type_icon
-      `),
-      // Add natural sort field for ORDER BY compatibility with DISTINCT
-      knex.raw(`
-        CASE
-          WHEN d.document_name ~ '^[0-9]'
-          THEN CAST(COALESCE(NULLIF(regexp_replace(d.document_name, '[^0-9].*$', ''), ''), '0') AS INTEGER)
-          ELSE 0
-        END as numeric_prefix
-      `)
-    )
-    .distinct('d.document_id');
+      return query.limit(sourceLimit).offset((sourcePage - 1) * sourceLimit);
+    };
 
-  // Apply sorting based on filters
-  if (filters?.sortBy) {
-    const sortField = filters.sortBy;
-    const sortOrder = filters.sortOrder || 'desc';
+    const pagination = await paginateAuthorizedDocuments({
+      trx,
+      tenant,
+      user,
+      page,
+      limit,
+      fetchPage,
+    });
 
-    // Handle special case for created_by_full_name which is a computed field
-    if (sortField === 'created_by_full_name') {
-      query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${sortOrder}`);
-    } else if (sortField === 'document_name') {
-      // Natural sort for document_name: sort numerically by leading digits, then alphabetically
-      query = query.orderByRaw(`numeric_prefix ${sortOrder}, d.document_name ${sortOrder}`);
-    } else {
-      // For other fields, prefix with table alias
-      query = query.orderBy(`d.${sortField}`, sortOrder);
-    }
-  } else {
-    // Default sort by document_name asc with natural sorting
-    query = query.orderByRaw(`numeric_prefix ASC, d.document_name ASC`);
-  }
-
-  // Apply pagination after sorting
-  query = query.limit(limit).offset(offset);
-
-  const documents = await query;
-
-  return {
-    documents,
-    total,
-  };
+    return {
+      documents: pagination.documents,
+      total: pagination.totalCount,
+    };
+  });
 });
 
 /**
@@ -2963,14 +3119,32 @@ export const moveDocumentsToFolder = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
+  const mutationResult = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const authorizationResult = await assertAuthorizedDocumentSetForMutation(
+      trx,
+      tenant,
+      user,
+      documentIds,
+      'Permission denied: Cannot move documents'
+    );
+    if (isActionPermissionErrorResult(authorizationResult)) {
+      return authorizationResult;
+    }
 
-  await knex('documents')
-    .whereIn('document_id', documentIds)
-    .andWhere('tenant', tenant)
-    .update({
-      folder_path: newFolderPath,
-      updated_at: new Date(),
-    });
+    await trx('documents')
+      .whereIn('document_id', documentIds)
+      .andWhere('tenant', tenant)
+      .update({
+        folder_path: newFolderPath,
+        updated_at: new Date(),
+      });
+
+    return null;
+  });
+
+  if (isActionPermissionErrorResult(mutationResult)) {
+    return mutationResult;
+  }
 });
 
 /**
@@ -2995,16 +3169,30 @@ export const toggleDocumentVisibility = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
+  const mutationResult = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const authorizationResult = await assertAuthorizedDocumentSetForMutation(
+      trx,
+      tenant,
+      user,
+      documentIds,
+      'Permission denied: Cannot update document visibility'
+    );
+    if (isActionPermissionErrorResult(authorizationResult)) {
+      return authorizationResult;
+    }
 
-  const updatedCount = await knex('documents')
-    .where('tenant', tenant)
-    .whereIn('document_id', documentIds)
-    .update({
-      is_client_visible: isClientVisible,
-      updated_at: new Date(),
-    });
+    const updatedCount = await trx('documents')
+      .where('tenant', tenant)
+      .whereIn('document_id', documentIds)
+      .update({
+        is_client_visible: isClientVisible,
+        updated_at: new Date(),
+      });
 
-  return Number(updatedCount || 0);
+    return Number(updatedCount || 0);
+  });
+
+  return mutationResult;
 });
 
 /**
@@ -3073,6 +3261,22 @@ export const toggleFolderVisibility = withAuth(async (
           .whereRaw('da.document_id = d.document_id')
           .andWhere('da.tenant', tenant);
       });
+    }
+
+    const documentsToUpdate = await documentsQuery
+      .clone()
+      .select('d.document_id', 'd.created_by', 'd.is_client_visible');
+    const authorizationResult = await withTransaction(knex, async (trx: Knex.Transaction) =>
+      assertAuthorizedDocumentSetForMutation(
+        trx,
+        tenant,
+        user,
+        documentsToUpdate.map((document: { document_id: string }) => document.document_id),
+        'Permission denied: Cannot update folder visibility'
+      )
+    );
+    if (isActionPermissionErrorResult(authorizationResult)) {
+      return authorizationResult;
     }
 
     const documentUpdatedCount = await documentsQuery.update({
@@ -3158,6 +3362,22 @@ export const toggleFolderVisibilityByPath = withAuth(async (
       });
     }
 
+    const documentsToUpdate = await documentsQuery
+      .clone()
+      .select('d.document_id', 'd.created_by', 'd.is_client_visible');
+    const authorizationResult = await withTransaction(knex, async (trx: Knex.Transaction) =>
+      assertAuthorizedDocumentSetForMutation(
+        trx,
+        tenant,
+        user,
+        documentsToUpdate.map((document: { document_id: string }) => document.document_id),
+        'Permission denied: Cannot update folder visibility'
+      )
+    );
+    if (isActionPermissionErrorResult(authorizationResult)) {
+      return authorizationResult;
+    }
+
     const documentUpdatedCount = await documentsQuery.update({
       is_client_visible: isClientVisible,
       updated_at: new Date(),
@@ -3198,10 +3418,12 @@ export const ensureEntityFolders = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  await ensureEntityFoldersInitializedInternal(knex, tenant, entityId, entityType, user.user_id);
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    await ensureEntityFoldersInitializedInternal(trx, tenant, entityId, entityType, user.user_id);
 
-  // Return current folder tree
-  return _getFolderTreeInternal(knex, tenant, entityId, entityType);
+    // Return current folder tree
+    return _getFolderTreeInternal(trx, user, tenant, entityId, entityType);
+  });
 });
 
 /**
@@ -3214,23 +3436,49 @@ export const getFolderStats = withAuth(async (
   user,
   { tenant },
   folderPath: string
-): Promise<IFolderStats> => {
+): Promise<IFolderStats | ActionPermissionError> => {
+  if (!(await hasPermission(user, 'document', 'read'))) {
+    return permissionError('Permission denied');
+  }
+
   const { knex } = await createTenantKnex();
 
-  const result = await knex('documents')
-    .where('tenant', tenant)
-    .where(function() {
-      this.where('folder_path', folderPath)
-        .orWhere('folder_path', 'like', `${folderPath}/%`);
-    })
-    .count('* as count')
-    .sum('file_size as size')
-    .first();
+  const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const rows = await trx('documents')
+      .where('tenant', tenant)
+      .where(function() {
+        this.where('folder_path', folderPath)
+          .orWhere('folder_path', 'like', `${folderPath}/%`);
+      })
+      .select('document_id', 'created_by', 'is_client_visible', 'file_size');
+
+    const authorizationInput = rows.map((row: { document_id: string; created_by: string | null; is_client_visible: boolean | null; file_size: number | string | null }) => ({
+      document_id: row.document_id,
+      created_by: row.created_by ?? undefined,
+      is_client_visible: row.is_client_visible ?? false,
+      file_size: row.file_size == null ? undefined : Number(row.file_size),
+    })) as IDocument[];
+    const authorizedDocuments = await authorizeAndRedactDocuments(trx, tenant, user, authorizationInput);
+    const authorizedDocumentIds = new Set(authorizedDocuments.map((document) => document.document_id));
+    const totalSize = rows.reduce((sum, row: { document_id: string; file_size: number | string | null }) => {
+      if (!authorizedDocumentIds.has(row.document_id)) {
+        return sum;
+      }
+
+      const size = row.file_size == null ? 0 : Number(row.file_size);
+      return sum + (Number.isFinite(size) ? size : 0);
+    }, 0);
+
+    return {
+      documentCount: authorizedDocumentIds.size,
+      totalSize,
+    };
+  });
 
   return {
     path: folderPath,
-    documentCount: parseInt(result?.count as string) || 0,
-    totalSize: parseInt(result?.size as string) || 0,
+    documentCount: result.documentCount,
+    totalSize: result.totalSize,
   };
 });
 
@@ -3352,6 +3600,24 @@ export const deleteFolder = withAuth(async (user, { tenant }, folderPath: string
 
   const { knex } = await createTenantKnex();
 
+  const documentsInFolder = await knex('documents')
+    .where('tenant', tenant)
+    .where('folder_path', folderPath)
+    .select('document_id', 'created_by', 'is_client_visible');
+
+  const authorizationResult = await withTransaction(knex, async (trx: Knex.Transaction) =>
+    assertAuthorizedDocumentSetForMutation(
+      trx,
+      tenant,
+      user,
+      documentsInFolder.map((document: { document_id: string }) => document.document_id),
+      'Permission denied: Cannot delete folder'
+    )
+  );
+  if (isActionPermissionErrorResult(authorizationResult)) {
+    return authorizationResult;
+  }
+
   // Check if folder has documents
   const docCount = await knex('documents')
     .where('tenant', tenant)
@@ -3425,8 +3691,9 @@ function buildFolderTreeFromPaths(
 
 async function enrichFolderTreeWithCounts(
   nodes: IFolderNode[],
-  knex: Knex,
+  knex: Knex.Transaction,
   tenant: string,
+  user: IUser,
   entityId?: string | null,
   entityType?: string | null
 ): Promise<void> {
@@ -3446,18 +3713,13 @@ async function enrichFolderTreeWithCounts(
     return;
   }
 
-  // Note: This is an internal helper called from within withAuth-wrapped functions
-  // so the tenant context is already established. We use a fixed set of entity types.
-  const allowedEntityTypes = ['ticket', 'client', 'contact', 'asset', 'project_task', 'contract'];
-
-  // Single query to get counts for ALL folders at once - with same permission filtering as getDocumentsByFolder
-  const countsQuery = knex('documents as d')
+  // Gather candidate documents first, then apply kernel authorization before counting.
+  let documentsQuery = knex('documents as d')
     .where('d.tenant', tenant)
     .whereIn('d.folder_path', allPaths);
 
   if (entityId && entityType) {
-    // Entity-scoped: only count documents associated with this specific entity
-    countsQuery.whereExists(function() {
+    documentsQuery = documentsQuery.whereExists(function() {
       this.select('*')
         .from('document_associations as da')
         .whereRaw('da.document_id = d.document_id')
@@ -3466,36 +3728,35 @@ async function enrichFolderTreeWithCounts(
         .andWhere('da.entity_type', entityType);
     });
   } else {
-    // Tenant-level: count unassociated docs + docs with allowed entity types
-    countsQuery.where(function() {
-      // Option 1: Document has no associations (tenant-level doc)
-      this.whereNotExists(function() {
-        this.select('*')
-          .from('document_associations as da')
-          .whereRaw('da.document_id = d.document_id')
-          .andWhere('da.tenant', tenant);
-      })
-      // Option 2: Document has associations user has permission for
-      .orWhereExists(function() {
-        this.select('*')
-          .from('document_associations as da')
-          .whereRaw('da.document_id = d.document_id')
-          .andWhere('da.tenant', tenant)
-          .whereIn('da.entity_type', allowedEntityTypes);
-      });
-    });
+    // No entity scope: include all documents and rely on kernel decisions for narrowing.
   }
 
-  const counts = await countsQuery
-    .groupBy('d.folder_path')
-    .select('d.folder_path')
-    .count('* as count');
+  const rows = await documentsQuery.select(
+    'd.document_id',
+    'd.created_by',
+    'd.is_client_visible',
+    'd.folder_path'
+  );
+  if (rows.length === 0) {
+    return;
+  }
+
+  const authorizationInput = rows.map((row: { document_id: string; created_by: string | null; is_client_visible: boolean | null }) => ({
+    document_id: row.document_id,
+    created_by: row.created_by ?? undefined,
+    is_client_visible: row.is_client_visible ?? false,
+  })) as IDocument[];
+  const authorizedDocuments = await authorizeAndRedactDocuments(knex, tenant, user, authorizationInput);
+  const authorizedDocumentIds = new Set(authorizedDocuments.map((document) => document.document_id));
 
   // Build map of path -> count
   const countMap = new Map<string, number>();
-  for (const row of counts) {
-    const count = typeof row.count === 'string' ? parseInt(row.count) : Number(row.count);
-    countMap.set(String(row.folder_path), count);
+  for (const row of rows as Array<{ document_id: string; folder_path: string }>) {
+    if (!authorizedDocumentIds.has(row.document_id)) {
+      continue;
+    }
+    const folderPath = String(row.folder_path);
+    countMap.set(folderPath, (countMap.get(folderPath) ?? 0) + 1);
   }
 
   // Apply counts to nodes recursively
@@ -3525,10 +3786,9 @@ export const getDocumentByFileId = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  const row = await knex('documents')
-    .select('document_id', 'document_name', 'is_client_visible')
-    .where({ tenant, file_id: fileId })
-    .first<{ document_id: string; document_name: string; is_client_visible: boolean }>();
+  const row = await withTransaction(knex, async (trx: Knex.Transaction) =>
+    getAuthorizedDocumentByFileId(trx, tenant, user, fileId)
+  );
 
   if (!row) return null;
 

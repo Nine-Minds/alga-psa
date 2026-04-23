@@ -508,7 +508,18 @@ const fetchContacts = async (): Promise<void> => {
         });
 
         if (!result.success) {
-          reportCreateUserError(result.error);
+          const keysByCode: Record<typeof result.code, string> = {
+            ROLE_REQUIRED: 'users.messages.error.roleRequired',
+            INVALID_ROLE: 'users.messages.error.invalidRole',
+            ROLE_MSP_NOT_ALLOWED_FOR_CLIENT: 'users.messages.error.selectAppropriateRole',
+            ROLE_CLIENT_NOT_ALLOWED_FOR_MSP: 'users.messages.error.selectAppropriateRole',
+            EMAIL_ALREADY_EXISTS: 'users.messages.error.emailAlreadyInUse',
+            LICENSE_LIMIT_REACHED: 'users.messages.error.licenseLimitReached',
+            SOLO_PLAN_LIMIT: 'users.messages.error.soloPlanLimit',
+          };
+          const message = t(keysByCode[result.code], { defaultValue: result.error });
+          toast.error(message);
+          setError(message);
           return;
         }
 

@@ -9,8 +9,16 @@ export const metadata: Metadata = {
 
 export default async function TimeTrackingPage() {
   const currentUser = await getCurrentUser();
-  const teamsData = currentUser ? await getTeams() : [];
-  const isManager = teamsData.some(team => team.manager_id === currentUser?.user_id);
+
+  let isManager = false;
+  if (currentUser) {
+    try {
+      const teamsData = await getTeams();
+      isManager = teamsData.some(team => team.manager_id === currentUser.user_id);
+    } catch (error) {
+      console.warn('[TimeTrackingPage] Failed to load teams for manager check; defaulting to non-manager', error);
+    }
+  }
 
   return <TimeTrackingClient initialUser={currentUser} initialIsManager={isManager} />;
 }
