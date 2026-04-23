@@ -70,6 +70,33 @@ exports.seed = async function (knex, tenantId) {
                     .filter(id => id !== undefined);
             }
             
+            // MSP Manager - parity baseline: technician capabilities plus scoped approvals and user/team visibility
+            else if (role.role_name === 'Manager' && role.msp === true) {
+                const managerPermissions = [
+                    'asset:create:msp', 'asset:read:msp', 'asset:update:msp',
+                    'client:read:msp', 'client:delete:msp',
+                    'contact:read:msp', 'contact:delete:msp',
+                    'document:create:msp', 'document:read:msp', 'document:update:msp',
+                    'profile:read:msp', 'profile:update:msp',
+                    'project:read:msp',
+                    'project_task:create:msp', 'project_task:read:msp', 'project_task:update:msp',
+                    'tag:create:msp', 'tag:read:msp', 'tag:update:msp',
+                    'technician_dispatch:read:msp',
+                    'ticket:create:msp', 'ticket:read:msp', 'ticket:update:msp',
+                    'timeentry:create:msp', 'timeentry:read:msp', 'timeentry:update:msp',
+                    'timesheet:read:msp', 'timesheet:update:msp', 'timesheet:submit:msp', 'timesheet:approve:msp', 'timesheet:reverse:msp',
+                    'user:read:msp',
+                    'user_schedule:read:msp',
+                    'user_settings:read:msp',
+                    'ticket_settings:read:msp',
+                    'sla_policy:read:msp'
+                ];
+
+                rolePermissionIds = managerPermissions
+                    .map(key => permissionMap.get(key))
+                    .filter(id => id !== undefined);
+            }
+            
             // MSP Technician - Based on permissions_list.md
             else if (role.role_name === 'Technician' && role.msp === true) {
                 const technicianPermissions = [
@@ -159,7 +186,7 @@ exports.seed = async function (knex, tenantId) {
                     'time_management:create:client', 'time_management:read:client', 'time_management:update:client', 'time_management:delete:client',
                     'user:create:client', 'user:read:client', 'user:update:client', 'user:delete:client', 'user:reset_password:client',
                     'settings:create:client', 'settings:read:client', 'settings:update:client', 'settings:delete:client',
-                    'documents:create:client', 'documents:read:client', 'documents:update:client'
+                    'document:create:client', 'document:read:client', 'document:update:client'
                 ];
                 
                 rolePermissionIds = clientAdminPermissions
@@ -177,7 +204,7 @@ exports.seed = async function (knex, tenantId) {
                     'time_management:read:client',
                     'user:read:client',
                     'settings:read:client',
-                    'documents:create:client', 'documents:read:client', 'documents:update:client'
+                    'document:create:client', 'document:read:client', 'document:update:client'
                 ];
                 
                 rolePermissionIds = clientFinancePermissions
@@ -192,7 +219,7 @@ exports.seed = async function (knex, tenantId) {
                     'project:read:client',
                     'ticket:create:client', 'ticket:read:client', 'ticket:update:client',
                     'time_management:read:client',
-                    'documents:create:client', 'documents:read:client', 'documents:update:client'
+                    'document:create:client', 'document:read:client', 'document:update:client'
                 ];
                 
                 rolePermissionIds = clientUserPermissions

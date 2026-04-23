@@ -1,0 +1,23 @@
+{
+  "name": "@alga-psa/authorization",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/authorization/src",
+  "projectType": "library",
+  "tags": ["scope:authorization", "type:horizontal"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "build"
+      },
+      "dependsOn": ["^build"]
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/authorization/**/*.{ts,tsx}"]
+      }
+    }
+  }
+}

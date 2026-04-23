@@ -1,0 +1,526 @@
+[
+  {
+    "id": "F001",
+    "description": "Create and maintain a plan-local current-behavior baseline artifact that documents today's authorization semantics across tickets, documents, time, projects, assets, billing, client-portal relationships, and API-key flows.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Requirements",
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Define a shared authorization-kernel contract for single-resource authorization, list/query scope resolution, mutation authorization, field-redaction hooks, and explainability traces.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Introduce a CE-compatible builtin authorization provider that evaluates only product-defined kernel behavior with no tenant-configurable premium overlays.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Non-functional Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Introduce an EE authorization provider that extends the shared kernel with tenant-configurable bundle-based narrowing overlays.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Requirements",
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Package the shared authorization runtime behind an edition-aware seam so feature code calls one stable interface instead of branching on `isEnterprise()`.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Keep RBAC as the mandatory prerequisite gate before any built-in or configurable authorization narrowing runs.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Implement shared relationship resolvers for the core relationship semantics used throughout the product, including own, assigned, managed, same-client, client-portfolio, same-team, and selected-board relationships where applicable.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Implement a shared scope-composition model that combines built-in and configured authorization as narrowing intersections rather than widening unions.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Implement shared mutation-guard evaluation for stateful authorization constraints such as approval restrictions and visibility-only guards.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Implement shared field-redaction hooks so migrated domains can hide sensitive fields without broadening record visibility.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Emit structured decision reasons from the authorization kernel that distinguish RBAC, built-in kernel behavior, and configured bundle-based narrowing.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Non-functional Requirements",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Add request-local caching for repeated relationship, assignment, bundle, and effective-scope resolution within a request.",
+    "implemented": true,
+    "prdRefs": [
+      "Non-functional Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Retire the legacy policy DSL as the primary runtime direction for migrated authorization paths without depending on end-user-authored expressions.",
+    "implemented": true,
+    "prdRefs": [
+      "Problem",
+      "Non-goals",
+      "Functional Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Create an `authorization_bundles` control-plane structure for reusable premium authorization bundles.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Create an `authorization_bundle_revisions` structure that stores draft, published, and archived bundle revisions separately from the stable bundle identity.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Create an `authorization_bundle_rules` structure keyed to revisions that stores typed resource/action/template/effect rules plus structured configuration payloads.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Create a generic `authorization_bundle_assignments` structure keyed by `target_type + target_id` for role, team, user, and API-key attachments.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Validate bundle-assignment targets at write time so assignments only reference same-tenant roles, teams, users, or API keys that actually exist.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Support bundle lifecycle states and revision lifecycle states so draft work is not enforced until explicitly published.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Make publishing a bundle revision atomically switch enforcement to the newly published revision for all active assignments of that bundle.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Support bundle archive semantics and disabled assignments so historical configuration can be retained without active enforcement.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Implement bundle-resolution logic that collects active assignments from roles, teams, users, and API keys and applies them as narrowing intersections.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Ensure API-key bundle restrictions are intersected with the impersonated user's effective built-in and configured access rather than widening it.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Define and enforce the v1 typed template catalog for premium narrowing bundles instead of arbitrary expressions.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Support core relationship-first scope templates such as own, assigned, managed, own-or-assigned, own-or-managed, selected-clients/client-portfolio, same-team, and selected-boards.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Support high-value narrowing guards and redaction templates such as not-self-approver, client-visible-only, and hide-sensitive-fields for the first migrated resource families.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Provide shipped system bundles / starter bundles that model common MSP operating boundaries such as assigned-client technician, project delivery team, time manager, restricted asset operator, and finance reviewer.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Add a tier-gated EE Bundle Library surface for browsing, searching, cloning, and archiving authorization bundles.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Add a tier-gated EE Bundle Editor that authors draft revisions through resource-oriented sections rather than raw rule grids.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Add natural-language summaries for bundle rules, effective bundle descriptions, and revision changes so admins can understand configuration without reading raw JSON.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Add a tier-gated EE Assignment Manager that shows which roles, teams, users, and API keys each bundle currently affects.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Add a tier-gated EE Access Simulator that evaluates draft and published bundle behavior against real principals and real existing records.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Users and Primary Flows",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Extend the EE Access Simulator to support synthetic authorization scenarios when no suitable real principal or record exists.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Users and Primary Flows",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Provide upgrade / unavailable states that follow existing EE tier-gating patterns when configurable premium ABAC is not available in CE or in non-entitled EE tiers.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Permission-gate bundle CRUD, publish, assignment, and simulator actions so authorization management itself is controlled by server-side checks.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Capture audit-relevant metadata for bundle and revision lifecycle events, including who created drafts, who published revisions, and which assignments are active.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Migrate ticket authorization for the selected v1 UI/server-action paths onto the shared kernel for list and single-record access evaluation.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Preserve and kernelize selected-board ticket narrowing so current client-portal-style board scoping becomes a first-class shared authorization capability.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Functional Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Support premium ticket narrowing bundles that can restrict ticket visibility and mutation by assignment, client portfolio, team scope, and selected boards.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Migrate document authorization for the selected v1 UI/server-action paths onto the shared kernel while preserving ownership, same-client, and client-visible semantics.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Support premium document narrowing bundles that can restrict document access by client portfolio and client-visible-only rules.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "Support document-sensitive-field redaction hooks for the selected v1 document surfaces without changing record-level visibility semantics.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Migrate time / timesheet delegation and approval authorization onto the shared kernel while preserving self, manager, reports-to, and tenant-wide semantics where they already exist.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Functional Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Support premium time narrowing bundles that can restrict access to self-only or self-plus-managed-user scopes without broadening existing delegation behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Kernelize not-self-approver style time-related approval restrictions where they are part of the selected v1 approval flows.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "Migrate the selected v1 project authorization paths onto the shared kernel, including the existing own-comment / internal-user semantics that must remain intact.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "Support premium project narrowing bundles that can restrict project access by assignment, client portfolio, and team scope on the selected v1 project surfaces.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "Migrate the selected v1 asset authorization paths onto the shared kernel with explicit client/team/assignment segmentation hooks suitable for later remote-access-sensitive behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "Support premium asset narrowing bundles that can restrict asset access by client portfolio, team scope, and assignment on the selected v1 asset surfaces.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "Migrate the selected v1 billing authorization paths onto the shared kernel while preserving existing quote/invoice visibility, approval, and blocker semantics.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "Support premium billing narrowing bundles that can restrict billing visibility by client portfolio and apply selected v1 approval-oriented guards without widening access.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "Support billing-sensitive-field redaction hooks for the selected v1 billing surfaces where field-level hiding is part of the premium authorization story.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "Normalize migrated API/programmatic paths to resolve effective authorization through the shared kernel rather than duplicating feature-specific inline checks.",
+    "implemented": true,
+    "prdRefs": [
+      "Problem",
+      "Functional Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "Adopt shared-kernel authorization in the selected v1 API-key-backed ticket, document, time, project, asset, and billing endpoints where parity work is in scope.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Rollout / Migration",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "Ensure CE continues to use the shared built-in kernel path for migrated resource families even though configurable premium bundle management is unavailable.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Goals",
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "Validate that migrated resource-family cutovers preserve baseline behavior rather than silently broadening access, using the plan-local baseline artifact as the parity contract.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  }
+]

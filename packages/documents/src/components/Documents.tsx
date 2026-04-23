@@ -611,6 +611,11 @@ const Documents = ({
         folder_path: folderPath
       });
 
+      if (isActionPermissionError(result)) {
+        setDrawerError(result.permissionError);
+        return;
+      }
+
       preCreatedDocIdRef.current = result.document_id;
       setIsCreatingNew(true);
       setNewDocumentName('');
@@ -995,7 +1000,7 @@ const Documents = ({
         setIsLoadingContent(true);
         try {
           const content = await getBlockContent(selectedDocument.document_id);
-          if (content?.block_data) {
+          if (content && !isActionPermissionError(content) && content.block_data) {
             try {
               const parsedContent = typeof content.block_data === 'string'
                 ? JSON.parse(content.block_data)

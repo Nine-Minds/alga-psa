@@ -23,7 +23,7 @@ import {
 } from './timeEntrySchemas'; // Import schemas
 import { getClientIdForWorkItem } from './timeEntryHelpers'; // Import helper
 import { computeWorkDateFields, resolveUserTimeZone } from '@alga-psa/db';
-import { assertCanActOnBehalf } from './timeEntryDelegationAuth';
+import { assertCanActOnBehalf, assertCanApproveSubject } from './timeEntryDelegationAuth';
 import { toPlainDate } from '@alga-psa/core';
 import {
   createTimeEntryChangeRequestRecord,
@@ -927,7 +927,11 @@ export const updateTimeEntryApprovalStatus = withAuth(async (
     throw new Error('Time entry not found');
   }
 
-  await assertCanActOnBehalf(user, tenant, existingEntry.user_id, db);
+  if (validatedParams.approvalStatus === 'APPROVED') {
+    await assertCanApproveSubject(user, tenant, existingEntry.user_id, db);
+  } else {
+    await assertCanActOnBehalf(user, tenant, existingEntry.user_id, db);
+  }
 
   if (existingEntry.invoiced) {
     throw new Error('This time entry has already been invoiced and cannot be modified.');

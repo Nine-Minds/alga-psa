@@ -16,14 +16,20 @@ export function useTeamAuth(currentUser: IUser | null) {
         return;
       }
 
-      const allTeams = await getTeams();
-      const userManagedTeams = allTeams.filter((team) => team.manager_id === currentUser.user_id);
+      try {
+        const allTeams = await getTeams();
+        const userManagedTeams = allTeams.filter((team) => team.manager_id === currentUser.user_id);
 
-      setIsManager(userManagedTeams.length > 0);
-      setManagedTeams(userManagedTeams);
+        setIsManager(userManagedTeams.length > 0);
+        setManagedTeams(userManagedTeams);
+      } catch (error) {
+        console.warn('[useTeamAuth] Failed to load teams for manager check; defaulting to non-manager', error);
+        setIsManager(false);
+        setManagedTeams([]);
+      }
     }
 
-    checkManagerStatus();
+    void checkManagerStatus();
   }, [currentUser]);
 
   return { isManager, managedTeams };

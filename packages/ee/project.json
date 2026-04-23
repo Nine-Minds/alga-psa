@@ -6,8 +6,8 @@
   "tags": ["scope:ee-stubs", "type:horizontal"],
   "targets": {
     "build": {
-      "executor": "nx:noop"
+      "executor": "nx:noop",
+      "dependsOn": []
     }
   }
 }
-

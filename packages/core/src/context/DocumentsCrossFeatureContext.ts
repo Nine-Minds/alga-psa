@@ -60,7 +60,7 @@ export interface DocumentsCrossFeatureCallbacks {
     entityId?: string;
     entityType?: 'ticket' | 'client' | 'contact' | 'asset' | 'project_task' | 'contract';
     folder_path?: string | null;
-  }) => Promise<{ document_id: string; content_id: string }>;
+  }) => Promise<{ document_id: string; content_id: string } | { permissionError: string }>;
   ensureEntityFolders: (entityId: string, entityType: string) => Promise<any>;
 }
 

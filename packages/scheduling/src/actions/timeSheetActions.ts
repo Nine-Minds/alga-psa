@@ -11,9 +11,9 @@ import {
   ITimeSheetApprovalView,
   ITimePeriodView
 } from '@alga-psa/types';
-import { createTenantKnex, User } from '@alga-psa/db';
+import { createTenantKnex } from '@alga-psa/db';
 import { formatISO } from 'date-fns';
-import { toPlainDate, isFeatureFlagEnabled } from '@alga-psa/core';
+import { toPlainDate } from '@alga-psa/core';
 import {
   timeSheetApprovalViewSchema,
   timeSheetCommentSchema,
@@ -24,7 +24,7 @@ import { WorkItemType } from '@alga-psa/types';
 import { validateArray, validateData } from '@alga-psa/validation';
 import { Temporal } from '@js-temporal/polyfill';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { assertCanActOnBehalf } from './timeEntryDelegationAuth';
+import { assertCanActOnBehalf, assertCanApproveSubject, resolveManagedSubjectUserIds } from './timeEntryDelegationAuth';
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
@@ -147,32 +147,13 @@ export const fetchTimeSheetsForApproval = withAuth(async (
       );
 
     if (!canReadAll) {
-      const reportsToEnabled = await isFeatureFlagEnabled('teams-v2', {
-        userId: user.user_id,
-        tenantId: tenant
-      });
-
-      const reportsToUserIds = reportsToEnabled
-        ? await User.getReportsToSubordinateIds(db, user.user_id)
-        : [];
+      const managedUserIds = await resolveManagedSubjectUserIds(db, tenant, user);
+      if (managedUserIds.length === 0) {
+        return [];
+      }
 
       query = query
-        .where((builder) => {
-          builder.whereExists(function managerScope() {
-            this.select(1)
-              .from('team_members')
-              .join('teams', function joinTeams() {
-                this.on('team_members.team_id', '=', 'teams.team_id').andOn('team_members.tenant', '=', 'teams.tenant');
-              })
-              .where('team_members.user_id', db.ref('users.user_id'))
-              .andWhere('teams.manager_id', user.user_id)
-              .andWhere('teams.tenant', tenant);
-          });
-
-          if (reportsToEnabled && reportsToUserIds.length > 0) {
-            builder.orWhereIn('users.user_id', reportsToUserIds);
-          }
-        })
+        .whereIn('users.user_id', managedUserIds)
         .distinct();
     }
 
@@ -227,6 +208,9 @@ export const addCommentToTimeSheet = withAuth(async (
     if (!isOwner && !canApprove) {
       throw new Error('Permission denied: Cannot add comments to timesheets');
     }
+    if (!isOwner) {
+      await assertCanActOnBehalf(user, tenant, timeSheet.user_id, db);
+    }
     const [newComment] = await db('time_sheet_comments')
       .insert({
         time_sheet_id: timeSheetId,
@@ -279,7 +263,7 @@ export const bulkApproveTimeSheets = withAuth(async (user, { tenant }, timeSheet
           throw new Error(`Time sheet ${id} is not in a submitted state or does not exist`);
         }
 
-        await assertCanActOnBehalf(user, tenant, timeSheet.user_id, trx);
+        await assertCanApproveSubject(user, tenant, timeSheet.user_id, trx);
 
         // Get analytics data before approval
         const entriesInfo = await trx('time_entries')
@@ -468,15 +452,18 @@ export const fetchTimeSheetComments = withAuth(async (user, { tenant }, timeShee
         'time_sheets.tenant': tenant
       })
       .select(
+        'time_sheets.user_id',
         'users.first_name',
         'users.last_name',
         'users.email'
       )
-      .first();
+      .first<{ user_id: string; first_name: string; last_name: string; email: string }>();
 
     if (!timeSheet) {
       throw new Error('Time sheet not found');
     }
+
+    await assertCanActOnBehalf(user, tenant, timeSheet.user_id, db);
 
     // Then get all comments with user info
     const comments = await db('time_sheet_comments')
@@ -540,7 +527,7 @@ export const approveTimeSheet = withAuth(async (user, { tenant }, timeSheetId: s
         throw new Error('Time sheet not found');
       }
 
-      await assertCanActOnBehalf(user, tenant, timeSheet.user_id, trx);
+      await assertCanApproveSubject(user, tenant, timeSheet.user_id, trx);
 
       // Get analytics data
       const entriesInfo = await trx('time_entries')
@@ -610,6 +597,10 @@ export const requestChangesForTimeSheet = withAuth(async (user, { tenant }, time
       throw new Error('Permission denied: Cannot request changes for timesheets');
     }
 
+    if (approverId !== user.user_id) {
+      throw new Error('Permission denied: Invalid approver');
+    }
+
     await db.transaction(async (trx) => {
       const timeSheet = await trx('time_sheets')
         .where({
@@ -621,6 +612,8 @@ export const requestChangesForTimeSheet = withAuth(async (user, { tenant }, time
       if (!timeSheet) {
         throw new Error('Time sheet not found');
       }
+
+      await assertCanActOnBehalf(user, tenant, timeSheet.user_id, trx);
 
       await trx('time_sheets')
         .where({

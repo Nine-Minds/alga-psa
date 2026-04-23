@@ -55,7 +55,15 @@
     "migrate:ee:down": "node scripts/run-ee-migrations.js down",
     "migrate:ee:status": "node scripts/run-ee-migrations.js status"
   },
+  "nx": {
+    "targets": {
+      "build": {
+        "dependsOn": []
+      }
+    }
+  },
   "dependencies": {
+    "@alga-psa/authorization": "*",
     "@alga-psa/workflow-streams": "*",
     "@alga-psa/workflows": "*",
     "@anthropic-ai/sdk": "^0.36.3",

@@ -1,0 +1,302 @@
+[
+  {
+    "id": "T001",
+    "description": "Review artifact: `CURRENT_AUTHORIZATION_BASELINE.md` captures current authorization behavior and salient file paths for tickets, documents, time, projects, assets, billing, client relationships, and API-key flows before migration cutovers proceed.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F056"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Migration/contract: the new authorization control-plane schema creates bundles, revisions, rules, and generic assignments with tenant-scoped keys and no dependency on the legacy policy DSL tables.",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F015",
+      "F016",
+      "F017"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "DB-backed integration: publishing a draft bundle revision makes only the published revision enforceable while preserving the stable bundle identity and existing assignments.",
+    "implemented": true,
+    "featureIds": [
+      "F019",
+      "F020"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Guard: assignment creation rejects cross-tenant or wrong-target references for role, team, user, and API-key bundle attachments.",
+    "implemented": true,
+    "featureIds": [
+      "F017",
+      "F018"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Integration: effective bundle resolution for a user combines role, team, and direct-user attachments as narrowing intersections rather than widening unions.",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Guard/integration: API-key effective access is the intersection of user access and API-key bundle restrictions and never broadens the impersonated user's scope.",
+    "implemented": true,
+    "featureIds": [
+      "F023",
+      "F054"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Kernel contract: callers can resolve a single-resource decision, list/query scope, mutation guards, and explainability reasons through one shared authorization interface in both CE and EE modes.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F003",
+      "F004",
+      "F005",
+      "F011"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Guard: if RBAC denies a resource/action, neither built-in kernel behavior nor configured bundles restore access.",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Guard: configured premium bundles can only narrow access; multiple configured bundle rules for the same resource/action resolve as intersections.",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F022",
+      "F056"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Simulator: EE admins can evaluate both real principals/records and synthetic scenarios against draft and published bundle revisions and receive explainable decision output.",
+    "implemented": true,
+    "featureIds": [
+      "F032",
+      "F033"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Tier/edition guard: CE and non-entitled EE tiers cannot use configurable bundle-management actions or UI, while migrated builtin-kernel behavior still runs.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F028",
+      "F029",
+      "F031",
+      "F034",
+      "F035",
+      "F055"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Happy path: a published starter or custom bundle can be attached to a role and immediately narrows effective ticket scope for users in that role.",
+    "implemented": true,
+    "featureIds": [
+      "F020",
+      "F022",
+      "F024",
+      "F025",
+      "F027",
+      "F039"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Regression/integration: migrated ticket list and direct-ticket authorization preserve baseline board/client narrowing semantics while honoring configured selected-client and selected-board bundle restrictions.",
+    "implemented": true,
+    "featureIds": [
+      "F037",
+      "F038",
+      "F039",
+      "F056"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Parity: the selected migrated ticket API path and the selected migrated ticket UI/server-action path resolve the same effective scope for the same user and tenant context.",
+    "implemented": true,
+    "featureIds": [
+      "F037",
+      "F053",
+      "F054",
+      "F056"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Regression/integration: migrated document authorization preserves baseline own/same-client/client-visible behavior while premium selected-client narrowing further restricts access without broadening it.",
+    "implemented": true,
+    "featureIds": [
+      "F040",
+      "F041",
+      "F056"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Guard/redaction: document-sensitive-field redaction hides configured fields on allowed records without changing record-level allow/deny behavior.",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F042"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Regression/integration: migrated time authorization preserves self, manager, reports-to, and tenant-wide semantics from the current delegation model.",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F043",
+      "F056"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Guard: premium time bundles can narrow access to self-only or self-plus-managed-users but cannot grant broader delegation than the builtin time model already allows.",
+    "implemented": true,
+    "featureIds": [
+      "F044",
+      "F056"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Regression/guard: migrated time approval flows preserve the selected not-self-approver and related state-transition restrictions after kernelization.",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F045",
+      "F056"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Regression/integration: migrated project authorization preserves selected own-comment / internal-user semantics and can further narrow project visibility by assignment, client portfolio, or team bundle rules.",
+    "implemented": true,
+    "featureIds": [
+      "F046",
+      "F047",
+      "F056"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Regression/integration: migrated asset authorization preserves baseline visibility while premium client/team/assignment bundles narrow access on the selected v1 asset surfaces.",
+    "implemented": true,
+    "featureIds": [
+      "F048",
+      "F049",
+      "F056"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Regression/integration: migrated billing authorization preserves selected quote/invoice visibility and approval/blocker semantics while client-portfolio narrowing applies when configured.",
+    "implemented": true,
+    "featureIds": [
+      "F050",
+      "F051",
+      "F056"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Guard/redaction: billing-sensitive-field redaction hides configured cost or financial fields on allowed records without broadening or denying the underlying record unexpectedly.",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F052"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "EE UI/action: Bundle Library, Bundle Editor, and Assignment Manager allow draft editing, publish, assignment, disable, and archive flows without mutating the currently published revision in place.",
+    "implemented": true,
+    "featureIds": [
+      "F028",
+      "F029",
+      "F031"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "EE UX: bundle rules and revisions display human-readable summaries that reflect resource sections, typed templates, and material draft changes.",
+    "implemented": true,
+    "featureIds": [
+      "F024",
+      "F025",
+      "F026",
+      "F030"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Guard: only authorized users can create bundles, edit drafts, publish revisions, manage assignments, or run the simulator.",
+    "implemented": true,
+    "featureIds": [
+      "F035"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "Audit trail: bundle creation, draft edits, revision publication, and assignment changes persist enough metadata to explain who changed what and when.",
+    "implemented": true,
+    "featureIds": [
+      "F036"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "Regression: CE migrated flows for the selected ticket, document, time, project, asset, and billing paths continue to work through the shared builtin kernel even though premium bundle management is unavailable.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F037",
+      "F040",
+      "F043",
+      "F046",
+      "F048",
+      "F050",
+      "F055"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "Explainability: effective authorization output for a migrated resource identifies the RBAC gate, builtin kernel rule path, and any configured bundle sources that further narrowed access.",
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F032",
+      "F033"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Legacy-direction regression: migrated authorization paths no longer depend on end-user-authored DSL parsing or the old policy-engine runtime to make access decisions.",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  }
+]

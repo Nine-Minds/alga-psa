@@ -45,11 +45,16 @@ export async function assertTierAccess(feature: TIER_FEATURES): Promise<void> {
   if (!isEnterprise) return;
 
   const session = await getSession();
-  const plan = session?.user?.plan;
-  const { tier } = resolveTier(plan);
-  const effectiveTier = tier === 'solo' && hasActiveSoloProTrial(session?.user?.solo_pro_trial_end)
-    ? 'pro'
-    : tier;
+  const tenantId = session?.user?.tenant;
+
+  const effectiveTier = tenantId
+    ? await getTenantTier(tenantId)
+    : (() => {
+        const { tier } = resolveTier(session?.user?.plan);
+        return tier === 'solo' && hasActiveSoloProTrial(session?.user?.solo_pro_trial_end)
+          ? 'pro'
+          : tier;
+      })();
 
   if (!tierHasFeature(effectiveTier, feature)) {
     const requiredTier = FEATURE_MINIMUM_TIER[feature];

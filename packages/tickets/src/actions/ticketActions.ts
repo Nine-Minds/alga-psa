@@ -44,9 +44,19 @@ import { TicketModelEventPublisher } from '../lib/adapters/TicketModelEventPubli
 import { TicketModelAnalyticsTracker } from '../lib/adapters/TicketModelAnalyticsTracker';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
+import {
+  BuiltinAuthorizationKernelProvider,
+  BundleAuthorizationKernelProvider,
+  RequestLocalAuthorizationCache,
+  createAuthorizationKernel,
+  type AuthorizationRecord,
+  type AuthorizationSubject,
+} from '@alga-psa/authorization/kernel';
+import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
 import { getTicketOrigin, type ResolvedTicketOrigin } from '../lib/ticketOrigin';
+import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { updateTicketWithCache } from './optimizedTicketActions';
 import {
   buildTicketResolutionSlaStageCompletionEvent,
@@ -72,6 +82,105 @@ function getEmailEventChannel(): string {
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into tickets.
+}
+
+function extractRoleIdsFromUser(user: unknown): string[] {
+  const roles = (user as { roles?: unknown }).roles;
+  if (!Array.isArray(roles)) {
+    return [];
+  }
+
+  return roles
+    .map((role) => {
+      if (typeof role === 'string') {
+        return role;
+      }
+      if (role && typeof role === 'object' && 'role_id' in role) {
+        const roleId = (role as { role_id?: unknown }).role_id;
+        return typeof roleId === 'string' ? roleId : null;
+      }
+      return null;
+    })
+    .filter((value): value is string => Boolean(value));
+}
+
+async function resolveAuthorizationSubjectForUser(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles
+): Promise<AuthorizationSubject> {
+  let roleIds = extractRoleIdsFromUser(user);
+  if (roleIds.length === 0) {
+    try {
+      const roleRows = await trx('user_roles')
+        .where({ tenant, user_id: user.user_id })
+        .select<{ role_id: string }[]>('role_id');
+      roleIds = roleRows.map((row) => row.role_id);
+    } catch {
+      roleIds = [];
+    }
+  }
+
+  let teamRows: Array<{ team_id: string }> = [];
+  let managedRows: Array<{ user_id: string }> = [];
+  try {
+    teamRows = await trx('team_members')
+      .where({ tenant, user_id: user.user_id })
+      .select<{ team_id: string }[]>('team_id');
+  } catch {
+    teamRows = [];
+  }
+  try {
+    managedRows = await trx('users')
+      .where({ tenant, reports_to: user.user_id })
+      .select<{ user_id: string }[]>('user_id');
+  } catch {
+    managedRows = [];
+  }
+
+  return {
+    tenant,
+    userId: user.user_id,
+    userType: user.user_type,
+    roleIds,
+    teamIds: teamRows.map((row) => row.team_id),
+    managedUserIds: managedRows.map((row) => row.user_id),
+    clientId: user.clientId ?? null,
+    portfolioClientIds: [],
+  };
+}
+
+function toTicketAuthorizationRecord(ticket: Partial<ITicket>): AuthorizationRecord {
+  return {
+    id: ticket.ticket_id ?? null,
+    ownerUserId: ticket.entered_by ?? null,
+    assignedUserIds: ticket.assigned_to ? [ticket.assigned_to] : [],
+    clientId: ticket.client_id ?? null,
+    boardId: ticket.board_id ?? null,
+    teamIds: ticket.assigned_team_id ? [ticket.assigned_team_id] : [],
+  };
+}
+
+async function resolveClientSelectedBoardIds(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles
+): Promise<string[] | undefined> {
+  if (user.user_type !== 'client') {
+    return undefined;
+  }
+
+  if (!user.contact_id) {
+    return [];
+  }
+
+  try {
+    const visibilityContext = await getClientContactVisibilityContext(trx, tenant, user.contact_id);
+    return visibilityContext.visibleBoardIds ?? undefined;
+  } catch {
+    // Fail closed for client portal users when visibility context cannot be resolved safely.
+    return [];
+  }
 }
 
 // Helper function to safely convert dates
@@ -941,6 +1050,31 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
         throw new Error('Permission denied: Cannot view tickets');
       }
 
+      const authorizationSubject = await resolveAuthorizationSubjectForUser(
+        trx,
+        tenant,
+        user as IUserWithRoles
+      );
+      const selectedBoardIds = await resolveClientSelectedBoardIds(trx, tenant, user as IUserWithRoles);
+      const relationshipRules =
+        selectedBoardIds === undefined ? [] : [{ template: 'selected_boards' as const }];
+      const authorizationKernel = createAuthorizationKernel({
+        builtinProvider: new BuiltinAuthorizationKernelProvider({
+          relationshipRules,
+        }),
+        bundleProvider: new BundleAuthorizationKernelProvider({
+          resolveRules: async (input) => {
+            try {
+              return await resolveBundleNarrowingRulesForEvaluation(trx, input);
+            } catch {
+              return [];
+            }
+          },
+        }),
+        rbacEvaluator: async () => true,
+      });
+      const requestCache = new RequestLocalAuthorizationCache();
+
       let query = trx('tickets as t')
       .select(
         't.*',
@@ -1026,6 +1160,10 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
       query = query.where('t.client_id', validatedFilters.clientId);
     }
 
+    if ((user as IUserWithRoles).user_type === 'client' && (user as IUserWithRoles).clientId) {
+      query = query.where('t.client_id', (user as IUserWithRoles).clientId);
+    }
+
     if (validatedFilters.searchQuery) {
       const searchTerm = `%${validatedFilters.searchQuery}%`;
       query = query.where(function(this: any) {
@@ -1075,8 +1213,26 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
         })
         .orderBy('t.ticket_id', 'desc');
 
+      const decisions = await Promise.all(
+        tickets.map((ticket: any) =>
+          authorizationKernel.authorizeResource({
+            subject: authorizationSubject,
+            resource: {
+              type: 'ticket',
+              action: 'read',
+              id: ticket.ticket_id,
+            },
+            record: toTicketAuthorizationRecord(ticket),
+            selectedBoardIds,
+            requestCache,
+            knex: trx,
+          })
+        )
+      );
+      const authorizedTickets = tickets.filter((_ticket: any, index: number) => decisions[index]?.allowed);
+
       // Transform and validate the data
-      const ticketListItems = tickets.map((ticket: any): ITicketListItem => {
+      const ticketListItems = authorizedTickets.map((ticket: any): ITicketListItem => {
         const {
           status_id,
           priority_id,
@@ -1608,6 +1764,31 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
         throw new Error('Permission denied: Cannot view ticket');
       }
 
+      const authorizationSubject = await resolveAuthorizationSubjectForUser(
+        trx,
+        tenant,
+        user as IUserWithRoles
+      );
+      const selectedBoardIds = await resolveClientSelectedBoardIds(trx, tenant, user as IUserWithRoles);
+      const relationshipRules =
+        selectedBoardIds === undefined ? [] : [{ template: 'selected_boards' as const }];
+      const authorizationKernel = createAuthorizationKernel({
+        builtinProvider: new BuiltinAuthorizationKernelProvider({
+          relationshipRules,
+        }),
+        bundleProvider: new BundleAuthorizationKernelProvider({
+          resolveRules: async (input) => {
+            try {
+              return await resolveBundleNarrowingRulesForEvaluation(trx, input);
+            } catch {
+              return [];
+            }
+          },
+        }),
+        rbacEvaluator: async () => true,
+      });
+      const requestCache = new RequestLocalAuthorizationCache();
+
     type TicketQueryResult = ITicket & {
       status_name: string;
       is_closed: boolean;
@@ -1661,9 +1842,32 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
       })
       .first();
 
-    if (!ticket) {
-      throw new Error('Ticket not found');
-    }
+      if (!ticket) {
+        throw new Error('Ticket not found');
+      }
+
+      if ((user as IUserWithRoles).user_type === 'client' && (user as IUserWithRoles).clientId) {
+        if (ticket.client_id !== (user as IUserWithRoles).clientId) {
+          throw new Error('Permission denied: Cannot view ticket');
+        }
+      }
+
+      const authorizationDecision = await authorizationKernel.authorizeResource({
+        subject: authorizationSubject,
+        resource: {
+          type: 'ticket',
+          action: 'read',
+          id,
+        },
+        record: toTicketAuthorizationRecord(ticket),
+        selectedBoardIds,
+        requestCache,
+        knex: trx,
+      });
+
+      if (!authorizationDecision.allowed) {
+        throw new Error('Permission denied: Cannot view ticket');
+      }
 
       // Fetch additional resources and available agents in parallel
       const [additionalAgents, availableAgents] = await Promise.all([
