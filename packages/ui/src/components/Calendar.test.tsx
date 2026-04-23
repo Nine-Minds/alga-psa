@@ -46,9 +46,9 @@ describe('Calendar', () => {
       />
     );
 
-    const todayButton = screen.getByRole('button', { name: 'Select today' });
+    const todayButton = screen.getByRole('button', { name: 'Select today' }) as HTMLButtonElement;
 
-    expect(todayButton).toBeDisabled();
+    expect(todayButton.disabled).toBe(true);
     fireEvent.click(todayButton);
     expect(onSelect).not.toHaveBeenCalled();
   });
