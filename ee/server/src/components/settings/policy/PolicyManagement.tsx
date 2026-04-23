@@ -1,11 +1,25 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Archive,
+  ArrowLeft,
+  FlaskConical,
+  Layers3,
+  type LucideIcon,
+  Search,
+  Shield,
+  Sparkles,
+  Users,
+} from 'lucide-react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
+import { Switch } from '@alga-psa/ui/components/Switch';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import { TIER_FEATURES } from '@alga-psa/types';
@@ -47,6 +61,7 @@ const ASSIGNMENT_TARGET_TYPES = ['role', 'team', 'user', 'api_key'] as const;
 
 type AssignmentTargetType = (typeof ASSIGNMENT_TARGET_TYPES)[number];
 type EditorRule = AuthorizationBundleDraftEditorPayload['rules'][number];
+type WorkspacePanel = 'editor' | 'assignments' | 'simulator';
 
 interface RuleDraftFormState {
   ruleId?: string;
@@ -171,6 +186,39 @@ function buildRuleConfig(draft: RuleDraftFormState): Record<string, unknown> {
   return config;
 }
 
+function OverviewMetricCard({
+  icon: Icon,
+  title,
+  value,
+  subtitle,
+}: {
+  icon: LucideIcon;
+  title: string;
+  value: string | number;
+  subtitle: string;
+}) {
+  return (
+    <Card className="border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))]">
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[rgb(var(--color-text-500))]">
+              {title}
+            </div>
+            <div className="text-2xl font-semibold tracking-[-0.02em] text-[rgb(var(--color-text-900))]">
+              {value}
+            </div>
+            <p className="text-xs text-[rgb(var(--color-text-500))]">{subtitle}</p>
+          </div>
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[rgb(var(--color-primary-100))] dark:bg-[rgb(var(--color-primary-400)/0.22)]">
+            <Icon className="h-5 w-5 text-[rgb(var(--color-primary-700))] dark:text-[rgb(var(--color-primary-800))]" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function PolicyManagement() {
   const hasBundleLibrary = useTierFeature(TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES);
   const [entries, setEntries] = useState<AuthorizationBundleLibraryEntry[]>([]);
@@ -216,6 +264,21 @@ export default function PolicyManagement() {
     [entries]
   );
 
+  const archivedCount = useMemo(
+    () => entries.filter((entry) => entry.status === 'archived').length,
+    [entries]
+  );
+
+  const starterCount = useMemo(
+    () => entries.filter((entry) => entry.isSystem).length,
+    [entries]
+  );
+
+  const totalAssignments = useMemo(
+    () => entries.reduce((total, entry) => total + entry.assignmentCount, 0),
+    [entries]
+  );
+
   const clientNameById = useMemo(
     () =>
       new Map(
@@ -235,6 +298,21 @@ export default function PolicyManagement() {
   const assignmentTargetOptions = useMemo(() => {
     return assignmentData?.availableTargets?.[assignmentTargetType] ?? [];
   }, [assignmentData, assignmentTargetType]);
+
+  const selectedBundleId = editorBundleId ?? assignmentBundleId ?? simulatorBundleId;
+
+  const selectedBundleEntry = useMemo(
+    () => entries.find((entry) => entry.bundleId === selectedBundleId) ?? null,
+    [entries, selectedBundleId]
+  );
+
+  const activeWorkspacePanel: WorkspacePanel | null = editorBundleId
+    ? 'editor'
+    : assignmentBundleId
+      ? 'assignments'
+      : simulatorBundleId
+        ? 'simulator'
+        : null;
 
   const fetchEntries = useCallback(async () => {
     if (!hasBundleLibrary) {
@@ -373,6 +451,15 @@ export default function PolicyManagement() {
     []
   );
 
+  const workspaceTabs = useMemo(
+    () => [
+      { id: 'editor', label: 'Draft editor', icon: Sparkles, content: <div /> },
+      { id: 'assignments', label: 'Assignments', icon: Users, content: <div /> },
+      { id: 'simulator', label: 'Simulator', icon: FlaskConical, content: <div /> },
+    ],
+    []
+  );
+
   const editorHasPublishableDraft = useMemo(() => {
     if (!editorData) {
       return false;
@@ -415,6 +502,18 @@ export default function PolicyManagement() {
     }
     updateRuleDraft(resourceType, buildEmptyRuleDraft(editorData));
   }, [editorData, updateRuleDraft]);
+
+  const openWorkspace = useCallback((bundleId: string, panel: WorkspacePanel) => {
+    setEditorBundleId(panel === 'editor' ? bundleId : null);
+    setAssignmentBundleId(panel === 'assignments' ? bundleId : null);
+    setSimulatorBundleId(panel === 'simulator' ? bundleId : null);
+  }, []);
+
+  const closeWorkspace = useCallback(() => {
+    setEditorBundleId(null);
+    setAssignmentBundleId(null);
+    setSimulatorBundleId(null);
+  }, []);
 
   const handleClone = async (entry: AuthorizationBundleLibraryEntry): Promise<void> => {
     const clonedName = `${entry.name} Copy`;
@@ -486,7 +585,7 @@ export default function PolicyManagement() {
       setNewBundleName('');
       setNewBundleDescription('');
       await fetchEntries();
-      setEditorBundleId(created.bundleId);
+      openWorkspace(created.bundleId, 'editor');
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : 'Failed to create bundle.');
     } finally {
@@ -673,800 +772,962 @@ export default function PolicyManagement() {
 
   if (!hasBundleLibrary) {
     return (
-      <div className="space-y-4 rounded-lg border border-dashed border-muted-foreground/40 p-6 text-sm text-muted-foreground">
-        <p className="font-semibold text-foreground">Authorization Bundle Library</p>
-        <p>
-          Advanced Authorization Bundle management is available on the Premium tier. Upgrade to manage reusable narrowing bundles.
-        </p>
-      </div>
+      <Card className="border-dashed border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-card))]">
+        <CardHeader>
+          <CardTitle>Authorization bundles</CardTitle>
+          <CardDescription>
+            Advanced Authorization Bundle management is available on the Premium tier. Upgrade to manage reusable narrowing bundles.
+          </CardDescription>
+        </CardHeader>
+      </Card>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-4">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div className="space-y-1">
-            <h2 className="text-xl font-semibold">Authorization Bundle Library</h2>
-            <p className="text-sm text-muted-foreground">
-              Browse and manage reusable narrowing bundles. Active bundles: {activeCount}
-            </p>
+    <div className="mx-auto max-w-7xl space-y-8 pb-8">
+      {!selectedBundleId ? (
+        <>
+          <div className="overflow-hidden rounded-2xl bg-[linear-gradient(90deg,rgb(var(--color-primary-600)),rgb(var(--color-secondary-500)))] text-white shadow-[0_24px_48px_rgb(var(--color-primary-500)/0.18)]">
+            <div className="flex flex-col gap-8 p-7 lg:flex-row lg:items-center lg:justify-between lg:p-8">
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/15">
+                  <Shield className="h-6 w-6 text-white" />
+                </div>
+                <div className="space-y-2">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-white/90">
+                    Premium workspace
+                  </div>
+                  <div className="space-y-1">
+                    <h2 className="text-2xl font-semibold tracking-[-0.02em] text-white">Authorization bundles</h2>
+                    <p className="max-w-2xl text-sm text-white/85">
+                      Manage premium access narrowing with draft revisions, scoped assignments, and safe simulation from one control center.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  id="authorization-bundle-create-button"
+                  size="sm"
+                  variant="outline"
+                  className="border-white/25 bg-white text-[rgb(var(--color-primary-700))] hover:bg-white/90 hover:text-[rgb(var(--color-primary-700))]"
+                  onClick={() => setIsCreateDialogOpen(true)}
+                >
+                  New bundle
+                </Button>
+                <Button
+                  id="authorization-bundle-seed-starters-button"
+                  size="sm"
+                  variant="outline"
+                  className="border-white/25 bg-transparent text-white hover:bg-white/10"
+                  onClick={() => void handleSeedStarters()}
+                  disabled={seeding}
+                >
+                  {seeding ? 'Adding starter bundles...' : 'Add starter bundles'}
+                </Button>
+              </div>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              id="authorization-bundle-create-button"
-              size="sm"
-              variant="outline"
-              onClick={() => setIsCreateDialogOpen(true)}
-            >
-              New Bundle
-            </Button>
-            <Button
-              id="authorization-bundle-seed-starters-button"
-              size="sm"
-              onClick={() => void handleSeedStarters()}
-              disabled={seeding}
-            >
-              {seeding ? 'Adding starter bundles...' : 'Add Starter Bundles'}
-            </Button>
-          </div>
-        </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <Input
-            id="authorization-bundle-search-input"
-            className="max-w-md"
-            placeholder="Search bundles by name or description"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-          <Button
-            id="authorization-bundle-toggle-archived-button"
-            size="sm"
-            variant={includeArchived ? 'default' : 'outline'}
-            onClick={() => setIncludeArchived((current) => !current)}
-          >
-            {includeArchived ? 'Showing archived' : 'Show archived'}
-          </Button>
-        </div>
-      </div>
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+            <OverviewMetricCard
+              icon={Layers3}
+              title="Active bundles"
+              value={activeCount}
+              subtitle="Reusable narrowing bundles currently available to assign"
+            />
+            <OverviewMetricCard
+              icon={Users}
+              title="Active assignments"
+              value={totalAssignments}
+              subtitle="Live role, team, user, and API key rollouts"
+            />
+            <OverviewMetricCard
+              icon={Sparkles}
+              title="Starter bundles"
+              value={starterCount}
+              subtitle="Bundled relationship-first presets ready to adapt"
+            />
+            <OverviewMetricCard
+              icon={Archive}
+              title="Archived bundles"
+              value={archivedCount}
+              subtitle="Retired bundles preserved for audit and reuse"
+            />
+          </div>
+        </>
+      ) : null}
 
       {error ? (
-        <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+        <div className="rounded-xl border border-[rgb(var(--color-destructive)/0.25)] bg-[rgb(var(--color-destructive)/0.08)] px-4 py-3.5 text-sm text-[rgb(var(--color-destructive))] shadow-sm">
           {error}
         </div>
       ) : null}
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Bundle</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Assignments</TableHead>
-              <TableHead>Updated</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {!loading && entries.length === 0 ? (
+      {!selectedBundleId ? (
+        <Card className="overflow-hidden rounded-2xl border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] shadow-sm">
+        <CardHeader className="gap-5 border-b border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] pb-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="space-y-1">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[rgb(var(--color-text-500))]">
+                Library
+              </div>
+              <CardTitle>Authorization bundle library</CardTitle>
+              <CardDescription>
+                Browse bundle status, manage lifecycle changes, and open a focused workspace for one bundle at a time.
+              </CardDescription>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative w-full min-w-[320px] max-w-md">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[rgb(var(--color-text-400))]" />
+                <Input
+                  id="authorization-bundle-search-input"
+                  className="pl-9"
+                  placeholder="Search bundles by name or description"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                />
+              </div>
+              <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] px-3 py-2 dark:bg-[rgb(var(--color-border-50))]">
+                <Switch
+                  id="authorization-bundle-toggle-archived-button"
+                  checked={includeArchived}
+                  onCheckedChange={setIncludeArchived}
+                  label="Show archived"
+                />
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={6} className="text-sm text-muted-foreground">
-                  No authorization bundles found.
-                </TableCell>
+                <TableHead>Bundle</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Assignments</TableHead>
+                <TableHead>Updated</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            ) : null}
-
-            {entries.map((entry) => {
-              const rowBusy = busyBundleId === entry.bundleId;
-              const isEditing = editorBundleId === entry.bundleId;
-              return (
-                <TableRow key={entry.bundleId}>
-                  <TableCell>
-                    <div className="space-y-1">
-                      <div className="font-medium">{entry.name}</div>
-                      {entry.description ? (
-                        <div className="text-xs text-muted-foreground">{entry.description}</div>
-                      ) : (
-                        <div className="text-xs text-muted-foreground">
-                          {entry.isSystem
-                            ? 'System starter bundle.'
-                            : 'Custom narrowing bundle for role/team/user/API-key assignments.'}
-                        </div>
-                      )}
-                      <div className="text-xs text-muted-foreground">
-                        Effective summary: {entry.status === 'active' ? 'active' : 'archived'} bundle with {entry.assignmentCount} active assignment(s).
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={entry.status === 'active' ? 'default' : 'secondary'}>
-                      {entry.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{entry.isSystem ? 'System' : 'Custom'}</TableCell>
-                  <TableCell>{entry.assignmentCount}</TableCell>
-                  <TableCell>{formatDate(entry.updatedAt)}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        id={`authorization-bundle-edit-${entry.bundleId}`}
-                        size="sm"
-                        variant={isEditing ? 'default' : 'outline'}
-                        onClick={() => setEditorBundleId(isEditing ? null : entry.bundleId)}
-                      >
-                        {isEditing ? 'Close Editor' : 'Edit Draft'}
-                      </Button>
-                      <Button
-                        id={`authorization-bundle-assignments-${entry.bundleId}`}
-                        size="sm"
-                        variant={assignmentBundleId === entry.bundleId ? 'default' : 'outline'}
-                        onClick={() =>
-                          setAssignmentBundleId(
-                            assignmentBundleId === entry.bundleId ? null : entry.bundleId
-                          )
-                        }
-                      >
-                        {assignmentBundleId === entry.bundleId ? 'Close Assignments' : 'Assignments'}
-                      </Button>
-                      <Button
-                        id={`authorization-bundle-simulator-${entry.bundleId}`}
-                        size="sm"
-                        variant={simulatorBundleId === entry.bundleId ? 'default' : 'outline'}
-                        onClick={() =>
-                          setSimulatorBundleId(simulatorBundleId === entry.bundleId ? null : entry.bundleId)
-                        }
-                      >
-                        {simulatorBundleId === entry.bundleId ? 'Close Simulator' : 'Simulator'}
-                      </Button>
-                      <Button
-                        id={`authorization-bundle-clone-${entry.bundleId}`}
-                        size="sm"
-                        variant="outline"
-                        disabled={rowBusy}
-                        onClick={() => void handleClone(entry)}
-                      >
-                        Clone
-                      </Button>
-                      {entry.status === 'active' ? (
-                        <Button
-                          id={`authorization-bundle-archive-${entry.bundleId}`}
-                          size="sm"
-                          variant="destructive"
-                          disabled={rowBusy}
-                          onClick={() => void handleArchive(entry)}
-                        >
-                          Archive
-                        </Button>
-                      ) : null}
-                    </div>
+            </TableHeader>
+            <TableBody>
+              {!loading && entries.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="px-6 py-10 text-center text-sm text-muted-foreground">
+                    No authorization bundles found.
                   </TableCell>
                 </TableRow>
-              );
-            })}
-
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-sm text-muted-foreground">
-                  Loading authorization bundles...
-                </TableCell>
-              </TableRow>
-            ) : null}
-          </TableBody>
-        </Table>
-      </div>
-
-      {editorBundleId ? (
-        <div className="space-y-4 rounded-md border p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="space-y-1">
-              <h3 className="text-lg font-semibold">Bundle Editor</h3>
-              {editorData ? (
-                <p className="text-sm text-muted-foreground">
-                  {editorHasPublishableDraft ? (
-                    <>
-                      Editing draft revision for <span className="font-medium text-foreground">{editorData.bundle.name}</span>.{' '}
-                      Changes stay in draft until published.
-                    </>
-                  ) : (
-                    <>
-                      Viewing the published revision for <span className="font-medium text-foreground">{editorData.bundle.name}</span>.{' '}
-                      No active draft revision exists right now.
-                    </>
-                  )}
-                </p>
               ) : null}
-            </div>
-            {editorHasPublishableDraft ? (
-              <Button
-                id="authorization-bundle-publish-draft-button"
-                size="sm"
-                onClick={() => void handlePublishDraft()}
-                disabled={!editorData || editorLoading || publishingBundleId === editorData?.bundle.bundleId}
-              >
-                {publishingBundleId === editorData?.bundle.bundleId ? 'Publishing...' : 'Publish Draft'}
-              </Button>
-            ) : (
-              <Badge variant="outline">Published</Badge>
-            )}
-          </div>
 
-          {editorLoading || !editorData ? (
-            <div className="text-sm text-muted-foreground">Loading draft editor...</div>
-          ) : (
-            <div className="space-y-4">
-              <div className="rounded-md border bg-muted/20 p-3 text-sm text-muted-foreground">
-                Revision summary: {editorData.revisionChangeSummary}
-              </div>
-
-              {RESOURCE_SECTIONS.map((section) => {
-                const sectionRules = editorData.rules.filter(
-                  (rule) => rule.resourceType === section.resourceType
-                );
-                const draft = ruleDrafts[section.resourceType] ?? buildEmptyRuleDraft(editorData);
-                const constraintOptions: SelectOption[] = [
-                  { value: '', label: 'none' },
-                  ...editorData.availableConstraints.map((constraint) => ({
-                    value: constraint,
-                    label: constraint,
-                  })),
-                ];
-                const templateOptions: SelectOption[] = editorData.availableTemplates.map((template) => ({
-                  value: template,
-                  label: template,
-                }));
-                const clientOptions: SelectOption[] = editorData.availableClients.map((client) => ({
-                  value: client.client_id,
-                  label: client.client_name,
-                  is_inactive: client.is_inactive,
-                }));
-                const boardOptions: SelectOption[] = editorData.availableBoards.map((board) => ({
-                  value: board.board_id,
-                  label: board.board_name,
-                  is_inactive: board.is_inactive,
-                }));
-                const editingExistingRule = Boolean(draft.ruleId);
-                const ruleCountLabel = `${sectionRules.length} ${editorHasPublishableDraft ? 'draft' : 'published'} rule(s)`;
-                const emptyRulesLabel = `No ${editorHasPublishableDraft ? 'draft' : 'published'} rules yet for ${section.label.toLowerCase()}.`;
-                const ruleFormTitle = editorHasPublishableDraft
-                  ? editingExistingRule
-                    ? 'Edit Draft Rule'
-                    : 'Add Draft Rule'
-                  : editingExistingRule
-                    ? 'Edit Published Rule as Draft'
-                    : 'Create Draft Rule';
-                const ruleFormHelper = !editorHasPublishableDraft
-                  ? editingExistingRule
-                    ? 'Saving will create a new draft revision with your changes to this published rule.'
-                    : 'Saving will create a new draft revision for this bundle.'
-                  : null;
-                const saveRuleLabel = editorHasPublishableDraft
-                  ? editingExistingRule
-                    ? 'Save Draft Rule'
-                    : 'Add Draft Rule'
-                  : editingExistingRule
-                    ? 'Save as Draft Change'
-                    : 'Create Draft Rule';
-                const removeRuleLabel = editorHasPublishableDraft ? 'Remove' : 'Remove as Draft Change';
-                const removeRuleTitle = editorHasPublishableDraft
-                  ? 'Remove this draft rule.'
-                  : 'Create a new draft revision that removes this published rule.';
-
+              {entries.map((entry) => {
+                const rowBusy = busyBundleId === entry.bundleId;
                 return (
-                  <div key={section.resourceType} className="space-y-3 rounded-md border p-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <h4 className="font-medium">{section.label}</h4>
-                      <Badge variant="outline">{ruleCountLabel}</Badge>
-                    </div>
-
-                    <div className="space-y-2">
-                      {sectionRules.length === 0 ? (
-                        <div className="text-sm text-muted-foreground">{emptyRulesLabel}</div>
-                      ) : (
-                        sectionRules.map((rule) => (
-                          <div
-                            key={rule.ruleId}
-                            className="flex flex-wrap items-start justify-between gap-2 rounded border bg-muted/20 px-3 py-2 text-sm"
-                          >
-                            <div className="min-w-0 flex-1 space-y-2">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <Badge variant="outline">{rule.action}</Badge>
-                                <span className="font-medium">{rule.templateKey}</span>
-                                {rule.constraintKey ? (
-                                  <span className="text-muted-foreground">constraint: {rule.constraintKey}</span>
-                                ) : null}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {summarizeRule(rule)}
-                              </div>
-                              {rule.selectedClientIds.length > 0 ? (
-                                <div className="text-xs text-muted-foreground">
-                                  Selected clients: {renderNamedIds(rule.selectedClientIds, 'client').join(', ')}
-                                </div>
-                              ) : null}
-                              {rule.selectedBoardIds.length > 0 ? (
-                                <div className="text-xs text-muted-foreground">
-                                  Selected boards: {renderNamedIds(rule.selectedBoardIds, 'board').join(', ')}
-                                </div>
-                              ) : null}
-                              {rule.redactedFields.length > 0 ? (
-                                <div className="text-xs text-muted-foreground">
-                                  Redacted fields: {rule.redactedFields.join(', ')}
-                                </div>
-                              ) : null}
-                            </div>
-                            <div className="flex gap-2">
-                              <Button
-                                id={`authorization-bundle-edit-rule-${rule.ruleId}`}
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleEditRule(section.resourceType, rule)}
-                              >
-                                Edit
-                              </Button>
-                              <Button
-                                id={`authorization-bundle-delete-rule-${rule.ruleId}`}
-                                size="sm"
-                                variant="outline"
-                                title={removeRuleTitle}
-                                onClick={() => void handleDeleteRule(section.resourceType, rule.ruleId)}
-                              >
-                                {removeRuleLabel}
-                              </Button>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-
-                    <div className="space-y-3 rounded-md border border-dashed p-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="space-y-1">
-                          <div className="text-sm font-medium">{ruleFormTitle}</div>
-                          {ruleFormHelper ? (
-                            <div className="text-xs text-muted-foreground">{ruleFormHelper}</div>
-                          ) : null}
+                  <TableRow key={entry.bundleId}>
+                    <TableCell>
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="font-medium text-[rgb(var(--color-text-900))]">{entry.name}</div>
+                          {entry.isSystem ? <Badge variant="outline">Starter</Badge> : null}
                         </div>
+                        <div className="text-xs text-[rgb(var(--color-text-500))]">
+                          {entry.description || (entry.isSystem
+                            ? 'System starter bundle.'
+                            : 'Custom narrowing bundle for role, team, user, or API key assignments.')}
+                        </div>
+                        <div className="text-xs text-[rgb(var(--color-text-500))]">
+                          Effective summary: {entry.status === 'active' ? 'active' : 'archived'} bundle with {entry.assignmentCount} active assignment(s).
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={entry.status === 'active' ? 'default' : 'secondary'}>
+                        {entry.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{entry.isSystem ? 'System' : 'Custom'}</TableCell>
+                    <TableCell>{entry.assignmentCount}</TableCell>
+                    <TableCell>{formatDate(entry.updatedAt)}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex flex-wrap justify-end gap-2">
                         <Button
-                          id={`authorization-bundle-reset-rule-form-${section.resourceType}`}
+                          id={`authorization-bundle-edit-${entry.bundleId}`}
+                          size="sm"
+                          onClick={() => openWorkspace(entry.bundleId, 'editor')}
+                        >
+                          Open editor
+                        </Button>
+                        <Button
+                          id={`authorization-bundle-assignments-${entry.bundleId}`}
                           size="sm"
                           variant="outline"
-                          onClick={() => resetRuleDraft(section.resourceType)}
+                          onClick={() => openWorkspace(entry.bundleId, 'assignments')}
                         >
-                          Reset
+                          Assignments
                         </Button>
-                      </div>
-
-                      <div className="grid gap-2 md:grid-cols-3">
-                        <label className="text-sm">
-                          <div className="mb-1 text-muted-foreground">Action</div>
-                          <CustomSelect
-                            id={`authorization-bundle-rule-action-${section.resourceType}`}
-                            options={actionOptions}
-                            value={draft.action}
-                            onValueChange={(value) => updateRuleDraft(section.resourceType, { action: value })}
-                          />
-                        </label>
-
-                        <label className="text-sm">
-                          <div className="mb-1 text-muted-foreground">Template</div>
-                          <CustomSelect
-                            id={`authorization-bundle-rule-template-${section.resourceType}`}
-                            options={templateOptions}
-                            value={draft.templateKey}
-                            onValueChange={(value) => updateRuleDraft(section.resourceType, { templateKey: value })}
-                          />
-                        </label>
-
-                        <label className="text-sm">
-                          <div className="mb-1 text-muted-foreground">Constraint (optional)</div>
-                          <CustomSelect
-                            id={`authorization-bundle-rule-constraint-${section.resourceType}`}
-                            options={constraintOptions}
-                            value={draft.constraintKey}
-                            onValueChange={(value) => updateRuleDraft(section.resourceType, { constraintKey: value })}
-                          />
-                        </label>
-                      </div>
-
-                      {draft.templateKey === 'selected_clients' ? (
-                        <div className="space-y-2 rounded-md border bg-muted/10 p-3">
-                          <div className="text-sm font-medium">Selected client scopes</div>
-                          <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
-                            <CustomSelect
-                              id={`authorization-bundle-rule-client-scope-${section.resourceType}`}
-                              options={clientOptions}
-                              value={draft.pendingClientId}
-                              onValueChange={(value) => updateRuleDraft(section.resourceType, { pendingClientId: value })}
-                              placeholder="Select client"
-                            />
-                            <Button
-                              id={`authorization-bundle-add-client-scope-${section.resourceType}`}
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                if (!draft.pendingClientId) {
-                                  return;
-                                }
-                                updateRuleDraft(section.resourceType, {
-                                  selectedClientIds: [...new Set([...draft.selectedClientIds, draft.pendingClientId])],
-                                  pendingClientId: '',
-                                });
-                              }}
-                            >
-                              Add Client Scope
-                            </Button>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {draft.selectedClientIds.length === 0 ? (
-                              <span className="text-xs text-muted-foreground">No client scopes added yet.</span>
-                            ) : (
-                              draft.selectedClientIds.map((clientId) => (
-                                <div
-                                  key={clientId}
-                                  className="flex items-center gap-2 rounded-full border px-3 py-1 text-xs"
-                                >
-                                  <span>{clientNameById.get(clientId) ?? clientId}</span>
-                                  <button
-                                    id={`authorization-bundle-remove-client-scope-${section.resourceType}-${clientId}`}
-                                    type="button"
-                                    className="text-muted-foreground hover:text-foreground"
-                                    onClick={() =>
-                                      updateRuleDraft(section.resourceType, {
-                                        selectedClientIds: draft.selectedClientIds.filter((id) => id !== clientId),
-                                      })
-                                    }
-                                  >
-                                    Remove
-                                  </button>
-                                </div>
-                              ))
-                            )}
-                          </div>
-                        </div>
-                      ) : null}
-
-                      {draft.templateKey === 'selected_boards' ? (
-                        <div className="space-y-2 rounded-md border bg-muted/10 p-3">
-                          <div className="text-sm font-medium">Selected board scopes</div>
-                          <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
-                            <CustomSelect
-                              id={`authorization-bundle-rule-board-scope-${section.resourceType}`}
-                              options={boardOptions}
-                              value={draft.pendingBoardId}
-                              onValueChange={(value) => updateRuleDraft(section.resourceType, { pendingBoardId: value })}
-                              placeholder="Select board"
-                            />
-                            <Button
-                              id={`authorization-bundle-add-board-scope-${section.resourceType}`}
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                if (!draft.pendingBoardId) {
-                                  return;
-                                }
-                                updateRuleDraft(section.resourceType, {
-                                  selectedBoardIds: [...new Set([...draft.selectedBoardIds, draft.pendingBoardId])],
-                                  pendingBoardId: '',
-                                });
-                              }}
-                            >
-                              Add Board Scope
-                            </Button>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {draft.selectedBoardIds.length === 0 ? (
-                              <span className="text-xs text-muted-foreground">No board scopes added yet.</span>
-                            ) : (
-                              draft.selectedBoardIds.map((boardId) => (
-                                <div
-                                  key={boardId}
-                                  className="flex items-center gap-2 rounded-full border px-3 py-1 text-xs"
-                                >
-                                  <span>{boardNameById.get(boardId) ?? boardId}</span>
-                                  <button
-                                    id={`authorization-bundle-remove-board-scope-${section.resourceType}-${boardId}`}
-                                    type="button"
-                                    className="text-muted-foreground hover:text-foreground"
-                                    onClick={() =>
-                                      updateRuleDraft(section.resourceType, {
-                                        selectedBoardIds: draft.selectedBoardIds.filter((id) => id !== boardId),
-                                      })
-                                    }
-                                  >
-                                    Remove
-                                  </button>
-                                </div>
-                              ))
-                            )}
-                          </div>
-                        </div>
-                      ) : null}
-
-                      {draft.constraintKey === 'hide_sensitive_fields' ? (
-                        <label className="block text-sm">
-                          <div className="mb-1 text-muted-foreground">Redacted fields</div>
-                          <Input
-                            id={`authorization-bundle-rule-redacted-fields-${section.resourceType}`}
-                            placeholder="internal_cost, margin"
-                            value={draft.redactedFieldsInput}
-                            onChange={(event) =>
-                              updateRuleDraft(section.resourceType, {
-                                redactedFieldsInput: event.target.value,
-                              })
-                            }
-                          />
-                          <div className="mt-1 text-xs text-muted-foreground">
-                            Comma-separated field names to redact when this rule allows access.
-                          </div>
-                        </label>
-                      ) : null}
-
-                      <div className="flex justify-end">
                         <Button
-                          id={`authorization-bundle-save-rule-${section.resourceType}`}
+                          id={`authorization-bundle-simulator-${entry.bundleId}`}
                           size="sm"
-                          onClick={() => void handleSaveRule(section.resourceType)}
+                          variant="outline"
+                          onClick={() => openWorkspace(entry.bundleId, 'simulator')}
                         >
-                          {saveRuleLabel}
+                          Simulator
+                        </Button>
+                        <Button
+                          id={`authorization-bundle-clone-${entry.bundleId}`}
+                          size="sm"
+                          variant="outline"
+                          disabled={rowBusy}
+                          onClick={() => void handleClone(entry)}
+                        >
+                          Clone
+                        </Button>
+                        {entry.status === 'active' ? (
+                          <Button
+                            id={`authorization-bundle-archive-${entry.bundleId}`}
+                            size="sm"
+                            variant="destructive"
+                            disabled={rowBusy}
+                            onClick={() => void handleArchive(entry)}
+                          >
+                            Archive
+                          </Button>
+                        ) : null}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="px-6 py-10 text-center text-sm text-muted-foreground">
+                    Loading authorization bundles...
+                  </TableCell>
+                </TableRow>
+              ) : null}
+            </TableBody>
+          </Table>
+        </CardContent>
+        </Card>
+      ) : null}
+
+      {selectedBundleId ? (
+        <Card className="overflow-hidden rounded-2xl border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] shadow-[0_12px_28px_rgb(var(--color-primary-500)/0.08)]">
+          <CardHeader className="gap-6 border-b border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] pb-6">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <Button
+                  id="authorization-bundle-close-workspace-button"
+                  size="sm"
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => closeWorkspace()}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to library
+                </Button>
+                <div className="text-xs text-[rgb(var(--color-text-500))]">
+                  {selectedBundleEntry ? (
+                    <>Updated {formatDate(selectedBundleEntry.updatedAt)} · {selectedBundleEntry.assignmentCount} active assignment(s)</>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+                <div className="space-y-2">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[rgb(var(--color-text-500))]">
+                    Bundle workspace
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <CardTitle>{selectedBundleEntry?.name ?? editorData?.bundle.name ?? 'Selected bundle'}</CardTitle>
+                    {selectedBundleEntry ? (
+                      <Badge variant={selectedBundleEntry.status === 'active' ? 'default' : 'secondary'}>
+                        {selectedBundleEntry.status}
+                      </Badge>
+                    ) : null}
+                    {selectedBundleEntry?.isSystem ? <Badge variant="outline">Starter</Badge> : null}
+                  </div>
+                  <CardDescription>
+                    {selectedBundleEntry?.description || 'Use the draft editor, assignment manager, and simulator to ship safe narrowing changes.'}
+                  </CardDescription>
+                </div>
+                <div className="min-w-0 xl:min-w-[420px]">
+                  <CustomTabs
+                    tabs={workspaceTabs}
+                    idPrefix="authorization-bundle-workspace-tabs"
+                    value={activeWorkspacePanel ?? 'editor'}
+                    onTabChange={(tabValue) => openWorkspace(selectedBundleId, tabValue as WorkspacePanel)}
+                    tabStyles={{
+                      root: 'w-full',
+                      list: 'mb-0 rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-1.5 shadow-sm dark:bg-[rgb(var(--color-border-50))]',
+                      trigger: 'rounded-lg border-b-0 text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))] data-[state=active]:bg-[rgb(var(--color-card))] data-[state=active]:text-[rgb(var(--color-primary-700))] data-[state=active]:shadow-sm',
+                      activeTrigger: 'data-[state=active]:border-transparent',
+                      content: 'hidden',
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-8 p-6 lg:p-8">
+            {activeWorkspacePanel === 'editor' ? (
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-5 dark:bg-[rgb(var(--color-border-50))]">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-sm font-medium text-[rgb(var(--color-text-900))]">
+                      <Sparkles className="h-4 w-4 text-[rgb(var(--color-primary-600))]" />
+                      Bundle editor
+                    </div>
+                    {editorData ? (
+                      <p className="text-sm text-muted-foreground">
+                        {editorHasPublishableDraft ? (
+                          <>
+                            Editing draft revision for <span className="font-medium text-foreground">{editorData.bundle.name}</span>.{' '}
+                            Changes stay in draft until published.
+                          </>
+                        ) : (
+                          <>
+                            Viewing the published revision for <span className="font-medium text-foreground">{editorData.bundle.name}</span>.{' '}
+                            No active draft revision exists right now.
+                          </>
+                        )}
+                      </p>
+                    ) : null}
+                  </div>
+                  {editorHasPublishableDraft ? (
+                    <Button
+                      id="authorization-bundle-publish-draft-button"
+                      size="sm"
+                      onClick={() => void handlePublishDraft()}
+                      disabled={!editorData || editorLoading || publishingBundleId === editorData?.bundle.bundleId}
+                    >
+                      {publishingBundleId === editorData?.bundle.bundleId ? 'Publishing...' : 'Publish Draft'}
+                    </Button>
+                  ) : (
+                    <Badge variant="outline">Published</Badge>
+                  )}
+                </div>
+
+                {editorLoading || !editorData ? (
+                  <div className="text-sm text-muted-foreground">Loading draft editor...</div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-5 text-sm leading-6 text-muted-foreground dark:bg-[rgb(var(--color-border-50))]">
+                      Revision summary: {editorData.revisionChangeSummary}
+                    </div>
+
+                    {RESOURCE_SECTIONS.map((section) => {
+                      const sectionRules = editorData.rules.filter(
+                        (rule) => rule.resourceType === section.resourceType
+                      );
+                      const draft = ruleDrafts[section.resourceType] ?? buildEmptyRuleDraft(editorData);
+                      const constraintOptions: SelectOption[] = [
+                        { value: '', label: 'none' },
+                        ...editorData.availableConstraints.map((constraint) => ({
+                          value: constraint,
+                          label: constraint,
+                        })),
+                      ];
+                      const templateOptions: SelectOption[] = editorData.availableTemplates.map((template) => ({
+                        value: template,
+                        label: template,
+                      }));
+                      const clientOptions: SelectOption[] = editorData.availableClients.map((client) => ({
+                        value: client.client_id,
+                        label: client.client_name,
+                        is_inactive: client.is_inactive,
+                      }));
+                      const boardOptions: SelectOption[] = editorData.availableBoards.map((board) => ({
+                        value: board.board_id,
+                        label: board.board_name,
+                        is_inactive: board.is_inactive,
+                      }));
+                      const editingExistingRule = Boolean(draft.ruleId);
+                      const ruleCountLabel = `${sectionRules.length} ${editorHasPublishableDraft ? 'draft' : 'published'} rule(s)`;
+                      const emptyRulesLabel = `No ${editorHasPublishableDraft ? 'draft' : 'published'} rules yet for ${section.label.toLowerCase()}.`;
+                      const ruleFormTitle = editorHasPublishableDraft
+                        ? editingExistingRule
+                          ? 'Edit Draft Rule'
+                          : 'Add Draft Rule'
+                        : editingExistingRule
+                          ? 'Edit Published Rule as Draft'
+                          : 'Create Draft Rule';
+                      const ruleFormHelper = !editorHasPublishableDraft
+                        ? editingExistingRule
+                          ? 'Saving will create a new draft revision with your changes to this published rule.'
+                          : 'Saving will create a new draft revision for this bundle.'
+                        : null;
+                      const saveRuleLabel = editorHasPublishableDraft
+                        ? editingExistingRule
+                          ? 'Save Draft Rule'
+                          : 'Add Draft Rule'
+                        : editingExistingRule
+                          ? 'Save as Draft Change'
+                          : 'Create Draft Rule';
+                      const removeRuleLabel = editorHasPublishableDraft ? 'Remove' : 'Remove as Draft Change';
+                      const removeRuleTitle = editorHasPublishableDraft
+                        ? 'Remove this draft rule.'
+                        : 'Create a new draft revision that removes this published rule.';
+
+                      return (
+                        <Card key={section.resourceType} className="border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] shadow-sm">
+                          <CardHeader className="gap-3 border-b border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] pb-5">
+                            <div className="flex items-center justify-between gap-2">
+                              <div>
+                                <CardTitle className="text-base">{section.label}</CardTitle>
+                                <CardDescription className="mt-1">{emptyRulesLabel}</CardDescription>
+                              </div>
+                              <Badge variant="outline">{ruleCountLabel}</Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="space-y-5 p-5 lg:p-6">
+                            <div className="space-y-3">
+                              {sectionRules.length === 0 ? (
+                                <div className="rounded-lg border border-dashed border-[rgb(var(--color-border-300))] px-4 py-6 text-sm text-muted-foreground">
+                                  {emptyRulesLabel}
+                                </div>
+                              ) : (
+                                sectionRules.map((rule) => (
+                                  <div
+                                    key={rule.ruleId}
+                                    className="rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-5 dark:bg-[rgb(var(--color-border-50))]"
+                                  >
+                                    <div className="flex flex-wrap items-start justify-between gap-3">
+                                      <div className="min-w-0 flex-1 space-y-3">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                          <Badge variant="outline">{rule.action}</Badge>
+                                          <Badge variant="secondary">{rule.templateKey}</Badge>
+                                          {rule.constraintKey ? (
+                                            <Badge variant="outline">{rule.constraintKey}</Badge>
+                                          ) : null}
+                                        </div>
+                                        <div className="text-sm text-[rgb(var(--color-text-700))]">
+                                          {summarizeRule(rule)}
+                                        </div>
+                                        {rule.selectedClientIds.length > 0 ? (
+                                          <div className="space-y-1">
+                                            <div className="text-xs font-medium text-[rgb(var(--color-text-500))]">Selected client scopes</div>
+                                            <div className="flex flex-wrap gap-2">
+                                              {renderNamedIds(rule.selectedClientIds, 'client').map((clientName) => (
+                                                <span key={clientName} className="rounded-full border border-[rgb(var(--color-primary-200))] bg-[rgb(var(--color-primary-50))] px-3 py-1 text-xs text-[rgb(var(--color-primary-700))] dark:bg-[rgb(var(--color-primary-400)/0.18)]">
+                                                  {clientName}
+                                                </span>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        ) : null}
+                                        {rule.selectedBoardIds.length > 0 ? (
+                                          <div className="space-y-1">
+                                            <div className="text-xs font-medium text-[rgb(var(--color-text-500))]">Selected board scopes</div>
+                                            <div className="flex flex-wrap gap-2">
+                                              {renderNamedIds(rule.selectedBoardIds, 'board').map((boardName) => (
+                                                <span key={boardName} className="rounded-full border border-[rgb(var(--color-primary-200))] bg-[rgb(var(--color-primary-50))] px-3 py-1 text-xs text-[rgb(var(--color-primary-700))] dark:bg-[rgb(var(--color-primary-400)/0.18)]">
+                                                  {boardName}
+                                                </span>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        ) : null}
+                                        {rule.redactedFields.length > 0 ? (
+                                          <div className="space-y-1">
+                                            <div className="text-xs font-medium text-[rgb(var(--color-text-500))]">Redacted fields</div>
+                                            <div className="flex flex-wrap gap-2">
+                                              {rule.redactedFields.map((field) => (
+                                                <span key={field} className="rounded-full border border-[rgb(var(--color-accent-200))] bg-[rgb(var(--color-accent-50))] px-3 py-1 text-xs text-[rgb(var(--color-accent-700))]">
+                                                  {field}
+                                                </span>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        ) : null}
+                                      </div>
+                                      <div className="flex gap-2">
+                                        <Button
+                                          id={`authorization-bundle-edit-rule-${rule.ruleId}`}
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => handleEditRule(section.resourceType, rule)}
+                                        >
+                                          Edit
+                                        </Button>
+                                        <Button
+                                          id={`authorization-bundle-delete-rule-${rule.ruleId}`}
+                                          size="sm"
+                                          variant="outline"
+                                          title={removeRuleTitle}
+                                          onClick={() => void handleDeleteRule(section.resourceType, rule.ruleId)}
+                                        >
+                                          {removeRuleLabel}
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+
+                            <div className="space-y-5 rounded-2xl border border-dashed border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-card))] p-5">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="space-y-1">
+                                  <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">{ruleFormTitle}</div>
+                                  {ruleFormHelper ? (
+                                    <div className="text-xs text-muted-foreground">{ruleFormHelper}</div>
+                                  ) : null}
+                                </div>
+                                <Button
+                                  id={`authorization-bundle-reset-rule-form-${section.resourceType}`}
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => resetRuleDraft(section.resourceType)}
+                                >
+                                  Reset
+                                </Button>
+                              </div>
+
+                              <div className="grid gap-3 md:grid-cols-3">
+                                <label className="text-sm">
+                                  <div className="mb-1 text-muted-foreground">Action</div>
+                                  <CustomSelect
+                                    id={`authorization-bundle-rule-action-${section.resourceType}`}
+                                    options={actionOptions}
+                                    value={draft.action}
+                                    onValueChange={(value) => updateRuleDraft(section.resourceType, { action: value })}
+                                  />
+                                </label>
+
+                                <label className="text-sm">
+                                  <div className="mb-1 text-muted-foreground">Template</div>
+                                  <CustomSelect
+                                    id={`authorization-bundle-rule-template-${section.resourceType}`}
+                                    options={templateOptions}
+                                    value={draft.templateKey}
+                                    onValueChange={(value) => updateRuleDraft(section.resourceType, { templateKey: value })}
+                                  />
+                                </label>
+
+                                <label className="text-sm">
+                                  <div className="mb-1 text-muted-foreground">Constraint (optional)</div>
+                                  <CustomSelect
+                                    id={`authorization-bundle-rule-constraint-${section.resourceType}`}
+                                    options={constraintOptions}
+                                    value={draft.constraintKey}
+                                    onValueChange={(value) => updateRuleDraft(section.resourceType, { constraintKey: value })}
+                                  />
+                                </label>
+                              </div>
+
+                              {draft.templateKey === 'selected_clients' ? (
+                                <div className="space-y-3 rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-5 dark:bg-[rgb(var(--color-border-50))]">
+                                  <div className="text-sm font-medium">Selected client scopes</div>
+                                  <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
+                                    <CustomSelect
+                                      id={`authorization-bundle-rule-client-scope-${section.resourceType}`}
+                                      options={clientOptions}
+                                      value={draft.pendingClientId}
+                                      onValueChange={(value) => updateRuleDraft(section.resourceType, { pendingClientId: value })}
+                                      placeholder="Select client"
+                                    />
+                                    <Button
+                                      id={`authorization-bundle-add-client-scope-${section.resourceType}`}
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        if (!draft.pendingClientId) {
+                                          return;
+                                        }
+                                        updateRuleDraft(section.resourceType, {
+                                          selectedClientIds: [...new Set([...draft.selectedClientIds, draft.pendingClientId])],
+                                          pendingClientId: '',
+                                        });
+                                      }}
+                                    >
+                                      Add client scope
+                                    </Button>
+                                  </div>
+                                  <div className="flex flex-wrap gap-2">
+                                    {draft.selectedClientIds.length === 0 ? (
+                                      <span className="text-xs text-muted-foreground">No client scopes added yet.</span>
+                                    ) : (
+                                      draft.selectedClientIds.map((clientId) => (
+                                        <div
+                                          key={clientId}
+                                          className="flex items-center gap-2 rounded-full border border-[rgb(var(--color-primary-200))] bg-[rgb(var(--color-primary-50))] px-3 py-1 text-xs text-[rgb(var(--color-primary-700))] dark:bg-[rgb(var(--color-primary-400)/0.18)]"
+                                        >
+                                          <span>{clientNameById.get(clientId) ?? clientId}</span>
+                                          <button
+                                            id={`authorization-bundle-remove-client-scope-${section.resourceType}-${clientId}`}
+                                            type="button"
+                                            className="text-[rgb(var(--color-primary-700))] hover:text-[rgb(var(--color-primary-900))]"
+                                            onClick={() =>
+                                              updateRuleDraft(section.resourceType, {
+                                                selectedClientIds: draft.selectedClientIds.filter((id) => id !== clientId),
+                                              })
+                                            }
+                                          >
+                                            Remove
+                                          </button>
+                                        </div>
+                                      ))
+                                    )}
+                                  </div>
+                                </div>
+                              ) : null}
+
+                              {draft.templateKey === 'selected_boards' ? (
+                                <div className="space-y-3 rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-5 dark:bg-[rgb(var(--color-border-50))]">
+                                  <div className="text-sm font-medium">Selected board scopes</div>
+                                  <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
+                                    <CustomSelect
+                                      id={`authorization-bundle-rule-board-scope-${section.resourceType}`}
+                                      options={boardOptions}
+                                      value={draft.pendingBoardId}
+                                      onValueChange={(value) => updateRuleDraft(section.resourceType, { pendingBoardId: value })}
+                                      placeholder="Select board"
+                                    />
+                                    <Button
+                                      id={`authorization-bundle-add-board-scope-${section.resourceType}`}
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        if (!draft.pendingBoardId) {
+                                          return;
+                                        }
+                                        updateRuleDraft(section.resourceType, {
+                                          selectedBoardIds: [...new Set([...draft.selectedBoardIds, draft.pendingBoardId])],
+                                          pendingBoardId: '',
+                                        });
+                                      }}
+                                    >
+                                      Add board scope
+                                    </Button>
+                                  </div>
+                                  <div className="flex flex-wrap gap-2">
+                                    {draft.selectedBoardIds.length === 0 ? (
+                                      <span className="text-xs text-muted-foreground">No board scopes added yet.</span>
+                                    ) : (
+                                      draft.selectedBoardIds.map((boardId) => (
+                                        <div
+                                          key={boardId}
+                                          className="flex items-center gap-2 rounded-full border border-[rgb(var(--color-primary-200))] bg-[rgb(var(--color-primary-50))] px-3 py-1 text-xs text-[rgb(var(--color-primary-700))] dark:bg-[rgb(var(--color-primary-400)/0.18)]"
+                                        >
+                                          <span>{boardNameById.get(boardId) ?? boardId}</span>
+                                          <button
+                                            id={`authorization-bundle-remove-board-scope-${section.resourceType}-${boardId}`}
+                                            type="button"
+                                            className="text-[rgb(var(--color-primary-700))] hover:text-[rgb(var(--color-primary-900))]"
+                                            onClick={() =>
+                                              updateRuleDraft(section.resourceType, {
+                                                selectedBoardIds: draft.selectedBoardIds.filter((id) => id !== boardId),
+                                              })
+                                            }
+                                          >
+                                            Remove
+                                          </button>
+                                        </div>
+                                      ))
+                                    )}
+                                  </div>
+                                </div>
+                              ) : null}
+
+                              {draft.constraintKey === 'hide_sensitive_fields' ? (
+                                <label className="block text-sm">
+                                  <div className="mb-1 text-muted-foreground">Redacted fields</div>
+                                  <Input
+                                    id={`authorization-bundle-rule-redacted-fields-${section.resourceType}`}
+                                    placeholder="internal_cost, margin"
+                                    value={draft.redactedFieldsInput}
+                                    onChange={(event) =>
+                                      updateRuleDraft(section.resourceType, {
+                                        redactedFieldsInput: event.target.value,
+                                      })
+                                    }
+                                  />
+                                  <div className="mt-1 text-xs text-muted-foreground">
+                                    Comma-separated field names to redact when this rule allows access.
+                                  </div>
+                                </label>
+                              ) : null}
+
+                              <div className="flex justify-end">
+                                <Button
+                                  id={`authorization-bundle-save-rule-${section.resourceType}`}
+                                  size="sm"
+                                  onClick={() => void handleSaveRule(section.resourceType)}
+                                >
+                                  {saveRuleLabel}
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : null}
+
+            {activeWorkspacePanel === 'assignments' ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-[rgb(var(--color-text-900))]">
+                  <Users className="h-4 w-4 text-[rgb(var(--color-primary-600))]" />
+                  Assignment manager
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  View and manage role, team, user, and API-key targets currently affected by this bundle.
+                </p>
+
+                {assignmentLoading || !assignmentData ? (
+                  <div className="text-sm text-muted-foreground">Loading assignments...</div>
+                ) : (
+                  <>
+                    <div className="rounded-2xl border border-dashed border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-card))] p-5">
+                      <div className="mb-3 text-sm font-medium text-[rgb(var(--color-text-900))]">Add assignment</div>
+                      <div className="grid gap-3 md:grid-cols-[180px_minmax(0,1fr)_auto]">
+                        <CustomSelect
+                          id="authorization-bundle-assignment-target-type"
+                          options={assignmentTargetTypeOptions}
+                          value={assignmentTargetType}
+                          onValueChange={(value) => setAssignmentTargetType(value as AssignmentTargetType)}
+                        />
+                        <CustomSelect
+                          id="authorization-bundle-assignment-target-id"
+                          options={assignmentTargetOptions.map((option) => ({
+                            value: option.id,
+                            label: option.label,
+                          }))}
+                          value={assignmentTargetId}
+                          onValueChange={setAssignmentTargetId}
+                          placeholder={`Select ${TARGET_TYPE_LABELS[assignmentTargetType].toLowerCase()}`}
+                          disabled={assignmentTargetOptions.length === 0}
+                        />
+                        <Button
+                          id="authorization-bundle-assignment-add-button"
+                          size="sm"
+                          onClick={() => void handleCreateAssignment()}
+                          disabled={assignmentSaving || !assignmentTargetId}
+                        >
+                          {assignmentSaving ? 'Adding...' : 'Add Assignment'}
                         </Button>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      ) : null}
 
-      {assignmentBundleId ? (
-        <div className="space-y-4 rounded-md border p-4">
-          <div className="space-y-1">
-            <h3 className="text-lg font-semibold">Assignment Manager</h3>
-            <p className="text-sm text-muted-foreground">
-              View and manage role, team, user, and API-key targets currently affected by this bundle.
-            </p>
-          </div>
-
-          {assignmentLoading || !assignmentData ? (
-            <div className="text-sm text-muted-foreground">Loading assignments...</div>
-          ) : (
-            <>
-              <div className="space-y-3 rounded-md border border-dashed p-3">
-                <div className="text-sm font-medium">Add assignment</div>
-                <div className="grid gap-2 md:grid-cols-[180px_minmax(0,1fr)_auto]">
-                  <CustomSelect
-                    id="authorization-bundle-assignment-target-type"
-                    options={assignmentTargetTypeOptions}
-                    value={assignmentTargetType}
-                    onValueChange={(value) => setAssignmentTargetType(value as AssignmentTargetType)}
-                  />
-                  <CustomSelect
-                    id="authorization-bundle-assignment-target-id"
-                    options={assignmentTargetOptions.map((option) => ({
-                      value: option.id,
-                      label: option.label,
-                    }))}
-                    value={assignmentTargetId}
-                    onValueChange={setAssignmentTargetId}
-                    placeholder={`Select ${TARGET_TYPE_LABELS[assignmentTargetType].toLowerCase()}`}
-                    disabled={assignmentTargetOptions.length === 0}
-                  />
-                  <Button
-                    id="authorization-bundle-assignment-add-button"
-                    size="sm"
-                    onClick={() => void handleCreateAssignment()}
-                    disabled={assignmentSaving || !assignmentTargetId}
-                  >
-                    {assignmentSaving ? 'Adding...' : 'Add Assignment'}
-                  </Button>
-                </div>
-              </div>
-
-              {assignmentData.assignments.length === 0 ? (
-                <div className="text-sm text-muted-foreground">No assignments for this bundle yet.</div>
-              ) : (
-                <div className="grid gap-3 md:grid-cols-2">
-                  {ASSIGNMENT_TARGET_TYPES.map((targetType) => {
-                    const rows = groupedAssignments.get(targetType) ?? [];
-                    return (
-                      <div key={targetType} className="space-y-2 rounded-md border p-3">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-medium">{TARGET_TYPE_LABELS[targetType]}</h4>
-                          <Badge variant="outline">{rows.length}</Badge>
-                        </div>
-                        {rows.length === 0 ? (
-                          <div className="text-sm text-muted-foreground">No {TARGET_TYPE_LABELS[targetType].toLowerCase()} assignments.</div>
-                        ) : (
-                          rows.map((assignment) => {
-                            const nextStatus = assignment.status === 'active' ? 'disabled' : 'active';
-                            return (
-                              <div key={assignment.assignmentId} className="rounded border bg-muted/20 px-3 py-2 text-sm">
-                                <div className="flex items-start justify-between gap-2">
-                                  <div>
-                                    <div className="font-medium">{assignment.targetLabel}</div>
-                                    <div className="text-xs text-muted-foreground">
-                                      {assignment.targetId}
-                                    </div>
-                                  </div>
-                                  <Badge variant={assignment.status === 'active' ? 'default' : 'secondary'}>
-                                    {assignment.status}
-                                  </Badge>
-                                </div>
-                                <div className="mt-2 flex justify-end">
-                                  <Button
-                                    id={`authorization-bundle-assignment-status-${assignment.assignmentId}`}
-                                    size="sm"
-                                    variant="outline"
-                                    disabled={assignmentStatusBusyId === assignment.assignmentId}
-                                    onClick={() =>
-                                      void handleSetAssignmentStatus(assignment.assignmentId, nextStatus)
-                                    }
-                                  >
-                                    {assignmentStatusBusyId === assignment.assignmentId
-                                      ? 'Saving...'
-                                      : nextStatus === 'disabled'
-                                        ? 'Disable'
-                                        : 'Enable'}
-                                  </Button>
-                                </div>
-                              </div>
-                            );
-                          })
-                        )}
+                    {assignmentData.assignments.length === 0 ? (
+                      <div className="rounded-xl border border-dashed border-[rgb(var(--color-border-300))] px-4 py-6 text-sm text-muted-foreground">
+                        No assignments for this bundle yet.
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      ) : null}
-
-      {simulatorBundleId ? (
-        <div className="space-y-4 rounded-md border p-4">
-          <div className="space-y-1">
-            <h3 className="text-lg font-semibold">Access Simulator</h3>
-            <p className="text-sm text-muted-foreground">
-              Simulate draft vs published bundle behavior against a real principal and existing record.
-            </p>
-          </div>
-
-          <div className="grid gap-2 md:grid-cols-4">
-            <label className="text-sm">
-              <div className="mb-1 text-muted-foreground">Resource</div>
-              <CustomSelect
-                id="authorization-bundle-simulator-resource"
-                options={RESOURCE_SECTIONS.map((section) => ({ value: section.resourceType, label: section.label }))}
-                value={simulatorResourceType}
-                onValueChange={(value) => {
-                  setSimulatorResourceType(value);
-                  setSimulatorRecordId('');
-                  setSimulationResult(null);
-                }}
-              />
-            </label>
-
-            <label className="text-sm">
-              <div className="mb-1 text-muted-foreground">Action</div>
-              <CustomSelect
-                id="authorization-bundle-simulator-action"
-                options={actionOptions}
-                value={simulatorAction}
-                onValueChange={setSimulatorAction}
-              />
-            </label>
-
-            <label className="text-sm">
-              <div className="mb-1 text-muted-foreground">Principal</div>
-              <CustomSelect
-                id="authorization-bundle-simulator-principal"
-                options={principalOptions.map((option) => ({ value: option.id, label: option.label }))}
-                value={simulatorPrincipalId}
-                onValueChange={setSimulatorPrincipalId}
-              />
-            </label>
-
-            <label className="text-sm">
-              <div className="mb-1 text-muted-foreground">Record</div>
-              <CustomSelect
-                id="authorization-bundle-simulator-record"
-                options={recordOptions.map((option) => ({ value: option.id, label: option.label }))}
-                value={simulatorRecordId}
-                onValueChange={setSimulatorRecordId}
-                disabled={useSyntheticRecord}
-              />
-            </label>
-          </div>
-
-          <div className="space-y-2 rounded-md border p-3">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                id="authorization-bundle-simulator-use-synthetic"
-                type="checkbox"
-                checked={useSyntheticRecord}
-                onChange={(event) => setUseSyntheticRecord(event.target.checked)}
-              />
-              Use synthetic record scenario
-            </label>
-            {useSyntheticRecord ? (
-              <div className="grid gap-2 md:grid-cols-4">
-                <Input
-                  id="authorization-bundle-simulator-synthetic-owner"
-                  placeholder="Owner user ID (optional)"
-                  value={syntheticOwnerUserId}
-                  onChange={(event) => setSyntheticOwnerUserId(event.target.value)}
-                />
-                <Input
-                  id="authorization-bundle-simulator-synthetic-client"
-                  placeholder="Client ID (optional)"
-                  value={syntheticClientId}
-                  onChange={(event) => setSyntheticClientId(event.target.value)}
-                />
-                <Input
-                  id="authorization-bundle-simulator-synthetic-board"
-                  placeholder="Board ID (optional)"
-                  value={syntheticBoardId}
-                  onChange={(event) => setSyntheticBoardId(event.target.value)}
-                />
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    id="authorization-bundle-simulator-synthetic-client-visible"
-                    type="checkbox"
-                    checked={syntheticClientVisible}
-                    onChange={(event) => setSyntheticClientVisible(event.target.checked)}
-                  />
-                  Client visible
-                </label>
+                    ) : (
+                      <div className="grid gap-4 lg:grid-cols-2">
+                        {ASSIGNMENT_TARGET_TYPES.map((targetType) => {
+                          const rows = groupedAssignments.get(targetType) ?? [];
+                          return (
+                            <Card key={targetType} className="border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))]">
+                              <CardHeader className="gap-2 border-b border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] pb-5">
+                                <div className="flex items-center justify-between gap-2">
+                                  <CardTitle className="text-base">{TARGET_TYPE_LABELS[targetType]}</CardTitle>
+                                  <Badge variant="outline">{rows.length}</Badge>
+                                </div>
+                              </CardHeader>
+                              <CardContent className="space-y-3 p-4">
+                                {rows.length === 0 ? (
+                                  <div className="text-sm text-muted-foreground">No {TARGET_TYPE_LABELS[targetType].toLowerCase()} assignments.</div>
+                                ) : (
+                                  rows.map((assignment) => {
+                                    const nextStatus = assignment.status === 'active' ? 'disabled' : 'active';
+                                    return (
+                                      <div key={assignment.assignmentId} className="rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-5 dark:bg-[rgb(var(--color-border-50))]">
+                                        <div className="flex items-start justify-between gap-3">
+                                          <div className="space-y-1">
+                                            <div className="font-medium text-[rgb(var(--color-text-900))]">{assignment.targetLabel}</div>
+                                            <div className="text-xs text-muted-foreground">{assignment.targetId}</div>
+                                          </div>
+                                          <Badge variant={assignment.status === 'active' ? 'default' : 'secondary'}>
+                                            {assignment.status}
+                                          </Badge>
+                                        </div>
+                                        <div className="mt-3 flex justify-end">
+                                          <Button
+                                            id={`authorization-bundle-assignment-status-${assignment.assignmentId}`}
+                                            size="sm"
+                                            variant="outline"
+                                            disabled={assignmentStatusBusyId === assignment.assignmentId}
+                                            onClick={() => void handleSetAssignmentStatus(assignment.assignmentId, nextStatus)}
+                                          >
+                                            {assignmentStatusBusyId === assignment.assignmentId
+                                              ? 'Saving...'
+                                              : nextStatus === 'disabled'
+                                                ? 'Disable'
+                                                : 'Enable'}
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    );
+                                  })
+                                )}
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             ) : null}
-          </div>
 
-          <div className="flex justify-end">
-            <Button
-              id="authorization-bundle-simulator-run-button"
-              size="sm"
-              onClick={() => void handleRunSimulation()}
-              disabled={simulatorLoading}
-            >
-              {simulatorLoading ? 'Running simulation...' : 'Run Simulation'}
-            </Button>
-          </div>
-
-          {simulationResult ? (
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-2 rounded-md border p-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-medium">Draft Revision</h4>
-                  <Badge variant={simulationResult.draft.allowed ? 'default' : 'destructive'}>
-                    {simulationResult.draft.allowed ? 'allowed' : 'denied'}
-                  </Badge>
+            {activeWorkspacePanel === 'simulator' ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-[rgb(var(--color-text-900))]">
+                  <FlaskConical className="h-4 w-4 text-[rgb(var(--color-primary-600))]" />
+                  Access simulator
                 </div>
-                <div className="space-y-1 text-xs text-muted-foreground">
-                  {simulationResult.draft.reasonCodes.map((code) => (
-                    <div key={code}>{code}</div>
-                  ))}
+                <p className="text-sm text-muted-foreground">
+                  Simulate draft vs published bundle behavior against a real principal and existing record.
+                </p>
+
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <div className="space-y-5 rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-5 lg:p-6">
+                    <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">Simulation input</div>
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                      <label className="text-sm">
+                        <div className="mb-1 text-muted-foreground">Resource</div>
+                        <CustomSelect
+                          id="authorization-bundle-simulator-resource"
+                          options={RESOURCE_SECTIONS.map((section) => ({ value: section.resourceType, label: section.label }))}
+                          value={simulatorResourceType}
+                          onValueChange={(value) => {
+                            setSimulatorResourceType(value);
+                            setSimulatorRecordId('');
+                            setSimulationResult(null);
+                          }}
+                        />
+                      </label>
+
+                      <label className="text-sm">
+                        <div className="mb-1 text-muted-foreground">Action</div>
+                        <CustomSelect
+                          id="authorization-bundle-simulator-action"
+                          options={actionOptions}
+                          value={simulatorAction}
+                          onValueChange={setSimulatorAction}
+                        />
+                      </label>
+
+                      <label className="text-sm">
+                        <div className="mb-1 text-muted-foreground">Principal</div>
+                        <CustomSelect
+                          id="authorization-bundle-simulator-principal"
+                          options={principalOptions.map((option) => ({ value: option.id, label: option.label }))}
+                          value={simulatorPrincipalId}
+                          onValueChange={setSimulatorPrincipalId}
+                        />
+                      </label>
+
+                      <label className="text-sm">
+                        <div className="mb-1 text-muted-foreground">Record</div>
+                        <CustomSelect
+                          id="authorization-bundle-simulator-record"
+                          options={recordOptions.map((option) => ({ value: option.id, label: option.label }))}
+                          value={simulatorRecordId}
+                          onValueChange={setSimulatorRecordId}
+                          disabled={useSyntheticRecord}
+                        />
+                      </label>
+                    </div>
+
+                    <div className="space-y-4 rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-5 dark:bg-[rgb(var(--color-border-50))]">
+                      <Switch
+                        id="authorization-bundle-simulator-use-synthetic"
+                        checked={useSyntheticRecord}
+                        onCheckedChange={setUseSyntheticRecord}
+                        label="Use synthetic record scenario"
+                      />
+                      {useSyntheticRecord ? (
+                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                          <Input
+                            id="authorization-bundle-simulator-synthetic-owner"
+                            placeholder="Owner user ID (optional)"
+                            value={syntheticOwnerUserId}
+                            onChange={(event) => setSyntheticOwnerUserId(event.target.value)}
+                          />
+                          <Input
+                            id="authorization-bundle-simulator-synthetic-client"
+                            placeholder="Client ID (optional)"
+                            value={syntheticClientId}
+                            onChange={(event) => setSyntheticClientId(event.target.value)}
+                          />
+                          <Input
+                            id="authorization-bundle-simulator-synthetic-board"
+                            placeholder="Board ID (optional)"
+                            value={syntheticBoardId}
+                            onChange={(event) => setSyntheticBoardId(event.target.value)}
+                          />
+                          <Switch
+                            id="authorization-bundle-simulator-synthetic-client-visible"
+                            checked={syntheticClientVisible}
+                            onCheckedChange={setSyntheticClientVisible}
+                            label="Client visible"
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="flex justify-end">
+                      <Button
+                        id="authorization-bundle-simulator-run-button"
+                        size="sm"
+                        onClick={() => void handleRunSimulation()}
+                        disabled={simulatorLoading}
+                      >
+                        {simulatorLoading ? 'Running simulation...' : 'Run simulation'}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-5 rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-5 lg:p-6">
+                    <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">Simulation result</div>
+                    {simulationResult ? (
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <div className="space-y-4 rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-5 dark:bg-[rgb(var(--color-border-50))]">
+                          <div className="flex items-center justify-between gap-2">
+                            <h4 className="font-medium text-[rgb(var(--color-text-900))]">Draft revision</h4>
+                            <Badge variant={simulationResult.draft.allowed ? 'default' : 'destructive'}>
+                              {simulationResult.draft.allowed ? 'Allowed' : 'Denied'}
+                            </Badge>
+                          </div>
+                          <div className="space-y-1 text-xs text-muted-foreground">
+                            {simulationResult.draft.reasonCodes.map((code) => (
+                              <div key={code}>{code}</div>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="space-y-4 rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-5 dark:bg-[rgb(var(--color-border-50))]">
+                          <div className="flex items-center justify-between gap-2">
+                            <h4 className="font-medium text-[rgb(var(--color-text-900))]">Published revision</h4>
+                            <Badge variant={simulationResult.published.allowed ? 'default' : 'destructive'}>
+                              {simulationResult.published.allowed ? 'Allowed' : 'Denied'}
+                            </Badge>
+                          </div>
+                          <div className="space-y-1 text-xs text-muted-foreground">
+                            {simulationResult.published.reasonCodes.map((code) => (
+                              <div key={code}>{code}</div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-dashed border-[rgb(var(--color-border-300))] px-4 py-8 text-sm text-muted-foreground">
+                        Run a simulation to compare draft and published behavior.
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div className="space-y-2 rounded-md border p-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-medium">Published Revision</h4>
-                  <Badge variant={simulationResult.published.allowed ? 'default' : 'destructive'}>
-                    {simulationResult.published.allowed ? 'allowed' : 'denied'}
-                  </Badge>
-                </div>
-                <div className="space-y-1 text-xs text-muted-foreground">
-                  {simulationResult.published.reasonCodes.map((code) => (
-                    <div key={code}>{code}</div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : null}
-        </div>
+            ) : null}
+          </CardContent>
+        </Card>
       ) : null}
 
       <Dialog
