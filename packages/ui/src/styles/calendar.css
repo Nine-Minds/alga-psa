@@ -378,10 +378,15 @@ button[aria-selected="true"].rdp-day {
   transition: all 0.2s;
 }
 
-.calendar-today-button:hover {
+.calendar-today-button:hover:not(:disabled) {
   background-color: var(--calendar-accent-lighter);
   border-color: var(--calendar-hover-border);
   color: rgb(var(--color-primary-200));
+}
+
+.calendar-today-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .calendar-today-button:focus-visible {

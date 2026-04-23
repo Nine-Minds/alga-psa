@@ -9,6 +9,11 @@ import { format } from 'date-fns';
 import 'react-day-picker/dist/style.css';
 import '../styles/calendar.css';
 
+const normalizeDate = (date: Date): Date => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+const isDateBefore = (left: Date, right: Date): boolean => left.getTime() < right.getTime();
+const isDateAfter = (left: Date, right: Date): boolean => left.getTime() > right.getTime();
+
 interface CalendarProps extends Omit<React.ComponentProps<typeof DayPicker>, 'mode' | 'selected' | 'onSelect'> {
   mode?: 'single';
   selected?: Date;
@@ -100,10 +105,35 @@ function Calendar({
 }: CalendarProps) {
   const [monthYear, setMonthYear] = React.useState<Date>(selected || new Date());
   const fromDate = props.fromDate || new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const today = React.useMemo(() => normalizeDate(new Date()), []);
+  const normalizedFromDate = React.useMemo(
+    () => (props.fromDate ? normalizeDate(props.fromDate) : undefined),
+    [props.fromDate]
+  );
+  const normalizedToDate = React.useMemo(
+    () => (props.toDate ? normalizeDate(props.toDate) : undefined),
+    [props.toDate]
+  );
+  const isTodaySelectable = React.useMemo(() => {
+    if (normalizedFromDate && isDateBefore(today, normalizedFromDate)) {
+      return false;
+    }
+
+    if (normalizedToDate && isDateAfter(today, normalizedToDate)) {
+      return false;
+    }
+
+    return true;
+  }, [normalizedFromDate, normalizedToDate, today]);
 
   const handleTodayClick = () => {
-    const today = new Date();
     setMonthYear(today);
+
+    if (!isTodaySelectable) {
+      return;
+    }
+
+    onSelect?.(today);
   };
 
   const handlePreviousMonth = () => {
@@ -175,8 +205,9 @@ function Calendar({
             <button
               onClick={handleTodayClick}
               className="calendar-today-button"
-              aria-label="Go to today"
+              aria-label="Select today"
               type="button"
+              disabled={!isTodaySelectable}
             >
               <ChevronsLeft className="w-4 h-4" />
               Today
