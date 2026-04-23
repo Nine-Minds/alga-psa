@@ -8,6 +8,7 @@ import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { syncCollabSnapshot } from '@alga-psa/documents/actions/collaborativeEditingActions';
 
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
@@ -101,6 +102,10 @@ export default function CollabTestPageClient({ userId, userName, tenantId }: Col
         user_id: userId,
         block_data: DEFAULT_DOC_CONTENT,
       });
+      if (isActionPermissionError(result)) {
+        setDocError(result.permissionError);
+        return;
+      }
       router.push(`/msp/test/collab?doc=${encodeURIComponent(result.document_id)}`);
     } catch (error) {
       console.error('[collab-test] Failed to create document:', error);

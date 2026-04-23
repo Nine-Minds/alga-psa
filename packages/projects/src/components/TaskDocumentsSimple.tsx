@@ -298,6 +298,11 @@ export default function TaskDocumentsSimple({
         folder_path: selectedFolderPath
       });
 
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+        return;
+      }
+
       toast.success(docT('createdSuccess', 'Document created successfully'));
 
       if (isPendingMode) {
