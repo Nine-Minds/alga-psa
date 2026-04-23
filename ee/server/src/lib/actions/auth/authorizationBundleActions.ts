@@ -8,12 +8,12 @@ import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import {
   type AuthorizationRecord,
   type AuthorizationReason,
+  type BundleNarrowingRule,
   type RelationshipTemplateKey,
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
   createAuthorizationKernel,
 } from '@alga-psa/authorization/kernel';
-import type { BundleNarrowingRule } from '@alga-psa/authorization/kernel/providers/bundleProvider';
 import {
   archiveBundle,
   cloneAuthorizationBundle,

@@ -1229,7 +1229,7 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
           })
         )
       );
-      const authorizedTickets = tickets.filter((_, index) => decisions[index]?.allowed);
+      const authorizedTickets = tickets.filter((_ticket: any, index: number) => decisions[index]?.allowed);
 
       // Transform and validate the data
       const ticketListItems = authorizedTickets.map((ticket: any): ITicketListItem => {

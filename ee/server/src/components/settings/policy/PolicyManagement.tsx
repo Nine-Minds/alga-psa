@@ -1693,7 +1693,7 @@ export default function PolicyManagement() {
                         <div className="space-y-4 rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-5 dark:bg-[rgb(var(--color-border-50))]">
                           <div className="flex items-center justify-between gap-2">
                             <h4 className="font-medium text-[rgb(var(--color-text-900))]">Draft revision</h4>
-                            <Badge variant={simulationResult.draft.allowed ? 'default' : 'destructive'}>
+                            <Badge variant={simulationResult.draft.allowed ? 'default' : 'error'}>
                               {simulationResult.draft.allowed ? 'Allowed' : 'Denied'}
                             </Badge>
                           </div>
@@ -1706,7 +1706,7 @@ export default function PolicyManagement() {
                         <div className="space-y-4 rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-5 dark:bg-[rgb(var(--color-border-50))]">
                           <div className="flex items-center justify-between gap-2">
                             <h4 className="font-medium text-[rgb(var(--color-text-900))]">Published revision</h4>
-                            <Badge variant={simulationResult.published.allowed ? 'default' : 'destructive'}>
+                            <Badge variant={simulationResult.published.allowed ? 'default' : 'error'}>
                               {simulationResult.published.allowed ? 'Allowed' : 'Denied'}
                             </Badge>
                           </div>
