@@ -30,6 +30,7 @@ export function SignInScreen() {
   const config = useMemo(() => getAppConfig(), []);
   const [status, setStatus] = useState<"idle" | "opening" | "apple">("idle");
   const [error, setError] = useState<string | null>(null);
+  const [errorTone, setErrorTone] = useState<"danger" | "info">("danger");
   const [capabilities, setCapabilities] = useState<MobileAuthCapabilities | null>(null);
   const [capabilitiesError, setCapabilitiesError] = useState<string | null>(null);
   const [capabilitiesLoading, setCapabilitiesLoading] = useState(false);
@@ -101,10 +102,12 @@ export function SignInScreen() {
 
   const onAppleSignIn = async () => {
     if (!baseUrl) {
+      setErrorTone("danger");
       setError(t("signIn.errors.missingConfig"));
       return;
     }
     if (!hostAllowed) {
+      setErrorTone("danger");
       setError(t("signIn.errors.hostNotAllowed"));
       return;
     }
@@ -130,12 +133,14 @@ export function SignInScreen() {
       if (!result.ok) {
         if (result.status === 404) {
           analytics.trackEvent(MobileAnalyticsEvents.authAppleNoAccount);
+          setErrorTone("info");
           setError(t("signIn.errors.appleNoAccount"));
         } else {
           analytics.trackEvent(MobileAnalyticsEvents.authAppleFailed, {
             status: result.status ?? null,
             errorKind: result.error.kind,
           });
+          setErrorTone("danger");
           setError(t("signIn.errors.appleFailed"));
         }
         return;
@@ -157,6 +162,7 @@ export function SignInScreen() {
       }
       logger.error("Apple sign-in failed", { error: e });
       analytics.trackEvent(MobileAnalyticsEvents.authAppleFailed, { reason: "exception" });
+      setErrorTone("danger");
       setError(t("signIn.errors.appleFailed"));
     } finally {
       setStatus("idle");
@@ -166,11 +172,13 @@ export function SignInScreen() {
   const onSignIn = async () => {
     if (!baseUrl) {
       analytics.trackEvent(MobileAnalyticsEvents.authSignInBlocked, { reason: "missing_base_url" });
+      setErrorTone("danger");
       setError(t("signIn.errors.missingConfig"));
       return;
     }
     if (!hostAllowed) {
       analytics.trackEvent(MobileAnalyticsEvents.authSignInBlocked, { reason: "host_not_allowlisted" });
+      setErrorTone("danger");
       setError(t("signIn.errors.hostNotAllowed"));
       return;
     }
@@ -198,6 +206,7 @@ export function SignInScreen() {
     } catch (e) {
       logger.error("Failed to open sign-in URL", { error: e });
       analytics.trackEvent(MobileAnalyticsEvents.authSignInOpenFailed, { reason: "exception" });
+      setErrorTone("danger");
       setError(t("signIn.errors.failedOpenBrowser"));
     } finally {
       setStatus("idle");
@@ -306,7 +315,7 @@ export function SignInScreen() {
             ...theme.typography.body,
             marginTop: theme.spacing.md,
             textAlign: "center",
-            color: theme.colors.danger,
+            color: errorTone === "info" ? theme.colors.primary : theme.colors.danger,
           }}
         >
           {error}

@@ -747,6 +747,43 @@ spec:
                 key: APPLE_IAP_ENVIRONMENT
           {{- end }}
 
+          # ----------- SIGN IN WITH APPLE ----------------
+          {{- if .Values.secrets.APPLE_SIGN_IN_BUNDLE_ID }}
+          - name: APPLE_SIGN_IN_BUNDLE_ID
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: APPLE_SIGN_IN_BUNDLE_ID
+          {{- end }}
+          {{- if .Values.secrets.APPLE_SIGN_IN_TEAM_ID }}
+          - name: APPLE_SIGN_IN_TEAM_ID
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: APPLE_SIGN_IN_TEAM_ID
+          {{- end }}
+          {{- if .Values.secrets.APPLE_SIGN_IN_KEY_ID }}
+          - name: APPLE_SIGN_IN_KEY_ID
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: APPLE_SIGN_IN_KEY_ID
+          {{- end }}
+          {{- if .Values.secrets.APPLE_SIGN_IN_PRIVATE_KEY }}
+          - name: APPLE_SIGN_IN_PRIVATE_KEY
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: APPLE_SIGN_IN_PRIVATE_KEY
+          {{- end }}
+          {{- if .Values.secrets.APPLE_SIGN_IN_ENCRYPTION_KEY }}
+          - name: APPLE_SIGN_IN_ENCRYPTION_KEY
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: APPLE_SIGN_IN_ENCRYPTION_KEY
+          {{- end }}
+
           # Non-sensitive Stripe configuration
           {{- if .Values.stripe }}
           {{- if .Values.stripe.master_billing_tenant_id_secret }}

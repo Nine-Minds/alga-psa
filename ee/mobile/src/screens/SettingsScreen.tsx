@@ -20,6 +20,14 @@ import { registerPushToken, unregisterPushToken } from "../api/pushToken";
 import { createApiClient } from "../api";
 import { getStableDeviceId } from "../device/clientMetadata";
 import { secureStorage, getSecureJson, setSecureJson } from "../storage/secureStorage";
+import { getAppleLinkStatus, linkAppleId, unlinkAppleId } from "../api/appleAuth";
+import {
+  AppleSignInCancelledError,
+  AppleSignInUnavailableError,
+  isAppleSignInAvailable,
+  signInWithApple,
+} from "../auth/appleSignIn";
+import { logger } from "../logging/logger";
 
 export function SettingsScreen() {
   const { t } = useTranslation("settings");
@@ -38,6 +46,10 @@ export function SettingsScreen() {
   const [hideSensitiveBusy, setHideSensitiveBusy] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushBusy, setPushBusy] = useState(false);
+  const [appleSupported, setAppleSupported] = useState(false);
+  const [appleLinked, setAppleLinked] = useState<boolean | null>(null);
+  const [appleBusy, setAppleBusy] = useState(false);
+  const [appleError, setAppleError] = useState<string | null>(null);
 
   useEffect(() => {
     let canceled = false;
@@ -59,6 +71,136 @@ export function SettingsScreen() {
       canceled = true;
     };
   }, []);
+
+  // Apple ID linking (iOS only) — fetch current state on mount, and whenever
+  // the session changes (sign-in / sign-out).
+  useEffect(() => {
+    if (Platform.OS !== "ios" || !session || !config.ok) return;
+    let canceled = false;
+    const controller = new AbortController();
+
+    void (async () => {
+      const available = await isAppleSignInAvailable();
+      if (canceled) return;
+      setAppleSupported(available);
+      if (!available) return;
+
+      try {
+        const client = createApiClient({
+          baseUrl: config.baseUrl,
+          getAccessToken: () => session.accessToken,
+          getTenantId: () => session.tenantId,
+          getUserAgentTag: () => `mobile/${Platform.OS}/apple-link`,
+        });
+        const result = await getAppleLinkStatus(client, controller.signal);
+        if (canceled || controller.signal.aborted) return;
+        if (result.ok) setAppleLinked(result.data.linked);
+      } catch (e) {
+        if (!canceled) logger.warn("Apple link status fetch failed", { error: e });
+      }
+    })();
+
+    return () => {
+      canceled = true;
+      controller.abort();
+    };
+  }, [session, config.ok, config.ok ? config.baseUrl : null]);
+
+  const toggleAppleLink = async () => {
+    if (appleBusy || !session || !config.ok) return;
+    setAppleError(null);
+
+    // Unlink path
+    if (appleLinked) {
+      Alert.alert(
+        t("security.appleId.disconnectTitle", "Disconnect Apple ID?"),
+        t(
+          "security.appleId.disconnectBody",
+          "You'll no longer be able to use Sign in with Apple for this account.",
+        ),
+        [
+          { text: t("common:cancel"), style: "cancel" },
+          {
+            text: t("security.appleId.disconnectConfirm", "Disconnect"),
+            style: "destructive",
+            onPress: () => {
+              void (async () => {
+                setAppleBusy(true);
+                try {
+                  const client = createApiClient({
+                    baseUrl: config.baseUrl,
+                    getAccessToken: () => session.accessToken,
+                    getTenantId: () => session.tenantId,
+                    getUserAgentTag: () => `mobile/${Platform.OS}/apple-unlink`,
+                  });
+                  const result = await unlinkAppleId(client);
+                  if (!result.ok) {
+                    setAppleError(t("security.appleId.errors.unlinkFailed", "Unable to disconnect your Apple ID. Please try again."));
+                  } else {
+                    setAppleLinked(false);
+                  }
+                } catch (e) {
+                  logger.error("Apple unlink threw", { error: e });
+                  setAppleError(t("security.appleId.errors.unlinkFailed", "Unable to disconnect your Apple ID. Please try again."));
+                } finally {
+                  setAppleBusy(false);
+                }
+              })();
+            },
+          },
+        ],
+      );
+      return;
+    }
+
+    // Link path
+    setAppleBusy(true);
+    try {
+      const credential = await signInWithApple();
+      const client = createApiClient({
+        baseUrl: config.baseUrl,
+        getAccessToken: () => session.accessToken,
+        getTenantId: () => session.tenantId,
+        getUserAgentTag: () => `mobile/${Platform.OS}/apple-link`,
+      });
+      const result = await linkAppleId(client, {
+        identityToken: credential.identityToken,
+        authorizationCode: credential.authorizationCode ?? undefined,
+      });
+      if (!result.ok) {
+        if (result.status === 409) {
+          setAppleError(
+            t(
+              "security.appleId.errors.alreadyLinkedElsewhere",
+              "This Apple ID is already linked to a different Alga PSA account.",
+            ),
+          );
+        } else {
+          setAppleError(t("security.appleId.errors.linkFailed", "Unable to link your Apple ID. Please try again."));
+        }
+        return;
+      }
+      setAppleLinked(true);
+      Alert.alert(
+        t("security.appleId.linkedTitle", "Apple ID connected"),
+        t(
+          "security.appleId.linkedBody",
+          "You can now use Sign in with Apple to sign into this account.",
+        ),
+        [{ text: t("common:ok") }],
+      );
+    } catch (e) {
+      if (e instanceof AppleSignInCancelledError) return;
+      if (e instanceof AppleSignInUnavailableError) {
+        setAppleSupported(false);
+        return;
+      }
+      logger.error("Apple link threw", { error: e });
+      setAppleError(t("security.appleId.errors.linkFailed", "Unable to link your Apple ID. Please try again."));
+    } finally {
+      setAppleBusy(false);
+    }
+  };
 
   const toggleBiometric = async () => {
     if (biometricBusy) return;
@@ -238,6 +380,33 @@ export function SettingsScreen() {
             {biometricError}
           </Text>
         ) : null}
+
+        {Platform.OS === "ios" && appleSupported ? (
+          <>
+            <View style={{ height: theme.spacing.sm }} />
+            <ToggleRow
+              theme={theme}
+              label={t("security.appleId.label", "Sign in with Apple")}
+              value={
+                appleBusy
+                  ? t("security.appleId.working", "Working…")
+                  : appleLinked === null
+                    ? t("common:loading")
+                    : appleLinked
+                      ? t("security.appleId.connected", "Connected — tap to disconnect")
+                      : t("security.appleId.notConnected", "Not connected — tap to connect")
+              }
+              disabled={appleBusy || appleLinked === null}
+              onPress={() => void toggleAppleLink()}
+            />
+            {appleError ? (
+              <Text style={{ ...theme.typography.caption, marginTop: theme.spacing.sm, color: theme.colors.danger }}>
+                {appleError}
+              </Text>
+            ) : null}
+          </>
+        ) : null}
+
         <View style={{ height: theme.spacing.sm }} />
         <ToggleRow
           theme={theme}
