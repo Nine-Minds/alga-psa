@@ -9,7 +9,15 @@ import { logger } from "../logging/logger";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../ui/ThemeContext";
 import { PrimaryButton } from "../ui/components/PrimaryButton";
-import { buildWebSignInUrl, createPendingMobileAuth, getAuthCallbackRedirectUri, parseAuthCallback } from "../auth/mobileAuth";
+import {
+  attachPendingAppleLinkToState,
+  buildWebSignInUrl,
+  clearPendingAppleLink,
+  createPendingMobileAuth,
+  getAuthCallbackRedirectUri,
+  parseAuthCallback,
+  storePendingAppleLink,
+} from "../auth/mobileAuth";
 import {
   AppleSignInCancelledError,
   AppleSignInUnavailableError,
@@ -132,6 +140,10 @@ export function SignInScreen() {
 
       if (!result.ok) {
         if (result.status === 404) {
+          await storePendingAppleLink({
+            identityToken: credential.identityToken,
+            authorizationCode: credential.authorizationCode ?? undefined,
+          });
           analytics.trackEvent(MobileAnalyticsEvents.authAppleNoAccount);
           setErrorTone("info");
           setError(t("signIn.errors.appleNoAccount"));
@@ -146,6 +158,7 @@ export function SignInScreen() {
         return;
       }
 
+      await clearPendingAppleLink();
       analytics.trackEvent(MobileAnalyticsEvents.authAppleSucceeded);
       navigation.navigate("AuthCallback", {
         ott: result.data.ott,
@@ -187,6 +200,7 @@ export function SignInScreen() {
     try {
       analytics.trackEvent(MobileAnalyticsEvents.authSignInStart);
       const pending = await createPendingMobileAuth();
+      await attachPendingAppleLinkToState(pending.state);
       const redirectUri = getAuthCallbackRedirectUri();
       const loginUrl = buildWebSignInUrl({ baseUrl, redirectUri, state: pending.state });
 

@@ -7,7 +7,14 @@ import type { RootStackParamList } from "../navigation/types";
 import { ErrorState, LoadingState } from "../ui/states";
 import { PrimaryButton } from "../ui/components/PrimaryButton";
 import { logger } from "../logging/logger";
-import { clearPendingMobileAuth, clearReceivedOtt, getPendingMobileAuth, storeReceivedOtt } from "../auth/mobileAuth";
+import {
+  clearPendingAppleLink,
+  clearPendingMobileAuth,
+  clearReceivedOtt,
+  getPendingAppleLink,
+  getPendingMobileAuth,
+  storeReceivedOtt,
+} from "../auth/mobileAuth";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
 import { exchangeOttWithRetry } from "../api/mobileAuth";
@@ -16,6 +23,7 @@ import { getStableDeviceId } from "../device/clientMetadata";
 import { analytics } from "../analytics/analytics";
 import { MobileAnalyticsEvents } from "../analytics/events";
 import { getTicketStats } from "../api/tickets";
+import { linkAppleId } from "../api/appleAuth";
 import { decodeQaSession, parseTicketRichTextQaScenario } from "../qa/ticketRichTextQa";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AuthCallback">;
@@ -163,6 +171,32 @@ export function AuthCallbackScreen({ navigation, route }: Props) {
           await Promise.allSettled([clearPendingMobileAuth(), clearReceivedOtt()]);
           setError(t("callback.errors.noPermission"));
           return;
+        }
+
+        const pendingAppleLink = qaOtt ? null : await getPendingAppleLink();
+        if (pendingAppleLink?.state === state) {
+          try {
+            const appleLinkClient = createApiClient({
+              baseUrl: config.baseUrl,
+              getAccessToken: () => exchanged.data.accessToken,
+              getTenantId: () => exchanged.data.tenantId,
+              getUserAgentTag: () => `mobile/${Platform.OS}/apple-link-after-signin`,
+            });
+            const appleLinkResult = await linkAppleId(appleLinkClient, {
+              identityToken: pendingAppleLink.identityToken,
+              authorizationCode: pendingAppleLink.authorizationCode,
+            });
+            if (!appleLinkResult.ok) {
+              logger.warn("Post-sign-in Apple link failed", {
+                status: appleLinkResult.status ?? null,
+                errorKind: appleLinkResult.error.kind,
+              });
+            }
+          } catch (e) {
+            logger.warn("Post-sign-in Apple link threw", { error: e });
+          } finally {
+            await clearPendingAppleLink();
+          }
         }
 
         const expiresAtMs = Date.now() + exchanged.data.expiresInSec * 1000;
