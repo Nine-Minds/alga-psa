@@ -166,6 +166,113 @@ function verifyWithJwk(
   return verified as AppleIdentityPayload;
 }
 
+// ---------------- Server-to-server notifications ----------------
+//
+// Apple POSTs JSON of the form `{ payload: "<JWS>" }` to the S2S endpoint
+// registered in the Apple Developer portal. The JWS is signed with the same
+// keys as identity tokens; the inner JWT has an `events` claim whose value is
+// a **JSON-encoded string** (not a nested object).
+
+export type AppleServerNotificationEventType =
+  | 'email-disabled'
+  | 'email-enabled'
+  | 'consent-revoked'
+  | 'account-delete';
+
+export type AppleServerNotificationEvent = {
+  type: AppleServerNotificationEventType;
+  sub: string;
+  email?: string;
+  is_private_email?: boolean | string;
+  event_time: number;
+};
+
+export type AppleServerNotification = {
+  iss: string;
+  aud: string;
+  iat: number;
+  jti: string;
+  events: AppleServerNotificationEvent;
+};
+
+type RawAppleNotificationJwt = {
+  iss: string;
+  aud: string;
+  iat: number;
+  jti: string;
+  events: string;
+};
+
+/**
+ * Verify an Apple server-to-server notification JWS and return the decoded
+ * event. The `events` claim in the JWT body is itself a JSON-encoded string,
+ * which we parse and validate.
+ *
+ * Throws on any of:
+ *   - Malformed JWT / unknown kid / bad signature
+ *   - Wrong issuer or audience
+ *   - Missing / malformed inner events claim
+ *   - Unknown event type (returned verbatim; caller decides whether to ignore)
+ */
+export async function verifyAppleServerNotification(
+  jwsToken: string,
+  config?: AppleSignInConfig,
+): Promise<AppleServerNotification> {
+  const cfg = config ?? (await getAppleSignInConfig());
+  const decodedHeader = jwt.decode(jwsToken, { complete: true });
+  if (!decodedHeader || typeof decodedHeader === 'string') {
+    throw new Error('Malformed Apple server notification token');
+  }
+  const kid = decodedHeader.header?.kid;
+  if (!kid) {
+    throw new Error('Apple server notification token missing kid');
+  }
+
+  const keys = await fetchJwks();
+  let jwk = keys.find((k) => k.kid === kid);
+  if (!jwk) {
+    jwksCache = null;
+    const refreshed = await fetchJwks();
+    jwk = refreshed.find((k) => k.kid === kid);
+    if (!jwk) {
+      throw new Error(`Unknown Apple signing key: ${kid}`);
+    }
+  }
+
+  const pem = jwkToPem(jwk);
+  const verified = jwt.verify(jwsToken, pem, {
+    algorithms: ['RS256'],
+    issuer: APPLE_ISSUER,
+    audience: cfg.bundleId,
+  });
+  if (typeof verified === 'string' || !verified) {
+    throw new Error('Apple server notification payload is not an object');
+  }
+
+  const raw = verified as RawAppleNotificationJwt;
+  if (typeof raw.events !== 'string') {
+    throw new Error('Apple server notification missing events claim');
+  }
+
+  let parsed: AppleServerNotificationEvent;
+  try {
+    parsed = JSON.parse(raw.events) as AppleServerNotificationEvent;
+  } catch {
+    throw new Error('Apple server notification events claim is not valid JSON');
+  }
+  if (!parsed || typeof parsed !== 'object' || !parsed.type || !parsed.sub) {
+    throw new Error('Apple server notification events payload is malformed');
+  }
+
+  return {
+    iss: raw.iss,
+    aud: raw.aud,
+    iat: raw.iat,
+    jti: raw.jti,
+    events: parsed,
+  };
+}
+
 // ---------------- Authorization code exchange ----------------
 
 export type AppleTokenResponse = {
