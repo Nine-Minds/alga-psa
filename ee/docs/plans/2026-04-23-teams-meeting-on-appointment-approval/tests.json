@@ -219,7 +219,7 @@
     "id": "T037",
     "description": "UI (Playwright, client portal): AppointmentRequestDetailsPage renders a primary 'Join Teams Meeting' button when online_meeting_url is populated.",
     "featureIds": ["F018"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T038",

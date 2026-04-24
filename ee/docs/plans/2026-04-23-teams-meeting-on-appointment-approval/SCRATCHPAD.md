@@ -177,6 +177,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-24: Completed `T034` with `server/src/test/unit/appointments/EntryPopup.teams.test.tsx`, asserting the pending appointment-request branch of `EntryPopup` shows the Teams toggle when capability is available.
 - 2026-04-24: Completed `T035` in the same `EntryPopup` test file, asserting the approved appointment banner renders the Teams join action when `online_meeting_url` is present.
 - 2026-04-24: Completed `T036` in the `AppointmentRequestsPanel` test file, asserting approved request details render the Teams join action when a meeting URL is stored.
+- 2026-04-24: Completed `T037` in the client-portal detail page test file, asserting `AppointmentRequestDetailsPage` renders the `Join Teams Meeting` button when `online_meeting_url` is populated.
 
 ## Working notes
 
