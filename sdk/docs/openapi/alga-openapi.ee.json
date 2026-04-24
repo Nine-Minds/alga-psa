@@ -35,6 +35,9 @@
       "name": "Email"
     },
     {
+      "name": "Extension Gateway"
+    },
+    {
       "name": "Products"
     },
     {
@@ -90,9 +93,6 @@
     },
     {
       "name": "contracts"
-    },
-    {
-      "name": "email"
     },
     {
       "name": "ext"
@@ -1377,6 +1377,339 @@
         "required": [
           "success",
           "message"
+        ]
+      },
+      "MicrosoftWebhookValidationQuery": {
+        "type": "object",
+        "properties": {
+          "validationtoken": {
+            "type": "string",
+            "description": "Microsoft Graph subscription validation token. The handler also accepts validationToken with camel-case spelling."
+          },
+          "validationToken": {
+            "type": "string",
+            "description": "Camel-case variant of the Microsoft Graph validation token."
+          }
+        }
+      },
+      "MicrosoftWebhookTextResponse": {
+        "type": "string",
+        "description": "Plain text response. For validation requests, this is the validation token echoed verbatim; otherwise it may be OK or Internal Server Error."
+      },
+      "MicrosoftGraphResourceData": {
+        "type": "object",
+        "properties": {
+          "@odata.type": {
+            "type": "string",
+            "description": "OData resource type, such as #microsoft.graph.message."
+          },
+          "@odata.id": {
+            "type": "string",
+            "description": "OData resource identifier."
+          },
+          "id": {
+            "type": "string",
+            "description": "Microsoft Graph message ID. If absent, the handler extracts it from resource."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Optional message subject supplied by Microsoft Graph."
+          }
+        }
+      },
+      "MicrosoftGraphNotification": {
+        "type": "object",
+        "properties": {
+          "changeType": {
+            "type": "string",
+            "description": "Microsoft Graph change type, typically created for new mail."
+          },
+          "clientState": {
+            "type": "string",
+            "description": "Opaque verification token that must match microsoft_email_provider_config.webhook_verification_token when configured."
+          },
+          "resource": {
+            "type": "string",
+            "description": "Graph resource path, for example /users/{userId}/messages/{messageId}."
+          },
+          "resourceData": {
+            "$ref": "#/components/schemas/MicrosoftGraphResourceData"
+          },
+          "subscriptionExpirationDateTime": {
+            "type": "string",
+            "description": "Microsoft Graph subscription expiry timestamp."
+          },
+          "subscriptionId": {
+            "type": "string",
+            "description": "Microsoft Graph subscription ID. Used to resolve microsoft_email_provider_config.webhook_subscription_id."
+          },
+          "tenantId": {
+            "type": "string",
+            "description": "Microsoft tenant GUID from the notification. Informational only; tenant is resolved from DB."
+          }
+        },
+        "required": [
+          "changeType",
+          "resource",
+          "resourceData",
+          "subscriptionId"
+        ]
+      },
+      "MicrosoftGraphWebhookBody": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MicrosoftGraphNotification"
+            },
+            "description": "Batch of Microsoft Graph change notifications."
+          }
+        },
+        "required": [
+          "value"
+        ]
+      },
+      "MicrosoftWebhookSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ],
+            "description": "Webhook request was processed successfully."
+          },
+          "queued": {
+            "type": "boolean",
+            "description": "Whether any notification pointer jobs were enqueued."
+          },
+          "handoff": {
+            "type": "string",
+            "enum": [
+              "unified_pointer_queue"
+            ],
+            "description": "Queue handoff mechanism used for Microsoft notification pointers."
+          },
+          "unifiedQueuedCount": {
+            "type": "integer",
+            "description": "Number of notification jobs enqueued."
+          },
+          "processedCount": {
+            "type": "integer",
+            "description": "Number of notifications processed."
+          },
+          "messageIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Microsoft Graph message IDs that were enqueued."
+          }
+        },
+        "required": [
+          "success",
+          "queued",
+          "handoff",
+          "unifiedQueuedCount",
+          "processedCount",
+          "messageIds"
+        ]
+      },
+      "MicrosoftWebhookEmptyResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ],
+            "description": "Webhook request was accepted."
+          },
+          "message": {
+            "type": "string",
+            "description": "Reason no notification jobs were enqueued."
+          }
+        },
+        "required": [
+          "success",
+          "message"
+        ]
+      },
+      "MicrosoftWebhookEnqueueErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "enum": [
+              "Failed to enqueue one or more Microsoft pointer jobs"
+            ]
+          },
+          "failureCount": {
+            "type": "integer",
+            "description": "Number of enqueue failures."
+          },
+          "failures": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "subscriptionId": {
+                  "type": "string",
+                  "description": "Microsoft Graph subscription ID from the notification."
+                },
+                "messageId": {
+                  "type": "string",
+                  "description": "Microsoft Graph message ID that failed to enqueue."
+                },
+                "providerId": {
+                  "type": "string",
+                  "description": "Resolved email provider ID."
+                },
+                "tenantId": {
+                  "type": "string",
+                  "description": "Resolved tenant identifier."
+                },
+                "reason": {
+                  "type": "string",
+                  "description": "Failure reason."
+                }
+              },
+              "required": [
+                "subscriptionId",
+                "messageId",
+                "providerId",
+                "tenantId",
+                "reason"
+              ]
+            },
+            "description": "Per-notification enqueue failures."
+          }
+        },
+        "required": [
+          "error",
+          "failureCount",
+          "failures"
+        ]
+      },
+      "EmailWebhookTestRequest": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "microsoft",
+              "google"
+            ],
+            "description": "Email provider type to simulate in the synthetic inbound email event. Defaults to microsoft."
+          },
+          "messageId": {
+            "type": "string",
+            "description": "Synthetic message identifier to include in the test event. Defaults to test-message-123."
+          }
+        }
+      },
+      "EmailWebhookTestResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ],
+            "description": "Test event was published successfully."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable success message."
+          },
+          "eventId": {
+            "type": "string",
+            "description": "Redis Streams event ID returned by publishEvent."
+          },
+          "tenant": {
+            "type": "string",
+            "description": "Tenant identifier from the authenticated user session."
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "eventId",
+          "tenant"
+        ]
+      },
+      "ExtensionGatewayParams": {
+        "type": "object",
+        "properties": {
+          "extensionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Extension identifier from the URL. This may be a registry/install UUID or a publisher.name slug, resolved case-insensitively."
+          },
+          "path": {
+            "type": "string",
+            "description": "Remaining extension endpoint path after extensionId. The gateway forwards this path to the runner unchanged."
+          }
+        },
+        "required": [
+          "extensionId"
+        ]
+      },
+      "ExtensionGatewayHeaders": {
+        "type": "object",
+        "properties": {
+          "x-request-id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Optional request ID. The gateway generates a UUID when absent and forwards it to the runner."
+          },
+          "x-idempotency-key": {
+            "type": "string",
+            "description": "Optional idempotency key. For non-GET requests, the gateway falls back to x-request-id when absent."
+          },
+          "x-alga-tenant": {
+            "type": "string",
+            "description": "Internal tenant header used for tenant resolution before session fallback."
+          },
+          "x-tenant-id": {
+            "type": "string",
+            "description": "Legacy tenant header accepted for tenant resolution before session fallback."
+          }
+        }
+      },
+      "ExtensionOpaqueRequest": {
+        "type": "object",
+        "properties": {},
+        "description": "Extension-specific request body. The gateway treats this as opaque, enforces a 10 MB limit, base64-encodes it, and forwards it to the extension runner."
+      },
+      "ExtensionOpaqueResponse": {
+        "type": "object",
+        "properties": {},
+        "description": "Extension-specific response relayed from the runner. Status code, content type, and body are controlled by the extension."
+      },
+      "ExtensionGatewayErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "enum": [
+              "not_installed",
+              "payload_too_large",
+              "install_context_missing",
+              "runner_empty_response",
+              "runner_invalid_response",
+              "bad_gateway",
+              "internal_error"
+            ],
+            "description": "Gateway-level error code."
+          },
+          "detail": {
+            "description": "Additional error detail when available."
+          }
+        },
+        "required": [
+          "error"
         ]
       },
       "BoardIdParams": {
@@ -4681,6 +5014,586 @@
         }
       }
     },
+    "/api/email/webhooks/microsoft": {
+      "get": {
+        "summary": "Validate Microsoft email webhook subscription",
+        "description": "Microsoft Graph subscription validation endpoint. During subscription creation or renewal, Microsoft calls this endpoint with validationtoken or validationToken. The handler echoes the token verbatim as text/plain. If no token is provided, it returns OK. No session, API key, tenant header, or request body is required.",
+        "tags": [
+          "Email"
+        ],
+        "security": [],
+        "extensions": {
+          "x-api-key-auth-skipped": true,
+          "x-webhook-provider": "microsoft-graph"
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Microsoft Graph subscription validation token. The handler also accepts validationToken with camel-case spelling."
+            },
+            "required": false,
+            "description": "Microsoft Graph subscription validation token. The handler also accepts validationToken with camel-case spelling.",
+            "name": "validationtoken",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Camel-case variant of the Microsoft Graph validation token."
+            },
+            "required": false,
+            "description": "Camel-case variant of the Microsoft Graph validation token.",
+            "name": "validationToken",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Plain text validation token echo, or OK when no validation token is present.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/MicrosoftWebhookTextResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error while handling validation request.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/MicrosoftWebhookTextResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "options": {
+        "summary": "CORS preflight for Microsoft email webhook",
+        "description": "CORS preflight response for the Microsoft Graph email webhook endpoint. Global middleware intercepts OPTIONS before route logic and returns 204 No Content with CORS headers. No authentication, tenant, request body, query parameter, or database access is required.",
+        "tags": [
+          "Email"
+        ],
+        "security": [],
+        "extensions": {
+          "x-cors-preflight": true,
+          "x-handled-by": "middleware"
+        },
+        "responses": {
+          "204": {
+            "description": "CORS preflight accepted; response body is empty."
+          }
+        }
+      },
+      "post": {
+        "summary": "Receive Microsoft Graph email webhook",
+        "description": "Receives Microsoft Graph change notifications for monitored mailboxes. Standard session and API-key middleware are bypassed. The handler supports validation token echo, parses Microsoft notification batches, resolves provider and tenant by matching notification subscriptionId to microsoft_email_provider_config.webhook_subscription_id, validates clientState against the stored webhook_verification_token when configured, extracts message IDs, and enqueues pointer-only jobs into the unified inbound email queue. The tenantId in the Microsoft payload is informational and is not trusted for tenant resolution.",
+        "tags": [
+          "Email"
+        ],
+        "security": [],
+        "extensions": {
+          "x-api-key-auth-skipped": true,
+          "x-session-auth-skipped": true,
+          "x-webhook-provider": "microsoft-graph"
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Microsoft Graph subscription validation token. The handler also accepts validationToken with camel-case spelling."
+            },
+            "required": false,
+            "description": "Microsoft Graph subscription validation token. The handler also accepts validationToken with camel-case spelling.",
+            "name": "validationtoken",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Camel-case variant of the Microsoft Graph validation token."
+            },
+            "required": false,
+            "description": "Camel-case variant of the Microsoft Graph validation token.",
+            "name": "validationToken",
+            "in": "query"
+          }
+        ],
+        "requestBody": {
+          "description": "Microsoft Graph webhook notification batch.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MicrosoftGraphWebhookBody"
+              },
+              "description": "Microsoft Graph webhook notification batch."
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Validation token echoed as text/plain, or JSON success response after notifications are processed or skipped.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/MicrosoftWebhookSuccessResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MicrosoftWebhookEmptyResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MicrosoftWebhookTextResponse"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected internal server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "One or more notification pointers could not be enqueued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MicrosoftWebhookEnqueueErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/email/webhooks/test": {
+      "post": {
+        "summary": "Publish test inbound email event",
+        "description": "Publishes a synthetic INBOUND_EMAIL_RECEIVED event to the workflow event stream so operators can test webhook and workflow delivery without a real provider notification. Requires a valid Auth.js session; tenant is taken from the authenticated user session. The route performs no RBAC check and does not require an API key.",
+        "tags": [
+          "Email"
+        ],
+        "security": [
+          {
+            "SessionCookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "description": "Optional synthetic email provider metadata for the test event.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailWebhookTestRequest"
+              },
+              "description": "Optional synthetic email provider metadata for the test event."
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Test event was published successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailWebhookTestResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No authenticated user session was found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to publish the test event.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ext/{extensionId}/{path}": {
+      "delete": {
+        "summary": "Forward DELETE request to extension runner",
+        "description": "Tenant-scoped extension gateway endpoint that forwards DELETE requests to the installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development; verifies the extension is installed and enabled for that tenant; forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner response. The gateway currently has a placeholder access check and does not enforce per-extension RBAC beyond tenant install resolution.",
+        "tags": [
+          "Extension Gateway"
+        ],
+        "security": [
+          {
+            "SessionCookieAuth": []
+          }
+        ],
+        "extensions": {
+          "x-api-key-auth-skipped": true,
+          "x-proxy-target": "extension-runner",
+          "x-max-body-bytes": 10485760
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Extension identifier from the URL. This may be a registry/install UUID or a publisher.name slug, resolved case-insensitively."
+            },
+            "required": true,
+            "description": "Extension identifier from the URL. This may be a registry/install UUID or a publisher.name slug, resolved case-insensitively.",
+            "name": "extensionId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Remaining extension endpoint path after extensionId. The gateway forwards this path to the runner unchanged."
+            },
+            "required": false,
+            "description": "Remaining extension endpoint path after extensionId. The gateway forwards this path to the runner unchanged.",
+            "name": "path",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Optional request ID. The gateway generates a UUID when absent and forwards it to the runner."
+            },
+            "required": false,
+            "description": "Optional request ID. The gateway generates a UUID when absent and forwards it to the runner.",
+            "name": "x-request-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optional idempotency key. For non-GET requests, the gateway falls back to x-request-id when absent."
+            },
+            "required": false,
+            "description": "Optional idempotency key. For non-GET requests, the gateway falls back to x-request-id when absent.",
+            "name": "x-idempotency-key",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal tenant header used for tenant resolution before session fallback."
+            },
+            "required": false,
+            "description": "Internal tenant header used for tenant resolution before session fallback.",
+            "name": "x-alga-tenant",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Legacy tenant header accepted for tenant resolution before session fallback."
+            },
+            "required": false,
+            "description": "Legacy tenant header accepted for tenant resolution before session fallback.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "description": "Optional extension-specific DELETE body. The gateway accepts any content type up to 10 MB.",
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtensionOpaqueRequest"
+              },
+              "description": "Optional extension-specific DELETE body. The gateway accepts any content type up to 10 MB."
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Runner response relayed by the gateway. The actual status can vary by extension contract.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionOpaqueResponse"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "Runner returned no content, or CORS preflight for OPTIONS requests on this gateway path."
+          },
+          "404": {
+            "description": "Extension is not installed or not enabled for the resolved tenant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionGatewayErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body exceeds the 10 MB gateway limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionGatewayErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Tenant could not be resolved or another internal gateway error occurred.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionGatewayErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Runner call failed, runner response was empty/invalid, or install context was incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionGatewayErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "GET ext",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "ext"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "PATCH ext",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "ext"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "POST ext",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "ext"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "PUT ext",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "ext"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/boards": {
       "get": {
         "summary": "List boards",
@@ -7889,459 +8802,6 @@
           },
           "404": {
             "description": "Project task not found, or its parent project could not be resolved.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/email/webhooks/microsoft": {
-      "get": {
-        "summary": "GET email",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "email"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "options": {
-        "summary": "OPTIONS email",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "email"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "POST email",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "email"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/email/webhooks/test": {
-      "post": {
-        "summary": "POST email",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "email"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/ext/{extensionId}/{path}": {
-      "delete": {
-        "summary": "DELETE ext",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "ext"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "204": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "summary": "GET ext",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "ext"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "patch": {
-        "summary": "PATCH ext",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "ext"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "POST ext",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "ext"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "summary": "PUT ext",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "ext"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
