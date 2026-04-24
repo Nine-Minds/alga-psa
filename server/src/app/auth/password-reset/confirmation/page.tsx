@@ -3,8 +3,10 @@ import React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@alga-psa/ui/components/Button';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const PasswordResetConfirmation: React.FC = () => {
+  const { t } = useTranslation('msp/auth');
   const router = useRouter();
   const searchParams = useSearchParams();
   const portal = searchParams?.get('portal') || 'msp';
@@ -19,17 +21,17 @@ const PasswordResetConfirmation: React.FC = () => {
         <div>
           <Image
             src="/images/avatar-purple-background.png"
-            alt="Logo"
+            alt={t('passwordReset.confirmation.logoAlt', 'Logo')}
             width={60}
             height={60}
             className="mx-auto rounded-full"
           />
         </div>
-        <h2 className="text-2xl font-bold text-[rgb(var(--color-text-900))]">Password reset</h2>
+        <h2 className="text-2xl font-bold text-[rgb(var(--color-text-900))]">{t('passwordReset.confirmation.title', 'Password reset')}</h2>
         <p className="text-sm text-[rgb(var(--color-text-600))]">
-          Your password has been successfully reset.
+          {t('passwordReset.confirmation.subtitle', 'Your password has been successfully reset.')}
           <br />
-          Click below to sign in with your new password.
+          {t('passwordReset.confirmation.subtitleContinue', 'Click below to sign in with your new password.')}
         </p>
         <Button
           id="proceed-to-sign-in-btn"
@@ -37,7 +39,7 @@ const PasswordResetConfirmation: React.FC = () => {
           onClick={handleContinue}
           className="w-full px-4 py-2 text-sm font-medium text-white bg-[rgb(var(--color-primary-600))] rounded-md hover:bg-[rgb(var(--color-primary-700))] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[rgb(var(--color-primary-500))]"
         >
-          Continue
+          {t('passwordReset.confirmation.continue', 'Continue')}
         </Button>
       </div>
     </div>

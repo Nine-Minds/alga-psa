@@ -514,7 +514,12 @@
       "updateAssignmentStatus": "Nie udało się zaktualizować statusu przypisania.",
       "selectPrincipal": "Wybierz użytkownika przed uruchomieniem symulacji.",
       "selectRecord": "Wybierz rekord przed uruchomieniem symulacji.",
-      "runSimulation": "Nie udało się uruchomić symulacji."
+      "runSimulation": "Nie udało się uruchomić symulacji.",
+      "simulator": {
+        "unsupportedAction": "Symulator obecnie obsługuje tylko sprawdzenia Odczyt i Zatwierdź. Wybierz jedną z tych akcji i spróbuj ponownie.",
+        "unsupportedResource": "Ten typ rekordu nie jest jeszcze dostępny w symulatorze. Wybierz obsługiwany typ rekordu i spróbuj ponownie.",
+        "clientTicketNotSupported": "Sprawdzenia biletów dla użytkowników klienta nie są jeszcze dostępne w symulatorze, ponieważ widoczność tablicy biletów nie jest uwzględniona. Spróbuj z użytkownikiem wewnętrznym lub zweryfikuj dostęp klienta do biletów w aplikacji."
+      }
     }
   }
 }

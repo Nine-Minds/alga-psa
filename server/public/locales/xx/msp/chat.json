@@ -1,0 +1,146 @@
+{
+  "sidebar": {
+    "title": "11111",
+    "subtitleHistory": "11111",
+    "subtitleDefault": "11111",
+    "showHistory": "11111",
+    "hideHistory": "11111",
+    "showHistoryTooltip": "11111",
+    "hideHistoryTooltip": "11111",
+    "startNewChat": "11111",
+    "hideSidebar": "11111",
+    "hideSidebarTooltip": "11111",
+    "introMessage": "11111",
+    "loadingChatConversation": "11111",
+    "history": {
+      "searchResults": "11111",
+      "recentChats": "11111",
+      "loading": "11111",
+      "searchAriaLabel": "11111",
+      "searchPlaceholder": "11111",
+      "typeAtLeastNChars": "11111 {{count}} 11111",
+      "emptyInitial": "11111",
+      "emptySearch": "11111",
+      "untitled": "11111",
+      "noMessagesYet": "11111",
+      "loadingConversation": "11111",
+      "chatActionsFor": "11111 {{title}} 11111",
+      "rename": "11111",
+      "delete": "11111",
+      "unableToLoadRecent": "11111",
+      "unableToLoadSearch": "11111"
+    },
+    "timestamp": {
+      "recently": "11111",
+      "justNow": "11111",
+      "minutesAgo": "11111 {{count}} 11111",
+      "hoursAgo": "11111 {{count}} 11111",
+      "daysAgo": "11111 {{count}} 11111"
+    },
+    "newChatConfirm": {
+      "title": "11111",
+      "message": "11111",
+      "confirmLabel": "11111",
+      "cancelLabel": "11111"
+    },
+    "deleteConfirm": {
+      "title": "11111",
+      "messageWithTitle": "11111 {{title}} 11111",
+      "fallbackTitle": "11111",
+      "confirmLabel": "11111",
+      "cancelLabel": "11111"
+    },
+    "rename": {
+      "dialogTitle": "11111",
+      "inputLabel": "11111",
+      "inputPlaceholder": "11111",
+      "cancel": "11111",
+      "save": "11111"
+    }
+  },
+  "chat": {
+    "greeting": "11111",
+    "avatarAlt": "11111",
+    "defaultFunctionName": "11111",
+    "resultTruncated": "11111",
+    "inputPlaceholder": "11111",
+    "inputPlaceholderGenerating": "11111",
+    "inputAriaLabel": "11111",
+    "thinking": "11111",
+    "hintMultiline": "11111",
+    "hintSingleLine": "11111",
+    "editingNotice": "11111",
+    "cancelEdit": "11111",
+    "stop": "11111",
+    "send": "11111",
+    "viewDetails": "11111",
+    "viewFullValue": "11111",
+    "parameters": "11111",
+    "plan": "11111",
+    "playbooks": "11111",
+    "validation": {
+      "dialogTitle": "11111",
+      "ok": "11111",
+      "enterMessage": "11111"
+    },
+    "errors": {
+      "userNotIdentified": "11111",
+      "unableToSave": "11111",
+      "requestFailedStatus": "11111 {{status}} 11111",
+      "unexpectedResponse": "11111",
+      "unexpectedError": "11111",
+      "generationError": "11111",
+      "connectionInterrupted": "11111",
+      "connectionInterruptedWithReason": "11111 {{reason}} 11111"
+    },
+    "function": {
+      "approveAriaLabel": "11111",
+      "declineAriaLabel": "11111",
+      "approve": "11111",
+      "approving": "11111",
+      "deny": "11111",
+      "processing": "11111",
+      "autoApproveLabel": "11111 {{method}} 11111",
+      "executingRequest": "11111",
+      "continuingWithoutCall": "11111",
+      "autoApprovalEnabled": "11111 {{method}} 11111",
+      "reviewAndApprove": "11111",
+      "completedNoDetails": "11111",
+      "emDash": "11111"
+    }
+  },
+  "quickAsk": {
+    "title": "11111",
+    "yoloLabel": "11111",
+    "yoloAriaLabel": "11111",
+    "openInSidebar": "11111",
+    "close": "11111",
+    "ask": "11111",
+    "inputPlaceholder": "11111",
+    "inputAriaLabel": "11111",
+    "followUpNotice": "11111",
+    "startingSession": "11111",
+    "session": "11111 {{chatId}} 11111",
+    "hint": "11111 {{modifier}} 11111"
+  },
+  "message": {
+    "authorAlga": "11111",
+    "authorYou": "11111",
+    "authorSystem": "11111",
+    "avatarAlt": "11111",
+    "draftingResponse": "11111",
+    "interrupted": "11111",
+    "interruptionDetail": "11111",
+    "showAssistantReasoning": "11111",
+    "editAriaLabel": "11111",
+    "editTooltip": "11111",
+    "regenerateAriaLabel": "11111",
+    "regenerateTooltip": "11111",
+    "functionStatus": {
+      "success": "11111",
+      "declined": "11111",
+      "pending": "11111",
+      "error": "11111"
+    }
+  }
+}

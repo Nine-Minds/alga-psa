@@ -514,7 +514,12 @@
       "updateAssignmentStatus": "Falha ao atualizar o status da atribuição.",
       "selectPrincipal": "Selecione um principal antes de executar a simulação.",
       "selectRecord": "Selecione um registro antes de executar a simulação.",
-      "runSimulation": "Falha ao executar a simulação."
+      "runSimulation": "Falha ao executar a simulação.",
+      "simulator": {
+        "unsupportedAction": "Atualmente, o simulador oferece suporte apenas a verificações de Leitura e Aprovação. Escolha uma dessas ações e tente novamente.",
+        "unsupportedResource": "Esse tipo de registro ainda não está disponível no simulador. Escolha um tipo de registro compatível e tente novamente.",
+        "clientTicketNotSupported": "As verificações de chamados para usuários cliente ainda não estão disponíveis no simulador porque a visibilidade do quadro de chamados não está incluída. Tente com um usuário interno ou verifique o acesso de chamados do cliente no aplicativo."
+      }
     }
   }
 }

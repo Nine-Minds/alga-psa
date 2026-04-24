@@ -514,7 +514,12 @@
       "updateAssignmentStatus": "11111",
       "selectPrincipal": "11111",
       "selectRecord": "11111",
-      "runSimulation": "11111"
+      "runSimulation": "11111",
+      "simulator": {
+        "unsupportedAction": "11111",
+        "unsupportedResource": "11111",
+        "clientTicketNotSupported": "11111"
+      }
     }
   }
 }

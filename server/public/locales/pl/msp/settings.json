@@ -610,7 +610,40 @@
         "priorityMatrixTitle": "Macierz priorytetów",
         "impactDescription": "Poziomy wpływu określają zakres problemu",
         "urgencyDescription": "Poziomy pilności określają, jak szybko problem wymaga rozwiązania",
-        "priorityDescription": "Priorytet jest obliczany na podstawie wpływu i pilności"
+        "priorityDescription": "Priorytet jest obliczany na podstawie wpływu i pilności",
+        "categories": {
+          "serviceRequest": "Wniosek o usługę"
+        },
+        "priorityMatrix": {
+          "urgencyHeaderLine1": {
+            "high": "Wysoka",
+            "mediumHigh": "Średnio-wysoka",
+            "medium": "Średnia",
+            "mediumLow": "Średnio-niska",
+            "low": "Niska"
+          },
+          "urgencyHeaderLine2": {
+            "high": "Pilność (1)",
+            "mediumHigh": "Pilność (2)",
+            "medium": "Pilność (3)",
+            "mediumLow": "Pilność (4)",
+            "low": "Pilność (5)"
+          },
+          "impact": {
+            "high": "Wysoki wpływ (1)",
+            "mediumHigh": "Średnio-wysoki wpływ (2)",
+            "medium": "Średni wpływ (3)",
+            "mediumLow": "Średnio-niski wpływ (4)",
+            "low": "Niski wpływ (5)"
+          },
+          "priority": {
+            "critical": "Krytyczny (1)",
+            "high": "Wysoki (2)",
+            "medium": "Średni (3)",
+            "low": "Niski (4)",
+            "planning": "Planowanie (5)"
+          }
+        }
       },
       "messages": {
         "success": {

@@ -610,7 +610,40 @@
         "priorityMatrixTitle": "Prioritätsmatrix",
         "impactDescription": "Auswirkungsstufen definieren den Umfang des Problems",
         "urgencyDescription": "Dringlichkeitsstufen definieren, wie schnell das Problem gelöst werden muss",
-        "priorityDescription": "Die Priorität wird aus Auswirkung und Dringlichkeit berechnet"
+        "priorityDescription": "Die Priorität wird aus Auswirkung und Dringlichkeit berechnet",
+        "categories": {
+          "serviceRequest": "Serviceanfrage"
+        },
+        "priorityMatrix": {
+          "urgencyHeaderLine1": {
+            "high": "Hoch",
+            "mediumHigh": "Mittel-Hoch",
+            "medium": "Mittel",
+            "mediumLow": "Mittel-Niedrig",
+            "low": "Niedrig"
+          },
+          "urgencyHeaderLine2": {
+            "high": "Dringlichkeit (1)",
+            "mediumHigh": "Dringlichkeit (2)",
+            "medium": "Dringlichkeit (3)",
+            "mediumLow": "Dringlichkeit (4)",
+            "low": "Dringlichkeit (5)"
+          },
+          "impact": {
+            "high": "Hohe Auswirkung (1)",
+            "mediumHigh": "Mittel-Hohe Auswirkung (2)",
+            "medium": "Mittlere Auswirkung (3)",
+            "mediumLow": "Mittel-Niedrige Auswirkung (4)",
+            "low": "Niedrige Auswirkung (5)"
+          },
+          "priority": {
+            "critical": "Kritisch (1)",
+            "high": "Hoch (2)",
+            "medium": "Mittel (3)",
+            "low": "Niedrig (4)",
+            "planning": "Planung (5)"
+          }
+        }
       },
       "messages": {
         "success": {

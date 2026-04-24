@@ -1,0 +1,146 @@
+{
+  "sidebar": {
+    "title": "Chat",
+    "subtitleHistory": "Current user recent AI sessions",
+    "subtitleDefault": "Chat with AI and manage saved sessions",
+    "showHistory": "Show chat history",
+    "hideHistory": "Hide chat history",
+    "showHistoryTooltip": "Show history",
+    "hideHistoryTooltip": "Hide history",
+    "startNewChat": "Start new chat",
+    "hideSidebar": "Hide chat sidebar",
+    "hideSidebarTooltip": "Hide chat",
+    "introMessage": "Chat with AI - Ask anything!",
+    "loadingChatConversation": "Loading chat conversation",
+    "history": {
+      "searchResults": "Search Results",
+      "recentChats": "Recent Chats",
+      "loading": "Loading…",
+      "searchAriaLabel": "Search chat history",
+      "searchPlaceholder": "Search saved chats",
+      "typeAtLeastNChars": "Type at least {{count}} characters to search saved chats.",
+      "emptyInitial": "Saved chats will appear here after you send a message.",
+      "emptySearch": "No matching chats found.",
+      "untitled": "Untitled chat",
+      "noMessagesYet": "No messages yet",
+      "loadingConversation": "Loading conversation…",
+      "chatActionsFor": "Chat actions for {{title}}",
+      "rename": "Rename",
+      "delete": "Delete",
+      "unableToLoadRecent": "Unable to load recent chats.",
+      "unableToLoadSearch": "Unable to load search results."
+    },
+    "timestamp": {
+      "recently": "Recently",
+      "justNow": "Just now",
+      "minutesAgo": "{{count}}m ago",
+      "hoursAgo": "{{count}}h ago",
+      "daysAgo": "{{count}}d ago"
+    },
+    "newChatConfirm": {
+      "title": "Start a new chat?",
+      "message": "Your current chat will be cleared from the sidebar. Saved messages remain in chat history.",
+      "confirmLabel": "Start New Chat",
+      "cancelLabel": "Keep Current Chat"
+    },
+    "deleteConfirm": {
+      "title": "Delete this chat?",
+      "messageWithTitle": "Delete \"{{title}}\" from your AI history? This cannot be undone.",
+      "fallbackTitle": "this chat",
+      "confirmLabel": "Delete Chat",
+      "cancelLabel": "Cancel"
+    },
+    "rename": {
+      "dialogTitle": "Rename chat",
+      "inputLabel": "Chat title",
+      "inputPlaceholder": "Enter chat title",
+      "cancel": "Cancel",
+      "save": "Save"
+    }
+  },
+  "chat": {
+    "greeting": "I am Alga! Your favorite AI assistant. Ask me a question.",
+    "avatarAlt": "Alga",
+    "defaultFunctionName": "Function call",
+    "resultTruncated": "Result was too large and was truncated.",
+    "inputPlaceholder": "Send a message",
+    "inputPlaceholderGenerating": "Generating text...",
+    "inputAriaLabel": "Message Alga",
+    "thinking": "Thinking...",
+    "hintMultiline": "Multiline mode: Enter adds a new line. Ctrl+Enter or ⌘+Enter sends.",
+    "hintSingleLine": "Press Enter to send. Shift+Enter switches to multiline mode.",
+    "editingNotice": "Editing selected message. Sending will replace that message and regenerate the thread from there.",
+    "cancelEdit": "Cancel edit",
+    "stop": "STOP",
+    "send": "SEND",
+    "viewDetails": "View details",
+    "viewFullValue": "View full value",
+    "parameters": "Parameters",
+    "plan": "Plan",
+    "playbooks": "Playbooks",
+    "validation": {
+      "dialogTitle": "Message Required",
+      "ok": "OK",
+      "enterMessage": "Please enter a message before sending."
+    },
+    "errors": {
+      "userNotIdentified": "Unable to send message: user not identified.",
+      "unableToSave": "Unable to save this message, continuing without persistence for now.",
+      "requestFailedStatus": "Request failed with status {{status}}",
+      "unexpectedResponse": "Unexpected response from the assistant.",
+      "unexpectedError": "An unexpected error occurred.",
+      "generationError": "An error occurred while generating the response.",
+      "connectionInterrupted": "Connection interrupted — showing partial response.",
+      "connectionInterruptedWithReason": "Connection interrupted — {{reason}}"
+    },
+    "function": {
+      "approveAriaLabel": "Approve function call",
+      "declineAriaLabel": "Decline function call",
+      "approve": "Approve",
+      "approving": "Approving…",
+      "deny": "Deny",
+      "processing": "Processing…",
+      "autoApproveLabel": "Auto-approve future {{method}} requests",
+      "executingRequest": "Executing request…",
+      "continuingWithoutCall": "Continuing without calling the function…",
+      "autoApprovalEnabled": "Auto-approval enabled for {{method}} requests.",
+      "reviewAndApprove": "Review and approve when you are ready.",
+      "completedNoDetails": "The action completed without additional details.",
+      "emDash": "—"
+    }
+  },
+  "quickAsk": {
+    "title": "Quick Ask",
+    "yoloLabel": "YOLO",
+    "yoloAriaLabel": "YOLO mode (auto-approve HTTP actions)",
+    "openInSidebar": "Open in sidebar",
+    "close": "Close",
+    "ask": "Ask",
+    "inputPlaceholder": "Ask a quick question…",
+    "inputAriaLabel": "Quick Ask input",
+    "followUpNotice": "Ask follow-ups below. This chat will be saved like sidebar chat.",
+    "startingSession": "Starting session…",
+    "session": "Session: {{chatId}}",
+    "hint": "Esc to close • Enter to ask • Shift+Enter for newline • {{modifier}}+↑ to reopen"
+  },
+  "message": {
+    "authorAlga": "Alga",
+    "authorYou": "You",
+    "authorSystem": "System",
+    "avatarAlt": "Alga avatar",
+    "draftingResponse": "Drafting response…",
+    "interrupted": "Interrupted",
+    "interruptionDetail": "Connection interrupted — showing partial response.",
+    "showAssistantReasoning": "Show assistant reasoning",
+    "editAriaLabel": "Edit this message",
+    "editTooltip": "Edit this message",
+    "regenerateAriaLabel": "Regenerate from this message",
+    "regenerateTooltip": "Regenerate from this message",
+    "functionStatus": {
+      "success": "Function executed",
+      "declined": "Function declined",
+      "pending": "Function queued",
+      "error": "Function error"
+    }
+  }
+}

@@ -514,7 +514,12 @@
       "updateAssignmentStatus": "Kan toewijzingsstatus niet bijwerken.",
       "selectPrincipal": "Selecteer een principal voordat u een simulatie uitvoert.",
       "selectRecord": "Selecteer een record voordat u een simulatie uitvoert.",
-      "runSimulation": "Kan simulatie niet uitvoeren."
+      "runSimulation": "Kan simulatie niet uitvoeren.",
+      "simulator": {
+        "unsupportedAction": "De simulator ondersteunt momenteel alleen Lezen- en Goedkeuren-controles. Kies een van deze acties en probeer het opnieuw.",
+        "unsupportedResource": "Dit recordtype is nog niet beschikbaar in de simulator. Kies een ondersteund recordtype en probeer het opnieuw.",
+        "clientTicketNotSupported": "Ticketcontroles voor cliënt-gebruikers zijn nog niet beschikbaar in de simulator omdat de zichtbaarheid van ticket-boards niet is inbegrepen. Probeer een interne gebruiker, of verifieer de ticket-toegang voor cliënten in de app."
+      }
     }
   }
 }

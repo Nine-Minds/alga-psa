@@ -1114,6 +1114,82 @@
       "saveSettingsFailed": "Kan instellingen niet opslaan",
       "webhookConfigured": "Webhook succesvol geconfigureerd!",
       "webhookConfigureFailed": "Kan webhook niet configureren"
+    },
+    "expiration": {
+      "selectPlaceholder": "Selecteer vervaltijd",
+      "custom": "Aangepast...",
+      "hoursSingular": "{{count}} uur",
+      "hoursPlural": "{{count}} uur",
+      "daysSingular": "{{count}} dag",
+      "daysPlural": "{{count}} dagen",
+      "daysDecimal": "{{count}} dagen",
+      "hoursUnit": "uur ({{formatted}})",
+      "willExpireAfter": "Betaallinks verlopen na {{duration}}"
+    },
+    "notConnected": {
+      "title": "Stripe niet verbonden",
+      "description": "Om betalingsinstellingen te configureren, moet u eerst uw Stripe-account verbinden.",
+      "connectButton": "Stripe verbinden"
+    },
+    "settings": {
+      "paymentLinksInEmails": {
+        "label": "Betaallinks opnemen in factuur-e-mails",
+        "description": "Voeg een knop \"Nu betalen\" toe aan factuur-e-mails"
+      },
+      "paymentConfirmations": {
+        "label": "Betalingsbevestigingsmails verzenden",
+        "description": "E-mail klanten wanneer hun betaling is ontvangen"
+      },
+      "paymentLinkExpiration": {
+        "label": "Vervaldatum betaallink",
+        "description": "Hoe lang betaallinks geldig blijven voordat ze verlopen"
+      },
+      "actions": {
+        "save": "Instellingen opslaan",
+        "saving": "Opslaan..."
+      }
+    },
+    "stripe": {
+      "cardTitle": "Stripe-betalingen",
+      "cardDescription": "Accepteer creditcardbetalingen voor uw facturen",
+      "connectedTitle": "Stripe verbonden",
+      "publishableKey": "Publiceerbare sleutel: {{key}}...",
+      "testConnection": "Verbinding testen",
+      "disconnect": "Loskoppelen",
+      "disconnectDialog": {
+        "title": "Stripe loskoppelen",
+        "message": "Weet u zeker dat u Stripe wilt loskoppelen? Betaallinks zullen niet meer werken.",
+        "confirm": "Loskoppelen",
+        "cancel": "Annuleren"
+      },
+      "webhook": {
+        "label": "Webhook-configuratie",
+        "configuredTitle": "Webhooks automatisch geconfigureerd",
+        "configuredDescription": "Alga PSA ontvangt betalingsmeldingen voor:",
+        "failedTitle": "Webhook-configuratie mislukt",
+        "failedDescription": "Automatische webhook-configuratie is mislukt. Klik op opnieuw proberen om de configuratie opnieuw te proberen.",
+        "configuring": "Configureren...",
+        "retry": "Configuratie opnieuw proberen"
+      },
+      "connectForm": {
+        "secretKeyLabel": "Geheime sleutel",
+        "secretKeyPlaceholder": "sk_live_... of sk_test_...",
+        "secretKeyHelpPrefix": "Vind dit in uw",
+        "secretKeyHelpLink": "Stripe Dashboard → API-sleutels",
+        "publishableKeyLabel": "Publiceerbare sleutel",
+        "publishableKeyPlaceholder": "pk_live_... of pk_test_...",
+        "connecting": "Verbinden...",
+        "connect": "Stripe verbinden",
+        "cancel": "Annuleren"
+      },
+      "empty": {
+        "description": "Verbind uw Stripe-account om online betalingen voor facturen te accepteren",
+        "connectButton": "Stripe verbinden"
+      },
+      "settingsCard": {
+        "title": "Betalingsinstellingen",
+        "description": "Configureer hoe betaallinks werken met uw facturen"
+      }
     }
   }
 }

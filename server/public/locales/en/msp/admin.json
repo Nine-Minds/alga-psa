@@ -514,7 +514,12 @@
       "updateAssignmentStatus": "Failed to update assignment status.",
       "selectPrincipal": "Select a principal before running simulation.",
       "selectRecord": "Select a record before running simulation.",
-      "runSimulation": "Failed to run simulation."
+      "runSimulation": "Failed to run simulation.",
+      "simulator": {
+        "unsupportedAction": "The simulator currently supports only Read and Approve checks. Choose one of those actions and try again.",
+        "unsupportedResource": "This record type is not available in the simulator yet. Choose a supported record type and try again.",
+        "clientTicketNotSupported": "Ticket checks for client users are not available in the simulator yet because ticket board visibility is not included. Try an internal user, or verify client ticket access in the app."
+      }
     }
   }
 }

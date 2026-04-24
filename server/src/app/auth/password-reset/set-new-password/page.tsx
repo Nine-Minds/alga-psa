@@ -13,6 +13,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { User, Lock } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type FormData = {
   password: string;
@@ -20,6 +21,7 @@ type FormData = {
 };
 
 const SetNewPasswordContent: React.FC = () => {
+  const { t } = useTranslation('msp/auth');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
@@ -93,8 +95,8 @@ const SetNewPasswordContent: React.FC = () => {
       setIsAlertOpen(true);
       setAlertInfo({
           type: 'error',
-          title: 'Password ',
-          message: 'Please ensure your password match.',
+          title: t('passwordReset.setNew.alerts.passwordTitle', 'Password '),
+          message: t('passwordReset.setNew.alerts.passwordsDoNotMatchMessage', 'Please ensure your password match.'),
         });
       return;
     }
@@ -103,30 +105,30 @@ const SetNewPasswordContent: React.FC = () => {
       setIsAlertOpen(true);
       setAlertInfo({
           type: 'error',
-          title: 'Password ',
-          message: 'Please ensure your password meets all the specified criteria.',
+          title: t('passwordReset.setNew.alerts.passwordTitle', 'Password '),
+          message: t('passwordReset.setNew.alerts.passwordCriteriaMessage', 'Please ensure your password meets all the specified criteria.'),
         });
       return;
     }
 
-    if (!token) { 
+    if (!token) {
       setIsAlertOpen(true);
       setAlertInfo({
           type: 'error',
-          title: 'Warning!!!',
-          message: 'It is missing client information.',
+          title: t('passwordReset.setNew.alerts.warningTitle', 'Warning!!!'),
+          message: t('passwordReset.setNew.alerts.missingClientInfoMessage', 'It is missing client information.'),
         });
-      return; 
+      return;
     }
     const wasSuccess = await setNewPassword(formData.password, token);
-    if (!wasSuccess) { 
+    if (!wasSuccess) {
       setIsAlertOpen(true);
         setAlertInfo({
           type: 'error',
-          title: 'Failed !!!',
-          message: 'Please try again. If the error persist please contact support',
+          title: t('passwordReset.setNew.alerts.failedTitle', 'Failed !!!'),
+          message: t('passwordReset.setNew.alerts.tryAgainMessage', 'Please try again. If the error persist please contact support'),
         });
-      return; 
+      return;
     }
     console.log('New password set')
     router.push(`/auth/password-reset/confirmation?portal=${portal}`); 
@@ -161,8 +163,8 @@ const SetNewPasswordContent: React.FC = () => {
           <div className="text-center mb-6">
           <h2 className="text-2xl font-bold text-[rgb(var(--color-text-900))] text-center mb-2 flex items-center justify-center gap-2">
             <Lock className="w-6 h-6" />
-              Reset Your Password</h2>
-            <p className="text-[rgb(var(--color-text-600))] mt-1">Set a new password for your account</p>
+              {t('passwordReset.setNew.title', 'Reset Your Password')}</h2>
+            <p className="text-[rgb(var(--color-text-600))] mt-1">{t('passwordReset.setNew.subtitle', 'Set a new password for your account')}</p>
           </div>
 
           {/* Account Information Section */}
@@ -170,22 +172,22 @@ const SetNewPasswordContent: React.FC = () => {
             <UIAlert variant="info" className="mb-6">
               <User className="h-4 w-4" />
               <AlertDescription>
-                <h3 className="font-semibold mb-3">Account Information</h3>
+                <h3 className="font-semibold mb-3">{t('passwordReset.setNew.accountInformation', 'Account Information')}</h3>
                 <div className="space-y-2 text-sm">
                   <div className="flex">
-                    <span className="text-[rgb(var(--color-text-500))] w-28">Name:</span>
+                    <span className="text-[rgb(var(--color-text-500))] w-28">{t('passwordReset.setNew.nameLabel', 'Name:')}</span>
                     <span className="font-medium">{accountInfo.name}</span>
                   </div>
                   <div className="flex">
-                    <span className="text-[rgb(var(--color-text-500))] w-28">Email:</span>
+                    <span className="text-[rgb(var(--color-text-500))] w-28">{t('passwordReset.setNew.emailLabel', 'Email:')}</span>
                     <span className="font-medium">{accountInfo.email}</span>
                   </div>
                   <div className="flex">
-                    <span className="text-[rgb(var(--color-text-500))] w-28">Username:</span>
+                    <span className="text-[rgb(var(--color-text-500))] w-28">{t('passwordReset.setNew.usernameLabel', 'Username:')}</span>
                     <span className="font-medium">{accountInfo.username}</span>
                   </div>
                   <div className="flex">
-                    <span className="text-[rgb(var(--color-text-500))] w-28">Account Type:</span>
+                    <span className="text-[rgb(var(--color-text-500))] w-28">{t('passwordReset.setNew.accountTypeLabel', 'Account Type:')}</span>
                     <span className="font-medium">{accountInfo.accountType}</span>
                   </div>
                 </div>
@@ -199,7 +201,7 @@ const SetNewPasswordContent: React.FC = () => {
               <div className="space-y-2">
                 <Label
                 className="text-sm font-medium text-[rgb(var(--color-text-700))]" htmlFor="password">
-                  New Password
+                  {t('passwordReset.setNew.newPasswordLabel', 'New Password')}
                 </Label>
                 <div className="relative">
                   <Form.Control asChild>
@@ -234,7 +236,7 @@ const SetNewPasswordContent: React.FC = () => {
               <div className="space-y-2">
                 <Label
                  className="text-sm font-medium text-[rgb(var(--color-text-700))]" htmlFor="confirmPassword">
-                  Confirm New Password
+                  {t('passwordReset.setNew.confirmPasswordLabel', 'Confirm New Password')}
                 </Label>
                 <div className="relative">
                   <Form.Control asChild>
@@ -243,7 +245,7 @@ const SetNewPasswordContent: React.FC = () => {
                       name="confirmPassword"
                       type={showConfirmPassword ? "text" : "password"}
                       required
-                      placeholder="Confirm your new password"
+                      placeholder={t('passwordReset.setNew.confirmPasswordPlaceholder', 'Confirm your new password')}
                       className="w-full px-3 py-2 border border-[rgb(var(--color-border-300))] rounded-md shadow-sm appearance-none focus:outline-none focus:ring-1 focus:ring-[rgb(var(--color-primary-500))] focus:border-[rgb(var(--color-primary-500))]"
                       value={formData.confirmPassword}
                       onChange={handleInputChange}
@@ -266,31 +268,31 @@ const SetNewPasswordContent: React.FC = () => {
 
             {/* Password Requirements */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Password Requirements</Label>
+              <Label className="text-sm font-medium">{t('passwordReset.setNew.passwordRequirements', 'Password Requirements')}</Label>
               <div className="space-y-1 text-xs">
                 <div className={`flex items-center gap-2 ${passwordRequirements.minLength ? 'text-success' : 'text-[rgb(var(--color-text-500))]'}`}>
                   <div className={`w-2 h-2 rounded-full ${passwordRequirements.minLength ? 'bg-success' : 'bg-[rgb(var(--color-border-300))]'}`}></div>
-                  At least 8 characters
+                  {t('passwordReset.setNew.requirements.minLength', 'At least 8 characters')}
                 </div>
                 <div className={`flex items-center gap-2 ${passwordRequirements.hasUppercase ? 'text-success' : 'text-[rgb(var(--color-text-500))]'}`}>
                   <div className={`w-2 h-2 rounded-full ${passwordRequirements.hasUppercase ? 'bg-success' : 'bg-[rgb(var(--color-border-300))]'}`}></div>
-                  One uppercase letter
+                  {t('passwordReset.setNew.requirements.hasUppercase', 'One uppercase letter')}
                 </div>
                 <div className={`flex items-center gap-2 ${passwordRequirements.hasLowercase ? 'text-success' : 'text-[rgb(var(--color-text-500))]'}`}>
                   <div className={`w-2 h-2 rounded-full ${passwordRequirements.hasLowercase ? 'bg-success' : 'bg-[rgb(var(--color-border-300))]'}`}></div>
-                  One lowercase letter
+                  {t('passwordReset.setNew.requirements.hasLowercase', 'One lowercase letter')}
                 </div>
                 <div className={`flex items-center gap-2 ${passwordRequirements.hasNumber ? 'text-success' : 'text-[rgb(var(--color-text-500))]'}`}>
                   <div className={`w-2 h-2 rounded-full ${passwordRequirements.hasNumber ? 'bg-success' : 'bg-[rgb(var(--color-border-300))]'}`}></div>
-                  One number
+                  {t('passwordReset.setNew.requirements.hasNumber', 'One number')}
                 </div>
                 <div className={`flex items-center gap-2 ${passwordRequirements.hasSpecialChar ? 'text-success' : 'text-[rgb(var(--color-text-500))]'}`}>
                   <div className={`w-2 h-2 rounded-full ${passwordRequirements.hasSpecialChar ? 'bg-success' : 'bg-[rgb(var(--color-border-300))]'}`}></div>
-                  One special character
+                  {t('passwordReset.setNew.requirements.hasSpecialChar', 'One special character')}
                 </div>
                 <div className={`flex items-center gap-2 ${passwordRequirements.passwordsMatch ? 'text-success' : 'text-[rgb(var(--color-text-500))]'}`}>
                   <div className={`w-2 h-2 rounded-full ${passwordRequirements.passwordsMatch ? 'bg-success' : 'bg-[rgb(var(--color-border-300))]'}`}></div>
-                  Passwords match
+                  {t('passwordReset.setNew.requirements.passwordsMatch', 'Passwords match')}
                 </div>
               </div>
             </div>
@@ -303,7 +305,7 @@ const SetNewPasswordContent: React.FC = () => {
                 className="w-full"
                 disabled={!allCriteriaMet || !passwordsMatch || !formData.confirmPassword}
               >
-                Reset Password
+                {t('passwordReset.setNew.submit', 'Reset Password')}
               </Button>
             </Form.Submit>
           </Form.Root>
@@ -311,14 +313,14 @@ const SetNewPasswordContent: React.FC = () => {
           {/* Back to sign in link */}
           <div className="mt-6 text-center">
             <p className="text-sm text-[rgb(var(--color-text-600))]">
-              Remember your password?{' '}
-              <Link 
-                href={portal === 'client' ? '/auth/client-portal/signin' : '/auth/msp/signin'} 
+              {t('passwordReset.setNew.rememberYourPassword', 'Remember your password?')}{' '}
+              <Link
+                href={portal === 'client' ? '/auth/client-portal/signin' : '/auth/msp/signin'}
                 className={`font-medium ${
                   'text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-400))]'
                 }`}
               >
-                Sign in instead
+                {t('passwordReset.setNew.signInInstead', 'Sign in instead')}
               </Link>
             </p>
           </div>

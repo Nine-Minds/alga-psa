@@ -1,0 +1,146 @@
+{
+  "sidebar": {
+    "title": "Czat",
+    "subtitleHistory": "Ostatnie sesje AI bieżącego użytkownika",
+    "subtitleDefault": "Czatuj z AI i zarządzaj zapisanymi sesjami",
+    "showHistory": "Pokaż historię czatu",
+    "hideHistory": "Ukryj historię czatu",
+    "showHistoryTooltip": "Pokaż historię",
+    "hideHistoryTooltip": "Ukryj historię",
+    "startNewChat": "Rozpocznij nowy czat",
+    "hideSidebar": "Ukryj panel boczny czatu",
+    "hideSidebarTooltip": "Ukryj czat",
+    "introMessage": "Czatuj z AI - zapytaj o cokolwiek!",
+    "loadingChatConversation": "Ładowanie konwersacji",
+    "history": {
+      "searchResults": "Wyniki wyszukiwania",
+      "recentChats": "Ostatnie czaty",
+      "loading": "Ładowanie…",
+      "searchAriaLabel": "Przeszukaj historię czatu",
+      "searchPlaceholder": "Przeszukaj zapisane czaty",
+      "typeAtLeastNChars": "Wpisz co najmniej {{count}} znaków, aby przeszukać zapisane czaty.",
+      "emptyInitial": "Zapisane czaty pojawią się tutaj po wysłaniu wiadomości.",
+      "emptySearch": "Nie znaleziono pasujących czatów.",
+      "untitled": "Czat bez tytułu",
+      "noMessagesYet": "Brak wiadomości",
+      "loadingConversation": "Ładowanie konwersacji…",
+      "chatActionsFor": "Akcje czatu dla {{title}}",
+      "rename": "Zmień nazwę",
+      "delete": "Usuń",
+      "unableToLoadRecent": "Nie udało się załadować ostatnich czatów.",
+      "unableToLoadSearch": "Nie udało się załadować wyników wyszukiwania."
+    },
+    "timestamp": {
+      "recently": "Niedawno",
+      "justNow": "Przed chwilą",
+      "minutesAgo": "{{count}} min temu",
+      "hoursAgo": "{{count}} godz. temu",
+      "daysAgo": "{{count}} dni temu"
+    },
+    "newChatConfirm": {
+      "title": "Rozpocząć nowy czat?",
+      "message": "Bieżący czat zostanie wyczyszczony z panelu bocznego. Zapisane wiadomości pozostaną w historii czatu.",
+      "confirmLabel": "Rozpocznij nowy czat",
+      "cancelLabel": "Zachowaj bieżący czat"
+    },
+    "deleteConfirm": {
+      "title": "Usunąć ten czat?",
+      "messageWithTitle": "Usunąć „{{title}}” z historii AI? Tej operacji nie można cofnąć.",
+      "fallbackTitle": "ten czat",
+      "confirmLabel": "Usuń czat",
+      "cancelLabel": "Anuluj"
+    },
+    "rename": {
+      "dialogTitle": "Zmień nazwę czatu",
+      "inputLabel": "Tytuł czatu",
+      "inputPlaceholder": "Wprowadź tytuł czatu",
+      "cancel": "Anuluj",
+      "save": "Zapisz"
+    }
+  },
+  "chat": {
+    "greeting": "Cześć, jestem Alga! Twój ulubiony asystent AI. Zadaj mi pytanie.",
+    "avatarAlt": "Alga",
+    "defaultFunctionName": "Wywołanie funkcji",
+    "resultTruncated": "Wynik był zbyt duży i został skrócony.",
+    "inputPlaceholder": "Wyślij wiadomość",
+    "inputPlaceholderGenerating": "Generowanie tekstu...",
+    "inputAriaLabel": "Wiadomość do Algi",
+    "thinking": "Myślę...",
+    "hintMultiline": "Tryb wielowierszowy: Enter dodaje nowy wiersz. Ctrl+Enter lub ⌘+Enter wysyła.",
+    "hintSingleLine": "Naciśnij Enter, aby wysłać. Shift+Enter przełącza na tryb wielowierszowy.",
+    "editingNotice": "Edytujesz wybraną wiadomość. Wysłanie zastąpi tę wiadomość i wygeneruje wątek od tego miejsca.",
+    "cancelEdit": "Anuluj edycję",
+    "stop": "STOP",
+    "send": "WYŚLIJ",
+    "viewDetails": "Zobacz szczegóły",
+    "viewFullValue": "Zobacz pełną wartość",
+    "parameters": "Parametry",
+    "plan": "Plan",
+    "playbooks": "Playbooki",
+    "validation": {
+      "dialogTitle": "Wymagana wiadomość",
+      "ok": "OK",
+      "enterMessage": "Wprowadź wiadomość przed wysłaniem."
+    },
+    "errors": {
+      "userNotIdentified": "Nie można wysłać wiadomości: użytkownik niezidentyfikowany.",
+      "unableToSave": "Nie udało się zapisać tej wiadomości, kontynuowanie bez utrwalania.",
+      "requestFailedStatus": "Żądanie nie powiodło się ze statusem {{status}}",
+      "unexpectedResponse": "Nieoczekiwana odpowiedź od asystenta.",
+      "unexpectedError": "Wystąpił nieoczekiwany błąd.",
+      "generationError": "Wystąpił błąd podczas generowania odpowiedzi.",
+      "connectionInterrupted": "Połączenie przerwane — wyświetlanie częściowej odpowiedzi.",
+      "connectionInterruptedWithReason": "Połączenie przerwane — {{reason}}"
+    },
+    "function": {
+      "approveAriaLabel": "Zatwierdź wywołanie funkcji",
+      "declineAriaLabel": "Odrzuć wywołanie funkcji",
+      "approve": "Zatwierdź",
+      "approving": "Zatwierdzanie…",
+      "deny": "Odrzuć",
+      "processing": "Przetwarzanie…",
+      "autoApproveLabel": "Automatycznie zatwierdzaj przyszłe żądania {{method}}",
+      "executingRequest": "Wykonywanie żądania…",
+      "continuingWithoutCall": "Kontynuowanie bez wywoływania funkcji…",
+      "autoApprovalEnabled": "Włączono automatyczne zatwierdzanie żądań {{method}}.",
+      "reviewAndApprove": "Przejrzyj i zatwierdź, gdy będziesz gotowy.",
+      "completedNoDetails": "Akcja została zakończona bez dodatkowych szczegółów.",
+      "emDash": "—"
+    }
+  },
+  "quickAsk": {
+    "title": "Szybkie pytanie",
+    "yoloLabel": "YOLO",
+    "yoloAriaLabel": "Tryb YOLO (automatyczne zatwierdzanie akcji HTTP)",
+    "openInSidebar": "Otwórz w panelu bocznym",
+    "close": "Zamknij",
+    "ask": "Zapytaj",
+    "inputPlaceholder": "Zadaj szybkie pytanie…",
+    "inputAriaLabel": "Pole szybkiego pytania",
+    "followUpNotice": "Zadawaj pytania uzupełniające poniżej. Ten czat zostanie zapisany jak czat z panelu bocznego.",
+    "startingSession": "Rozpoczynanie sesji…",
+    "session": "Sesja: {{chatId}}",
+    "hint": "Esc zamyka • Enter wysyła • Shift+Enter dodaje nowy wiersz • {{modifier}}+↑ ponownie otwiera"
+  },
+  "message": {
+    "authorAlga": "Alga",
+    "authorYou": "Ty",
+    "authorSystem": "System",
+    "avatarAlt": "Awatar Algi",
+    "draftingResponse": "Tworzenie odpowiedzi…",
+    "interrupted": "Przerwano",
+    "interruptionDetail": "Połączenie przerwane — wyświetlanie częściowej odpowiedzi.",
+    "showAssistantReasoning": "Pokaż rozumowanie asystenta",
+    "editAriaLabel": "Edytuj tę wiadomość",
+    "editTooltip": "Edytuj tę wiadomość",
+    "regenerateAriaLabel": "Wygeneruj ponownie od tej wiadomości",
+    "regenerateTooltip": "Wygeneruj ponownie od tej wiadomości",
+    "functionStatus": {
+      "success": "Funkcja wykonana",
+      "declined": "Funkcja odrzucona",
+      "pending": "Funkcja w kolejce",
+      "error": "Błąd funkcji"
+    }
+  }
+}

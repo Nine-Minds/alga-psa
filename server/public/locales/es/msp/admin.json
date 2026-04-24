@@ -514,7 +514,12 @@
       "updateAssignmentStatus": "No se pudo actualizar el estado de la asignación.",
       "selectPrincipal": "Seleccione un principal antes de ejecutar la simulación.",
       "selectRecord": "Seleccione un registro antes de ejecutar la simulación.",
-      "runSimulation": "No se pudo ejecutar la simulación."
+      "runSimulation": "No se pudo ejecutar la simulación.",
+      "simulator": {
+        "unsupportedAction": "El simulador actualmente solo admite comprobaciones de Lectura y Aprobación. Elija una de esas acciones y vuelva a intentarlo.",
+        "unsupportedResource": "Este tipo de registro aún no está disponible en el simulador. Elija un tipo de registro compatible y vuelva a intentarlo.",
+        "clientTicketNotSupported": "Las comprobaciones de tickets para usuarios cliente aún no están disponibles en el simulador porque la visibilidad del tablero de tickets no está incluida. Pruebe con un usuario interno o verifique el acceso de tickets de cliente en la aplicación."
+      }
     }
   }
 }

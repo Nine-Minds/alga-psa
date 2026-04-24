@@ -610,7 +610,40 @@
         "priorityMatrixTitle": "Matriz de prioridad",
         "impactDescription": "Los niveles de impacto definen el alcance del problema",
         "urgencyDescription": "Los niveles de urgencia definen la rapidez con que se necesita la resolución",
-        "priorityDescription": "La prioridad se calcula a partir del impacto y la urgencia"
+        "priorityDescription": "La prioridad se calcula a partir del impacto y la urgencia",
+        "categories": {
+          "serviceRequest": "Solicitud de servicio"
+        },
+        "priorityMatrix": {
+          "urgencyHeaderLine1": {
+            "high": "Alta",
+            "mediumHigh": "Media-Alta",
+            "medium": "Media",
+            "mediumLow": "Media-Baja",
+            "low": "Baja"
+          },
+          "urgencyHeaderLine2": {
+            "high": "Urgencia (1)",
+            "mediumHigh": "Urgencia (2)",
+            "medium": "Urgencia (3)",
+            "mediumLow": "Urgencia (4)",
+            "low": "Urgencia (5)"
+          },
+          "impact": {
+            "high": "Impacto alto (1)",
+            "mediumHigh": "Impacto medio-alto (2)",
+            "medium": "Impacto medio (3)",
+            "mediumLow": "Impacto medio-bajo (4)",
+            "low": "Impacto bajo (5)"
+          },
+          "priority": {
+            "critical": "Crítica (1)",
+            "high": "Alta (2)",
+            "medium": "Media (3)",
+            "low": "Baja (4)",
+            "planning": "Planificación (5)"
+          }
+        }
       },
       "messages": {
         "success": {

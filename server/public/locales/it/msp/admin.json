@@ -514,7 +514,12 @@
       "updateAssignmentStatus": "Impossibile aggiornare lo stato dell'assegnazione.",
       "selectPrincipal": "Seleziona un principal prima di eseguire la simulazione.",
       "selectRecord": "Seleziona un record prima di eseguire la simulazione.",
-      "runSimulation": "Impossibile eseguire la simulazione."
+      "runSimulation": "Impossibile eseguire la simulazione.",
+      "simulator": {
+        "unsupportedAction": "Il simulatore attualmente supporta solo i controlli di Lettura e Approvazione. Scegli una di queste azioni e riprova.",
+        "unsupportedResource": "Questo tipo di record non è ancora disponibile nel simulatore. Scegli un tipo di record supportato e riprova.",
+        "clientTicketNotSupported": "I controlli dei ticket per gli utenti client non sono ancora disponibili nel simulatore perché la visibilità della board dei ticket non è inclusa. Prova con un utente interno o verifica l'accesso ai ticket client nell'app."
+      }
     }
   }
 }

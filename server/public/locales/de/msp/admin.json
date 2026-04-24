@@ -514,7 +514,12 @@
       "updateAssignmentStatus": "Zuweisungsstatus konnte nicht aktualisiert werden.",
       "selectPrincipal": "Wählen Sie einen Principal aus, bevor Sie die Simulation ausführen.",
       "selectRecord": "Wählen Sie einen Datensatz aus, bevor Sie die Simulation ausführen.",
-      "runSimulation": "Simulation konnte nicht ausgeführt werden."
+      "runSimulation": "Simulation konnte nicht ausgeführt werden.",
+      "simulator": {
+        "unsupportedAction": "Der Simulator unterstützt derzeit nur Lese- und Genehmigungsprüfungen. Wählen Sie eine dieser Aktionen aus und versuchen Sie es erneut.",
+        "unsupportedResource": "Dieser Datensatztyp ist im Simulator noch nicht verfügbar. Wählen Sie einen unterstützten Datensatztyp aus und versuchen Sie es erneut.",
+        "clientTicketNotSupported": "Ticketprüfungen für Client-Benutzer sind im Simulator noch nicht verfügbar, da die Sichtbarkeit von Ticket-Boards nicht enthalten ist. Versuchen Sie es mit einem internen Benutzer oder überprüfen Sie den Client-Ticket-Zugriff in der App."
+      }
     }
   }
 }

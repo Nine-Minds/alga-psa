@@ -1,0 +1,146 @@
+{
+  "sidebar": {
+    "title": "Chat",
+    "subtitleHistory": "Zuletzt verwendete KI-Sitzungen des aktuellen Benutzers",
+    "subtitleDefault": "Mit der KI chatten und gespeicherte Sitzungen verwalten",
+    "showHistory": "Chatverlauf anzeigen",
+    "hideHistory": "Chatverlauf ausblenden",
+    "showHistoryTooltip": "Verlauf anzeigen",
+    "hideHistoryTooltip": "Verlauf ausblenden",
+    "startNewChat": "Neuen Chat starten",
+    "hideSidebar": "Chat-Seitenleiste ausblenden",
+    "hideSidebarTooltip": "Chat ausblenden",
+    "introMessage": "Mit der KI chatten – Stellen Sie eine beliebige Frage!",
+    "loadingChatConversation": "Chat-Konversation wird geladen",
+    "history": {
+      "searchResults": "Suchergebnisse",
+      "recentChats": "Letzte Chats",
+      "loading": "Wird geladen…",
+      "searchAriaLabel": "Chatverlauf durchsuchen",
+      "searchPlaceholder": "Gespeicherte Chats durchsuchen",
+      "typeAtLeastNChars": "Geben Sie mindestens {{count}} Zeichen ein, um gespeicherte Chats zu durchsuchen.",
+      "emptyInitial": "Gespeicherte Chats erscheinen hier, nachdem Sie eine Nachricht gesendet haben.",
+      "emptySearch": "Keine passenden Chats gefunden.",
+      "untitled": "Unbenannter Chat",
+      "noMessagesYet": "Noch keine Nachrichten",
+      "loadingConversation": "Konversation wird geladen…",
+      "chatActionsFor": "Chat-Aktionen für {{title}}",
+      "rename": "Umbenennen",
+      "delete": "Löschen",
+      "unableToLoadRecent": "Letzte Chats konnten nicht geladen werden.",
+      "unableToLoadSearch": "Suchergebnisse konnten nicht geladen werden."
+    },
+    "timestamp": {
+      "recently": "Vor Kurzem",
+      "justNow": "Gerade eben",
+      "minutesAgo": "vor {{count}} Min.",
+      "hoursAgo": "vor {{count}} Std.",
+      "daysAgo": "vor {{count}} T."
+    },
+    "newChatConfirm": {
+      "title": "Neuen Chat starten?",
+      "message": "Ihr aktueller Chat wird aus der Seitenleiste entfernt. Gespeicherte Nachrichten bleiben im Chatverlauf erhalten.",
+      "confirmLabel": "Neuen Chat starten",
+      "cancelLabel": "Aktuellen Chat behalten"
+    },
+    "deleteConfirm": {
+      "title": "Diesen Chat löschen?",
+      "messageWithTitle": "\"{{title}}\" aus Ihrem KI-Verlauf löschen? Dies kann nicht rückgängig gemacht werden.",
+      "fallbackTitle": "diesen Chat",
+      "confirmLabel": "Chat löschen",
+      "cancelLabel": "Abbrechen"
+    },
+    "rename": {
+      "dialogTitle": "Chat umbenennen",
+      "inputLabel": "Chat-Titel",
+      "inputPlaceholder": "Chat-Titel eingeben",
+      "cancel": "Abbrechen",
+      "save": "Speichern"
+    }
+  },
+  "chat": {
+    "greeting": "Ich bin Alga! Ihr bevorzugter KI-Assistent. Stellen Sie mir eine Frage.",
+    "avatarAlt": "Alga",
+    "defaultFunctionName": "Funktionsaufruf",
+    "resultTruncated": "Das Ergebnis war zu groß und wurde gekürzt.",
+    "inputPlaceholder": "Nachricht senden",
+    "inputPlaceholderGenerating": "Text wird generiert...",
+    "inputAriaLabel": "Nachricht an Alga",
+    "thinking": "Wird überlegt...",
+    "hintMultiline": "Mehrzeilenmodus: Enter fügt eine neue Zeile ein. Strg+Enter oder ⌘+Enter sendet.",
+    "hintSingleLine": "Drücken Sie Enter zum Senden. Umschalt+Enter wechselt in den Mehrzeilenmodus.",
+    "editingNotice": "Ausgewählte Nachricht wird bearbeitet. Beim Senden wird diese Nachricht ersetzt und der Thread von dort an neu generiert.",
+    "cancelEdit": "Bearbeitung abbrechen",
+    "stop": "STOPP",
+    "send": "SENDEN",
+    "viewDetails": "Details anzeigen",
+    "viewFullValue": "Vollständigen Wert anzeigen",
+    "parameters": "Parameter",
+    "plan": "Plan",
+    "playbooks": "Playbooks",
+    "validation": {
+      "dialogTitle": "Nachricht erforderlich",
+      "ok": "OK",
+      "enterMessage": "Bitte geben Sie eine Nachricht ein, bevor Sie senden."
+    },
+    "errors": {
+      "userNotIdentified": "Nachricht kann nicht gesendet werden: Benutzer nicht identifiziert.",
+      "unableToSave": "Diese Nachricht kann nicht gespeichert werden, es wird vorerst ohne Speicherung fortgefahren.",
+      "requestFailedStatus": "Anfrage fehlgeschlagen mit Status {{status}}",
+      "unexpectedResponse": "Unerwartete Antwort vom Assistenten.",
+      "unexpectedError": "Ein unerwarteter Fehler ist aufgetreten.",
+      "generationError": "Beim Generieren der Antwort ist ein Fehler aufgetreten.",
+      "connectionInterrupted": "Verbindung unterbrochen — Teilantwort wird angezeigt.",
+      "connectionInterruptedWithReason": "Verbindung unterbrochen — {{reason}}"
+    },
+    "function": {
+      "approveAriaLabel": "Funktionsaufruf genehmigen",
+      "declineAriaLabel": "Funktionsaufruf ablehnen",
+      "approve": "Genehmigen",
+      "approving": "Wird genehmigt…",
+      "deny": "Ablehnen",
+      "processing": "Wird verarbeitet…",
+      "autoApproveLabel": "Zukünftige {{method}}-Anfragen automatisch genehmigen",
+      "executingRequest": "Anfrage wird ausgeführt…",
+      "continuingWithoutCall": "Wird ohne Funktionsaufruf fortgesetzt…",
+      "autoApprovalEnabled": "Automatische Genehmigung für {{method}}-Anfragen aktiviert.",
+      "reviewAndApprove": "Überprüfen und genehmigen, sobald Sie bereit sind.",
+      "completedNoDetails": "Die Aktion wurde ohne weitere Details abgeschlossen.",
+      "emDash": "—"
+    }
+  },
+  "quickAsk": {
+    "title": "Schnelle Frage",
+    "yoloLabel": "YOLO",
+    "yoloAriaLabel": "YOLO-Modus (HTTP-Aktionen automatisch genehmigen)",
+    "openInSidebar": "In Seitenleiste öffnen",
+    "close": "Schließen",
+    "ask": "Fragen",
+    "inputPlaceholder": "Stellen Sie eine kurze Frage…",
+    "inputAriaLabel": "Eingabefeld für schnelle Frage",
+    "followUpNotice": "Stellen Sie unten Folgefragen. Dieser Chat wird wie ein Seitenleisten-Chat gespeichert.",
+    "startingSession": "Sitzung wird gestartet…",
+    "session": "Sitzung: {{chatId}}",
+    "hint": "Esc zum Schließen • Enter zum Fragen • Umschalt+Enter für neue Zeile • {{modifier}}+↑ zum erneuten Öffnen"
+  },
+  "message": {
+    "authorAlga": "Alga",
+    "authorYou": "Sie",
+    "authorSystem": "System",
+    "avatarAlt": "Alga-Avatar",
+    "draftingResponse": "Antwort wird verfasst…",
+    "interrupted": "Unterbrochen",
+    "interruptionDetail": "Verbindung unterbrochen — Teilantwort wird angezeigt.",
+    "showAssistantReasoning": "Assistenten-Argumentation anzeigen",
+    "editAriaLabel": "Diese Nachricht bearbeiten",
+    "editTooltip": "Diese Nachricht bearbeiten",
+    "regenerateAriaLabel": "Ab dieser Nachricht neu generieren",
+    "regenerateTooltip": "Ab dieser Nachricht neu generieren",
+    "functionStatus": {
+      "success": "Funktion ausgeführt",
+      "declined": "Funktion abgelehnt",
+      "pending": "Funktion in Warteschlange",
+      "error": "Funktionsfehler"
+    }
+  }
+}

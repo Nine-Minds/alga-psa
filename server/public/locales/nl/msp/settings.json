@@ -610,7 +610,40 @@
         "priorityMatrixTitle": "Prioriteitsmatrix",
         "impactDescription": "Impactniveaus definiëren de reikwijdte van het probleem",
         "urgencyDescription": "Urgentieniveaus definiëren hoe snel het probleem moet worden opgelost",
-        "priorityDescription": "Prioriteit wordt berekend op basis van impact en urgentie"
+        "priorityDescription": "Prioriteit wordt berekend op basis van impact en urgentie",
+        "categories": {
+          "serviceRequest": "Serviceaanvraag"
+        },
+        "priorityMatrix": {
+          "urgencyHeaderLine1": {
+            "high": "Hoog",
+            "mediumHigh": "Middelhoog",
+            "medium": "Gemiddeld",
+            "mediumLow": "Middellaag",
+            "low": "Laag"
+          },
+          "urgencyHeaderLine2": {
+            "high": "Urgentie (1)",
+            "mediumHigh": "Urgentie (2)",
+            "medium": "Urgentie (3)",
+            "mediumLow": "Urgentie (4)",
+            "low": "Urgentie (5)"
+          },
+          "impact": {
+            "high": "Hoge impact (1)",
+            "mediumHigh": "Middelhoge impact (2)",
+            "medium": "Gemiddelde impact (3)",
+            "mediumLow": "Middellage impact (4)",
+            "low": "Lage impact (5)"
+          },
+          "priority": {
+            "critical": "Kritiek (1)",
+            "high": "Hoog (2)",
+            "medium": "Gemiddeld (3)",
+            "low": "Laag (4)",
+            "planning": "Planning (5)"
+          }
+        }
       },
       "messages": {
         "success": {

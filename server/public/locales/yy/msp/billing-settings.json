@@ -1114,6 +1114,82 @@
       "saveSettingsFailed": "55555",
       "webhookConfigured": "55555",
       "webhookConfigureFailed": "55555"
+    },
+    "expiration": {
+      "selectPlaceholder": "55555",
+      "custom": "55555",
+      "hoursSingular": "55555 {{count}} 55555",
+      "hoursPlural": "55555 {{count}} 55555",
+      "daysSingular": "55555 {{count}} 55555",
+      "daysPlural": "55555 {{count}} 55555",
+      "daysDecimal": "55555 {{count}} 55555",
+      "hoursUnit": "55555 {{formatted}} 55555",
+      "willExpireAfter": "55555 {{duration}} 55555"
+    },
+    "notConnected": {
+      "title": "55555",
+      "description": "55555",
+      "connectButton": "55555"
+    },
+    "settings": {
+      "paymentLinksInEmails": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "paymentConfirmations": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "paymentLinkExpiration": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "actions": {
+        "save": "55555",
+        "saving": "55555"
+      }
+    },
+    "stripe": {
+      "cardTitle": "55555",
+      "cardDescription": "55555",
+      "connectedTitle": "55555",
+      "publishableKey": "55555 {{key}} 55555",
+      "testConnection": "55555",
+      "disconnect": "55555",
+      "disconnectDialog": {
+        "title": "55555",
+        "message": "55555",
+        "confirm": "55555",
+        "cancel": "55555"
+      },
+      "webhook": {
+        "label": "55555",
+        "configuredTitle": "55555",
+        "configuredDescription": "55555",
+        "failedTitle": "55555",
+        "failedDescription": "55555",
+        "configuring": "55555",
+        "retry": "55555"
+      },
+      "connectForm": {
+        "secretKeyLabel": "55555",
+        "secretKeyPlaceholder": "55555",
+        "secretKeyHelpPrefix": "55555",
+        "secretKeyHelpLink": "55555",
+        "publishableKeyLabel": "55555",
+        "publishableKeyPlaceholder": "55555",
+        "connecting": "55555",
+        "connect": "55555",
+        "cancel": "55555"
+      },
+      "empty": {
+        "description": "55555",
+        "connectButton": "55555"
+      },
+      "settingsCard": {
+        "title": "55555",
+        "description": "55555"
+      }
     }
   }
 }

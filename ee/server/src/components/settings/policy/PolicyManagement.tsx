@@ -776,7 +776,16 @@ export default function PolicyManagement() {
           : undefined,
       });
       if (result.ok === false) {
-        setError(result.error.message);
+        // Map the server-provided error code to a translated message; fall
+        // back to the server's English message for any unknown codes.
+        const simulatorErrorKey: Record<string, string> = {
+          unsupported_simulation_action: 'policyManagement.errors.simulator.unsupportedAction',
+          unsupported_simulation_resource_type: 'policyManagement.errors.simulator.unsupportedResource',
+          unsupported_ticket_client_principal_simulation:
+            'policyManagement.errors.simulator.clientTicketNotSupported',
+        };
+        const translationKey = simulatorErrorKey[result.error.code];
+        setError(translationKey ? t(translationKey) : result.error.message);
         return;
       }
       setSimulationResult(result.data);
