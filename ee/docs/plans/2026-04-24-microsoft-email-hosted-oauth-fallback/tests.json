@@ -1,0 +1,32 @@
+[
+  {
+    "id": "T001",
+    "description": "Resolver returns hosted app-level Microsoft email credentials when no Email binding exists and hosted credentials are configured.",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T002",
+    "description": "Resolver prefers a ready explicit Email binding over hosted app-level Microsoft credentials.",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T003",
+    "description": "Resolver returns invalid_profile for an invalid explicit Email binding even when hosted app-level credentials exist.",
+    "implemented": true,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T004",
+    "description": "Resolver does not implicitly bind Email to an unrelated single Microsoft profile before hosted fallback.",
+    "implemented": true,
+    "featureIds": ["F001", "F003"]
+  },
+  {
+    "id": "T005",
+    "description": "Runtime contract confirms email OAuth initiation, callback, and token refresh use the shared resolver instead of direct Microsoft env reads.",
+    "implemented": true,
+    "featureIds": ["F004"]
+  }
+]
