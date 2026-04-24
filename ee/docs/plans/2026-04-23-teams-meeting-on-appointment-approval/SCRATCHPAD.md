@@ -159,6 +159,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-23: Completed `T040-T042` with `server/src/test/unit/verifyMeetingOrganizer.test.ts`, covering successful organizer verification, missing-user handling, and Application Access Policy failures that map to `reason: 'policy_missing'`.
 - 2026-04-23: Completed `T001-T002` with `server/src/test/unit/teamsMeetingMigrations.test.ts`, executing both migration `up()` functions against mocked `knex.schema` surfaces and asserting the new columns are added as nullable `text`.
 - 2026-04-23: Completed `T017` by hardening CE build wiring and rerunning `npm run build:ce`. Root `build`/`build:ce` scripts now force `EDITION=community NEXT_PUBLIC_EDITION=community`, and `server/next.config.mjs` maps `@alga-psa/ee-microsoft-teams` to `./src/empty` for CE so the built manifest no longer points at `ee/packages/microsoft-teams`.
+- 2026-04-24: Completed `T053` by rerunning `npm run build:ce` after the Teams meeting changes landed. The community build completed end-to-end, confirming the existing EE dynamic-import guard still keeps CE builds green.
 - 2026-04-24: Completed `T020` with `server/src/test/integration/appointmentRequests.integration.test.ts`, adding approval-path integration coverage that asserts a Teams-enabled approval persists `online_meeting_provider/url/id` and passes `onlineMeetingUrl` into the approved-email payload.
 - 2026-04-24: Completed `T021` in the same approval integration suite, asserting `generate_teams_meeting: false` leaves `online_meeting_*` columns `NULL` and never calls the Teams meeting service.
 - 2026-04-24: Completed `T022` in the same suite, asserting approval still succeeds when Teams capability is unavailable, no Graph create runs, and `teamsMeetingWarning` explains the organizer/setup gap.
@@ -202,6 +203,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - Approval flow nuance: when the approver keeps the originally requested time, `requested_date`/`requested_time` must be converted from the requester's local wall clock via `fromZonedTime(...)`; only explicit `final_date`/`final_time` values sent from the UI are already normalized to UTC strings.
 - Integration harness nuance: initialize the Teams meeting mocks in `beforeEach`, not only `afterEach`, so isolated Vitest filters still see a configured `getTeamsMeetingCapability()` on the first matching test.
 - Client-portal cancel nuance: Teams deletion is intentionally fail-soft, but the action still needs to propagate a warning string back to the UI when `deleteTeamsMeetingIfAvailable()` returns `false`; otherwise the failure is silent even though the appointment cancellation succeeded.
+- CE regression check on 2026-04-24 passed on the normal `build:ce` path, so the existing `EDITION=community` forcing plus `@alga-psa/ee-microsoft-teams -> ./src/empty` aliasing remains sufficient to keep enterprise-only code out of the CE bundle.
 - The server integration harness needed both `@alga-psa/db` and `@alga-psa/auth`-layer synchronization. Mocking only `server/src/lib/db` and `@alga-psa/users/actions` is insufficient now that these actions import package-level wrappers directly.
 - Approval-path integration tests also need UUID-shaped staff fixture IDs because `appointment_requests.approved_by_user_id` is typed as `uuid`; old placeholder strings caused PostgreSQL `22P02` failures before Teams assertions ran.
 - Runbook command used for validation so far: `node -c server/migrations/20260423130000_add_online_meeting_columns_to_appointment_requests.cjs`
@@ -227,3 +229,4 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - Additional validation command: `npx vitest --root server --config vitest.config.ts run src/test/unit/appointments/AvailabilitySettings.teams.test.tsx --coverage.enabled false`
 - Additional validation command: `rm -rf server/.next && npm run build:ce`
 - Additional validation command: `rg -n "@alga-psa/ee-microsoft-teams|ee/packages/microsoft-teams" server/.next`
+- Additional validation command: `npm run build:ce`

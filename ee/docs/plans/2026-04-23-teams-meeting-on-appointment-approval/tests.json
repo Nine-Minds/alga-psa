@@ -315,7 +315,7 @@
     "id": "T053",
     "description": "Regression: CE build succeeds without EE package available (validates the dynamic-import guard).",
     "featureIds": ["F007"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T054",
