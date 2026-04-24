@@ -638,7 +638,10 @@
     },
     "stepPanel": {
       "readOnly": "Accès en lecture seule : l’édition des étapes est désactivée.",
-      "selectPrompt": "Sélectionnez une étape pour modifier sa configuration."
+      "selectPrompt": "Sélectionnez une étape pour modifier sa configuration.",
+      "readOnlyNotice": "Accès en lecture seule : l'édition des étapes est désactivée.",
+      "contractMode": "Mode contrat :",
+      "catalogSchema": "Schéma du catalogue :"
     },
     "stepConfig": {
       "eventLabel": "Événement",
@@ -652,7 +655,27 @@
       "assignOnResume": "Assigner à la reprise",
       "fieldLabel": "Champ",
       "fieldPathLabel": "Chemin du champ",
-      "dataContextToggle": "À quelles données puis-je accéder ici ?"
+      "dataContextToggle": "À quelles données puis-je accéder ici ?",
+      "condition": "Condition",
+      "itemsExpression": "Expression d'éléments",
+      "itemVariable": "Variable d'élément",
+      "concurrency": "Concurrence",
+      "onItemError": "En cas d'erreur d'élément",
+      "captureErrorAs": "Capturer l'erreur comme",
+      "workflowId": "ID du workflow",
+      "workflowVersion": "Version du workflow",
+      "inputMapping": "Mappage d'entrée",
+      "outputMapping": "Mappage de sortie",
+      "value": "Valeur",
+      "mode": "Mode",
+      "days": "Jours",
+      "hours": "Heures",
+      "minutes": "Minutes",
+      "seconds": "Secondes",
+      "untilInput": "Entrée jusqu'à",
+      "specificDateTime": "Date et heure spécifiques",
+      "untilExpression": "Expression jusqu'à",
+      "returnNotice": "Return arrête l'exécution du workflow."
     },
     "mappingExpr": {
       "add": "Ajouter",
@@ -751,7 +774,8 @@
         "warnings": "Avertissements",
         "valid": "Valide",
         "unknown": "Inconnu"
-      }
+      },
+      "errors": "Erreurs de validation"
     },
     "discardDialog": {
       "title": "Abandonner les modifications non enregistrées ?",
@@ -928,6 +952,61 @@
       "publishFailed": "Échec de la publication du workflow",
       "publishValidationErrors": "Échec de la publication — corrigez les erreurs de validation",
       "systemEventMissingSchema": "Cet événement système n’a pas de schéma valide et ne peut pas être sélectionné tant qu’il n’est pas corrigé."
+    },
+    "propsPanel": {
+      "resizeAria": "Redimensionner le panneau des propriétés",
+      "settingsTitle": "Paramètres du workflow",
+      "settingsSubtitle": "Contrôles de visibilité, de mise en pause et de sécurité.",
+      "visibleToUsers": "Visible aux utilisateurs",
+      "paused": "En pause (arrêter les nouvelles exécutions)",
+      "concurrencyLimit": "Limite de concurrence",
+      "unlimited": "Illimité",
+      "autoPauseFailureRate": "Mise en pause automatique sur taux d'échec",
+      "failureRateThreshold": "Seuil de taux d'échec",
+      "minRunsBeforeAutoPause": "Exécutions minimum avant mise en pause automatique"
+    },
+    "trigger": {
+      "summary": "Résumé du déclencheur",
+      "actionNeeded": "Action requise",
+      "noMappingNeeded": "Aucun mappage requis",
+      "sourceSchemaOverride": "Remplacer le schéma source du déclencheur",
+      "useCatalogSchemaDefault": "Utiliser le schéma du catalogue (par défaut)",
+      "useCatalogSchemaPlaceholder": "Utiliser le schéma du catalogue…",
+      "noSchemasFound": "Aucun schéma trouvé",
+      "mappingTitle": "Mappage du déclencheur",
+      "mappingNotRequired": "Mappage : Non requis.",
+      "mappingErrors": "Erreurs de mappage",
+      "mappingWarnings": "Avertissements de mappage"
+    },
+    "schemaSettings": {
+      "lockVersion": "Verrouiller la version du schéma",
+      "lockVersionHelp": "Verrouillez la version du schéma pour empêcher les futurs changements du déclencheur d'affecter ce workflow.",
+      "lockedVersion": "Version de schéma verrouillée",
+      "manualRef": "Référence de schéma manuelle",
+      "fixedForTimeTriggers": "Fixé pour les déclencheurs temporels",
+      "availableFieldsPreview": "Aperçu des champs disponibles",
+      "payloadContract": "Schéma de contrat de charge utile du workflow",
+      "ref": "Référence du schéma :",
+      "loadFailed": "Échec du chargement du schéma.",
+      "notLoaded": "Schéma pas encore chargé.",
+      "loadPreviewFailed": "Échec du chargement de l'aperçu du schéma.",
+      "selectVersionPlaceholder": "Sélectionner la version du schéma…",
+      "payloadRefAdvanced": "Référence du schéma de charge utile (avancé)"
+    },
+    "expression": {
+      "insertField": "Insérer un champ",
+      "enterPlaceholder": "Entrer l'expression..."
+    },
+    "dataContext": {
+      "availableDataAtStep": "Données disponibles à cette étape",
+      "payload": "Charge utile",
+      "noPayloadFields": "Aucun champ de charge utile",
+      "payloadSchemaRefHint": "Définissez 'Référence du schéma de charge utile' pour définir la structure de la charge utile",
+      "stepOutputs": "Sorties d'étape (vars)",
+      "outputSchemaUnavailable": "Schéma de sortie non disponible",
+      "noFields": "Aucun champ",
+      "copyAllPaths": "Copier tous les chemins",
+      "copyAllFieldPaths": "Copier tous les chemins de champ"
     }
   },
   "actionInputFieldInfo": {

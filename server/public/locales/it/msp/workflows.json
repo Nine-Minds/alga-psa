@@ -638,7 +638,10 @@
     },
     "stepPanel": {
       "readOnly": "Accesso in sola lettura: la modifica dei passaggi è disabilitata.",
-      "selectPrompt": "Seleziona un passaggio per modificarne la configurazione."
+      "selectPrompt": "Seleziona un passaggio per modificarne la configurazione.",
+      "readOnlyNotice": "Accesso in sola lettura: la modifica dei passaggi è disabilitata.",
+      "contractMode": "Modalità contratto:",
+      "catalogSchema": "Schema del catalogo:"
     },
     "stepConfig": {
       "eventLabel": "Evento",
@@ -652,7 +655,27 @@
       "assignOnResume": "Assegna alla ripresa",
       "fieldLabel": "Campo",
       "fieldPathLabel": "Percorso campo",
-      "dataContextToggle": "A quali dati posso accedere qui?"
+      "dataContextToggle": "A quali dati posso accedere qui?",
+      "condition": "Condizione",
+      "itemsExpression": "Espressione elementi",
+      "itemVariable": "Variabile elemento",
+      "concurrency": "Concorrenza",
+      "onItemError": "In caso di errore elemento",
+      "captureErrorAs": "Cattura errore come",
+      "workflowId": "ID workflow",
+      "workflowVersion": "Versione workflow",
+      "inputMapping": "Mappatura di input",
+      "outputMapping": "Mappatura di output",
+      "value": "Valore",
+      "mode": "Modalità",
+      "days": "Giorni",
+      "hours": "Ore",
+      "minutes": "Minuti",
+      "seconds": "Secondi",
+      "untilInput": "Input fino a",
+      "specificDateTime": "Data e ora specifiche",
+      "untilExpression": "Espressione fino a",
+      "returnNotice": "Return ferma l'esecuzione del workflow."
     },
     "mappingExpr": {
       "add": "Aggiungi",
@@ -751,7 +774,8 @@
         "warnings": "Avvisi",
         "valid": "Valido",
         "unknown": "Sconosciuto"
-      }
+      },
+      "errors": "Errori di validazione"
     },
     "discardDialog": {
       "title": "Annullare le modifiche non salvate?",
@@ -928,6 +952,61 @@
       "publishFailed": "Impossibile pubblicare il workflow",
       "publishValidationErrors": "Pubblicazione non riuscita – correggere gli errori di validazione",
       "systemEventMissingSchema": "A questo evento di sistema manca uno schema valido e non può essere selezionato finché non viene corretto."
+    },
+    "propsPanel": {
+      "resizeAria": "Ridimensiona pannello proprietà",
+      "settingsTitle": "Impostazioni workflow",
+      "settingsSubtitle": "Controlli di visibilità, pausa e sicurezza.",
+      "visibleToUsers": "Visibile agli utenti",
+      "paused": "In pausa (ferma nuove esecuzioni)",
+      "concurrencyLimit": "Limite di concorrenza",
+      "unlimited": "Illimitato",
+      "autoPauseFailureRate": "Pausa automatica sul tasso di errore",
+      "failureRateThreshold": "Soglia del tasso di errore",
+      "minRunsBeforeAutoPause": "Esecuzioni minime prima della pausa automatica"
+    },
+    "trigger": {
+      "summary": "Riepilogo trigger",
+      "actionNeeded": "Azione necessaria",
+      "noMappingNeeded": "Nessuna mappatura necessaria",
+      "sourceSchemaOverride": "Sovrascrivi schema sorgente trigger",
+      "useCatalogSchemaDefault": "Usa schema del catalogo (predefinito)",
+      "useCatalogSchemaPlaceholder": "Usa schema del catalogo…",
+      "noSchemasFound": "Nessuno schema trovato",
+      "mappingTitle": "Mappatura trigger",
+      "mappingNotRequired": "Mappatura: Non richiesta.",
+      "mappingErrors": "Errori di mappatura",
+      "mappingWarnings": "Avvisi di mappatura"
+    },
+    "schemaSettings": {
+      "lockVersion": "Blocca versione schema",
+      "lockVersionHelp": "Blocca la versione dello schema per impedire che le future modifiche ai trigger influenzino questo workflow.",
+      "lockedVersion": "Versione schema bloccata",
+      "manualRef": "Riferimento schema manuale",
+      "fixedForTimeTriggers": "Fisso per trigger temporali",
+      "availableFieldsPreview": "Anteprima campi disponibili",
+      "payloadContract": "Schema contratto payload del workflow",
+      "ref": "Riferimento schema:",
+      "loadFailed": "Caricamento dello schema non riuscito.",
+      "notLoaded": "Schema non ancora caricato.",
+      "loadPreviewFailed": "Caricamento dell'anteprima dello schema non riuscito.",
+      "selectVersionPlaceholder": "Seleziona versione schema…",
+      "payloadRefAdvanced": "Riferimento schema payload (avanzato)"
+    },
+    "expression": {
+      "insertField": "Inserisci campo",
+      "enterPlaceholder": "Inserisci espressione..."
+    },
+    "dataContext": {
+      "availableDataAtStep": "Dati disponibili in questo passaggio",
+      "payload": "Payload",
+      "noPayloadFields": "Nessun campo payload",
+      "payloadSchemaRefHint": "Imposta 'Riferimento schema payload' per definire la struttura del payload",
+      "stepOutputs": "Output del passaggio (vars)",
+      "outputSchemaUnavailable": "Schema di output non disponibile",
+      "noFields": "Nessun campo",
+      "copyAllPaths": "Copia tutti i percorsi",
+      "copyAllFieldPaths": "Copia tutti i percorsi dei campi"
     }
   },
   "actionInputFieldInfo": {

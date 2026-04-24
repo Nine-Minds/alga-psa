@@ -638,7 +638,10 @@
     },
     "stepPanel": {
       "readOnly": "Read-only access: step editing is disabled.",
-      "selectPrompt": "Select a step to edit its configuration."
+      "selectPrompt": "Select a step to edit its configuration.",
+      "readOnlyNotice": "Read-only access: step editing is disabled.",
+      "contractMode": "Contract mode:",
+      "catalogSchema": "Catalog schema:"
     },
     "stepConfig": {
       "eventLabel": "Event",
@@ -652,7 +655,27 @@
       "assignOnResume": "Assign on resume",
       "fieldLabel": "Field",
       "fieldPathLabel": "Field path",
-      "dataContextToggle": "What data can I access here?"
+      "dataContextToggle": "What data can I access here?",
+      "condition": "Condition",
+      "itemsExpression": "Items expression",
+      "itemVariable": "Item variable",
+      "concurrency": "Concurrency",
+      "onItemError": "On item error",
+      "captureErrorAs": "Capture error as",
+      "workflowId": "Workflow ID",
+      "workflowVersion": "Workflow version",
+      "inputMapping": "Input mapping",
+      "outputMapping": "Output mapping",
+      "value": "Value",
+      "mode": "Mode",
+      "days": "Days",
+      "hours": "Hours",
+      "minutes": "Minutes",
+      "seconds": "Seconds",
+      "untilInput": "Until input",
+      "specificDateTime": "Specific date & time",
+      "untilExpression": "Until expression",
+      "returnNotice": "Return stops workflow execution."
     },
     "mappingExpr": {
       "add": "Add",
@@ -751,7 +774,8 @@
         "warnings": "Warnings",
         "valid": "Valid",
         "unknown": "Unknown"
-      }
+      },
+      "errors": "Validation errors"
     },
     "discardDialog": {
       "title": "Discard unsaved changes?",
@@ -928,6 +952,61 @@
       "publishFailed": "Failed to publish workflow",
       "publishValidationErrors": "Publish failed - fix validation errors",
       "systemEventMissingSchema": "This system event is missing a valid schema and cannot be selected until fixed."
+    },
+    "propsPanel": {
+      "resizeAria": "Resize properties panel",
+      "settingsTitle": "Workflow Settings",
+      "settingsSubtitle": "Visibility, pausing, and safety controls.",
+      "visibleToUsers": "Visible to users",
+      "paused": "Paused (stop new runs)",
+      "concurrencyLimit": "Concurrency limit",
+      "unlimited": "Unlimited",
+      "autoPauseFailureRate": "Auto-pause on failure rate",
+      "failureRateThreshold": "Failure rate threshold",
+      "minRunsBeforeAutoPause": "Min runs before auto-pause"
+    },
+    "trigger": {
+      "summary": "Trigger summary",
+      "actionNeeded": "Action needed",
+      "noMappingNeeded": "No mapping needed",
+      "sourceSchemaOverride": "Trigger source schema override",
+      "useCatalogSchemaDefault": "Use catalog schema (default)",
+      "useCatalogSchemaPlaceholder": "Use catalog schema…",
+      "noSchemasFound": "No schemas found",
+      "mappingTitle": "Trigger mapping",
+      "mappingNotRequired": "Mapping: Not required.",
+      "mappingErrors": "Mapping errors",
+      "mappingWarnings": "Mapping warnings"
+    },
+    "schemaSettings": {
+      "lockVersion": "Lock schema version",
+      "lockVersionHelp": "Lock schema version to prevent future trigger changes from affecting this workflow.",
+      "lockedVersion": "Locked schema version",
+      "manualRef": "Manual schema ref",
+      "fixedForTimeTriggers": "Fixed for time triggers",
+      "availableFieldsPreview": "Available fields preview",
+      "payloadContract": "Workflow payload contract schema",
+      "ref": "Schema ref:",
+      "loadFailed": "Failed to load schema.",
+      "notLoaded": "Schema not loaded yet.",
+      "loadPreviewFailed": "Failed to load schema preview.",
+      "selectVersionPlaceholder": "Select schema version…",
+      "payloadRefAdvanced": "Payload schema ref (advanced)"
+    },
+    "expression": {
+      "insertField": "Insert field",
+      "enterPlaceholder": "Enter expression..."
+    },
+    "dataContext": {
+      "availableDataAtStep": "Available Data at This Step",
+      "payload": "Payload",
+      "noPayloadFields": "No payload fields",
+      "payloadSchemaRefHint": "Set 'Payload schema ref' to define payload structure",
+      "stepOutputs": "Step Outputs (vars)",
+      "outputSchemaUnavailable": "Output schema not available",
+      "noFields": "No fields",
+      "copyAllPaths": "Copy all paths",
+      "copyAllFieldPaths": "Copy all field paths"
     }
   },
   "actionInputFieldInfo": {

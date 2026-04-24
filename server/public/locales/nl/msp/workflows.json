@@ -638,7 +638,10 @@
     },
     "stepPanel": {
       "readOnly": "Alleen-lezentoegang: het bewerken van stappen is uitgeschakeld.",
-      "selectPrompt": "Selecteer een stap om de configuratie ervan te bewerken."
+      "selectPrompt": "Selecteer een stap om de configuratie ervan te bewerken.",
+      "readOnlyNotice": "Alleen-lezen toegang: het bewerken van stappen is uitgeschakeld.",
+      "contractMode": "Contractmodus:",
+      "catalogSchema": "Catalogusschema:"
     },
     "stepConfig": {
       "eventLabel": "Gebeurtenis",
@@ -652,7 +655,27 @@
       "assignOnResume": "Toewijzen bij hervatten",
       "fieldLabel": "Veld",
       "fieldPathLabel": "Veldpad",
-      "dataContextToggle": "Welke gegevens kan ik hier benaderen?"
+      "dataContextToggle": "Welke gegevens kan ik hier benaderen?",
+      "condition": "Voorwaarde",
+      "itemsExpression": "Items-expressie",
+      "itemVariable": "Itemvariabele",
+      "concurrency": "Concurrentie",
+      "onItemError": "Bij itemfout",
+      "captureErrorAs": "Fout vastleggen als",
+      "workflowId": "Workflow-ID",
+      "workflowVersion": "Workflow-versie",
+      "inputMapping": "Invoermapping",
+      "outputMapping": "Uitvoermapping",
+      "value": "Waarde",
+      "mode": "Modus",
+      "days": "Dagen",
+      "hours": "Uren",
+      "minutes": "Minuten",
+      "seconds": "Seconden",
+      "untilInput": "Tot-invoer",
+      "specificDateTime": "Specifieke datum en tijd",
+      "untilExpression": "Tot-expressie",
+      "returnNotice": "Return stopt de uitvoering van de workflow."
     },
     "mappingExpr": {
       "add": "Toevoegen",
@@ -751,7 +774,8 @@
         "warnings": "Waarschuwingen",
         "valid": "Geldig",
         "unknown": "Onbekend"
-      }
+      },
+      "errors": "Validatiefouten"
     },
     "discardDialog": {
       "title": "Niet-opgeslagen wijzigingen negeren?",
@@ -928,6 +952,61 @@
       "publishFailed": "Kan workflow niet publiceren",
       "publishValidationErrors": "Publiceren mislukt - corrigeer validatiefouten",
       "systemEventMissingSchema": "Deze systeemgebeurtenis heeft geen geldig schema en kan niet worden geselecteerd totdat dit is opgelost."
+    },
+    "propsPanel": {
+      "resizeAria": "Eigenschappenpaneel vergroten/verkleinen",
+      "settingsTitle": "Workflow-instellingen",
+      "settingsSubtitle": "Zichtbaarheid, pauze en veiligheidsbesturing.",
+      "visibleToUsers": "Zichtbaar voor gebruikers",
+      "paused": "Gepauzeerd (stop nieuwe uitvoeringen)",
+      "concurrencyLimit": "Concurrentielimiet",
+      "unlimited": "Onbeperkt",
+      "autoPauseFailureRate": "Automatisch pauzeren bij faalpercentage",
+      "failureRateThreshold": "Drempel faalpercentage",
+      "minRunsBeforeAutoPause": "Minimale uitvoeringen voor automatische pauze"
+    },
+    "trigger": {
+      "summary": "Triggeroverzicht",
+      "actionNeeded": "Actie vereist",
+      "noMappingNeeded": "Geen mapping nodig",
+      "sourceSchemaOverride": "Trigger-bronschema overschrijven",
+      "useCatalogSchemaDefault": "Catalogusschema gebruiken (standaard)",
+      "useCatalogSchemaPlaceholder": "Catalogusschema gebruiken…",
+      "noSchemasFound": "Geen schema's gevonden",
+      "mappingTitle": "Trigger-mapping",
+      "mappingNotRequired": "Mapping: Niet vereist.",
+      "mappingErrors": "Mapping-fouten",
+      "mappingWarnings": "Mapping-waarschuwingen"
+    },
+    "schemaSettings": {
+      "lockVersion": "Schemaversie vergrendelen",
+      "lockVersionHelp": "Vergrendel de schemaversie om te voorkomen dat toekomstige triggerwijzigingen deze workflow beïnvloeden.",
+      "lockedVersion": "Vergrendelde schemaversie",
+      "manualRef": "Handmatige schemareferentie",
+      "fixedForTimeTriggers": "Vast voor tijd-triggers",
+      "availableFieldsPreview": "Voorbeeld beschikbare velden",
+      "payloadContract": "Workflow-payload-contractschema",
+      "ref": "Schemareferentie:",
+      "loadFailed": "Schema laden mislukt.",
+      "notLoaded": "Schema nog niet geladen.",
+      "loadPreviewFailed": "Voorbeeld van schema laden mislukt.",
+      "selectVersionPlaceholder": "Schemaversie selecteren…",
+      "payloadRefAdvanced": "Payload-schemareferentie (geavanceerd)"
+    },
+    "expression": {
+      "insertField": "Veld invoegen",
+      "enterPlaceholder": "Expressie invoeren..."
+    },
+    "dataContext": {
+      "availableDataAtStep": "Beschikbare gegevens bij deze stap",
+      "payload": "Payload",
+      "noPayloadFields": "Geen payload-velden",
+      "payloadSchemaRefHint": "Stel 'Payload-schemareferentie' in om de payload-structuur te definiëren",
+      "stepOutputs": "Stap-uitvoer (vars)",
+      "outputSchemaUnavailable": "Uitvoerschema niet beschikbaar",
+      "noFields": "Geen velden",
+      "copyAllPaths": "Alle paden kopiëren",
+      "copyAllFieldPaths": "Alle veldpaden kopiëren"
     }
   },
   "actionInputFieldInfo": {
