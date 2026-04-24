@@ -285,7 +285,7 @@
     "id": "T048",
     "description": "i18n validator (scripts/validate-translations.cjs) reports 0 errors / 0 warnings after adding new keys and regenerating pseudo-locales.",
     "featureIds": ["F026"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T049",
