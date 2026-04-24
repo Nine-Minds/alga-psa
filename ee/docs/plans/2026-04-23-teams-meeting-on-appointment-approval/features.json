@@ -68,7 +68,7 @@
   {
     "id": "F012",
     "description": "cancelAppointmentRequest and MSP-side appointment deletion call deleteTeamsMeeting when an associated Teams meeting exists.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-11"]
   },
   {

@@ -32,6 +32,7 @@ import {
 } from '../../services/availabilityService';
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions';
 import { isValidEmail } from '@alga-psa/core';
+import { isEnterprise } from '@alga-psa/core/features';
 import { format, type Locale } from 'date-fns';
 import { de, es, fr, it, nl, enUS } from 'date-fns/locale';
 import { fromZonedTime } from 'date-fns-tz';
@@ -67,6 +68,7 @@ export interface AppointmentRequestResult<T> {
   success: boolean;
   data?: T;
   error?: string;
+  teamsMeetingWarning?: string;
 }
 
 type TenantSettings = {
@@ -217,6 +219,34 @@ async function getClientCompanyName(clientId: string, tenant: string): Promise<s
 
     return client?.client_name || 'Unknown Client';
   });
+}
+
+async function deleteTeamsMeetingIfAvailable(params: {
+  tenantId: string;
+  meetingId: string;
+  appointmentRequestId: string;
+}): Promise<boolean> {
+  if (!isEnterprise) {
+    return false;
+  }
+
+  try {
+    const teamsModule = await import('@alga-psa/ee-microsoft-teams/lib');
+    if (typeof teamsModule.deleteTeamsMeeting !== 'function') {
+      return false;
+    }
+
+    return teamsModule.deleteTeamsMeeting({
+      tenantId: params.tenantId,
+      meetingId: params.meetingId,
+      appointmentRequestId: params.appointmentRequestId,
+    });
+  } catch (error) {
+    console.warn('[ClientPortalAppointmentRequests] Failed to load Teams meeting delete implementation', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
 }
 
 /**
@@ -1174,7 +1204,7 @@ export const getAppointmentRequestDetails = withAuth(async (
 });
 
 /**
- * Cancel a pending appointment request
+ * Cancel a client appointment request
  */
 export const cancelAppointmentRequest = withAuth(async (
   currentUser: IUserWithRoles,
@@ -1212,7 +1242,7 @@ export const cancelAppointmentRequest = withAuth(async (
 
     const clientId = contact.client_id;
 
-    await withTransaction(db, async (trx: Knex.Transaction) => {
+    const cancellationContext = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Verify request exists and belongs to this client
       const request = await trx('appointment_requests')
         .where({
@@ -1226,12 +1256,27 @@ export const cancelAppointmentRequest = withAuth(async (
         throw new Error('Appointment request not found');
       }
 
-      // Only pending requests can be cancelled
-      if (request.status !== 'pending') {
+      if (!['pending', 'approved'].includes(request.status)) {
         throw new Error(`Cannot cancel appointment request with status: ${request.status}`);
       }
 
       const now = new Date();
+
+      if (request.schedule_entry_id) {
+        await trx('schedule_entry_assignees')
+          .where({
+            entry_id: request.schedule_entry_id,
+            tenant
+          })
+          .delete();
+
+        await trx('schedule_entries')
+          .where({
+            entry_id: request.schedule_entry_id,
+            tenant
+          })
+          .delete();
+      }
 
       // Update request status to cancelled
       await trx('appointment_requests')
@@ -1242,6 +1287,10 @@ export const cancelAppointmentRequest = withAuth(async (
         .update({
           status: 'cancelled',
           declined_reason: validatedData.cancellation_reason || 'Cancelled by client',
+          schedule_entry_id: null,
+          online_meeting_provider: null,
+          online_meeting_url: null,
+          online_meeting_id: null,
           updated_at: now
         });
 
@@ -1345,7 +1394,23 @@ export const cancelAppointmentRequest = withAuth(async (
         console.error('Error sending cancellation notifications:', emailError);
         // Don't fail the cancellation if notifications fail
       }
+
+      return {
+        appointmentRequestId: request.appointment_request_id,
+        meetingId:
+          request.online_meeting_provider === 'teams' && request.online_meeting_id
+            ? request.online_meeting_id
+            : null,
+      };
     });
+
+    if (cancellationContext?.meetingId) {
+      await deleteTeamsMeetingIfAvailable({
+        tenantId: tenant,
+        meetingId: cancellationContext.meetingId,
+        appointmentRequestId: cancellationContext.appointmentRequestId,
+      });
+    }
 
     return { success: true };
   } catch (error) {

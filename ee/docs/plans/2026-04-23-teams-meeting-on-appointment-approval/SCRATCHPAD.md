@@ -130,6 +130,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-23: Completed `F009` by wiring `approveAppointmentRequest()` to the scheduling Teams meeting service. When `generate_teams_meeting` is true it now creates the meeting, persists `online_meeting_*` columns on success, and threads the join URL into the outgoing approval/assignment email payloads plus the ICS event URL.
 - 2026-04-23: Completed `F010` by extending approval responses with `teamsMeetingWarning`. The action now distinguishes capability/setup issues from Graph create failures and still returns `success: true` when the appointment itself was approved.
 - 2026-04-23: Completed `F011` by extending `updateAppointmentRequestDateTime()` to support approved requests, update linked schedule entries, publish `SCHEDULE_ENTRY_UPDATED` for approved reschedules, and PATCH an existing Teams meeting when `online_meeting_id` is present. PATCH failures now surface through `teamsMeetingWarning`.
+- 2026-04-23: Completed `F012` by wiring Teams meeting deletion into both client-portal cancellation and MSP-side schedule-entry deletion. Both paths now clear `online_meeting_*` metadata from `appointment_requests`, sever the schedule-entry link, and attempt a best-effort Graph DELETE when the stored provider is `teams`.
 
 ## Working notes
 
@@ -138,6 +139,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - Extracted Graph app-token acquisition into `ee/packages/microsoft-teams/src/lib/graphAuth.ts` so meeting helpers and notification delivery share the same OAuth client-credentials flow.
 - Added `resolveTeamsMeetingExecutionConfig()` as the central place for readiness checks needed by create/update/delete helpers: install status must be `active`, `selected_profile_id` must exist, organizer UPN must be set, and the Microsoft profile must resolve as `ready`.
 - Scheduling-side EE boundary mirrors the calendar-actions pattern: memoized dynamic import of `@alga-psa/ee-microsoft-teams/lib`, fallback logging on load failure, and CE no-op implementations instead of hard EE imports.
+- Client portal needed its own EE-safe Teams delete loader because it does not depend on the scheduling package. Implemented a local guarded dynamic import in `packages/client-portal/src/actions/client-portal-actions/appointmentRequestActions.ts`.
 - Approval flow nuance: when the approver keeps the originally requested time, `requested_date`/`requested_time` must be converted from the requester's local wall clock via `fromZonedTime(...)`; only explicit `final_date`/`final_time` values sent from the UI are already normalized to UTC strings.
 - Runbook command used for validation so far: `node -c server/migrations/20260423130000_add_online_meeting_columns_to_appointment_requests.cjs`
 - Additional validation command: `node -c ee/server/migrations/20260423131000_add_default_meeting_organizer_to_teams_integrations.cjs`
