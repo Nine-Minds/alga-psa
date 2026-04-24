@@ -149,7 +149,7 @@
       "labels": {
         "reference": "Odniesienie",
         "client": "Klient",
-        "requester": "Zgłaszający",
+        "requester": "Wnioskodawca",
         "contact": "Kontakt",
         "email": "E-mail",
         "phone": "Telefon",
@@ -159,10 +159,10 @@
         "status": "Status",
         "linkedTicket": "Połączony bilet",
         "description": "Opis",
-        "teamsMeeting": "Teams Meeting"
+        "teamsMeeting": "Spotkanie Teams"
       },
       "actions": {
-        "joinTeamsMeeting": "Join Teams Meeting"
+        "joinTeamsMeeting": "Dołącz do spotkania Teams"
       }
     },
     "approval": {
@@ -172,7 +172,7 @@
         "finalDateTime": "Ostateczna data i godzina",
         "internalNotes": "Notatki wewnętrzne (opcjonalnie)",
         "linkedTicket": "Link do biletu (opcjonalnie)",
-        "generateTeamsMeeting": "Generate Microsoft Teams meeting link"
+        "generateTeamsMeeting": "Wygeneruj link do spotkania Microsoft Teams"
       },
       "placeholders": {
         "assignedTechnician": "Wybierz technika",
@@ -208,7 +208,7 @@
       "userHours": "Godziny użytkownika",
       "serviceRules": "Regulamin serwisu",
       "exceptions": "Wyjątki",
-      "teamsMeetings": "Teams Meetings"
+      "teamsMeetings": "Spotkania Teams"
     },
     "days": {
       "sunday": "Niedziela",
@@ -431,37 +431,51 @@
     },
     "teamsMeetings": {
       "prerequisites": {
-        "title": "Azure prerequisites",
-        "description": "Before you turn this on, grant the app the OnlineMeetings.ReadWrite.All application permission and create an Application Access Policy for the organizer account.",
-        "link": "Open Microsoft setup guidance"
+        "title": "Wymagania wstępne platformy Azure",
+        "description": "Zanim to włączysz, udziel aplikacji uprawnienia OnlineMeetings.ReadWrite.All i utwórz Application Access Policy dla konta organizatora.",
+        "steps": {
+          "toggle": "Pokaż kroki konfiguracji platformy Azure",
+          "step1": {
+            "title": "1. Udziel uprawnień aplikacji Graph",
+            "item1": "Otwórz centrum administracyjne Entra → Rejestracje aplikacji.",
+            "item2": "Wybierz aplikację używaną przez integrację Teams tej dzierżawy.",
+            "item3": "Uprawnienia API → Dodaj → Microsoft Graph → Uprawnienia aplikacji.",
+            "item4": "Dodaj OnlineMeetings.ReadWrite.All i udziel zgody administratora."
+          },
+          "step2": {
+            "title": "2. Utwórz Application Access Policy",
+            "intro": "Tworzenie spotkań tylko przez aplikację musi zostać wyraźnie dozwolone dla konta organizatora.",
+            "note": "Odczekaj 5–10 minut na propagację zasady przed kliknięciem Weryfikuj."
+          }
+        }
       },
       "organizer": {
-        "title": "Meeting organizer",
-        "label": "Default meeting organizer (UPN or Microsoft user ID)",
-        "help": "Approved appointments create Teams meetings as this Microsoft user. A UPN such as scheduling@acme.com is usually the safest choice.",
+        "title": "Organizator spotkania",
+        "label": "Domyślny organizator spotkania (UPN lub ID użytkownika Microsoft)",
+        "help": "Zatwierdzone spotkania tworzą spotkania Teams jako ten użytkownik Microsoft. UPN taki jak scheduling@acme.com jest zazwyczaj najbezpieczniejszym wyborem.",
         "placeholder": "scheduling@acme.com"
       },
       "actions": {
-        "save": "Save",
-        "saving": "Saving...",
-        "verify": "Verify",
-        "verifying": "Verifying..."
+        "save": "Zapisz",
+        "saving": "Zapisywanie...",
+        "verify": "Weryfikuj",
+        "verifying": "Weryfikacja..."
       },
       "feedback": {
-        "saveSuccess": "Teams meeting organizer saved",
-        "saveError": "Failed to save Teams meeting organizer",
-        "verifySuccess": "Teams meeting organizer verified",
-        "verifyError": "Failed to verify Teams meeting organizer"
+        "saveSuccess": "Organizator spotkania Teams zapisany",
+        "saveError": "Nie udało się zapisać organizatora spotkania Teams",
+        "verifySuccess": "Organizator spotkania Teams zweryfikowany",
+        "verifyError": "Nie udało się zweryfikować organizatora spotkania Teams"
       },
       "verify": {
-        "valid": "Microsoft organizer verified successfully.",
-        "validWithName": "Verified Microsoft user: {{displayName}}.",
+        "valid": "Pomyślnie zweryfikowano organizatora Microsoft.",
+        "validWithName": "Zweryfikowany użytkownik Microsoft: {{displayName}}.",
         "reasons": {
-          "eeDisabled": "Teams meeting verification is only available in Enterprise Edition.",
-          "notConfigured": "Teams integration must be active before an organizer can be verified.",
-          "userNotFound": "Microsoft could not find a user for that organizer value.",
-          "policyMissing": "The Microsoft user exists, but the application access policy is not allowing meeting creation yet.",
-          "graphError": "Microsoft Graph could not verify this organizer right now."
+          "eeDisabled": "Weryfikacja spotkań Teams jest dostępna tylko w wersji Enterprise Edition.",
+          "notConfigured": "Integracja Teams musi być aktywna, aby można było zweryfikować organizatora.",
+          "userNotFound": "Microsoft nie znalazł użytkownika dla tej wartości organizatora.",
+          "policyMissing": "Użytkownik Microsoft istnieje, ale Application Access Policy nie zezwala jeszcze na tworzenie spotkań.",
+          "graphError": "Microsoft Graph nie mógł teraz zweryfikować tego organizatora."
         }
       }
     }
@@ -513,7 +527,7 @@
         "title": "Zatwierdzone spotkanie",
         "descriptionWithDate": "To spotkanie powstało na prośbę klienta i zostało zatwierdzone {{date}}.",
         "description": "Spotkanie to powstało na prośbę klienta.",
-        "joinTeamsMeeting": "Join Teams Meeting"
+        "joinTeamsMeeting": "Dołącz do spotkania Teams"
       },
       "pending": {
         "title": "Oczekujące żądanie spotkania",
@@ -529,7 +543,7 @@
         "description": "To zaproszenie na spotkanie zostało anulowane przez klienta."
       },
       "requesterInfo": {
-        "title": "Informacje o zgłaszającym",
+        "title": "Informacje o wnioskodawcy",
         "company": "Firma",
         "name": "Imię i nazwisko",
         "email": "E-mail",
@@ -555,7 +569,7 @@
         "declined": "Prośba o spotkanie została odrzucona",
         "declineFailed": "Nie udało się odrzucić prośby"
       },
-      "generateTeamsMeeting": "Generate Microsoft Teams meeting link"
+      "generateTeamsMeeting": "Wygeneruj link do spotkania Microsoft Teams"
     },
     "recurrence": {
       "label": "Powtarzanie",
@@ -589,8 +603,8 @@
         "message": "Wybierz, które wydarzenia chcesz usunąć:",
         "confirm": "Kontynuuj"
       },
-      "confirm": "Are you sure you want to delete this schedule entry? This action cannot be undone.",
-      "confirmWithTeamsWarning": "Are you sure you want to delete this schedule entry? This action cannot be undone. This will also delete the Microsoft Teams meeting."
+      "confirm": "Czy na pewno chcesz usunąć ten wpis harmonogramu? Tej akcji nie można cofnąć.",
+      "confirmWithTeamsWarning": "Czy na pewno chcesz usunąć ten wpis harmonogramu? Tej akcji nie można cofnąć. Powiązane spotkanie Microsoft Teams również zostanie usunięte."
     },
     "scopeOptions": {
       "single": "Tylko to wydarzenie",

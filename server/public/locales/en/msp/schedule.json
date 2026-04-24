@@ -433,7 +433,21 @@
       "prerequisites": {
         "title": "Azure prerequisites",
         "description": "Before you turn this on, grant the app the OnlineMeetings.ReadWrite.All application permission and create an Application Access Policy for the organizer account.",
-        "link": "Open Microsoft setup guidance"
+        "steps": {
+          "toggle": "Show Azure setup steps",
+          "step1": {
+            "title": "1. Grant Graph application permission",
+            "item1": "Open Entra admin center → App registrations.",
+            "item2": "Select the app used by this tenant's Teams integration.",
+            "item3": "API permissions → Add → Microsoft Graph → Application permissions.",
+            "item4": "Add OnlineMeetings.ReadWrite.All and grant admin consent."
+          },
+          "step2": {
+            "title": "2. Create an Application Access Policy",
+            "intro": "App-only meeting creation must be explicitly allowed for the organizer account.",
+            "note": "Allow 5–10 minutes for policy propagation before clicking Verify."
+          }
+        }
       },
       "organizer": {
         "title": "Meeting organizer",

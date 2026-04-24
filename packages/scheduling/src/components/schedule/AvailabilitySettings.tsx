@@ -1476,17 +1476,74 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                       defaultValue: 'Before you turn this on, grant the app the OnlineMeetings.ReadWrite.All application permission and create an Application Access Policy for the organizer account.',
                     })}
                   </div>
-                  <Button
-                    id="open-teams-meeting-prerequisites"
-                    type="button"
-                    variant="link"
-                    className="h-auto p-0"
-                    onClick={() => window.open('/docs/integrations/teams-meetings-setup.md', '_blank', 'noopener,noreferrer')}
-                  >
-                    {t('availabilitySettings.teamsMeetings.prerequisites.link', {
-                      defaultValue: 'Open Teams meeting setup runbook',
-                    })}
-                  </Button>
+                  <details className="rounded-md border border-warning/30 bg-warning/5 p-3">
+                    <summary className="cursor-pointer select-none text-sm font-medium">
+                      {t('availabilitySettings.teamsMeetings.prerequisites.steps.toggle', {
+                        defaultValue: 'Show Azure setup steps',
+                      })}
+                    </summary>
+                    <div className="mt-3 space-y-4 text-sm">
+                      <section>
+                        <div className="font-semibold">
+                          {t('availabilitySettings.teamsMeetings.prerequisites.steps.step1.title', {
+                            defaultValue: '1. Grant Graph application permission',
+                          })}
+                        </div>
+                        <ol className="list-decimal list-inside space-y-1 mt-1">
+                          <li>
+                            {t('availabilitySettings.teamsMeetings.prerequisites.steps.step1.item1', {
+                              defaultValue: 'Open Entra admin center → App registrations.',
+                            })}
+                          </li>
+                          <li>
+                            {t('availabilitySettings.teamsMeetings.prerequisites.steps.step1.item2', {
+                              defaultValue: "Select the app used by this tenant's Teams integration.",
+                            })}
+                          </li>
+                          <li>
+                            {t('availabilitySettings.teamsMeetings.prerequisites.steps.step1.item3', {
+                              defaultValue: 'API permissions → Add → Microsoft Graph → Application permissions.',
+                            })}
+                          </li>
+                          <li>
+                            {t('availabilitySettings.teamsMeetings.prerequisites.steps.step1.item4', {
+                              defaultValue: 'Add OnlineMeetings.ReadWrite.All and grant admin consent.',
+                            })}
+                          </li>
+                        </ol>
+                      </section>
+                      <section>
+                        <div className="font-semibold">
+                          {t('availabilitySettings.teamsMeetings.prerequisites.steps.step2.title', {
+                            defaultValue: '2. Create an Application Access Policy',
+                          })}
+                        </div>
+                        <p className="mt-1">
+                          {t('availabilitySettings.teamsMeetings.prerequisites.steps.step2.intro', {
+                            defaultValue: 'App-only meeting creation must be explicitly allowed for the organizer account.',
+                          })}
+                        </p>
+                        <pre className="bg-gray-900 text-gray-100 rounded p-3 overflow-x-auto text-xs mt-2 whitespace-pre">{`Connect-MicrosoftTeams
+
+$appId = "<your-app-registration-client-id>"
+$organizerUpn = "scheduling@acme.com"
+
+New-CsApplicationAccessPolicy \`
+  -Identity "Alga-Appointment-Meetings" \`
+  -AppIds $appId \`
+  -Description "Allow Alga PSA to create appointment meetings"
+
+Grant-CsApplicationAccessPolicy \`
+  -PolicyName "Alga-Appointment-Meetings" \`
+  -Identity $organizerUpn`}</pre>
+                        <p className="text-xs mt-1 text-gray-600">
+                          {t('availabilitySettings.teamsMeetings.prerequisites.steps.step2.note', {
+                            defaultValue: 'Allow 5–10 minutes for policy propagation before clicking Verify.',
+                          })}
+                        </p>
+                      </section>
+                    </div>
+                  </details>
                 </AlertDescription>
               </Alert>
 

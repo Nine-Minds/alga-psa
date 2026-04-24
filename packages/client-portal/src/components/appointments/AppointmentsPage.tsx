@@ -10,7 +10,7 @@ import { RequestAppointmentModal } from './RequestAppointmentModal';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
-import { Calendar, Clock, User, FileText, AlertCircle, X } from 'lucide-react';
+import { Calendar, Clock, User, FileText, AlertCircle, X, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { fromZonedTime } from 'date-fns-tz';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
@@ -436,6 +436,26 @@ export default function AppointmentsPage() {
                     </div>
                   </div>
                 </div>
+
+                {selectedAppointment.online_meeting_url && (
+                  <div className="flex items-start gap-3">
+                    <ExternalLink className="h-5 w-5 text-gray-500 mt-0.5" />
+                    <div className="flex-1">
+                      <div className="text-sm font-medium text-gray-700">
+                        {t('details.teamsMeeting', 'Teams Meeting')}
+                      </div>
+                      <Button
+                        id="join-teams-meeting-client-portal-list"
+                        type="button"
+                        onClick={() => window.open(selectedAppointment.online_meeting_url!, '_blank', 'noopener,noreferrer')}
+                        className="mt-2"
+                      >
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        {t('details.joinTeamsMeeting', 'Join Teams Meeting')}
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
                 {selectedAppointment.preferred_assigned_user_name && (
                   <div className="flex items-start gap-3">

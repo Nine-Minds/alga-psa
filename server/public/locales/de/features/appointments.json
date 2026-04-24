@@ -119,14 +119,14 @@
     "created": "Angefragt",
     "approved": "Genehmigt",
     "cancelButton": "Termin stornieren",
-    "teamsMeeting": "Teams Meeting",
-    "joinTeamsMeeting": "Join Teams Meeting"
+    "teamsMeeting": "Teams-Besprechung",
+    "joinTeamsMeeting": "An Teams-Besprechung teilnehmen"
   },
   "cancel": {
     "title": "Termin stornieren",
     "message": "Sind Sie sicher, dass Sie diese Terminanfrage stornieren möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
     "confirm": "Ja, stornieren",
-    "messageWithTeamsWarning": "Are you sure you want to cancel this appointment request? This action cannot be undone. This will also delete the Microsoft Teams meeting."
+    "messageWithTeamsWarning": "Sind Sie sicher, dass Sie diese Terminanfrage stornieren möchten? Diese Aktion kann nicht rückgängig gemacht werden. Die zugehörige Microsoft Teams-Besprechung wird ebenfalls gelöscht."
   },
   "ticketSection": {
     "title": "Terminanfragen",

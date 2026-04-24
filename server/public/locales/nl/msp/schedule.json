@@ -159,10 +159,10 @@
         "status": "Status",
         "linkedTicket": "Gekoppeld kaartje",
         "description": "Beschrijving",
-        "teamsMeeting": "Teams Meeting"
+        "teamsMeeting": "Teams-vergadering"
       },
       "actions": {
-        "joinTeamsMeeting": "Join Teams Meeting"
+        "joinTeamsMeeting": "Deelnemen aan Teams-vergadering"
       }
     },
     "approval": {
@@ -172,7 +172,7 @@
         "finalDateTime": "Laatste datum en tijd",
         "internalNotes": "Interne opmerkingen (optioneel)",
         "linkedTicket": "Link naar ticket (optioneel)",
-        "generateTeamsMeeting": "Generate Microsoft Teams meeting link"
+        "generateTeamsMeeting": "Microsoft Teams-vergaderlink genereren"
       },
       "placeholders": {
         "assignedTechnician": "Selecteer technicus",
@@ -208,7 +208,7 @@
       "userHours": "Gebruikersuren",
       "serviceRules": "Serviceregels",
       "exceptions": "Uitzonderingen",
-      "teamsMeetings": "Teams Meetings"
+      "teamsMeetings": "Teams-vergaderingen"
     },
     "days": {
       "sunday": "Zondag",
@@ -431,37 +431,51 @@
     },
     "teamsMeetings": {
       "prerequisites": {
-        "title": "Azure prerequisites",
-        "description": "Before you turn this on, grant the app the OnlineMeetings.ReadWrite.All application permission and create an Application Access Policy for the organizer account.",
-        "link": "Open Microsoft setup guidance"
+        "title": "Azure-vereisten",
+        "description": "Voordat u dit inschakelt, verleent u de app de toepassingsmachtiging OnlineMeetings.ReadWrite.All en maakt u een Application Access Policy voor het organisatoraccount.",
+        "steps": {
+          "toggle": "Azure-installatiestappen tonen",
+          "step1": {
+            "title": "1. Graph-toepassingsmachtiging verlenen",
+            "item1": "Open het Entra-beheercentrum → App-registraties.",
+            "item2": "Selecteer de app die door de Teams-integratie van deze tenant wordt gebruikt.",
+            "item3": "API-machtigingen → Toevoegen → Microsoft Graph → Toepassingsmachtigingen.",
+            "item4": "Voeg OnlineMeetings.ReadWrite.All toe en verleen beheerderstoestemming."
+          },
+          "step2": {
+            "title": "2. Een Application Access Policy maken",
+            "intro": "Het aanmaken van vergaderingen uitsluitend via de app moet expliciet worden toegestaan voor het organisatoraccount.",
+            "note": "Wacht 5–10 minuten op de doorvoering van het beleid voordat u op Verifiëren klikt."
+          }
+        }
       },
       "organizer": {
-        "title": "Meeting organizer",
-        "label": "Default meeting organizer (UPN or Microsoft user ID)",
-        "help": "Approved appointments create Teams meetings as this Microsoft user. A UPN such as scheduling@acme.com is usually the safest choice.",
+        "title": "Vergaderorganisator",
+        "label": "Standaard vergaderorganisator (UPN of Microsoft-gebruikers-ID)",
+        "help": "Goedgekeurde afspraken maken Teams-vergaderingen aan als deze Microsoft-gebruiker. Een UPN zoals scheduling@acme.com is meestal de veiligste keuze.",
         "placeholder": "scheduling@acme.com"
       },
       "actions": {
-        "save": "Save",
-        "saving": "Saving...",
-        "verify": "Verify",
-        "verifying": "Verifying..."
+        "save": "Opslaan",
+        "saving": "Opslaan...",
+        "verify": "Verifiëren",
+        "verifying": "Verifiëren..."
       },
       "feedback": {
-        "saveSuccess": "Teams meeting organizer saved",
-        "saveError": "Failed to save Teams meeting organizer",
-        "verifySuccess": "Teams meeting organizer verified",
-        "verifyError": "Failed to verify Teams meeting organizer"
+        "saveSuccess": "Teams-vergaderorganisator opgeslagen",
+        "saveError": "Opslaan van Teams-vergaderorganisator mislukt",
+        "verifySuccess": "Teams-vergaderorganisator geverifieerd",
+        "verifyError": "Verifiëren van Teams-vergaderorganisator mislukt"
       },
       "verify": {
-        "valid": "Microsoft organizer verified successfully.",
-        "validWithName": "Verified Microsoft user: {{displayName}}.",
+        "valid": "Microsoft-organisator succesvol geverifieerd.",
+        "validWithName": "Geverifieerde Microsoft-gebruiker: {{displayName}}.",
         "reasons": {
-          "eeDisabled": "Teams meeting verification is only available in Enterprise Edition.",
-          "notConfigured": "Teams integration must be active before an organizer can be verified.",
-          "userNotFound": "Microsoft could not find a user for that organizer value.",
-          "policyMissing": "The Microsoft user exists, but the application access policy is not allowing meeting creation yet.",
-          "graphError": "Microsoft Graph could not verify this organizer right now."
+          "eeDisabled": "Verificatie van Teams-vergaderingen is alleen beschikbaar in de Enterprise Edition.",
+          "notConfigured": "De Teams-integratie moet actief zijn voordat een organisator kan worden geverifieerd.",
+          "userNotFound": "Microsoft kon geen gebruiker vinden voor deze organisatorwaarde.",
+          "policyMissing": "De Microsoft-gebruiker bestaat, maar de Application Access Policy staat het maken van vergaderingen nog niet toe.",
+          "graphError": "Microsoft Graph kan deze organisator op dit moment niet verifiëren."
         }
       }
     }
@@ -513,7 +527,7 @@
         "title": "Goedgekeurde afspraak",
         "descriptionWithDate": "Deze afspraak kwam voort uit een verzoek van een klant en werd goedgekeurd op {{date}}.",
         "description": "Deze afspraak is ontstaan ​​vanuit een verzoek van een cliënt.",
-        "joinTeamsMeeting": "Join Teams Meeting"
+        "joinTeamsMeeting": "Deelnemen aan Teams-vergadering"
       },
       "pending": {
         "title": "Afspraakverzoek in behandeling",
@@ -529,7 +543,7 @@
         "description": "Dit afspraakverzoek is door de cliënt geannuleerd."
       },
       "requesterInfo": {
-        "title": "Aanvragergegevens",
+        "title": "Aanvragerinformatie",
         "company": "Bedrijf",
         "name": "Naam",
         "email": "E-mail",
@@ -555,7 +569,7 @@
         "declined": "Afspraakverzoek afgewezen",
         "declineFailed": "Kan het verzoek niet weigeren"
       },
-      "generateTeamsMeeting": "Generate Microsoft Teams meeting link"
+      "generateTeamsMeeting": "Microsoft Teams-vergaderlink genereren"
     },
     "recurrence": {
       "label": "Herhaling",
@@ -589,8 +603,8 @@
         "message": "Selecteer welke evenementen u wilt verwijderen:",
         "confirm": "Doorgaan"
       },
-      "confirm": "Are you sure you want to delete this schedule entry? This action cannot be undone.",
-      "confirmWithTeamsWarning": "Are you sure you want to delete this schedule entry? This action cannot be undone. This will also delete the Microsoft Teams meeting."
+      "confirm": "Weet u zeker dat u deze planningsitem wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+      "confirmWithTeamsWarning": "Weet u zeker dat u deze planningsitem wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt. De bijbehorende Microsoft Teams-vergadering wordt ook verwijderd."
     },
     "scopeOptions": {
       "single": "Alleen dit evenement",

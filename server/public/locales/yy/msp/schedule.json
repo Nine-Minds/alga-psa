@@ -433,7 +433,21 @@
       "prerequisites": {
         "title": "55555",
         "description": "55555",
-        "link": "55555"
+        "steps": {
+          "toggle": "55555",
+          "step1": {
+            "title": "55555",
+            "item1": "55555",
+            "item2": "55555",
+            "item3": "55555",
+            "item4": "55555"
+          },
+          "step2": {
+            "title": "55555",
+            "intro": "55555",
+            "note": "55555"
+          }
+        }
       },
       "organizer": {
         "title": "55555",
