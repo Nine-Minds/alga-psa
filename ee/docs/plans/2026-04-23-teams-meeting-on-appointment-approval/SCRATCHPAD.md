@@ -157,6 +157,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-23: Completed `T003-T016`, `T018`, and `T051` with `server/src/test/unit/teamsMeetingHelpers.test.ts`, covering Teams meeting create/update/delete helper behavior, capability resolution, the CE no-op shim, and tenant-scoped credential isolation.
 - 2026-04-23: Completed `T043` with `packages/scheduling/tests/availabilitySettingsActions.permission.test.ts`, asserting `setDefaultMeetingOrganizer` rejects callers who lack the settings-update permission.
 - 2026-04-23: Completed `T040-T042` with `server/src/test/unit/verifyMeetingOrganizer.test.ts`, covering successful organizer verification, missing-user handling, and Application Access Policy failures that map to `reason: 'policy_missing'`.
+- 2026-04-23: Completed `T001-T002` with `server/src/test/unit/teamsMeetingMigrations.test.ts`, executing both migration `up()` functions against mocked `knex.schema` surfaces and asserting the new columns are added as nullable `text`.
 
 ## Working notes
 
@@ -189,3 +190,4 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - Additional validation command: `npx vitest --root server --config vitest.config.ts run src/test/unit/teamsMeetingHelpers.test.ts --coverage.enabled false`
 - Additional validation command: `npx vitest --root packages/scheduling --config vitest.config.ts run tests/availabilitySettingsActions.permission.test.ts`
 - Additional validation command: `npx vitest --root server --config vitest.config.ts run src/test/unit/verifyMeetingOrganizer.test.ts --coverage.enabled false`
+- Additional validation command: `npx vitest --root server --config vitest.config.ts run src/test/unit/teamsMeetingMigrations.test.ts --coverage.enabled false`

@@ -3,13 +3,13 @@
     "id": "T001",
     "description": "Migration: after apply, `appointment_requests` has nullable columns online_meeting_provider, online_meeting_url, online_meeting_id with correct types.",
     "featureIds": ["F001"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T002",
     "description": "Migration: after apply, `teams_integrations` has nullable column default_meeting_organizer_upn.",
     "featureIds": ["F002"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T003",
