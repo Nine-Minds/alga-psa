@@ -149,6 +149,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-23: Completed `F028` by normalizing Teams meeting helper logs so create/update/delete success paths log structured INFO rows and non-response warning paths still include `status: null` alongside tenant, request, and operation context.
 - 2026-04-23: Completed `T019` with `packages/scheduling/tests/appointmentRequestSchemas.test.ts`, covering `generate_teams_meeting` explicit true/false values plus omission defaulting to `false`.
 - 2026-04-23: Completed `T046` by extending `server/src/test/unit/icsGenerator.test.ts` with an explicit Teams meeting case that asserts both `LOCATION: Microsoft Teams Meeting` and the join `URL:` line are emitted together.
+- 2026-04-23: Completed `T047` by tightening the minimal ICS generator test so events without a meeting URL assert both `LOCATION` and `URL` are absent.
 
 ## Working notes
 

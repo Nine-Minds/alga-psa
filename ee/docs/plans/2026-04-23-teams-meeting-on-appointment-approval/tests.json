@@ -279,7 +279,7 @@
     "id": "T047",
     "description": "ICS generator test: when url is absent, no URL line is emitted and LOCATION is unset.",
     "featureIds": ["F025"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T048",

@@ -121,6 +121,7 @@ describe('ICS Generator', () => {
       expect(ics).toContain('SUMMARY:Minimal Event');
       expect(ics).not.toContain('DESCRIPTION:');
       expect(ics).not.toContain('LOCATION:');
+      expect(ics).not.toContain('URL:');
       expect(ics).not.toContain('ORGANIZER:');
     });
 
