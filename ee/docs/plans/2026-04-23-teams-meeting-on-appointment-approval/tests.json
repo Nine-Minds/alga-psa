@@ -225,7 +225,7 @@
     "id": "T038",
     "description": "UI (Playwright): AvailabilitySettings shows the 'Teams Meetings' tab only when teams_integrations.install_status = 'active' for the current tenant.",
     "featureIds": ["F019"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T039",

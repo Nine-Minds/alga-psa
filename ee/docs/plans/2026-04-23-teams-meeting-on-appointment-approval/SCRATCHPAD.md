@@ -178,6 +178,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-24: Completed `T035` in the same `EntryPopup` test file, asserting the approved appointment banner renders the Teams join action when `online_meeting_url` is present.
 - 2026-04-24: Completed `T036` in the `AppointmentRequestsPanel` test file, asserting approved request details render the Teams join action when a meeting URL is stored.
 - 2026-04-24: Completed `T037` in the client-portal detail page test file, asserting `AppointmentRequestDetailsPage` renders the `Join Teams Meeting` button when `online_meeting_url` is populated.
+- 2026-04-24: Completed `T038` with `server/src/test/unit/appointments/AvailabilitySettings.teams.test.tsx`, asserting the `Teams Meetings` tab is rendered only when the tab-state action reports it visible.
 
 ## Working notes
 
@@ -221,5 +222,6 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - Additional validation command: `npx vitest --root server --config vitest.config.ts run src/test/unit/appointments/AppointmentRequestDetailsPage.teams.test.tsx --coverage.enabled false`
 - Additional validation command: `npx vitest --root server --config vitest.config.ts run src/test/unit/appointments/AppointmentRequestsPanel.teams.test.tsx --coverage.enabled false`
 - Additional validation command: `npx vitest --root server --config vitest.config.ts run src/test/unit/appointments/EntryPopup.teams.test.tsx --coverage.enabled false`
+- Additional validation command: `npx vitest --root server --config vitest.config.ts run src/test/unit/appointments/AvailabilitySettings.teams.test.tsx --coverage.enabled false`
 - Additional validation command: `rm -rf server/.next && npm run build:ce`
 - Additional validation command: `rg -n "@alga-psa/ee-microsoft-teams|ee/packages/microsoft-teams" server/.next`
