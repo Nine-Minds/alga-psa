@@ -73,7 +73,6 @@ export class ApiProjectController extends ApiBaseController {
       ownerUserId: typeof project.assigned_to === 'string' ? project.assigned_to : undefined,
       assignedUserIds: typeof project.assigned_to === 'string' ? [project.assigned_to] : [],
       clientId: typeof project.client_id === 'string' ? project.client_id : undefined,
-      teamIds: typeof project.assigned_team_id === 'string' ? [project.assigned_team_id] : [],
       status: project.status,
       isClosed: project.is_closed,
     };
@@ -114,7 +113,6 @@ export class ApiProjectController extends ApiBaseController {
       clientId: typeof ticket.client_id === 'string' ? ticket.client_id : undefined,
       boardId: typeof ticket.board_id === 'string' ? ticket.board_id : undefined,
       teamIds: typeof ticket.assigned_team_id === 'string' ? [ticket.assigned_team_id] : [],
-      is_client_visible: typeof ticket.is_client_visible === 'boolean' ? ticket.is_client_visible : undefined,
       statusId: ticket.status_id,
     };
   }

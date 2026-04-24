@@ -25,10 +25,9 @@ export const STARTER_AUTHORIZATION_BUNDLES: StarterBundleDefinition[] = [
   {
     key: 'project-delivery-team',
     name: 'Project Delivery Team',
-    description: 'Project teams are restricted to assigned or same-team project delivery work.',
+    description: 'Project delivery staff can read projects they own or are assigned to as project manager.',
     rules: [
       { resourceType: 'project', action: 'read', templateKey: 'own_or_assigned' },
-      { resourceType: 'project', action: 'update', templateKey: 'same_team' },
     ],
   },
   {
