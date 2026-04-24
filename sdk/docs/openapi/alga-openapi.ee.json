@@ -56,6 +56,9 @@
       "name": "Services"
     },
     {
+      "name": "SoftwareOne Extensions"
+    },
+    {
       "name": "Statuses"
     },
     {
@@ -93,9 +96,6 @@
     },
     {
       "name": "contracts"
-    },
-    {
-      "name": "ext"
     },
     {
       "name": "ext-bundles"
@@ -1666,7 +1666,7 @@
           },
           "x-idempotency-key": {
             "type": "string",
-            "description": "Optional idempotency key. For non-GET requests, the gateway falls back to x-request-id when absent."
+            "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner."
           },
           "x-alga-tenant": {
             "type": "string",
@@ -1681,7 +1681,7 @@
       "ExtensionOpaqueRequest": {
         "type": "object",
         "properties": {},
-        "description": "Extension-specific request body. The gateway treats this as opaque, enforces a 10 MB limit, base64-encodes it, and forwards it to the extension runner."
+        "description": "Extension-specific request body. The gateway treats this as opaque, enforces a 10 MB limit for non-GET methods, base64-encodes it, and forwards it to the extension runner."
       },
       "ExtensionOpaqueResponse": {
         "type": "object",
@@ -3267,6 +3267,177 @@
           "project_status_mapping_id"
         ],
         "description": "Payload for creating a project task within a phase. Provide project_status_mapping_id as a UUID from the project task status mappings endpoint. The phaseId path parameter selects which phase will receive the task."
+      },
+      "SoftwareOneAgreement": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "SoftwareOne agreement identifier, such as agr-001. This is an external SoftwareOne-style ID, not an Alga UUID."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable agreement name."
+          },
+          "product": {
+            "type": "string",
+            "description": "Product or SKU name associated with the agreement."
+          },
+          "vendor": {
+            "type": "string",
+            "description": "Software vendor name, such as Microsoft or Adobe."
+          },
+          "consumer": {
+            "type": "string",
+            "description": "End-customer organization name for the agreement."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive",
+              "pending",
+              "expired"
+            ],
+            "description": "Agreement status."
+          },
+          "currency": {
+            "type": "string",
+            "description": "Three-letter billing currency code, such as USD."
+          },
+          "spxy": {
+            "type": "number",
+            "description": "Annual SPx value from SoftwareOne dummy data."
+          },
+          "marginRpxy": {
+            "type": "number",
+            "description": "Margin RPxY value from SoftwareOne dummy data."
+          },
+          "operations": {
+            "type": "string",
+            "enum": [
+              "visible",
+              "hidden",
+              "restricted"
+            ],
+            "description": "Operational visibility state for the agreement."
+          },
+          "billingConfigId": {
+            "type": "string",
+            "description": "SoftwareOne billing configuration identifier associated with the agreement."
+          },
+          "localConfig": {
+            "type": "object",
+            "properties": {
+              "autoRenewal": {
+                "type": "boolean",
+                "description": "Whether local auto-renewal is enabled."
+              },
+              "notificationDays": {
+                "type": "integer",
+                "description": "Days before renewal/expiry to notify."
+              },
+              "markup": {
+                "type": "number",
+                "description": "Optional local markup percentage used by richer SoftwareOne schemas."
+              },
+              "notes": {
+                "type": "string",
+                "description": "Optional local notes."
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Optional local tags."
+              }
+            },
+            "description": "Locally editable configuration metadata. Current MVP data includes autoRenewal and notificationDays."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "product",
+          "vendor",
+          "consumer",
+          "status",
+          "currency",
+          "spxy",
+          "marginRpxy",
+          "operations",
+          "billingConfigId"
+        ]
+      },
+      "SoftwareOnePaginationMeta": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "description": "Total agreements returned by the current dummy implementation."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Current page number. Currently hardcoded to 1."
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Page size. Currently hardcoded to 50."
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "pageSize"
+        ]
+      },
+      "SoftwareOneAgreementsListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ],
+            "description": "Request succeeded."
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SoftwareOneAgreement"
+            },
+            "description": "SoftwareOne agreement records."
+          },
+          "meta": {
+            "$ref": "#/components/schemas/SoftwareOnePaginationMeta"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ]
+      },
+      "SoftwareOneErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              false
+            ],
+            "description": "Request failed."
+          },
+          "error": {
+            "type": "string",
+            "description": "Human-readable error message."
+          }
+        },
+        "required": [
+          "success",
+          "error"
+        ]
       },
       "StoragePutRequest": {
         "type": "object",
@@ -5237,9 +5408,9 @@
       }
     },
     "/api/ext/{extensionId}/{path}": {
-      "delete": {
-        "summary": "Forward DELETE request to extension runner",
-        "description": "Tenant-scoped extension gateway endpoint that forwards DELETE requests to the installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development; verifies the extension is installed and enabled for that tenant; forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner response. The gateway currently has a placeholder access check and does not enforce per-extension RBAC beyond tenant install resolution.",
+      "get": {
+        "summary": "Forward GET request to extension runner",
+        "description": "Tenant-scoped extension gateway endpoint that forwards GET requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development; verifies the extension is installed and enabled for that tenant; forwards selected headers and all query parameters to RUNNER_BASE_URL /v1/execute; and relays the runner response. GET requests do not read a body and do not generate an idempotency key. The gateway currently has a placeholder access check and does not enforce per-extension RBAC beyond tenant install resolution.",
         "tags": [
           "Extension Gateway"
         ],
@@ -5251,7 +5422,8 @@
         "extensions": {
           "x-api-key-auth-skipped": true,
           "x-proxy-target": "extension-runner",
-          "x-max-body-bytes": 10485760
+          "x-request-body-read": false,
+          "x-idempotency-generated": false
         },
         "parameters": [
           {
@@ -5289,10 +5461,139 @@
           {
             "schema": {
               "type": "string",
-              "description": "Optional idempotency key. For non-GET requests, the gateway falls back to x-request-id when absent."
+              "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner."
             },
             "required": false,
-            "description": "Optional idempotency key. For non-GET requests, the gateway falls back to x-request-id when absent.",
+            "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner.",
+            "name": "x-idempotency-key",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal tenant header used for tenant resolution before session fallback."
+            },
+            "required": false,
+            "description": "Internal tenant header used for tenant resolution before session fallback.",
+            "name": "x-alga-tenant",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Legacy tenant header accepted for tenant resolution before session fallback."
+            },
+            "required": false,
+            "description": "Legacy tenant header accepted for tenant resolution before session fallback.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Runner response relayed by the gateway. The actual status can vary by extension contract.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionOpaqueResponse"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "Runner returned no content, or CORS preflight for OPTIONS requests on this gateway path."
+          },
+          "404": {
+            "description": "Extension is not installed or not enabled for the resolved tenant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionGatewayErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Tenant could not be resolved or another internal gateway error occurred.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionGatewayErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Runner call failed, runner response was empty/invalid, or install context was incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionGatewayErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Forward POST request to extension runner",
+        "description": "Tenant-scoped extension gateway endpoint that forwards POST requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development; verifies the extension is installed and enabled for that tenant; forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner response. For POST requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. An x-idempotency-key header is forwarded when supplied, otherwise the generated x-request-id is used as the non-GET idempotency fallback. The gateway currently has a placeholder access check and does not enforce per-extension RBAC beyond tenant install resolution.",
+        "tags": [
+          "Extension Gateway"
+        ],
+        "security": [
+          {
+            "SessionCookieAuth": []
+          }
+        ],
+        "extensions": {
+          "x-api-key-auth-skipped": true,
+          "x-proxy-target": "extension-runner",
+          "x-max-body-bytes": 10485760,
+          "x-idempotency-supported": true,
+          "x-idempotency-key-header": "x-idempotency-key",
+          "x-idempotency-fallback": "x-request-id"
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Extension identifier from the URL. This may be a registry/install UUID or a publisher.name slug, resolved case-insensitively."
+            },
+            "required": true,
+            "description": "Extension identifier from the URL. This may be a registry/install UUID or a publisher.name slug, resolved case-insensitively.",
+            "name": "extensionId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Remaining extension endpoint path after extensionId. The gateway forwards this path to the runner unchanged."
+            },
+            "required": false,
+            "description": "Remaining extension endpoint path after extensionId. The gateway forwards this path to the runner unchanged.",
+            "name": "path",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Optional request ID. The gateway generates a UUID when absent and forwards it to the runner."
+            },
+            "required": false,
+            "description": "Optional request ID. The gateway generates a UUID when absent and forwards it to the runner.",
+            "name": "x-request-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner."
+            },
+            "required": false,
+            "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner.",
             "name": "x-idempotency-key",
             "in": "header"
           },
@@ -5318,14 +5619,14 @@
           }
         ],
         "requestBody": {
-          "description": "Optional extension-specific DELETE body. The gateway accepts any content type up to 10 MB.",
+          "description": "Optional extension-specific POST body. The gateway accepts any content type up to 10 MB and forwards it as base64.",
           "required": false,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/ExtensionOpaqueRequest"
               },
-              "description": "Optional extension-specific DELETE body. The gateway accepts any content type up to 10 MB."
+              "description": "Optional extension-specific POST body. The gateway accepts any content type up to 10 MB and forwards it as base64."
             }
           }
         },
@@ -5385,43 +5686,151 @@
           }
         }
       },
-      "get": {
-        "summary": "GET ext",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+      "put": {
+        "summary": "Forward PUT request to extension runner",
+        "description": "Tenant-scoped extension gateway endpoint that forwards PUT requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development; verifies the extension is installed and enabled for that tenant; forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner response. For PUT requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. Clients should provide x-idempotency-key for safe retries; otherwise the gateway falls back to a generated request ID. The gateway currently has a placeholder access check and does not enforce per-extension RBAC beyond tenant install resolution.",
         "tags": [
-          "ext"
+          "Extension Gateway"
+        ],
+        "security": [
+          {
+            "SessionCookieAuth": []
+          }
         ],
         "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
+          "x-api-key-auth-skipped": true,
+          "x-proxy-target": "extension-runner",
+          "x-max-body-bytes": 10485760,
+          "x-idempotency-supported": true,
+          "x-idempotency-key-header": "x-idempotency-key",
+          "x-idempotency-fallback": "x-request-id"
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Extension identifier from the URL. This may be a registry/install UUID or a publisher.name slug, resolved case-insensitively."
+            },
+            "required": true,
+            "description": "Extension identifier from the URL. This may be a registry/install UUID or a publisher.name slug, resolved case-insensitively.",
+            "name": "extensionId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Remaining extension endpoint path after extensionId. The gateway forwards this path to the runner unchanged."
+            },
+            "required": false,
+            "description": "Remaining extension endpoint path after extensionId. The gateway forwards this path to the runner unchanged.",
+            "name": "path",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Optional request ID. The gateway generates a UUID when absent and forwards it to the runner."
+            },
+            "required": false,
+            "description": "Optional request ID. The gateway generates a UUID when absent and forwards it to the runner.",
+            "name": "x-request-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner."
+            },
+            "required": false,
+            "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner.",
+            "name": "x-idempotency-key",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal tenant header used for tenant resolution before session fallback."
+            },
+            "required": false,
+            "description": "Internal tenant header used for tenant resolution before session fallback.",
+            "name": "x-alga-tenant",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Legacy tenant header accepted for tenant resolution before session fallback."
+            },
+            "required": false,
+            "description": "Legacy tenant header accepted for tenant resolution before session fallback.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "description": "Optional extension-specific PUT body. The gateway accepts any content type up to 10 MB and forwards it as base64.",
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtensionOpaqueRequest"
+              },
+              "description": "Optional extension-specific PUT body. The gateway accepts any content type up to 10 MB and forwards it as base64."
+            }
+          }
         },
         "responses": {
           "200": {
-            "description": "Placeholder success response",
+            "description": "Runner response relayed by the gateway. The actual status can vary by extension contract.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
+                  "$ref": "#/components/schemas/ExtensionOpaqueResponse"
                 }
               }
             }
           },
-          "401": {
-            "description": "Authentication required",
+          "204": {
+            "description": "Runner returned no content, or CORS preflight for OPTIONS requests on this gateway path."
+          },
+          "404": {
+            "description": "Extension is not installed or not enabled for the resolved tenant.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/ExtensionGatewayErrorResponse"
                 }
               }
             }
           },
-          "403": {
-            "description": "Forbidden",
+          "413": {
+            "description": "Request body exceeds the 10 MB gateway limit.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/ExtensionGatewayErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Tenant could not be resolved or another internal gateway error occurred.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionGatewayErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Runner call failed, runner response was empty/invalid, or install context was incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionGatewayErrorResponse"
                 }
               }
             }
@@ -5429,164 +5838,301 @@
         }
       },
       "patch": {
-        "summary": "PATCH ext",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "summary": "Forward PATCH request to extension runner",
+        "description": "Tenant-scoped extension gateway endpoint that forwards PATCH requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development; verifies the extension is installed and enabled for that tenant; forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner response. For PATCH requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. Clients should provide x-idempotency-key for safe retries; otherwise the gateway falls back to a generated request ID. The gateway does not interpret PATCH semantics; partial-update behavior is extension-defined.",
         "tags": [
-          "ext"
+          "Extension Gateway"
+        ],
+        "security": [
+          {
+            "SessionCookieAuth": []
+          }
         ],
         "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
+          "x-api-key-auth-skipped": true,
+          "x-proxy-target": "extension-runner",
+          "x-max-body-bytes": 10485760,
+          "x-idempotency-supported": true,
+          "x-idempotency-key-header": "x-idempotency-key",
+          "x-idempotency-fallback": "x-request-id"
         },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Extension identifier from the URL. This may be a registry/install UUID or a publisher.name slug, resolved case-insensitively."
+            },
+            "required": true,
+            "description": "Extension identifier from the URL. This may be a registry/install UUID or a publisher.name slug, resolved case-insensitively.",
+            "name": "extensionId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Remaining extension endpoint path after extensionId. The gateway forwards this path to the runner unchanged."
+            },
+            "required": false,
+            "description": "Remaining extension endpoint path after extensionId. The gateway forwards this path to the runner unchanged.",
+            "name": "path",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Optional request ID. The gateway generates a UUID when absent and forwards it to the runner."
+            },
+            "required": false,
+            "description": "Optional request ID. The gateway generates a UUID when absent and forwards it to the runner.",
+            "name": "x-request-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner."
+            },
+            "required": false,
+            "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner.",
+            "name": "x-idempotency-key",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal tenant header used for tenant resolution before session fallback."
+            },
+            "required": false,
+            "description": "Internal tenant header used for tenant resolution before session fallback.",
+            "name": "x-alga-tenant",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Legacy tenant header accepted for tenant resolution before session fallback."
+            },
+            "required": false,
+            "description": "Legacy tenant header accepted for tenant resolution before session fallback.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
         "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
+          "description": "Optional extension-specific PATCH body. The gateway accepts any content type up to 10 MB and forwards it as base64.",
+          "required": false,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
+                "$ref": "#/components/schemas/ExtensionOpaqueRequest"
               },
-              "description": "Placeholder request body"
+              "description": "Optional extension-specific PATCH body. The gateway accepts any content type up to 10 MB and forwards it as base64."
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Placeholder success response",
+            "description": "Runner response relayed by the gateway. The actual status can vary by extension contract.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
+                  "$ref": "#/components/schemas/ExtensionOpaqueResponse"
                 }
               }
             }
           },
-          "401": {
-            "description": "Authentication required",
+          "204": {
+            "description": "Runner returned no content, or CORS preflight for OPTIONS requests on this gateway path."
+          },
+          "404": {
+            "description": "Extension is not installed or not enabled for the resolved tenant.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/ExtensionGatewayErrorResponse"
                 }
               }
             }
           },
-          "403": {
-            "description": "Forbidden",
+          "413": {
+            "description": "Request body exceeds the 10 MB gateway limit.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/ExtensionGatewayErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Tenant could not be resolved or another internal gateway error occurred.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionGatewayErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Runner call failed, runner response was empty/invalid, or install context was incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionGatewayErrorResponse"
                 }
               }
             }
           }
         }
       },
-      "post": {
-        "summary": "POST ext",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+      "delete": {
+        "summary": "Forward DELETE request to extension runner",
+        "description": "Tenant-scoped extension gateway endpoint that forwards DELETE requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development; verifies the extension is installed and enabled for that tenant; forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner response. For DELETE requests the body, if present, is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. The gateway currently has a placeholder access check and does not enforce per-extension RBAC beyond tenant install resolution.",
         "tags": [
-          "ext"
+          "Extension Gateway"
+        ],
+        "security": [
+          {
+            "SessionCookieAuth": []
+          }
         ],
         "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
+          "x-api-key-auth-skipped": true,
+          "x-proxy-target": "extension-runner",
+          "x-max-body-bytes": 10485760,
+          "x-idempotency-supported": true,
+          "x-idempotency-key-header": "x-idempotency-key",
+          "x-idempotency-fallback": "x-request-id"
         },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Extension identifier from the URL. This may be a registry/install UUID or a publisher.name slug, resolved case-insensitively."
+            },
+            "required": true,
+            "description": "Extension identifier from the URL. This may be a registry/install UUID or a publisher.name slug, resolved case-insensitively.",
+            "name": "extensionId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Remaining extension endpoint path after extensionId. The gateway forwards this path to the runner unchanged."
+            },
+            "required": false,
+            "description": "Remaining extension endpoint path after extensionId. The gateway forwards this path to the runner unchanged.",
+            "name": "path",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Optional request ID. The gateway generates a UUID when absent and forwards it to the runner."
+            },
+            "required": false,
+            "description": "Optional request ID. The gateway generates a UUID when absent and forwards it to the runner.",
+            "name": "x-request-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner."
+            },
+            "required": false,
+            "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner.",
+            "name": "x-idempotency-key",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Internal tenant header used for tenant resolution before session fallback."
+            },
+            "required": false,
+            "description": "Internal tenant header used for tenant resolution before session fallback.",
+            "name": "x-alga-tenant",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Legacy tenant header accepted for tenant resolution before session fallback."
+            },
+            "required": false,
+            "description": "Legacy tenant header accepted for tenant resolution before session fallback.",
+            "name": "x-tenant-id",
+            "in": "header"
+          }
+        ],
         "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
+          "description": "Optional extension-specific DELETE body. The gateway accepts any content type up to 10 MB and forwards it as base64.",
+          "required": false,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
+                "$ref": "#/components/schemas/ExtensionOpaqueRequest"
               },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "summary": "PUT ext",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "ext"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              "description": "Optional extension-specific DELETE body. The gateway accepts any content type up to 10 MB and forwards it as base64."
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Placeholder success response",
+            "description": "Runner response relayed by the gateway. The actual status can vary by extension contract.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
+                  "$ref": "#/components/schemas/ExtensionOpaqueResponse"
                 }
               }
             }
           },
-          "401": {
-            "description": "Authentication required",
+          "204": {
+            "description": "Runner returned no content, or CORS preflight for OPTIONS requests on this gateway path."
+          },
+          "404": {
+            "description": "Extension is not installed or not enabled for the resolved tenant.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/ExtensionGatewayErrorResponse"
                 }
               }
             }
           },
-          "403": {
-            "description": "Forbidden",
+          "413": {
+            "description": "Request body exceeds the 10 MB gateway limit.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/ExtensionGatewayErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Tenant could not be resolved or another internal gateway error occurred.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionGatewayErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Runner call failed, runner response was empty/invalid, or install context was incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionGatewayErrorResponse"
                 }
               }
             }
@@ -8815,42 +9361,56 @@
     },
     "/api/extensions/softwareone/agreements": {
       "get": {
-        "summary": "GET extensions",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "summary": "List SoftwareOne agreements",
+        "description": "Returns SoftwareOne agreement records available to the SoftwareOne extension. The current handler is an MVP placeholder backed by hardcoded dummy data; comments in the route indicate that a full implementation will validate permissions, derive tenant context, fetch from the SoftwareOne API, and apply filtering, sorting, and pagination. This route is not in the middleware API-key skip list, so callers must provide x-api-key at the API layer.",
         "tags": [
-          "extensions"
+          "SoftwareOne Extensions"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
         ],
         "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
+          "x-placeholder-implementation": true,
+          "x-extension": "softwareone"
         },
         "responses": {
           "200": {
-            "description": "Placeholder success response",
+            "description": "Agreement list returned successfully.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
+                  "$ref": "#/components/schemas/SoftwareOneAgreementsListResponse"
                 }
               }
             }
           },
           "401": {
-            "description": "Authentication required",
+            "description": "API key missing at middleware before the handler executes.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Middleware authentication error message."
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
                 }
               }
             }
           },
-          "403": {
-            "description": "Forbidden",
+          "500": {
+            "description": "Unexpected failure while fetching agreements.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/SoftwareOneErrorResponse"
                 }
               }
             }
