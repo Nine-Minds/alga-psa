@@ -50,7 +50,7 @@
   {
     "id": "F009",
     "description": "approveAppointmentRequest server action calls createTeamsMeeting when generate_teams_meeting is true, persists the three columns, and passes the URL into email + ICS payloads.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-9"]
   },
   {

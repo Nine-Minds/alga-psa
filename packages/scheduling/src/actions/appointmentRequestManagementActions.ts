@@ -38,6 +38,7 @@ import {
 } from './appointmentHelpers';
 import { generateICSBuffer, generateICSFilename, ICSEventData } from '../utils/icsGenerator';
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
+import { resolveTeamsMeetingService } from '../lib/teamsMeetingService';
 
 export interface IAppointmentRequest {
   appointment_request_id: string;
@@ -62,6 +63,9 @@ export interface IAppointmentRequest {
   approved_by_user_id?: string;
   approved_at?: string;
   declined_reason?: string;
+  online_meeting_provider?: string | null;
+  online_meeting_url?: string | null;
+  online_meeting_id?: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -427,6 +431,7 @@ export const approveAppointmentRequest = withAuth(async (
 
       const finalDate = validatedData.final_date ?? fallbackDate;
       const finalTime = (validatedData.final_time ?? fallbackTime).slice(0, 5);
+      const approvalUsesRequestedFallback = !validatedData.final_date && !validatedData.final_time;
 
       // Verify assigned user exists
       const assignedUser = await trx('users')
@@ -458,15 +463,17 @@ export const approveAppointmentRequest = withAuth(async (
         throw new Error('Invalid final date provided for approval');
       }
 
-      // Parse the time as UTC to avoid timezone issues
-      // The finalTime should be in HH:MM format
-      const scheduledStart = new Date(`${dateStr}T${finalTime}:00Z`);
+      const scheduledStart = approvalUsesRequestedFallback
+        ? fromZonedTime(`${dateStr}T${finalTime}:00`, request.requester_timezone || 'UTC')
+        : new Date(`${dateStr}T${finalTime}:00Z`);
 
       if (isNaN(scheduledStart.getTime())) {
         throw new Error(`Invalid date/time: ${dateStr}T${finalTime}`);
       }
 
       const scheduledEnd = new Date(scheduledStart.getTime() + request.requested_duration * 60000);
+      let onlineMeetingUrl: string | null = null;
+      let onlineMeetingId: string | null = null;
 
       let scheduleEntry;
 
@@ -640,6 +647,22 @@ export const approveAppointmentRequest = withAuth(async (
 
       const now = new Date();
 
+      if (validatedData.generate_teams_meeting) {
+        const teamsMeetingService = await resolveTeamsMeetingService();
+        const createdMeeting = await teamsMeetingService.createTeamsMeeting({
+          tenantId: tenant,
+          subject: `Appointment: ${service.service_name}`,
+          startDateTime: scheduledStart.toISOString(),
+          endDateTime: scheduledEnd.toISOString(),
+          appointmentRequestId: request.appointment_request_id,
+        });
+
+        if (createdMeeting) {
+          onlineMeetingUrl = createdMeeting.joinWebUrl;
+          onlineMeetingId = createdMeeting.meetingId;
+        }
+      }
+
       // Update appointment request
       await trx('appointment_requests')
         .where({
@@ -652,6 +675,9 @@ export const approveAppointmentRequest = withAuth(async (
           approved_by_user_id: user.user_id,
           approved_at: now,
           ticket_id: validatedData.ticket_id || request.ticket_id,
+          online_meeting_provider: onlineMeetingUrl && onlineMeetingId ? 'teams' : request.online_meeting_provider || null,
+          online_meeting_url: onlineMeetingUrl || request.online_meeting_url || null,
+          online_meeting_id: onlineMeetingId || request.online_meeting_id || null,
           updated_at: now
         });
 
@@ -729,7 +755,7 @@ export const approveAppointmentRequest = withAuth(async (
           endDate: new Date(scheduleEntryWithDetails.scheduled_end),
           organizerName: `${assignedUser.first_name} ${assignedUser.last_name}`,
           organizerEmail: assignedUser.email || tenantSettings.contactEmail,
-          url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/client-portal/appointments/${request.appointment_request_id}`
+          url: onlineMeetingUrl || `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/client-portal/appointments/${request.appointment_request_id}`
         };
         const icsBuffer = generateICSBuffer(icsEventData);
         const icsFilename = generateICSFilename(`Appointment-${service.service_name}`);
@@ -761,6 +787,7 @@ export const approveAppointmentRequest = withAuth(async (
             technicianName: `${assignedUser.first_name} ${assignedUser.last_name}`,
             technicianEmail: assignedUser.email || '',
             technicianPhone: assignedUser.phone || '',
+            onlineMeetingUrl: onlineMeetingUrl || undefined,
             calendarLink: calendarLink,
             cancellationPolicy: 'Please cancel at least 24 hours in advance.',
             minimumNoticeHours: 24,
@@ -796,6 +823,7 @@ export const approveAppointmentRequest = withAuth(async (
             duration: request.requested_duration,
             clientName,
             description: request.description || '',
+            onlineMeetingUrl: onlineMeetingUrl || undefined,
             calendarLink: calendarLink,
             contactEmail: tenantSettings.contactEmail,
             contactPhone: tenantSettings.contactPhone
