@@ -1481,10 +1481,10 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                     type="button"
                     variant="link"
                     className="h-auto p-0"
-                    onClick={() => window.open('https://learn.microsoft.com/en-us/graph/cloud-communication-online-meeting-application-access-policy', '_blank', 'noopener,noreferrer')}
+                    onClick={() => window.open('/docs/integrations/teams-meetings-setup.md', '_blank', 'noopener,noreferrer')}
                   >
                     {t('availabilitySettings.teamsMeetings.prerequisites.link', {
-                      defaultValue: 'Open Microsoft setup guidance',
+                      defaultValue: 'Open Teams meeting setup runbook',
                     })}
                   </Button>
                 </AlertDescription>

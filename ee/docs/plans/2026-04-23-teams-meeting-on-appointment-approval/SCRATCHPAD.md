@@ -145,6 +145,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-23: Completed `F025` by changing approval-email ICS generation to emit `LOCATION: Microsoft Teams Meeting`, `URL: <join link>`, and a `Join Teams Meeting: ...` description line only when a Teams meeting was created.
 - 2026-04-23: Completed `F023` by updating the source-of-truth appointment email templates plus a new re-upsert migration so both approved-client and assigned-technician emails render a conditional `Join Teams Meeting` block when `onlineMeetingUrl` is populated.
 - 2026-04-23: Completed `F026` by adding the new Teams UI keys to English locale files, backfilling the same keys across shipped human locales to satisfy the translation validator, and regenerating pseudo-locales.
+- 2026-04-23: Completed `F027` by authoring the Azure admin runbook at `docs/integrations/teams-meetings-setup.md`, adding a browser-served copy under `server/public/docs/...`, and repointing the Availability Settings banner link to that runbook.
 
 ## Working notes
 
@@ -161,6 +162,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - The previous ICS behavior always included a client-portal URL and tenant-name location. Teams-meeting acceptance criteria required narrowing that behavior so URL/location are only emitted for actual online meetings.
 - Email template updates follow the repo’s source-of-truth pattern: modify `server/migrations/utils/templates/email/appointments/*.cjs` and add a migration that re-upserts existing DB rows, rather than editing seeded SQL or relying on future installs only.
 - Translation validator enforces new keys across all shipped human locales (`de/es/fr/it/nl/pl/pt`) as well as pseudo locales. Adding English-only keys is not enough to make `node scripts/validate-translations.cjs` pass.
+- Repo docs under `docs/` are not automatically browser-accessible from the MSP UI. For in-app documentation links, a static copy under `server/public/...` is needed unless a dedicated docs route already exists.
 - Approval flow nuance: when the approver keeps the originally requested time, `requested_date`/`requested_time` must be converted from the requester's local wall clock via `fromZonedTime(...)`; only explicit `final_date`/`final_time` values sent from the UI are already normalized to UTC strings.
 - Runbook command used for validation so far: `node -c server/migrations/20260423130000_add_online_meeting_columns_to_appointment_requests.cjs`
 - Additional validation command: `node -c ee/server/migrations/20260423131000_add_default_meeting_organizer_to_teams_integrations.cjs`

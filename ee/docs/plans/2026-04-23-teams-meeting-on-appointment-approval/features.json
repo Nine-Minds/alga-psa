@@ -158,7 +158,7 @@
   {
     "id": "F027",
     "description": "Azure admin runbook authored at docs/integrations/teams-meetings-setup.md describing required app permission and Application Access Policy.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Phase 3"]
   },
   {
