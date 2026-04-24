@@ -1093,13 +1093,14 @@ export const updateAppointmentRequestDateTime = withAuth(async (
         throw new Error('Appointment request not found');
       }
 
-      if (request.status !== 'pending') {
+      if (!['pending', 'approved'].includes(request.status)) {
         throw new Error(`Cannot update request with status: ${request.status}`);
       }
 
       const now = new Date();
       const effectiveTimezone = validatedData.new_timezone ?? request.requester_timezone ?? 'UTC';
       const effectiveDuration = validatedData.new_duration ?? request.requested_duration;
+      let teamsMeetingWarning: string | undefined;
       const updateData: any = {
         requested_date: validatedData.new_date,
         requested_time: validatedData.new_time,
@@ -1122,12 +1123,19 @@ export const updateAppointmentRequestDateTime = withAuth(async (
       // Keep the linked schedule entry in sync with the new local wall-clock.
       // new_date/new_time are the user's naive local time in effectiveTimezone;
       // schedule_entries.scheduled_start must be the corresponding UTC instant.
+      const scheduledStart = fromZonedTime(
+        `${validatedData.new_date}T${validatedData.new_time}:00`,
+        effectiveTimezone
+      );
+      const scheduledEnd = new Date(scheduledStart.getTime() + effectiveDuration * 60000);
+
       if (request.schedule_entry_id) {
-        const scheduledStart = fromZonedTime(
-          `${validatedData.new_date}T${validatedData.new_time}:00`,
-          effectiveTimezone
-        );
-        const scheduledEnd = new Date(scheduledStart.getTime() + effectiveDuration * 60000);
+        const previousScheduleEntry = await trx('schedule_entries')
+          .where({
+            entry_id: request.schedule_entry_id,
+            tenant
+          })
+          .first();
 
         await trx('schedule_entries')
           .where({
@@ -1139,6 +1147,49 @@ export const updateAppointmentRequestDateTime = withAuth(async (
             scheduled_end: scheduledEnd.toISOString(),
             updated_at: now
           });
+
+        if (request.status === 'approved') {
+          const updatedScheduleEntry = await trx('schedule_entries')
+            .where({
+              entry_id: request.schedule_entry_id,
+              tenant
+            })
+            .first();
+
+          if (previousScheduleEntry && updatedScheduleEntry) {
+            try {
+              await publishEvent({
+                eventType: 'SCHEDULE_ENTRY_UPDATED',
+                payload: {
+                  tenantId: tenant,
+                  userId: user.user_id,
+                  entryId: request.schedule_entry_id,
+                  changes: {
+                    before: previousScheduleEntry,
+                    after: updatedScheduleEntry,
+                  }
+                }
+              });
+            } catch (eventError) {
+              console.error('[AppointmentRequestUpdate] Failed to publish SCHEDULE_ENTRY_UPDATED event', eventError);
+            }
+          }
+        }
+      }
+
+      if (request.online_meeting_id && request.online_meeting_provider === 'teams') {
+        const teamsMeetingService = await resolveTeamsMeetingService();
+        const updatedMeeting = await teamsMeetingService.updateTeamsMeeting({
+          tenantId: tenant,
+          meetingId: request.online_meeting_id,
+          startDateTime: scheduledStart.toISOString(),
+          endDateTime: scheduledEnd.toISOString(),
+          appointmentRequestId: request.appointment_request_id,
+        });
+
+        if (!updatedMeeting) {
+          teamsMeetingWarning = 'Appointment updated, but the Microsoft Teams meeting could not be rescheduled. Please update it manually in Teams.';
+        }
       }
 
       // Get updated request
@@ -1149,10 +1200,17 @@ export const updateAppointmentRequestDateTime = withAuth(async (
         })
         .first();
 
-      return updatedRequest;
+      return {
+        updatedRequest,
+        teamsMeetingWarning,
+      };
     });
 
-    return { success: true, data: result as IAppointmentRequest };
+    return {
+      success: true,
+      data: result.updatedRequest as IAppointmentRequest,
+      teamsMeetingWarning: result.teamsMeetingWarning,
+    };
   } catch (error) {
     console.error('Error updating appointment request date/time:', error);
     const message = error instanceof Error ? error.message : 'Failed to update appointment request';

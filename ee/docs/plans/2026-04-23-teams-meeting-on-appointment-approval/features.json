@@ -62,7 +62,7 @@
   {
     "id": "F011",
     "description": "updateAppointmentRequestDateTime invokes updateTeamsMeeting when online_meeting_id is present; failure becomes teamsMeetingWarning.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-10"]
   },
   {
