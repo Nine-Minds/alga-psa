@@ -86,7 +86,7 @@
   {
     "id": "F015",
     "description": "EntryPopup pending-branch approval form renders the same toggle with the same visibility rules.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-12"]
   },
   {

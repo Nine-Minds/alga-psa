@@ -26,6 +26,7 @@ import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import {
   approveAppointmentRequest as approveRequest,
   declineAppointmentRequest as declineRequest,
+  getTeamsMeetingCapability,
   getAppointmentRequestById,
   IAppointmentRequest
 } from '@alga-psa/scheduling/actions';
@@ -134,6 +135,8 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   const [showDeclineForm, setShowDeclineForm] = useState(false);
   const [declineReason, setDeclineReason] = useState('');
   const [assignedTechnicianId, setAssignedTechnicianId] = useState<string>('');
+  const [generateTeamsMeeting, setGenerateTeamsMeeting] = useState(true);
+  const [teamsMeetingCapability, setTeamsMeetingCapability] = useState<{ available: boolean; reason?: string } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const { t } = useTranslation('msp/schedule');
   const { formatDate } = useFormatters();
@@ -164,14 +167,22 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
 
     // Detect if this is an appointment request and fetch its data
     useEffect(() => {
-      const fetchAppointmentRequest = async () => {
-        if (event && event.work_item_type === 'appointment_request' && event.work_item_id) {
-          setIsAppointmentRequest(true);
+    const fetchAppointmentRequest = async () => {
+      if (event && event.work_item_type === 'appointment_request' && event.work_item_id) {
+        setIsAppointmentRequest(true);
 
-          // Fetch the appointment request data to check its status
-          const result = await getAppointmentRequestById(event.work_item_id);
-          if (result.success && result.data) {
-            setAppointmentRequestData(result.data);
+        // Fetch the appointment request data to check its status
+        const result = await getAppointmentRequestById(event.work_item_id);
+        try {
+          const capability = await getTeamsMeetingCapability();
+          setTeamsMeetingCapability(capability);
+        } catch (error) {
+          console.error('Failed to load Teams meeting capability:', error);
+          setTeamsMeetingCapability({ available: false, reason: 'not_configured' });
+        }
+        if (result.success && result.data) {
+          setAppointmentRequestData(result.data);
+          setGenerateTeamsMeeting(true);
 
             // Pre-fill assigned technician if one exists
             if (event.assigned_user_ids && event.assigned_user_ids.length > 0) {
@@ -193,15 +204,16 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                 }));
               }
             }
-          } else {
-            console.error('Failed to fetch appointment request:', result.error);
-            setAppointmentRequestData(null);
-          }
         } else {
-          setIsAppointmentRequest(false);
+          console.error('Failed to fetch appointment request:', result.error);
           setAppointmentRequestData(null);
         }
-      };
+      } else {
+        setIsAppointmentRequest(false);
+        setAppointmentRequestData(null);
+        setTeamsMeetingCapability(null);
+      }
+    };
 
       fetchAppointmentRequest();
     }, [event]);
@@ -496,7 +508,8 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         appointment_request_id: event.work_item_id,
         assigned_user_id: assignedTechnicianId,
         final_date: startDate.toISOString().split('T')[0],
-        final_time: startDate.toTimeString().slice(0, 5)
+        final_time: startDate.toTimeString().slice(0, 5),
+        generate_teams_meeting: Boolean(teamsMeetingCapability?.available && generateTeamsMeeting),
       });
 
       if (result.success) {
@@ -921,6 +934,19 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                     buttonWidth="full"
                   />
                 </div>
+
+                {teamsMeetingCapability?.available && (
+                  <div>
+                    <Switch
+                      id="generate-teams-meeting-entry-popup"
+                      checked={generateTeamsMeeting}
+                      onCheckedChange={setGenerateTeamsMeeting}
+                      label={t('entryPopup.appointmentRequest.generateTeamsMeeting', {
+                        defaultValue: 'Generate Microsoft Teams meeting link',
+                      })}
+                    />
+                  </div>
+                )}
 
                 <div>
                   <Label>
