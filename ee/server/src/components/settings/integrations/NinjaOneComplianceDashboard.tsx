@@ -14,6 +14,7 @@ import React, { useEffect, useRef, useState, useTransition } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   Monitor,
   MonitorOff,
@@ -99,6 +100,7 @@ interface NinjaOneComplianceDashboardProps {
 }
 
 const NinjaOneComplianceDashboard: React.FC<NinjaOneComplianceDashboardProps> = ({ refreshKey }) => {
+  const { t } = useTranslation('msp/integrations');
   const [summary, setSummary] = useState<ComplianceSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -111,7 +113,7 @@ const NinjaOneComplianceDashboard: React.FC<NinjaOneComplianceDashboardProps> = 
     try {
       const result = await getRmmComplianceSummary();
       if (!result.success || result.error) {
-        setError(result.error ?? 'Failed to load compliance summary');
+        setError(result.error ?? t('integrations.rmm.ninjaOne.compliance.summaryError'));
         setSummary(null);
       } else if (result.summary) {
         setSummary(result.summary);
@@ -119,7 +121,7 @@ const NinjaOneComplianceDashboard: React.FC<NinjaOneComplianceDashboardProps> = 
         setSummary(null);
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load compliance summary';
+      const message = err instanceof Error ? err.message : t('integrations.rmm.ninjaOne.compliance.summaryError');
       setError(message);
       setSummary(null);
     } finally {
@@ -171,12 +173,12 @@ const NinjaOneComplianceDashboard: React.FC<NinjaOneComplianceDashboardProps> = 
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Fleet Compliance</CardTitle>
+          <CardTitle className="text-base">{t('integrations.rmm.ninjaOne.compliance.title')}</CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center py-8">
           <LoadingIndicator
             spinnerProps={{ size: 'sm' }}
-            text="Loading compliance data..."
+            text={t('integrations.rmm.ninjaOne.compliance.loading')}
           />
         </CardContent>
       </Card>
@@ -187,12 +189,12 @@ const NinjaOneComplianceDashboard: React.FC<NinjaOneComplianceDashboardProps> = 
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Fleet Compliance</CardTitle>
+          <CardTitle className="text-base">{t('integrations.rmm.ninjaOne.compliance.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <AlertTriangle className="h-4 w-4 text-amber-500" />
-            {error || 'No compliance data available'}
+            {error || t('integrations.rmm.ninjaOne.compliance.noData')}
           </div>
           <Button
             id="ninjaone-compliance-retry-btn"
@@ -201,7 +203,7 @@ const NinjaOneComplianceDashboard: React.FC<NinjaOneComplianceDashboardProps> = 
             className="mt-3"
             onClick={fetchSummary}
           >
-            Retry
+            {t('integrations.rmm.ninjaOne.compliance.actions.retry')}
           </Button>
         </CardContent>
       </Card>
@@ -222,13 +224,13 @@ const NinjaOneComplianceDashboard: React.FC<NinjaOneComplianceDashboardProps> = 
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-base flex items-center gap-2">
-              Fleet Compliance
+              {t('integrations.rmm.ninjaOne.compliance.title')}
               {isHealthy && (
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
               )}
             </CardTitle>
             <CardDescription className="text-xs mt-1">
-              RMM-managed device health overview
+              {t('integrations.rmm.ninjaOne.compliance.description')}
             </CardDescription>
           </div>
           <Button
@@ -247,14 +249,14 @@ const NinjaOneComplianceDashboard: React.FC<NinjaOneComplianceDashboardProps> = 
         <div className="grid grid-cols-2 gap-3">
           <MetricCard
             icon={Monitor}
-            label="Devices Online"
+            label={t('integrations.rmm.ninjaOne.compliance.metrics.devicesOnline')}
             value={summary.devicesOnline}
             total={summary.totalDevices}
             variant={onlinePercentage >= 90 ? 'success' : onlinePercentage >= 70 ? 'warning' : 'danger'}
           />
           <MetricCard
             icon={MonitorOff}
-            label="Devices Offline"
+            label={t('integrations.rmm.ninjaOne.compliance.metrics.devicesOffline')}
             value={summary.devicesOffline}
             variant={summary.devicesOffline === 0 ? 'success' : summary.devicesOffline < 5 ? 'warning' : 'danger'}
           />
@@ -264,13 +266,13 @@ const NinjaOneComplianceDashboard: React.FC<NinjaOneComplianceDashboardProps> = 
         <div className="grid grid-cols-2 gap-3">
           <MetricCard
             icon={ShieldAlert}
-            label="Patches Pending"
+            label={t('integrations.rmm.ninjaOne.compliance.metrics.patchesPending')}
             value={summary.patchesPending}
             variant={summary.patchesPending === 0 ? 'success' : summary.patchesPending < 10 ? 'warning' : 'danger'}
           />
           <MetricCard
             icon={summary.patchesFailed === 0 ? ShieldCheck : XCircle}
-            label="Patches Failed"
+            label={t('integrations.rmm.ninjaOne.compliance.metrics.patchesFailed')}
             value={summary.patchesFailed}
             variant={summary.patchesFailed === 0 ? 'success' : 'danger'}
           />
@@ -279,7 +281,7 @@ const NinjaOneComplianceDashboard: React.FC<NinjaOneComplianceDashboardProps> = 
         {/* Alerts */}
         <MetricCard
           icon={AlertTriangle}
-          label="Devices With Alerts"
+          label={t('integrations.rmm.ninjaOne.compliance.metrics.devicesWithAlerts')}
           value={summary.devicesWithAlerts}
           variant={summary.devicesWithAlerts === 0 ? 'success' : summary.devicesWithAlerts < 5 ? 'warning' : 'danger'}
         />
@@ -297,10 +299,10 @@ const NinjaOneComplianceDashboard: React.FC<NinjaOneComplianceDashboardProps> = 
             {isSyncingPatches ? (
               <>
                 <RefreshCw className="mr-1 h-3 w-3 animate-spin" />
-                Syncing...
+                {t('integrations.rmm.ninjaOne.compliance.actions.syncing')}
               </>
             ) : (
-              'Sync Patches'
+              t('integrations.rmm.ninjaOne.compliance.actions.syncPatches')
             )}
           </Button>
           <Button
@@ -314,10 +316,10 @@ const NinjaOneComplianceDashboard: React.FC<NinjaOneComplianceDashboardProps> = 
             {isSyncingSoftware ? (
               <>
                 <RefreshCw className="mr-1 h-3 w-3 animate-spin" />
-                Syncing...
+                {t('integrations.rmm.ninjaOne.compliance.actions.syncing')}
               </>
             ) : (
-              'Sync Software'
+              t('integrations.rmm.ninjaOne.compliance.actions.syncSoftware')
             )}
           </Button>
         </div>

@@ -255,5 +255,266 @@
       "load": "Impossibile caricare i valori predefiniti ticket",
       "delete": "Impossibile eliminare i valori predefiniti ticket"
     }
+  },
+  "policyManagement": {
+    "resourceSections": {
+      "tickets": "Ticket",
+      "documents": "Documenti",
+      "time": "Tempo",
+      "projects": "Progetti",
+      "assets": "Asset",
+      "billing": "Fatturazione"
+    },
+    "targetTypes": {
+      "role": "Ruolo",
+      "team": "Team",
+      "user": "Utente",
+      "apiKey": "Chiave API"
+    },
+    "templateSummaries": {
+      "own": "record di proprietà del principal",
+      "assigned": "record assegnati al principal",
+      "managed": "record di proprietà di utenti gestiti",
+      "ownOrAssigned": "record di proprietà o assegnati al principal",
+      "ownOrManaged": "record di proprietà del principal o di utenti gestiti",
+      "sameClient": "record nello stesso ambito cliente",
+      "clientPortfolio": "record per il portfolio cliente del principal",
+      "selectedClients": "record negli ambiti cliente selezionati",
+      "sameTeam": "record di proprietà dello stesso team",
+      "selectedBoards": "record nelle bacheche selezionate"
+    },
+    "constraintSummaries": {
+      "notSelfApprover": "blocca l'auto-approvazione",
+      "clientVisibleOnly": "richiede record visibili al cliente",
+      "hideSensitiveFields": "redige i campi sensibili"
+    },
+    "dates": {
+      "unknown": "Sconosciuto"
+    },
+    "ruleSummary": {
+      "base": "Limita {{resourceType}} {{action}} a {{scope}}.",
+      "withConstraint": "Limita {{resourceType}} {{action}} a {{scope}}; {{constraint}}."
+    },
+    "upsell": {
+      "title": "Pacchetti di autorizzazione",
+      "description": "La gestione avanzata dei pacchetti di autorizzazione è disponibile nel piano Premium. Esegui l'upgrade per gestire pacchetti di restrizione riutilizzabili."
+    },
+    "hero": {
+      "badge": "Workspace Premium",
+      "title": "Pacchetti di autorizzazione",
+      "subtitle": "Gestisci la restrizione degli accessi Premium con revisioni in bozza, assegnazioni con ambito e simulazione sicura da un unico centro di controllo.",
+      "newBundle": "Nuovo pacchetto",
+      "addStarters": "Aggiungi pacchetti iniziali",
+      "addingStarters": "Aggiunta pacchetti iniziali in corso..."
+    },
+    "metrics": {
+      "activeBundles": {
+        "title": "Pacchetti attivi",
+        "subtitle": "Pacchetti di restrizione riutilizzabili attualmente disponibili per l'assegnazione"
+      },
+      "activeAssignments": {
+        "title": "Assegnazioni attive",
+        "subtitle": "Rollout attivi per ruolo, team, utente e chiave API"
+      },
+      "starterBundles": {
+        "title": "Pacchetti iniziali",
+        "subtitle": "Preset relationship-first pronti da adattare"
+      },
+      "archivedBundles": {
+        "title": "Pacchetti archiviati",
+        "subtitle": "Pacchetti ritirati conservati per audit e riutilizzo"
+      }
+    },
+    "library": {
+      "eyebrow": "Libreria",
+      "title": "Libreria dei pacchetti di autorizzazione",
+      "description": "Sfoglia lo stato dei pacchetti, gestisci le modifiche del ciclo di vita e apri uno workspace dedicato per un pacchetto alla volta.",
+      "searchPlaceholder": "Cerca pacchetti per nome o descrizione",
+      "showArchived": "Mostra archiviati",
+      "columns": {
+        "bundle": "Pacchetto",
+        "status": "Stato",
+        "type": "Tipo",
+        "assignments": "Assegnazioni",
+        "updated": "Aggiornato",
+        "actions": "Azioni"
+      },
+      "statusLabels": {
+        "active": "attivo",
+        "archived": "archiviato"
+      },
+      "typeLabels": {
+        "system": "Sistema",
+        "custom": "Personalizzato"
+      },
+      "badges": {
+        "starter": "Iniziale"
+      },
+      "descriptions": {
+        "systemStarter": "Pacchetto iniziale di sistema.",
+        "customBundle": "Pacchetto di restrizione personalizzato per assegnazioni a ruolo, team, utente o chiave API."
+      },
+      "effectiveSummary": "Riepilogo effettivo: pacchetto {{status}} con {{count}} assegnazione/i attiva/e.",
+      "empty": "Nessun pacchetto di autorizzazione trovato.",
+      "loading": "Caricamento pacchetti di autorizzazione...",
+      "actions": {
+        "openEditor": "Apri editor",
+        "assignments": "Assegnazioni",
+        "simulator": "Simulatore",
+        "clone": "Clona",
+        "archive": "Archivia"
+      }
+    },
+    "workspace": {
+      "backToLibrary": "Torna alla libreria",
+      "updatedWithAssignments": "Aggiornato {{date}} · {{count}} assegnazione/i attiva/e",
+      "eyebrow": "Workspace del pacchetto",
+      "fallbackBundleName": "Pacchetto selezionato",
+      "fallbackDescription": "Utilizza l'editor di bozze, il gestore delle assegnazioni e il simulatore per distribuire modifiche di restrizione sicure.",
+      "tabs": {
+        "editor": "Editor di bozze",
+        "assignments": "Assegnazioni",
+        "simulator": "Simulatore"
+      }
+    },
+    "editor": {
+      "header": "Editor del pacchetto",
+      "editingDraftPrefix": "Modifica della revisione di bozza per ",
+      "editingDraftSuffix": ". Le modifiche restano in bozza fino alla pubblicazione.",
+      "viewingPublishedPrefix": "Visualizzazione della revisione pubblicata per ",
+      "viewingPublishedSuffix": ". Al momento non esiste una revisione di bozza attiva.",
+      "publishDraft": "Pubblica bozza",
+      "publishing": "Pubblicazione in corso...",
+      "publishedBadge": "Pubblicato",
+      "loading": "Caricamento editor di bozze...",
+      "revisionSummary": "Riepilogo della revisione: {{summary}}",
+      "ruleCount": "{{count}} regola/e {{revisionType}}",
+      "revisionType": {
+        "draft": "bozza",
+        "published": "pubblicata"
+      },
+      "emptyRules": "Ancora nessuna regola {{revisionType}} per {{resource}}.",
+      "ruleForm": {
+        "addDraftTitle": "Aggiungi regola di bozza",
+        "editDraftTitle": "Modifica regola di bozza",
+        "createDraftTitle": "Crea regola di bozza",
+        "editPublishedTitle": "Modifica regola pubblicata come bozza",
+        "helperEditPublished": "Il salvataggio creerà una nuova revisione di bozza con le modifiche a questa regola pubblicata.",
+        "helperCreateDraft": "Il salvataggio creerà una nuova revisione di bozza per questo pacchetto.",
+        "reset": "Reimposta",
+        "action": "Azione",
+        "template": "Modello",
+        "constraint": "Vincolo (facoltativo)",
+        "constraintNone": "nessuno",
+        "saveDraftRule": "Salva regola di bozza",
+        "addDraftRule": "Aggiungi regola di bozza",
+        "saveAsDraftChange": "Salva come modifica di bozza",
+        "createDraftRule": "Crea regola di bozza"
+      },
+      "rule": {
+        "edit": "Modifica",
+        "remove": "Rimuovi",
+        "removeAsDraft": "Rimuovi come modifica di bozza",
+        "removeDraftTooltip": "Rimuovi questa regola di bozza.",
+        "removePublishedTooltip": "Crea una nuova revisione di bozza che rimuove questa regola pubblicata.",
+        "selectedClientScopes": "Ambiti cliente selezionati",
+        "selectedBoardScopes": "Ambiti bacheca selezionati",
+        "redactedFields": "Campi redatti"
+      },
+      "scopes": {
+        "clientTitle": "Ambiti cliente selezionati",
+        "boardTitle": "Ambiti bacheca selezionati",
+        "selectClient": "Seleziona cliente",
+        "selectBoard": "Seleziona bacheca",
+        "addClientScope": "Aggiungi ambito cliente",
+        "addBoardScope": "Aggiungi ambito bacheca",
+        "noClientScopes": "Nessun ambito cliente ancora aggiunto.",
+        "noBoardScopes": "Nessun ambito bacheca ancora aggiunto.",
+        "remove": "Rimuovi"
+      },
+      "redaction": {
+        "label": "Campi redatti",
+        "placeholder": "internal_cost, margin",
+        "helper": "Nomi dei campi separati da virgole da redigere quando questa regola consente l'accesso."
+      }
+    },
+    "assignments": {
+      "header": "Gestore delle assegnazioni",
+      "description": "Visualizza e gestisci i target di ruolo, team, utente e chiave API attualmente interessati da questo pacchetto.",
+      "loading": "Caricamento assegnazioni...",
+      "addAssignment": "Aggiungi assegnazione",
+      "selectTargetPlaceholder": "Seleziona {{target}}",
+      "addButton": "Aggiungi assegnazione",
+      "adding": "Aggiunta in corso...",
+      "empty": "Ancora nessuna assegnazione per questo pacchetto.",
+      "groupEmpty": "Nessuna assegnazione {{target}}.",
+      "statusActions": {
+        "disable": "Disabilita",
+        "enable": "Abilita",
+        "saving": "Salvataggio..."
+      },
+      "statusLabels": {
+        "active": "attiva",
+        "disabled": "disabilitata"
+      }
+    },
+    "simulator": {
+      "header": "Simulatore di accesso",
+      "description": "Simula il comportamento del pacchetto in bozza rispetto a quello pubblicato con un principal reale e un record esistente.",
+      "inputTitle": "Input della simulazione",
+      "resource": "Risorsa",
+      "action": "Azione",
+      "principal": "Principal",
+      "record": "Record",
+      "useSynthetic": "Usa scenario record sintetico",
+      "syntheticOwnerPlaceholder": "ID utente proprietario (facoltativo)",
+      "syntheticClientPlaceholder": "ID cliente (facoltativo)",
+      "syntheticBoardPlaceholder": "ID bacheca (facoltativo)",
+      "clientVisible": "Visibile al cliente",
+      "run": "Esegui simulazione",
+      "running": "Esecuzione simulazione in corso...",
+      "resultTitle": "Risultato della simulazione",
+      "draftRevision": "Revisione in bozza",
+      "publishedRevision": "Revisione pubblicata",
+      "allowed": "Consentito",
+      "denied": "Negato",
+      "empty": "Esegui una simulazione per confrontare il comportamento in bozza e pubblicato."
+    },
+    "createDialog": {
+      "title": "Crea pacchetto di autorizzazione",
+      "cancel": "Annulla",
+      "create": "Crea pacchetto",
+      "creating": "Creazione in corso...",
+      "nameLabel": "Nome",
+      "namePlaceholder": "Finance Reviewer West",
+      "descriptionLabel": "Descrizione",
+      "descriptionPlaceholder": "Pacchetto di restrizione riutilizzabile per un team, gruppo di clienti o workflow specifico."
+    },
+    "clone": {
+      "copySuffix": "{{name}} Copia"
+    },
+    "errors": {
+      "loadBundles": "Impossibile caricare i pacchetti.",
+      "loadEditor": "Impossibile caricare l'editor del pacchetto.",
+      "loadAssignments": "Impossibile caricare le assegnazioni del pacchetto.",
+      "cloneBundle": "Impossibile clonare il pacchetto.",
+      "archiveBundle": "Impossibile archiviare il pacchetto.",
+      "seedStarters": "Impossibile inizializzare i pacchetti iniziali.",
+      "bundleNameRequired": "Il nome del pacchetto è obbligatorio.",
+      "createBundle": "Impossibile creare il pacchetto.",
+      "publishDraft": "Impossibile pubblicare la bozza del pacchetto.",
+      "selectTemplate": "Seleziona un modello prima di salvare una regola.",
+      "selectClientRequired": "Aggiungi almeno un cliente selezionato prima di salvare questa regola.",
+      "selectBoardRequired": "Aggiungi almeno una bacheca selezionata prima di salvare questa regola.",
+      "redactedFieldRequired": "Inserisci almeno un campo redatto prima di salvare questa regola.",
+      "saveRule": "Impossibile salvare la regola di bozza.",
+      "removeRule": "Impossibile rimuovere la regola.",
+      "selectTarget": "Seleziona un target prima di aggiungere un'assegnazione.",
+      "addAssignment": "Impossibile aggiungere l'assegnazione.",
+      "updateAssignmentStatus": "Impossibile aggiornare lo stato dell'assegnazione.",
+      "selectPrincipal": "Seleziona un principal prima di eseguire la simulazione.",
+      "selectRecord": "Seleziona un record prima di eseguire la simulazione.",
+      "runSimulation": "Impossibile eseguire la simulazione."
+    }
   }
 }

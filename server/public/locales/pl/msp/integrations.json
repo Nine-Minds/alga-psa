@@ -345,6 +345,322 @@
         }
       }
     },
+    "entra": {
+      "settings": {
+        "actions": {
+          "disconnect": "Rozłącz",
+          "reconnect": "Połącz ponownie",
+          "reconnecting": "Ponowne łączenie…",
+          "refresh": "Odśwież",
+          "resetFieldSync": "Resetuj",
+          "reviewMappings": "Przejrzyj mapowania",
+          "reviewRemap": "Przejrzyj / Zmapuj ponownie",
+          "hideReviewRemap": "Ukryj Przejrzyj / Zmapuj ponownie",
+          "runDiscovery": "Uruchom wykrywanie",
+          "runDiscoveryAgain": "Uruchom wykrywanie ponownie",
+          "runDiscoveryRunning": "Uruchamianie wykrywania…",
+          "runInitialSync": "Uruchom początkową synchronizację",
+          "runInitialSyncRunning": "Uruchamianie początkowej synchronizacji…",
+          "saveFieldSync": "Zapisz ustawienia synchronizacji pól",
+          "savingFieldSync": "Zapisywanie…",
+          "syncAll": "Synchronizuj wszystkie tenanty teraz",
+          "syncAllStarting": "Uruchamianie…"
+        },
+        "badges": {
+          "enterprise": "Enterprise",
+          "reviewBeforeInitialSync": "Przejrzyj przed początkową synchronizacją"
+        },
+        "connection": {
+          "connectingSuffix": " (Łączenie...)",
+          "details": "Szczegóły połączenia",
+          "directCredentialSourceLabel": "Źródło poświadczeń:",
+          "directTenantDefault": "common (multi-tenant)",
+          "directTenantLabel": "Tenant Microsoft:",
+          "cippServerLabel": "Serwer CIPP:",
+          "notAvailable": "Niedostępne",
+          "notConfigured": "Nie skonfigurowano",
+          "notConnectedStatus": "not_connected",
+          "optionsTitle": "Opcje połączenia",
+          "promptDetails": "Połącz Entra, aby wypełnić szczegóły dostawcy."
+        },
+        "currentStep": {
+          "connect": {
+            "guidance": "Wybierz opcję połączenia, aby kontynuować wdrażanie.",
+            "title": "Krok 1: Połącz"
+          },
+          "connectionsBelow": "Opcje połączenia pojawiają się poniżej.",
+          "discover": {
+            "guidance": "Uruchom wykrywanie, aby załadować zarządzane tenanty Entra przed mapowaniem.",
+            "title": "Krok 2: Wykryj"
+          },
+          "label": "Bieżący krok",
+          "map": {
+            "guidance": "Potwierdź lub dostosuj mapowania tenantów, aby odblokować początkową synchronizację.",
+            "title": "Krok 3: Mapuj"
+          },
+          "sync": {
+            "guidance": "Rozpocznij pierwsze uruchomienie synchronizacji dla potwierdzonych mapowań.",
+            "title": "Krok 4: Początkowa synchronizacja"
+          }
+        },
+        "description": "Skonfiguruj dostęp Entra na poziomie partnera, wykryj zarządzane tenanty, zmapuj je do klientów i uruchamiaj przepływy synchronizacji.",
+        "disabled": {
+          "description": "Interfejs integracji Entra jest obecnie wyłączony dla tego tenanta.",
+          "title": "Integracja Microsoft Entra"
+        },
+        "discovery": {
+          "completed": "Wykrywanie ukończone. Wykryto {{count}} tenantów.",
+          "completedOne": "Wykrywanie ukończone. Wykryto {{count}} tenant.",
+          "failed": "Nie udało się uruchomić wykrywania tenantów."
+        },
+        "errors": {
+          "loadStatus": "Nie można załadować statusu połączenia Entra.",
+          "unknown": "Nieznany błąd"
+        },
+        "fieldSync": {
+          "description": "Wybierz, które pola profilu Entra mogą nadpisywać lokalne pola kontaktów podczas synchronizacji.",
+          "feedback": {
+            "saveFailed": "Nie udało się zapisać ustawień synchronizacji pól.",
+            "saved": "Zapisano ustawienia synchronizacji pól."
+          },
+          "options": {
+            "displayName": {
+              "description": "Zezwól, aby nazwa wyświetlana Entra nadpisywała pełne imię kontaktu w powiązanych kontaktach.",
+              "label": "Nazwa wyświetlana"
+            },
+            "email": {
+              "description": "Zezwól, aby e-mail/UPN Entra nadpisywał e-mail kontaktu w powiązanych kontaktach.",
+              "label": "E-mail"
+            },
+            "phone": {
+              "description": "Zezwól, aby wartości telefonu Entra nadpisywały numer telefonu kontaktu w powiązanych kontaktach.",
+              "label": "Telefon"
+            },
+            "role": {
+              "description": "Zezwól, aby tytuł stanowiska Entra nadpisywał rolę kontaktu w powiązanych kontaktach.",
+              "label": "Rola"
+            },
+            "upn": {
+              "description": "Zezwól, aby UPN Entra nadpisywał zapisaną nazwę principal Entra w powiązanych kontaktach.",
+              "label": "UPN"
+            }
+          },
+          "title": "Ustawienia synchronizacji pól"
+        },
+        "guidedStep": {
+          "current": "bieżący",
+          "complete": "ukończony",
+          "locked": "zablokowany",
+          "stepLabel": "Krok {{number}}",
+          "thisIsCurrent": "To jest Twój bieżący krok wdrażania."
+        },
+        "initialSync": {
+          "failed": "Nie udało się rozpocząć początkowej synchronizacji Entra.",
+          "started": "Rozpoczęto początkową synchronizację. ID uruchomienia: {{runId}}",
+          "startedNoId": "Żądanie rozpoczęcia początkowej synchronizacji zaakceptowane."
+        },
+        "maintenance": {
+          "description": "Początkowa konfiguracja została ukończona. Skoncentruj się tutaj na operacjach synchronizacji, kontrolach stanu i przeglądach utrzymania.",
+          "healthDescription": "Przejrzyj stan połączenia, uruchamiaj operacje utrzymania i monitoruj aktywność synchronizacji.",
+          "healthTitle": "Podsumowanie stanu",
+          "title": "Tryb bieżących operacji"
+        },
+        "mapping": {
+          "description": "Przejrzyj sugerowane dopasowania, wybierz właściwego klienta dla każdego tenanta i potwierdź mapowania przed początkową synchronizacją.",
+          "needsReviewLabel": "Wymaga przeglądu:",
+          "savedLabel": "Zapisano:",
+          "selectedLabel": "Wybrane:",
+          "skippedLabel": "Pominięto:",
+          "stepLabel": "Krok 3",
+          "title": "Mapuj tenanty do klientów"
+        },
+        "onboarding": {
+          "description": "Ukończ każdy krok wdrażania po kolei: połącz, wykryj, mapuj, a następnie uruchom pierwszą synchronizację.",
+          "title": "Tryb konfiguracji"
+        },
+        "ongoing": {
+          "description": "Użyj tych kontrolek do ręcznych operacji synchronizacji po ukończeniu kroków wdrażania.",
+          "title": "Bieżące operacje"
+        },
+        "overview": {
+          "connectionLabel": "Połączenie:",
+          "connectionTypeLabel": "Typ połączenia:",
+          "label": "Przegląd",
+          "mappedTenantsLabel": "Zmapowane tenanty:",
+          "nextSyncIntervalEvery": "Co {{minutes}} minut",
+          "nextSyncIntervalLabel": "Następny interwał synchronizacji:"
+        },
+        "skipped": {
+          "empty": "Obecnie żadne tenanty nie są oznaczone jako pominięte.",
+          "noPrimaryDomain": "Brak domeny podstawowej",
+          "remap": "Zmapuj ponownie",
+          "title": "Pominięte tenanty"
+        },
+        "status": {
+          "connectionHealth": "Stan połączenia",
+          "label": "Status"
+        },
+        "syncAll": {
+          "failed": "Nie udało się rozpocząć pełnej synchronizacji Entra.",
+          "started": "Rozpoczęto synchronizację. ID uruchomienia: {{runId}}",
+          "startedNoId": "Żądanie rozpoczęcia synchronizacji zaakceptowane."
+        },
+        "title": "Integracja Microsoft Entra",
+        "validation": {
+          "label": "Walidacja i wykrywanie",
+          "lastDiscoveryLabel": "Ostatnie wykrywanie:",
+          "lastValidatedLabel": "Ostatnio zwalidowano:",
+          "neverFormatted": "Nigdy",
+          "noneValidationError": "Brak",
+          "validationErrorLabel": "Błąd walidacji:"
+        },
+        "wizard": {
+          "connect": {
+            "description": "Autoryzuj bezpośrednie uwierzytelnianie partnera Microsoft, aby połączyć ten tenant Entra.",
+            "title": "Połącz"
+          },
+          "discover": {
+            "description": "Załaduj i zachowaj zarządzane tenanty Entra dla tego tenanta MSP.",
+            "title": "Wykryj tenanty"
+          },
+          "map": {
+            "description": "Przejrzyj sugestie automatycznego dopasowywania i potwierdź mapowania.",
+            "title": "Mapuj tenanty do klientów"
+          },
+          "sync": {
+            "description": "Rozpocznij pierwsze uruchomienie synchronizacji dla potwierdzonych mapowań.",
+            "title": "Początkowa synchronizacja"
+          }
+        }
+      },
+      "tenantMapping": {
+        "actions": {
+          "confirmSelected": "Potwierdź wybrane mapowania",
+          "confirming": "Potwierdzanie…",
+          "import": "Importuj jako nowego klienta",
+          "importing": "Importowanie…",
+          "preselectExact": "Wstępnie wybierz dokładne dopasowania",
+          "refresh": "Odśwież podgląd",
+          "skip": "Pomiń",
+          "skipped": "Pominięto"
+        },
+        "columns": {
+          "actions": "Akcje",
+          "confidence": "Pewność",
+          "entraTenant": "Tenant Entra",
+          "primaryDomain": "Domena podstawowa",
+          "selectClient": "Wybierz klienta",
+          "status": "Status",
+          "suggestedClient": "Sugerowany klient"
+        },
+        "empty": "Brak wykrytych tenantów dostępnych dla podglądu mapowania.",
+        "errors": {
+          "confirmFailed": "Nie udało się potwierdzić wybranych mapowań.",
+          "importFailed": "Nie udało się zaimportować tenanta jako klienta.",
+          "loadFailed": "Nie udało się załadować podglądu mapowania tenantów.",
+          "selectAtLeastOne": "Wybierz co najmniej jednego klienta, aby potwierdzić mapowanie.",
+          "skipFailed": "Nie udało się pominąć tego mapowania tenanta."
+        },
+        "feedback": {
+          "confirmed": "Potwierdzono {{count}} mapowań.",
+          "confirmedOne": "Potwierdzono {{count}} mapowanie."
+        },
+        "noSuggestion": "Brak sugestii",
+        "picker": {
+          "placeholder": "Wybierz klienta...",
+          "unknownClient": "Nieznany klient"
+        },
+        "reasons": {
+          "exactDomain": "Dokładna domena",
+          "fuzzyName": "Przybliżona nazwa",
+          "secondaryDomain": "Domena drugorzędna"
+        },
+        "states": {
+          "autoMatched": "Automatycznie dopasowane",
+          "imported": "Zaimportowane",
+          "needsReview": "Wymaga przeglądu",
+          "skipped": "Pominięte",
+          "unmatched": "Niedopasowane"
+        },
+        "title": "Podgląd mapowania tenantów"
+      },
+      "cippDialog": {
+        "actions": {
+          "cancel": "Anuluj",
+          "connect": "Połącz",
+          "connecting": "Łączenie..."
+        },
+        "description": "Wprowadź URL swojej instancji CIPP oraz token API, aby umożliwić Alga wykrywanie i synchronizację danych Entra.",
+        "errors": {
+          "missingFields": "Zarówno Base URL, jak i token API są wymagane.",
+          "unknown": "Wystąpił nieznany błąd."
+        },
+        "fields": {
+          "apiToken": "Token API",
+          "apiTokenPlaceholder": "Wprowadź token...",
+          "baseUrl": "Bazowy URL CIPP",
+          "baseUrlPlaceholder": "https://cipp.yourdomain.com"
+        },
+        "title": "Połącz CIPP"
+      },
+      "reconciliation": {
+        "actions": {
+          "refresh": "Odśwież",
+          "resolveExisting": "Rozwiąż do istniejącego",
+          "resolveNew": "Rozwiąż do nowego"
+        },
+        "candidate": {
+          "fallback": "kandydat",
+          "label": "Kontakty kandydujące: {{count}}"
+        },
+        "contactPicker": {
+          "label": "Istniejący kontakt",
+          "placeholder": "Wybierz istniejący kontakt..."
+        },
+        "errors": {
+          "enterContactId": "Wprowadź ID kontaktu, aby rozwiązać do istniejącego kontaktu.",
+          "loadQueue": "Nie udało się załadować kolejki uzgadniania.",
+          "resolveFailed": "Nie udało się rozwiązać elementu kolejki."
+        },
+        "empty": "Żadne niejednoznaczne dopasowania nie oczekują na przegląd.",
+        "loading": "Ładowanie kolejki…",
+        "noEmailIdentity": "Brak tożsamości e-mail",
+        "queuedAt": "{{identity}} · w kolejce {{time}}",
+        "scopedToMappedClient": "Opcje istniejących kontaktów są ograniczone do tego zmapowanego klienta.",
+        "success": {
+          "resolvedExisting": "Rozwiązano element kolejki {{queueItemId}} do istniejącego kontaktu {{contactNameId}}.",
+          "resolvedNew": "Rozwiązano element kolejki {{queueItemId}} przez utworzenie kontaktu {{contactNameId}}."
+        },
+        "title": "Kolejka niejednoznacznych dopasowań"
+      },
+      "syncHistory": {
+        "actions": {
+          "hideDetails": "Ukryj szczegóły",
+          "refresh": "Odśwież",
+          "viewDetails": "Zobacz szczegóły"
+        },
+        "details": {
+          "noResults": "Nie zarejestrowano wyników tenantów.",
+          "stats": "utworzone {{created}}, powiązane {{linked}}, zaktualizowane {{updated}}, niejednoznaczne {{ambiguous}}, dezaktywowane {{inactivated}}",
+          "tenantHeader": "Tenant {{tenant}} · {{status}}",
+          "unknownTenant": "nieznany"
+        },
+        "empty": "Nie znaleziono jeszcze uruchomień synchronizacji.",
+        "errors": {
+          "loadDetailFailed": "Nie udało się załadować szczegółów uruchomienia.",
+          "loadFailed": "Nie udało się załadować historii synchronizacji.",
+          "loadRunFailed": "Nie udało się załadować uruchomienia {{runId}}."
+        },
+        "loading": "Ładowanie historii synchronizacji…",
+        "run": {
+          "header": "{{runType}} · {{status}}",
+          "inProgress": "W toku",
+          "tenants": "Tenanty: {{processed}}/{{total}} · Sukces: {{success}} · Nieudane: {{failed}}",
+          "timing": "Rozpoczęto {{started}} · Ukończono {{completed}}"
+        },
+        "title": "Ostatnie uruchomienia synchronizacji"
+      }
+    },
     "google": {
       "settings": {
         "actions": {
@@ -685,6 +1001,26 @@
           "disconnectUnexpected": "An unexpected error occurred while disconnecting.",
           "orgSyncFailed": "Organization sync failed.",
           "deviceSyncFailed": "Device sync failed."
+        },
+        "compliance": {
+          "actions": {
+            "retry": "Ponów",
+            "syncing": "Synchronizacja...",
+            "syncPatches": "Synchronizuj poprawki",
+            "syncSoftware": "Synchronizuj oprogramowanie"
+          },
+          "description": "Przegląd stanu urządzeń zarządzanych przez RMM",
+          "loading": "Ładowanie danych zgodności...",
+          "metrics": {
+            "devicesOffline": "Urządzenia offline",
+            "devicesOnline": "Urządzenia online",
+            "devicesWithAlerts": "Urządzenia z alertami",
+            "patchesFailed": "Poprawki nieudane",
+            "patchesPending": "Poprawki oczekujące"
+          },
+          "noData": "Brak dostępnych danych zgodności",
+          "summaryError": "Nie udało się załadować podsumowania zgodności",
+          "title": "Zgodność floty"
         }
       },
       "setup": {
@@ -834,7 +1170,72 @@
         }
       },
       "tanium": {
-        "loading": "Ładowanie ustawień integracji Tanium..."
+        "loading": "Ładowanie ustawień integracji Tanium...",
+        "actions": {
+          "discoverScopes": "Wykryj zakresy",
+          "disconnect": "Rozłącz",
+          "runInventorySync": "Uruchom synchronizację inwentarza",
+          "saveConfiguration": "Zapisz konfigurację",
+          "testConnection": "Testuj połączenie"
+        },
+        "connection": {
+          "connectedAt": "Połączono o: {{time}}",
+          "description": "Skonfiguruj poświadczenia Tanium Gateway i zweryfikuj dostęp z zakresem tenanta.",
+          "never": "Nigdy",
+          "syncLabel": "Synchronizacja: {{status}}",
+          "syncLabelWithError": "Synchronizacja: {{status}} ({{error}})",
+          "title": "Połączenie Tanium"
+        },
+        "errors": {
+          "loadMappings": "Nie udało się załadować mapowań Tanium.",
+          "loadSettings": "Nie udało się załadować ustawień Tanium.",
+          "loadState": "Nie udało się załadować stanu integracji Tanium.",
+          "saveConfiguration": "Nie udało się zapisać konfiguracji Tanium.",
+          "testConnectionFailed": "Test połączenia Tanium nie powiódł się.",
+          "disconnectFailed": "Nie udało się rozłączyć integracji Tanium.",
+          "scopeDiscoveryFailed": "Wykrywanie zakresu nie powiodło się.",
+          "inventorySyncFailed": "Synchronizacja inwentarza nie powiodła się.",
+          "updateMappingFailed": "Nie udało się zaktualizować mapowania."
+        },
+        "fields": {
+          "apiToken": "Token API {{state}}",
+          "apiTokenPlaceholderExisting": "Pozostaw puste, aby zachować istniejący token",
+          "apiTokenPlaceholderNew": "Wklej token API Tanium",
+          "apiTokenStateRequired": "(wymagany)",
+          "apiTokenStateSaved": "(zapisany)",
+          "assetApiUrl": "URL Asset API (opcjonalny)",
+          "assetApiUrlPlaceholder": "https://example.cloud.tanium.com/plugin/products/asset",
+          "assetFallbackLabel": "Włącz fallback Asset API dla pokrycia wygasłych punktów końcowych",
+          "gatewayUrl": "URL Gateway",
+          "gatewayUrlPlaceholder": "https://example.cloud.tanium.com"
+        },
+        "mappings": {
+          "autoSync": "Automatyczna synchronizacja",
+          "autoSyncDisabled": "Wyłączona",
+          "autoSyncEnabled": "Włączona",
+          "externalScope": "Zakres zewnętrzny",
+          "loading": "Ładowanie mapowań...",
+          "mappedClient": "Zmapowany klient",
+          "noScopes": "Nie wykryto jeszcze żadnych zakresów Tanium.",
+          "scopeIdLabel": "ID: {{id}}",
+          "unmapped": "Niezmapowane"
+        },
+        "status": {
+          "connected": "Połączono",
+          "disconnected": "Rozłączono",
+          "label": "Status: "
+        },
+        "success": {
+          "configurationSaved": "Zapisano konfigurację Tanium.",
+          "connectionTestSucceeded": "Test połączenia Tanium powiódł się.",
+          "disconnected": "Rozłączono integrację Tanium.",
+          "inventorySyncCompleted": "Synchronizacja inwentarza zakończona. Przetworzone: {{processed}}, Utworzone: {{created}}, Zaktualizowane: {{updated}}",
+          "scopeDiscoveryCompleted": "Wykrywanie zakresu zakończone. Przetworzone: {{processed}}, Utworzone: {{created}}, Zaktualizowane: {{updated}}"
+        },
+        "sync": {
+          "description": "Wykryj zakresy z grup komputerów Tanium, zmapuj je do klientów, a następnie uruchom synchronizację inwentarza.",
+          "title": "Synchronizacja Tanium"
+        }
       }
     },
     "sso": {

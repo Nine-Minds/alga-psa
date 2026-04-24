@@ -255,5 +255,266 @@
       "load": "Failed to load ticket defaults",
       "delete": "Failed to delete ticket defaults"
     }
+  },
+  "policyManagement": {
+    "resourceSections": {
+      "tickets": "Tickets",
+      "documents": "Documentos",
+      "time": "Tempo",
+      "projects": "Projetos",
+      "assets": "Ativos",
+      "billing": "Faturamento"
+    },
+    "targetTypes": {
+      "role": "Função",
+      "team": "Equipe",
+      "user": "Usuário",
+      "apiKey": "Chave de API"
+    },
+    "templateSummaries": {
+      "own": "registros de propriedade do principal",
+      "assigned": "registros atribuídos ao principal",
+      "managed": "registros de propriedade de usuários gerenciados",
+      "ownOrAssigned": "registros de propriedade ou atribuídos ao principal",
+      "ownOrManaged": "registros de propriedade do principal ou de usuários gerenciados",
+      "sameClient": "registros no mesmo escopo de cliente",
+      "clientPortfolio": "registros do portfólio de clientes do principal",
+      "selectedClients": "registros em escopos de clientes selecionados",
+      "sameTeam": "registros de propriedade da mesma equipe",
+      "selectedBoards": "registros nos boards selecionados"
+    },
+    "constraintSummaries": {
+      "notSelfApprover": "bloqueia autoaprovação",
+      "clientVisibleOnly": "requer registros visíveis ao cliente",
+      "hideSensitiveFields": "oculta campos sensíveis"
+    },
+    "dates": {
+      "unknown": "Desconhecido"
+    },
+    "ruleSummary": {
+      "base": "Restringir {{action}} de {{resourceType}} a {{scope}}.",
+      "withConstraint": "Restringir {{action}} de {{resourceType}} a {{scope}}; {{constraint}}."
+    },
+    "upsell": {
+      "title": "Pacotes de autorização",
+      "description": "O gerenciamento avançado de pacotes de autorização está disponível no nível Premium. Faça upgrade para gerenciar pacotes de restrição reutilizáveis."
+    },
+    "hero": {
+      "badge": "Espaço de trabalho Premium",
+      "title": "Pacotes de autorização",
+      "subtitle": "Gerencie restrições de acesso Premium com revisões de rascunho, atribuições com escopo e simulação segura a partir de um único centro de controle.",
+      "newBundle": "Novo pacote",
+      "addStarters": "Adicionar pacotes iniciais",
+      "addingStarters": "Adicionando pacotes iniciais..."
+    },
+    "metrics": {
+      "activeBundles": {
+        "title": "Pacotes ativos",
+        "subtitle": "Pacotes de restrição reutilizáveis atualmente disponíveis para atribuição"
+      },
+      "activeAssignments": {
+        "title": "Atribuições ativas",
+        "subtitle": "Implantações ao vivo de função, equipe, usuário e chave de API"
+      },
+      "starterBundles": {
+        "title": "Pacotes iniciais",
+        "subtitle": "Predefinições prontas baseadas em relacionamento para adaptar"
+      },
+      "archivedBundles": {
+        "title": "Pacotes arquivados",
+        "subtitle": "Pacotes aposentados preservados para auditoria e reutilização"
+      }
+    },
+    "library": {
+      "eyebrow": "Biblioteca",
+      "title": "Biblioteca de pacotes de autorização",
+      "description": "Navegue pelo status dos pacotes, gerencie alterações de ciclo de vida e abra um espaço de trabalho focado em um pacote por vez.",
+      "searchPlaceholder": "Pesquisar pacotes por nome ou descrição",
+      "showArchived": "Mostrar arquivados",
+      "columns": {
+        "bundle": "Pacote",
+        "status": "Status",
+        "type": "Tipo",
+        "assignments": "Atribuições",
+        "updated": "Atualizado",
+        "actions": "Ações"
+      },
+      "statusLabels": {
+        "active": "ativo",
+        "archived": "arquivado"
+      },
+      "typeLabels": {
+        "system": "Sistema",
+        "custom": "Personalizado"
+      },
+      "badges": {
+        "starter": "Inicial"
+      },
+      "descriptions": {
+        "systemStarter": "Pacote inicial do sistema.",
+        "customBundle": "Pacote de restrição personalizado para atribuições de função, equipe, usuário ou chave de API."
+      },
+      "effectiveSummary": "Resumo efetivo: pacote {{status}} com {{count}} atribuição(ões) ativa(s).",
+      "empty": "Nenhum pacote de autorização encontrado.",
+      "loading": "Carregando pacotes de autorização...",
+      "actions": {
+        "openEditor": "Abrir editor",
+        "assignments": "Atribuições",
+        "simulator": "Simulador",
+        "clone": "Clonar",
+        "archive": "Arquivar"
+      }
+    },
+    "workspace": {
+      "backToLibrary": "Voltar à biblioteca",
+      "updatedWithAssignments": "Atualizado em {{date}} · {{count}} atribuição(ões) ativa(s)",
+      "eyebrow": "Espaço de trabalho do pacote",
+      "fallbackBundleName": "Pacote selecionado",
+      "fallbackDescription": "Use o editor de rascunho, o gerenciador de atribuições e o simulador para aplicar alterações de restrição com segurança.",
+      "tabs": {
+        "editor": "Editor de rascunho",
+        "assignments": "Atribuições",
+        "simulator": "Simulador"
+      }
+    },
+    "editor": {
+      "header": "Editor de pacote",
+      "editingDraftPrefix": "Editando revisão de rascunho para ",
+      "editingDraftSuffix": ". As alterações permanecem em rascunho até serem publicadas.",
+      "viewingPublishedPrefix": "Visualizando a revisão publicada para ",
+      "viewingPublishedSuffix": ". Nenhuma revisão de rascunho ativa existe no momento.",
+      "publishDraft": "Publicar rascunho",
+      "publishing": "Publicando...",
+      "publishedBadge": "Publicado",
+      "loading": "Carregando editor de rascunho...",
+      "revisionSummary": "Resumo da revisão: {{summary}}",
+      "ruleCount": "{{count}} regra(s) {{revisionType}}",
+      "revisionType": {
+        "draft": "rascunho",
+        "published": "publicada"
+      },
+      "emptyRules": "Ainda não há regras {{revisionType}} para {{resource}}.",
+      "ruleForm": {
+        "addDraftTitle": "Adicionar regra de rascunho",
+        "editDraftTitle": "Editar regra de rascunho",
+        "createDraftTitle": "Criar regra de rascunho",
+        "editPublishedTitle": "Editar regra publicada como rascunho",
+        "helperEditPublished": "Salvar criará uma nova revisão de rascunho com suas alterações a esta regra publicada.",
+        "helperCreateDraft": "Salvar criará uma nova revisão de rascunho para este pacote.",
+        "reset": "Redefinir",
+        "action": "Ação",
+        "template": "Modelo",
+        "constraint": "Restrição (opcional)",
+        "constraintNone": "nenhuma",
+        "saveDraftRule": "Salvar regra de rascunho",
+        "addDraftRule": "Adicionar regra de rascunho",
+        "saveAsDraftChange": "Salvar como alteração de rascunho",
+        "createDraftRule": "Criar regra de rascunho"
+      },
+      "rule": {
+        "edit": "Editar",
+        "remove": "Remover",
+        "removeAsDraft": "Remover como alteração de rascunho",
+        "removeDraftTooltip": "Remover esta regra de rascunho.",
+        "removePublishedTooltip": "Criar uma nova revisão de rascunho que remove esta regra publicada.",
+        "selectedClientScopes": "Escopos de cliente selecionados",
+        "selectedBoardScopes": "Escopos de board selecionados",
+        "redactedFields": "Campos ocultados"
+      },
+      "scopes": {
+        "clientTitle": "Escopos de cliente selecionados",
+        "boardTitle": "Escopos de board selecionados",
+        "selectClient": "Selecionar cliente",
+        "selectBoard": "Selecionar board",
+        "addClientScope": "Adicionar escopo de cliente",
+        "addBoardScope": "Adicionar escopo de board",
+        "noClientScopes": "Nenhum escopo de cliente adicionado ainda.",
+        "noBoardScopes": "Nenhum escopo de board adicionado ainda.",
+        "remove": "Remover"
+      },
+      "redaction": {
+        "label": "Campos ocultados",
+        "placeholder": "internal_cost, margin",
+        "helper": "Nomes de campos separados por vírgulas a serem ocultados quando esta regra permitir acesso."
+      }
+    },
+    "assignments": {
+      "header": "Gerenciador de atribuições",
+      "description": "Visualize e gerencie alvos de função, equipe, usuário e chave de API atualmente afetados por este pacote.",
+      "loading": "Carregando atribuições...",
+      "addAssignment": "Adicionar atribuição",
+      "selectTargetPlaceholder": "Selecionar {{target}}",
+      "addButton": "Adicionar atribuição",
+      "adding": "Adicionando...",
+      "empty": "Ainda não há atribuições para este pacote.",
+      "groupEmpty": "Nenhuma atribuição de {{target}}.",
+      "statusActions": {
+        "disable": "Desabilitar",
+        "enable": "Habilitar",
+        "saving": "Salvando..."
+      },
+      "statusLabels": {
+        "active": "ativo",
+        "disabled": "desabilitado"
+      }
+    },
+    "simulator": {
+      "header": "Simulador de acesso",
+      "description": "Simule o comportamento do pacote em rascunho vs publicado contra um principal real e registro existente.",
+      "inputTitle": "Entrada da simulação",
+      "resource": "Recurso",
+      "action": "Ação",
+      "principal": "Principal",
+      "record": "Registro",
+      "useSynthetic": "Usar cenário de registro sintético",
+      "syntheticOwnerPlaceholder": "ID do usuário proprietário (opcional)",
+      "syntheticClientPlaceholder": "ID do cliente (opcional)",
+      "syntheticBoardPlaceholder": "ID do board (opcional)",
+      "clientVisible": "Visível ao cliente",
+      "run": "Executar simulação",
+      "running": "Executando simulação...",
+      "resultTitle": "Resultado da simulação",
+      "draftRevision": "Revisão de rascunho",
+      "publishedRevision": "Revisão publicada",
+      "allowed": "Permitido",
+      "denied": "Negado",
+      "empty": "Execute uma simulação para comparar o comportamento do rascunho e da revisão publicada."
+    },
+    "createDialog": {
+      "title": "Criar pacote de autorização",
+      "cancel": "Cancelar",
+      "create": "Criar pacote",
+      "creating": "Criando...",
+      "nameLabel": "Nome",
+      "namePlaceholder": "Revisor Financeiro Oeste",
+      "descriptionLabel": "Descrição",
+      "descriptionPlaceholder": "Pacote de restrição reutilizável para uma equipe específica, grupo de clientes ou fluxo de trabalho."
+    },
+    "clone": {
+      "copySuffix": "{{name}} Cópia"
+    },
+    "errors": {
+      "loadBundles": "Falha ao carregar pacotes.",
+      "loadEditor": "Falha ao carregar o editor de pacote.",
+      "loadAssignments": "Falha ao carregar as atribuições do pacote.",
+      "cloneBundle": "Falha ao clonar o pacote.",
+      "archiveBundle": "Falha ao arquivar o pacote.",
+      "seedStarters": "Falha ao semear pacotes iniciais.",
+      "bundleNameRequired": "O nome do pacote é obrigatório.",
+      "createBundle": "Falha ao criar o pacote.",
+      "publishDraft": "Falha ao publicar o rascunho do pacote.",
+      "selectTemplate": "Selecione um modelo antes de salvar uma regra.",
+      "selectClientRequired": "Adicione pelo menos um cliente selecionado antes de salvar esta regra.",
+      "selectBoardRequired": "Adicione pelo menos um board selecionado antes de salvar esta regra.",
+      "redactedFieldRequired": "Insira pelo menos um campo oculto antes de salvar esta regra.",
+      "saveRule": "Falha ao salvar a regra de rascunho.",
+      "removeRule": "Falha ao remover a regra.",
+      "selectTarget": "Selecione um alvo antes de adicionar uma atribuição.",
+      "addAssignment": "Falha ao adicionar a atribuição.",
+      "updateAssignmentStatus": "Falha ao atualizar o status da atribuição.",
+      "selectPrincipal": "Selecione um principal antes de executar a simulação.",
+      "selectRecord": "Selecione um registro antes de executar a simulação.",
+      "runSimulation": "Falha ao executar a simulação."
+    }
   }
 }

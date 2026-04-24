@@ -345,6 +345,322 @@
         }
       }
     },
+    "entra": {
+      "settings": {
+        "actions": {
+          "disconnect": "Verbinding verbreken",
+          "reconnect": "Opnieuw verbinden",
+          "reconnecting": "Opnieuw verbinden…",
+          "refresh": "Vernieuwen",
+          "resetFieldSync": "Resetten",
+          "reviewMappings": "Toewijzingen controleren",
+          "reviewRemap": "Controleren / Opnieuw toewijzen",
+          "hideReviewRemap": "Controleren / Opnieuw toewijzen verbergen",
+          "runDiscovery": "Ontdekking uitvoeren",
+          "runDiscoveryAgain": "Ontdekking opnieuw uitvoeren",
+          "runDiscoveryRunning": "Ontdekking uitvoeren…",
+          "runInitialSync": "Initiële synchronisatie uitvoeren",
+          "runInitialSyncRunning": "Initiële synchronisatie starten…",
+          "saveFieldSync": "Veldsynchronisatiebesturingselementen opslaan",
+          "savingFieldSync": "Opslaan…",
+          "syncAll": "Alle tenants nu synchroniseren",
+          "syncAllStarting": "Starten…"
+        },
+        "badges": {
+          "enterprise": "Enterprise",
+          "reviewBeforeInitialSync": "Controleer voor initiële synchronisatie"
+        },
+        "connection": {
+          "connectingSuffix": " (Verbinden...)",
+          "details": "Verbindingsdetails",
+          "directCredentialSourceLabel": "Bron van inloggegevens:",
+          "directTenantDefault": "common (multi-tenant)",
+          "directTenantLabel": "Microsoft-tenant:",
+          "cippServerLabel": "CIPP-server:",
+          "notAvailable": "Niet beschikbaar",
+          "notConfigured": "Niet geconfigureerd",
+          "notConnectedStatus": "not_connected",
+          "optionsTitle": "Verbindingsopties",
+          "promptDetails": "Verbind Entra om providerdetails in te vullen."
+        },
+        "currentStep": {
+          "connect": {
+            "guidance": "Selecteer een verbindingsoptie om door te gaan met onboarding.",
+            "title": "Stap 1: Verbinden"
+          },
+          "connectionsBelow": "Verbindingsopties verschijnen hieronder.",
+          "discover": {
+            "guidance": "Voer ontdekking uit om beheerde Entra-tenants te laden voordat u toewijzingen maakt.",
+            "title": "Stap 2: Ontdekken"
+          },
+          "label": "Huidige stap",
+          "map": {
+            "guidance": "Bevestig of pas tenant-toewijzingen aan om initiële synchronisatie te ontgrendelen.",
+            "title": "Stap 3: Toewijzen"
+          },
+          "sync": {
+            "guidance": "Start de eerste synchronisatierun voor bevestigde toewijzingen.",
+            "title": "Stap 4: Initiële synchronisatie"
+          }
+        },
+        "description": "Configureer Entra-toegang op partnerniveau, ontdek beheerde tenants, wijs ze toe aan klanten en voer synchronisatieworkflows uit.",
+        "disabled": {
+          "description": "De Entra-integratie-UI is momenteel uitgeschakeld voor deze tenant.",
+          "title": "Microsoft Entra-integratie"
+        },
+        "discovery": {
+          "completed": "Ontdekking voltooid. {{count}} tenants ontdekt.",
+          "completedOne": "Ontdekking voltooid. {{count}} tenant ontdekt.",
+          "failed": "Kan tenantontdekking niet uitvoeren."
+        },
+        "errors": {
+          "loadStatus": "Kan Entra-verbindingsstatus niet laden.",
+          "unknown": "Onbekende fout"
+        },
+        "fieldSync": {
+          "description": "Kies welke Entra-profielvelden lokale contactvelden mogen overschrijven tijdens synchronisatie.",
+          "feedback": {
+            "saveFailed": "Kan veldsynchronisatiebesturingselementen niet opslaan.",
+            "saved": "Veldsynchronisatiebesturingselementen opgeslagen."
+          },
+          "options": {
+            "displayName": {
+              "description": "Sta toe dat de Entra-weergavenaam de volledige contactnaam van gekoppelde contacten overschrijft.",
+              "label": "Weergavenaam"
+            },
+            "email": {
+              "description": "Sta toe dat Entra-e-mail/UPN het contact-e-mailadres van gekoppelde contacten overschrijft.",
+              "label": "E-mail"
+            },
+            "phone": {
+              "description": "Sta toe dat Entra-telefoonwaarden het contacttelefoonnummer van gekoppelde contacten overschrijven.",
+              "label": "Telefoon"
+            },
+            "role": {
+              "description": "Sta toe dat de Entra-functietitel de contactrol van gekoppelde contacten overschrijft.",
+              "label": "Rol"
+            },
+            "upn": {
+              "description": "Sta toe dat Entra-UPN de opgeslagen Entra-principalnaam van gekoppelde contacten overschrijft.",
+              "label": "UPN"
+            }
+          },
+          "title": "Veldsynchronisatiebesturingselementen"
+        },
+        "guidedStep": {
+          "current": "huidig",
+          "complete": "voltooid",
+          "locked": "vergrendeld",
+          "stepLabel": "Stap {{number}}",
+          "thisIsCurrent": "Dit is uw huidige onboarding-stap."
+        },
+        "initialSync": {
+          "failed": "Kan initiële Entra-synchronisatie niet starten.",
+          "started": "Initiële synchronisatie gestart. Run-ID: {{runId}}",
+          "startedNoId": "Startverzoek voor initiële synchronisatie geaccepteerd."
+        },
+        "maintenance": {
+          "description": "De initiële installatie is voltooid. Focus hier op synchronisatiebewerkingen, health checks en onderhoudsbeoordelingen.",
+          "healthDescription": "Bekijk de verbindingsgezondheid, voer onderhoudsbewerkingen uit en bewaak synchronisatieactiviteit.",
+          "healthTitle": "Gezondheidsoverzicht",
+          "title": "Doorlopende-operaties-modus"
+        },
+        "mapping": {
+          "description": "Bekijk voorgestelde overeenkomsten, kies de juiste klant voor elke tenant en bevestig toewijzingen voor de initiële synchronisatie.",
+          "needsReviewLabel": "Vereist controle:",
+          "savedLabel": "Opgeslagen:",
+          "selectedLabel": "Geselecteerd:",
+          "skippedLabel": "Overgeslagen:",
+          "stepLabel": "Stap 3",
+          "title": "Tenants toewijzen aan klanten"
+        },
+        "onboarding": {
+          "description": "Voltooi elke onboarding-stap op volgorde: verbinden, ontdekken, toewijzen en voer vervolgens uw eerste synchronisatie uit.",
+          "title": "Installatiemodus"
+        },
+        "ongoing": {
+          "description": "Gebruik deze besturingselementen voor handmatige synchronisatiebewerkingen nadat de onboarding-stappen zijn voltooid.",
+          "title": "Doorlopende operaties"
+        },
+        "overview": {
+          "connectionLabel": "Verbinding:",
+          "connectionTypeLabel": "Verbindingstype:",
+          "label": "Overzicht",
+          "mappedTenantsLabel": "Toegewezen tenants:",
+          "nextSyncIntervalEvery": "Elke {{minutes}} minuten",
+          "nextSyncIntervalLabel": "Volgende synchronisatie-interval:"
+        },
+        "skipped": {
+          "empty": "Momenteel zijn er geen tenants gemarkeerd als overgeslagen.",
+          "noPrimaryDomain": "Geen primair domein",
+          "remap": "Opnieuw toewijzen",
+          "title": "Overgeslagen tenants"
+        },
+        "status": {
+          "connectionHealth": "Verbindingsgezondheid",
+          "label": "Status"
+        },
+        "syncAll": {
+          "failed": "Kan volledige Entra-synchronisatie niet starten.",
+          "started": "Synchronisatie gestart. Run-ID: {{runId}}",
+          "startedNoId": "Synchronisatiestartverzoek geaccepteerd."
+        },
+        "title": "Microsoft Entra-integratie",
+        "validation": {
+          "label": "Validatie en ontdekking",
+          "lastDiscoveryLabel": "Laatste ontdekking:",
+          "lastValidatedLabel": "Laatst gevalideerd:",
+          "neverFormatted": "Nooit",
+          "noneValidationError": "Geen",
+          "validationErrorLabel": "Validatiefout:"
+        },
+        "wizard": {
+          "connect": {
+            "description": "Autoriseer Direct Microsoft partner-auth om deze Entra-tenant te koppelen.",
+            "title": "Verbinden"
+          },
+          "discover": {
+            "description": "Laad en bewaar beheerde Entra-tenants voor deze MSP-tenant.",
+            "title": "Tenants ontdekken"
+          },
+          "map": {
+            "description": "Bekijk automatische overeenkomst-suggesties en bevestig toewijzingen.",
+            "title": "Tenants toewijzen aan klanten"
+          },
+          "sync": {
+            "description": "Start de eerste synchronisatierun voor bevestigde toewijzingen.",
+            "title": "Initiële synchronisatie"
+          }
+        }
+      },
+      "tenantMapping": {
+        "actions": {
+          "confirmSelected": "Geselecteerde toewijzingen bevestigen",
+          "confirming": "Bevestigen…",
+          "import": "Importeren als nieuwe klant",
+          "importing": "Importeren…",
+          "preselectExact": "Exacte overeenkomsten voorselecteren",
+          "refresh": "Voorbeeld vernieuwen",
+          "skip": "Overslaan",
+          "skipped": "Overgeslagen"
+        },
+        "columns": {
+          "actions": "Acties",
+          "confidence": "Vertrouwen",
+          "entraTenant": "Entra-tenant",
+          "primaryDomain": "Primair domein",
+          "selectClient": "Selecteer klant",
+          "status": "Status",
+          "suggestedClient": "Voorgestelde klant"
+        },
+        "empty": "Geen ontdekte tenants beschikbaar voor toewijzingsvoorbeeld.",
+        "errors": {
+          "confirmFailed": "Kan geselecteerde toewijzingen niet bevestigen.",
+          "importFailed": "Kan tenant niet importeren als klant.",
+          "loadFailed": "Kan tenant-toewijzingsvoorbeeld niet laden.",
+          "selectAtLeastOne": "Selecteer ten minste één klant om een toewijzing te bevestigen.",
+          "skipFailed": "Kan deze tenant-toewijzing niet overslaan."
+        },
+        "feedback": {
+          "confirmed": "{{count}} toewijzingen bevestigd.",
+          "confirmedOne": "{{count}} toewijzing bevestigd."
+        },
+        "noSuggestion": "Geen suggestie",
+        "picker": {
+          "placeholder": "Selecteer klant...",
+          "unknownClient": "Onbekende klant"
+        },
+        "reasons": {
+          "exactDomain": "Exact domein",
+          "fuzzyName": "Fuzzy naam",
+          "secondaryDomain": "Secundair domein"
+        },
+        "states": {
+          "autoMatched": "Automatisch gekoppeld",
+          "imported": "Geïmporteerd",
+          "needsReview": "Vereist controle",
+          "skipped": "Overgeslagen",
+          "unmatched": "Niet gekoppeld"
+        },
+        "title": "Tenant-toewijzingsvoorbeeld"
+      },
+      "cippDialog": {
+        "actions": {
+          "cancel": "Annuleren",
+          "connect": "Verbinden",
+          "connecting": "Verbinden..."
+        },
+        "description": "Voer uw CIPP-instantie-URL en een API-token in om Alga toegang te geven om Entra-gegevens te ontdekken en te synchroniseren.",
+        "errors": {
+          "missingFields": "Zowel Basis-URL als API-token zijn vereist.",
+          "unknown": "Er is een onbekende fout opgetreden."
+        },
+        "fields": {
+          "apiToken": "API-token",
+          "apiTokenPlaceholder": "Voer token in...",
+          "baseUrl": "CIPP-basis-URL",
+          "baseUrlPlaceholder": "https://cipp.uwdomein.com"
+        },
+        "title": "CIPP verbinden"
+      },
+      "reconciliation": {
+        "actions": {
+          "refresh": "Vernieuwen",
+          "resolveExisting": "Oplossen naar bestaand",
+          "resolveNew": "Oplossen naar nieuw"
+        },
+        "candidate": {
+          "fallback": "kandidaat",
+          "label": "Kandidaat-contacten: {{count}}"
+        },
+        "contactPicker": {
+          "label": "Bestaand contact",
+          "placeholder": "Selecteer bestaand contact..."
+        },
+        "errors": {
+          "enterContactId": "Voer een contact-ID in om naar een bestaand contact op te lossen.",
+          "loadQueue": "Kan afstemmingswachtrij niet laden.",
+          "resolveFailed": "Kan wachtrij-item niet oplossen."
+        },
+        "empty": "Er wachten geen dubbelzinnige overeenkomsten op controle.",
+        "loading": "Wachtrij laden…",
+        "noEmailIdentity": "Geen e-mailidentiteit",
+        "queuedAt": "{{identity}} · in wachtrij geplaatst {{time}}",
+        "scopedToMappedClient": "Bestaande contactopties zijn beperkt tot deze toegewezen klant.",
+        "success": {
+          "resolvedExisting": "Wachtrij-item {{queueItemId}} opgelost naar bestaand contact {{contactNameId}}.",
+          "resolvedNew": "Wachtrij-item {{queueItemId}} opgelost door contact {{contactNameId}} aan te maken."
+        },
+        "title": "Wachtrij voor dubbelzinnige overeenkomsten"
+      },
+      "syncHistory": {
+        "actions": {
+          "hideDetails": "Details verbergen",
+          "refresh": "Vernieuwen",
+          "viewDetails": "Details bekijken"
+        },
+        "details": {
+          "noResults": "Geen tenantresultaten geregistreerd.",
+          "stats": "aangemaakt {{created}}, gekoppeld {{linked}}, bijgewerkt {{updated}}, dubbelzinnig {{ambiguous}}, gedeactiveerd {{inactivated}}",
+          "tenantHeader": "Tenant {{tenant}} · {{status}}",
+          "unknownTenant": "onbekend"
+        },
+        "empty": "Nog geen synchronisatieruns gevonden.",
+        "errors": {
+          "loadDetailFailed": "Kan rundetails niet laden.",
+          "loadFailed": "Kan synchronisatiegeschiedenis niet laden.",
+          "loadRunFailed": "Kan run {{runId}} niet laden."
+        },
+        "loading": "Synchronisatiegeschiedenis laden…",
+        "run": {
+          "header": "{{runType}} · {{status}}",
+          "inProgress": "Bezig",
+          "tenants": "Tenants: {{processed}}/{{total}} · Succes: {{success}} · Mislukt: {{failed}}",
+          "timing": "Gestart {{started}} · Voltooid {{completed}}"
+        },
+        "title": "Recente synchronisatieruns"
+      }
+    },
     "google": {
       "settings": {
         "actions": {
@@ -599,92 +915,112 @@
       "ninjaOne": {
         "loading": "NinjaOne-integratie-instellingen laden...",
         "card": {
-          "title": "NinjaOne RMM Integration",
-          "description": "Connect your NinjaOne account to synchronize devices, receive alerts, and enable remote access capabilities.",
-          "skeletonDescription": "Loading NinjaOne integration..."
+          "title": "NinjaOne RMM-integratie",
+          "description": "Verbind uw NinjaOne-account om apparaten te synchroniseren, waarschuwingen te ontvangen en functies voor externe toegang in te schakelen.",
+          "skeletonDescription": "NinjaOne-integratie laden..."
         },
         "status": {
-          "checking": "Checking NinjaOne connection...",
+          "checking": "NinjaOne-verbinding controleren...",
           "notConnected": {
-            "title": "Not connected to NinjaOne",
-            "description": "Connect your NinjaOne account to sync devices, receive alerts, and enable remote access."
+            "title": "Niet verbonden met NinjaOne",
+            "description": "Verbind uw NinjaOne-account om apparaten te synchroniseren, waarschuwingen te ontvangen en externe toegang in te schakelen."
           },
-          "connected": "Connected to NinjaOne",
-          "connectedWithErrors": "NinjaOne connected with sync errors",
-          "instanceLabel": "Instance:",
-          "organizations": "{{count}} organizations",
-          "devices": "{{count}} devices",
-          "activeAlerts": "{{count}} active alerts",
-          "lastSynced": "Last synced: {{time}}"
+          "connected": "Verbonden met NinjaOne",
+          "connectedWithErrors": "NinjaOne verbonden met synchronisatiefouten",
+          "instanceLabel": "Instantie:",
+          "organizations": "{{count}} organisaties",
+          "devices": "{{count}} apparaten",
+          "activeAlerts": "{{count}} actieve waarschuwingen",
+          "lastSynced": "Laatst gesynchroniseerd: {{time}}"
         },
         "setup": {
-          "title": "Setup Instructions",
+          "title": "Installatie-instructies",
           "steps": {
-            "login": "Log into your NinjaOne dashboard",
-            "navigate": "Navigate to Administration → Apps → API",
-            "addClient": "Click \"+ Add client app\" to create a new API application",
-            "platform": "Set Application Platform to \"Web (PHP, Java, .Net Core, etc.)\"",
-            "name": "Enter a Name (e.g., \"Alga PSA\")",
-            "redirectUri": "Add the redirect URI:",
-            "scopes": "Under \"Scopes\", check \"Monitoring\" and \"Management\"",
-            "grantTypes": "Under \"Allowed grant types\", check \"Authorization code\", \"Client credentials\", and \"Refresh token\"",
-            "addAndCopy": "Click \"Add\" and copy the Client ID and Client Secret below"
+            "login": "Log in op uw NinjaOne-dashboard",
+            "navigate": "Ga naar Administration → Apps → API",
+            "addClient": "Klik op \"+ Add client app\" om een nieuwe API-applicatie aan te maken",
+            "platform": "Stel Application Platform in op \"Web (PHP, Java, .Net Core, etc.)\"",
+            "name": "Voer een Name in (bijv. \"Alga PSA\")",
+            "redirectUri": "Voeg de redirect-URI toe:",
+            "scopes": "Vink onder \"Scopes\" \"Monitoring\" en \"Management\" aan",
+            "grantTypes": "Vink onder \"Allowed grant types\" \"Authorization code\", \"Client credentials\" en \"Refresh token\" aan",
+            "addAndCopy": "Klik op \"Add\" en kopieer de Client ID en Client Secret hieronder"
           },
-          "docsPrefix": "For detailed setup instructions, see",
-          "docsSection": "Section 10.15",
-          "docsSuffix": "in the documentation.",
-          "openApiSettings": "Open NinjaOne API Settings"
+          "docsPrefix": "Zie voor gedetailleerde installatie-instructies",
+          "docsSection": "Sectie 10.15",
+          "docsSuffix": "in de documentatie.",
+          "openApiSettings": "NinjaOne API-instellingen openen"
         },
         "credentials": {
-          "title": "API Credentials",
-          "saved": "Credentials saved",
+          "title": "API-inloggegevens",
+          "saved": "Inloggegevens opgeslagen",
           "clientIdLabel": "Client ID",
-          "clientIdPlaceholder": "Enter your NinjaOne Client ID",
+          "clientIdPlaceholder": "Voer uw NinjaOne Client ID in",
           "clientSecretLabel": "Client Secret",
-          "clientSecretPlaceholder": "Enter your NinjaOne Client Secret",
-          "clientSecretUpdatePlaceholder": "Enter new secret to update",
+          "clientSecretPlaceholder": "Voer uw NinjaOne Client Secret in",
+          "clientSecretUpdatePlaceholder": "Voer nieuw secret in om bij te werken",
           "secretMaskedLabel": "Secret",
-          "saving": "Saving...",
-          "save": "Save Credentials"
+          "saving": "Opslaan...",
+          "save": "Inloggegevens opslaan"
         },
         "region": {
-          "hint": "Select your NinjaOne region, then click ‘Connect to NinjaOne’ to authorize access.",
-          "label": "Region:"
+          "hint": "Selecteer uw NinjaOne-regio en klik vervolgens op 'Verbinden met NinjaOne' om toegang te autoriseren.",
+          "label": "Regio:"
         },
         "actions": {
-          "refreshing": "Refreshing...",
-          "refreshStatus": "Refresh Status",
-          "syncing": "Syncing...",
-          "syncOrganizations": "Sync Organizations",
-          "syncingDevices": "Syncing Devices...",
-          "syncDevices": "Sync Devices",
-          "disconnecting": "Disconnecting...",
-          "disconnect": "Disconnect",
-          "connect": "Connect to NinjaOne"
+          "refreshing": "Vernieuwen...",
+          "refreshStatus": "Status vernieuwen",
+          "syncing": "Synchroniseren...",
+          "syncOrganizations": "Organisaties synchroniseren",
+          "syncingDevices": "Apparaten synchroniseren...",
+          "syncDevices": "Apparaten synchroniseren",
+          "disconnecting": "Verbinding verbreken...",
+          "disconnect": "Verbinding verbreken",
+          "connect": "Verbinden met NinjaOne"
         },
         "disconnectModal": {
-          "title": "Disconnect NinjaOne",
-          "description": "Are you sure you want to disconnect NinjaOne? This will stop device synchronization and alert notifications, and remove your stored API credentials. Organization mappings will be preserved.",
-          "cancel": "Cancel",
-          "confirm": "Disconnect"
+          "title": "NinjaOne loskoppelen",
+          "description": "Weet u zeker dat u NinjaOne wilt loskoppelen? Hierdoor wordt apparaatsynchronisatie en waarschuwingsmeldingen gestopt en worden uw opgeslagen API-inloggegevens verwijderd. Organisatie-toewijzingen blijven behouden.",
+          "cancel": "Annuleren",
+          "confirm": "Verbinding verbreken"
         },
         "toasts": {
-          "connectSuccess": "Successfully connected to NinjaOne.",
-          "connectFailed": "NinjaOne connection failed.",
-          "connectFailedWithDetail": "NinjaOne connection failed: {{detail}}",
-          "disconnectSuccess": "NinjaOne connection successfully disconnected.",
-          "credentialsSaved": "NinjaOne API credentials saved successfully.",
-          "orgSyncSuccess": "Organization sync completed. Processed: {{processed}}, Created: {{created}}, Updated: {{updated}}",
-          "deviceSyncSuccess": "Device sync completed. Processed: {{processed}}, Created: {{created}}, Updated: {{updated}}"
+          "connectSuccess": "Succesvol verbonden met NinjaOne.",
+          "connectFailed": "NinjaOne-verbinding mislukt.",
+          "connectFailedWithDetail": "NinjaOne-verbinding mislukt: {{detail}}",
+          "disconnectSuccess": "NinjaOne-verbinding succesvol losgekoppeld.",
+          "credentialsSaved": "NinjaOne API-inloggegevens succesvol opgeslagen.",
+          "orgSyncSuccess": "Organisatiesynchronisatie voltooid. Verwerkt: {{processed}}, Aangemaakt: {{created}}, Bijgewerkt: {{updated}}",
+          "deviceSyncSuccess": "Apparaatsynchronisatie voltooid. Verwerkt: {{processed}}, Aangemaakt: {{created}}, Bijgewerkt: {{updated}}"
         },
         "errors": {
-          "loadStatus": "Failed to load NinjaOne connection status.",
-          "saveCredentials": "Failed to save credentials.",
-          "connect": "Failed to initiate NinjaOne connection.",
-          "disconnect": "Failed to disconnect NinjaOne.",
-          "disconnectUnexpected": "An unexpected error occurred while disconnecting.",
-          "orgSyncFailed": "Organization sync failed.",
-          "deviceSyncFailed": "Device sync failed."
+          "loadStatus": "Kan NinjaOne-verbindingsstatus niet laden.",
+          "saveCredentials": "Kan inloggegevens niet opslaan.",
+          "connect": "Kan NinjaOne-verbinding niet starten.",
+          "disconnect": "Kan NinjaOne niet loskoppelen.",
+          "disconnectUnexpected": "Er is een onverwachte fout opgetreden tijdens het loskoppelen.",
+          "orgSyncFailed": "Organisatiesynchronisatie mislukt.",
+          "deviceSyncFailed": "Apparaatsynchronisatie mislukt."
+        },
+        "compliance": {
+          "actions": {
+            "retry": "Opnieuw proberen",
+            "syncing": "Synchroniseren...",
+            "syncPatches": "Patches synchroniseren",
+            "syncSoftware": "Software synchroniseren"
+          },
+          "description": "Overzicht van apparaatgezondheid beheerd door RMM",
+          "loading": "Nalevingsgegevens laden...",
+          "metrics": {
+            "devicesOffline": "Apparaten offline",
+            "devicesOnline": "Apparaten online",
+            "devicesWithAlerts": "Apparaten met waarschuwingen",
+            "patchesFailed": "Patches mislukt",
+            "patchesPending": "Patches in behandeling"
+          },
+          "noData": "Geen nalevingsgegevens beschikbaar",
+          "summaryError": "Kan nalevingsoverzicht niet laden",
+          "title": "Fleet-naleving"
         }
       },
       "setup": {
@@ -834,7 +1170,72 @@
         }
       },
       "tanium": {
-        "loading": "Tanium-integratie-instellingen worden geladen..."
+        "loading": "Tanium-integratie-instellingen worden geladen...",
+        "actions": {
+          "discoverScopes": "Scopes ontdekken",
+          "disconnect": "Verbinding verbreken",
+          "runInventorySync": "Inventarissynchronisatie uitvoeren",
+          "saveConfiguration": "Configuratie opslaan",
+          "testConnection": "Verbinding testen"
+        },
+        "connection": {
+          "connectedAt": "Verbonden om: {{time}}",
+          "description": "Configureer Tanium Gateway-inloggegevens en verifieer tenantgebonden toegang.",
+          "never": "Nooit",
+          "syncLabel": "Synchronisatie: {{status}}",
+          "syncLabelWithError": "Synchronisatie: {{status}} ({{error}})",
+          "title": "Tanium-verbinding"
+        },
+        "errors": {
+          "loadMappings": "Kan Tanium-toewijzingen niet laden.",
+          "loadSettings": "Kan Tanium-instellingen niet laden.",
+          "loadState": "Kan Tanium-integratiestatus niet laden.",
+          "saveConfiguration": "Kan Tanium-configuratie niet opslaan.",
+          "testConnectionFailed": "Tanium-verbindingstest mislukt.",
+          "disconnectFailed": "Kan Tanium-integratie niet loskoppelen.",
+          "scopeDiscoveryFailed": "Scope-ontdekking mislukt.",
+          "inventorySyncFailed": "Inventarissynchronisatie mislukt.",
+          "updateMappingFailed": "Kan toewijzing niet bijwerken."
+        },
+        "fields": {
+          "apiToken": "API-token {{state}}",
+          "apiTokenPlaceholderExisting": "Laat leeg om het bestaande token te behouden",
+          "apiTokenPlaceholderNew": "Plak Tanium API-token",
+          "apiTokenStateRequired": "(vereist)",
+          "apiTokenStateSaved": "(opgeslagen)",
+          "assetApiUrl": "Asset API-URL (optioneel)",
+          "assetApiUrlPlaceholder": "https://example.cloud.tanium.com/plugin/products/asset",
+          "assetFallbackLabel": "Asset API-fallback inschakelen voor dekking van verouderde endpoints",
+          "gatewayUrl": "Gateway-URL",
+          "gatewayUrlPlaceholder": "https://example.cloud.tanium.com"
+        },
+        "mappings": {
+          "autoSync": "Automatische synchronisatie",
+          "autoSyncDisabled": "Uitgeschakeld",
+          "autoSyncEnabled": "Ingeschakeld",
+          "externalScope": "Externe scope",
+          "loading": "Toewijzingen laden...",
+          "mappedClient": "Toegewezen klant",
+          "noScopes": "Nog geen Tanium-scopes ontdekt.",
+          "scopeIdLabel": "ID: {{id}}",
+          "unmapped": "Niet toegewezen"
+        },
+        "status": {
+          "connected": "Verbonden",
+          "disconnected": "Niet verbonden",
+          "label": "Status: "
+        },
+        "success": {
+          "configurationSaved": "Tanium-configuratie opgeslagen.",
+          "connectionTestSucceeded": "Tanium-verbindingstest geslaagd.",
+          "disconnected": "Tanium-integratie losgekoppeld.",
+          "inventorySyncCompleted": "Inventarissynchronisatie voltooid. Verwerkt: {{processed}}, Aangemaakt: {{created}}, Bijgewerkt: {{updated}}",
+          "scopeDiscoveryCompleted": "Scope-ontdekking voltooid. Verwerkt: {{processed}}, Aangemaakt: {{created}}, Bijgewerkt: {{updated}}"
+        },
+        "sync": {
+          "description": "Ontdek scopes vanuit Tanium-computergroepen, wijs ze toe aan klanten en voer vervolgens inventarissynchronisatie uit.",
+          "title": "Tanium-synchronisatie"
+        }
       }
     },
     "sso": {
@@ -1286,60 +1687,60 @@
     },
     "stripe": {
       "title": "Stripe Payments",
-      "description": "Accept credit card payments for your invoices",
+      "description": "Accepteer creditcardbetalingen voor uw facturen",
       "connected": {
-        "title": "Stripe Connected",
+        "title": "Stripe verbonden",
         "publishableKey": "Publishable key: {{key}}..."
       },
       "empty": {
-        "description": "Connect your Stripe account to accept online payments for invoices"
+        "description": "Verbind uw Stripe-account om online betalingen voor facturen te accepteren"
       },
       "actions": {
-        "testConnection": "Test Connection",
-        "disconnect": "Disconnect",
-        "connect": "Connect Stripe",
-        "connecting": "Connecting...",
-        "cancel": "Cancel"
+        "testConnection": "Verbinding testen",
+        "disconnect": "Verbinding verbreken",
+        "connect": "Stripe verbinden",
+        "connecting": "Verbinden...",
+        "cancel": "Annuleren"
       },
       "form": {
-        "secretKeyLabel": "Secret Key",
-        "secretKeyPlaceholder": "sk_live_... or sk_test_...",
-        "publishableKeyLabel": "Publishable Key",
-        "publishableKeyPlaceholder": "pk_live_... or pk_test_...",
-        "findKeyPrefix": "Find this in your",
+        "secretKeyLabel": "Secret key",
+        "secretKeyPlaceholder": "sk_live_... of sk_test_...",
+        "publishableKeyLabel": "Publishable key",
+        "publishableKeyPlaceholder": "pk_live_... of pk_test_...",
+        "findKeyPrefix": "Vind dit in uw",
         "dashboardLink": "Stripe Dashboard → API Keys"
       },
       "webhook": {
-        "heading": "Webhook Configuration",
-        "configuredAutomatically": "Webhooks configured automatically",
-        "receiveNotifications": "Alga PSA will receive payment notifications for:",
-        "failedTitle": "Webhook configuration failed",
-        "failedBody": "Automatic webhook configuration failed. Click retry to attempt configuration again.",
-        "configuring": "Configuring...",
-        "retry": "Retry Configuration"
+        "heading": "Webhook-configuratie",
+        "configuredAutomatically": "Webhooks automatisch geconfigureerd",
+        "receiveNotifications": "Alga PSA ontvangt betalingsmeldingen voor:",
+        "failedTitle": "Webhook-configuratie mislukt",
+        "failedBody": "Automatische webhook-configuratie mislukt. Klik op Opnieuw proberen om de configuratie opnieuw te proberen.",
+        "configuring": "Configureren...",
+        "retry": "Configuratie opnieuw proberen"
       },
       "disconnectDialog": {
-        "title": "Disconnect Stripe",
-        "message": "Are you sure you want to disconnect Stripe? Payment links will no longer work.",
-        "confirm": "Disconnect",
-        "cancel": "Cancel"
+        "title": "Stripe loskoppelen",
+        "message": "Weet u zeker dat u Stripe wilt loskoppelen? Betaallinks werken dan niet meer.",
+        "confirm": "Verbinding verbreken",
+        "cancel": "Annuleren"
       },
       "toasts": {
-        "connectedWithWebhook": "Stripe connected and webhooks configured automatically!",
-        "connectedWebhookFailed": "Stripe connected! Note: Webhook auto-configuration failed - you may need to configure webhooks manually in Stripe Dashboard.",
-        "disconnected": "Stripe disconnected",
-        "connectionSuccess": "Connection successful!",
-        "webhookConfigured": "Webhook configured successfully!"
+        "connectedWithWebhook": "Stripe verbonden en webhooks automatisch geconfigureerd!",
+        "connectedWebhookFailed": "Stripe verbonden! Let op: automatische webhook-configuratie is mislukt - u moet mogelijk webhooks handmatig configureren in het Stripe Dashboard.",
+        "disconnected": "Stripe losgekoppeld",
+        "connectionSuccess": "Verbinding geslaagd!",
+        "webhookConfigured": "Webhook succesvol geconfigureerd!"
       },
       "errors": {
-        "loadConfig": "Failed to load Stripe configuration",
-        "connect": "Failed to connect Stripe",
-        "disconnect": "Failed to disconnect Stripe",
-        "testConnection": "Connection test failed",
-        "configureWebhook": "Failed to configure webhook",
-        "bothKeysRequired": "Please enter both secret key and publishable key",
-        "secretKeyFormat": "Secret key should start with sk_",
-        "publishableKeyFormat": "Publishable key should start with pk_"
+        "loadConfig": "Kan Stripe-configuratie niet laden",
+        "connect": "Kan Stripe niet verbinden",
+        "disconnect": "Kan Stripe niet loskoppelen",
+        "testConnection": "Verbindingstest mislukt",
+        "configureWebhook": "Kan webhook niet configureren",
+        "bothKeysRequired": "Voer zowel de secret key als de publishable key in",
+        "secretKeyFormat": "Secret key moet beginnen met sk_",
+        "publishableKeyFormat": "Publishable key moet beginnen met pk_"
       }
     }
   }

@@ -460,6 +460,208 @@
       "create": "Create Defaults"
     }
   },
+  "imapForm": {
+    "sections": {
+      "basic": {
+        "title": "Basic Settings",
+        "description": "Define the IMAP mailbox connection details."
+      },
+      "auth": {
+        "title": "Authentication",
+        "description": "Choose password or OAuth2 authentication."
+      },
+      "processing": {
+        "title": "Processing Settings",
+        "description": "Choose folders and processing behavior."
+      }
+    },
+    "fields": {
+      "providerName": "Provider Name",
+      "mailboxAddress": "Mailbox Address",
+      "imapHost": "IMAP Host",
+      "port": "Port",
+      "useTls": "Use TLS/SSL",
+      "allowStarttls": "Allow STARTTLS Upgrade",
+      "authenticationType": "Authentication Type",
+      "username": "Username",
+      "passwordLabel": "Password / App Password",
+      "authorizeUrl": "Authorize URL",
+      "tokenUrl": "Token URL",
+      "oauthClientId": "OAuth Client ID",
+      "oauthClientSecret": "OAuth Client Secret",
+      "oauthScopes": "OAuth Scopes",
+      "oauthScopesPlaceholder": "space-delimited scopes",
+      "folderFilters": "Folder Filters",
+      "folderFiltersPlaceholder": "Inbox, Support, Tickets",
+      "active": "Active",
+      "ticketDefaultsLabel": "Ticket Defaults",
+      "ticketDefaultsPlaceholder": "Select defaults...",
+      "ticketDefaultsEmpty": "No defaults available"
+    },
+    "authOptions": {
+      "password": "Password",
+      "oauth2": "OAuth2 (XOAUTH2)"
+    },
+    "password": {
+      "editHelp": "Passwords are stored securely and will not be displayed. Leave blank to keep the existing password."
+    },
+    "oauth": {
+      "statusLabel": "OAuth Status",
+      "connected": "Connected",
+      "notConnected": "Not connected",
+      "authorizing": "Authorizing...",
+      "reconnect": "Reconnect OAuth"
+    },
+    "validation": {
+      "fixHighlightedFields": "Please fix the highlighted fields and try again."
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "saving": "Saving...",
+      "updateProvider": "Update Provider",
+      "createProvider": "Create Provider"
+    }
+  },
+  "microsoftForm": {
+    "header": {
+      "title": "Microsoft 365 Integration",
+      "description": "Simply connect your Microsoft 365 account and configure your email processing preferences to get started."
+    },
+    "sections": {
+      "accountSetup": {
+        "title": "Microsoft 365 Account Setup",
+        "description": "Configure your Microsoft 365 account for inbound email processing"
+      },
+      "authentication": {
+        "title": "Microsoft 365 Authentication",
+        "description": "Connect your Microsoft 365 account to enable email processing"
+      },
+      "processing": {
+        "title": "Email Processing Settings",
+        "description": "Configure how emails are processed and imported"
+      },
+      "ticketDefaults": {
+        "title": "Ticket Defaults",
+        "description": "Select defaults to apply to email-created tickets"
+      }
+    },
+    "fields": {
+      "providerNameLabel": "Provider Name *",
+      "providerNamePlaceholder": "e.g., Support Microsoft 365",
+      "mailboxLabel": "Microsoft 365 Address *",
+      "mailboxPlaceholder": "support@client.com",
+      "enableProvider": "Enable this provider",
+      "foldersLabel": "Folders to Monitor",
+      "foldersPlaceholder": "Inbox, Support, Custom Folder",
+      "foldersHelp": "Comma-separated list of folders to monitor (default: Inbox)",
+      "maxEmailsLabel": "Max Emails Per Sync",
+      "maxEmailsHelp": "Maximum number of emails to process in each sync (1-1000)",
+      "inboundDefaultsLabel": "Inbound Ticket Defaults",
+      "inboundDefaultsPlaceholder": "Select defaults (optional)"
+    },
+    "oauth": {
+      "connectionTitle": "Microsoft 365 Connection",
+      "descriptionIdle": "Authorize access to your Microsoft 365 account",
+      "descriptionSuccess": "Successfully connected! Complete setup by saving below.",
+      "connecting": "Connecting...",
+      "connected": "Connected",
+      "connectButton": "Connect Microsoft 365",
+      "requiredTitle": "Microsoft 365 Connection Required",
+      "requiredDescriptionUpdate": "You must connect your Microsoft 365 account above before updating the provider.",
+      "requiredDescriptionAdd": "You must connect your Microsoft 365 account above before adding the provider.",
+      "authError": "Please fill in all required fields before authorizing",
+      "popupBlocked": "Failed to open OAuth popup. Please allow popups for this site.",
+      "authorizationFailed": "Authorization failed",
+      "initiateFailed": "Failed to initiate OAuth",
+      "hostedConfigIncomplete": "Hosted Microsoft configuration not available or incomplete",
+      "hostedCredentialsMissing": "Hosted Microsoft client credentials not available"
+    },
+    "nextStep": {
+      "title": "Complete Setup",
+      "autoSubmit": "Auto-completing in",
+      "secondsSuffix": "seconds, or click",
+      "clickNow": "below now.",
+      "manualInstruction": "Click",
+      "manualSuffix": "below to finish configuration.",
+      "cancelAutoSubmit": "Cancel Auto-Submit"
+    },
+    "buttons": {
+      "updateProvider": "Update Provider",
+      "addProvider": "Add Provider",
+      "manageDefaults": "Manage defaults",
+      "refreshList": "Refresh list",
+      "cancel": "Cancel",
+      "completeSetupSuffix": "& Complete Setup",
+      "settingUp": "Setting up Microsoft 365 integration..."
+    },
+    "validation": {
+      "requiredFieldsTitle": "Please fill in the required fields:",
+      "providerName": "Provider Name",
+      "mailbox": "Microsoft 365 Address"
+    }
+  },
+  "gmailForm": {
+    "header": {
+      "title": "Gmail Integration",
+      "description": "Connect your Gmail account and configure your email processing preferences."
+    },
+    "basicConfig": {
+      "title": "Gmail Account Setup",
+      "description": "Configure your Gmail account for inbound email processing"
+    },
+    "authentication": {
+      "title": "Gmail Authentication",
+      "description": "Connect your Gmail account to enable email processing",
+      "connectionTitle": "Gmail Connection",
+      "descriptionIdle": "Authorize access to your Gmail account",
+      "descriptionSuccess": "Successfully connected! Saving your settings...",
+      "buttonIdle": "Connect Gmail",
+      "buttonAuthorizing": "Connecting...",
+      "buttonSuccess": "Connected"
+    },
+    "processing": {
+      "title": "Email Processing Settings",
+      "description": "Configure how emails are processed and imported"
+    },
+    "ticketDefaults": {
+      "title": "Ticket Defaults",
+      "description": "Select defaults to apply to email-created tickets",
+      "manageDefaults": "Manage defaults",
+      "inboundDefaultsLabel": "Inbound Ticket Defaults",
+      "inboundDefaultsPlaceholder": "Select defaults (optional)",
+      "refreshList": "Refresh list"
+    },
+    "googleConfig": {
+      "notConfigured": "Google integration is not configured for this tenant.",
+      "configureHint": "Configure tenant-owned Google OAuth + Pub/Sub first:",
+      "settingsPath": "Settings → Integrations → Providers",
+      "openSettings": "Open Google Settings"
+    },
+    "oauth": {
+      "requiredTitle": "Gmail Connection Required",
+      "requiredDescriptionUpdate": "You must connect your Gmail account above before updating the provider.",
+      "requiredDescriptionAdd": "You must connect your Gmail account above before adding the provider.",
+      "fillRequiredFields": "Please fill in all required fields before authorizing",
+      "notConfiguredTenant": "Google integration is not configured for this tenant. Configure Google first, then retry.",
+      "initiateFailed": "Failed to initiate OAuth"
+    },
+    "validation": {
+      "requiredFieldsTitle": "Please fill in the required fields:",
+      "providerName": "Provider Name",
+      "mailbox": "Gmail Address"
+    },
+    "warnings": {
+      "setupIncomplete": "Provider saved but setup incomplete: {{error}}",
+      "setupWarningsTitle": "Setup completed with warnings:"
+    },
+    "buttons": {
+      "updateProvider": "Update Provider",
+      "addProvider": "Add Provider",
+      "completeSetupSuffix": "& Complete Setup",
+      "cancel": "Cancel",
+      "settingUp": "Setting up Gmail integration..."
+    }
+  },
   "managed": {
     "messages": {
       "loadDomainsFailed": "Failed to load managed domains",

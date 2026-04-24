@@ -380,6 +380,208 @@
       }
     }
   },
+  "imapForm": {
+    "sections": {
+      "basic": {
+        "title": "Ustawienia podstawowe",
+        "description": "Zdefiniuj szczegóły połączenia ze skrzynką pocztową IMAP."
+      },
+      "auth": {
+        "title": "Uwierzytelnianie",
+        "description": "Wybierz hasło lub uwierzytelnianie OAuth2."
+      },
+      "processing": {
+        "title": "Ustawienia przetwarzania",
+        "description": "Wybierz foldery i zachowanie przetwarzania."
+      }
+    },
+    "fields": {
+      "providerName": "Nazwa dostawcy",
+      "mailboxAddress": "Adres skrzynki pocztowej",
+      "imapHost": "Host IMAP",
+      "port": "Port",
+      "useTls": "Użyj TLS/SSL",
+      "allowStarttls": "Zezwól na aktualizację STARTTLS",
+      "authenticationType": "Typ uwierzytelnienia",
+      "username": "Nazwa użytkownika",
+      "passwordLabel": "Hasło / hasło do aplikacji",
+      "authorizeUrl": "Autoryzuj adres URL",
+      "tokenUrl": "Adres URL tokena",
+      "oauthClientId": "OAuth Client ID",
+      "oauthClientSecret": "OAuth Client Secret",
+      "oauthScopes": "Zakresy OAuth",
+      "oauthScopesPlaceholder": "zakresy rozdzielone spacjami",
+      "folderFilters": "Filtry folderów",
+      "folderFiltersPlaceholder": "Skrzynka odbiorcza, wsparcie, zgłoszenia",
+      "active": "Aktywny",
+      "ticketDefaultsLabel": "Domyślne ustawienia zgłoszeń",
+      "ticketDefaultsPlaceholder": "Wybierz ustawienia domyślne...",
+      "ticketDefaultsEmpty": "Brak dostępnych ustawień domyślnych"
+    },
+    "authOptions": {
+      "password": "Hasło",
+      "oauth2": "OAuth2 (XOAUTH2)"
+    },
+    "password": {
+      "editHelp": "Hasła są bezpiecznie przechowywane i nie będą wyświetlane. Pozostaw puste, aby zachować istniejące hasło."
+    },
+    "oauth": {
+      "statusLabel": "Stan OAuth",
+      "connected": "Połączono",
+      "notConnected": "Nie podłączono",
+      "authorizing": "Autoryzowanie...",
+      "reconnect": "Połącz ponownie OAuth"
+    },
+    "validation": {
+      "fixHighlightedFields": "Popraw wyróżnione pola i spróbuj ponownie."
+    },
+    "actions": {
+      "cancel": "Anuluj",
+      "saving": "Zapisywanie...",
+      "updateProvider": "Aktualizuj dostawcę",
+      "createProvider": "Utwórz dostawcę"
+    }
+  },
+  "microsoftForm": {
+    "header": {
+      "title": "Integracja Microsoft 365",
+      "description": "Po prostu połącz swoje konto Microsoft 365 i skonfiguruj preferencje przetwarzania poczty, aby rozpocząć."
+    },
+    "sections": {
+      "accountSetup": {
+        "title": "Konfiguracja konta Microsoft 365",
+        "description": "Skonfiguruj swoje konto Microsoft 365 do przetwarzania poczty przychodzącej"
+      },
+      "authentication": {
+        "title": "Uwierzytelnianie Microsoft 365",
+        "description": "Połącz swoje konto Microsoft 365, aby włączyć przetwarzanie poczty"
+      },
+      "processing": {
+        "title": "Ustawienia przetwarzania poczty",
+        "description": "Skonfiguruj sposób przetwarzania i importowania wiadomości e-mail"
+      },
+      "ticketDefaults": {
+        "title": "Domyślne ustawienia zgłoszeń",
+        "description": "Wybierz wartości domyślne, które mają zostać zastosowane do zgłoszeń tworzonych z wiadomości e-mail"
+      }
+    },
+    "fields": {
+      "providerNameLabel": "Nazwa dostawcy *",
+      "providerNamePlaceholder": "np. Support Microsoft 365",
+      "mailboxLabel": "Adres Microsoft 365 *",
+      "mailboxPlaceholder": "wsparcie@klient.com",
+      "enableProvider": "Włącz tego dostawcę",
+      "foldersLabel": "Foldery do monitorowania",
+      "foldersPlaceholder": "Skrzynka odbiorcza, wsparcie, folder niestandardowy",
+      "foldersHelp": "Rozdzielana przecinkami lista folderów do monitorowania (domyślnie: Skrzynka odbiorcza)",
+      "maxEmailsLabel": "Maksymalna liczba wiadomości na synchronizację",
+      "maxEmailsHelp": "Maksymalna liczba wiadomości do przetworzenia w każdej synchronizacji (1-1000)",
+      "inboundDefaultsLabel": "Domyślne ustawienia zgłoszeń przychodzących",
+      "inboundDefaultsPlaceholder": "Wybierz ustawienia domyślne (opcjonalne)"
+    },
+    "oauth": {
+      "connectionTitle": "Połączenie Microsoft 365",
+      "descriptionIdle": "Autoryzuj dostęp do swojego konta Microsoft 365",
+      "descriptionSuccess": "Pomyślnie połączono! Ukończ konfigurację, zapisując poniżej.",
+      "connecting": "Łączenie...",
+      "connected": "Połączono",
+      "connectButton": "Połącz Microsoft 365",
+      "requiredTitle": "Wymagane połączenie Microsoft 365",
+      "requiredDescriptionUpdate": "Musisz połączyć swoje konto Microsoft 365 powyżej przed zaktualizowaniem dostawcy.",
+      "requiredDescriptionAdd": "Musisz połączyć swoje konto Microsoft 365 powyżej przed dodaniem dostawcy.",
+      "authError": "Przed autoryzacją wypełnij wszystkie wymagane pola",
+      "popupBlocked": "Nie udało się otworzyć wyskakującego okienka OAuth. Zezwól na wyświetlanie wyskakujących okienek w tej witrynie.",
+      "authorizationFailed": "Autoryzacja nie powiodła się",
+      "initiateFailed": "Nie udało się zainicjować OAuth",
+      "hostedConfigIncomplete": "Hostowana konfiguracja Microsoft jest niedostępna lub niekompletna",
+      "hostedCredentialsMissing": "Hostowane poświadczenia klienta Microsoft są niedostępne"
+    },
+    "nextStep": {
+      "title": "Ukończ konfigurację",
+      "autoSubmit": "Automatyczne kończenie za",
+      "secondsSuffix": "sekund lub kliknij",
+      "clickNow": "poniżej teraz.",
+      "manualInstruction": "Kliknij",
+      "manualSuffix": "poniżej, aby zakończyć konfigurację.",
+      "cancelAutoSubmit": "Anuluj automatyczne wysłanie"
+    },
+    "buttons": {
+      "updateProvider": "Aktualizuj dostawcę",
+      "addProvider": "Dodaj dostawcę",
+      "manageDefaults": "Zarządzaj ustawieniami domyślnymi",
+      "refreshList": "Odśwież listę",
+      "cancel": "Anuluj",
+      "completeSetupSuffix": "& Ukończ konfigurację",
+      "settingUp": "Konfigurowanie integracji Microsoft 365..."
+    },
+    "validation": {
+      "requiredFieldsTitle": "Proszę wypełnić wymagane pola:",
+      "providerName": "Nazwa dostawcy",
+      "mailbox": "Adres Microsoft 365"
+    }
+  },
+  "gmailForm": {
+    "header": {
+      "title": "Integracja Gmaila",
+      "description": "Połącz swoje konto Gmail i skonfiguruj preferencje przetwarzania poczty."
+    },
+    "basicConfig": {
+      "title": "Konfiguracja konta Gmail",
+      "description": "Skonfiguruj swoje konto Gmail do przetwarzania poczty przychodzącej"
+    },
+    "authentication": {
+      "title": "Uwierzytelnianie Gmaila",
+      "description": "Połącz swoje konto Gmail, aby włączyć przetwarzanie poczty",
+      "connectionTitle": "Połączenie Gmail",
+      "descriptionIdle": "Autoryzuj dostęp do swojego konta Gmail",
+      "descriptionSuccess": "Pomyślnie połączono! Zapisywanie ustawień...",
+      "buttonIdle": "Połącz Gmaila",
+      "buttonAuthorizing": "Łączenie...",
+      "buttonSuccess": "Połączono"
+    },
+    "processing": {
+      "title": "Ustawienia przetwarzania poczty",
+      "description": "Skonfiguruj sposób przetwarzania i importowania wiadomości e-mail"
+    },
+    "ticketDefaults": {
+      "title": "Domyślne ustawienia zgłoszeń",
+      "description": "Wybierz wartości domyślne, które mają zostać zastosowane do zgłoszeń tworzonych z wiadomości e-mail",
+      "manageDefaults": "Zarządzaj ustawieniami domyślnymi",
+      "inboundDefaultsLabel": "Domyślne ustawienia zgłoszeń przychodzących",
+      "inboundDefaultsPlaceholder": "Wybierz ustawienia domyślne (opcjonalne)",
+      "refreshList": "Odśwież listę"
+    },
+    "googleConfig": {
+      "notConfigured": "Integracja Google nie jest skonfigurowana dla tego tenanta.",
+      "configureHint": "Najpierw skonfiguruj OAuth + Pub/Sub Google należące do tenanta:",
+      "settingsPath": "Ustawienia → Integracje → Dostawcy",
+      "openSettings": "Otwórz ustawienia Google"
+    },
+    "oauth": {
+      "requiredTitle": "Wymagane połączenie Gmail",
+      "requiredDescriptionUpdate": "Musisz połączyć swoje konto Gmail powyżej przed zaktualizowaniem dostawcy.",
+      "requiredDescriptionAdd": "Musisz połączyć swoje konto Gmail powyżej przed dodaniem dostawcy.",
+      "fillRequiredFields": "Przed autoryzacją wypełnij wszystkie wymagane pola",
+      "notConfiguredTenant": "Integracja Google nie jest skonfigurowana dla tego tenanta. Najpierw skonfiguruj Google, a następnie spróbuj ponownie.",
+      "initiateFailed": "Nie udało się zainicjować OAuth"
+    },
+    "validation": {
+      "requiredFieldsTitle": "Proszę wypełnić wymagane pola:",
+      "providerName": "Nazwa dostawcy",
+      "mailbox": "Adres Gmail"
+    },
+    "warnings": {
+      "setupIncomplete": "Dostawca zapisany, ale konfiguracja niekompletna: {{error}}",
+      "setupWarningsTitle": "Konfiguracja zakończona z ostrzeżeniami:"
+    },
+    "buttons": {
+      "updateProvider": "Aktualizuj dostawcę",
+      "addProvider": "Dodaj dostawcę",
+      "completeSetupSuffix": "& Ukończ konfigurację",
+      "cancel": "Anuluj",
+      "settingUp": "Konfigurowanie integracji Gmail..."
+    }
+  },
   "inboundDefaultsForm": {
     "feedback": {
       "loadOptionsError": "Nie udało się załadować opcji pola",

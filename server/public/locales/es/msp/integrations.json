@@ -345,6 +345,322 @@
         }
       }
     },
+    "entra": {
+      "settings": {
+        "actions": {
+          "disconnect": "Desconectar",
+          "reconnect": "Reconectar",
+          "reconnecting": "Reconectando…",
+          "refresh": "Actualizar",
+          "resetFieldSync": "Restablecer",
+          "reviewMappings": "Revisar asignaciones",
+          "reviewRemap": "Revisar / Reasignar",
+          "hideReviewRemap": "Ocultar revisión / reasignación",
+          "runDiscovery": "Ejecutar descubrimiento",
+          "runDiscoveryAgain": "Volver a ejecutar descubrimiento",
+          "runDiscoveryRunning": "Ejecutando descubrimiento…",
+          "runInitialSync": "Ejecutar sincronización inicial",
+          "runInitialSyncRunning": "Iniciando sincronización inicial…",
+          "saveFieldSync": "Guardar controles de sincronización de campos",
+          "savingFieldSync": "Guardando…",
+          "syncAll": "Sincronizar ahora todos los inquilinos",
+          "syncAllStarting": "Iniciando…"
+        },
+        "badges": {
+          "enterprise": "Enterprise",
+          "reviewBeforeInitialSync": "Revisar antes de la sincronización inicial"
+        },
+        "connection": {
+          "connectingSuffix": " (Conectando...)",
+          "details": "Detalles de conexión",
+          "directCredentialSourceLabel": "Origen de credenciales:",
+          "directTenantDefault": "common (multi-tenant)",
+          "directTenantLabel": "Microsoft Tenant:",
+          "cippServerLabel": "Servidor CIPP:",
+          "notAvailable": "No disponible",
+          "notConfigured": "No configurado",
+          "notConnectedStatus": "not_connected",
+          "optionsTitle": "Opciones de conexión",
+          "promptDetails": "Conecte Entra para completar los detalles del proveedor."
+        },
+        "currentStep": {
+          "connect": {
+            "guidance": "Seleccione una opción de conexión para continuar con la incorporación.",
+            "title": "Paso 1: Conectar"
+          },
+          "connectionsBelow": "Las opciones de conexión aparecen a continuación.",
+          "discover": {
+            "guidance": "Ejecute el descubrimiento para cargar los inquilinos gestionados de Entra antes de asignarlos.",
+            "title": "Paso 2: Descubrir"
+          },
+          "label": "Paso actual",
+          "map": {
+            "guidance": "Confirme o ajuste las asignaciones de inquilinos para desbloquear la sincronización inicial.",
+            "title": "Paso 3: Asignar"
+          },
+          "sync": {
+            "guidance": "Inicie la primera ejecución de sincronización para las asignaciones confirmadas.",
+            "title": "Paso 4: Sincronización inicial"
+          }
+        },
+        "description": "Configure el acceso a Entra a nivel de socio, descubra inquilinos gestionados, asígnelos a clientes y ejecute flujos de sincronización.",
+        "disabled": {
+          "description": "La interfaz de integración con Entra está actualmente deshabilitada para este inquilino.",
+          "title": "Integración con Microsoft Entra"
+        },
+        "discovery": {
+          "completed": "Descubrimiento completado. Se descubrieron {{count}} inquilinos.",
+          "completedOne": "Descubrimiento completado. Se descubrió {{count}} inquilino.",
+          "failed": "No se pudo ejecutar el descubrimiento de inquilinos."
+        },
+        "errors": {
+          "loadStatus": "No se pudo cargar el estado de conexión de Entra.",
+          "unknown": "Error desconocido"
+        },
+        "fieldSync": {
+          "description": "Elija qué campos del perfil de Entra pueden sobrescribir los campos de contacto locales durante la sincronización.",
+          "feedback": {
+            "saveFailed": "No se pudieron guardar los controles de sincronización de campos.",
+            "saved": "Controles de sincronización de campos guardados."
+          },
+          "options": {
+            "displayName": {
+              "description": "Permitir que el nombre visible de Entra sobrescriba el nombre completo en los contactos vinculados.",
+              "label": "Nombre visible"
+            },
+            "email": {
+              "description": "Permitir que el correo/UPN de Entra sobrescriba el correo del contacto en los contactos vinculados.",
+              "label": "Correo electrónico"
+            },
+            "phone": {
+              "description": "Permitir que los valores de teléfono de Entra sobrescriban el número de teléfono del contacto en los contactos vinculados.",
+              "label": "Teléfono"
+            },
+            "role": {
+              "description": "Permitir que el puesto de Entra sobrescriba el rol del contacto en los contactos vinculados.",
+              "label": "Rol"
+            },
+            "upn": {
+              "description": "Permitir que el UPN de Entra sobrescriba el nombre principal de Entra almacenado en los contactos vinculados.",
+              "label": "UPN"
+            }
+          },
+          "title": "Controles de sincronización de campos"
+        },
+        "guidedStep": {
+          "current": "actual",
+          "complete": "completo",
+          "locked": "bloqueado",
+          "stepLabel": "Paso {{number}}",
+          "thisIsCurrent": "Este es su paso actual de incorporación."
+        },
+        "initialSync": {
+          "failed": "No se pudo iniciar la sincronización inicial de Entra.",
+          "started": "Sincronización inicial iniciada. ID de ejecución: {{runId}}",
+          "startedNoId": "Solicitud de inicio de sincronización inicial aceptada."
+        },
+        "maintenance": {
+          "description": "La configuración inicial está completa. Concéntrese aquí en las operaciones de sincronización, comprobaciones de estado y revisiones de mantenimiento.",
+          "healthDescription": "Revise el estado de la conexión, ejecute operaciones de mantenimiento y monitoree la actividad de sincronización.",
+          "healthTitle": "Resumen de estado",
+          "title": "Modo de operaciones continuas"
+        },
+        "mapping": {
+          "description": "Revise las coincidencias sugeridas, elija el cliente correcto para cada inquilino y confirme las asignaciones antes de la sincronización inicial.",
+          "needsReviewLabel": "Requiere revisión:",
+          "savedLabel": "Guardado:",
+          "selectedLabel": "Seleccionado:",
+          "skippedLabel": "Omitido:",
+          "stepLabel": "Paso 3",
+          "title": "Asignar inquilinos a clientes"
+        },
+        "onboarding": {
+          "description": "Complete cada paso de incorporación en orden: conectar, descubrir, asignar y luego ejecutar su primera sincronización.",
+          "title": "Modo de configuración"
+        },
+        "ongoing": {
+          "description": "Use estos controles para las operaciones de sincronización manual después de completar los pasos de incorporación.",
+          "title": "Operaciones continuas"
+        },
+        "overview": {
+          "connectionLabel": "Conexión:",
+          "connectionTypeLabel": "Tipo de conexión:",
+          "label": "Resumen",
+          "mappedTenantsLabel": "Inquilinos asignados:",
+          "nextSyncIntervalEvery": "Cada {{minutes}} minutos",
+          "nextSyncIntervalLabel": "Próximo intervalo de sincronización:"
+        },
+        "skipped": {
+          "empty": "Actualmente no hay inquilinos marcados como omitidos.",
+          "noPrimaryDomain": "Sin dominio principal",
+          "remap": "Reasignar",
+          "title": "Inquilinos omitidos"
+        },
+        "status": {
+          "connectionHealth": "Estado de la conexión",
+          "label": "Estado"
+        },
+        "syncAll": {
+          "failed": "No se pudo iniciar la sincronización completa de Entra.",
+          "started": "Sincronización iniciada. ID de ejecución: {{runId}}",
+          "startedNoId": "Solicitud de inicio de sincronización aceptada."
+        },
+        "title": "Integración con Microsoft Entra",
+        "validation": {
+          "label": "Validación y descubrimiento",
+          "lastDiscoveryLabel": "Último descubrimiento:",
+          "lastValidatedLabel": "Última validación:",
+          "neverFormatted": "Nunca",
+          "noneValidationError": "Ninguno",
+          "validationErrorLabel": "Error de validación:"
+        },
+        "wizard": {
+          "connect": {
+            "description": "Autorizar la autenticación directa de socio de Microsoft para vincular este inquilino de Entra.",
+            "title": "Conectar"
+          },
+          "discover": {
+            "description": "Cargar y persistir los inquilinos gestionados de Entra para este inquilino MSP.",
+            "title": "Descubrir inquilinos"
+          },
+          "map": {
+            "description": "Revisar las sugerencias de coincidencia automática y confirmar las asignaciones.",
+            "title": "Asignar inquilinos a clientes"
+          },
+          "sync": {
+            "description": "Iniciar la primera ejecución de sincronización para las asignaciones confirmadas.",
+            "title": "Sincronización inicial"
+          }
+        }
+      },
+      "tenantMapping": {
+        "actions": {
+          "confirmSelected": "Confirmar asignaciones seleccionadas",
+          "confirming": "Confirmando…",
+          "import": "Importar como nuevo cliente",
+          "importing": "Importando…",
+          "preselectExact": "Preseleccionar coincidencias exactas",
+          "refresh": "Actualizar vista previa",
+          "skip": "Omitir",
+          "skipped": "Omitido"
+        },
+        "columns": {
+          "actions": "Acciones",
+          "confidence": "Confianza",
+          "entraTenant": "Inquilino de Entra",
+          "primaryDomain": "Dominio principal",
+          "selectClient": "Seleccionar cliente",
+          "status": "Estado",
+          "suggestedClient": "Cliente sugerido"
+        },
+        "empty": "No hay inquilinos descubiertos disponibles para la vista previa de asignación.",
+        "errors": {
+          "confirmFailed": "No se pudieron confirmar las asignaciones seleccionadas.",
+          "importFailed": "No se pudo importar el inquilino como cliente.",
+          "loadFailed": "No se pudo cargar la vista previa de asignación de inquilinos.",
+          "selectAtLeastOne": "Seleccione al menos un cliente para confirmar una asignación.",
+          "skipFailed": "No se pudo omitir esta asignación de inquilino."
+        },
+        "feedback": {
+          "confirmed": "Se confirmaron {{count}} asignaciones.",
+          "confirmedOne": "Se confirmó {{count}} asignación."
+        },
+        "noSuggestion": "Sin sugerencia",
+        "picker": {
+          "placeholder": "Seleccionar cliente...",
+          "unknownClient": "Cliente desconocido"
+        },
+        "reasons": {
+          "exactDomain": "Dominio exacto",
+          "fuzzyName": "Nombre aproximado",
+          "secondaryDomain": "Dominio secundario"
+        },
+        "states": {
+          "autoMatched": "Emparejado automáticamente",
+          "imported": "Importado",
+          "needsReview": "Requiere revisión",
+          "skipped": "Omitido",
+          "unmatched": "Sin coincidencia"
+        },
+        "title": "Vista previa de asignación de inquilinos"
+      },
+      "cippDialog": {
+        "actions": {
+          "cancel": "Cancelar",
+          "connect": "Conectar",
+          "connecting": "Conectando..."
+        },
+        "description": "Introduzca la URL de su instancia CIPP y un token de API para permitir que Alga descubra y sincronice los datos de Entra.",
+        "errors": {
+          "missingFields": "Se requieren tanto la URL base como el token de API.",
+          "unknown": "Se produjo un error desconocido."
+        },
+        "fields": {
+          "apiToken": "Token de API",
+          "apiTokenPlaceholder": "Introduzca el token...",
+          "baseUrl": "URL base de CIPP",
+          "baseUrlPlaceholder": "https://cipp.yourdomain.com"
+        },
+        "title": "Conectar CIPP"
+      },
+      "reconciliation": {
+        "actions": {
+          "refresh": "Actualizar",
+          "resolveExisting": "Resolver en existente",
+          "resolveNew": "Resolver en nuevo"
+        },
+        "candidate": {
+          "fallback": "candidato",
+          "label": "Contactos candidatos: {{count}}"
+        },
+        "contactPicker": {
+          "label": "Contacto existente",
+          "placeholder": "Seleccionar contacto existente..."
+        },
+        "errors": {
+          "enterContactId": "Introduzca un ID de contacto para resolverlo en un contacto existente.",
+          "loadQueue": "No se pudo cargar la cola de conciliación.",
+          "resolveFailed": "No se pudo resolver el elemento de la cola."
+        },
+        "empty": "No hay coincidencias ambiguas en espera de revisión.",
+        "loading": "Cargando cola…",
+        "noEmailIdentity": "Sin identidad de correo",
+        "queuedAt": "{{identity}} · en cola {{time}}",
+        "scopedToMappedClient": "Las opciones de contacto existente están limitadas a este cliente asignado.",
+        "success": {
+          "resolvedExisting": "Elemento de cola {{queueItemId}} resuelto en el contacto existente {{contactNameId}}.",
+          "resolvedNew": "Elemento de cola {{queueItemId}} resuelto creando el contacto {{contactNameId}}."
+        },
+        "title": "Cola de coincidencias ambiguas"
+      },
+      "syncHistory": {
+        "actions": {
+          "hideDetails": "Ocultar detalles",
+          "refresh": "Actualizar",
+          "viewDetails": "Ver detalles"
+        },
+        "details": {
+          "noResults": "No se registraron resultados de inquilino.",
+          "stats": "creados {{created}}, vinculados {{linked}}, actualizados {{updated}}, ambiguos {{ambiguous}}, inactivados {{inactivated}}",
+          "tenantHeader": "Inquilino {{tenant}} · {{status}}",
+          "unknownTenant": "desconocido"
+        },
+        "empty": "Aún no se encontraron ejecuciones de sincronización.",
+        "errors": {
+          "loadDetailFailed": "No se pudo cargar el detalle de la ejecución.",
+          "loadFailed": "No se pudo cargar el historial de sincronización.",
+          "loadRunFailed": "No se pudo cargar la ejecución {{runId}}."
+        },
+        "loading": "Cargando historial de sincronización…",
+        "run": {
+          "header": "{{runType}} · {{status}}",
+          "inProgress": "En progreso",
+          "tenants": "Inquilinos: {{processed}}/{{total}} · Éxito: {{success}} · Fallidos: {{failed}}",
+          "timing": "Iniciado {{started}} · Completado {{completed}}"
+        },
+        "title": "Ejecuciones de sincronización recientes"
+      }
+    },
     "google": {
       "settings": {
         "actions": {
@@ -685,6 +1001,26 @@
           "disconnectUnexpected": "An unexpected error occurred while disconnecting.",
           "orgSyncFailed": "Organization sync failed.",
           "deviceSyncFailed": "Device sync failed."
+        },
+        "compliance": {
+          "actions": {
+            "retry": "Reintentar",
+            "syncing": "Sincronizando...",
+            "syncPatches": "Sincronizar parches",
+            "syncSoftware": "Sincronizar software"
+          },
+          "description": "Resumen del estado de los dispositivos gestionados por RMM",
+          "loading": "Cargando datos de cumplimiento...",
+          "metrics": {
+            "devicesOffline": "Dispositivos fuera de línea",
+            "devicesOnline": "Dispositivos en línea",
+            "devicesWithAlerts": "Dispositivos con alertas",
+            "patchesFailed": "Parches fallidos",
+            "patchesPending": "Parches pendientes"
+          },
+          "noData": "No hay datos de cumplimiento disponibles",
+          "summaryError": "No se pudo cargar el resumen de cumplimiento",
+          "title": "Cumplimiento de la flota"
         }
       },
       "setup": {
@@ -834,7 +1170,72 @@
         }
       },
       "tanium": {
-        "loading": "Cargando configuración de la integración con Tanium..."
+        "loading": "Cargando configuración de la integración con Tanium...",
+        "actions": {
+          "discoverScopes": "Descubrir ámbitos",
+          "disconnect": "Desconectar",
+          "runInventorySync": "Ejecutar sincronización de inventario",
+          "saveConfiguration": "Guardar configuración",
+          "testConnection": "Probar conexión"
+        },
+        "connection": {
+          "connectedAt": "Conectado el: {{time}}",
+          "description": "Configure las credenciales de Tanium Gateway y verifique el acceso acotado al inquilino.",
+          "never": "Nunca",
+          "syncLabel": "Sincronización: {{status}}",
+          "syncLabelWithError": "Sincronización: {{status}} ({{error}})",
+          "title": "Conexión con Tanium"
+        },
+        "errors": {
+          "loadMappings": "No se pudieron cargar las asignaciones de Tanium.",
+          "loadSettings": "No se pudo cargar la configuración de Tanium.",
+          "loadState": "No se pudo cargar el estado de la integración de Tanium.",
+          "saveConfiguration": "No se pudo guardar la configuración de Tanium.",
+          "testConnectionFailed": "La prueba de conexión de Tanium falló.",
+          "disconnectFailed": "No se pudo desconectar la integración de Tanium.",
+          "scopeDiscoveryFailed": "El descubrimiento de ámbitos falló.",
+          "inventorySyncFailed": "La sincronización de inventario falló.",
+          "updateMappingFailed": "No se pudo actualizar la asignación."
+        },
+        "fields": {
+          "apiToken": "Token de API {{state}}",
+          "apiTokenPlaceholderExisting": "Déjelo en blanco para conservar el token existente",
+          "apiTokenPlaceholderNew": "Pegue el token de API de Tanium",
+          "apiTokenStateRequired": "(requerido)",
+          "apiTokenStateSaved": "(guardado)",
+          "assetApiUrl": "URL de API de activos (opcional)",
+          "assetApiUrlPlaceholder": "https://example.cloud.tanium.com/plugin/products/asset",
+          "assetFallbackLabel": "Habilitar el respaldo de la API de activos para la cobertura de endpoints desactualizados",
+          "gatewayUrl": "URL de Gateway",
+          "gatewayUrlPlaceholder": "https://example.cloud.tanium.com"
+        },
+        "mappings": {
+          "autoSync": "Sincronización automática",
+          "autoSyncDisabled": "Deshabilitada",
+          "autoSyncEnabled": "Habilitada",
+          "externalScope": "Ámbito externo",
+          "loading": "Cargando asignaciones...",
+          "mappedClient": "Cliente asignado",
+          "noScopes": "Aún no se han descubierto ámbitos de Tanium.",
+          "scopeIdLabel": "ID: {{id}}",
+          "unmapped": "Sin asignar"
+        },
+        "status": {
+          "connected": "Conectado",
+          "disconnected": "Desconectado",
+          "label": "Estado: "
+        },
+        "success": {
+          "configurationSaved": "Configuración de Tanium guardada.",
+          "connectionTestSucceeded": "La prueba de conexión de Tanium fue exitosa.",
+          "disconnected": "Integración de Tanium desconectada.",
+          "inventorySyncCompleted": "Sincronización de inventario completada. Procesados: {{processed}}, Creados: {{created}}, Actualizados: {{updated}}",
+          "scopeDiscoveryCompleted": "Descubrimiento de ámbitos completado. Procesados: {{processed}}, Creados: {{created}}, Actualizados: {{updated}}"
+        },
+        "sync": {
+          "description": "Descubra ámbitos desde los grupos de computadoras de Tanium, asígnelos a clientes y luego ejecute la sincronización de inventario.",
+          "title": "Sincronización de Tanium"
+        }
       }
     },
     "sso": {

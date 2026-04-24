@@ -6,6 +6,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   disconnectTaniumIntegration,
   getTaniumOrganizationMappings,
@@ -32,6 +33,7 @@ type ClientRow = {
 };
 
 export default function TaniumIntegrationSettings() {
+  const { t } = useTranslation('msp/integrations');
   const [gatewayUrl, setGatewayUrl] = useState('');
   const [assetApiUrl, setAssetApiUrl] = useState('');
   const [apiToken, setApiToken] = useState('');
@@ -66,7 +68,7 @@ export default function TaniumIntegrationSettings() {
       ]);
 
       if (!settingsResult.success) {
-        setError(settingsResult.error || 'Failed to load Tanium settings.');
+        setError(settingsResult.error || t('integrations.rmm.tanium.errors.loadSettings'));
       } else {
         const config = settingsResult.config;
         setGatewayUrl(config?.gatewayUrl || '');
@@ -80,26 +82,26 @@ export default function TaniumIntegrationSettings() {
       }
 
       if (!mappingResult.success) {
-        setError((prev) => prev || mappingResult.error || 'Failed to load Tanium mappings.');
+        setError((prev) => prev || mappingResult.error || t('integrations.rmm.tanium.errors.loadMappings'));
       } else {
         setMappings((mappingResult.mappings || []) as MappingRow[]);
         setClients((mappingResult.clients || []) as ClientRow[]);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load Tanium integration state.');
+      setError(err instanceof Error ? err.message : t('integrations.rmm.tanium.errors.loadState'));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
 
   const statusBadge = useMemo(() => {
-    if (isActive) return <Badge variant="default">Connected</Badge>;
-    return <Badge variant="outline">Disconnected</Badge>;
-  }, [isActive]);
+    if (isActive) return <Badge variant="default">{t('integrations.rmm.tanium.status.connected')}</Badge>;
+    return <Badge variant="outline">{t('integrations.rmm.tanium.status.disconnected')}</Badge>;
+  }, [isActive, t]);
 
   const handleSave = () => {
     startSaving(async () => {
@@ -114,10 +116,10 @@ export default function TaniumIntegrationSettings() {
 
       if (result.success) {
         setApiToken('');
-        setSuccess('Tanium configuration saved.');
+        setSuccess(t('integrations.rmm.tanium.success.configurationSaved'));
         await refresh();
       } else {
-        setError(result.error || 'Failed to save Tanium configuration.');
+        setError(result.error || t('integrations.rmm.tanium.errors.saveConfiguration'));
       }
     });
   };
@@ -128,9 +130,9 @@ export default function TaniumIntegrationSettings() {
       setSuccess(null);
       const result = await testTaniumConnection();
       if (result.success) {
-        setSuccess('Tanium connection test succeeded.');
+        setSuccess(t('integrations.rmm.tanium.success.connectionTestSucceeded'));
       } else {
-        setError(result.error || 'Tanium connection test failed.');
+        setError(result.error || t('integrations.rmm.tanium.errors.testConnectionFailed'));
       }
       await refresh();
     });
@@ -142,9 +144,9 @@ export default function TaniumIntegrationSettings() {
       setSuccess(null);
       const result = await disconnectTaniumIntegration();
       if (result.success) {
-        setSuccess('Tanium integration disconnected.');
+        setSuccess(t('integrations.rmm.tanium.success.disconnected'));
       } else {
-        setError(result.error || 'Failed to disconnect Tanium integration.');
+        setError(result.error || t('integrations.rmm.tanium.errors.disconnectFailed'));
       }
       await refresh();
     });
@@ -157,10 +159,14 @@ export default function TaniumIntegrationSettings() {
       const result = await syncTaniumScopes();
       if (result.success) {
         setSuccess(
-          `Scope discovery completed. Processed: ${result.items_processed}, Created: ${result.items_created}, Updated: ${result.items_updated}`
+          t('integrations.rmm.tanium.success.scopeDiscoveryCompleted', {
+            processed: result.items_processed,
+            created: result.items_created,
+            updated: result.items_updated,
+          })
         );
       } else {
-        setError(result.error || 'Scope discovery failed.');
+        setError(result.error || t('integrations.rmm.tanium.errors.scopeDiscoveryFailed'));
       }
       await refresh();
     });
@@ -173,10 +179,14 @@ export default function TaniumIntegrationSettings() {
       const result = await triggerTaniumFullSync();
       if (result.success && 'items_processed' in result) {
         setSuccess(
-          `Inventory sync completed. Processed: ${result.items_processed}, Created: ${result.items_created}, Updated: ${result.items_updated}`
+          t('integrations.rmm.tanium.success.inventorySyncCompleted', {
+            processed: result.items_processed,
+            created: result.items_created,
+            updated: result.items_updated,
+          })
         );
       } else {
-        const message = (result as any).error || 'Inventory sync failed.';
+        const message = (result as any).error || t('integrations.rmm.tanium.errors.inventorySyncFailed');
         setError(message);
       }
       await refresh();
@@ -190,7 +200,7 @@ export default function TaniumIntegrationSettings() {
         clientId: clientId || null,
       });
       if (!result.success) {
-        setError(result.error || 'Failed to update mapping.');
+        setError(result.error || t('integrations.rmm.tanium.errors.updateMappingFailed'));
         return;
       }
       await refresh();
@@ -212,52 +222,60 @@ export default function TaniumIntegrationSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Tanium Connection</CardTitle>
+          <CardTitle>{t('integrations.rmm.tanium.connection.title')}</CardTitle>
           <CardDescription>
-            Configure Tanium Gateway credentials and verify tenant-scoped access.
+            {t('integrations.rmm.tanium.connection.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">
-              Status: {statusBadge}
+              {t('integrations.rmm.tanium.status.label')}{statusBadge}
             </div>
             <div className="text-sm text-muted-foreground">
-              Sync: {syncStatus}{syncError ? ` (${syncError})` : ''}
+              {syncError
+                ? t('integrations.rmm.tanium.connection.syncLabelWithError', { status: syncStatus, error: syncError })
+                : t('integrations.rmm.tanium.connection.syncLabel', { status: syncStatus })}
             </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Gateway URL</label>
+              <label className="text-sm font-medium">{t('integrations.rmm.tanium.fields.gatewayUrl')}</label>
               <Input
                 id="tanium-gateway-url"
                 value={gatewayUrl}
                 onChange={(e) => setGatewayUrl(e.target.value)}
-                placeholder="https://example.cloud.tanium.com"
+                placeholder={t('integrations.rmm.tanium.fields.gatewayUrlPlaceholder')}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Asset API URL (optional)</label>
+              <label className="text-sm font-medium">{t('integrations.rmm.tanium.fields.assetApiUrl')}</label>
               <Input
                 id="tanium-asset-api-url"
                 value={assetApiUrl}
                 onChange={(e) => setAssetApiUrl(e.target.value)}
-                placeholder="https://example.cloud.tanium.com/plugin/products/asset"
+                placeholder={t('integrations.rmm.tanium.fields.assetApiUrlPlaceholder')}
               />
             </div>
           </div>
 
           <div className="space-y-2">
             <label className="text-sm font-medium">
-              API Token {hasApiToken ? '(saved)' : '(required)'}
+              {t('integrations.rmm.tanium.fields.apiToken', {
+                state: hasApiToken
+                  ? t('integrations.rmm.tanium.fields.apiTokenStateSaved')
+                  : t('integrations.rmm.tanium.fields.apiTokenStateRequired'),
+              })}
             </label>
             <Input
               id="tanium-api-token"
               type="password"
               value={apiToken}
               onChange={(e) => setApiToken(e.target.value)}
-              placeholder={hasApiToken ? 'Leave blank to keep existing token' : 'Paste Tanium API token'}
+              placeholder={hasApiToken
+                ? t('integrations.rmm.tanium.fields.apiTokenPlaceholderExisting')
+                : t('integrations.rmm.tanium.fields.apiTokenPlaceholderNew')}
             />
           </div>
 
@@ -268,41 +286,43 @@ export default function TaniumIntegrationSettings() {
               checked={useAssetFallback}
               onChange={(e) => setUseAssetFallback(e.target.checked)}
             />
-            Enable Asset API fallback for aged-out endpoint coverage
+            {t('integrations.rmm.tanium.fields.assetFallbackLabel')}
           </label>
 
           <div className="flex flex-wrap gap-2">
             <Button id="tanium-save-config" onClick={handleSave} disabled={isSaving || isLoading}>
-              Save Configuration
+              {t('integrations.rmm.tanium.actions.saveConfiguration')}
             </Button>
             <Button id="tanium-test-connection" variant="outline" onClick={handleTest} disabled={isTesting || isLoading}>
-              Test Connection
+              {t('integrations.rmm.tanium.actions.testConnection')}
             </Button>
             <Button id="tanium-disconnect" variant="outline" onClick={handleDisconnect} disabled={isDisconnecting || isLoading}>
-              Disconnect
+              {t('integrations.rmm.tanium.actions.disconnect')}
             </Button>
           </div>
 
           <div className="text-xs text-muted-foreground">
-            Connected at: {connectedAt ? new Date(connectedAt).toLocaleString() : 'Never'}
+            {t('integrations.rmm.tanium.connection.connectedAt', {
+              time: connectedAt ? new Date(connectedAt).toLocaleString() : t('integrations.rmm.tanium.connection.never'),
+            })}
           </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Tanium Sync</CardTitle>
+          <CardTitle>{t('integrations.rmm.tanium.sync.title')}</CardTitle>
           <CardDescription>
-            Discover scopes from Tanium computer groups, map them to clients, then run inventory sync.
+            {t('integrations.rmm.tanium.sync.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap gap-2">
             <Button id="tanium-sync-scopes" onClick={handleScopeSync} disabled={isScopeSyncing || isLoading}>
-              Discover Scopes
+              {t('integrations.rmm.tanium.actions.discoverScopes')}
             </Button>
             <Button id="tanium-sync-devices" onClick={handleDeviceSync} disabled={isDeviceSyncing || isLoading}>
-              Run Inventory Sync
+              {t('integrations.rmm.tanium.actions.runInventorySync')}
             </Button>
           </div>
 
@@ -310,9 +330,9 @@ export default function TaniumIntegrationSettings() {
             <table className="min-w-full text-sm">
               <thead className="bg-muted/50">
                 <tr>
-                  <th className="px-3 py-2 text-left">External Scope</th>
-                  <th className="px-3 py-2 text-left">Mapped Client</th>
-                  <th className="px-3 py-2 text-left">Auto Sync</th>
+                  <th className="px-3 py-2 text-left">{t('integrations.rmm.tanium.mappings.externalScope')}</th>
+                  <th className="px-3 py-2 text-left">{t('integrations.rmm.tanium.mappings.mappedClient')}</th>
+                  <th className="px-3 py-2 text-left">{t('integrations.rmm.tanium.mappings.autoSync')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -320,7 +340,7 @@ export default function TaniumIntegrationSettings() {
                   <tr key={mapping.mapping_id} className="border-t">
                     <td className="px-3 py-2">
                       <div className="font-medium">{mapping.external_organization_name || mapping.external_organization_id}</div>
-                      <div className="text-xs text-muted-foreground">ID: {mapping.external_organization_id}</div>
+                      <div className="text-xs text-muted-foreground">{t('integrations.rmm.tanium.mappings.scopeIdLabel', { id: mapping.external_organization_id })}</div>
                     </td>
                     <td className="px-3 py-2">
                       <select
@@ -328,7 +348,7 @@ export default function TaniumIntegrationSettings() {
                         value={mapping.client_id || ''}
                         onChange={(e) => handleMappingClientChange(mapping.mapping_id, e.target.value)}
                       >
-                        <option value="">Unmapped</option>
+                        <option value="">{t('integrations.rmm.tanium.mappings.unmapped')}</option>
                         {clients.map((client) => (
                           <option key={client.client_id} value={client.client_id}>
                             {client.client_name}
@@ -337,14 +357,18 @@ export default function TaniumIntegrationSettings() {
                       </select>
                     </td>
                     <td className="px-3 py-2">
-                      {mapping.auto_sync_assets ? <Badge variant="default">Enabled</Badge> : <Badge variant="outline">Disabled</Badge>}
+                      {mapping.auto_sync_assets
+                        ? <Badge variant="default">{t('integrations.rmm.tanium.mappings.autoSyncEnabled')}</Badge>
+                        : <Badge variant="outline">{t('integrations.rmm.tanium.mappings.autoSyncDisabled')}</Badge>}
                     </td>
                   </tr>
                 ))}
                 {!mappings.length ? (
                   <tr>
                     <td className="px-3 py-3 text-muted-foreground" colSpan={3}>
-                      {isLoading ? 'Loading mappings...' : 'No Tanium scopes discovered yet.'}
+                      {isLoading
+                        ? t('integrations.rmm.tanium.mappings.loading')
+                        : t('integrations.rmm.tanium.mappings.noScopes')}
                     </td>
                   </tr>
                 ) : null}

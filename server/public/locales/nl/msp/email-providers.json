@@ -460,6 +460,208 @@
       "create": "Standaardwaarden maken"
     }
   },
+  "imapForm": {
+    "sections": {
+      "basic": {
+        "title": "Basisinstellingen",
+        "description": "Definieer de IMAP-mailboxverbindingsgegevens."
+      },
+      "auth": {
+        "title": "Authenticatie",
+        "description": "Kies een wachtwoord of OAuth2-authenticatie."
+      },
+      "processing": {
+        "title": "Verwerkingsinstellingen",
+        "description": "Kies mappen en verwerkingsgedrag."
+      }
+    },
+    "fields": {
+      "providerName": "Naam aanbieder",
+      "mailboxAddress": "Postbusadres",
+      "imapHost": "IMAP-host",
+      "port": "Poort",
+      "useTls": "Gebruik TLS/SSL",
+      "allowStarttls": "Sta STARTTLS-upgrade toe",
+      "authenticationType": "Authenticatietype",
+      "username": "Gebruikersnaam",
+      "passwordLabel": "Wachtwoord / App-wachtwoord",
+      "authorizeUrl": "Autoriseer URL",
+      "tokenUrl": "Token-URL",
+      "oauthClientId": "OAuth-client-ID",
+      "oauthClientSecret": "OAuth-clientgeheim",
+      "oauthScopes": "OAuth-bereiken",
+      "oauthScopesPlaceholder": "door spaties gescheiden scopes",
+      "folderFilters": "Mapfilters",
+      "folderFiltersPlaceholder": "Inbox, Ondersteuning, Tickets",
+      "active": "Actief",
+      "ticketDefaultsLabel": "Ticketstandaarden",
+      "ticketDefaultsPlaceholder": "Selecteer standaardinstellingen...",
+      "ticketDefaultsEmpty": "Geen standaardinstellingen beschikbaar"
+    },
+    "authOptions": {
+      "password": "Wachtwoord",
+      "oauth2": "OAuth2 (XOAUTH2)"
+    },
+    "password": {
+      "editHelp": "Wachtwoorden worden veilig opgeslagen en worden niet weergegeven. Laat dit leeg om het bestaande wachtwoord te behouden."
+    },
+    "oauth": {
+      "statusLabel": "OAuth-status",
+      "connected": "Verbonden",
+      "notConnected": "Niet verbonden",
+      "authorizing": "Autoriseren...",
+      "reconnect": "Maak opnieuw verbinding met OAuth"
+    },
+    "validation": {
+      "fixHighlightedFields": "Corrigeer de gemarkeerde velden en probeer het opnieuw."
+    },
+    "actions": {
+      "cancel": "Annuleren",
+      "saving": "Opslaan...",
+      "updateProvider": "Aanbieder bijwerken",
+      "createProvider": "Aanbieder maken"
+    }
+  },
+  "microsoftForm": {
+    "header": {
+      "title": "Microsoft 365-integratie",
+      "description": "Verbind eenvoudig uw Microsoft 365-account en configureer uw voorkeuren voor e-mailverwerking om aan de slag te gaan."
+    },
+    "sections": {
+      "accountSetup": {
+        "title": "Microsoft 365-accountinstallatie",
+        "description": "Configureer uw Microsoft 365-account voor inkomende e-mailverwerking"
+      },
+      "authentication": {
+        "title": "Microsoft 365-authenticatie",
+        "description": "Verbind uw Microsoft 365-account om e-mailverwerking in te schakelen"
+      },
+      "processing": {
+        "title": "Instellingen voor e-mailverwerking",
+        "description": "Configureer hoe e-mails worden verwerkt en geïmporteerd"
+      },
+      "ticketDefaults": {
+        "title": "Ticketstandaarden",
+        "description": "Selecteer standaardinstellingen die moeten worden toegepast op via e-mail gemaakte tickets"
+      }
+    },
+    "fields": {
+      "providerNameLabel": "Naam aanbieder *",
+      "providerNamePlaceholder": "bijv. Support Microsoft 365",
+      "mailboxLabel": "Microsoft 365-adres *",
+      "mailboxPlaceholder": "support@client.com",
+      "enableProvider": "Schakel deze aanbieder in",
+      "foldersLabel": "Te controleren mappen",
+      "foldersPlaceholder": "Inbox, Ondersteuning, Aangepaste map",
+      "foldersHelp": "Door komma's gescheiden lijst met mappen die moeten worden gecontroleerd (standaard: Inbox)",
+      "maxEmailsLabel": "Max. e-mails per synchronisatie",
+      "maxEmailsHelp": "Maximum aantal e-mails dat per synchronisatie wordt verwerkt (1-1000)",
+      "inboundDefaultsLabel": "Standaardwaarden voor inkomende tickets",
+      "inboundDefaultsPlaceholder": "Selecteer standaardwaarden (optioneel)"
+    },
+    "oauth": {
+      "connectionTitle": "Microsoft 365-verbinding",
+      "descriptionIdle": "Toegang tot uw Microsoft 365-account autoriseren",
+      "descriptionSuccess": "Succesvol verbonden! Voltooi de installatie door hieronder op te slaan.",
+      "connecting": "Verbinden...",
+      "connected": "Verbonden",
+      "connectButton": "Microsoft 365 verbinden",
+      "requiredTitle": "Microsoft 365-verbinding vereist",
+      "requiredDescriptionUpdate": "U moet uw Microsoft 365-account hierboven verbinden voordat u de provider bijwerkt.",
+      "requiredDescriptionAdd": "U moet uw Microsoft 365-account hierboven verbinden voordat u de provider toevoegt.",
+      "authError": "Vul alle verplichte velden in voordat u autoriseert",
+      "popupBlocked": "Kan de OAuth-pop-up niet openen. Sta pop-ups toe voor deze site.",
+      "authorizationFailed": "Autorisatie mislukt",
+      "initiateFailed": "Kan OAuth niet starten",
+      "hostedConfigIncomplete": "Gehoste Microsoft-configuratie niet beschikbaar of onvolledig",
+      "hostedCredentialsMissing": "Gehoste Microsoft-client-inloggegevens niet beschikbaar"
+    },
+    "nextStep": {
+      "title": "Installatie voltooien",
+      "autoSubmit": "Automatisch voltooien over",
+      "secondsSuffix": "seconden, of klik",
+      "clickNow": "hieronder nu.",
+      "manualInstruction": "Klik",
+      "manualSuffix": "hieronder om de configuratie te voltooien.",
+      "cancelAutoSubmit": "Automatisch versturen annuleren"
+    },
+    "buttons": {
+      "updateProvider": "Aanbieder bijwerken",
+      "addProvider": "Aanbieder toevoegen",
+      "manageDefaults": "Standaardinstellingen beheren",
+      "refreshList": "Lijst vernieuwen",
+      "cancel": "Annuleren",
+      "completeSetupSuffix": "& Installatie voltooien",
+      "settingUp": "Microsoft 365-integratie instellen..."
+    },
+    "validation": {
+      "requiredFieldsTitle": "Vul de verplichte velden in:",
+      "providerName": "Naam aanbieder",
+      "mailbox": "Microsoft 365-adres"
+    }
+  },
+  "gmailForm": {
+    "header": {
+      "title": "Gmail-integratie",
+      "description": "Verbind uw Gmail-account en configureer uw voorkeuren voor e-mailverwerking."
+    },
+    "basicConfig": {
+      "title": "Gmail-accountinstallatie",
+      "description": "Configureer uw Gmail-account voor inkomende e-mailverwerking"
+    },
+    "authentication": {
+      "title": "Gmail-authenticatie",
+      "description": "Verbind uw Gmail-account om e-mailverwerking in te schakelen",
+      "connectionTitle": "Gmail-verbinding",
+      "descriptionIdle": "Toegang tot uw Gmail-account autoriseren",
+      "descriptionSuccess": "Succesvol verbonden! Uw instellingen opslaan...",
+      "buttonIdle": "Gmail verbinden",
+      "buttonAuthorizing": "Verbinden...",
+      "buttonSuccess": "Verbonden"
+    },
+    "processing": {
+      "title": "Instellingen voor e-mailverwerking",
+      "description": "Configureer hoe e-mails worden verwerkt en geïmporteerd"
+    },
+    "ticketDefaults": {
+      "title": "Ticketstandaarden",
+      "description": "Selecteer standaardinstellingen die moeten worden toegepast op via e-mail gemaakte tickets",
+      "manageDefaults": "Standaardinstellingen beheren",
+      "inboundDefaultsLabel": "Standaardwaarden voor inkomende tickets",
+      "inboundDefaultsPlaceholder": "Selecteer standaardwaarden (optioneel)",
+      "refreshList": "Lijst vernieuwen"
+    },
+    "googleConfig": {
+      "notConfigured": "Google-integratie is niet geconfigureerd voor deze tenant.",
+      "configureHint": "Configureer eerst tenant-eigen Google OAuth + Pub/Sub:",
+      "settingsPath": "Instellingen → Integraties → Providers",
+      "openSettings": "Open Google-instellingen"
+    },
+    "oauth": {
+      "requiredTitle": "Gmail-verbinding vereist",
+      "requiredDescriptionUpdate": "U moet uw Gmail-account hierboven verbinden voordat u de provider bijwerkt.",
+      "requiredDescriptionAdd": "U moet uw Gmail-account hierboven verbinden voordat u de provider toevoegt.",
+      "fillRequiredFields": "Vul alle verplichte velden in voordat u autoriseert",
+      "notConfiguredTenant": "Google-integratie is niet geconfigureerd voor deze tenant. Configureer eerst Google en probeer het vervolgens opnieuw.",
+      "initiateFailed": "Kan OAuth niet starten"
+    },
+    "validation": {
+      "requiredFieldsTitle": "Vul de verplichte velden in:",
+      "providerName": "Naam aanbieder",
+      "mailbox": "Gmail-adres"
+    },
+    "warnings": {
+      "setupIncomplete": "Provider opgeslagen maar installatie onvolledig: {{error}}",
+      "setupWarningsTitle": "Installatie voltooid met waarschuwingen:"
+    },
+    "buttons": {
+      "updateProvider": "Aanbieder bijwerken",
+      "addProvider": "Aanbieder toevoegen",
+      "completeSetupSuffix": "& Installatie voltooien",
+      "cancel": "Annuleren",
+      "settingUp": "Gmail-integratie instellen..."
+    }
+  },
   "managed": {
     "messages": {
       "loadDomainsFailed": "Kan beheerde domeinen niet laden",

@@ -255,5 +255,266 @@
       "load": "Impossible de charger les valeurs par défaut des tickets",
       "delete": "Impossible de supprimer les valeurs par défaut des tickets"
     }
+  },
+  "policyManagement": {
+    "resourceSections": {
+      "tickets": "Tickets",
+      "documents": "Documents",
+      "time": "Temps",
+      "projects": "Projets",
+      "assets": "Actifs",
+      "billing": "Facturation"
+    },
+    "targetTypes": {
+      "role": "Rôle",
+      "team": "Équipe",
+      "user": "Utilisateur",
+      "apiKey": "Clé API"
+    },
+    "templateSummaries": {
+      "own": "enregistrements appartenant au principal",
+      "assigned": "enregistrements assignés au principal",
+      "managed": "enregistrements appartenant aux utilisateurs gérés",
+      "ownOrAssigned": "enregistrements appartenant ou assignés au principal",
+      "ownOrManaged": "enregistrements appartenant au principal ou aux utilisateurs gérés",
+      "sameClient": "enregistrements dans la même portée client",
+      "clientPortfolio": "enregistrements pour le portefeuille client du principal",
+      "selectedClients": "enregistrements dans les portées client sélectionnées",
+      "sameTeam": "enregistrements appartenant à la même équipe",
+      "selectedBoards": "enregistrements dans les tableaux sélectionnés"
+    },
+    "constraintSummaries": {
+      "notSelfApprover": "bloque l'auto-approbation",
+      "clientVisibleOnly": "exige des enregistrements visibles par le client",
+      "hideSensitiveFields": "masque les champs sensibles"
+    },
+    "dates": {
+      "unknown": "Inconnu"
+    },
+    "ruleSummary": {
+      "base": "Restreindre {{action}} sur {{resourceType}} à {{scope}}.",
+      "withConstraint": "Restreindre {{action}} sur {{resourceType}} à {{scope}} ; {{constraint}}."
+    },
+    "upsell": {
+      "title": "Bundles d'autorisation",
+      "description": "La gestion avancée des bundles d'autorisation est disponible dans le forfait Premium. Effectuez une mise à niveau pour gérer les bundles de restriction réutilisables."
+    },
+    "hero": {
+      "badge": "Espace Premium",
+      "title": "Bundles d'autorisation",
+      "subtitle": "Gérez la restriction d'accès Premium avec des révisions de brouillon, des affectations ciblées et une simulation sûre depuis un centre de contrôle unique.",
+      "newBundle": "Nouveau bundle",
+      "addStarters": "Ajouter des bundles de démarrage",
+      "addingStarters": "Ajout des bundles de démarrage..."
+    },
+    "metrics": {
+      "activeBundles": {
+        "title": "Bundles actifs",
+        "subtitle": "Bundles de restriction réutilisables actuellement disponibles à l'affectation"
+      },
+      "activeAssignments": {
+        "title": "Affectations actives",
+        "subtitle": "Déploiements actifs sur les rôles, équipes, utilisateurs et clés API"
+      },
+      "starterBundles": {
+        "title": "Bundles de démarrage",
+        "subtitle": "Préréglages relationnels prêts à adapter"
+      },
+      "archivedBundles": {
+        "title": "Bundles archivés",
+        "subtitle": "Bundles retirés conservés pour audit et réutilisation"
+      }
+    },
+    "library": {
+      "eyebrow": "Bibliothèque",
+      "title": "Bibliothèque de bundles d'autorisation",
+      "description": "Parcourez le statut des bundles, gérez les changements de cycle de vie et ouvrez un espace de travail dédié pour un bundle à la fois.",
+      "searchPlaceholder": "Rechercher des bundles par nom ou description",
+      "showArchived": "Afficher les archivés",
+      "columns": {
+        "bundle": "Bundle",
+        "status": "Statut",
+        "type": "Type",
+        "assignments": "Affectations",
+        "updated": "Mis à jour",
+        "actions": "Actions"
+      },
+      "statusLabels": {
+        "active": "actif",
+        "archived": "archivé"
+      },
+      "typeLabels": {
+        "system": "Système",
+        "custom": "Personnalisé"
+      },
+      "badges": {
+        "starter": "Démarrage"
+      },
+      "descriptions": {
+        "systemStarter": "Bundle de démarrage système.",
+        "customBundle": "Bundle de restriction personnalisé pour les affectations de rôle, équipe, utilisateur ou clé API."
+      },
+      "effectiveSummary": "Résumé effectif : bundle {{status}} avec {{count}} affectation(s) active(s).",
+      "empty": "Aucun bundle d'autorisation trouvé.",
+      "loading": "Chargement des bundles d'autorisation...",
+      "actions": {
+        "openEditor": "Ouvrir l'éditeur",
+        "assignments": "Affectations",
+        "simulator": "Simulateur",
+        "clone": "Cloner",
+        "archive": "Archiver"
+      }
+    },
+    "workspace": {
+      "backToLibrary": "Retour à la bibliothèque",
+      "updatedWithAssignments": "Mis à jour {{date}} · {{count}} affectation(s) active(s)",
+      "eyebrow": "Espace de travail du bundle",
+      "fallbackBundleName": "Bundle sélectionné",
+      "fallbackDescription": "Utilisez l'éditeur de brouillon, le gestionnaire d'affectations et le simulateur pour livrer des modifications de restriction sûres.",
+      "tabs": {
+        "editor": "Éditeur de brouillon",
+        "assignments": "Affectations",
+        "simulator": "Simulateur"
+      }
+    },
+    "editor": {
+      "header": "Éditeur de bundle",
+      "editingDraftPrefix": "Modification de la révision brouillon pour ",
+      "editingDraftSuffix": ". Les modifications restent en brouillon jusqu'à publication.",
+      "viewingPublishedPrefix": "Affichage de la révision publiée pour ",
+      "viewingPublishedSuffix": ". Aucune révision brouillon active n'existe actuellement.",
+      "publishDraft": "Publier le brouillon",
+      "publishing": "Publication...",
+      "publishedBadge": "Publié",
+      "loading": "Chargement de l'éditeur de brouillon...",
+      "revisionSummary": "Résumé de la révision : {{summary}}",
+      "ruleCount": "{{count}} règle(s) {{revisionType}}",
+      "revisionType": {
+        "draft": "brouillon",
+        "published": "publié"
+      },
+      "emptyRules": "Aucune règle {{revisionType}} pour le moment pour {{resource}}.",
+      "ruleForm": {
+        "addDraftTitle": "Ajouter une règle brouillon",
+        "editDraftTitle": "Modifier la règle brouillon",
+        "createDraftTitle": "Créer une règle brouillon",
+        "editPublishedTitle": "Modifier la règle publiée comme brouillon",
+        "helperEditPublished": "L'enregistrement créera une nouvelle révision brouillon avec vos modifications de cette règle publiée.",
+        "helperCreateDraft": "L'enregistrement créera une nouvelle révision brouillon pour ce bundle.",
+        "reset": "Réinitialiser",
+        "action": "Action",
+        "template": "Modèle",
+        "constraint": "Contrainte (facultatif)",
+        "constraintNone": "aucune",
+        "saveDraftRule": "Enregistrer la règle brouillon",
+        "addDraftRule": "Ajouter une règle brouillon",
+        "saveAsDraftChange": "Enregistrer comme modification brouillon",
+        "createDraftRule": "Créer une règle brouillon"
+      },
+      "rule": {
+        "edit": "Modifier",
+        "remove": "Supprimer",
+        "removeAsDraft": "Supprimer comme modification brouillon",
+        "removeDraftTooltip": "Supprimer cette règle brouillon.",
+        "removePublishedTooltip": "Créer une nouvelle révision brouillon qui supprime cette règle publiée.",
+        "selectedClientScopes": "Portées client sélectionnées",
+        "selectedBoardScopes": "Portées de tableau sélectionnées",
+        "redactedFields": "Champs masqués"
+      },
+      "scopes": {
+        "clientTitle": "Portées client sélectionnées",
+        "boardTitle": "Portées de tableau sélectionnées",
+        "selectClient": "Sélectionner un client",
+        "selectBoard": "Sélectionner un tableau",
+        "addClientScope": "Ajouter une portée client",
+        "addBoardScope": "Ajouter une portée de tableau",
+        "noClientScopes": "Aucune portée client ajoutée pour le moment.",
+        "noBoardScopes": "Aucune portée de tableau ajoutée pour le moment.",
+        "remove": "Supprimer"
+      },
+      "redaction": {
+        "label": "Champs masqués",
+        "placeholder": "internal_cost, margin",
+        "helper": "Noms de champs séparés par des virgules à masquer lorsque cette règle autorise l'accès."
+      }
+    },
+    "assignments": {
+      "header": "Gestionnaire d'affectations",
+      "description": "Affichez et gérez les cibles de rôle, équipe, utilisateur et clé API actuellement affectées par ce bundle.",
+      "loading": "Chargement des affectations...",
+      "addAssignment": "Ajouter une affectation",
+      "selectTargetPlaceholder": "Sélectionner {{target}}",
+      "addButton": "Ajouter l'affectation",
+      "adding": "Ajout en cours...",
+      "empty": "Aucune affectation pour ce bundle pour le moment.",
+      "groupEmpty": "Aucune affectation {{target}}.",
+      "statusActions": {
+        "disable": "Désactiver",
+        "enable": "Activer",
+        "saving": "Enregistrement..."
+      },
+      "statusLabels": {
+        "active": "actif",
+        "disabled": "désactivé"
+      }
+    },
+    "simulator": {
+      "header": "Simulateur d'accès",
+      "description": "Simuler le comportement du bundle brouillon vs publié sur un principal réel et un enregistrement existant.",
+      "inputTitle": "Entrée de simulation",
+      "resource": "Ressource",
+      "action": "Action",
+      "principal": "Principal",
+      "record": "Enregistrement",
+      "useSynthetic": "Utiliser un scénario d'enregistrement synthétique",
+      "syntheticOwnerPlaceholder": "ID utilisateur propriétaire (facultatif)",
+      "syntheticClientPlaceholder": "ID client (facultatif)",
+      "syntheticBoardPlaceholder": "ID tableau (facultatif)",
+      "clientVisible": "Visible par le client",
+      "run": "Lancer la simulation",
+      "running": "Simulation en cours...",
+      "resultTitle": "Résultat de la simulation",
+      "draftRevision": "Révision brouillon",
+      "publishedRevision": "Révision publiée",
+      "allowed": "Autorisé",
+      "denied": "Refusé",
+      "empty": "Lancez une simulation pour comparer le comportement brouillon et publié."
+    },
+    "createDialog": {
+      "title": "Créer un bundle d'autorisation",
+      "cancel": "Annuler",
+      "create": "Créer le bundle",
+      "creating": "Création...",
+      "nameLabel": "Nom",
+      "namePlaceholder": "Réviseur Finance Ouest",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Bundle de restriction réutilisable pour une équipe, un groupe de clients ou un workflow spécifique."
+    },
+    "clone": {
+      "copySuffix": "{{name}} Copie"
+    },
+    "errors": {
+      "loadBundles": "Échec du chargement des bundles.",
+      "loadEditor": "Échec du chargement de l'éditeur de bundle.",
+      "loadAssignments": "Échec du chargement des affectations du bundle.",
+      "cloneBundle": "Échec du clonage du bundle.",
+      "archiveBundle": "Échec de l'archivage du bundle.",
+      "seedStarters": "Échec de l'amorçage des bundles de démarrage.",
+      "bundleNameRequired": "Le nom du bundle est requis.",
+      "createBundle": "Échec de la création du bundle.",
+      "publishDraft": "Échec de la publication du brouillon du bundle.",
+      "selectTemplate": "Sélectionnez un modèle avant d'enregistrer une règle.",
+      "selectClientRequired": "Ajoutez au moins un client sélectionné avant d'enregistrer cette règle.",
+      "selectBoardRequired": "Ajoutez au moins un tableau sélectionné avant d'enregistrer cette règle.",
+      "redactedFieldRequired": "Saisissez au moins un champ masqué avant d'enregistrer cette règle.",
+      "saveRule": "Échec de l'enregistrement de la règle brouillon.",
+      "removeRule": "Échec de la suppression de la règle.",
+      "selectTarget": "Sélectionnez une cible avant d'ajouter une affectation.",
+      "addAssignment": "Échec de l'ajout de l'affectation.",
+      "updateAssignmentStatus": "Échec de la mise à jour du statut d'affectation.",
+      "selectPrincipal": "Sélectionnez un principal avant de lancer la simulation.",
+      "selectRecord": "Sélectionnez un enregistrement avant de lancer la simulation.",
+      "runSimulation": "Échec de l'exécution de la simulation."
+    }
   }
 }

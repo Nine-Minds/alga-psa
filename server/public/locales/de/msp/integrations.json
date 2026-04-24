@@ -345,6 +345,322 @@
         }
       }
     },
+    "entra": {
+      "settings": {
+        "actions": {
+          "disconnect": "Trennen",
+          "reconnect": "Erneut verbinden",
+          "reconnecting": "Wird erneut verbunden…",
+          "refresh": "Aktualisieren",
+          "resetFieldSync": "Zurücksetzen",
+          "reviewMappings": "Zuordnungen prüfen",
+          "reviewRemap": "Prüfen / Neu zuordnen",
+          "hideReviewRemap": "Prüfen / Neu zuordnen ausblenden",
+          "runDiscovery": "Discovery ausführen",
+          "runDiscoveryAgain": "Discovery erneut ausführen",
+          "runDiscoveryRunning": "Discovery wird ausgeführt…",
+          "runInitialSync": "Initiale Synchronisation ausführen",
+          "runInitialSyncRunning": "Initiale Synchronisation wird gestartet…",
+          "saveFieldSync": "Feldsynchronisationssteuerung speichern",
+          "savingFieldSync": "Wird gespeichert…",
+          "syncAll": "Alle Tenants jetzt synchronisieren",
+          "syncAllStarting": "Wird gestartet…"
+        },
+        "badges": {
+          "enterprise": "Enterprise",
+          "reviewBeforeInitialSync": "Vor initialer Synchronisation prüfen"
+        },
+        "connection": {
+          "connectingSuffix": " (Verbindung wird hergestellt...)",
+          "details": "Verbindungsdetails",
+          "directCredentialSourceLabel": "Anmeldedatenquelle:",
+          "directTenantDefault": "common (multi-tenant)",
+          "directTenantLabel": "Microsoft Tenant:",
+          "cippServerLabel": "CIPP-Server:",
+          "notAvailable": "Nicht verfügbar",
+          "notConfigured": "Nicht konfiguriert",
+          "notConnectedStatus": "not_connected",
+          "optionsTitle": "Verbindungsoptionen",
+          "promptDetails": "Verbinden Sie Entra, um Anbieterdetails zu füllen."
+        },
+        "currentStep": {
+          "connect": {
+            "guidance": "Wählen Sie eine Verbindungsoption, um das Onboarding fortzusetzen.",
+            "title": "Schritt 1: Verbinden"
+          },
+          "connectionsBelow": "Verbindungsoptionen werden unten angezeigt.",
+          "discover": {
+            "guidance": "Führen Sie Discovery aus, um verwaltete Entra-Tenants vor der Zuordnung zu laden.",
+            "title": "Schritt 2: Erkennen"
+          },
+          "label": "Aktueller Schritt",
+          "map": {
+            "guidance": "Bestätigen oder passen Sie Tenant-Zuordnungen an, um die initiale Synchronisation freizuschalten.",
+            "title": "Schritt 3: Zuordnen"
+          },
+          "sync": {
+            "guidance": "Starten Sie den ersten Synchronisationslauf für bestätigte Zuordnungen.",
+            "title": "Schritt 4: Initiale Synchronisation"
+          }
+        },
+        "description": "Konfigurieren Sie partnerseitigen Entra-Zugriff, erkennen Sie verwaltete Tenants, ordnen Sie sie Kunden zu und führen Sie Sync-Workflows aus.",
+        "disabled": {
+          "description": "Die Entra-Integrations-UI ist für diesen Tenant derzeit deaktiviert.",
+          "title": "Microsoft Entra Integration"
+        },
+        "discovery": {
+          "completed": "Discovery abgeschlossen. {{count}} Tenants erkannt.",
+          "completedOne": "Discovery abgeschlossen. {{count}} Tenant erkannt.",
+          "failed": "Tenant-Discovery konnte nicht ausgeführt werden."
+        },
+        "errors": {
+          "loadStatus": "Entra-Verbindungsstatus konnte nicht geladen werden.",
+          "unknown": "Unbekannter Fehler"
+        },
+        "fieldSync": {
+          "description": "Wählen Sie, welche Entra-Profilfelder lokale Kontaktfelder während der Synchronisation überschreiben dürfen.",
+          "feedback": {
+            "saveFailed": "Feldsynchronisationssteuerung konnte nicht gespeichert werden.",
+            "saved": "Feldsynchronisationssteuerung gespeichert."
+          },
+          "options": {
+            "displayName": {
+              "description": "Erlauben Sie dem Entra-Anzeigenamen, den vollständigen Namen verbundener Kontakte zu überschreiben.",
+              "label": "Anzeigename"
+            },
+            "email": {
+              "description": "Erlauben Sie der Entra-E-Mail/UPN, die E-Mail-Adresse verbundener Kontakte zu überschreiben.",
+              "label": "E-Mail"
+            },
+            "phone": {
+              "description": "Erlauben Sie Entra-Telefonwerten, die Telefonnummer verbundener Kontakte zu überschreiben.",
+              "label": "Telefon"
+            },
+            "role": {
+              "description": "Erlauben Sie der Entra-Berufsbezeichnung, die Rolle verbundener Kontakte zu überschreiben.",
+              "label": "Rolle"
+            },
+            "upn": {
+              "description": "Erlauben Sie der Entra-UPN, den gespeicherten Entra-Principal-Namen verbundener Kontakte zu überschreiben.",
+              "label": "UPN"
+            }
+          },
+          "title": "Feldsynchronisationssteuerung"
+        },
+        "guidedStep": {
+          "current": "aktuell",
+          "complete": "abgeschlossen",
+          "locked": "gesperrt",
+          "stepLabel": "Schritt {{number}}",
+          "thisIsCurrent": "Dies ist Ihr aktueller Onboarding-Schritt."
+        },
+        "initialSync": {
+          "failed": "Initiale Entra-Synchronisation konnte nicht gestartet werden.",
+          "started": "Initiale Synchronisation gestartet. Run-ID: {{runId}}",
+          "startedNoId": "Anfrage zum Start der initialen Synchronisation akzeptiert."
+        },
+        "maintenance": {
+          "description": "Die initiale Einrichtung ist abgeschlossen. Konzentrieren Sie sich hier auf Sync-Operationen, Health-Checks und Wartungsprüfungen.",
+          "healthDescription": "Überprüfen Sie die Verbindungsgesundheit, führen Sie Wartungsoperationen aus und überwachen Sie die Sync-Aktivität.",
+          "healthTitle": "Health-Zusammenfassung",
+          "title": "Modus für laufende Operationen"
+        },
+        "mapping": {
+          "description": "Überprüfen Sie vorgeschlagene Übereinstimmungen, wählen Sie für jeden Tenant den richtigen Kunden aus und bestätigen Sie die Zuordnungen vor der initialen Synchronisation.",
+          "needsReviewLabel": "Benötigt Prüfung:",
+          "savedLabel": "Gespeichert:",
+          "selectedLabel": "Ausgewählt:",
+          "skippedLabel": "Übersprungen:",
+          "stepLabel": "Schritt 3",
+          "title": "Tenants Kunden zuordnen"
+        },
+        "onboarding": {
+          "description": "Schließen Sie jeden Onboarding-Schritt der Reihe nach ab: verbinden, erkennen, zuordnen und dann die erste Synchronisation ausführen.",
+          "title": "Einrichtungsmodus"
+        },
+        "ongoing": {
+          "description": "Verwenden Sie diese Steuerelemente für manuelle Sync-Operationen, nachdem die Onboarding-Schritte abgeschlossen sind.",
+          "title": "Laufende Operationen"
+        },
+        "overview": {
+          "connectionLabel": "Verbindung:",
+          "connectionTypeLabel": "Verbindungstyp:",
+          "label": "Übersicht",
+          "mappedTenantsLabel": "Zugeordnete Tenants:",
+          "nextSyncIntervalEvery": "Alle {{minutes}} Minuten",
+          "nextSyncIntervalLabel": "Nächstes Sync-Intervall:"
+        },
+        "skipped": {
+          "empty": "Derzeit sind keine Tenants als übersprungen markiert.",
+          "noPrimaryDomain": "Keine primäre Domain",
+          "remap": "Neu zuordnen",
+          "title": "Übersprungene Tenants"
+        },
+        "status": {
+          "connectionHealth": "Verbindungsgesundheit",
+          "label": "Status"
+        },
+        "syncAll": {
+          "failed": "Vollständige Entra-Synchronisation konnte nicht gestartet werden.",
+          "started": "Synchronisation gestartet. Run-ID: {{runId}}",
+          "startedNoId": "Anfrage zum Synchronisationsstart akzeptiert."
+        },
+        "title": "Microsoft Entra Integration",
+        "validation": {
+          "label": "Validierung & Discovery",
+          "lastDiscoveryLabel": "Letzte Discovery:",
+          "lastValidatedLabel": "Zuletzt validiert:",
+          "neverFormatted": "Nie",
+          "noneValidationError": "Keiner",
+          "validationErrorLabel": "Validierungsfehler:"
+        },
+        "wizard": {
+          "connect": {
+            "description": "Autorisieren Sie die Direct Microsoft Partner Auth, um diesen Entra-Tenant zu verknüpfen.",
+            "title": "Verbinden"
+          },
+          "discover": {
+            "description": "Verwaltete Entra-Tenants für diesen MSP-Tenant laden und persistieren.",
+            "title": "Tenants erkennen"
+          },
+          "map": {
+            "description": "Auto-Match-Vorschläge prüfen und Zuordnungen bestätigen.",
+            "title": "Tenants Kunden zuordnen"
+          },
+          "sync": {
+            "description": "Starten Sie den ersten Synchronisationslauf für bestätigte Zuordnungen.",
+            "title": "Initiale Synchronisation"
+          }
+        }
+      },
+      "tenantMapping": {
+        "actions": {
+          "confirmSelected": "Ausgewählte Zuordnungen bestätigen",
+          "confirming": "Wird bestätigt…",
+          "import": "Als neuen Kunden importieren",
+          "importing": "Wird importiert…",
+          "preselectExact": "Exakte Übereinstimmungen vorauswählen",
+          "refresh": "Vorschau aktualisieren",
+          "skip": "Überspringen",
+          "skipped": "Übersprungen"
+        },
+        "columns": {
+          "actions": "Aktionen",
+          "confidence": "Konfidenz",
+          "entraTenant": "Entra-Tenant",
+          "primaryDomain": "Primäre Domain",
+          "selectClient": "Kunden auswählen",
+          "status": "Status",
+          "suggestedClient": "Vorgeschlagener Kunde"
+        },
+        "empty": "Keine erkannten Tenants für die Zuordnungsvorschau verfügbar.",
+        "errors": {
+          "confirmFailed": "Ausgewählte Zuordnungen konnten nicht bestätigt werden.",
+          "importFailed": "Tenant konnte nicht als Kunde importiert werden.",
+          "loadFailed": "Tenant-Zuordnungsvorschau konnte nicht geladen werden.",
+          "selectAtLeastOne": "Wählen Sie mindestens einen Kunden aus, um eine Zuordnung zu bestätigen.",
+          "skipFailed": "Diese Tenant-Zuordnung konnte nicht übersprungen werden."
+        },
+        "feedback": {
+          "confirmed": "{{count}} Zuordnungen bestätigt.",
+          "confirmedOne": "{{count}} Zuordnung bestätigt."
+        },
+        "noSuggestion": "Kein Vorschlag",
+        "picker": {
+          "placeholder": "Kunden auswählen...",
+          "unknownClient": "Unbekannter Kunde"
+        },
+        "reasons": {
+          "exactDomain": "Exakte Domain",
+          "fuzzyName": "Unscharfer Name",
+          "secondaryDomain": "Sekundäre Domain"
+        },
+        "states": {
+          "autoMatched": "Automatisch zugeordnet",
+          "imported": "Importiert",
+          "needsReview": "Benötigt Prüfung",
+          "skipped": "Übersprungen",
+          "unmatched": "Nicht zugeordnet"
+        },
+        "title": "Tenant-Zuordnungsvorschau"
+      },
+      "cippDialog": {
+        "actions": {
+          "cancel": "Abbrechen",
+          "connect": "Verbinden",
+          "connecting": "Verbindung wird hergestellt..."
+        },
+        "description": "Geben Sie Ihre CIPP-Instanz-URL und ein API-Token ein, damit Alga Entra-Daten erkennen und synchronisieren kann.",
+        "errors": {
+          "missingFields": "Sowohl Basis-URL als auch API-Token sind erforderlich.",
+          "unknown": "Ein unbekannter Fehler ist aufgetreten."
+        },
+        "fields": {
+          "apiToken": "API-Token",
+          "apiTokenPlaceholder": "Token eingeben...",
+          "baseUrl": "CIPP-Basis-URL",
+          "baseUrlPlaceholder": "https://cipp.yourdomain.com"
+        },
+        "title": "CIPP verbinden"
+      },
+      "reconciliation": {
+        "actions": {
+          "refresh": "Aktualisieren",
+          "resolveExisting": "Auf bestehenden Kontakt auflösen",
+          "resolveNew": "Auf neuen Kontakt auflösen"
+        },
+        "candidate": {
+          "fallback": "Kandidat",
+          "label": "Kandidaten-Kontakte: {{count}}"
+        },
+        "contactPicker": {
+          "label": "Bestehender Kontakt",
+          "placeholder": "Bestehenden Kontakt auswählen..."
+        },
+        "errors": {
+          "enterContactId": "Geben Sie eine Kontakt-ID ein, um auf einen bestehenden Kontakt aufzulösen.",
+          "loadQueue": "Abgleichswarteschlange konnte nicht geladen werden.",
+          "resolveFailed": "Warteschlangenelement konnte nicht aufgelöst werden."
+        },
+        "empty": "Keine mehrdeutigen Übereinstimmungen warten auf Prüfung.",
+        "loading": "Warteschlange wird geladen…",
+        "noEmailIdentity": "Keine E-Mail-Identität",
+        "queuedAt": "{{identity}} · eingereiht {{time}}",
+        "scopedToMappedClient": "Bestehende Kontaktoptionen sind auf diesen zugeordneten Kunden beschränkt.",
+        "success": {
+          "resolvedExisting": "Warteschlangenelement {{queueItemId}} auf bestehenden Kontakt {{contactNameId}} aufgelöst.",
+          "resolvedNew": "Warteschlangenelement {{queueItemId}} durch Erstellen des Kontakts {{contactNameId}} aufgelöst."
+        },
+        "title": "Warteschlange für mehrdeutige Übereinstimmungen"
+      },
+      "syncHistory": {
+        "actions": {
+          "hideDetails": "Details ausblenden",
+          "refresh": "Aktualisieren",
+          "viewDetails": "Details anzeigen"
+        },
+        "details": {
+          "noResults": "Keine Tenant-Ergebnisse aufgezeichnet.",
+          "stats": "erstellt {{created}}, verknüpft {{linked}}, aktualisiert {{updated}}, mehrdeutig {{ambiguous}}, deaktiviert {{inactivated}}",
+          "tenantHeader": "Tenant {{tenant}} · {{status}}",
+          "unknownTenant": "unbekannt"
+        },
+        "empty": "Noch keine Sync-Läufe gefunden.",
+        "errors": {
+          "loadDetailFailed": "Lauf-Detail konnte nicht geladen werden.",
+          "loadFailed": "Sync-Verlauf konnte nicht geladen werden.",
+          "loadRunFailed": "Lauf {{runId}} konnte nicht geladen werden."
+        },
+        "loading": "Sync-Verlauf wird geladen…",
+        "run": {
+          "header": "{{runType}} · {{status}}",
+          "inProgress": "In Bearbeitung",
+          "tenants": "Tenants: {{processed}}/{{total}} · Erfolgreich: {{success}} · Fehlgeschlagen: {{failed}}",
+          "timing": "Gestartet {{started}} · Abgeschlossen {{completed}}"
+        },
+        "title": "Letzte Sync-Läufe"
+      }
+    },
     "google": {
       "settings": {
         "actions": {
@@ -599,92 +915,112 @@
       "ninjaOne": {
         "loading": "NinjaOne-Integrationseinstellungen werden geladen...",
         "card": {
-          "title": "NinjaOne RMM Integration",
-          "description": "Connect your NinjaOne account to synchronize devices, receive alerts, and enable remote access capabilities.",
-          "skeletonDescription": "Loading NinjaOne integration..."
+          "title": "NinjaOne RMM-Integration",
+          "description": "Verbinden Sie Ihr NinjaOne-Konto, um Geräte zu synchronisieren, Warnungen zu erhalten und Fernzugriff zu aktivieren.",
+          "skeletonDescription": "NinjaOne-Integration wird geladen..."
         },
         "status": {
-          "checking": "Checking NinjaOne connection...",
+          "checking": "NinjaOne-Verbindung wird geprüft...",
           "notConnected": {
-            "title": "Not connected to NinjaOne",
-            "description": "Connect your NinjaOne account to sync devices, receive alerts, and enable remote access."
+            "title": "Nicht mit NinjaOne verbunden",
+            "description": "Verbinden Sie Ihr NinjaOne-Konto, um Geräte zu synchronisieren, Warnungen zu erhalten und Fernzugriff zu aktivieren."
           },
-          "connected": "Connected to NinjaOne",
-          "connectedWithErrors": "NinjaOne connected with sync errors",
-          "instanceLabel": "Instance:",
-          "organizations": "{{count}} organizations",
-          "devices": "{{count}} devices",
-          "activeAlerts": "{{count}} active alerts",
-          "lastSynced": "Last synced: {{time}}"
+          "connected": "Mit NinjaOne verbunden",
+          "connectedWithErrors": "NinjaOne verbunden mit Synchronisierungsfehlern",
+          "instanceLabel": "Instanz:",
+          "organizations": "{{count}} Organisationen",
+          "devices": "{{count}} Geräte",
+          "activeAlerts": "{{count}} aktive Warnungen",
+          "lastSynced": "Zuletzt synchronisiert: {{time}}"
         },
         "setup": {
-          "title": "Setup Instructions",
+          "title": "Einrichtungsanweisungen",
           "steps": {
-            "login": "Log into your NinjaOne dashboard",
-            "navigate": "Navigate to Administration → Apps → API",
-            "addClient": "Click \"+ Add client app\" to create a new API application",
-            "platform": "Set Application Platform to \"Web (PHP, Java, .Net Core, etc.)\"",
-            "name": "Enter a Name (e.g., \"Alga PSA\")",
-            "redirectUri": "Add the redirect URI:",
-            "scopes": "Under \"Scopes\", check \"Monitoring\" and \"Management\"",
-            "grantTypes": "Under \"Allowed grant types\", check \"Authorization code\", \"Client credentials\", and \"Refresh token\"",
-            "addAndCopy": "Click \"Add\" and copy the Client ID and Client Secret below"
+            "login": "Melden Sie sich in Ihrem NinjaOne-Dashboard an",
+            "navigate": "Navigieren Sie zu Administration → Apps → API",
+            "addClient": "Klicken Sie auf „+ Add client app“, um eine neue API-Anwendung zu erstellen",
+            "platform": "Stellen Sie die Application Platform auf „Web (PHP, Java, .Net Core, etc.)“",
+            "name": "Geben Sie einen Namen ein (z. B. „Alga PSA“)",
+            "redirectUri": "Fügen Sie die Redirect-URI hinzu:",
+            "scopes": "Aktivieren Sie unter „Scopes“ „Monitoring“ und „Management“",
+            "grantTypes": "Aktivieren Sie unter „Allowed grant types“ „Authorization code“, „Client credentials“ und „Refresh token“",
+            "addAndCopy": "Klicken Sie auf „Add“ und kopieren Sie Client ID und Client Secret unten"
           },
-          "docsPrefix": "For detailed setup instructions, see",
-          "docsSection": "Section 10.15",
-          "docsSuffix": "in the documentation.",
-          "openApiSettings": "Open NinjaOne API Settings"
+          "docsPrefix": "Detaillierte Einrichtungsanweisungen finden Sie in",
+          "docsSection": "Abschnitt 10.15",
+          "docsSuffix": "der Dokumentation.",
+          "openApiSettings": "NinjaOne-API-Einstellungen öffnen"
         },
         "credentials": {
-          "title": "API Credentials",
-          "saved": "Credentials saved",
+          "title": "API-Anmeldedaten",
+          "saved": "Anmeldedaten gespeichert",
           "clientIdLabel": "Client ID",
-          "clientIdPlaceholder": "Enter your NinjaOne Client ID",
+          "clientIdPlaceholder": "Geben Sie Ihre NinjaOne Client ID ein",
           "clientSecretLabel": "Client Secret",
-          "clientSecretPlaceholder": "Enter your NinjaOne Client Secret",
-          "clientSecretUpdatePlaceholder": "Enter new secret to update",
+          "clientSecretPlaceholder": "Geben Sie Ihr NinjaOne Client Secret ein",
+          "clientSecretUpdatePlaceholder": "Neues Secret eingeben, um zu aktualisieren",
           "secretMaskedLabel": "Secret",
-          "saving": "Saving...",
-          "save": "Save Credentials"
+          "saving": "Wird gespeichert...",
+          "save": "Anmeldedaten speichern"
         },
         "region": {
-          "hint": "Select your NinjaOne region, then click ‘Connect to NinjaOne’ to authorize access.",
+          "hint": "Wählen Sie Ihre NinjaOne-Region und klicken Sie dann auf „Mit NinjaOne verbinden“, um den Zugriff zu autorisieren.",
           "label": "Region:"
         },
         "actions": {
-          "refreshing": "Refreshing...",
-          "refreshStatus": "Refresh Status",
-          "syncing": "Syncing...",
-          "syncOrganizations": "Sync Organizations",
-          "syncingDevices": "Syncing Devices...",
-          "syncDevices": "Sync Devices",
-          "disconnecting": "Disconnecting...",
-          "disconnect": "Disconnect",
-          "connect": "Connect to NinjaOne"
+          "refreshing": "Wird aktualisiert...",
+          "refreshStatus": "Status aktualisieren",
+          "syncing": "Wird synchronisiert...",
+          "syncOrganizations": "Organisationen synchronisieren",
+          "syncingDevices": "Geräte werden synchronisiert...",
+          "syncDevices": "Geräte synchronisieren",
+          "disconnecting": "Wird getrennt...",
+          "disconnect": "Trennen",
+          "connect": "Mit NinjaOne verbinden"
         },
         "disconnectModal": {
-          "title": "Disconnect NinjaOne",
-          "description": "Are you sure you want to disconnect NinjaOne? This will stop device synchronization and alert notifications, and remove your stored API credentials. Organization mappings will be preserved.",
-          "cancel": "Cancel",
-          "confirm": "Disconnect"
+          "title": "NinjaOne trennen",
+          "description": "Sind Sie sicher, dass Sie NinjaOne trennen möchten? Dadurch werden die Gerätesynchronisation und Warnungsbenachrichtigungen gestoppt und Ihre gespeicherten API-Anmeldedaten entfernt. Organisationszuordnungen bleiben erhalten.",
+          "cancel": "Abbrechen",
+          "confirm": "Trennen"
         },
         "toasts": {
-          "connectSuccess": "Successfully connected to NinjaOne.",
-          "connectFailed": "NinjaOne connection failed.",
-          "connectFailedWithDetail": "NinjaOne connection failed: {{detail}}",
-          "disconnectSuccess": "NinjaOne connection successfully disconnected.",
-          "credentialsSaved": "NinjaOne API credentials saved successfully.",
-          "orgSyncSuccess": "Organization sync completed. Processed: {{processed}}, Created: {{created}}, Updated: {{updated}}",
-          "deviceSyncSuccess": "Device sync completed. Processed: {{processed}}, Created: {{created}}, Updated: {{updated}}"
+          "connectSuccess": "Erfolgreich mit NinjaOne verbunden.",
+          "connectFailed": "NinjaOne-Verbindung fehlgeschlagen.",
+          "connectFailedWithDetail": "NinjaOne-Verbindung fehlgeschlagen: {{detail}}",
+          "disconnectSuccess": "NinjaOne-Verbindung erfolgreich getrennt.",
+          "credentialsSaved": "NinjaOne-API-Anmeldedaten erfolgreich gespeichert.",
+          "orgSyncSuccess": "Organisationssynchronisation abgeschlossen. Verarbeitet: {{processed}}, Erstellt: {{created}}, Aktualisiert: {{updated}}",
+          "deviceSyncSuccess": "Gerätesynchronisation abgeschlossen. Verarbeitet: {{processed}}, Erstellt: {{created}}, Aktualisiert: {{updated}}"
         },
         "errors": {
-          "loadStatus": "Failed to load NinjaOne connection status.",
-          "saveCredentials": "Failed to save credentials.",
-          "connect": "Failed to initiate NinjaOne connection.",
-          "disconnect": "Failed to disconnect NinjaOne.",
-          "disconnectUnexpected": "An unexpected error occurred while disconnecting.",
-          "orgSyncFailed": "Organization sync failed.",
-          "deviceSyncFailed": "Device sync failed."
+          "loadStatus": "NinjaOne-Verbindungsstatus konnte nicht geladen werden.",
+          "saveCredentials": "Anmeldedaten konnten nicht gespeichert werden.",
+          "connect": "NinjaOne-Verbindung konnte nicht initiiert werden.",
+          "disconnect": "NinjaOne konnte nicht getrennt werden.",
+          "disconnectUnexpected": "Beim Trennen ist ein unerwarteter Fehler aufgetreten.",
+          "orgSyncFailed": "Organisationssynchronisation fehlgeschlagen.",
+          "deviceSyncFailed": "Gerätesynchronisation fehlgeschlagen."
+        },
+        "compliance": {
+          "actions": {
+            "retry": "Erneut versuchen",
+            "syncing": "Wird synchronisiert...",
+            "syncPatches": "Patches synchronisieren",
+            "syncSoftware": "Software synchronisieren"
+          },
+          "description": "Übersicht über den Gerätezustand von RMM-verwalteten Geräten",
+          "loading": "Compliance-Daten werden geladen...",
+          "metrics": {
+            "devicesOffline": "Offline-Geräte",
+            "devicesOnline": "Online-Geräte",
+            "devicesWithAlerts": "Geräte mit Warnungen",
+            "patchesFailed": "Fehlgeschlagene Patches",
+            "patchesPending": "Ausstehende Patches"
+          },
+          "noData": "Keine Compliance-Daten verfügbar",
+          "summaryError": "Compliance-Zusammenfassung konnte nicht geladen werden",
+          "title": "Flotten-Compliance"
         }
       },
       "setup": {
@@ -834,7 +1170,72 @@
         }
       },
       "tanium": {
-        "loading": "Tanium-Integrationseinstellungen werden geladen..."
+        "loading": "Tanium-Integrationseinstellungen werden geladen...",
+        "actions": {
+          "discoverScopes": "Scopes erkennen",
+          "disconnect": "Trennen",
+          "runInventorySync": "Inventarsynchronisation ausführen",
+          "saveConfiguration": "Konfiguration speichern",
+          "testConnection": "Verbindung testen"
+        },
+        "connection": {
+          "connectedAt": "Verbunden am: {{time}}",
+          "description": "Konfigurieren Sie Tanium-Gateway-Anmeldedaten und verifizieren Sie tenant-bezogenen Zugriff.",
+          "never": "Nie",
+          "syncLabel": "Sync: {{status}}",
+          "syncLabelWithError": "Sync: {{status}} ({{error}})",
+          "title": "Tanium-Verbindung"
+        },
+        "errors": {
+          "loadMappings": "Tanium-Zuordnungen konnten nicht geladen werden.",
+          "loadSettings": "Tanium-Einstellungen konnten nicht geladen werden.",
+          "loadState": "Tanium-Integrationsstatus konnte nicht geladen werden.",
+          "saveConfiguration": "Tanium-Konfiguration konnte nicht gespeichert werden.",
+          "testConnectionFailed": "Tanium-Verbindungstest fehlgeschlagen.",
+          "disconnectFailed": "Tanium-Integration konnte nicht getrennt werden.",
+          "scopeDiscoveryFailed": "Scope-Discovery fehlgeschlagen.",
+          "inventorySyncFailed": "Inventarsynchronisation fehlgeschlagen.",
+          "updateMappingFailed": "Zuordnung konnte nicht aktualisiert werden."
+        },
+        "fields": {
+          "apiToken": "API-Token {{state}}",
+          "apiTokenPlaceholderExisting": "Leer lassen, um das bestehende Token beizubehalten",
+          "apiTokenPlaceholderNew": "Tanium-API-Token einfügen",
+          "apiTokenStateRequired": "(erforderlich)",
+          "apiTokenStateSaved": "(gespeichert)",
+          "assetApiUrl": "Asset-API-URL (optional)",
+          "assetApiUrlPlaceholder": "https://example.cloud.tanium.com/plugin/products/asset",
+          "assetFallbackLabel": "Asset-API-Fallback für abgelaufene Endpunkt-Abdeckung aktivieren",
+          "gatewayUrl": "Gateway-URL",
+          "gatewayUrlPlaceholder": "https://example.cloud.tanium.com"
+        },
+        "mappings": {
+          "autoSync": "Automatische Synchronisation",
+          "autoSyncDisabled": "Deaktiviert",
+          "autoSyncEnabled": "Aktiviert",
+          "externalScope": "Externer Scope",
+          "loading": "Zuordnungen werden geladen...",
+          "mappedClient": "Zugeordneter Kunde",
+          "noScopes": "Noch keine Tanium-Scopes erkannt.",
+          "scopeIdLabel": "ID: {{id}}",
+          "unmapped": "Nicht zugeordnet"
+        },
+        "status": {
+          "connected": "Verbunden",
+          "disconnected": "Getrennt",
+          "label": "Status: "
+        },
+        "success": {
+          "configurationSaved": "Tanium-Konfiguration gespeichert.",
+          "connectionTestSucceeded": "Tanium-Verbindungstest erfolgreich.",
+          "disconnected": "Tanium-Integration getrennt.",
+          "inventorySyncCompleted": "Inventarsynchronisation abgeschlossen. Verarbeitet: {{processed}}, Erstellt: {{created}}, Aktualisiert: {{updated}}",
+          "scopeDiscoveryCompleted": "Scope-Discovery abgeschlossen. Verarbeitet: {{processed}}, Erstellt: {{created}}, Aktualisiert: {{updated}}"
+        },
+        "sync": {
+          "description": "Erkennen Sie Scopes aus Tanium-Computergruppen, ordnen Sie sie Kunden zu und führen Sie dann die Inventarsynchronisation aus.",
+          "title": "Tanium-Synchronisation"
+        }
       }
     },
     "sso": {
@@ -1286,60 +1687,60 @@
     },
     "stripe": {
       "title": "Stripe Payments",
-      "description": "Accept credit card payments for your invoices",
+      "description": "Akzeptieren Sie Kreditkartenzahlungen für Ihre Rechnungen",
       "connected": {
-        "title": "Stripe Connected",
-        "publishableKey": "Publishable key: {{key}}..."
+        "title": "Stripe verbunden",
+        "publishableKey": "Publishable Key: {{key}}..."
       },
       "empty": {
-        "description": "Connect your Stripe account to accept online payments for invoices"
+        "description": "Verbinden Sie Ihr Stripe-Konto, um Online-Zahlungen für Rechnungen zu akzeptieren"
       },
       "actions": {
-        "testConnection": "Test Connection",
-        "disconnect": "Disconnect",
-        "connect": "Connect Stripe",
-        "connecting": "Connecting...",
-        "cancel": "Cancel"
+        "testConnection": "Verbindung testen",
+        "disconnect": "Trennen",
+        "connect": "Stripe verbinden",
+        "connecting": "Verbindung wird hergestellt...",
+        "cancel": "Abbrechen"
       },
       "form": {
         "secretKeyLabel": "Secret Key",
-        "secretKeyPlaceholder": "sk_live_... or sk_test_...",
+        "secretKeyPlaceholder": "sk_live_... oder sk_test_...",
         "publishableKeyLabel": "Publishable Key",
-        "publishableKeyPlaceholder": "pk_live_... or pk_test_...",
-        "findKeyPrefix": "Find this in your",
+        "publishableKeyPlaceholder": "pk_live_... oder pk_test_...",
+        "findKeyPrefix": "Finden Sie dies in Ihrem",
         "dashboardLink": "Stripe Dashboard → API Keys"
       },
       "webhook": {
-        "heading": "Webhook Configuration",
-        "configuredAutomatically": "Webhooks configured automatically",
-        "receiveNotifications": "Alga PSA will receive payment notifications for:",
-        "failedTitle": "Webhook configuration failed",
-        "failedBody": "Automatic webhook configuration failed. Click retry to attempt configuration again.",
-        "configuring": "Configuring...",
-        "retry": "Retry Configuration"
+        "heading": "Webhook-Konfiguration",
+        "configuredAutomatically": "Webhooks automatisch konfiguriert",
+        "receiveNotifications": "Alga PSA erhält Zahlungsbenachrichtigungen für:",
+        "failedTitle": "Webhook-Konfiguration fehlgeschlagen",
+        "failedBody": "Die automatische Webhook-Konfiguration ist fehlgeschlagen. Klicken Sie auf Erneut versuchen, um die Konfiguration erneut zu versuchen.",
+        "configuring": "Wird konfiguriert...",
+        "retry": "Konfiguration erneut versuchen"
       },
       "disconnectDialog": {
-        "title": "Disconnect Stripe",
-        "message": "Are you sure you want to disconnect Stripe? Payment links will no longer work.",
-        "confirm": "Disconnect",
-        "cancel": "Cancel"
+        "title": "Stripe trennen",
+        "message": "Sind Sie sicher, dass Sie Stripe trennen möchten? Zahlungslinks funktionieren dann nicht mehr.",
+        "confirm": "Trennen",
+        "cancel": "Abbrechen"
       },
       "toasts": {
-        "connectedWithWebhook": "Stripe connected and webhooks configured automatically!",
-        "connectedWebhookFailed": "Stripe connected! Note: Webhook auto-configuration failed - you may need to configure webhooks manually in Stripe Dashboard.",
-        "disconnected": "Stripe disconnected",
-        "connectionSuccess": "Connection successful!",
-        "webhookConfigured": "Webhook configured successfully!"
+        "connectedWithWebhook": "Stripe verbunden und Webhooks automatisch konfiguriert!",
+        "connectedWebhookFailed": "Stripe verbunden! Hinweis: Die automatische Webhook-Konfiguration ist fehlgeschlagen – Sie müssen Webhooks möglicherweise manuell im Stripe Dashboard konfigurieren.",
+        "disconnected": "Stripe getrennt",
+        "connectionSuccess": "Verbindung erfolgreich!",
+        "webhookConfigured": "Webhook erfolgreich konfiguriert!"
       },
       "errors": {
-        "loadConfig": "Failed to load Stripe configuration",
-        "connect": "Failed to connect Stripe",
-        "disconnect": "Failed to disconnect Stripe",
-        "testConnection": "Connection test failed",
-        "configureWebhook": "Failed to configure webhook",
-        "bothKeysRequired": "Please enter both secret key and publishable key",
-        "secretKeyFormat": "Secret key should start with sk_",
-        "publishableKeyFormat": "Publishable key should start with pk_"
+        "loadConfig": "Stripe-Konfiguration konnte nicht geladen werden",
+        "connect": "Stripe konnte nicht verbunden werden",
+        "disconnect": "Stripe konnte nicht getrennt werden",
+        "testConnection": "Verbindungstest fehlgeschlagen",
+        "configureWebhook": "Webhook konnte nicht konfiguriert werden",
+        "bothKeysRequired": "Bitte geben Sie sowohl Secret Key als auch Publishable Key ein",
+        "secretKeyFormat": "Secret Key sollte mit sk_ beginnen",
+        "publishableKeyFormat": "Publishable Key sollte mit pk_ beginnen"
       }
     }
   }

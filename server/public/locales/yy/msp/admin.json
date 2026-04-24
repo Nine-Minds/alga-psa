@@ -255,5 +255,266 @@
       "load": "55555",
       "delete": "55555"
     }
+  },
+  "policyManagement": {
+    "resourceSections": {
+      "tickets": "55555",
+      "documents": "55555",
+      "time": "55555",
+      "projects": "55555",
+      "assets": "55555",
+      "billing": "55555"
+    },
+    "targetTypes": {
+      "role": "55555",
+      "team": "55555",
+      "user": "55555",
+      "apiKey": "55555"
+    },
+    "templateSummaries": {
+      "own": "55555",
+      "assigned": "55555",
+      "managed": "55555",
+      "ownOrAssigned": "55555",
+      "ownOrManaged": "55555",
+      "sameClient": "55555",
+      "clientPortfolio": "55555",
+      "selectedClients": "55555",
+      "sameTeam": "55555",
+      "selectedBoards": "55555"
+    },
+    "constraintSummaries": {
+      "notSelfApprover": "55555",
+      "clientVisibleOnly": "55555",
+      "hideSensitiveFields": "55555"
+    },
+    "dates": {
+      "unknown": "55555"
+    },
+    "ruleSummary": {
+      "base": "55555 {{resourceType}} 55555 {{action}} 55555 {{scope}} 55555",
+      "withConstraint": "55555 {{resourceType}} 55555 {{action}} 55555 {{scope}} 55555 {{constraint}} 55555"
+    },
+    "upsell": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "hero": {
+      "badge": "55555",
+      "title": "55555",
+      "subtitle": "55555",
+      "newBundle": "55555",
+      "addStarters": "55555",
+      "addingStarters": "55555"
+    },
+    "metrics": {
+      "activeBundles": {
+        "title": "55555",
+        "subtitle": "55555"
+      },
+      "activeAssignments": {
+        "title": "55555",
+        "subtitle": "55555"
+      },
+      "starterBundles": {
+        "title": "55555",
+        "subtitle": "55555"
+      },
+      "archivedBundles": {
+        "title": "55555",
+        "subtitle": "55555"
+      }
+    },
+    "library": {
+      "eyebrow": "55555",
+      "title": "55555",
+      "description": "55555",
+      "searchPlaceholder": "55555",
+      "showArchived": "55555",
+      "columns": {
+        "bundle": "55555",
+        "status": "55555",
+        "type": "55555",
+        "assignments": "55555",
+        "updated": "55555",
+        "actions": "55555"
+      },
+      "statusLabels": {
+        "active": "55555",
+        "archived": "55555"
+      },
+      "typeLabels": {
+        "system": "55555",
+        "custom": "55555"
+      },
+      "badges": {
+        "starter": "55555"
+      },
+      "descriptions": {
+        "systemStarter": "55555",
+        "customBundle": "55555"
+      },
+      "effectiveSummary": "55555 {{status}} 55555 {{count}} 55555",
+      "empty": "55555",
+      "loading": "55555",
+      "actions": {
+        "openEditor": "55555",
+        "assignments": "55555",
+        "simulator": "55555",
+        "clone": "55555",
+        "archive": "55555"
+      }
+    },
+    "workspace": {
+      "backToLibrary": "55555",
+      "updatedWithAssignments": "55555 {{date}} 55555 {{count}} 55555",
+      "eyebrow": "55555",
+      "fallbackBundleName": "55555",
+      "fallbackDescription": "55555",
+      "tabs": {
+        "editor": "55555",
+        "assignments": "55555",
+        "simulator": "55555"
+      }
+    },
+    "editor": {
+      "header": "55555",
+      "editingDraftPrefix": "55555",
+      "editingDraftSuffix": "55555",
+      "viewingPublishedPrefix": "55555",
+      "viewingPublishedSuffix": "55555",
+      "publishDraft": "55555",
+      "publishing": "55555",
+      "publishedBadge": "55555",
+      "loading": "55555",
+      "revisionSummary": "55555 {{summary}} 55555",
+      "ruleCount": "55555 {{count}} 55555 {{revisionType}} 55555",
+      "revisionType": {
+        "draft": "55555",
+        "published": "55555"
+      },
+      "emptyRules": "55555 {{revisionType}} 55555 {{resource}} 55555",
+      "ruleForm": {
+        "addDraftTitle": "55555",
+        "editDraftTitle": "55555",
+        "createDraftTitle": "55555",
+        "editPublishedTitle": "55555",
+        "helperEditPublished": "55555",
+        "helperCreateDraft": "55555",
+        "reset": "55555",
+        "action": "55555",
+        "template": "55555",
+        "constraint": "55555",
+        "constraintNone": "55555",
+        "saveDraftRule": "55555",
+        "addDraftRule": "55555",
+        "saveAsDraftChange": "55555",
+        "createDraftRule": "55555"
+      },
+      "rule": {
+        "edit": "55555",
+        "remove": "55555",
+        "removeAsDraft": "55555",
+        "removeDraftTooltip": "55555",
+        "removePublishedTooltip": "55555",
+        "selectedClientScopes": "55555",
+        "selectedBoardScopes": "55555",
+        "redactedFields": "55555"
+      },
+      "scopes": {
+        "clientTitle": "55555",
+        "boardTitle": "55555",
+        "selectClient": "55555",
+        "selectBoard": "55555",
+        "addClientScope": "55555",
+        "addBoardScope": "55555",
+        "noClientScopes": "55555",
+        "noBoardScopes": "55555",
+        "remove": "55555"
+      },
+      "redaction": {
+        "label": "55555",
+        "placeholder": "55555",
+        "helper": "55555"
+      }
+    },
+    "assignments": {
+      "header": "55555",
+      "description": "55555",
+      "loading": "55555",
+      "addAssignment": "55555",
+      "selectTargetPlaceholder": "55555 {{target}} 55555",
+      "addButton": "55555",
+      "adding": "55555",
+      "empty": "55555",
+      "groupEmpty": "55555 {{target}} 55555",
+      "statusActions": {
+        "disable": "55555",
+        "enable": "55555",
+        "saving": "55555"
+      },
+      "statusLabels": {
+        "active": "55555",
+        "disabled": "55555"
+      }
+    },
+    "simulator": {
+      "header": "55555",
+      "description": "55555",
+      "inputTitle": "55555",
+      "resource": "55555",
+      "action": "55555",
+      "principal": "55555",
+      "record": "55555",
+      "useSynthetic": "55555",
+      "syntheticOwnerPlaceholder": "55555",
+      "syntheticClientPlaceholder": "55555",
+      "syntheticBoardPlaceholder": "55555",
+      "clientVisible": "55555",
+      "run": "55555",
+      "running": "55555",
+      "resultTitle": "55555",
+      "draftRevision": "55555",
+      "publishedRevision": "55555",
+      "allowed": "55555",
+      "denied": "55555",
+      "empty": "55555"
+    },
+    "createDialog": {
+      "title": "55555",
+      "cancel": "55555",
+      "create": "55555",
+      "creating": "55555",
+      "nameLabel": "55555",
+      "namePlaceholder": "55555",
+      "descriptionLabel": "55555",
+      "descriptionPlaceholder": "55555"
+    },
+    "clone": {
+      "copySuffix": "55555 {{name}} 55555"
+    },
+    "errors": {
+      "loadBundles": "55555",
+      "loadEditor": "55555",
+      "loadAssignments": "55555",
+      "cloneBundle": "55555",
+      "archiveBundle": "55555",
+      "seedStarters": "55555",
+      "bundleNameRequired": "55555",
+      "createBundle": "55555",
+      "publishDraft": "55555",
+      "selectTemplate": "55555",
+      "selectClientRequired": "55555",
+      "selectBoardRequired": "55555",
+      "redactedFieldRequired": "55555",
+      "saveRule": "55555",
+      "removeRule": "55555",
+      "selectTarget": "55555",
+      "addAssignment": "55555",
+      "updateAssignmentStatus": "55555",
+      "selectPrincipal": "55555",
+      "selectRecord": "55555",
+      "runSimulation": "55555"
+    }
   }
 }
