@@ -201,7 +201,7 @@
     "id": "T034",
     "description": "UI (Playwright): EntryPopup pending approval view shows the same Teams toggle when capability is available.",
     "featureIds": ["F015"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T035",

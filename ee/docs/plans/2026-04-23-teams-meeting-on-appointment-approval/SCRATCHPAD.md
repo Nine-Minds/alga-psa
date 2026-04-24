@@ -174,6 +174,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-24: Completed `T031` in the same client-portal detail test file, asserting the cancel confirmation falls back to the normal message when there is no Teams meeting URL.
 - 2026-04-24: Completed `T032` with `server/src/test/unit/appointments/AppointmentRequestsPanel.teams.test.tsx`, asserting the MSP appointment-requests approval form shows a checked Teams toggle when capability is available.
 - 2026-04-24: Completed `T033` in the same appointment-requests panel test file, asserting the approval form hides the Teams toggle when capability reports unavailable.
+- 2026-04-24: Completed `T034` with `server/src/test/unit/appointments/EntryPopup.teams.test.tsx`, asserting the pending appointment-request branch of `EntryPopup` shows the Teams toggle when capability is available.
 
 ## Working notes
 
@@ -216,5 +217,6 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - Additional validation command: `npx vitest --root server --config vitest.config.ts run src/test/integration/appointmentRequests.integration.test.ts -t "deletes the linked Teams meeting when a client cancels an approved appointment|deletes the linked Teams meeting when MSP staff deletes the schedule entry|surfaces a warning when Teams meeting deletion fails during cancellation" --coverage.enabled false`
 - Additional validation command: `npx vitest --root server --config vitest.config.ts run src/test/unit/appointments/AppointmentRequestDetailsPage.teams.test.tsx --coverage.enabled false`
 - Additional validation command: `npx vitest --root server --config vitest.config.ts run src/test/unit/appointments/AppointmentRequestsPanel.teams.test.tsx --coverage.enabled false`
+- Additional validation command: `npx vitest --root server --config vitest.config.ts run src/test/unit/appointments/EntryPopup.teams.test.tsx --coverage.enabled false`
 - Additional validation command: `rm -rf server/.next && npm run build:ce`
 - Additional validation command: `rg -n "@alga-psa/ee-microsoft-teams|ee/packages/microsoft-teams" server/.next`
