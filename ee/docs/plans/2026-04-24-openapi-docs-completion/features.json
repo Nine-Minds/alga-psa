@@ -1,0 +1,146 @@
+[
+  {
+    "id": "F001",
+    "description": "Document remaining automation execution, performance, rule, template, statistics, and bulk-operation routes with source-grounded schemas and auth/RBAC metadata.",
+    "implemented": false,
+    "prdRefs": ["Goals", "Current Baseline"]
+  },
+  {
+    "id": "F002",
+    "description": "Document contract-line and contract-line-template routes, including bulk operations, service associations, activation, analytics, copy, fixed config, and usage metrics.",
+    "implemented": false,
+    "prdRefs": ["Goals"]
+  },
+  {
+    "id": "F003",
+    "description": "Document category routes for service categories, ticket categories, trees, move operations, search, analytics, and bulk delete.",
+    "implemented": false,
+    "prdRefs": ["Goals"]
+  },
+  {
+    "id": "F004",
+    "description": "Document client, client-contract-line, contact, and related location/contact subresource routes.",
+    "implemented": false,
+    "prdRefs": ["Goals"]
+  },
+  {
+    "id": "F005",
+    "description": "Document financial, billing analytics, invoices, credits, transactions, payment terms, billing calculation, bulk invoice, and invoice lifecycle routes.",
+    "implemented": false,
+    "prdRefs": ["Goals"]
+  },
+  {
+    "id": "F006",
+    "description": "Document QuickBooks and integration duplicate route families under /api/v1/integrations/quickbooks and /api/v1/quickbooks, including mapping, connection, import, sync, and catalog endpoints.",
+    "implemented": false,
+    "prdRefs": ["Goals", "Risks and Constraints"]
+  },
+  {
+    "id": "F007",
+    "description": "Document webhook route family including CRUD, analytics, events, deliveries, testing, retry, subscription, and bulk endpoints.",
+    "implemented": false,
+    "prdRefs": ["Goals"]
+  },
+  {
+    "id": "F008",
+    "description": "Document workflow route family including CRUD, events, execution, templates, validation, analytics, import/export, and versioning endpoints.",
+    "implemented": false,
+    "prdRefs": ["Goals"]
+  },
+  {
+    "id": "F009",
+    "description": "Document user, user-role, role, permission, permission-check, RBAC audit/analytics, teams, and team membership/hierarchy route families.",
+    "implemented": false,
+    "prdRefs": ["Goals"]
+  },
+  {
+    "id": "F010",
+    "description": "Document project, ticket, tag, schedule, time-entry, time-sheet, time-period, and time approval route families.",
+    "implemented": false,
+    "prdRefs": ["Goals"]
+  },
+  {
+    "id": "F011",
+    "description": "Document quote and contract route families, including quote items, approval/send/convert flows, and contract-line associations.",
+    "implemented": false,
+    "prdRefs": ["Goals"]
+  },
+  {
+    "id": "F012",
+    "description": "Document meta, health-like v1 metadata, feature-access, feature-flag, user telemetry, test-auth, and remaining single-operation utility routes.",
+    "implemented": false,
+    "prdRefs": ["Goals"]
+  },
+  {
+    "id": "F013",
+    "description": "For every remaining operation, include path/query/header/body schemas with required fields and ID provenance grounded in route/controller/service code.",
+    "implemented": false,
+    "prdRefs": ["Goals", "Acceptance Criteria / Definition of Done"]
+  },
+  {
+    "id": "F014",
+    "description": "For every remaining operation, include response schemas, status codes, response-envelope shape, and known mismatches between implementation and existing Zod schemas.",
+    "implemented": false,
+    "prdRefs": ["Goals", "Risks and Constraints"]
+  },
+  {
+    "id": "F015",
+    "description": "For every remaining operation, document auth mechanism, tenant scoping, RBAC resource/action, middleware behavior, and current auth wiring gaps where applicable.",
+    "implemented": false,
+    "prdRefs": ["Goals", "Risks and Constraints"]
+  },
+  {
+    "id": "F016",
+    "description": "Document inventory-only or missing-handler route entries explicitly when route inventory refers to files that do not exist in the current worktree.",
+    "implemented": false,
+    "prdRefs": ["Data Model / API Integration Notes", "Risks and Constraints"]
+  },
+  {
+    "id": "F017",
+    "description": "Keep registrar organization maintainable by adding domain-specific files under server/src/lib/api/openapi/routes and importing them in index.ts before inventory backfill.",
+    "implemented": false,
+    "prdRefs": ["Primary Workflow", "Acceptance Criteria / Definition of Done"]
+  },
+  {
+    "id": "F018",
+    "description": "Regenerate CE/legacy and EE OpenAPI JSON/YAML specs after each batch or logical group of batches.",
+    "implemented": false,
+    "prdRefs": ["Primary Workflow", "Acceptance Criteria / Definition of Done"]
+  },
+  {
+    "id": "F019",
+    "description": "Validate placeholder removal after each batch using a generated-spec scan for generated descriptions and x-placeholder metadata.",
+    "implemented": false,
+    "prdRefs": ["Primary Workflow", "Acceptance Criteria / Definition of Done"]
+  },
+  {
+    "id": "F020",
+    "description": "Maintain /tmp/alga-openapi-doc-progress.md with completed batches, selected next batch, remaining placeholder count, and model/provider issues.",
+    "implemented": false,
+    "prdRefs": ["Primary Workflow"]
+  },
+  {
+    "id": "F021",
+    "description": "Keep this plan's PRD, features, tests, and scratchpad synchronized as remaining route families are completed.",
+    "implemented": false,
+    "prdRefs": ["Acceptance Criteria / Definition of Done"]
+  },
+  {
+    "id": "F022",
+    "description": "Commit and push source registrar and generated spec changes periodically, excluding pre-existing .env.localtest changes.",
+    "implemented": false,
+    "prdRefs": ["Primary Workflow", "Risks and Constraints"]
+  },
+  {
+    "id": "F023",
+    "description": "Perform final CE and EE zero-placeholder validation and record final counts/results in SCRATCHPAD.md and /tmp/alga-openapi-doc-progress.md.",
+    "implemented": false,
+    "prdRefs": ["Acceptance Criteria / Definition of Done"]
+  },
+  {
+    "id": "F024",
+    "description": "Create a final summary of documented route families, discovered implementation gaps, and any intentionally deferred runtime fixes.",
+    "implemented": false,
+    "prdRefs": ["Open Questions", "Acceptance Criteria / Definition of Done"]
+  }
+]

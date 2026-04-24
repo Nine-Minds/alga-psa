@@ -1,0 +1,74 @@
+[
+  {
+    "id": "T001",
+    "description": "After each documented batch, run a CE generated-spec scan for the batch operations and assert none contain generated placeholder descriptions or x-placeholder metadata.",
+    "implemented": false,
+    "featureIds": ["F018", "F019"]
+  },
+  {
+    "id": "T002",
+    "description": "After each documented batch, run the same placeholder scan against the EE generated spec for the batch operations.",
+    "implemented": false,
+    "featureIds": ["F018", "F019"]
+  },
+  {
+    "id": "T003",
+    "description": "Run npm --prefix sdk run openapi:generate and verify CE/legacy JSON/YAML specs are regenerated without script failure.",
+    "implemented": false,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T004",
+    "description": "Run npm --prefix sdk run openapi:generate -- --edition ee and verify EE JSON/YAML specs are regenerated without script failure.",
+    "implemented": false,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T005",
+    "description": "For each new registrar file, verify server/src/lib/api/openapi/index.ts imports and registers it before inventory backfill so manual routes override placeholders.",
+    "implemented": false,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T006",
+    "description": "For representative API-key v1 controllers, inspect one read route and one mutation route per domain group to confirm OpenAPI auth/RBAC/tenant descriptions match source behavior.",
+    "implemented": false,
+    "featureIds": ["F001", "F002", "F003", "F004", "F005", "F009", "F010", "F015"]
+  },
+  {
+    "id": "T007",
+    "description": "For representative billing/financial and invoice routes, verify request body required fields and response envelopes against controller/service/Zod source before committing their registrar entries.",
+    "implemented": false,
+    "featureIds": ["F005", "F011", "F013", "F014"]
+  },
+  {
+    "id": "T008",
+    "description": "For QuickBooks/integration duplicate route families, verify whether routes are aliases, duplicated controllers, or divergent implementations, and document the distinction in operation descriptions.",
+    "implemented": false,
+    "featureIds": ["F006", "F013", "F014"]
+  },
+  {
+    "id": "T009",
+    "description": "For webhook and workflow route families, verify security schemes and callback/event payload schemas against route handlers and service code.",
+    "implemented": false,
+    "featureIds": ["F007", "F008", "F015"]
+  },
+  {
+    "id": "T010",
+    "description": "Before each commit, run git status --short and verify .env.localtest is not staged while registrar and generated spec files are staged intentionally.",
+    "implemented": false,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T011",
+    "description": "At final completion, run full CE and EE placeholder scans and assert remaining count is zero in both specs.",
+    "implemented": false,
+    "featureIds": ["F019", "F023"]
+  },
+  {
+    "id": "T012",
+    "description": "At final completion, review /tmp/alga-openapi-doc-progress.md, PRD.md, features.json, tests.json, and SCRATCHPAD.md for consistency with the final route/spec state.",
+    "implemented": false,
+    "featureIds": ["F020", "F021", "F023", "F024"]
+  }
+]
