@@ -300,6 +300,7 @@ const DESIGNER_PALETTE_COLLAPSED_WIDTH = 32;
 const DESIGNER_PALETTE_TOGGLE_OVERHANG = 16;
 const DESIGNER_CENTER_LEFT_EXTRA_PADDING = 16;
 const DESIGNER_CENTER_RIGHT_EXTRA_PADDING = 24;
+const DESIGNER_CENTER_MIN_WIDTH = 640;
 
 type PipeSegment = {
   index: number;
@@ -1523,6 +1524,33 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     const currentPaletteWidth = isPaletteCollapsed
       ? DESIGNER_PALETTE_COLLAPSED_WIDTH
       : DESIGNER_PALETTE_WIDTH;
+    const anchorWidth = designerFloatAnchorRect.right - designerFloatAnchorRect.left;
+    const minimumFloatingWidth =
+      (DESIGNER_FLOAT_PANEL_OFFSET * 2)
+      + currentPaletteWidth
+      + DESIGNER_PALETTE_TOGGLE_OVERHANG
+      + DESIGNER_CENTER_LEFT_EXTRA_PADDING
+      + DESIGNER_CENTER_MIN_WIDTH
+      + DESIGNER_CENTER_RIGHT_EXTRA_PADDING
+      + designerSidebarWidth;
+    const isStacked = anchorWidth < minimumFloatingWidth;
+
+    if (isStacked) {
+      return {
+        isStacked,
+        paletteStyle: {
+          position: 'relative',
+          maxHeight: 'none',
+        } as React.CSSProperties,
+        sidebarStyle: {
+          position: 'relative',
+          width: '100%',
+          maxHeight: 'none',
+        } as React.CSSProperties,
+        centerScrollStyle: {} as React.CSSProperties,
+      };
+    }
+
     const paletteLeft = Math.min(
       Math.max(DESIGNER_FLOAT_EDGE_GUTTER, designerFloatAnchorRect.left + DESIGNER_FLOAT_PANEL_OFFSET),
       window.innerWidth - DESIGNER_FLOAT_EDGE_GUTTER - currentPaletteWidth
@@ -1549,6 +1577,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     );
 
     return {
+      isStacked,
       paletteStyle: {
         position: 'fixed',
         top,
@@ -1934,10 +1963,10 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   }, [isDesignerSidebarResizing, stopDesignerSidebarResize]);
 
   useEffect(() => {
-    if (!designerFloatAnchorRect && isDesignerSidebarResizing) {
+    if ((!designerFloatAnchorRect || designerFloatingLayout?.isStacked) && isDesignerSidebarResizing) {
       stopDesignerSidebarResize();
     }
-  }, [designerFloatAnchorRect, isDesignerSidebarResizing, stopDesignerSidebarResize]);
+  }, [designerFloatAnchorRect, designerFloatingLayout?.isStacked, isDesignerSidebarResizing, stopDesignerSidebarResize]);
 
   const handleControlPanelTabChange = useCallback((nextTabId: string) => {
     setActiveTab(nextTabId);
@@ -3483,12 +3512,17 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   };
 
   const showInitialDesignerSkeleton = isLoading && !activeDefinition;
+  const isDesignerStacked = designerFloatingLayout?.isStacked ?? false;
+  const canResizeDesignerSidebar = canManage && !isDesignerStacked;
 
   const designerContent = (
     <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
     <div className="flex flex-col h-full min-h-0">
-	      <div ref={designerFloatAnchorRef} className="relative flex flex-col flex-1 min-h-0 overflow-hidden bg-gray-50 dark:bg-[rgb(var(--color-background))]">
-        <div className="sticky top-4 z-20 h-0 pointer-events-none">
+	      <div
+          ref={designerFloatAnchorRef}
+          className={`relative flex flex-col flex-1 min-h-0 bg-gray-50 dark:bg-[rgb(var(--color-background))] ${isDesignerStacked ? 'overflow-y-auto' : 'overflow-hidden'}`}
+        >
+        <div className={isDesignerStacked ? 'contents' : 'sticky top-4 z-20 h-0 pointer-events-none'}>
           {/* Floating Icon-Grid Palette (left) */}
           <Droppable
             droppableId="palette"
@@ -3503,6 +3537,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
               <WorkflowDesignerPalette
                 visible={Boolean(designerFloatAnchorRect)}
                 style={designerFloatingLayout?.paletteStyle}
+                layout={isDesignerStacked ? 'stacked' : 'floating'}
+                className={isDesignerStacked ? 'order-1 mx-4 mt-4 flex-none' : undefined}
                 search={search}
                 onSearchChange={setSearch}
                 registryError={registryError}
@@ -3532,7 +3568,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           {/* Floating Properties (right) */}
           <aside
             id="workflow-designer-sidebar-scroll"
-            className={`pointer-events-auto relative max-h-[calc(100vh-220px)] bg-white/95 dark:bg-[rgb(var(--color-card))]/95 backdrop-blur border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg shadow-lg overflow-y-auto p-4 space-y-4 z-40 ${designerFloatAnchorRect ? '' : 'hidden'}`}
+            className={`pointer-events-auto relative max-h-[calc(100vh-220px)] bg-white/95 dark:bg-[rgb(var(--color-card))]/95 backdrop-blur border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg shadow-lg overflow-y-auto p-4 space-y-4 z-40 ${isDesignerStacked ? 'order-3 mx-4 mb-4 flex-none' : ''} ${designerFloatAnchorRect ? '' : 'hidden'}`}
             style={designerFloatingLayout?.sidebarStyle}
           >
             <div
@@ -3540,9 +3576,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
               role="separator"
               aria-orientation="vertical"
               aria-label="Resize properties panel"
-              className={`absolute inset-y-0 left-0 z-10 w-3 select-none ${canManage ? 'cursor-col-resize' : 'pointer-events-none opacity-0'}`}
+              className={`absolute inset-y-0 left-0 z-10 w-3 select-none ${canResizeDesignerSidebar ? 'cursor-col-resize' : 'pointer-events-none opacity-0'}`}
               onPointerDown={(event) => {
-                if (!canManage) return;
+                if (!canResizeDesignerSidebar) return;
                 event.preventDefault();
                 event.stopPropagation();
                 designerSidebarResizeRef.current = {
@@ -3722,7 +3758,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
 	        <div
             id="workflow-designer-center-scroll"
-            className="flex-1 min-h-0 overflow-y-auto p-6 pl-72 pr-[460px]"
+            className={isDesignerStacked ? 'order-2 flex-none min-h-0 overflow-visible p-4' : 'flex-1 min-h-0 overflow-y-auto p-6 pl-72 pr-[460px]'}
             style={designerFloatingLayout?.centerScrollStyle}
           >
           <div className="max-w-4xl mx-auto space-y-6">

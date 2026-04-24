@@ -14,6 +14,8 @@ export type WorkflowDesignerPaletteItem = {
 type WorkflowDesignerPaletteProps<TItem extends WorkflowDesignerPaletteItem> = {
   visible: boolean;
   style?: React.CSSProperties;
+  layout?: 'floating' | 'stacked';
+  className?: string;
   search: string;
   onSearchChange: (value: string) => void;
   registryError: boolean;
@@ -32,6 +34,8 @@ type WorkflowDesignerPaletteProps<TItem extends WorkflowDesignerPaletteItem> = {
 export function WorkflowDesignerPalette<TItem extends WorkflowDesignerPaletteItem>({
   visible,
   style,
+  layout = 'floating',
+  className,
   search,
   onSearchChange,
   registryError,
@@ -50,26 +54,40 @@ export function WorkflowDesignerPalette<TItem extends WorkflowDesignerPaletteIte
   let paletteIndex = 0;
 
   const outerWidth = isCollapsed ? collapsedWidth : expandedWidth;
+  const isStacked = layout === 'stacked';
   const containerStyle: React.CSSProperties | undefined = visible
-    ? {
-        ...(style || {}),
-        width: outerWidth,
-        minWidth: outerWidth,
-        maxWidth: outerWidth,
-      }
+    ? isStacked
+      ? {
+          ...(style || {}),
+          width: 'auto',
+          minWidth: 0,
+          maxWidth: 'none',
+        }
+      : {
+          ...(style || {}),
+          width: outerWidth,
+          minWidth: outerWidth,
+          maxWidth: outerWidth,
+        }
     : undefined;
 
   const cardSizingStyle: React.CSSProperties = isCollapsed
     ? {}
-    : {
-        width: expandedWidth,
-        minWidth: expandedWidth,
-        maxWidth: expandedWidth,
-      };
+    : isStacked
+      ? {
+          width: '100%',
+          minWidth: 0,
+          maxWidth: 'none',
+        }
+      : {
+          width: expandedWidth,
+          minWidth: expandedWidth,
+          maxWidth: expandedWidth,
+        };
 
   return (
     <aside
-      className={`pointer-events-auto flex flex-col max-h-[calc(100vh-220px)] min-h-0 z-40 ${styles.container} ${visible ? '' : 'hidden'}`}
+      className={`pointer-events-auto flex flex-col max-h-[calc(100vh-220px)] min-h-0 z-40 ${styles.container} ${isStacked ? styles.stackedContainer : ''} ${className ?? ''} ${visible ? '' : 'hidden'}`}
       style={containerStyle}
     >
       {onToggleCollapse ? (
