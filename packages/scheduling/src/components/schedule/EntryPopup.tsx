@@ -765,6 +765,65 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
           </Alert>
         )}
 
+        {/* Requester info — shown for any appointment-request entry when useful fields are populated */}
+        {isAppointmentRequest && appointmentRequestData && (() => {
+          const ar = appointmentRequestData as any;
+          const companyLabel = ar.is_authenticated ? ar.client_company_name : ar.company_name;
+          const contactName = ar.contact_name || (!ar.is_authenticated ? ar.requester_name : null);
+          const contactEmail = ar.contact_email || (!ar.is_authenticated ? ar.requester_email : null);
+          const contactPhone = !ar.is_authenticated ? ar.requester_phone : null;
+          if (!companyLabel && !contactName && !contactEmail && !contactPhone) return null;
+          return (
+            <div className="mb-4 rounded border border-gray-200 bg-gray-50 p-3">
+              <p className="text-sm font-semibold text-gray-700 mb-2">
+                {t('entryPopup.appointmentRequest.requesterInfo.title', { defaultValue: 'Requester Info' })}
+              </p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                {companyLabel && (
+                  <div>
+                    <div className="text-xs text-gray-500">
+                      {t('entryPopup.appointmentRequest.requesterInfo.company', { defaultValue: 'Company' })}
+                    </div>
+                    <div>{companyLabel}</div>
+                  </div>
+                )}
+                {contactName && (
+                  <div>
+                    <div className="text-xs text-gray-500">
+                      {t('entryPopup.appointmentRequest.requesterInfo.name', { defaultValue: 'Name' })}
+                    </div>
+                    <div>{contactName}</div>
+                  </div>
+                )}
+                {contactEmail && (
+                  <div>
+                    <div className="text-xs text-gray-500">
+                      {t('entryPopup.appointmentRequest.requesterInfo.email', { defaultValue: 'Email' })}
+                    </div>
+                    <div>
+                      <a href={`mailto:${contactEmail}`} className="text-blue-600 hover:underline break-all">
+                        {contactEmail}
+                      </a>
+                    </div>
+                  </div>
+                )}
+                {contactPhone && (
+                  <div>
+                    <div className="text-xs text-gray-500">
+                      {t('entryPopup.appointmentRequest.requesterInfo.phone', { defaultValue: 'Phone' })}
+                    </div>
+                    <div>
+                      <a href={`tel:${contactPhone}`} className="text-blue-600 hover:underline">
+                        {contactPhone}
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Status display for declined/cancelled appointment requests */}
         {isAppointmentRequest && event && appointmentRequestData && (appointmentRequestData.status === 'declined' || appointmentRequestData.status === 'cancelled') && (
           <div className="space-y-4">

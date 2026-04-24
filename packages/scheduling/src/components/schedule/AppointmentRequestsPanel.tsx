@@ -419,6 +419,12 @@ export default function AppointmentRequestsPanel({
                           {(request as any).contact_name && (
                             <div className="text-sm text-gray-600">{(request as any).contact_name}</div>
                           )}
+                          {!request.is_authenticated && request.requester_name && (
+                            <div className="text-sm text-gray-600">{request.requester_name}</div>
+                          )}
+                          {!request.is_authenticated && request.requester_email && (
+                            <div className="text-xs text-gray-500">{request.requester_email}</div>
+                          )}
                         </div>
                         <Badge variant={getStatusBadgeVariant(request.status)}>
                           {request.status}
@@ -494,8 +500,18 @@ export default function AppointmentRequestsPanel({
                 </div>
                 <div>
                   <div className="font-semibold text-gray-700">{t('requests.detail.labels.client', { defaultValue: 'Client' })}</div>
-                  <div>{selectedRequest.is_authenticated ? (selectedRequest as any).client_company_name : selectedRequest.company_name}</div>
+                  <div>
+                    {selectedRequest.is_authenticated
+                      ? (selectedRequest as any).client_company_name
+                      : selectedRequest.company_name || t('requests.list.fallbacks.publicRequest', { defaultValue: 'Public Request' })}
+                  </div>
                 </div>
+                {!selectedRequest.is_authenticated && selectedRequest.requester_name && (
+                  <div>
+                    <div className="font-semibold text-gray-700">{t('requests.detail.labels.requester', { defaultValue: 'Requester' })}</div>
+                    <div>{selectedRequest.requester_name}</div>
+                  </div>
+                )}
                 {(selectedRequest as any).contact_name && (
                   <div>
                     <div className="font-semibold text-gray-700">{t('requests.detail.labels.contact', { defaultValue: 'Contact' })}</div>
@@ -511,13 +527,21 @@ export default function AppointmentRequestsPanel({
                 {selectedRequest.requester_email && !selectedRequest.is_authenticated && (
                   <div>
                     <div className="font-semibold text-gray-700">{t('requests.detail.labels.email', { defaultValue: 'Email' })}</div>
-                    <div>{selectedRequest.requester_email}</div>
+                    <div>
+                      <a href={`mailto:${selectedRequest.requester_email}`} className="text-blue-600 hover:underline">
+                        {selectedRequest.requester_email}
+                      </a>
+                    </div>
                   </div>
                 )}
                 {selectedRequest.requester_phone && (
                   <div>
                     <div className="font-semibold text-gray-700">{t('requests.detail.labels.phone', { defaultValue: 'Phone' })}</div>
-                    <div>{selectedRequest.requester_phone}</div>
+                    <div>
+                      <a href={`tel:${selectedRequest.requester_phone}`} className="text-blue-600 hover:underline">
+                        {selectedRequest.requester_phone}
+                      </a>
+                    </div>
                   </div>
                 )}
                 <div>

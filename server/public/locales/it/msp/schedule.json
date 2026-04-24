@@ -149,6 +149,7 @@
       "labels": {
         "reference": "Riferimento",
         "client": "Cliente",
+        "requester": "Richiedente",
         "contact": "Contatto",
         "email": "E-mail",
         "phone": "Telefono",
@@ -483,6 +484,13 @@
       "cancelled": {
         "title": "Richiesta di appuntamento annullata",
         "description": "Questa richiesta di appuntamento è stata annullata dal cliente."
+      },
+      "requesterInfo": {
+        "title": "Informazioni sul richiedente",
+        "company": "Azienda",
+        "name": "Nome",
+        "email": "Email",
+        "phone": "Telefono"
       },
       "requestedDateTimeLabel": "Data e ora richieste",
       "assignTechnicianLabel": "Assegna Tecnico *",

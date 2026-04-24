@@ -149,6 +149,7 @@
       "labels": {
         "reference": "Referenz",
         "client": "Kunde",
+        "requester": "Antragsteller",
         "contact": "Kontakt",
         "email": "E-Mail",
         "phone": "Telefon",
@@ -483,6 +484,13 @@
       "cancelled": {
         "title": "Terminanfrage storniert",
         "description": "Diese Terminanfrage wurde vom Kunden storniert."
+      },
+      "requesterInfo": {
+        "title": "Informationen zum Anforderer",
+        "company": "Unternehmen",
+        "name": "Name",
+        "email": "E-Mail",
+        "phone": "Telefon"
       },
       "requestedDateTimeLabel": "Gewünschtes Datum und Uhrzeit",
       "assignTechnicianLabel": "Techniker zuweisen *",

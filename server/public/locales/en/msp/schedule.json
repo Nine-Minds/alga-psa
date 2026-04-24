@@ -149,6 +149,7 @@
       "labels": {
         "reference": "Reference",
         "client": "Client",
+        "requester": "Requester",
         "contact": "Contact",
         "email": "Email",
         "phone": "Phone",
@@ -483,6 +484,13 @@
       "cancelled": {
         "title": "Cancelled Appointment Request",
         "description": "This appointment request was cancelled by the client."
+      },
+      "requesterInfo": {
+        "title": "Requester Info",
+        "company": "Company",
+        "name": "Name",
+        "email": "Email",
+        "phone": "Phone"
       },
       "requestedDateTimeLabel": "Requested Date & Time",
       "assignTechnicianLabel": "Assign Technician *",

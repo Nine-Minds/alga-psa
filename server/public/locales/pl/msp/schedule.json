@@ -149,6 +149,7 @@
       "labels": {
         "reference": "Odniesienie",
         "client": "Klient",
+        "requester": "Zgłaszający",
         "contact": "Kontakt",
         "email": "E-mail",
         "phone": "Telefon",
@@ -483,6 +484,13 @@
       "cancelled": {
         "title": "Anulowane żądanie spotkania",
         "description": "To zaproszenie na spotkanie zostało anulowane przez klienta."
+      },
+      "requesterInfo": {
+        "title": "Informacje o zgłaszającym",
+        "company": "Firma",
+        "name": "Imię i nazwisko",
+        "email": "E-mail",
+        "phone": "Telefon"
       },
       "requestedDateTimeLabel": "Żądana data i godzina",
       "assignTechnicianLabel": "Przypisz technika *",

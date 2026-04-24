@@ -149,6 +149,7 @@
       "labels": {
         "reference": "Référence",
         "client": "Client",
+        "requester": "Demandeur",
         "contact": "Contact",
         "email": "E-mail",
         "phone": "Téléphone",
@@ -483,6 +484,13 @@
       "cancelled": {
         "title": "Demande de rendez-vous annulée",
         "description": "Cette demande de rendez-vous a été annulée par le client."
+      },
+      "requesterInfo": {
+        "title": "Informations du demandeur",
+        "company": "Entreprise",
+        "name": "Nom",
+        "email": "E-mail",
+        "phone": "Téléphone"
       },
       "requestedDateTimeLabel": "Date et heure demandées",
       "assignTechnicianLabel": "Attribuer un technicien *",

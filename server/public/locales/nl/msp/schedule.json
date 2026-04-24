@@ -149,6 +149,7 @@
       "labels": {
         "reference": "Referentie",
         "client": "Cliënt",
+        "requester": "Aanvrager",
         "contact": "Contact",
         "email": "E-mail",
         "phone": "Telefoon",
@@ -483,6 +484,13 @@
       "cancelled": {
         "title": "Afspraakverzoek geannuleerd",
         "description": "Dit afspraakverzoek is door de cliënt geannuleerd."
+      },
+      "requesterInfo": {
+        "title": "Aanvragergegevens",
+        "company": "Bedrijf",
+        "name": "Naam",
+        "email": "E-mail",
+        "phone": "Telefoon"
       },
       "requestedDateTimeLabel": "Gevraagde datum en tijd",
       "assignTechnicianLabel": "Technicus toewijzen *",

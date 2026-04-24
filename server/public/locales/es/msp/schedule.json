@@ -149,6 +149,7 @@
       "labels": {
         "reference": "Referencia",
         "client": "Cliente",
+        "requester": "Solicitante",
         "contact": "Contacto",
         "email": "Correo electrónico",
         "phone": "Teléfono",
@@ -483,6 +484,13 @@
       "cancelled": {
         "title": "Solicitud de cita cancelada",
         "description": "Esta solicitud de cita fue cancelada por el cliente."
+      },
+      "requesterInfo": {
+        "title": "Información del solicitante",
+        "company": "Empresa",
+        "name": "Nombre",
+        "email": "Correo electrónico",
+        "phone": "Teléfono"
       },
       "requestedDateTimeLabel": "Fecha y hora solicitadas",
       "assignTechnicianLabel": "Asignar técnico *",

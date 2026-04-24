@@ -149,6 +149,7 @@
       "labels": {
         "reference": "11111",
         "client": "11111",
+        "requester": "11111",
         "contact": "11111",
         "email": "11111",
         "phone": "11111",
@@ -331,7 +332,7 @@
       },
       "deleteDialog": {
         "title": "11111",
-        "message": "11111"
+        "message": "11111 {{userName}} 11111"
       }
     },
     "serviceRules": {
@@ -379,7 +380,7 @@
       },
       "deleteDialog": {
         "title": "11111",
-        "message": "11111"
+        "message": "11111 {{serviceName}} 11111"
       }
     },
     "exceptions": {
@@ -483,6 +484,13 @@
       "cancelled": {
         "title": "11111",
         "description": "11111"
+      },
+      "requesterInfo": {
+        "title": "11111",
+        "company": "11111",
+        "name": "11111",
+        "email": "11111",
+        "phone": "11111"
       },
       "requestedDateTimeLabel": "11111",
       "assignTechnicianLabel": "11111",
