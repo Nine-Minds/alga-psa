@@ -160,6 +160,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-23: Completed `T001-T002` with `server/src/test/unit/teamsMeetingMigrations.test.ts`, executing both migration `up()` functions against mocked `knex.schema` surfaces and asserting the new columns are added as nullable `text`.
 - 2026-04-23: Completed `T017` by hardening CE build wiring and rerunning `npm run build:ce`. Root `build`/`build:ce` scripts now force `EDITION=community NEXT_PUBLIC_EDITION=community`, and `server/next.config.mjs` maps `@alga-psa/ee-microsoft-teams` to `./src/empty` for CE so the built manifest no longer points at `ee/packages/microsoft-teams`.
 - 2026-04-24: Completed `T020` with `server/src/test/integration/appointmentRequests.integration.test.ts`, adding approval-path integration coverage that asserts a Teams-enabled approval persists `online_meeting_provider/url/id` and passes `onlineMeetingUrl` into the approved-email payload.
+- 2026-04-24: Completed `T021` in the same approval integration suite, asserting `generate_teams_meeting: false` leaves `online_meeting_*` columns `NULL` and never calls the Teams meeting service.
 
 ## Working notes
 

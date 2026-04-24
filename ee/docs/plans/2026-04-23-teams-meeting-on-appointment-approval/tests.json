@@ -123,7 +123,7 @@
     "id": "T021",
     "description": "Approval integration test: with toggle OFF, no Graph call is made and online_meeting_* columns remain NULL.",
     "featureIds": ["F009"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T022",
