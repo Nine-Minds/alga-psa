@@ -17,9 +17,9 @@
 
 **EE — Microsoft Teams**
 - Profile + secret resolver: `ee/packages/microsoft-teams/src/lib/auth/teamsMicrosoftProviderResolution.ts` (`resolveTeamsMicrosoftProviderConfigImpl` L30-79)
-- Token fetcher: `ee/packages/microsoft-teams/src/lib/notifications/teamsNotificationDelivery.ts` (`fetchMicrosoftGraphAppToken` L121-156). Consider extracting into a shared `graphAuth.ts` to avoid deep imports from meetings code.
+- Shared Graph auth utility: `ee/packages/microsoft-teams/src/lib/graphAuth.ts`
 - Integration state: `ee/packages/microsoft-teams/src/lib/actions/integrations/teamsActions.ts` (`getTeamsIntegrationStatusImpl`, `getTeamsIntegrationExecutionStateImpl`)
-- New helpers target dir: `ee/packages/microsoft-teams/src/lib/meetings/` (create/update/delete + capability)
+- Meeting helpers: `ee/packages/microsoft-teams/src/lib/meetings/createTeamsMeeting.ts`, `ee/packages/microsoft-teams/src/lib/meetings/meetingConfig.ts`
 - New actions target dir: `ee/packages/microsoft-teams/src/lib/actions/meetings/`
 
 **Migrations**
@@ -65,7 +65,6 @@ Tenant admin must do once in Azure:
 
 ## Open questions / verification needed before implementation
 
-- Confirm `fetchMicrosoftGraphAppToken` is exported or can be extracted cleanly for reuse from the meetings module. May need a refactor pass to move it into a shared `ee/packages/microsoft-teams/src/lib/graphAuth.ts`.
 - Verify CE shim pattern already used elsewhere in the codebase for EE features — look at how calendar or activity notifications are consumed from CE-safe packages today. Mirror that pattern.
 - Decide whether `APPOINTMENT_ONLINE_MEETING_ATTACHED` is worth a new event type or if `SCHEDULE_ENTRY_UPDATED` is sufficient.
 
@@ -120,10 +119,14 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-23: PRD, features.json, tests.json, SCRATCHPAD created in `ee/docs/plans/2026-04-23-teams-meeting-on-appointment-approval/`. No implementation yet.
 - 2026-04-23: Completed `F001` by adding `server/migrations/20260423130000_add_online_meeting_columns_to_appointment_requests.cjs`. Used guarded `hasColumn` checks so the migration is idempotent and safe to re-run in local/dev environments.
 - 2026-04-23: Completed `F002` by adding `ee/server/migrations/20260423131000_add_default_meeting_organizer_to_teams_integrations.cjs`. Kept it EE-local and nullable so tenant setup remains opt-in.
+- 2026-04-23: Completed `F003` by adding `createTeamsMeeting()` plus shared meeting config and Graph auth helpers under `ee/packages/microsoft-teams/src/lib/meetings/`. The helper reads `teams_integrations.default_meeting_organizer_upn`, resolves the tenant Microsoft profile, POSTs to Graph, logs success/failure, and returns `null` on any soft failure.
 
 ## Working notes
 
 - Migration pattern for `appointment_requests` follows the existing guarded `alterTable` style from `20260416210000_add_requester_timezone_to_appointment_requests.cjs`.
 - `teams_integrations` migration does not need a Citus redistribution step for a nullable non-key column; guarded `alterTable` is sufficient.
+- Extracted Graph app-token acquisition into `ee/packages/microsoft-teams/src/lib/graphAuth.ts` so meeting helpers and notification delivery share the same OAuth client-credentials flow.
+- Added `resolveTeamsMeetingExecutionConfig()` as the central place for readiness checks needed by create/update/delete helpers: install status must be `active`, `selected_profile_id` must exist, organizer UPN must be set, and the Microsoft profile must resolve as `ready`.
 - Runbook command used for validation so far: `node -c server/migrations/20260423130000_add_online_meeting_columns_to_appointment_requests.cjs`
 - Additional validation command: `node -c ee/server/migrations/20260423131000_add_default_meeting_organizer_to_teams_integrations.cjs`
+- Additional validation command: `npm -w ee/packages/microsoft-teams run typecheck`

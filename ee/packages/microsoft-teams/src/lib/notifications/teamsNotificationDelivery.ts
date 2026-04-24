@@ -8,6 +8,7 @@ import {
   buildNotificationFailedPayload,
   buildNotificationSentPayload,
 } from '@alga-psa/workflow-streams';
+import { fetchMicrosoftGraphAppToken } from '../graphAuth';
 import { buildTeamsPersonalTabDeepLinkFromPsaUrl } from '../teams/teamsDeepLinks';
 
 type TeamsNotificationCategory =
@@ -216,7 +217,7 @@ async function resolveTeamsRecipientLink(
   return providerAccountId ? { providerAccountId } : null;
 }
 
-async function fetchMicrosoftGraphAppToken(params: {
+async function fetchMicrosoftGraphAppTokenForProfile(params: {
   tenant: string;
   tenantAuthority: string;
   clientId: string;
@@ -229,35 +230,11 @@ async function fetchMicrosoftGraphAppToken(params: {
     throw new Error('Selected Teams Microsoft profile is missing the client secret required for Graph delivery.');
   }
 
-  const tokenResponse = await fetch(
-    `https://login.microsoftonline.com/${encodeURIComponent(params.tenantAuthority)}/oauth2/v2.0/token`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        client_id: params.clientId,
-        client_secret: clientSecret,
-        scope: 'https://graph.microsoft.com/.default',
-        grant_type: 'client_credentials',
-      }),
-    }
-  );
-
-  if (!tokenResponse.ok) {
-    const errorBody = await tokenResponse.text();
-    throw new Error(`Failed to acquire Teams Graph token (${tokenResponse.status}): ${errorBody || tokenResponse.statusText}`);
-  }
-
-  const tokenPayload = await tokenResponse.json() as { access_token?: string };
-  const accessToken = normalizeString(tokenPayload.access_token);
-
-  if (!accessToken) {
-    throw new Error('Microsoft token response did not include an access token.');
-  }
-
-  return accessToken;
+  return fetchMicrosoftGraphAppToken({
+    tenantAuthority: params.tenantAuthority,
+    clientId: params.clientId,
+    clientSecret,
+  });
 }
 
 export async function deliverTeamsNotificationImpl(
@@ -331,7 +308,7 @@ export async function deliverTeamsNotificationImpl(
   });
 
   try {
-    const accessToken = await fetchMicrosoftGraphAppToken({
+    const accessToken = await fetchMicrosoftGraphAppTokenForProfile({
       tenant: notification.tenant,
       tenantAuthority: profile.tenant_id,
       clientId: profile.client_id,
