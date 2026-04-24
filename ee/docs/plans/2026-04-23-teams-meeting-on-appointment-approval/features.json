@@ -128,7 +128,7 @@
   {
     "id": "F022",
     "description": "verifyMeetingOrganizer server action calls Graph /users/{upn} and optionally performs a test-create-and-delete round-trip; returns { valid, displayName?, reason? }.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-15"]
   },
   {

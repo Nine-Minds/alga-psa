@@ -4,6 +4,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
+import { isEnterprise } from '@alga-psa/core/features';
 import { v4 as uuidv4 } from 'uuid';
 import {
   availabilitySettingSchema,
@@ -58,6 +59,12 @@ export interface TeamsMeetingsTabState {
 
 export interface TeamsMeetingOrganizerState {
   organizerUpn: string | null;
+}
+
+export interface TeamsMeetingOrganizerVerification {
+  valid: boolean;
+  displayName?: string;
+  reason?: 'ee_disabled' | 'not_configured' | 'user_not_found' | 'policy_missing' | 'graph_error';
 }
 
 export const getTeamsMeetingsTabState = withAuth(async (
@@ -139,6 +146,45 @@ export const setDefaultMeetingOrganizer = withAuth(async (
   } catch (error) {
     console.error('Error saving Teams meeting organizer:', error);
     const message = error instanceof Error ? error.message : 'Failed to save Teams meeting organizer';
+    return { success: false, error: message };
+  }
+});
+
+export const verifyMeetingOrganizer = withAuth(async (
+  user,
+  { tenant },
+  input: { upn?: string | null }
+): Promise<AvailabilitySettingsResult<TeamsMeetingOrganizerVerification>> => {
+  try {
+    const { knex: db } = await createTenantKnex();
+    const canManage = await hasPermission(user, 'system_settings', 'update', db);
+    if (!canManage) {
+      return { success: false, error: 'Insufficient permissions to manage Teams meeting settings' };
+    }
+
+    if (!isEnterprise) {
+      return { success: true, data: { valid: false, reason: 'ee_disabled' } };
+    }
+
+    const organizerUpn = (input.upn || '').trim();
+    if (!organizerUpn) {
+      return { success: true, data: { valid: false, reason: 'user_not_found' } };
+    }
+
+    const teamsModule = await import('@alga-psa/ee-microsoft-teams/lib');
+    if (typeof teamsModule.verifyMeetingOrganizer !== 'function') {
+      return { success: true, data: { valid: false, reason: 'ee_disabled' } };
+    }
+
+    const result = await teamsModule.verifyMeetingOrganizer({
+      tenantId: tenant,
+      organizerUpn,
+    });
+
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Error verifying Teams meeting organizer:', error);
+    const message = error instanceof Error ? error.message : 'Failed to verify Teams meeting organizer';
     return { success: false, error: message };
   }
 });
