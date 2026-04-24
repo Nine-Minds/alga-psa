@@ -26,7 +26,7 @@
   {
     "id": "F005",
     "description": "deleteTeamsMeeting helper DELETEs the Graph online meeting; errors are logged but do not throw.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-5"]
   },
   {
