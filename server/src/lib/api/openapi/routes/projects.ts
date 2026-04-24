@@ -338,4 +338,44 @@ export function registerProjectRoutes(
     },
     edition: 'both',
   });
+
+  registry.registerRoute({
+    method: 'delete',
+    path: '/api/v1/projects/tasks/{taskId}',
+    summary: 'Delete project task',
+    description:
+      'Permanently deletes a project task by task UUID. The controller resolves the task\'s parent project through project_tasks.phase_id and project_phases.project_id, checks project:delete permission, and verifies row-level read access to that project before deleting the task. Returns 204 No Content on success.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      params: ProjectTaskIdParams,
+    },
+    responses: {
+      204: {
+        description: 'Project task deleted successfully.',
+        emptyBody: true,
+      },
+      401: {
+        description: 'Authentication failed.',
+        schema: deps.ErrorResponse,
+      },
+      403: {
+        description: 'Authenticated user lacks project delete permission or row-level access to the parent project.',
+        schema: deps.ErrorResponse,
+      },
+      404: {
+        description: 'Project task not found, or its parent project could not be resolved.',
+        schema: deps.ErrorResponse,
+      },
+    },
+    extensions: {
+      'x-tenant-header-required': true,
+      'x-rbac-resource': 'project',
+      'x-chat-callable': true,
+      'x-chat-display-name': 'Delete Project Task',
+      'x-chat-rbac-resource': 'project',
+      'x-chat-approval-required': true,
+    },
+    edition: 'both',
+  });
 }
