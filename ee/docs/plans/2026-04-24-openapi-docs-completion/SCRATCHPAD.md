@@ -195,3 +195,47 @@ python3 <placeholder scan script for CE+EE targeted automation ops + remaining c
 ### Gotchas reinforced
 
 - OpenAPI registry request bodies must be registered as `request: { body: { schema: ... } }`; passing the schema directly (`body: Schema`) causes `zod-to-openapi` generation failure.
+
+## 2026-04-24 — Contract Line/Template Family Completed (F002)
+
+### Scope completed
+
+- Added new registrar: `server/src/lib/api/openapi/routes/contractLines.ts`.
+- Imported and registered it before inventory backfill in `server/src/lib/api/openapi/index.ts`.
+- Documented all 26 previously-placeholder operations across:
+  - `/api/v1/contract-lines`
+  - `/api/v1/contract-lines/{id}` and subresources (`activation`, `analytics`, `copy`, `fixed-config`, `services`, `usage-metrics`)
+  - `/api/v1/contract-lines/bulk` + explicit bulk subpaths
+  - `/api/v1/contract-line-templates`
+  - `/api/v1/contract-line-templates/{id}/create-contract-line`
+
+### Key decisions / discovered gaps
+
+- These controllers depend on `requireRequestContext(req)` but the global middleware only checks x-api-key presence for `/api/*` and does not populate request context. Documented as current auth wiring gap (`x-request-context-wiring-gap`).
+- `POST /api/v1/contract-lines/{id}/copy` currently uses `source_contract_line_id` from body and does not consume the path id.
+- `POST /api/v1/contract-line-templates/{id}/create-contract-line` currently validates/uses body `template_id` and does not consume the path id.
+- `GET /api/v1/contract-lines/{id}/services/{serviceId}` currently delegates to `getContractLineServices()` and returns full service list for `{id}`; `serviceId` is effectively ignored in GET behavior.
+
+### Validation results
+
+- CE contract-line/template placeholder check: all 26 operations are non-placeholder.
+- EE contract-line/template placeholder check: all 26 operations are non-placeholder.
+- Remaining placeholders after this pass:
+  - CE: `448`
+  - EE: `456`
+
+### Commands executed
+
+```bash
+npm --prefix sdk run openapi:generate
+npm --prefix sdk run openapi:generate -- --edition ee
+python3 <targeted CE/EE contract-line placeholder checks + global counts>
+```
+
+### Next cursor (CE)
+
+1. `GET /api/v1/billing-analytics/overview`
+2. `GET /api/v1/categories/analytics`
+3. `POST /api/v1/categories/bulk/delete`
+4. `GET /api/v1/categories/search`
+5. `DELETE /api/v1/categories/service/{id}`

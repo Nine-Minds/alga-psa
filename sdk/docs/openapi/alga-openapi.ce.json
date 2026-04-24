@@ -38,6 +38,9 @@
       "name": "Chat"
     },
     {
+      "name": "Contract Lines"
+    },
+    {
       "name": "Documents"
     },
     {
@@ -102,12 +105,6 @@
     },
     {
       "name": "contacts"
-    },
-    {
-      "name": "contract-line-templates"
-    },
-    {
-      "name": "contract-lines"
     },
     {
       "name": "contracts"
@@ -5155,6 +5152,819 @@
         },
         "required": [
           "slug"
+        ]
+      },
+      "ContractLineIdParam": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Contract line UUID from contract_lines.contract_line_id."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "ContractLineServiceParam": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Contract line UUID from contract_lines.contract_line_id."
+          },
+          "serviceId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Service UUID from service_catalog.service_id."
+          }
+        },
+        "required": [
+          "id",
+          "serviceId"
+        ]
+      },
+      "ContractLineTemplateParam": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Template UUID from plan_templates.template_id."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "ContractLineListQuery": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "string"
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          "search": {
+            "type": "string"
+          },
+          "created_from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "contract_line_name": {
+            "type": "string"
+          },
+          "contract_line_type": {
+            "type": "string",
+            "enum": [
+              "Fixed",
+              "Hourly",
+              "Usage"
+            ]
+          },
+          "billing_frequency": {
+            "type": "string",
+            "enum": [
+              "weekly",
+              "bi-weekly",
+              "monthly",
+              "quarterly",
+              "semi-annually",
+              "annually"
+            ]
+          },
+          "is_custom": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ]
+          },
+          "is_active": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ]
+          },
+          "service_category": {
+            "type": "string"
+          },
+          "has_services": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ]
+          },
+          "clients_count_min": {
+            "type": "string"
+          },
+          "clients_count_max": {
+            "type": "string"
+          },
+          "revenue_min": {
+            "type": "string"
+          },
+          "revenue_max": {
+            "type": "string"
+          },
+          "include_services": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "description": "Controller-level include flag parsed directly from query string."
+          },
+          "include_usage": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "description": "Controller-level include flag parsed directly from query string."
+          },
+          "include_clients": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "description": "Controller-level include flag parsed directly from query string."
+          }
+        }
+      },
+      "ContractLineUsageMetricsQuery": {
+        "type": "object",
+        "properties": {
+          "period_start": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Defaults to now minus 30 days when omitted."
+          },
+          "period_end": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Defaults to now when omitted."
+          }
+        }
+      },
+      "ContractLineBody": {
+        "type": "object",
+        "properties": {
+          "contract_line_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "billing_frequency": {
+            "type": "string",
+            "enum": [
+              "weekly",
+              "bi-weekly",
+              "monthly",
+              "quarterly",
+              "semi-annually",
+              "annually"
+            ]
+          },
+          "is_custom": {
+            "type": "boolean"
+          },
+          "service_category": {
+            "type": "string"
+          },
+          "contract_line_type": {
+            "type": "string",
+            "enum": [
+              "Fixed",
+              "Hourly",
+              "Usage"
+            ]
+          },
+          "cadence_owner": {
+            "type": "string",
+            "enum": [
+              "client",
+              "contract"
+            ]
+          },
+          "hourly_rate": {
+            "type": "number",
+            "minimum": 0
+          },
+          "minimum_billable_time": {
+            "type": "number",
+            "minimum": 0
+          },
+          "round_up_to_nearest": {
+            "type": "number",
+            "minimum": 1
+          },
+          "enable_overtime": {
+            "type": "boolean"
+          },
+          "overtime_rate": {
+            "type": "number",
+            "minimum": 0
+          },
+          "overtime_threshold": {
+            "type": "number",
+            "minimum": 0
+          },
+          "enable_after_hours_rate": {
+            "type": "boolean"
+          },
+          "after_hours_multiplier": {
+            "type": "number",
+            "minimum": 0
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "location_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "contract_line_name",
+          "billing_frequency",
+          "contract_line_type"
+        ]
+      },
+      "UpdateContractLineBody": {
+        "type": "object",
+        "properties": {
+          "contract_line_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "billing_frequency": {
+            "type": "string",
+            "enum": [
+              "weekly",
+              "bi-weekly",
+              "monthly",
+              "quarterly",
+              "semi-annually",
+              "annually"
+            ]
+          },
+          "is_custom": {
+            "type": "boolean"
+          },
+          "service_category": {
+            "type": "string"
+          },
+          "contract_line_type": {
+            "type": "string",
+            "enum": [
+              "Fixed",
+              "Hourly",
+              "Usage"
+            ]
+          },
+          "cadence_owner": {
+            "type": "string",
+            "enum": [
+              "client",
+              "contract"
+            ]
+          },
+          "hourly_rate": {
+            "type": "number",
+            "minimum": 0
+          },
+          "minimum_billable_time": {
+            "type": "number",
+            "minimum": 0
+          },
+          "round_up_to_nearest": {
+            "type": "number",
+            "minimum": 1
+          },
+          "enable_overtime": {
+            "type": "boolean"
+          },
+          "overtime_rate": {
+            "type": "number",
+            "minimum": 0
+          },
+          "overtime_threshold": {
+            "type": "number",
+            "minimum": 0
+          },
+          "enable_after_hours_rate": {
+            "type": "boolean"
+          },
+          "after_hours_multiplier": {
+            "type": "number",
+            "minimum": 0
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "location_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "ContractLineFixedConfigBody": {
+        "type": "object",
+        "properties": {
+          "base_rate": {
+            "type": "number",
+            "minimum": 0
+          },
+          "enable_proration": {
+            "type": "boolean"
+          },
+          "billing_cycle_alignment": {
+            "type": "string",
+            "enum": [
+              "start",
+              "end",
+              "prorated"
+            ]
+          }
+        }
+      },
+      "ContractLineAddServiceBody": {
+        "type": "object",
+        "properties": {
+          "service_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "number",
+            "minimum": 1
+          },
+          "custom_rate": {
+            "type": "number",
+            "minimum": 0
+          },
+          "configuration_type": {
+            "type": "string",
+            "enum": [
+              "Fixed",
+              "Hourly",
+              "Usage",
+              "Bucket"
+            ]
+          },
+          "type_config": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "service_id"
+        ]
+      },
+      "ContractLineUpdateServiceBody": {
+        "type": "object",
+        "properties": {
+          "quantity": {
+            "type": "number",
+            "minimum": 1
+          },
+          "custom_rate": {
+            "type": "number",
+            "minimum": 0
+          },
+          "type_config": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "rate_tiers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            }
+          },
+          "user_type_rates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            }
+          }
+        }
+      },
+      "ContractLineActivationBody": {
+        "type": "object",
+        "properties": {
+          "is_active": {
+            "type": "boolean"
+          },
+          "effective_date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "notify_clients": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "is_active"
+        ]
+      },
+      "CopyContractLineBody": {
+        "type": "object",
+        "properties": {
+          "source_contract_line_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Used by service; path id is currently ignored."
+          },
+          "new_contract_line_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "copy_services": {
+            "type": "boolean"
+          },
+          "copy_configurations": {
+            "type": "boolean"
+          },
+          "modify_rates": {
+            "type": "object",
+            "properties": {
+              "percentage_change": {
+                "type": "number"
+              },
+              "fixed_adjustment": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "required": [
+          "source_contract_line_id",
+          "new_contract_line_name"
+        ]
+      },
+      "BulkCreateContractLinesBody": {
+        "type": "object",
+        "properties": {
+          "plans": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContractLineBody"
+            },
+            "minItems": 1,
+            "maxItems": 50
+          }
+        },
+        "required": [
+          "plans"
+        ]
+      },
+      "BulkUpdateContractLinesBody": {
+        "type": "object",
+        "properties": {
+          "plans": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "contract_line_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "data": {
+                  "$ref": "#/components/schemas/UpdateContractLineBody"
+                }
+              },
+              "required": [
+                "contract_line_id",
+                "data"
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 50
+          }
+        },
+        "required": [
+          "plans"
+        ]
+      },
+      "BulkDeleteContractLinesBody": {
+        "type": "object",
+        "properties": {
+          "contract_line_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "maxItems": 50
+          }
+        },
+        "required": [
+          "contract_line_ids"
+        ]
+      },
+      "BulkAddServicesBody": {
+        "type": "object",
+        "properties": {
+          "contract_line_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "services": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContractLineAddServiceBody"
+            },
+            "minItems": 1,
+            "maxItems": 20
+          }
+        },
+        "required": [
+          "contract_line_id",
+          "services"
+        ]
+      },
+      "BulkRemoveServicesBody": {
+        "type": "object",
+        "properties": {
+          "contract_line_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "service_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "maxItems": 20
+          }
+        },
+        "required": [
+          "contract_line_id",
+          "service_ids"
+        ]
+      },
+      "CreateContractLineTemplateBody": {
+        "type": "object",
+        "properties": {
+          "template_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "template_description": {
+            "type": "string"
+          },
+          "contract_line_type": {
+            "type": "string",
+            "enum": [
+              "Fixed",
+              "Hourly",
+              "Usage"
+            ]
+          },
+          "billing_frequency": {
+            "type": "string",
+            "enum": [
+              "weekly",
+              "bi-weekly",
+              "monthly",
+              "quarterly",
+              "semi-annually",
+              "annually"
+            ]
+          },
+          "default_services": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "service_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "configuration_type": {
+                  "type": "string",
+                  "enum": [
+                    "Fixed",
+                    "Hourly",
+                    "Usage",
+                    "Bucket"
+                  ]
+                },
+                "default_rate": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "quantity": {
+                  "type": "number",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "service_id",
+                "configuration_type"
+              ]
+            }
+          },
+          "is_public": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "template_name",
+          "contract_line_type",
+          "billing_frequency"
+        ]
+      },
+      "CreateContractLineFromTemplateBody": {
+        "type": "object",
+        "properties": {
+          "template_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Used by service; current controller ignores the path id and relies on this field."
+          },
+          "contract_line_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "modify_rates": {
+            "type": "object",
+            "properties": {
+              "percentage_change": {
+                "type": "number"
+              },
+              "fixed_adjustment": {
+                "type": "number"
+              }
+            }
+          },
+          "override_services": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "service_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "custom_rate": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "quantity": {
+                  "type": "number",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "service_id"
+              ]
+            }
+          }
+        },
+        "required": [
+          "template_id",
+          "contract_line_name"
+        ]
+      },
+      "ContractLineApiSuccess": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {},
+          "meta": {
+            "type": "object",
+            "properties": {
+              "timestamp": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "version": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "timestamp",
+              "version"
+            ]
+          }
+        },
+        "required": [
+          "success"
+        ]
+      },
+      "ContractLineApiError": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              },
+              "details": {}
+            },
+            "required": [
+              "message",
+              "code"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "timestamp": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "version": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "timestamp",
+              "version"
+            ]
+          }
+        },
+        "required": [
+          "success",
+          "error"
         ]
       },
       "DocumentDownloadParams": {
@@ -14641,6 +15451,2196 @@
         }
       }
     },
+    "/api/v1/contract-lines": {
+      "get": {
+        "summary": "List contract lines",
+        "description": "Lists contract lines with pagination/filtering and optional include flags. Route requires x-api-key at middleware and a request context in-controller (requireRequestContext). Query parsing/validation uses contractLineListQuerySchema, then listWithOptions reads from contract_lines for the tenant context.",
+        "tags": [
+          "Contract Lines"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-source": "middleware API-key presence + request context requirement in controller",
+          "x-request-context-required": true,
+          "x-request-context-wiring-gap": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            },
+            "required": false,
+            "name": "order",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "search",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "created_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "created_to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "updated_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "updated_to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "contract_line_name",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "Fixed",
+                "Hourly",
+                "Usage"
+              ]
+            },
+            "required": false,
+            "name": "contract_line_type",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "weekly",
+                "bi-weekly",
+                "monthly",
+                "quarterly",
+                "semi-annually",
+                "annually"
+              ]
+            },
+            "required": false,
+            "name": "billing_frequency",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "required": false,
+            "name": "is_custom",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "required": false,
+            "name": "is_active",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "service_category",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "required": false,
+            "name": "has_services",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "clients_count_min",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "clients_count_max",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "revenue_min",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "revenue_max",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "description": "Controller-level include flag parsed directly from query string."
+            },
+            "required": false,
+            "description": "Controller-level include flag parsed directly from query string.",
+            "name": "include_services",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "description": "Controller-level include flag parsed directly from query string."
+            },
+            "required": false,
+            "description": "Controller-level include flag parsed directly from query string.",
+            "name": "include_usage",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "description": "Controller-level include flag parsed directly from query string."
+            },
+            "required": false,
+            "description": "Controller-level include flag parsed directly from query string.",
+            "name": "include_clients",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contract lines returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query parameters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Request context missing or unhandled service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create contract line",
+        "description": "Creates a contract line row in contract_lines. Validation uses createContractLineSchema (including overtime/after-hours constraints). ID is generated by service with uuidv4. Route currently relies on request context presence and can fail when context is unavailable.",
+        "tags": [
+          "Contract Lines"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-source": "middleware API-key presence + request context requirement in controller",
+          "x-request-context-required": true,
+          "x-request-context-wiring-gap": true,
+          "x-id-provenance": {
+            "contract_line_id": "contract_lines.contract_line_id (uuidv4)"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContractLineBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Contract line created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Request context missing or unhandled service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contract-lines/{id}": {
+      "get": {
+        "summary": "Get contract line",
+        "description": "Returns one contract line by contract_line_id, including optional related data through include query flags.",
+        "tags": [
+          "Contract Lines"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-source": "middleware API-key presence + request context requirement in controller",
+          "x-request-context-required": true,
+          "x-request-context-wiring-gap": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Contract line UUID from contract_lines.contract_line_id."
+            },
+            "required": true,
+            "description": "Contract line UUID from contract_lines.contract_line_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contract line returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiSuccess"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Contract line not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Request context missing or unhandled service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update contract line",
+        "description": "Updates a contract line by contract_line_id using updateContractLineSchema validation.",
+        "tags": [
+          "Contract Lines"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-source": "middleware API-key presence + request context requirement in controller",
+          "x-request-context-required": true,
+          "x-request-context-wiring-gap": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Contract line UUID from contract_lines.contract_line_id."
+            },
+            "required": true,
+            "description": "Contract line UUID from contract_lines.contract_line_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateContractLineBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contract line updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Request context missing or unhandled service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete contract line",
+        "description": "Deletes a contract line after dependency checks (in-use checks, service cleanup, contract detach).",
+        "tags": [
+          "Contract Lines"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-source": "middleware API-key presence + request context requirement in controller",
+          "x-request-context-required": true,
+          "x-request-context-wiring-gap": true,
+          "x-returns-json-with-204-currently": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Contract line UUID from contract_lines.contract_line_id."
+            },
+            "required": true,
+            "description": "Contract line UUID from contract_lines.contract_line_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deletion processed."
+          },
+          "401": {
+            "description": "x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Request context missing or delete blocked by dependency rules.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contract-lines/bulk": {
+      "post": {
+        "summary": "Bulk create contract lines",
+        "description": "Alias route to bulkCreateContractLines; creates multiple contract lines from `plans` array.",
+        "tags": [
+          "Contract Lines"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-source": "middleware API-key presence + request context requirement in controller",
+          "x-request-context-required": true,
+          "x-request-context-wiring-gap": true
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkCreateContractLinesBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Bulk create completed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Request context missing or unhandled service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Bulk update contract lines",
+        "description": "Alias route to bulkUpdateContractLines; updates multiple rows by contract_line_id.",
+        "tags": [
+          "Contract Lines"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-source": "middleware API-key presence + request context requirement in controller",
+          "x-request-context-required": true,
+          "x-request-context-wiring-gap": true
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkUpdateContractLinesBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bulk update completed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Request context missing or unhandled service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Bulk delete contract lines",
+        "description": "Alias route to bulkDeleteContractLines; deletes multiple contract lines by ID list.",
+        "tags": [
+          "Contract Lines"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-source": "middleware API-key presence + request context requirement in controller",
+          "x-request-context-required": true,
+          "x-request-context-wiring-gap": true
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkDeleteContractLinesBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bulk delete completed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Request context missing or delete blocked by dependency rules.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contract-lines/bulk/create": {
+      "post": {
+        "summary": "Bulk create contract lines (explicit route)",
+        "description": "Same controller behavior as POST /api/v1/contract-lines/bulk.",
+        "tags": [
+          "Contract Lines"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-source": "middleware API-key presence + request context requirement in controller",
+          "x-request-context-required": true,
+          "x-request-context-wiring-gap": true
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkCreateContractLinesBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Bulk create completed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Request context missing or unhandled service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contract-lines/bulk/update": {
+      "put": {
+        "summary": "Bulk update contract lines (explicit route)",
+        "description": "Same controller behavior as PUT /api/v1/contract-lines/bulk.",
+        "tags": [
+          "Contract Lines"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-source": "middleware API-key presence + request context requirement in controller",
+          "x-request-context-required": true,
+          "x-request-context-wiring-gap": true
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkUpdateContractLinesBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bulk update completed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Request context missing or unhandled service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contract-lines/bulk/delete": {
+      "delete": {
+        "summary": "Bulk delete contract lines (explicit route)",
+        "description": "Same controller behavior as DELETE /api/v1/contract-lines/bulk.",
+        "tags": [
+          "Contract Lines"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-source": "middleware API-key presence + request context requirement in controller",
+          "x-request-context-required": true,
+          "x-request-context-wiring-gap": true
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkDeleteContractLinesBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bulk delete completed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Request context missing or delete blocked by dependency rules.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contract-lines/bulk/add-services": {
+      "post": {
+        "summary": "Bulk add services to contract line",
+        "description": "Adds multiple services to one contract_line_id and returns per-service success/failure results.",
+        "tags": [
+          "Contract Lines"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-source": "middleware API-key presence + request context requirement in controller",
+          "x-request-context-required": true,
+          "x-request-context-wiring-gap": true,
+          "x-partial-failures-in-response": true
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkAddServicesBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bulk service add completed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Request context missing or unhandled service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contract-lines/bulk/remove-services": {
+      "delete": {
+        "summary": "Bulk remove services from contract line",
+        "description": "Removes multiple services from one contract_line_id and returns per-service success/failure results.",
+        "tags": [
+          "Contract Lines"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-source": "middleware API-key presence + request context requirement in controller",
+          "x-request-context-required": true,
+          "x-request-context-wiring-gap": true,
+          "x-partial-failures-in-response": true
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkRemoveServicesBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bulk service removal completed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Request context missing or unhandled service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contract-lines/{id}/activation": {
+      "put": {
+        "summary": "Set contract line activation",
+        "description": "Activates or deactivates a contract line. Deactivation can require a reason when plan is in use.",
+        "tags": [
+          "Contract Lines"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-source": "middleware API-key presence + request context requirement in controller",
+          "x-request-context-required": true,
+          "x-request-context-wiring-gap": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Contract line UUID from contract_lines.contract_line_id."
+            },
+            "required": true,
+            "description": "Contract line UUID from contract_lines.contract_line_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContractLineActivationBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Activation state updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Request context missing or activation business-rule failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contract-lines/{id}/analytics": {
+      "get": {
+        "summary": "Get contract line analytics",
+        "description": "Returns analytics aggregates for one contract line.",
+        "tags": [
+          "Contract Lines"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-source": "middleware API-key presence + request context requirement in controller",
+          "x-request-context-required": true,
+          "x-request-context-wiring-gap": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Contract line UUID from contract_lines.contract_line_id."
+            },
+            "required": true,
+            "description": "Contract line UUID from contract_lines.contract_line_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Analytics payload returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiSuccess"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Request context missing or analytics query failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contract-lines/{id}/copy": {
+      "post": {
+        "summary": "Copy contract line",
+        "description": "Copies an existing contract line. Current implementation validates and uses `source_contract_line_id` from body, while path `{id}` is not consumed by service logic.",
+        "tags": [
+          "Contract Lines"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-source": "middleware API-key presence + request context requirement in controller",
+          "x-request-context-required": true,
+          "x-request-context-wiring-gap": true,
+          "x-path-id-ignored-currently": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Contract line UUID from contract_lines.contract_line_id."
+            },
+            "required": true,
+            "description": "Contract line UUID from contract_lines.contract_line_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CopyContractLineBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Contract line copy created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Request context missing or copy operation failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contract-lines/{id}/fixed-config": {
+      "get": {
+        "summary": "Get fixed contract line config",
+        "description": "Returns fixed-plan configuration for a contract line; returns 404 when not found.",
+        "tags": [
+          "Contract Lines"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-source": "middleware API-key presence + request context requirement in controller",
+          "x-request-context-required": true,
+          "x-request-context-wiring-gap": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Contract line UUID from contract_lines.contract_line_id."
+            },
+            "required": true,
+            "description": "Contract line UUID from contract_lines.contract_line_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Fixed config returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiSuccess"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Fixed configuration not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Request context missing or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Upsert fixed contract line config",
+        "description": "Creates or updates fixed-plan configuration for a contract line.",
+        "tags": [
+          "Contract Lines"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-source": "middleware API-key presence + request context requirement in controller",
+          "x-request-context-required": true,
+          "x-request-context-wiring-gap": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Contract line UUID from contract_lines.contract_line_id."
+            },
+            "required": true,
+            "description": "Contract line UUID from contract_lines.contract_line_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContractLineFixedConfigBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Fixed config upserted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Request context missing or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contract-lines/{id}/services": {
+      "get": {
+        "summary": "List contract line services",
+        "description": "Returns all service configurations linked to a contract line.",
+        "tags": [
+          "Contract Lines"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-source": "middleware API-key presence + request context requirement in controller",
+          "x-request-context-required": true,
+          "x-request-context-wiring-gap": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Contract line UUID from contract_lines.contract_line_id."
+            },
+            "required": true,
+            "description": "Contract line UUID from contract_lines.contract_line_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Service configurations returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiSuccess"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Request context missing or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Add service to contract line",
+        "description": "Adds one service configuration to a contract line; rejects duplicates.",
+        "tags": [
+          "Contract Lines"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-source": "middleware API-key presence + request context requirement in controller",
+          "x-request-context-required": true,
+          "x-request-context-wiring-gap": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Contract line UUID from contract_lines.contract_line_id."
+            },
+            "required": true,
+            "description": "Contract line UUID from contract_lines.contract_line_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContractLineAddServiceBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Service added to contract line.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Request context missing or service-level validation failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contract-lines/{id}/services/{serviceId}": {
+      "get": {
+        "summary": "Get contract line service details",
+        "description": "Route inventory advertises item lookup, but current route handler delegates to getContractLineServices and returns the full service list for `{id}`; `{serviceId}` is effectively ignored in the GET path.",
+        "tags": [
+          "Contract Lines"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-source": "middleware API-key presence + request context requirement in controller",
+          "x-request-context-required": true,
+          "x-request-context-wiring-gap": true,
+          "x-service-id-ignored-by-get-handler": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Contract line UUID from contract_lines.contract_line_id."
+            },
+            "required": true,
+            "description": "Contract line UUID from contract_lines.contract_line_id.",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Service UUID from service_catalog.service_id."
+            },
+            "required": true,
+            "description": "Service UUID from service_catalog.service_id.",
+            "name": "serviceId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current implementation returns full service list for the contract line.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiSuccess"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Request context missing or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update contract line service",
+        "description": "Updates service configuration for one `{id}` + `{serviceId}` pair.",
+        "tags": [
+          "Contract Lines"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-source": "middleware API-key presence + request context requirement in controller",
+          "x-request-context-required": true,
+          "x-request-context-wiring-gap": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Contract line UUID from contract_lines.contract_line_id."
+            },
+            "required": true,
+            "description": "Contract line UUID from contract_lines.contract_line_id.",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Service UUID from service_catalog.service_id."
+            },
+            "required": true,
+            "description": "Service UUID from service_catalog.service_id.",
+            "name": "serviceId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContractLineUpdateServiceBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Service configuration updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Request context missing or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove service from contract line",
+        "description": "Removes one service configuration from a contract line.",
+        "tags": [
+          "Contract Lines"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-source": "middleware API-key presence + request context requirement in controller",
+          "x-request-context-required": true,
+          "x-request-context-wiring-gap": true,
+          "x-returns-json-with-204-currently": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Contract line UUID from contract_lines.contract_line_id."
+            },
+            "required": true,
+            "description": "Contract line UUID from contract_lines.contract_line_id.",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Service UUID from service_catalog.service_id."
+            },
+            "required": true,
+            "description": "Service UUID from service_catalog.service_id.",
+            "name": "serviceId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Service removed."
+          },
+          "401": {
+            "description": "x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Request context missing or service removal failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contract-lines/{id}/usage-metrics": {
+      "get": {
+        "summary": "Get contract line usage metrics",
+        "description": "Returns usage and cost metrics for a contract line over a time window.",
+        "tags": [
+          "Contract Lines"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-source": "middleware API-key presence + request context requirement in controller",
+          "x-request-context-required": true,
+          "x-request-context-wiring-gap": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Contract line UUID from contract_lines.contract_line_id."
+            },
+            "required": true,
+            "description": "Contract line UUID from contract_lines.contract_line_id.",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Defaults to now minus 30 days when omitted."
+            },
+            "required": false,
+            "description": "Defaults to now minus 30 days when omitted.",
+            "name": "period_start",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Defaults to now when omitted."
+            },
+            "required": false,
+            "description": "Defaults to now when omitted.",
+            "name": "period_end",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Usage metrics returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiSuccess"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Request context missing or usage query failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contract-line-templates": {
+      "post": {
+        "summary": "Create contract line template",
+        "description": "Creates a plan template record under plan_templates with optional default services.",
+        "tags": [
+          "Contract Lines"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-source": "middleware API-key presence + request context requirement in controller",
+          "x-request-context-required": true,
+          "x-request-context-wiring-gap": true,
+          "x-id-provenance": {
+            "template_id": "plan_templates.template_id (uuidv4)"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateContractLineTemplateBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Template created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Request context missing or template creation failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contract-line-templates/{id}/create-contract-line": {
+      "post": {
+        "summary": "Create contract line from template",
+        "description": "Creates a contract line from a template. Current controller validates body createPlanFromTemplateSchema and passes that body to service; path `{id}` is not used by service logic.",
+        "tags": [
+          "Contract Lines"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-source": "middleware API-key presence + request context requirement in controller",
+          "x-request-context-required": true,
+          "x-request-context-wiring-gap": true,
+          "x-path-id-ignored-currently": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Template UUID from plan_templates.template_id."
+            },
+            "required": true,
+            "description": "Template UUID from plan_templates.template_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateContractLineFromTemplateBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Contract line created from template.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Request context missing or template application failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractLineApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/documents/download/{fileId}": {
       "get": {
         "summary": "Download or export document file",
@@ -20857,1212 +23857,6 @@
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
           "billing-analytics"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/contract-lines": {
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "contract-lines"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "contract-lines"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/contract-lines/bulk": {
-      "delete": {
-        "summary": "DELETE v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "contract-lines"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "204": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "contract-lines"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "summary": "PUT v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "contract-lines"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/contract-lines/bulk/add-services": {
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "contract-lines"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/contract-lines/bulk/create": {
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "contract-lines"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/contract-lines/bulk/delete": {
-      "delete": {
-        "summary": "DELETE v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "contract-lines"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "204": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/contract-lines/bulk/remove-services": {
-      "delete": {
-        "summary": "DELETE v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "contract-lines"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "204": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/contract-lines/bulk/update": {
-      "put": {
-        "summary": "PUT v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "contract-lines"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/contract-lines/{id}": {
-      "delete": {
-        "summary": "DELETE v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "contract-lines"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "204": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "contract-lines"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "summary": "PUT v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "contract-lines"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/contract-lines/{id}/activation": {
-      "put": {
-        "summary": "PUT v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "contract-lines"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/contract-lines/{id}/analytics": {
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "contract-lines"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/contract-lines/{id}/copy": {
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "contract-lines"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/contract-lines/{id}/fixed-config": {
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "contract-lines"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "summary": "PUT v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "contract-lines"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/contract-lines/{id}/services": {
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "contract-lines"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "contract-lines"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/contract-lines/{id}/services/{serviceId}": {
-      "delete": {
-        "summary": "DELETE v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "contract-lines"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "204": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "contract-lines"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "summary": "PUT v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "contract-lines"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/contract-lines/{id}/usage-metrics": {
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "contract-lines"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -30895,120 +32689,6 @@
         },
         "responses": {
           "204": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/contract-line-templates": {
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "contract-line-templates"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/contract-line-templates/{id}/create-contract-line": {
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "contract-line-templates"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
             "description": "Placeholder success response",
             "content": {
               "application/json": {

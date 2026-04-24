@@ -11,7 +11,7 @@
   {
     "id": "F002",
     "description": "Document contract-line and contract-line-template routes, including bulk operations, service associations, activation, analytics, copy, fixed config, and usage metrics.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals"
     ]

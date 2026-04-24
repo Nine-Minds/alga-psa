@@ -16,6 +16,7 @@ tags:
   - name: Billing
   - name: Boards
   - name: Chat
+  - name: Contract Lines
   - name: Documents
   - name: Email
   - name: Extension Gateway
@@ -38,8 +39,6 @@ tags:
   - name: client-contract-lines
   - name: clients
   - name: contacts
-  - name: contract-line-templates
-  - name: contract-lines
   - name: contracts
   - name: ext-bundles
   - name: extensions
@@ -546,7 +545,7 @@ components:
           description: Sort column. Defaults to created_at.
         order:
           type: string
-          enum: &a10
+          enum: &a14
             - asc
             - desc
           description: Sort direction. Defaults to desc.
@@ -576,7 +575,7 @@ components:
             AssetService.list.
         is_active:
           type: string
-          enum: &a11
+          enum: &a15
             - "true"
             - "false"
           description: Accepted by validation, but not currently applied by
@@ -612,21 +611,21 @@ components:
           description: Partial client name match; joins clients on client_id and tenant.
         has_warranty:
           type: string
-          enum: &a12
+          enum: &a16
             - "true"
             - "false"
           description: true requires warranty_end_date to be non-null; false requires it
             to be null.
         warranty_expired:
           type: string
-          enum: &a13
+          enum: &a17
             - "true"
             - "false"
           description: true filters warranty_end_date before now; false filters future
             warranty dates or no warranty.
         maintenance_due:
           type: string
-          enum: &a14
+          enum: &a18
             - "true"
             - "false"
           description: Accepted by validation, but not currently applied by
@@ -652,7 +651,7 @@ components:
       properties:
         format:
           type: string
-          enum: &a15
+          enum: &a19
             - csv
             - json
             - xlsx
@@ -660,21 +659,21 @@ components:
             the same JSON envelope.
         include_extension_data:
           type: string
-          enum: &a16
+          enum: &a20
             - "true"
             - "false"
           description: Accepted by validation, but currently ignored by
             ApiAssetController.export.
         include_maintenance:
           type: string
-          enum: &a17
+          enum: &a21
             - "true"
             - "false"
           description: Accepted by validation, but currently ignored by
             ApiAssetController.export.
         include_documents:
           type: string
-          enum: &a18
+          enum: &a22
             - "true"
             - "false"
           description: Accepted by validation, but currently ignored by
@@ -1943,7 +1942,7 @@ components:
           type: array
           items:
             type: string
-            enum: &a19
+            enum: &a23
               - asset_tag
               - name
               - serial_number
@@ -1970,7 +1969,7 @@ components:
           description: Optional client UUID filters.
         include_extension_data:
           type: string
-          enum: &a20
+          enum: &a24
             - "true"
             - "false"
           description: When true, the service fetches asset-type-specific extension data
@@ -2147,7 +2146,7 @@ components:
             orders executions by started_at desc.
         order:
           type: string
-          enum: &a21
+          enum: &a25
             - asc
             - desc
           description: Accepted by shared list query validation.
@@ -2172,7 +2171,7 @@ components:
           description: Accepted by shared filter validation.
         is_active:
           type: string
-          enum: &a22
+          enum: &a26
             - "true"
             - "false"
           description: Accepted by shared filter validation and transformed to boolean.
@@ -2209,7 +2208,7 @@ components:
           description: Maximum execution duration in milliseconds.
         has_errors:
           type: string
-          enum: &a23
+          enum: &a27
             - "true"
             - "false"
           description: Filter by whether the execution has errors; transformed to boolean
@@ -2240,7 +2239,7 @@ components:
             rules by created_at desc.
         order:
           type: string
-          enum: &a24
+          enum: &a28
             - asc
             - desc
           description: Accepted by shared list query validation.
@@ -2265,7 +2264,7 @@ components:
           description: Accepted by shared filter validation.
         is_active:
           type: string
-          enum: &a25
+          enum: &a29
             - "true"
             - "false"
           description: Accepted by shared filter validation and transformed to boolean.
@@ -2331,7 +2330,7 @@ components:
             templates by created_at desc.
         order:
           type: string
-          enum: &a26
+          enum: &a30
             - asc
             - desc
           description: Accepted by shared list query validation.
@@ -2356,7 +2355,7 @@ components:
           description: Accepted by shared filter validation.
         is_active:
           type: string
-          enum: &a27
+          enum: &a31
             - "true"
             - "false"
           description: Accepted by shared filter validation and transformed to boolean.
@@ -2390,7 +2389,7 @@ components:
           description: Optional upper bound for performance window.
         group_by:
           type: string
-          enum: &a28
+          enum: &a32
             - hour
             - day
             - week
@@ -3677,6 +3676,554 @@ components:
             value but does not use it.
       required:
         - slug
+    ContractLineIdParam:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Contract line UUID from contract_lines.contract_line_id.
+      required:
+        - id
+    ContractLineServiceParam:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Contract line UUID from contract_lines.contract_line_id.
+        serviceId:
+          type: string
+          format: uuid
+          description: Service UUID from service_catalog.service_id.
+      required:
+        - id
+        - serviceId
+    ContractLineTemplateParam:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Template UUID from plan_templates.template_id.
+      required:
+        - id
+    ContractLineListQuery:
+      type: object
+      properties:
+        page:
+          type: string
+        limit:
+          type: string
+        sort:
+          type: string
+        order:
+          type: string
+          enum: &a33
+            - asc
+            - desc
+        search:
+          type: string
+        created_from:
+          type: string
+          format: date-time
+        created_to:
+          type: string
+          format: date-time
+        updated_from:
+          type: string
+          format: date-time
+        updated_to:
+          type: string
+          format: date-time
+        contract_line_name:
+          type: string
+        contract_line_type:
+          type: string
+          enum: &a9
+            - Fixed
+            - Hourly
+            - Usage
+        billing_frequency:
+          type: string
+          enum: &a8
+            - weekly
+            - bi-weekly
+            - monthly
+            - quarterly
+            - semi-annually
+            - annually
+        is_custom:
+          type: string
+          enum: &a34
+            - "true"
+            - "false"
+        is_active:
+          type: string
+          enum: &a35
+            - "true"
+            - "false"
+        service_category:
+          type: string
+        has_services:
+          type: string
+          enum: &a36
+            - "true"
+            - "false"
+        clients_count_min:
+          type: string
+        clients_count_max:
+          type: string
+        revenue_min:
+          type: string
+        revenue_max:
+          type: string
+        include_services:
+          type: string
+          enum: &a37
+            - "true"
+            - "false"
+          description: Controller-level include flag parsed directly from query string.
+        include_usage:
+          type: string
+          enum: &a38
+            - "true"
+            - "false"
+          description: Controller-level include flag parsed directly from query string.
+        include_clients:
+          type: string
+          enum: &a39
+            - "true"
+            - "false"
+          description: Controller-level include flag parsed directly from query string.
+    ContractLineUsageMetricsQuery:
+      type: object
+      properties:
+        period_start:
+          type: string
+          format: date-time
+          description: Defaults to now minus 30 days when omitted.
+        period_end:
+          type: string
+          format: date-time
+          description: Defaults to now when omitted.
+    ContractLineBody:
+      type: object
+      properties:
+        contract_line_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        billing_frequency:
+          type: string
+          enum: *a8
+        is_custom:
+          type: boolean
+        service_category:
+          type: string
+        contract_line_type:
+          type: string
+          enum: *a9
+        cadence_owner:
+          type: string
+          enum: &a10
+            - client
+            - contract
+        hourly_rate:
+          type: number
+          minimum: 0
+        minimum_billable_time:
+          type: number
+          minimum: 0
+        round_up_to_nearest:
+          type: number
+          minimum: 1
+        enable_overtime:
+          type: boolean
+        overtime_rate:
+          type: number
+          minimum: 0
+        overtime_threshold:
+          type: number
+          minimum: 0
+        enable_after_hours_rate:
+          type: boolean
+        after_hours_multiplier:
+          type: number
+          minimum: 0
+        is_active:
+          type: boolean
+        features:
+          type: array
+          items:
+            type: string
+        location_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+      required:
+        - contract_line_name
+        - billing_frequency
+        - contract_line_type
+    UpdateContractLineBody:
+      type: object
+      properties:
+        contract_line_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        billing_frequency:
+          type: string
+          enum: *a8
+        is_custom:
+          type: boolean
+        service_category:
+          type: string
+        contract_line_type:
+          type: string
+          enum: *a9
+        cadence_owner:
+          type: string
+          enum: *a10
+        hourly_rate:
+          type: number
+          minimum: 0
+        minimum_billable_time:
+          type: number
+          minimum: 0
+        round_up_to_nearest:
+          type: number
+          minimum: 1
+        enable_overtime:
+          type: boolean
+        overtime_rate:
+          type: number
+          minimum: 0
+        overtime_threshold:
+          type: number
+          minimum: 0
+        enable_after_hours_rate:
+          type: boolean
+        after_hours_multiplier:
+          type: number
+          minimum: 0
+        is_active:
+          type: boolean
+        features:
+          type: array
+          items:
+            type: string
+        location_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+    ContractLineFixedConfigBody:
+      type: object
+      properties:
+        base_rate:
+          type: number
+          minimum: 0
+        enable_proration:
+          type: boolean
+        billing_cycle_alignment:
+          type: string
+          enum:
+            - start
+            - end
+            - prorated
+    ContractLineAddServiceBody:
+      type: object
+      properties:
+        service_id:
+          type: string
+          format: uuid
+        quantity:
+          type: number
+          minimum: 1
+        custom_rate:
+          type: number
+          minimum: 0
+        configuration_type:
+          type: string
+          enum: &a11
+            - Fixed
+            - Hourly
+            - Usage
+            - Bucket
+        type_config:
+          type: object
+          additionalProperties: {}
+      required:
+        - service_id
+    ContractLineUpdateServiceBody:
+      type: object
+      properties:
+        quantity:
+          type: number
+          minimum: 1
+        custom_rate:
+          type: number
+          minimum: 0
+        type_config:
+          type: object
+          additionalProperties: {}
+        rate_tiers:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+        user_type_rates:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+    ContractLineActivationBody:
+      type: object
+      properties:
+        is_active:
+          type: boolean
+        effective_date:
+          type: string
+          format: date-time
+        reason:
+          type: string
+        notify_clients:
+          type: boolean
+      required:
+        - is_active
+    CopyContractLineBody:
+      type: object
+      properties:
+        source_contract_line_id:
+          type: string
+          format: uuid
+          description: Used by service; path id is currently ignored.
+        new_contract_line_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        copy_services:
+          type: boolean
+        copy_configurations:
+          type: boolean
+        modify_rates:
+          type: object
+          properties:
+            percentage_change:
+              type: number
+            fixed_adjustment:
+              type: number
+      required:
+        - source_contract_line_id
+        - new_contract_line_name
+    BulkCreateContractLinesBody:
+      type: object
+      properties:
+        plans:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContractLineBody"
+          minItems: 1
+          maxItems: 50
+      required:
+        - plans
+    BulkUpdateContractLinesBody:
+      type: object
+      properties:
+        plans:
+          type: array
+          items:
+            type: object
+            properties:
+              contract_line_id:
+                type: string
+                format: uuid
+              data:
+                $ref: "#/components/schemas/UpdateContractLineBody"
+            required:
+              - contract_line_id
+              - data
+          minItems: 1
+          maxItems: 50
+      required:
+        - plans
+    BulkDeleteContractLinesBody:
+      type: object
+      properties:
+        contract_line_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          maxItems: 50
+      required:
+        - contract_line_ids
+    BulkAddServicesBody:
+      type: object
+      properties:
+        contract_line_id:
+          type: string
+          format: uuid
+        services:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContractLineAddServiceBody"
+          minItems: 1
+          maxItems: 20
+      required:
+        - contract_line_id
+        - services
+    BulkRemoveServicesBody:
+      type: object
+      properties:
+        contract_line_id:
+          type: string
+          format: uuid
+        service_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          maxItems: 20
+      required:
+        - contract_line_id
+        - service_ids
+    CreateContractLineTemplateBody:
+      type: object
+      properties:
+        template_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        template_description:
+          type: string
+        contract_line_type:
+          type: string
+          enum: *a9
+        billing_frequency:
+          type: string
+          enum: *a8
+        default_services:
+          type: array
+          items:
+            type: object
+            properties:
+              service_id:
+                type: string
+                format: uuid
+              configuration_type:
+                type: string
+                enum: *a11
+              default_rate:
+                type: number
+                minimum: 0
+              quantity:
+                type: number
+                minimum: 1
+            required:
+              - service_id
+              - configuration_type
+        is_public:
+          type: boolean
+      required:
+        - template_name
+        - contract_line_type
+        - billing_frequency
+    CreateContractLineFromTemplateBody:
+      type: object
+      properties:
+        template_id:
+          type: string
+          format: uuid
+          description: Used by service; current controller ignores the path id and relies
+            on this field.
+        contract_line_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        modify_rates:
+          type: object
+          properties:
+            percentage_change:
+              type: number
+            fixed_adjustment:
+              type: number
+        override_services:
+          type: array
+          items:
+            type: object
+            properties:
+              service_id:
+                type: string
+                format: uuid
+              custom_rate:
+                type: number
+                minimum: 0
+              quantity:
+                type: number
+                minimum: 1
+            required:
+              - service_id
+      required:
+        - template_id
+        - contract_line_name
+    ContractLineApiSuccess:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data: {}
+        meta:
+          type: object
+          properties:
+            timestamp:
+              type: string
+              format: date-time
+            version:
+              type: string
+          required:
+            - timestamp
+            - version
+      required:
+        - success
+    ContractLineApiError:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - false
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            code:
+              type: string
+            details: {}
+          required:
+            - message
+            - code
+        meta:
+          type: object
+          properties:
+            timestamp:
+              type: string
+              format: date-time
+            version:
+              type: string
+          required:
+            - timestamp
+            - version
+      required:
+        - success
+        - error
     DocumentDownloadParams:
       type: object
       properties:
@@ -3720,7 +4267,7 @@ components:
       properties:
         format:
           type: string
-          enum: &a29
+          enum: &a40
             - pdf
             - markdown
             - md
@@ -4615,12 +5162,12 @@ components:
           type: boolean
         category_type:
           type: string
-          enum: &a8
+          enum: &a12
             - custom
             - itil
         priority_type:
           type: string
-          enum: &a9
+          enum: &a13
             - custom
             - itil
         default_assigned_to:
@@ -4653,10 +5200,10 @@ components:
           type: boolean
         category_type:
           type: string
-          enum: *a8
+          enum: *a12
         priority_type:
           type: string
-          enum: *a9
+          enum: *a13
         default_assigned_to:
           type:
             - string
@@ -5248,7 +5795,7 @@ components:
           type: string
         billing_method:
           type: string
-          enum: &a34
+          enum: &a45
             - fixed
             - hourly
             - usage
@@ -7025,7 +7572,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a10
+            enum: *a14
             description: Sort direction. Defaults to desc.
           required: false
           description: Sort direction. Defaults to desc.
@@ -7083,7 +7630,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a11
+            enum: *a15
             description: Accepted by validation, but not currently applied by
               AssetService.list.
           required: false
@@ -7144,7 +7691,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a12
+            enum: *a16
             description: true requires warranty_end_date to be non-null; false requires it
               to be null.
           required: false
@@ -7154,7 +7701,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a13
+            enum: *a17
             description: true filters warranty_end_date before now; false filters future
               warranty dates or no warranty.
           required: false
@@ -7164,7 +7711,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a14
+            enum: *a18
             description: Accepted by validation, but not currently applied by
               AssetService.list.
           required: false
@@ -7510,7 +8057,7 @@ paths:
       parameters:
         - schema:
             type: string
-            enum: *a15
+            enum: *a19
             description: Export format. csv returns text/csv; json and xlsx currently return
               the same JSON envelope.
           required: false
@@ -7520,7 +8067,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a16
+            enum: *a20
             description: Accepted by validation, but currently ignored by
               ApiAssetController.export.
           required: false
@@ -7530,7 +8077,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a17
+            enum: *a21
             description: Accepted by validation, but currently ignored by
               ApiAssetController.export.
           required: false
@@ -7540,7 +8087,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a18
+            enum: *a22
             description: Accepted by validation, but currently ignored by
               ApiAssetController.export.
           required: false
@@ -7858,7 +8405,7 @@ paths:
             type: array
             items:
               type: string
-              enum: *a19
+              enum: *a23
             description: Search fields. If omitted, the service searches asset_tag, name,
               serial_number, and location.
           required: false
@@ -7897,7 +8444,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a20
+            enum: *a24
             description: When true, the service fetches asset-type-specific extension data
               for every result.
           required: false
@@ -8853,7 +9400,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a21
+            enum: *a25
             description: Accepted by shared list query validation.
           required: false
           description: Accepted by shared list query validation.
@@ -8900,7 +9447,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a22
+            enum: *a26
             description: Accepted by shared filter validation and transformed to boolean.
           required: false
           description: Accepted by shared filter validation and transformed to boolean.
@@ -8956,7 +9503,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a23
+            enum: *a27
             description: Filter by whether the execution has errors; transformed to boolean
               by validation.
           required: false
@@ -9196,7 +9743,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a24
+            enum: *a28
             description: Accepted by shared list query validation.
           required: false
           description: Accepted by shared list query validation.
@@ -9243,7 +9790,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a25
+            enum: *a29
             description: Accepted by shared filter validation and transformed to boolean.
           required: false
           description: Accepted by shared filter validation and transformed to boolean.
@@ -9867,7 +10414,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a26
+            enum: *a30
             description: Accepted by shared list query validation.
           required: false
           description: Accepted by shared list query validation.
@@ -9914,7 +10461,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a27
+            enum: *a31
             description: Accepted by shared filter validation and transformed to boolean.
           required: false
           description: Accepted by shared filter validation and transformed to boolean.
@@ -10285,7 +10832,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a28
+            enum: *a32
             description: Aggregation bucket size; defaults to day.
           required: false
           description: Aggregation bucket size; defaults to day.
@@ -10666,6 +11213,1389 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ChatStreamError"
+  /api/v1/contract-lines:
+    get:
+      summary: List contract lines
+      description: Lists contract lines with pagination/filtering and optional include
+        flags. Route requires x-api-key at middleware and a request context
+        in-controller (requireRequestContext). Query parsing/validation uses
+        contractLineListQuerySchema, then listWithOptions reads from
+        contract_lines for the tenant context.
+      tags:
+        - Contract Lines
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-source: middleware API-key presence + request context requirement in controller
+        x-request-context-required: true
+        x-request-context-wiring-gap: true
+      parameters:
+        - schema:
+            type: string
+          required: false
+          name: page
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: sort
+          in: query
+        - schema:
+            type: string
+            enum: *a33
+          required: false
+          name: order
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: search
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: created_from
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: created_to
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: updated_from
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: updated_to
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: contract_line_name
+          in: query
+        - schema:
+            type: string
+            enum: *a9
+          required: false
+          name: contract_line_type
+          in: query
+        - schema:
+            type: string
+            enum: *a8
+          required: false
+          name: billing_frequency
+          in: query
+        - schema:
+            type: string
+            enum: *a34
+          required: false
+          name: is_custom
+          in: query
+        - schema:
+            type: string
+            enum: *a35
+          required: false
+          name: is_active
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: service_category
+          in: query
+        - schema:
+            type: string
+            enum: *a36
+          required: false
+          name: has_services
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: clients_count_min
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: clients_count_max
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: revenue_min
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: revenue_max
+          in: query
+        - schema:
+            type: string
+            enum: *a37
+            description: Controller-level include flag parsed directly from query string.
+          required: false
+          description: Controller-level include flag parsed directly from query string.
+          name: include_services
+          in: query
+        - schema:
+            type: string
+            enum: *a38
+            description: Controller-level include flag parsed directly from query string.
+          required: false
+          description: Controller-level include flag parsed directly from query string.
+          name: include_usage
+          in: query
+        - schema:
+            type: string
+            enum: *a39
+            description: Controller-level include flag parsed directly from query string.
+          required: false
+          description: Controller-level include flag parsed directly from query string.
+          name: include_clients
+          in: query
+      responses:
+        "200":
+          description: Contract lines returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiSuccess"
+        "400":
+          description: Invalid query parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "401":
+          description: x-api-key missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "500":
+          description: Request context missing or unhandled service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+    post:
+      summary: Create contract line
+      description: Creates a contract line row in contract_lines. Validation uses
+        createContractLineSchema (including overtime/after-hours constraints).
+        ID is generated by service with uuidv4. Route currently relies on
+        request context presence and can fail when context is unavailable.
+      tags:
+        - Contract Lines
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-source: middleware API-key presence + request context requirement in controller
+        x-request-context-required: true
+        x-request-context-wiring-gap: true
+        x-id-provenance:
+          contract_line_id: contract_lines.contract_line_id (uuidv4)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractLineBody"
+      responses:
+        "201":
+          description: Contract line created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiSuccess"
+        "400":
+          description: Invalid request payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "401":
+          description: x-api-key missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "500":
+          description: Request context missing or unhandled service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+  /api/v1/contract-lines/{id}:
+    get:
+      summary: Get contract line
+      description: Returns one contract line by contract_line_id, including optional
+        related data through include query flags.
+      tags:
+        - Contract Lines
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-source: middleware API-key presence + request context requirement in controller
+        x-request-context-required: true
+        x-request-context-wiring-gap: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Contract line UUID from contract_lines.contract_line_id.
+          required: true
+          description: Contract line UUID from contract_lines.contract_line_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Contract line returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiSuccess"
+        "401":
+          description: x-api-key missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "404":
+          description: Contract line not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "500":
+          description: Request context missing or unhandled service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+    put:
+      summary: Update contract line
+      description: Updates a contract line by contract_line_id using
+        updateContractLineSchema validation.
+      tags:
+        - Contract Lines
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-source: middleware API-key presence + request context requirement in controller
+        x-request-context-required: true
+        x-request-context-wiring-gap: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Contract line UUID from contract_lines.contract_line_id.
+          required: true
+          description: Contract line UUID from contract_lines.contract_line_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateContractLineBody"
+      responses:
+        "200":
+          description: Contract line updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiSuccess"
+        "400":
+          description: Invalid request payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "401":
+          description: x-api-key missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "500":
+          description: Request context missing or unhandled service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+    delete:
+      summary: Delete contract line
+      description: Deletes a contract line after dependency checks (in-use checks,
+        service cleanup, contract detach).
+      tags:
+        - Contract Lines
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-source: middleware API-key presence + request context requirement in controller
+        x-request-context-required: true
+        x-request-context-wiring-gap: true
+        x-returns-json-with-204-currently: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Contract line UUID from contract_lines.contract_line_id.
+          required: true
+          description: Contract line UUID from contract_lines.contract_line_id.
+          name: id
+          in: path
+      responses:
+        "204":
+          description: Deletion processed.
+        "401":
+          description: x-api-key missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "500":
+          description: Request context missing or delete blocked by dependency rules.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+  /api/v1/contract-lines/bulk:
+    post:
+      summary: Bulk create contract lines
+      description: Alias route to bulkCreateContractLines; creates multiple contract
+        lines from `plans` array.
+      tags:
+        - Contract Lines
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-source: middleware API-key presence + request context requirement in controller
+        x-request-context-required: true
+        x-request-context-wiring-gap: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkCreateContractLinesBody"
+      responses:
+        "201":
+          description: Bulk create completed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiSuccess"
+        "400":
+          description: Invalid request payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "401":
+          description: x-api-key missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "500":
+          description: Request context missing or unhandled service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+    put:
+      summary: Bulk update contract lines
+      description: Alias route to bulkUpdateContractLines; updates multiple rows by
+        contract_line_id.
+      tags:
+        - Contract Lines
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-source: middleware API-key presence + request context requirement in controller
+        x-request-context-required: true
+        x-request-context-wiring-gap: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkUpdateContractLinesBody"
+      responses:
+        "200":
+          description: Bulk update completed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiSuccess"
+        "400":
+          description: Invalid request payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "401":
+          description: x-api-key missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "500":
+          description: Request context missing or unhandled service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+    delete:
+      summary: Bulk delete contract lines
+      description: Alias route to bulkDeleteContractLines; deletes multiple contract
+        lines by ID list.
+      tags:
+        - Contract Lines
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-source: middleware API-key presence + request context requirement in controller
+        x-request-context-required: true
+        x-request-context-wiring-gap: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkDeleteContractLinesBody"
+      responses:
+        "200":
+          description: Bulk delete completed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiSuccess"
+        "400":
+          description: Invalid request payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "401":
+          description: x-api-key missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "500":
+          description: Request context missing or delete blocked by dependency rules.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+  /api/v1/contract-lines/bulk/create:
+    post:
+      summary: Bulk create contract lines (explicit route)
+      description: Same controller behavior as POST /api/v1/contract-lines/bulk.
+      tags:
+        - Contract Lines
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-source: middleware API-key presence + request context requirement in controller
+        x-request-context-required: true
+        x-request-context-wiring-gap: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkCreateContractLinesBody"
+      responses:
+        "201":
+          description: Bulk create completed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiSuccess"
+        "400":
+          description: Invalid request payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "401":
+          description: x-api-key missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "500":
+          description: Request context missing or unhandled service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+  /api/v1/contract-lines/bulk/update:
+    put:
+      summary: Bulk update contract lines (explicit route)
+      description: Same controller behavior as PUT /api/v1/contract-lines/bulk.
+      tags:
+        - Contract Lines
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-source: middleware API-key presence + request context requirement in controller
+        x-request-context-required: true
+        x-request-context-wiring-gap: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkUpdateContractLinesBody"
+      responses:
+        "200":
+          description: Bulk update completed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiSuccess"
+        "400":
+          description: Invalid request payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "401":
+          description: x-api-key missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "500":
+          description: Request context missing or unhandled service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+  /api/v1/contract-lines/bulk/delete:
+    delete:
+      summary: Bulk delete contract lines (explicit route)
+      description: Same controller behavior as DELETE /api/v1/contract-lines/bulk.
+      tags:
+        - Contract Lines
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-source: middleware API-key presence + request context requirement in controller
+        x-request-context-required: true
+        x-request-context-wiring-gap: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkDeleteContractLinesBody"
+      responses:
+        "200":
+          description: Bulk delete completed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiSuccess"
+        "400":
+          description: Invalid request payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "401":
+          description: x-api-key missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "500":
+          description: Request context missing or delete blocked by dependency rules.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+  /api/v1/contract-lines/bulk/add-services:
+    post:
+      summary: Bulk add services to contract line
+      description: Adds multiple services to one contract_line_id and returns
+        per-service success/failure results.
+      tags:
+        - Contract Lines
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-source: middleware API-key presence + request context requirement in controller
+        x-request-context-required: true
+        x-request-context-wiring-gap: true
+        x-partial-failures-in-response: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkAddServicesBody"
+      responses:
+        "200":
+          description: Bulk service add completed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiSuccess"
+        "400":
+          description: Invalid request payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "401":
+          description: x-api-key missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "500":
+          description: Request context missing or unhandled service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+  /api/v1/contract-lines/bulk/remove-services:
+    delete:
+      summary: Bulk remove services from contract line
+      description: Removes multiple services from one contract_line_id and returns
+        per-service success/failure results.
+      tags:
+        - Contract Lines
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-source: middleware API-key presence + request context requirement in controller
+        x-request-context-required: true
+        x-request-context-wiring-gap: true
+        x-partial-failures-in-response: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkRemoveServicesBody"
+      responses:
+        "200":
+          description: Bulk service removal completed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiSuccess"
+        "400":
+          description: Invalid request payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "401":
+          description: x-api-key missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "500":
+          description: Request context missing or unhandled service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+  /api/v1/contract-lines/{id}/activation:
+    put:
+      summary: Set contract line activation
+      description: Activates or deactivates a contract line. Deactivation can require
+        a reason when plan is in use.
+      tags:
+        - Contract Lines
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-source: middleware API-key presence + request context requirement in controller
+        x-request-context-required: true
+        x-request-context-wiring-gap: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Contract line UUID from contract_lines.contract_line_id.
+          required: true
+          description: Contract line UUID from contract_lines.contract_line_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractLineActivationBody"
+      responses:
+        "200":
+          description: Activation state updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiSuccess"
+        "400":
+          description: Invalid request payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "401":
+          description: x-api-key missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "500":
+          description: Request context missing or activation business-rule failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+  /api/v1/contract-lines/{id}/analytics:
+    get:
+      summary: Get contract line analytics
+      description: Returns analytics aggregates for one contract line.
+      tags:
+        - Contract Lines
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-source: middleware API-key presence + request context requirement in controller
+        x-request-context-required: true
+        x-request-context-wiring-gap: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Contract line UUID from contract_lines.contract_line_id.
+          required: true
+          description: Contract line UUID from contract_lines.contract_line_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Analytics payload returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiSuccess"
+        "401":
+          description: x-api-key missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "500":
+          description: Request context missing or analytics query failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+  /api/v1/contract-lines/{id}/copy:
+    post:
+      summary: Copy contract line
+      description: Copies an existing contract line. Current implementation validates
+        and uses `source_contract_line_id` from body, while path `{id}` is not
+        consumed by service logic.
+      tags:
+        - Contract Lines
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-source: middleware API-key presence + request context requirement in controller
+        x-request-context-required: true
+        x-request-context-wiring-gap: true
+        x-path-id-ignored-currently: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Contract line UUID from contract_lines.contract_line_id.
+          required: true
+          description: Contract line UUID from contract_lines.contract_line_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CopyContractLineBody"
+      responses:
+        "201":
+          description: Contract line copy created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiSuccess"
+        "400":
+          description: Invalid request payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "401":
+          description: x-api-key missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "500":
+          description: Request context missing or copy operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+  /api/v1/contract-lines/{id}/fixed-config:
+    get:
+      summary: Get fixed contract line config
+      description: Returns fixed-plan configuration for a contract line; returns 404
+        when not found.
+      tags:
+        - Contract Lines
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-source: middleware API-key presence + request context requirement in controller
+        x-request-context-required: true
+        x-request-context-wiring-gap: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Contract line UUID from contract_lines.contract_line_id.
+          required: true
+          description: Contract line UUID from contract_lines.contract_line_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Fixed config returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiSuccess"
+        "401":
+          description: x-api-key missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "404":
+          description: Fixed configuration not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "500":
+          description: Request context missing or service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+    put:
+      summary: Upsert fixed contract line config
+      description: Creates or updates fixed-plan configuration for a contract line.
+      tags:
+        - Contract Lines
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-source: middleware API-key presence + request context requirement in controller
+        x-request-context-required: true
+        x-request-context-wiring-gap: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Contract line UUID from contract_lines.contract_line_id.
+          required: true
+          description: Contract line UUID from contract_lines.contract_line_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractLineFixedConfigBody"
+      responses:
+        "200":
+          description: Fixed config upserted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiSuccess"
+        "400":
+          description: Invalid request payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "401":
+          description: x-api-key missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "500":
+          description: Request context missing or service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+  /api/v1/contract-lines/{id}/services:
+    get:
+      summary: List contract line services
+      description: Returns all service configurations linked to a contract line.
+      tags:
+        - Contract Lines
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-source: middleware API-key presence + request context requirement in controller
+        x-request-context-required: true
+        x-request-context-wiring-gap: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Contract line UUID from contract_lines.contract_line_id.
+          required: true
+          description: Contract line UUID from contract_lines.contract_line_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Service configurations returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiSuccess"
+        "401":
+          description: x-api-key missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "500":
+          description: Request context missing or service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+    post:
+      summary: Add service to contract line
+      description: Adds one service configuration to a contract line; rejects duplicates.
+      tags:
+        - Contract Lines
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-source: middleware API-key presence + request context requirement in controller
+        x-request-context-required: true
+        x-request-context-wiring-gap: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Contract line UUID from contract_lines.contract_line_id.
+          required: true
+          description: Contract line UUID from contract_lines.contract_line_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractLineAddServiceBody"
+      responses:
+        "201":
+          description: Service added to contract line.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiSuccess"
+        "400":
+          description: Invalid request payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "401":
+          description: x-api-key missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "500":
+          description: Request context missing or service-level validation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+  /api/v1/contract-lines/{id}/services/{serviceId}:
+    get:
+      summary: Get contract line service details
+      description: Route inventory advertises item lookup, but current route handler
+        delegates to getContractLineServices and returns the full service list
+        for `{id}`; `{serviceId}` is effectively ignored in the GET path.
+      tags:
+        - Contract Lines
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-source: middleware API-key presence + request context requirement in controller
+        x-request-context-required: true
+        x-request-context-wiring-gap: true
+        x-service-id-ignored-by-get-handler: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Contract line UUID from contract_lines.contract_line_id.
+          required: true
+          description: Contract line UUID from contract_lines.contract_line_id.
+          name: id
+          in: path
+        - schema:
+            type: string
+            format: uuid
+            description: Service UUID from service_catalog.service_id.
+          required: true
+          description: Service UUID from service_catalog.service_id.
+          name: serviceId
+          in: path
+      responses:
+        "200":
+          description: Current implementation returns full service list for the contract
+            line.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiSuccess"
+        "401":
+          description: x-api-key missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "500":
+          description: Request context missing or service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+    put:
+      summary: Update contract line service
+      description: Updates service configuration for one `{id}` + `{serviceId}` pair.
+      tags:
+        - Contract Lines
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-source: middleware API-key presence + request context requirement in controller
+        x-request-context-required: true
+        x-request-context-wiring-gap: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Contract line UUID from contract_lines.contract_line_id.
+          required: true
+          description: Contract line UUID from contract_lines.contract_line_id.
+          name: id
+          in: path
+        - schema:
+            type: string
+            format: uuid
+            description: Service UUID from service_catalog.service_id.
+          required: true
+          description: Service UUID from service_catalog.service_id.
+          name: serviceId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractLineUpdateServiceBody"
+      responses:
+        "200":
+          description: Service configuration updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiSuccess"
+        "400":
+          description: Invalid request payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "401":
+          description: x-api-key missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "500":
+          description: Request context missing or service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+    delete:
+      summary: Remove service from contract line
+      description: Removes one service configuration from a contract line.
+      tags:
+        - Contract Lines
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-source: middleware API-key presence + request context requirement in controller
+        x-request-context-required: true
+        x-request-context-wiring-gap: true
+        x-returns-json-with-204-currently: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Contract line UUID from contract_lines.contract_line_id.
+          required: true
+          description: Contract line UUID from contract_lines.contract_line_id.
+          name: id
+          in: path
+        - schema:
+            type: string
+            format: uuid
+            description: Service UUID from service_catalog.service_id.
+          required: true
+          description: Service UUID from service_catalog.service_id.
+          name: serviceId
+          in: path
+      responses:
+        "204":
+          description: Service removed.
+        "401":
+          description: x-api-key missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "500":
+          description: Request context missing or service removal failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+  /api/v1/contract-lines/{id}/usage-metrics:
+    get:
+      summary: Get contract line usage metrics
+      description: Returns usage and cost metrics for a contract line over a time window.
+      tags:
+        - Contract Lines
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-source: middleware API-key presence + request context requirement in controller
+        x-request-context-required: true
+        x-request-context-wiring-gap: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Contract line UUID from contract_lines.contract_line_id.
+          required: true
+          description: Contract line UUID from contract_lines.contract_line_id.
+          name: id
+          in: path
+        - schema:
+            type: string
+            format: date-time
+            description: Defaults to now minus 30 days when omitted.
+          required: false
+          description: Defaults to now minus 30 days when omitted.
+          name: period_start
+          in: query
+        - schema:
+            type: string
+            format: date-time
+            description: Defaults to now when omitted.
+          required: false
+          description: Defaults to now when omitted.
+          name: period_end
+          in: query
+      responses:
+        "200":
+          description: Usage metrics returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiSuccess"
+        "401":
+          description: x-api-key missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "500":
+          description: Request context missing or usage query failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+  /api/v1/contract-line-templates:
+    post:
+      summary: Create contract line template
+      description: Creates a plan template record under plan_templates with optional
+        default services.
+      tags:
+        - Contract Lines
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-source: middleware API-key presence + request context requirement in controller
+        x-request-context-required: true
+        x-request-context-wiring-gap: true
+        x-id-provenance:
+          template_id: plan_templates.template_id (uuidv4)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateContractLineTemplateBody"
+      responses:
+        "201":
+          description: Template created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiSuccess"
+        "400":
+          description: Invalid request payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "401":
+          description: x-api-key missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "500":
+          description: Request context missing or template creation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+  /api/v1/contract-line-templates/{id}/create-contract-line:
+    post:
+      summary: Create contract line from template
+      description: Creates a contract line from a template. Current controller
+        validates body createPlanFromTemplateSchema and passes that body to
+        service; path `{id}` is not used by service logic.
+      tags:
+        - Contract Lines
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-source: middleware API-key presence + request context requirement in controller
+        x-request-context-required: true
+        x-request-context-wiring-gap: true
+        x-path-id-ignored-currently: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Template UUID from plan_templates.template_id.
+          required: true
+          description: Template UUID from plan_templates.template_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateContractLineFromTemplateBody"
+      responses:
+        "201":
+          description: Contract line created from template.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiSuccess"
+        "400":
+          description: Invalid request payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "401":
+          description: x-api-key missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
+        "500":
+          description: Request context missing or template application failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractLineApiError"
   /api/documents/download/{fileId}:
     get:
       summary: Download or export document file
@@ -10699,7 +12629,7 @@ paths:
           in: path
         - schema:
             type: string
-            enum: *a29
+            enum: *a40
             description: Optional export format. pdf generates a PDF; markdown or md exports
               markdown; omitted downloads the original stored file.
           required: false
@@ -12878,7 +14808,7 @@ paths:
         this endpoint to inspect existing service catalog records and to gather
         prerequisite IDs such as custom_service_type_id and category_id before
         creating a new service.
-      tags: &a30
+      tags: &a41
         - Services
         - Service Catalog
       security:
@@ -12952,7 +14882,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: &a31
+            enum: &a42
               - fixed
               - hourly
               - usage
@@ -13000,7 +14930,7 @@ paths:
         with GET /api/v1/service-types and category_id with GET
         /api/v1/categories/service before calling this endpoint. Use this
         endpoint for fixed, hourly, or usage-based service offerings.
-      tags: *a30
+      tags: *a41
       security:
         - ApiKeyAuth: []
       extensions:
@@ -13027,7 +14957,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: *a31
+                  enum: *a42
                 default_rate:
                   type: number
                   minimum: 0
@@ -13089,7 +15019,7 @@ paths:
     get:
       summary: Get service
       description: Returns a single service catalog entry by UUID.
-      tags: *a30
+      tags: *a41
       security:
         - ApiKeyAuth: []
       extensions:
@@ -13136,7 +15066,7 @@ paths:
     put:
       summary: Update service
       description: Updates a service catalog entry by UUID.
-      tags: *a30
+      tags: *a41
       security:
         - ApiKeyAuth: []
       extensions:
@@ -13172,7 +15102,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: *a31
+                  enum: *a42
                 default_rate:
                   type: number
                   minimum: 0
@@ -13233,7 +15163,7 @@ paths:
     delete:
       summary: Delete service
       description: Deletes a service catalog entry by UUID.
-      tags: *a30
+      tags: *a41
       security:
         - ApiKeyAuth: []
       extensions:
@@ -13280,7 +15210,7 @@ paths:
         this endpoint to inspect existing product catalog records and to gather
         prerequisite IDs such as custom_service_type_id and category_id before
         creating a new product.
-      tags: &a32
+      tags: &a43
         - Products
         - Service Catalog
       security:
@@ -13389,7 +15319,7 @@ paths:
         /api/v1/categories/service before calling this endpoint. Products are
         catalog entries with item_kind product and always use billing_method
         usage.
-      tags: *a32
+      tags: *a43
       security:
         - ApiKeyAuth: []
       extensions:
@@ -13416,7 +15346,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: &a33
+                  enum: &a44
                     - usage
                   default: usage
                 default_rate:
@@ -13555,7 +15485,7 @@ paths:
     get:
       summary: Get product
       description: Returns a single product catalog entry by UUID.
-      tags: *a32
+      tags: *a43
       security:
         - ApiKeyAuth: []
       extensions:
@@ -13602,7 +15532,7 @@ paths:
     put:
       summary: Update product
       description: Updates a product catalog entry by UUID.
-      tags: *a32
+      tags: *a43
       security:
         - ApiKeyAuth: []
       extensions:
@@ -13638,7 +15568,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: *a33
+                  enum: *a44
                   default: usage
                 default_rate:
                   type: number
@@ -13777,7 +15707,7 @@ paths:
     delete:
       summary: Delete product
       description: Deletes a product catalog entry by UUID.
-      tags: *a32
+      tags: *a43
       security:
         - ApiKeyAuth: []
       extensions:
@@ -13823,7 +15753,7 @@ paths:
       description: Returns tenant service types. Use this endpoint to resolve
         custom_service_type_id before creating or updating services and products
         in the service catalog.
-      tags: &a35
+      tags: &a46
         - Service Types
         - Service Catalog
       security:
@@ -13843,7 +15773,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a34
+            enum: *a45
           required: false
           name: billing_method
           in: query
@@ -13888,7 +15818,7 @@ paths:
     get:
       summary: Get service type
       description: Returns a single tenant service type by UUID.
-      tags: *a35
+      tags: *a46
       security:
         - ApiKeyAuth: []
       extensions:
@@ -15001,789 +16931,6 @@ paths:
         inventory. Replace with canonical OpenAPI metadata.
       tags:
         - billing-analytics
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/contract-lines:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - contract-lines
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - contract-lines
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/contract-lines/bulk:
-    delete:
-      summary: DELETE v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - contract-lines
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "204":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - contract-lines
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    put:
-      summary: PUT v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - contract-lines
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/contract-lines/bulk/add-services:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - contract-lines
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/contract-lines/bulk/create:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - contract-lines
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/contract-lines/bulk/delete:
-    delete:
-      summary: DELETE v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - contract-lines
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "204":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/contract-lines/bulk/remove-services:
-    delete:
-      summary: DELETE v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - contract-lines
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "204":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/contract-lines/bulk/update:
-    put:
-      summary: PUT v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - contract-lines
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/contract-lines/{id}:
-    delete:
-      summary: DELETE v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - contract-lines
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "204":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - contract-lines
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    put:
-      summary: PUT v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - contract-lines
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/contract-lines/{id}/activation:
-    put:
-      summary: PUT v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - contract-lines
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/contract-lines/{id}/analytics:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - contract-lines
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/contract-lines/{id}/copy:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - contract-lines
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/contract-lines/{id}/fixed-config:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - contract-lines
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    put:
-      summary: PUT v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - contract-lines
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/contract-lines/{id}/services:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - contract-lines
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - contract-lines
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/contract-lines/{id}/services/{serviceId}:
-    delete:
-      summary: DELETE v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - contract-lines
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "204":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - contract-lines
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    put:
-      summary: PUT v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - contract-lines
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/contract-lines/{id}/usage-metrics:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - contract-lines
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -21511,80 +22658,6 @@ paths:
         x-placeholder: true
       responses:
         "204":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/contract-line-templates:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - contract-line-templates
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/contract-line-templates/{id}/create-contract-line:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - contract-line-templates
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
           description: Placeholder success response
           content:
             application/json:
