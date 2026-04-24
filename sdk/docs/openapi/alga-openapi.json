@@ -38,7 +38,13 @@
       "name": "Extension Gateway"
     },
     {
+      "name": "Extension Installs"
+    },
+    {
       "name": "Files"
+    },
+    {
+      "name": "Integrations - QuickBooks"
     },
     {
       "name": "Products"
@@ -111,12 +117,6 @@
     },
     {
       "name": "financial"
-    },
-    {
-      "name": "healthz"
-    },
-    {
-      "name": "installs"
     },
     {
       "name": "integrations"
@@ -1742,6 +1742,192 @@
         "required": [
           "status",
           "version"
+        ]
+      },
+      "HealthzResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "healthy"
+            ],
+            "description": "Always healthy when the process can serve HTTP."
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO timestamp generated when the liveness check is handled."
+          },
+          "uptime": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Process uptime in seconds from process.uptime()."
+          },
+          "version": {
+            "type": "string",
+            "description": "Application version from the environment/package metadata, with a fallback in the handler."
+          },
+          "environment": {
+            "type": "string",
+            "description": "NODE_ENV value returned by the Next.js /api/healthz handler."
+          }
+        },
+        "required": [
+          "status",
+          "timestamp",
+          "uptime",
+          "version"
+        ]
+      },
+      "RunnerCanaryHeaders": {
+        "type": "object",
+        "properties": {
+          "x-canary": {
+            "type": "string",
+            "description": "Optional runner canary identifier used only for logging and cache variance."
+          }
+        }
+      },
+      "InstallLookupByHostQuery": {
+        "type": "object",
+        "properties": {
+          "host": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Runner domain hostname to resolve. The implementation lowercases the value and strips any port before matching tenant_extension_install.runner_domain."
+          }
+        },
+        "required": [
+          "host"
+        ]
+      },
+      "InstallLookupByHostResponse": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Tenant ID from tenant_extension_install.tenant_id for the matching runner domain."
+          },
+          "extension_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Extension registry UUID from tenant_extension_install.registry_id."
+          },
+          "content_hash": {
+            "type": "string",
+            "description": "Content hash from extension_bundle.content_hash for the install version. Usually sha256:<64 hex chars>."
+          }
+        },
+        "required": [
+          "tenant_id",
+          "extension_id",
+          "content_hash"
+        ]
+      },
+      "InstallLookupErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error message, such as missing host, not found, internal error, or middleware API-key errors."
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "InstallValidateQuery": {
+        "type": "object",
+        "properties": {
+          "tenant": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Tenant UUID from tenant_extension_install.tenant_id."
+          },
+          "extension": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Extension registry UUID from tenant_extension_install.registry_id."
+          },
+          "hash": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bundle content hash to validate. The EE action accepts sha256:<64 hex chars> or a raw 64-character hex string and normalizes raw hex to sha256: form."
+          }
+        },
+        "required": [
+          "tenant",
+          "extension",
+          "hash"
+        ]
+      },
+      "InstallValidateResponse": {
+        "type": "object",
+        "properties": {
+          "valid": {
+            "type": "boolean",
+            "description": "True when the hash matches a bundle for the currently installed extension version; false when validation completes but does not match."
+          }
+        },
+        "required": [
+          "valid"
+        ]
+      },
+      "InstallValidateParameterErrorResponse": {
+        "type": "object",
+        "properties": {
+          "valid": {
+            "type": "boolean",
+            "enum": [
+              false
+            ],
+            "description": "Always false for parameter errors."
+          },
+          "error": {
+            "type": "string",
+            "enum": [
+              "missing or invalid parameters"
+            ],
+            "description": "Returned when tenant, extension, or hash is absent."
+          }
+        },
+        "required": [
+          "valid",
+          "error"
+        ]
+      },
+      "QboOAuthCallbackQuery": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "OAuth 2.0 authorization code returned by Intuit. Required unless Intuit sends an error parameter."
+          },
+          "state": {
+            "type": "string",
+            "description": "Base64url-encoded JSON containing tenantId and csrf generated by the connect endpoint."
+          },
+          "realmId": {
+            "type": "string",
+            "description": "QuickBooks company/realm ID returned by Intuit."
+          },
+          "error": {
+            "type": "string",
+            "description": "OAuth error returned by Intuit when authorization fails or is denied."
+          }
+        }
+      },
+      "QboErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error message returned by middleware or by the connect endpoint."
+          }
+        },
+        "required": [
+          "error"
         ]
       },
       "BoardIdParams": {
@@ -6990,6 +7176,354 @@
         }
       }
     },
+    "/api/healthz": {
+      "get": {
+        "summary": "Liveness probe",
+        "description": "Kubernetes liveness endpoint. It returns a fixed healthy status with timestamp, uptime, version, and environment when the process can serve HTTP. It does not check database, Redis, or downstream dependencies; use /api/readyz for dependency-aware readiness.",
+        "tags": [
+          "System"
+        ],
+        "security": [],
+        "extensions": {
+          "x-api-key-auth-skipped": true,
+          "x-dependency-checks": false,
+          "x-kubernetes-probe": "liveness"
+        },
+        "responses": {
+          "200": {
+            "description": "Process is alive and serving HTTP.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthzResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/installs/lookup-by-host": {
+      "get": {
+        "summary": "Lookup extension install by runner host",
+        "description": "Internal endpoint for extension runners. Given a runner domain, resolves the tenant, extension registry ID, and current bundle content hash needed to serve extension content. The EE implementation queries tenant_extension_install.runner_domain with an admin connection and then selects the latest extension_bundle row for the installed version. In non-EE builds the product-extension action is a stub. Requires x-api-key; the Express middleware allows the ALGA_AUTH_KEY runner secret or a valid database API key.",
+        "tags": [
+          "Extension Installs"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-runner-internal": true,
+          "x-admin-db-connection": true,
+          "x-cache-control": "no-store",
+          "x-vary": "x-api-key, x-canary"
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Runner domain hostname to resolve. The implementation lowercases the value and strips any port before matching tenant_extension_install.runner_domain."
+            },
+            "required": true,
+            "description": "Runner domain hostname to resolve. The implementation lowercases the value and strips any port before matching tenant_extension_install.runner_domain.",
+            "name": "host",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optional runner canary identifier used only for logging and cache variance."
+            },
+            "required": false,
+            "description": "Optional runner canary identifier used only for logging and cache variance.",
+            "name": "x-canary",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Install mapping found for the runner host.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstallLookupByHostResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The required host query parameter is missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstallLookupErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key is missing or invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstallLookupErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No install or bundle was found for the runner host.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstallLookupErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected lookup failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstallLookupErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/installs/validate": {
+      "get": {
+        "summary": "Validate extension bundle content hash",
+        "description": "Internal endpoint for extension runners and deployment validation. It checks whether a supplied content hash belongs to the currently installed extension version for the supplied tenant and extension registry ID. The EE action uses an admin database connection, reads tenant_extension_install by tenant_id and registry_id, and checks extension_bundle for a matching version_id and content_hash. A negative validation result is returned as 200 with valid=false, not as 404. Requires x-api-key; the Express middleware allows the ALGA_AUTH_KEY runner secret or a valid database API key.",
+        "tags": [
+          "Extension Installs"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-runner-internal": true,
+          "x-admin-db-connection": true,
+          "x-cache-control": "no-store",
+          "x-vary": "x-api-key, x-canary"
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Tenant UUID from tenant_extension_install.tenant_id."
+            },
+            "required": true,
+            "description": "Tenant UUID from tenant_extension_install.tenant_id.",
+            "name": "tenant",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Extension registry UUID from tenant_extension_install.registry_id."
+            },
+            "required": true,
+            "description": "Extension registry UUID from tenant_extension_install.registry_id.",
+            "name": "extension",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Bundle content hash to validate. The EE action accepts sha256:<64 hex chars> or a raw 64-character hex string and normalizes raw hex to sha256: form."
+            },
+            "required": true,
+            "description": "Bundle content hash to validate. The EE action accepts sha256:<64 hex chars> or a raw 64-character hex string and normalizes raw hex to sha256: form.",
+            "name": "hash",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optional runner canary identifier used only for logging and cache variance."
+            },
+            "required": false,
+            "description": "Optional runner canary identifier used only for logging and cache variance.",
+            "name": "x-canary",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Validation completed. valid=false means the hash did not match, the install was not found, or the hash format was invalid at the action layer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstallValidateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Required tenant, extension, or hash query parameter is missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstallValidateParameterErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key is missing or invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstallLookupErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected validation failure. The EE handler returns valid=false for internal exceptions.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstallValidateResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/integrations/qbo/connect": {
+      "get": {
+        "summary": "Start QuickBooks Online OAuth flow",
+        "description": "Browser-navigated endpoint that initiates the QuickBooks Online OAuth 2.0 authorization flow. The handler resolves tenant context with createTenantKnex, reads qbo_client_id from app secrets, generates a random CSRF value, embeds {tenantId, csrf} as base64url JSON in the state parameter, and redirects to Intuit at appcenter.intuit.com/connect/oauth2. The CSRF value is currently logged but not persisted, and the callback currently treats CSRF as valid. The route is not currently listed in apiKeySkipPaths, so middleware may require x-api-key before the browser can reach the handler.",
+        "tags": [
+          "Integrations - QuickBooks"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-oauth-provider": "quickbooks-online",
+          "x-redirect-endpoint": true,
+          "x-middleware-api-key-required-currently": true,
+          "x-csrf-validation-implemented": false
+        },
+        "responses": {
+          "302": {
+            "description": "Redirect to Intuit OAuth authorization URL. Location includes client_id, response_type=code, QuickBooks accounting scope, redirect_uri, and encoded state. The handler returns no JSON body."
+          },
+          "401": {
+            "description": "Tenant context is missing in the handler, or x-api-key is missing at middleware before the handler runs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QboErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "QBO client ID is not configured, or an unexpected error occurred while constructing the authorization redirect.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QboErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/integrations/qbo/callback": {
+      "get": {
+        "summary": "Handle QuickBooks Online OAuth callback",
+        "description": "OAuth 2.0 redirect endpoint for QuickBooks Online. Intuit redirects the browser here with code, state, and realmId after authorization. The handler decodes tenantId and csrf from the base64url state parameter, exchanges the code for access and refresh tokens, stores credentials in the tenant secret qbo_credentials keyed by realmId, and redirects back to /msp/settings with qbo_status=success or qbo_status=failure and an error code. The route returns redirects rather than JSON from the handler. Like the connect route, it is not currently listed in apiKeySkipPaths, so middleware may reject real Intuit callbacks that do not include x-api-key.",
+        "tags": [
+          "Integrations - QuickBooks"
+        ],
+        "security": [],
+        "extensions": {
+          "x-oauth-provider": "quickbooks-online",
+          "x-redirect-endpoint": true,
+          "x-token-secret-name": "qbo_credentials",
+          "x-middleware-api-key-required-currently": true,
+          "x-csrf-validation-implemented": false
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "OAuth 2.0 authorization code returned by Intuit. Required unless Intuit sends an error parameter."
+            },
+            "required": false,
+            "description": "OAuth 2.0 authorization code returned by Intuit. Required unless Intuit sends an error parameter.",
+            "name": "code",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Base64url-encoded JSON containing tenantId and csrf generated by the connect endpoint."
+            },
+            "required": false,
+            "description": "Base64url-encoded JSON containing tenantId and csrf generated by the connect endpoint.",
+            "name": "state",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "QuickBooks company/realm ID returned by Intuit."
+            },
+            "required": false,
+            "description": "QuickBooks company/realm ID returned by Intuit.",
+            "name": "realmId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "OAuth error returned by Intuit when authorization fails or is denied."
+            },
+            "required": false,
+            "description": "OAuth error returned by Intuit when authorization fails or is denied.",
+            "name": "error",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "307": {
+            "description": "Redirect to the MSP settings integrations page. Success redirects with qbo_status=success; failures redirect with qbo_status=failure and an error such as qbo_error, missing_params, invalid_state, csrf_mismatch, config_error, token_exchange_failed, or callback_processing_error. The handler returns no JSON body."
+          },
+          "401": {
+            "description": "Middleware-level API-key rejection can occur before the OAuth callback handler runs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QboErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/boards": {
       "get": {
         "summary": "List boards",
@@ -11124,231 +11658,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SoftwareOneErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/healthz": {
-      "get": {
-        "summary": "GET healthz",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "healthz"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/installs/lookup-by-host": {
-      "get": {
-        "summary": "GET installs",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "installs"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/installs/validate": {
-      "get": {
-        "summary": "GET installs",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "installs"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/integrations/qbo/callback": {
-      "get": {
-        "summary": "GET integrations",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "integrations"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/integrations/qbo/connect": {
-      "get": {
-        "summary": "GET integrations",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "integrations"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
