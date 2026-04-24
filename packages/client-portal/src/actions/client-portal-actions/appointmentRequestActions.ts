@@ -1404,15 +1404,21 @@ export const cancelAppointmentRequest = withAuth(async (
       };
     });
 
+    let teamsMeetingWarning: string | undefined;
+
     if (cancellationContext?.meetingId) {
-      await deleteTeamsMeetingIfAvailable({
+      const deletedMeeting = await deleteTeamsMeetingIfAvailable({
         tenantId: tenant,
         meetingId: cancellationContext.meetingId,
         appointmentRequestId: cancellationContext.appointmentRequestId,
       });
+
+      if (!deletedMeeting) {
+        teamsMeetingWarning = 'Appointment deleted, but the Microsoft Teams meeting could not be removed. Please remove it manually in Teams.';
+      }
     }
 
-    return { success: true };
+    return { success: true, teamsMeetingWarning };
   } catch (error) {
     console.error('Error cancelling appointment request:', error);
     const message = error instanceof Error ? error.message : 'Failed to cancel appointment request';
