@@ -41,7 +41,8 @@ export const FEATURE_MINIMUM_TIER: Record<TIER_FEATURES, TenantTier> = {
   [TIER_FEATURES.SSO]: 'solo',
   [TIER_FEATURES.ADVANCED_ASSETS]: 'solo',
   [TIER_FEATURES.CLIENT_PORTAL_ADMIN]: 'solo',
-  [TIER_FEATURES.WORKFLOW_DESIGNER]: 'pro',
+  // Available to all tiers; a usage cap (planned: 150 workflow steps) will be enforced separately rather than tier-gated.
+  [TIER_FEATURES.WORKFLOW_DESIGNER]: 'solo',
   [TIER_FEATURES.MOBILE_ACCESS]: 'solo',
   [TIER_FEATURES.ENTRA_SYNC]: 'premium',
   [TIER_FEATURES.CIPP]: 'premium',

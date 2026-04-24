@@ -76,20 +76,28 @@ describe('assertTierAccess', () => {
       await expect(assertTierAccess(TIER_FEATURES.EXTENSIONS)).resolves.toBeUndefined();
     });
 
-    it('throws TierAccessError for solo tenant accessing WORKFLOW_DESIGNER', async () => {
+    it('does not throw for solo tenant accessing WORKFLOW_DESIGNER (now unlocked at solo)', async () => {
       vi.mocked(getSession).mockResolvedValue({
         user: { plan: 'solo' },
       } as any);
 
-      await expect(assertTierAccess(TIER_FEATURES.WORKFLOW_DESIGNER)).rejects.toThrow(TierAccessError);
-      await expect(assertTierAccess(TIER_FEATURES.WORKFLOW_DESIGNER)).rejects.toMatchObject({
-        feature: TIER_FEATURES.WORKFLOW_DESIGNER,
+      await expect(assertTierAccess(TIER_FEATURES.WORKFLOW_DESIGNER)).resolves.toBeUndefined();
+    });
+
+    it('throws TierAccessError for solo tenant accessing TEAMS_INTEGRATION', async () => {
+      vi.mocked(getSession).mockResolvedValue({
+        user: { plan: 'solo' },
+      } as any);
+
+      await expect(assertTierAccess(TIER_FEATURES.TEAMS_INTEGRATION)).rejects.toThrow(TierAccessError);
+      await expect(assertTierAccess(TIER_FEATURES.TEAMS_INTEGRATION)).rejects.toMatchObject({
+        feature: TIER_FEATURES.TEAMS_INTEGRATION,
         requiredTier: 'pro',
         currentTier: 'solo',
       });
     });
 
-    it('does not throw for solo tenants accessing WORKFLOW_DESIGNER during an active Solo -> Pro trial', async () => {
+    it('does not throw for solo tenants accessing TEAMS_INTEGRATION during an active Solo -> Pro trial', async () => {
       vi.mocked(getSession).mockResolvedValue({
         user: {
           plan: 'solo',
@@ -97,7 +105,7 @@ describe('assertTierAccess', () => {
         },
       } as any);
 
-      await expect(assertTierAccess(TIER_FEATURES.WORKFLOW_DESIGNER)).resolves.toBeUndefined();
+      await expect(assertTierAccess(TIER_FEATURES.TEAMS_INTEGRATION)).resolves.toBeUndefined();
     });
 
     it('throws for NULL plan tenant (misconfigured → pro)', async () => {
@@ -119,9 +127,9 @@ describe('assertTierAccess', () => {
         },
       } as any);
 
-      // WORKFLOW_DESIGNER stays gated at Pro+, so once the trial expires a
+      // TEAMS_INTEGRATION stays gated at Pro+, so once the trial expires a
       // Solo tenant is blocked from it again.
-      await expect(assertTierAccess(TIER_FEATURES.WORKFLOW_DESIGNER)).rejects.toMatchObject({
+      await expect(assertTierAccess(TIER_FEATURES.TEAMS_INTEGRATION)).rejects.toMatchObject({
         currentTier: 'solo',
       });
     });

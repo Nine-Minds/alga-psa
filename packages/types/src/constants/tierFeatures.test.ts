@@ -33,11 +33,12 @@ describe('tierFeatures', () => {
         TIER_FEATURES.SSO,
         TIER_FEATURES.ADVANCED_ASSETS,
         TIER_FEATURES.CLIENT_PORTAL_ADMIN,
+        TIER_FEATURES.WORKFLOW_DESIGNER,
         TIER_FEATURES.MOBILE_ACCESS,
       ]);
     });
 
-    it('pro tier includes solo features plus workflow designer and Teams integration', () => {
+    it('pro tier includes solo features plus Teams integration', () => {
       expect(TIER_FEATURE_MAP.pro).toEqual([
         TIER_FEATURES.INTEGRATIONS,
         TIER_FEATURES.EXTENSIONS,
@@ -77,16 +78,15 @@ describe('tierFeatures', () => {
       expect(tierHasFeature('solo', TIER_FEATURES.SSO)).toBe(true);
       expect(tierHasFeature('solo', TIER_FEATURES.ADVANCED_ASSETS)).toBe(true);
       expect(tierHasFeature('solo', TIER_FEATURES.CLIENT_PORTAL_ADMIN)).toBe(true);
+      expect(tierHasFeature('solo', TIER_FEATURES.WORKFLOW_DESIGNER)).toBe(true);
       expect(tierHasFeature('solo', TIER_FEATURES.MOBILE_ACCESS)).toBe(true);
     });
 
-    it('solo cannot access workflow designer or Teams integration', () => {
-      expect(tierHasFeature('solo', TIER_FEATURES.WORKFLOW_DESIGNER)).toBe(false);
+    it('solo cannot access Teams integration', () => {
       expect(tierHasFeature('solo', TIER_FEATURES.TEAMS_INTEGRATION)).toBe(false);
     });
 
-    it('pro has access to workflow designer and Teams integration', () => {
-      expect(tierHasFeature('pro', TIER_FEATURES.WORKFLOW_DESIGNER)).toBe(true);
+    it('pro has access to Teams integration', () => {
       expect(tierHasFeature('pro', TIER_FEATURES.TEAMS_INTEGRATION)).toBe(true);
     });
 
@@ -114,11 +114,8 @@ describe('tierFeatures', () => {
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.SSO]).toBe('solo');
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.ADVANCED_ASSETS]).toBe('solo');
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.CLIENT_PORTAL_ADMIN]).toBe('solo');
+      expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.WORKFLOW_DESIGNER]).toBe('solo');
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.MOBILE_ACCESS]).toBe('solo');
-    });
-
-    it('keeps workflow designer at pro', () => {
-      expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.WORKFLOW_DESIGNER]).toBe('pro');
     });
 
     it('moves Teams integration to pro', () => {
