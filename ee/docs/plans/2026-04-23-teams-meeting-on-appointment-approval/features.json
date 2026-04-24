@@ -140,7 +140,7 @@
   {
     "id": "F024",
     "description": "SystemEmailService approved/assigned methods accept onlineMeetingUrl in their payload type and pass it through to template variables.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-16"]
   },
   {

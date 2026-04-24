@@ -141,6 +141,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-23: Completed `F020` by replacing the Teams Meetings tab placeholder with a real organizer form in `AvailabilitySettings.tsx`: prerequisites banner, organizer UPN input, Save action, Verify button, and inline verification feedback.
 - 2026-04-23: Completed `F021` by adding `setDefaultMeetingOrganizer` in `availabilitySettingsActions.ts`. The action is CE-safe, enforces `system_settings:update`, verifies that Teams is active for the tenant, and writes the trimmed organizer UPN (or `NULL` when cleared).
 - 2026-04-23: Completed `F022` by adding `verifyMeetingOrganizer` in scheduling plus an EE Graph helper. Verification first resolves `/users/{upn}`, then performs a short create/delete round-trip so missing Application Access Policy cases come back as `reason: 'policy_missing'`.
+- 2026-04-23: Completed `F024` by extending `@alga-psa/email` appointment payload types with `onlineMeetingUrl` and wiring the approved-email fallback template to render a Teams join action when the URL is present.
 
 ## Working notes
 
@@ -153,6 +154,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - `DeleteEntityDialog` now accepts an optional `confirmationMessage`, which keeps dependency-validation behavior intact while allowing schedule-entry delete flows to surface appointment-specific warnings like the Teams-meeting deletion notice.
 - `verifyMeetingOrganizer` required a second meeting-config resolver path: `resolveTeamsMeetingGraphConfig()` handles tenants with an active Teams profile even before an organizer is saved, while `resolveTeamsMeetingExecutionConfig()` still enforces the organizer requirement for create/update/delete flows.
 - Teams Meetings settings UI currently links admins to Microsoft’s Application Access Policy documentation directly; when the local runbook is added later (`F027`), update this banner link to the repo-authored setup guide.
+- `SystemEmailService.sendAppointmentAssignedNotification()` already passes the full payload object through `replaceVariables()`, so `onlineMeetingUrl` only needed a type update there; the explicit fallback template change was only necessary for the approved-client email path.
 - Approval flow nuance: when the approver keeps the originally requested time, `requested_date`/`requested_time` must be converted from the requester's local wall clock via `fromZonedTime(...)`; only explicit `final_date`/`final_time` values sent from the UI are already normalized to UTC strings.
 - Runbook command used for validation so far: `node -c server/migrations/20260423130000_add_online_meeting_columns_to_appointment_requests.cjs`
 - Additional validation command: `node -c ee/server/migrations/20260423131000_add_default_meeting_organizer_to_teams_integrations.cjs`
