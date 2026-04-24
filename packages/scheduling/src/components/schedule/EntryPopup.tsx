@@ -778,9 +778,24 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                       date: formatDate(new Date(appointmentRequestData.approved_at), { dateStyle: 'medium' }),
                     })
                   : t('entryPopup.appointmentRequest.approved.description', {
-                      defaultValue: 'This appointment originated from a client request.',
-                    })}
+                    defaultValue: 'This appointment originated from a client request.',
+                  })}
               </p>
+              {appointmentRequestData.online_meeting_url && (
+                <div className="mt-3">
+                  <Button
+                    id="join-teams-meeting-entry-popup"
+                    type="button"
+                    variant="outline"
+                    onClick={() => window.open(appointmentRequestData.online_meeting_url!, '_blank', 'noopener,noreferrer')}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    {t('entryPopup.appointmentRequest.approved.joinTeamsMeeting', {
+                      defaultValue: 'Join Teams Meeting',
+                    })}
+                  </Button>
+                </div>
+              )}
             </AlertDescription>
           </Alert>
         )}

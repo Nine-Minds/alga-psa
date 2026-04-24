@@ -92,7 +92,7 @@
   {
     "id": "F016",
     "description": "EntryPopup approved-appointment banner displays a 'Join Teams Meeting' button when online_meeting_url is present.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-13"]
   },
   {
