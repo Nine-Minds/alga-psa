@@ -870,6 +870,24 @@ function extractProviderAccountId(
     account: Record<string, unknown> | null | undefined,
     metadata: OAuthAccountMetadata,
 ): string | undefined {
+    const claims = metadata.idTokenClaims as Record<string, unknown> | undefined;
+
+    // Microsoft: oid is the Azure AD object ID — the value Bot Framework sends
+    // as activity.from.aadObjectId. Azure AD's sub is pairwise per app and does
+    // not match what Teams bots receive, so prefer oid.
+    if (claims && typeof claims.oid === 'string' && claims.oid.length > 0) {
+        return claims.oid;
+    }
+
+    // Generic OIDC subject (Google and others).
+    if (claims && typeof claims.sub === 'string' && claims.sub.length > 0) {
+        return claims.sub;
+    }
+
+    // Fallbacks: account.providerAccountId is populated by NextAuth from the
+    // profile() callback's returned id, which in this codebase is the Alga
+    // user_id — not a stable provider identifier. Use it only if the ID token
+    // is unavailable.
     const direct = toOptionalString(account?.providerAccountId);
     if (direct) {
         return direct;
@@ -878,11 +896,6 @@ function extractProviderAccountId(
     const legacyId = toOptionalString(account?.id);
     if (legacyId) {
         return legacyId;
-    }
-
-    const claims = metadata.idTokenClaims as Record<string, unknown> | undefined;
-    if (claims && typeof claims.sub === 'string' && claims.sub.length > 0) {
-        return claims.sub;
     }
 
     return undefined;
