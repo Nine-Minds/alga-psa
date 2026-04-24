@@ -231,7 +231,7 @@
     "id": "T039",
     "description": "UI (Playwright): setting + saving organizer UPN in Teams Meetings tab persists the value and triggers capability to flip to available.",
     "featureIds": ["F020", "F021"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T040",

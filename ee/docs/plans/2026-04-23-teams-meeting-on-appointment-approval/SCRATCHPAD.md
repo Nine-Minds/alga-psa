@@ -179,6 +179,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-24: Completed `T036` in the `AppointmentRequestsPanel` test file, asserting approved request details render the Teams join action when a meeting URL is stored.
 - 2026-04-24: Completed `T037` in the client-portal detail page test file, asserting `AppointmentRequestDetailsPage` renders the `Join Teams Meeting` button when `online_meeting_url` is populated.
 - 2026-04-24: Completed `T038` with `server/src/test/unit/appointments/AvailabilitySettings.teams.test.tsx`, asserting the `Teams Meetings` tab is rendered only when the tab-state action reports it visible.
+- 2026-04-24: Completed `T039` in the same Availability Settings test file, asserting the organizer UPN input saves through `setDefaultMeetingOrganizer()` and persists the returned organizer value in the form.
 
 ## Working notes
 
