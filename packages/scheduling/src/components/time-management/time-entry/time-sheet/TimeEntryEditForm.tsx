@@ -4,7 +4,7 @@ import { memo, useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getEligibleContractLinesForUI, getClientIdForWorkItem } from '../../../../lib/contractLineDisambiguation';
 import { getSchedulingClientById } from '../../../../actions/clientInteractionLookupActions';
-import { formatISO, parseISO, addMinutes, setHours, setMinutes, setSeconds } from 'date-fns';
+import { formatISO, isSameDay, parseISO, setHours, setMinutes, setSeconds } from 'date-fns';
 import { IService } from '@alga-psa/types';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -16,7 +16,7 @@ import { MinusCircle, XCircle, Info, AlertTriangle } from 'lucide-react';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { TimeEntryFormProps } from './types';
-import { calculateDuration, formatTimeForInput, parseTimeToDate, getDurationParts } from './utils';
+import { calculateDuration, clampDurationToSameDay, formatTimeForInput, parseTimeToDate, getDurationParts } from './utils';
 import { ISO8601String } from '@alga-psa/types';
 import ContractInfoBanner from './ContractInfoBanner';
 import { TimeEntryChangeRequestPanel } from './TimeEntryChangeRequestFeedback';
@@ -119,6 +119,19 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     const endTime = parseISO(entry.end_time);
     const duration = calculateDuration(startTime, endTime);
     const newErrors: typeof validationErrors = {};
+
+    if (Number.isNaN(startTime.getTime()) || Number.isNaN(endTime.getTime())) {
+      newErrors.duration = t('timeEntryForm.validation.invalidTimeRange', {
+        defaultValue: 'Enter a valid time range'
+      });
+    } else if (!isSameDay(startTime, endTime)) {
+      newErrors.duration = t('timeEntryForm.validation.durationSameDay', {
+        defaultValue: 'Duration must end on the same day'
+      });
+      newErrors.endTime = t('timeEntryForm.validation.endSameDay', {
+        defaultValue: 'End time must be on the same day as start time'
+      });
+    }
 
     if (startTime >= endTime) {
       newErrors.startTime = t('timeEntryForm.validation.startBeforeEnd', {
@@ -330,7 +343,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
   const handleTimeChange = useCallback((type: 'start' | 'end', value: string) => {
     if (!isEditable || !entry) return;
 
-    const currentDate = type === 'start' ? parseISO(entry.start_time) : parseISO(entry.end_time);
+    const currentDate = parseISO(entry.start_time);
     const newTime = parseTimeToDate(value, currentDate);
 
     const updatedEntry = markEntryAsDirty(updateBillableDuration(
@@ -358,16 +371,41 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
 
 
-  const handleDurationChange = useCallback((type: 'hours' | 'minutes', value: number) => {
-    if (!isEditable || !entry) return;
-    const hours = type === 'hours' ? value : durationHours;
-    const minutes = type === 'minutes' ? value : durationMinutes;
+  const parseDurationInputValue = useCallback((value: string): number => {
+    if (value.trim() === '') return 0;
 
-    if (hours < 0 || minutes < 0) return; // Silently ignore negative values
+    const parsedValue = Number(value);
+    if (!Number.isFinite(parsedValue) || parsedValue < 0) {
+      return 0;
+    }
+
+    return Math.floor(parsedValue);
+  }, []);
+
+  const handleDurationChange = useCallback((type: 'hours' | 'minutes', value: string) => {
+    if (!isEditable || !entry) return;
+    const parsedValue = parseDurationInputValue(value);
+    const hours = type === 'hours' ? parsedValue : durationHours;
+    const minutes = type === 'minutes' ? Math.min(59, parsedValue) : durationMinutes;
 
     const startTime = parseISO(entry.start_time);
-    const totalMinutes = Math.max(1, hours * 60 + minutes); // Enforce minimum 1 minute
-    const newEndTime = addMinutes(startTime, totalMinutes);
+    if (Number.isNaN(startTime.getTime())) {
+      setValidationErrors(prev => ({
+        ...prev,
+        duration: t('timeEntryForm.validation.invalidTimeRange', {
+          defaultValue: 'Enter a valid time range'
+        }),
+      }));
+      return;
+    }
+
+    const requestedTotalMinutes = hours * 60 + minutes;
+    const {
+      durationMinutes: totalMinutes,
+      endTime: newEndTime,
+      maxDurationMinutes,
+      wasClampedToSameDay,
+    } = clampDurationToSameDay(startTime, requestedTotalMinutes);
 
     const newBillableDuration = entry.billable_duration === 0 ? 0 : totalMinutes;
 
@@ -380,7 +418,9 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
     console.log('Duration change:', {
       hours,
       minutes,
+      requestedTotalMinutes,
       totalMinutes,
+      maxDurationMinutes,
       oldBillableDuration: entry.billable_duration,
       newBillableDuration
     });
@@ -390,11 +430,22 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
       [`end-${index}`]: formatTimeForInput(newEndTime),
     });
 
-    setValidationErrors({}); // Clear errors on change
-    if (showErrors) {
+    const durationError = wasClampedToSameDay
+      ? t('timeEntryForm.validation.durationSameDay', {
+        defaultValue: 'Duration must end on the same day'
+      })
+      : undefined;
+
+    setValidationErrors(prev => ({
+      ...prev,
+      startTime: undefined,
+      endTime: undefined,
+      duration: durationError,
+    }));
+    if (showErrors && !durationError) {
       validateTimes();
     }
-  }, [durationHours, durationMinutes, entry, index, isEditable, markEntryAsDirty, onUpdateEntry, onUpdateTimeInputs, showErrors, validateTimes]);
+  }, [durationHours, durationMinutes, entry, index, isEditable, markEntryAsDirty, onUpdateEntry, onUpdateTimeInputs, parseDurationInputValue, showErrors, t, validateTimes]);
 
   return (
     <div className="space-y-5">
@@ -477,7 +528,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
               setSelectedDate(newDate);
 
-              // Update the entry's start and end times to the new date while preserving the time
+              // Update the entry's start time to the new date and preserve duration when it still fits the same day.
               const startTime = parseISO(entry.start_time);
               const endTime = parseISO(entry.end_time);
 
@@ -489,19 +540,31 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
                 startTime.getSeconds()
               );
 
-              const newEndTime = setSeconds(
-                setMinutes(
-                  setHours(newDate, endTime.getHours()),
-                  endTime.getMinutes()
-                ),
-                endTime.getSeconds()
-              );
+              const originalDuration = calculateDuration(startTime, endTime);
+              const {
+                durationMinutes,
+                endTime: newEndTime,
+                wasClampedToSameDay,
+              } = clampDurationToSameDay(newStartTime, originalDuration);
 
-              onUpdateEntry(index, {
+              onUpdateEntry(index, markEntryAsDirty({
                 ...entry,
                 start_time: formatISO(newStartTime),
-                end_time: formatISO(newEndTime)
+                end_time: formatISO(newEndTime),
+                billable_duration: entry.billable_duration === 0 ? 0 : durationMinutes,
+              }));
+              onUpdateTimeInputs({
+                [`start-${index}`]: formatTimeForInput(newStartTime),
+                [`end-${index}`]: formatTimeForInput(newEndTime),
               });
+              setValidationErrors(prev => ({
+                ...prev,
+                duration: wasClampedToSameDay
+                  ? t('timeEntryForm.validation.durationSameDay', {
+                    defaultValue: 'Duration must end on the same day'
+                  })
+                  : undefined,
+              }));
             }}
             placeholder={t('timeEntryForm.placeholders.selectDate', { defaultValue: 'Select date' })}
             disabled={!isEditable}
@@ -552,11 +615,11 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
             <Input
-              id='duration-hours'
+              id={`${id}-duration-hours-${index}`}
               type="number"
               min="0"
               value={durationHours}
-              onChange={(e) => handleDurationChange('hours', parseInt(e.target.value) || 0)}
+              onChange={(e) => handleDurationChange('hours', e.target.value)}
               disabled={!isEditable}
               containerClassName="w-[5.5rem]"
               className="text-center"
@@ -565,12 +628,12 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
               {t('common.units.hoursShort', { defaultValue: 'h' })}
             </span>
             <Input
-              id='duration-minutes'
+              id={`${id}-duration-minutes-${index}`}
               type="number"
               min="0"
               max="59"
               value={durationMinutes}
-              onChange={(e) => handleDurationChange('minutes', Math.min(59, parseInt(e.target.value) || 0))}
+              onChange={(e) => handleDurationChange('minutes', e.target.value)}
               disabled={!isEditable}
               containerClassName="w-[4.5rem]"
               className="text-center"
@@ -581,7 +644,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
           </div>
           <div className="inline-flex h-10 items-center gap-3 rounded-md border border-gray-200 bg-gray-50 px-3">
             <Switch
-              id='billable-duration'
+              id={`${id}-billable-duration-${index}`}
               checked={entry?.billable_duration > 0}
               disabled={!isEditable}
               onCheckedChange={(checked) => {
@@ -610,7 +673,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
             </span>
           </div>
         </div>
-        {showErrors && validationErrors.duration && (
+        {(showErrors || Boolean(validationErrors.duration)) && validationErrors.duration && (
           <span className="text-sm text-red-500">
             {validationErrors.duration}
           </span>
@@ -622,7 +685,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
           {t('timeEntryForm.labels.notes', { defaultValue: 'Notes' })}
         </label>
         <TextArea
-          id='notes'
+          id={`${id}-notes-${index}`}
           value={entry?.notes || ''}
           onChange={(e) => {
             if (entry) {
