@@ -104,7 +104,7 @@
   {
     "id": "F018",
     "description": "Client-portal AppointmentRequestDetailsPage renders a primary 'Join Teams Meeting' button when online_meeting_url is present.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-14"]
   },
   {

@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Calendar, Clock, User, FileText, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, User, FileText, AlertCircle, ExternalLink } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -248,6 +248,26 @@ export function AppointmentRequestDetailsPage() {
                   </div>
                 </div>
               </div>
+
+              {appointment.online_meeting_url && (
+                <div className="flex items-start gap-3">
+                  <ExternalLink className="h-5 w-5 text-gray-500 mt-0.5" />
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-gray-700">
+                      {t('details.teamsMeeting', 'Teams Meeting')}
+                    </div>
+                    <Button
+                      id="join-teams-meeting-client-portal"
+                      type="button"
+                      onClick={() => window.open(appointment.online_meeting_url!, '_blank', 'noopener,noreferrer')}
+                      className="mt-2"
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      {t('details.joinTeamsMeeting', 'Join Teams Meeting')}
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               {preferredTechnicianName && (
                 <div className="flex items-start gap-3">
