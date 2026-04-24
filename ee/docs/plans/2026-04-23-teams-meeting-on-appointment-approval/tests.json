@@ -291,7 +291,7 @@
     "id": "T049",
     "description": "Docs: docs/integrations/teams-meetings-setup.md exists and links are reachable from the Teams Meetings tab's prerequisites banner.",
     "featureIds": ["F027"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T050",
