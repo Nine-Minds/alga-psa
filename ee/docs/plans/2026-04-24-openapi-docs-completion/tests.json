@@ -70,7 +70,7 @@
   {
     "id": "T008",
     "description": "For QuickBooks/integration duplicate route families, verify whether routes are aliases, duplicated controllers, or divergent implementations, and document the distinction in operation descriptions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F013",

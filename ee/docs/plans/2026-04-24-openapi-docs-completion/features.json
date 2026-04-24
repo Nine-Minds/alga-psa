@@ -43,7 +43,7 @@
   {
     "id": "F006",
     "description": "Document QuickBooks and integration duplicate route families under /api/v1/integrations/quickbooks and /api/v1/quickbooks, including mapping, connection, import, sync, and catalog endpoints.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Risks and Constraints"

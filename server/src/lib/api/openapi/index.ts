@@ -20,6 +20,7 @@ import { registerServiceCategoryRoutes } from './routes/serviceCategories';
 import { registerServiceRoutes } from './routes/services';
 import { registerProductRoutes } from './routes/products';
 import { registerQuickBooksRoutes } from './routes/quickbooks';
+import { registerQuickBooksV1Routes } from './routes/quickbooksV1';
 import { registerServiceTypeRoutes } from './routes/serviceTypes';
 import { registerSoftwareOneRoutes } from './routes/softwareOne';
 import { registerStorageRoutes } from './routes/extensionStorage';
@@ -48,6 +49,7 @@ export function buildBaseRegistry(options: RegistryInitOptions = {}): ApiOpenApi
   registerSystemRoutes(registry);
   registerInstallRoutes(registry);
   registerQuickBooksRoutes(registry);
+  registerQuickBooksV1Routes(registry);
   registerBoardRoutes(registry, components);
   registerStatusRoutes(registry, components);
   registerServiceCategoryRoutes(registry, components);

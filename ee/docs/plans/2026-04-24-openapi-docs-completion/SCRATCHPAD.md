@@ -357,3 +357,48 @@ npm --prefix sdk run openapi:generate
 npm --prefix sdk run openapi:generate -- --edition ee
 python3 <CE and EE placeholder scans for F005 family + global counts>
 ```
+
+## 2026-04-24 — QuickBooks Duplicate Families Completed (F006)
+
+### Scope completed
+
+- Added registrar: `server/src/lib/api/openapi/routes/quickbooksV1.ts`.
+- Registered in `server/src/lib/api/openapi/index.ts` before inventory backfill.
+- Documented all previously-placeholder routes in both v1 QuickBooks families:
+  - `/api/v1/integrations/quickbooks/*`
+  - `/api/v1/quickbooks/*`
+
+### Alias verification (T008)
+
+- Verified both families map method-for-method to the same `ApiQuickBooksController` handler methods.
+- Distinction documented in operation descriptions/extensions:
+  - `/api/v1/integrations/quickbooks/*`: route files generally wrap controller calls in explicit `try/catch` with `handleApiError`.
+  - `/api/v1/quickbooks/*`: route files generally bind controller handlers directly (`export const GET = controller.method()`).
+- Since controller methods already return `handleApiError` on failure, current runtime behavior is functionally aliased despite route-wrapper style differences.
+
+### Key source-grounded implementation notes captured
+
+- Controller authenticates via `x-api-key` + optional `x-tenant-id`, then RBAC checks against resource `quickbooks` with actions `read|write|admin`.
+- Multiple handler methods intentionally return temporary/stub payloads or TODO behavior (for example connection refresh, mapping deletes, sync cancel, account/tax mapping reads); these gaps are called out in descriptions.
+
+### Validation / tests completed in this pass
+
+- `T003` and `T004` rerun successfully:
+  - `npm --prefix sdk run openapi:generate`
+  - `npm --prefix sdk run openapi:generate -- --edition ee`
+- `T008` completed:
+  - CE QuickBooks placeholder check: `ce_quickbooks_remaining = 0`
+  - EE QuickBooks placeholder check: `ee_quickbooks_remaining = 0`
+
+### Remaining placeholder counts after this pass
+
+- CE: `279`
+- EE: `287`
+
+### Next cursor (CE)
+
+1. `POST /api/v1/feature-access`
+2. `GET /api/v1/feature-flags`
+3. `POST /api/v1/feature-flags`
+4. `GET /api/v1/quotes`
+5. `POST /api/v1/quotes`
