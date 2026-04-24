@@ -135,7 +135,7 @@
     "id": "T023",
     "description": "Approval integration test: Graph returns 500 → approval still succeeds, columns remain NULL, response includes teamsMeetingWarning, email is sent WITHOUT the join button block.",
     "featureIds": ["F010"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T024",
