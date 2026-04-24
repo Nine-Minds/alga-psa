@@ -182,6 +182,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-24: Completed `T038` with `server/src/test/unit/appointments/AvailabilitySettings.teams.test.tsx`, asserting the `Teams Meetings` tab is rendered only when the tab-state action reports it visible.
 - 2026-04-24: Completed `T039` in the same Availability Settings test file, asserting the organizer UPN input saves through `setDefaultMeetingOrganizer()` and persists the returned organizer value in the form.
 - 2026-04-24: Completed `T050` in `server/src/test/unit/teamsMeetingHelpers.test.ts`, asserting a create/update/delete helper lifecycle emits three structured INFO logs with tenant, appointment request ID, operation, and status.
+- 2026-04-24: Completed `T054` by running `npm run build:ee`. The enterprise production build completed successfully, confirming the new Teams meeting helpers and UI surfaces all survive the full EE type-check and bundle pipeline together.
 
 ## Working notes
 
@@ -204,6 +205,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - Integration harness nuance: initialize the Teams meeting mocks in `beforeEach`, not only `afterEach`, so isolated Vitest filters still see a configured `getTeamsMeetingCapability()` on the first matching test.
 - Client-portal cancel nuance: Teams deletion is intentionally fail-soft, but the action still needs to propagate a warning string back to the UI when `deleteTeamsMeetingIfAvailable()` returns `false`; otherwise the failure is silent even though the appointment cancellation succeeded.
 - CE regression check on 2026-04-24 passed on the normal `build:ce` path, so the existing `EDITION=community` forcing plus `@alga-psa/ee-microsoft-teams -> ./src/empty` aliasing remains sufficient to keep enterprise-only code out of the CE bundle.
+- EE regression check on 2026-04-24 passed on the normal `build:ee` path; the build still emitted the repo's long-standing webpack warnings, but there were no new type or bundle failures from the Teams meeting work.
 - The server integration harness needed both `@alga-psa/db` and `@alga-psa/auth`-layer synchronization. Mocking only `server/src/lib/db` and `@alga-psa/users/actions` is insufficient now that these actions import package-level wrappers directly.
 - Approval-path integration tests also need UUID-shaped staff fixture IDs because `appointment_requests.approved_by_user_id` is typed as `uuid`; old placeholder strings caused PostgreSQL `22P02` failures before Teams assertions ran.
 - Runbook command used for validation so far: `node -c server/migrations/20260423130000_add_online_meeting_columns_to_appointment_requests.cjs`
@@ -230,3 +232,4 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - Additional validation command: `rm -rf server/.next && npm run build:ce`
 - Additional validation command: `rg -n "@alga-psa/ee-microsoft-teams|ee/packages/microsoft-teams" server/.next`
 - Additional validation command: `npm run build:ce`
+- Additional validation command: `npm run build:ee`

@@ -321,6 +321,6 @@
     "id": "T054",
     "description": "Regression: EE build succeeds and all new UI surfaces type-check.",
     "featureIds": ["F003", "F014", "F019"],
-    "implemented": false
+    "implemented": true
   }
 ]
