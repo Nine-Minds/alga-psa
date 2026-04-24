@@ -255,7 +255,7 @@
     "id": "T043",
     "description": "Permission test: setDefaultMeetingOrganizer rejects callers without the required tenant_integrations:update permission.",
     "featureIds": ["F021"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T044",
