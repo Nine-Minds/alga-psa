@@ -24,6 +24,7 @@ import { useSession } from 'next-auth/react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getAvailabilitySettings,
+  getTeamsMeetingsTabState,
   createOrUpdateAvailabilitySetting,
   deleteAvailabilitySetting,
   getAvailabilityExceptions,
@@ -92,6 +93,8 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
 
   // Exceptions state
   const [exceptions, setExceptions] = useState<IAvailabilityException[]>([]);
+  const [teamsMeetingsVisible, setTeamsMeetingsVisible] = useState(false);
+  const [defaultMeetingOrganizerUpn, setDefaultMeetingOrganizerUpn] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [exceptionUserId, setExceptionUserId] = useState<string>('__company_wide__');
   const [exceptionReason, setExceptionReason] = useState('');
@@ -242,6 +245,12 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       const exceptionsResult = await getAvailabilityExceptions();
       if (exceptionsResult.success && exceptionsResult.data) {
         setExceptions(exceptionsResult.data);
+      }
+
+      const teamsMeetingsTabState = await getTeamsMeetingsTabState();
+      if (teamsMeetingsTabState.success && teamsMeetingsTabState.data) {
+        setTeamsMeetingsVisible(teamsMeetingsTabState.data.visible);
+        setDefaultMeetingOrganizerUpn(teamsMeetingsTabState.data.organizerUpn || '');
       }
     } catch (error) {
       handleError(error, t('availabilitySettings.feedback.loadError', { defaultValue: 'Failed to load settings' }));
@@ -781,6 +790,11 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
             <TabsTrigger value="user-hours">{t('availabilitySettings.tabs.userHours', { defaultValue: 'User Hours' })}</TabsTrigger>
             <TabsTrigger value="service-rules">{t('availabilitySettings.tabs.serviceRules', { defaultValue: 'Service Rules' })}</TabsTrigger>
             <TabsTrigger value="exceptions">{t('availabilitySettings.tabs.exceptions', { defaultValue: 'Exceptions' })}</TabsTrigger>
+            {teamsMeetingsVisible && (
+              <TabsTrigger value="teams-meetings">
+                {t('availabilitySettings.tabs.teamsMeetings', { defaultValue: 'Teams Meetings' })}
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="general" className="space-y-4 mt-4">
@@ -1331,6 +1345,18 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
               </div>
             </div>
           </TabsContent>
+
+          {teamsMeetingsVisible && (
+            <TabsContent value="teams-meetings" className="space-y-4 mt-4">
+              <Alert variant="info">
+                <AlertDescription>
+                  {t('availabilitySettings.teamsMeetings.comingSoon', {
+                    defaultValue: 'Configure the default Microsoft Teams meeting organizer for approved appointments here.',
+                  })}
+                </AlertDescription>
+              </Alert>
+            </TabsContent>
+          )}
         </Tabs>
         </div>
       )}

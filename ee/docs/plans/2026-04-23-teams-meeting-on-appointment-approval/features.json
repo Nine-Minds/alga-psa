@@ -110,7 +110,7 @@
   {
     "id": "F019",
     "description": "AvailabilitySettings.tsx adds a conditional 'Teams Meetings' TabsTrigger + TabsContent, visible only when teams_integrations.install_status = 'active'.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-15"]
   },
   {

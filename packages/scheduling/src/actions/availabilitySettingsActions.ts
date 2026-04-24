@@ -51,6 +51,46 @@ export interface AvailabilitySettingsResult<T> {
   error?: string;
 }
 
+export interface TeamsMeetingsTabState {
+  visible: boolean;
+  organizerUpn?: string | null;
+}
+
+export const getTeamsMeetingsTabState = withAuth(async (
+  user,
+  { tenant }
+): Promise<AvailabilitySettingsResult<TeamsMeetingsTabState>> => {
+  try {
+    const { knex: db } = await createTenantKnex();
+    const canRead = await hasPermission(user, 'system_settings', 'read', db);
+    if (!canRead) {
+      return { success: false, error: 'Insufficient permissions to view availability settings' };
+    }
+
+    const hasTeamsIntegrationsTable = await db.schema.hasTable('teams_integrations');
+    if (!hasTeamsIntegrationsTable) {
+      return { success: true, data: { visible: false, organizerUpn: null } };
+    }
+
+    const integration = await db('teams_integrations')
+      .where({ tenant })
+      .select('install_status', 'default_meeting_organizer_upn')
+      .first();
+
+    return {
+      success: true,
+      data: {
+        visible: integration?.install_status === 'active',
+        organizerUpn: integration?.default_meeting_organizer_upn ?? null,
+      },
+    };
+  } catch (error) {
+    console.error('Error loading Teams meetings tab state:', error);
+    const message = error instanceof Error ? error.message : 'Failed to load Teams meetings tab state';
+    return { success: false, error: message };
+  }
+});
+
 /**
  * Create or update an availability setting
  * If a matching setting exists (same type, user_id, service_id, day_of_week), it will be updated
