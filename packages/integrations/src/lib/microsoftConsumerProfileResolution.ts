@@ -9,6 +9,9 @@ import {
 const LEGACY_MICROSOFT_CLIENT_ID_SECRET = 'microsoft_client_id';
 const LEGACY_MICROSOFT_CLIENT_SECRET_SECRET = 'microsoft_client_secret';
 const LEGACY_MICROSOFT_TENANT_ID_SECRET = 'microsoft_tenant_id';
+const HOSTED_MICROSOFT_CLIENT_ID_SECRET = 'MICROSOFT_CLIENT_ID';
+const HOSTED_MICROSOFT_CLIENT_SECRET_SECRET = 'MICROSOFT_CLIENT_SECRET';
+const HOSTED_MICROSOFT_TENANT_ID_SECRET = 'MICROSOFT_TENANT_ID';
 const DEFAULT_MICROSOFT_PROFILE_NAME = 'Default Microsoft Profile';
 
 interface MicrosoftProfileRow {
@@ -48,6 +51,7 @@ export interface MicrosoftBindingCandidateProfile {
 }
 
 type ResolverStatus = 'ready' | 'not_configured' | 'invalid_profile';
+type MicrosoftCredentialSource = 'binding' | 'app';
 
 export interface MicrosoftConsumerProfileResolution {
   status: ResolverStatus;
@@ -57,6 +61,7 @@ export interface MicrosoftConsumerProfileResolution {
   clientId?: string;
   clientSecret?: string;
   microsoftTenantId?: string;
+  credentialSource?: MicrosoftCredentialSource;
   message?: string;
 }
 
@@ -102,6 +107,35 @@ async function getLegacyMicrosoftConfig(
     clientId: (clientId || '').trim(),
     clientSecret: (clientSecret || '').trim(),
     tenantId: normalizeTenantId(tenantId),
+  };
+}
+
+async function resolveHostedMicrosoftEmailConfig(
+  tenantId: string,
+  secretProvider: Awaited<ReturnType<typeof getSecretProviderInstance>>
+): Promise<MicrosoftConsumerProfileResolution | null> {
+  const [appClientId, appClientSecret, appTenantId] = await Promise.all([
+    secretProvider.getAppSecret(HOSTED_MICROSOFT_CLIENT_ID_SECRET),
+    secretProvider.getAppSecret(HOSTED_MICROSOFT_CLIENT_SECRET_SECRET),
+    secretProvider.getAppSecret(HOSTED_MICROSOFT_TENANT_ID_SECRET),
+  ]);
+
+  const clientId = (appClientId || process.env.MICROSOFT_CLIENT_ID || '').trim();
+  const clientSecret = (appClientSecret || process.env.MICROSOFT_CLIENT_SECRET || '').trim();
+  const microsoftTenantId = normalizeTenantId(appTenantId || process.env.MICROSOFT_TENANT_ID);
+
+  if (!isConfigured(clientId) || !isConfigured(clientSecret)) {
+    return null;
+  }
+
+  return {
+    status: 'ready',
+    tenantId,
+    consumerType: 'email',
+    clientId,
+    clientSecret,
+    microsoftTenantId,
+    credentialSource: 'app',
   };
 }
 
@@ -286,6 +320,14 @@ async function tenantHasLegacyUsage(
   return false;
 }
 
+async function hasLegacyMicrosoftEmailClientCredentials(
+  secretProvider: Awaited<ReturnType<typeof getSecretProviderInstance>>,
+  tenant: string
+): Promise<boolean> {
+  const legacyConfig = await getLegacyMicrosoftConfig(secretProvider, tenant);
+  return isConfigured(legacyConfig.clientId) && isConfigured(legacyConfig.clientSecret);
+}
+
 async function ensureMicrosoftConsumerBindingMigration(
   db: any,
   tenant: string,
@@ -310,6 +352,13 @@ async function ensureMicrosoftConsumerBindingMigration(
 
   const shouldBackfill = await tenantHasLegacyUsage(db, tenant, consumerType);
   if (!shouldBackfill) {
+    return undefined;
+  }
+
+  if (
+    consumerType === 'email' &&
+    !(await hasLegacyMicrosoftEmailClientCredentials(secretProvider, tenant))
+  ) {
     return undefined;
   }
 
@@ -345,6 +394,13 @@ export async function resolveMicrosoftConsumerProfileConfig(
   const binding = await ensureMicrosoftConsumerBindingMigration(db, tenantId, consumerType, secretProvider);
 
   if (!binding) {
+    if (consumerType === 'email') {
+      const hostedEmailConfig = await resolveHostedMicrosoftEmailConfig(tenantId, secretProvider);
+      if (hostedEmailConfig) {
+        return hostedEmailConfig;
+      }
+    }
+
     return {
       status: 'not_configured',
       tenantId,
@@ -383,5 +439,6 @@ export async function resolveMicrosoftConsumerProfileConfig(
     clientId: profile.client_id,
     clientSecret: clientSecret || undefined,
     microsoftTenantId: normalizeTenantId(profile.tenant_id),
+    credentialSource: 'binding',
   };
 }
