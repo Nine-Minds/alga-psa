@@ -116,7 +116,7 @@
   {
     "id": "F020",
     "description": "Teams Meetings tab contains an organizer UPN input, Save action, and Verify button that performs a best-effort Graph check.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-15"]
   },
   {

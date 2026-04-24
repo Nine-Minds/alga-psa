@@ -25,6 +25,8 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getAvailabilitySettings,
   getTeamsMeetingsTabState,
+  setDefaultMeetingOrganizer,
+  verifyMeetingOrganizer,
   createOrUpdateAvailabilitySetting,
   deleteAvailabilitySetting,
   getAvailabilityExceptions,
@@ -52,6 +54,13 @@ interface AvailabilitySettingsProps {
   isOpen: boolean;
   onClose: () => void;
 }
+
+type OrganizerVerificationState =
+  | {
+      variant: 'success' | 'warning';
+      message: string;
+    }
+  | null;
 
 export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySettingsProps) {
   const { t } = useTranslation('msp/schedule');
@@ -95,6 +104,9 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
   const [exceptions, setExceptions] = useState<IAvailabilityException[]>([]);
   const [teamsMeetingsVisible, setTeamsMeetingsVisible] = useState(false);
   const [defaultMeetingOrganizerUpn, setDefaultMeetingOrganizerUpn] = useState('');
+  const [isSavingMeetingOrganizer, setIsSavingMeetingOrganizer] = useState(false);
+  const [isVerifyingMeetingOrganizer, setIsVerifyingMeetingOrganizer] = useState(false);
+  const [meetingOrganizerVerification, setMeetingOrganizerVerification] = useState<OrganizerVerificationState>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [exceptionUserId, setExceptionUserId] = useState<string>('__company_wide__');
   const [exceptionReason, setExceptionReason] = useState('');
@@ -519,6 +531,110 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       }
     } catch (error) {
       handleError(error, t('availabilitySettings.serviceRules.feedback.saveError', { defaultValue: 'Failed to save service rules' }));
+    }
+  };
+
+  const getMeetingOrganizerVerificationMessage = (reason?: string) => {
+    switch (reason) {
+      case 'ee_disabled':
+        return t('availabilitySettings.teamsMeetings.verify.reasons.eeDisabled', {
+          defaultValue: 'Teams meeting verification is only available in Enterprise Edition.',
+        });
+      case 'not_configured':
+        return t('availabilitySettings.teamsMeetings.verify.reasons.notConfigured', {
+          defaultValue: 'Teams integration must be active before an organizer can be verified.',
+        });
+      case 'user_not_found':
+        return t('availabilitySettings.teamsMeetings.verify.reasons.userNotFound', {
+          defaultValue: 'Microsoft could not find a user for that organizer value.',
+        });
+      case 'policy_missing':
+        return t('availabilitySettings.teamsMeetings.verify.reasons.policyMissing', {
+          defaultValue: 'The Microsoft user exists, but the application access policy is not allowing meeting creation yet.',
+        });
+      default:
+        return t('availabilitySettings.teamsMeetings.verify.reasons.graphError', {
+          defaultValue: 'Microsoft Graph could not verify this organizer right now.',
+        });
+    }
+  };
+
+  const handleSaveMeetingOrganizer = async () => {
+    setIsSavingMeetingOrganizer(true);
+
+    try {
+      const result = await setDefaultMeetingOrganizer({
+        upn: defaultMeetingOrganizerUpn,
+      });
+
+      if (!result.success || !result.data) {
+        toast.error(result.error || t('availabilitySettings.teamsMeetings.feedback.saveError', {
+          defaultValue: 'Failed to save Teams meeting organizer',
+        }));
+        return;
+      }
+
+      setDefaultMeetingOrganizerUpn(result.data.organizerUpn || '');
+      setMeetingOrganizerVerification(null);
+      toast.success(t('availabilitySettings.teamsMeetings.feedback.saveSuccess', {
+        defaultValue: 'Teams meeting organizer saved',
+      }));
+    } catch (error) {
+      handleError(error, t('availabilitySettings.teamsMeetings.feedback.saveError', {
+        defaultValue: 'Failed to save Teams meeting organizer',
+      }));
+    } finally {
+      setIsSavingMeetingOrganizer(false);
+    }
+  };
+
+  const handleVerifyMeetingOrganizer = async () => {
+    setIsVerifyingMeetingOrganizer(true);
+
+    try {
+      const result = await verifyMeetingOrganizer({
+        upn: defaultMeetingOrganizerUpn,
+      });
+
+      if (!result.success || !result.data) {
+        toast.error(result.error || t('availabilitySettings.teamsMeetings.feedback.verifyError', {
+          defaultValue: 'Failed to verify Teams meeting organizer',
+        }));
+        return;
+      }
+
+      if (result.data.valid) {
+        const verifiedMessage = result.data.displayName
+          ? t('availabilitySettings.teamsMeetings.verify.validWithName', {
+              defaultValue: 'Verified Microsoft user: {{displayName}}.',
+              displayName: result.data.displayName,
+            })
+          : t('availabilitySettings.teamsMeetings.verify.valid', {
+              defaultValue: 'Microsoft organizer verified successfully.',
+            });
+
+        setMeetingOrganizerVerification({
+          variant: 'success',
+          message: verifiedMessage,
+        });
+        toast.success(t('availabilitySettings.teamsMeetings.feedback.verifySuccess', {
+          defaultValue: 'Teams meeting organizer verified',
+        }));
+        return;
+      }
+
+      const invalidMessage = getMeetingOrganizerVerificationMessage(result.data.reason);
+      setMeetingOrganizerVerification({
+        variant: 'warning',
+        message: invalidMessage,
+      });
+      toast.error(invalidMessage);
+    } catch (error) {
+      handleError(error, t('availabilitySettings.teamsMeetings.feedback.verifyError', {
+        defaultValue: 'Failed to verify Teams meeting organizer',
+      }));
+    } finally {
+      setIsVerifyingMeetingOrganizer(false);
     }
   };
 
@@ -1348,13 +1464,105 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
 
           {teamsMeetingsVisible && (
             <TabsContent value="teams-meetings" className="space-y-4 mt-4">
-              <Alert variant="info">
-                <AlertDescription>
-                  {t('availabilitySettings.teamsMeetings.comingSoon', {
-                    defaultValue: 'Configure the default Microsoft Teams meeting organizer for approved appointments here.',
-                  })}
+              <Alert variant="warning">
+                <AlertDescription className="space-y-3">
+                  <div className="font-medium">
+                    {t('availabilitySettings.teamsMeetings.prerequisites.title', {
+                      defaultValue: 'Azure prerequisites',
+                    })}
+                  </div>
+                  <div>
+                    {t('availabilitySettings.teamsMeetings.prerequisites.description', {
+                      defaultValue: 'Before you turn this on, grant the app the OnlineMeetings.ReadWrite.All application permission and create an Application Access Policy for the organizer account.',
+                    })}
+                  </div>
+                  <Button
+                    id="open-teams-meeting-prerequisites"
+                    type="button"
+                    variant="link"
+                    className="h-auto p-0"
+                    onClick={() => window.open('https://learn.microsoft.com/en-us/graph/cloud-communication-online-meeting-application-access-policy', '_blank', 'noopener,noreferrer')}
+                  >
+                    {t('availabilitySettings.teamsMeetings.prerequisites.link', {
+                      defaultValue: 'Open Microsoft setup guidance',
+                    })}
+                  </Button>
                 </AlertDescription>
               </Alert>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    {t('availabilitySettings.teamsMeetings.organizer.title', {
+                      defaultValue: 'Meeting organizer',
+                    })}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor="default-meeting-organizer-upn">
+                      {t('availabilitySettings.teamsMeetings.organizer.label', {
+                        defaultValue: 'Default meeting organizer (UPN or Microsoft user ID)',
+                      })}
+                    </Label>
+                    <p className="text-xs text-gray-600 mb-2">
+                      {t('availabilitySettings.teamsMeetings.organizer.help', {
+                        defaultValue: 'Approved appointments create Teams meetings as this Microsoft user. A UPN such as scheduling@acme.com is usually the safest choice.',
+                      })}
+                    </p>
+                    <Input
+                      id="default-meeting-organizer-upn"
+                      value={defaultMeetingOrganizerUpn}
+                      onChange={(event) => {
+                        setDefaultMeetingOrganizerUpn(event.target.value);
+                        setMeetingOrganizerVerification(null);
+                      }}
+                      placeholder={t('availabilitySettings.teamsMeetings.organizer.placeholder', {
+                        defaultValue: 'scheduling@acme.com',
+                      })}
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      id="save-teams-meeting-organizer"
+                      onClick={handleSaveMeetingOrganizer}
+                      disabled={isSavingMeetingOrganizer}
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      {isSavingMeetingOrganizer
+                        ? t('availabilitySettings.teamsMeetings.actions.saving', {
+                            defaultValue: 'Saving...',
+                          })
+                        : t('availabilitySettings.teamsMeetings.actions.save', {
+                            defaultValue: 'Save',
+                          })}
+                    </Button>
+                    <Button
+                      id="verify-teams-meeting-organizer"
+                      variant="outline"
+                      onClick={handleVerifyMeetingOrganizer}
+                      disabled={isVerifyingMeetingOrganizer || !defaultMeetingOrganizerUpn.trim()}
+                    >
+                      {isVerifyingMeetingOrganizer
+                        ? t('availabilitySettings.teamsMeetings.actions.verifying', {
+                            defaultValue: 'Verifying...',
+                          })
+                        : t('availabilitySettings.teamsMeetings.actions.verify', {
+                            defaultValue: 'Verify',
+                          })}
+                    </Button>
+                  </div>
+
+                  {meetingOrganizerVerification && (
+                    <Alert variant={meetingOrganizerVerification.variant}>
+                      <AlertDescription>
+                        {meetingOrganizerVerification.message}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
           )}
         </Tabs>
