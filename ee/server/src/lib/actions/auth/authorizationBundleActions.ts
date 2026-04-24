@@ -105,6 +105,18 @@ export interface AuthorizationBundleSimulationPayload {
   published: AuthorizationSimulationDecision;
 }
 
+export interface AuthorizationBundleSimulationValidationError {
+  code: string;
+  message: string;
+}
+
+export type AuthorizationBundleSimulationActionResult =
+  | { ok: true; data: AuthorizationBundleSimulationPayload }
+  | {
+      ok: false;
+      error: AuthorizationBundleSimulationValidationError;
+    };
+
 const SUPPORTED_SIMULATION_ACTIONS = new Set(['read', 'approve']);
 const SUPPORTED_SIMULATION_RESOURCE_TYPES = new Set([
   'ticket',
@@ -813,26 +825,34 @@ async function loadSimulationRecord(
   throw new Error(`Unsupported simulation resource type: ${resourceType}`);
 }
 
-function assertSimulationModeSupported(input: {
+function getSimulationModeValidationError(input: {
   resourceType: string;
   action: string;
   principalUserType: 'internal' | 'client';
-}): void {
+}): AuthorizationBundleSimulationValidationError | null {
   if (!SUPPORTED_SIMULATION_ACTIONS.has(input.action)) {
-    throw new Error(
-      `Simulator only supports read/approve actions in this remediation; "${input.action}" is not currently modeled faithfully.`
-    );
+    return {
+      code: 'unsupported_simulation_action',
+      message: 'The simulator currently supports only Read and Approve checks. Choose one of those actions and try again.',
+    };
   }
 
   if (!SUPPORTED_SIMULATION_RESOURCE_TYPES.has(input.resourceType)) {
-    throw new Error(`Unsupported simulation resource type: ${input.resourceType}`);
+    return {
+      code: 'unsupported_simulation_resource_type',
+      message: 'This record type is not available in the simulator yet. Choose a supported record type and try again.',
+    };
   }
 
   if (input.resourceType === 'ticket' && input.principalUserType === 'client') {
-    throw new Error(
-      'Ticket simulation for client principals is not supported in this remediation because board-visibility builtin invariants are not modeled yet.'
-    );
+    return {
+      code: 'unsupported_ticket_client_principal_simulation',
+      message:
+        'Ticket checks for client users are not available in the simulator yet because ticket board visibility is not included. Try an internal user, or verify client ticket access in the app.',
+    };
   }
+
+  return null;
 }
 
 function applySimulationInvariantNarrowing(input: {
@@ -886,7 +906,7 @@ export const runAuthorizationBundleSimulationAction = withAuth(
         isClientVisible?: boolean;
       };
     }
-  ): Promise<AuthorizationBundleSimulationPayload> => {
+  ): Promise<AuthorizationBundleSimulationActionResult> => {
     await assertTierAccess(TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES);
     await assertSecuritySettingsPermission(user, 'read');
 
@@ -909,11 +929,14 @@ export const runAuthorizationBundleSimulationAction = withAuth(
       throw new Error('Principal user not found in tenant scope.');
     }
 
-    assertSimulationModeSupported({
+    const validationError = getSimulationModeValidationError({
       resourceType: input.resourceType,
       action: input.action,
       principalUserType: principal.user_type,
     });
+    if (validationError) {
+      return { ok: false, error: validationError };
+    }
 
     const canWrite = await hasPermission(user as any, 'system_settings', 'update');
 
@@ -1089,13 +1112,16 @@ export const runAuthorizationBundleSimulationAction = withAuth(
     ]);
 
     return {
-      draft: {
-        allowed: draftDecision.allowed,
-        reasonCodes: draftDecision.reasons.map((reason) => `${reason.stage}:${reason.code}`),
-      },
-      published: {
-        allowed: publishedDecision.allowed,
-        reasonCodes: publishedDecision.reasons.map((reason) => `${reason.stage}:${reason.code}`),
+      ok: true,
+      data: {
+        draft: {
+          allowed: draftDecision.allowed,
+          reasonCodes: draftDecision.reasons.map((reason) => `${reason.stage}:${reason.code}`),
+        },
+        published: {
+          allowed: publishedDecision.allowed,
+          reasonCodes: publishedDecision.reasons.map((reason) => `${reason.stage}:${reason.code}`),
+        },
       },
     };
   }

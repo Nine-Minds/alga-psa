@@ -757,7 +757,11 @@ export default function PolicyManagement() {
             }
           : undefined,
       });
-      setSimulationResult(result);
+      if (result.ok === false) {
+        setError(result.error.message);
+        return;
+      }
+      setSimulationResult(result.data);
     } catch (simulationError) {
       setError(simulationError instanceof Error ? simulationError.message : 'Failed to run simulation.');
     } finally {
