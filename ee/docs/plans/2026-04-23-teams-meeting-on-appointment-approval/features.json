@@ -32,7 +32,7 @@
   {
     "id": "F006",
     "description": "getTeamsMeetingCapability(tenantId) server action returns { available, reason } for driving toggle visibility.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-6"]
   },
   {

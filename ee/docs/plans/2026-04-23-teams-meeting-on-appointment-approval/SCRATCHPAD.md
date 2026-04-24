@@ -21,6 +21,7 @@
 - Integration state: `ee/packages/microsoft-teams/src/lib/actions/integrations/teamsActions.ts` (`getTeamsIntegrationStatusImpl`, `getTeamsIntegrationExecutionStateImpl`)
 - Meeting helpers: `ee/packages/microsoft-teams/src/lib/meetings/createTeamsMeeting.ts`, `ee/packages/microsoft-teams/src/lib/meetings/meetingConfig.ts`
 - New actions target dir: `ee/packages/microsoft-teams/src/lib/actions/meetings/`
+- Capability action: `ee/packages/microsoft-teams/src/lib/actions/meetings/meetingCapabilityActions.ts`
 
 **Migrations**
 - Appointment requests: `server/migrations/20251110223310_create_appointment_requests.cjs` (base), `server/migrations/20260416210000_add_requester_timezone_to_appointment_requests.cjs`
@@ -122,6 +123,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-23: Completed `F003` by adding `createTeamsMeeting()` plus shared meeting config and Graph auth helpers under `ee/packages/microsoft-teams/src/lib/meetings/`. The helper reads `teams_integrations.default_meeting_organizer_upn`, resolves the tenant Microsoft profile, POSTs to Graph, logs success/failure, and returns `null` on any soft failure.
 - 2026-04-23: Completed `F004` by adding `updateTeamsMeeting()` in the same EE meetings module. It reuses the shared tenant readiness/config resolver, PATCHes Graph with the new ISO datetimes, returns `false` on soft failure, and emits structured update logs.
 - 2026-04-23: Completed `F005` by adding `deleteTeamsMeeting()` in the EE meetings module. It issues a Graph DELETE against the organizer-scoped online meeting endpoint, logs failures without throwing, and returns `false` on any soft failure.
+- 2026-04-23: Completed `F006` by adding `getTeamsMeetingCapability(tenantId)` under `ee/packages/microsoft-teams/src/lib/actions/meetings/`. Capability follows the PRD contract: `ee_disabled` outside EE, `not_configured` when Teams is inactive or missing a selected profile, `no_organizer` when the organizer UPN is blank, otherwise `available: true`.
 
 ## Working notes
 

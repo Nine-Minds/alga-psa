@@ -1,4 +1,5 @@
 export * from './actions/integrations/teamsActions';
+export * from './actions/meetings/meetingCapabilityActions';
 export * from './actions/integrations/teamsPackageActions';
 export * from './auth/teamsMicrosoftProviderResolution';
 export * from './graphAuth';
