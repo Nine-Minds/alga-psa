@@ -135,6 +135,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-23: Completed `F014` by adding a scheduling-side `getTeamsMeetingCapability` action wrapper and wiring `AppointmentRequestsPanel` to it. The approval form now shows a default-on Teams toggle only when the current tenant is capable of generating meetings.
 - 2026-04-23: Completed `F015` by mirroring the same capability-gated, default-on Teams toggle inside the pending-request approval branch of `EntryPopup`.
 - 2026-04-23: Completed `F016` by adding a "Join Teams Meeting" CTA to the approved appointment banner in `EntryPopup` when `online_meeting_url` is present.
+- 2026-04-23: Completed `F017` by exposing the stored Teams meeting URL and a "Join Teams Meeting" button in the `AppointmentRequestsPanel` detail view for approved requests.
 
 ## Working notes
 

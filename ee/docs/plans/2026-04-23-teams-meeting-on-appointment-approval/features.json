@@ -98,7 +98,7 @@
   {
     "id": "F017",
     "description": "AppointmentRequestsPanel detail view displays the join URL / Join button when online_meeting_url is present on an approved request.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-13"]
   },
   {

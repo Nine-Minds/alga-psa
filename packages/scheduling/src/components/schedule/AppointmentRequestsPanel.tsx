@@ -15,7 +15,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { fromZonedTime } from 'date-fns-tz';
-import { Check, X, Calendar, Clock, User, FileText, Briefcase, Ticket } from 'lucide-react';
+import { Check, X, Calendar, Clock, User, FileText, Briefcase, Ticket, ExternalLink } from 'lucide-react';
 import { getAllUsersBasic, getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import {
@@ -593,6 +593,33 @@ export default function AppointmentRequestsPanel({
                           ticket: (selectedRequest as any).ticket_number || selectedRequest.ticket_id.slice(0, 8),
                         })}
                       </button>
+                    </div>
+                  </div>
+                )}
+                {selectedRequest.online_meeting_url && (
+                  <div className="col-span-2">
+                    <div className="font-semibold text-gray-700 mb-2">
+                      {t('requests.detail.labels.teamsMeeting', { defaultValue: 'Teams Meeting' })}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Button
+                        id="join-teams-meeting-request-details"
+                        type="button"
+                        variant="outline"
+                        onClick={() => window.open(selectedRequest.online_meeting_url!, '_blank', 'noopener,noreferrer')}
+                      >
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        {t('requests.detail.actions.joinTeamsMeeting', { defaultValue: 'Join Teams Meeting' })}
+                      </Button>
+                      <a
+                        href={selectedRequest.online_meeting_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-sm text-blue-600 hover:underline break-all"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {selectedRequest.online_meeting_url}
+                      </a>
                     </div>
                   </div>
                 )}
