@@ -143,6 +143,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-23: Completed `F022` by adding `verifyMeetingOrganizer` in scheduling plus an EE Graph helper. Verification first resolves `/users/{upn}`, then performs a short create/delete round-trip so missing Application Access Policy cases come back as `reason: 'policy_missing'`.
 - 2026-04-23: Completed `F024` by extending `@alga-psa/email` appointment payload types with `onlineMeetingUrl` and wiring the approved-email fallback template to render a Teams join action when the URL is present.
 - 2026-04-23: Completed `F025` by changing approval-email ICS generation to emit `LOCATION: Microsoft Teams Meeting`, `URL: <join link>`, and a `Join Teams Meeting: ...` description line only when a Teams meeting was created.
+- 2026-04-23: Completed `F023` by updating the source-of-truth appointment email templates plus a new re-upsert migration so both approved-client and assigned-technician emails render a conditional `Join Teams Meeting` block when `onlineMeetingUrl` is populated.
 
 ## Working notes
 
@@ -157,6 +158,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - Teams Meetings settings UI currently links admins to Microsoft’s Application Access Policy documentation directly; when the local runbook is added later (`F027`), update this banner link to the repo-authored setup guide.
 - `SystemEmailService.sendAppointmentAssignedNotification()` already passes the full payload object through `replaceVariables()`, so `onlineMeetingUrl` only needed a type update there; the explicit fallback template change was only necessary for the approved-client email path.
 - The previous ICS behavior always included a client-portal URL and tenant-name location. Teams-meeting acceptance criteria required narrowing that behavior so URL/location are only emitted for actual online meetings.
+- Email template updates follow the repo’s source-of-truth pattern: modify `server/migrations/utils/templates/email/appointments/*.cjs` and add a migration that re-upserts existing DB rows, rather than editing seeded SQL or relying on future installs only.
 - Approval flow nuance: when the approver keeps the originally requested time, `requested_date`/`requested_time` must be converted from the requester's local wall clock via `fromZonedTime(...)`; only explicit `final_date`/`final_time` values sent from the UI are already normalized to UTC strings.
 - Runbook command used for validation so far: `node -c server/migrations/20260423130000_add_online_meeting_columns_to_appointment_requests.cjs`
 - Additional validation command: `node -c ee/server/migrations/20260423131000_add_default_meeting_organizer_to_teams_integrations.cjs`
