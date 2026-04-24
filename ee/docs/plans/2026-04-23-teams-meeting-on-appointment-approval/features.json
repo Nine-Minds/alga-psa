@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "Migration adds online_meeting_provider, online_meeting_url, online_meeting_id columns to appointment_requests (nullable text).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1"]
   },
   {

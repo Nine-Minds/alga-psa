@@ -24,6 +24,7 @@
 
 **Migrations**
 - Appointment requests: `server/migrations/20251110223310_create_appointment_requests.cjs` (base), `server/migrations/20260416210000_add_requester_timezone_to_appointment_requests.cjs`
+- Added meeting columns migration: `server/migrations/20260423130000_add_online_meeting_columns_to_appointment_requests.cjs`
 - Teams integrations: `ee/server/migrations/20260307153000_create_teams_integrations.cjs`
 - Email templates: `server/migrations/20251111123313_add_appointment_request_email_templates.cjs` + `server/migrations/20251209175019_update_appointment_email_templates_modern_styling.cjs` (both seed `system_email_templates`)
 
@@ -116,3 +117,9 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 ## Progress log
 
 - 2026-04-23: PRD, features.json, tests.json, SCRATCHPAD created in `ee/docs/plans/2026-04-23-teams-meeting-on-appointment-approval/`. No implementation yet.
+- 2026-04-23: Completed `F001` by adding `server/migrations/20260423130000_add_online_meeting_columns_to_appointment_requests.cjs`. Used guarded `hasColumn` checks so the migration is idempotent and safe to re-run in local/dev environments.
+
+## Working notes
+
+- Migration pattern for `appointment_requests` follows the existing guarded `alterTable` style from `20260416210000_add_requester_timezone_to_appointment_requests.cjs`.
+- Runbook command used for validation so far: `node -c server/migrations/20260423130000_add_online_meeting_columns_to_appointment_requests.cjs`
