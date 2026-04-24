@@ -1,5 +1,6 @@
 import { vi } from 'vitest';
 import { IUserWithRoles } from '../src/interfaces/auth.interfaces';
+import { getCurrentUser, hasPermission } from '@alga-psa/auth';
 
 const currentUserRef = vi.hoisted(() => ({
   user: {
@@ -131,6 +132,9 @@ export function mockRBAC(
     (user) => user.roles?.some(role => role.role_name.toLowerCase() === 'admin') ?? true
 ) {
   permissionCheckRef.fn = permissionCheck;
+  vi.mocked(hasPermission).mockImplementation((user: IUserWithRoles, resource?: string, action?: string) =>
+    Promise.resolve(permissionCheckRef.fn(user, resource, action))
+  );
 }
 
 /**
@@ -139,6 +143,7 @@ export function mockRBAC(
  */
 export function mockGetCurrentUser(mockUser: IUserWithRoles) {
   currentUserRef.user = mockUser;
+  vi.mocked(getCurrentUser).mockResolvedValue(mockUser);
 }
 
 export function setMockPermissions(permissions: string[]) {

@@ -117,7 +117,7 @@
     "id": "T020",
     "description": "Approval integration test: with toggle on and Teams configured, approving inserts join URL into appointment_requests and email payload includes onlineMeetingUrl.",
     "featureIds": ["F009"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T021",

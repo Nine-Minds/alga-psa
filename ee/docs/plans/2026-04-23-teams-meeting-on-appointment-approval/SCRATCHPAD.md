@@ -159,6 +159,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-23: Completed `T040-T042` with `server/src/test/unit/verifyMeetingOrganizer.test.ts`, covering successful organizer verification, missing-user handling, and Application Access Policy failures that map to `reason: 'policy_missing'`.
 - 2026-04-23: Completed `T001-T002` with `server/src/test/unit/teamsMeetingMigrations.test.ts`, executing both migration `up()` functions against mocked `knex.schema` surfaces and asserting the new columns are added as nullable `text`.
 - 2026-04-23: Completed `T017` by hardening CE build wiring and rerunning `npm run build:ce`. Root `build`/`build:ce` scripts now force `EDITION=community NEXT_PUBLIC_EDITION=community`, and `server/next.config.mjs` maps `@alga-psa/ee-microsoft-teams` to `./src/empty` for CE so the built manifest no longer points at `ee/packages/microsoft-teams`.
+- 2026-04-24: Completed `T020` with `server/src/test/integration/appointmentRequests.integration.test.ts`, adding approval-path integration coverage that asserts a Teams-enabled approval persists `online_meeting_provider/url/id` and passes `onlineMeetingUrl` into the approved-email payload.
 
 ## Working notes
 
@@ -178,6 +179,8 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - Repo docs under `docs/` are not automatically browser-accessible from the MSP UI. For in-app documentation links, a static copy under `server/public/...` is needed unless a dedicated docs route already exists.
 - Teams meeting helper logs already covered Graph response success/failure. The final observability cleanup was making the non-response warning paths structurally consistent by always including a `status` field as well.
 - Approval flow nuance: when the approver keeps the originally requested time, `requested_date`/`requested_time` must be converted from the requester's local wall clock via `fromZonedTime(...)`; only explicit `final_date`/`final_time` values sent from the UI are already normalized to UTC strings.
+- The server integration harness needed both `@alga-psa/db` and `@alga-psa/auth`-layer synchronization. Mocking only `server/src/lib/db` and `@alga-psa/users/actions` is insufficient now that these actions import package-level wrappers directly.
+- Approval-path integration tests also need UUID-shaped staff fixture IDs because `appointment_requests.approved_by_user_id` is typed as `uuid`; old placeholder strings caused PostgreSQL `22P02` failures before Teams assertions ran.
 - Runbook command used for validation so far: `node -c server/migrations/20260423130000_add_online_meeting_columns_to_appointment_requests.cjs`
 - Additional validation command: `node -c ee/server/migrations/20260423131000_add_default_meeting_organizer_to_teams_integrations.cjs`
 - Additional validation command: `npm -w ee/packages/microsoft-teams run typecheck`
@@ -192,5 +195,6 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - Additional validation command: `npx vitest --root packages/scheduling --config vitest.config.ts run tests/availabilitySettingsActions.permission.test.ts`
 - Additional validation command: `npx vitest --root server --config vitest.config.ts run src/test/unit/verifyMeetingOrganizer.test.ts --coverage.enabled false`
 - Additional validation command: `npx vitest --root server --config vitest.config.ts run src/test/unit/teamsMeetingMigrations.test.ts --coverage.enabled false`
+- Additional validation command: `npx vitest --root server --config vitest.config.ts run src/test/integration/appointmentRequests.integration.test.ts -t "creates and stores a Teams meeting when approval opts in|skips Teams meeting creation when the toggle is off|returns a warning and skips Graph create when Teams capability is unavailable|keeps approval successful when Teams meeting creation fails|converts requester-local approval times to UTC before creating the Teams meeting" --coverage.enabled false`
 - Additional validation command: `rm -rf server/.next && npm run build:ce`
 - Additional validation command: `rg -n "@alga-psa/ee-microsoft-teams|ee/packages/microsoft-teams" server/.next`
