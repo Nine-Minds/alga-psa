@@ -43,6 +43,7 @@ tags:
   - name: System
   - name: Telemetry
   - name: Ticket Categories
+  - name: Webhooks
   - name: contracts
   - name: feature-access
   - name: feature-flags
@@ -64,7 +65,6 @@ tags:
   - name: user
   - name: user-roles
   - name: users
-  - name: webhooks
   - name: workflows
 components:
   securitySchemes:
@@ -7947,6 +7947,433 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ServiceTypeResource"
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+            limit:
+              type: integer
+            total:
+              type: integer
+            totalPages:
+              type: integer
+            hasNext:
+              type: boolean
+            hasPrev:
+              type: boolean
+          required:
+            - page
+            - limit
+            - total
+            - totalPages
+            - hasNext
+            - hasPrev
+        meta:
+          type: object
+          additionalProperties: {}
+      required:
+        - data
+        - pagination
+    WebhookIdParamV1:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Webhook UUID from webhooks.webhook_id.
+      required:
+        - id
+    WebhookDeliveryParamsV1:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Webhook UUID from webhooks.webhook_id.
+        delivery_id:
+          type: string
+          description: Webhook delivery identifier extracted from URL path segment.
+      required:
+        - id
+        - delivery_id
+    WebhookListQueryV1:
+      type: object
+      properties:
+        page:
+          type: string
+        limit:
+          type: string
+        sort:
+          type: string
+        order:
+          type: string
+          enum: &a91
+            - asc
+            - desc
+        name:
+          type: string
+        url:
+          type: string
+        event_type:
+          type: string
+        is_active:
+          type: string
+          enum: &a92
+            - "true"
+            - "false"
+        is_test_mode:
+          type: string
+          enum: &a93
+            - "true"
+            - "false"
+        payload_format:
+          type: string
+          enum: &a94
+            - json
+            - xml
+            - form_data
+            - custom
+        has_failures:
+          type: string
+          enum: &a95
+            - "true"
+            - "false"
+        last_delivery_from:
+          type: string
+        last_delivery_to:
+          type: string
+        delivery_rate_min:
+          type: string
+        delivery_rate_max:
+          type: string
+        query:
+          type: string
+    WebhookAnalyticsQueryV1:
+      type: object
+      properties:
+        webhook_id:
+          type: string
+          format: uuid
+        date_from:
+          type: string
+          format: date-time
+        date_to:
+          type: string
+          format: date-time
+    WebhookDeliveryQueryV1:
+      type: object
+      properties:
+        page:
+          type: string
+        limit:
+          type: string
+        status:
+          type: string
+          enum: &a98
+            - pending
+            - delivered
+            - failed
+            - retrying
+            - abandoned
+        from_date:
+          type: string
+          format: date-time
+        to_date:
+          type: string
+          format: date-time
+    WebhookExportQueryV1:
+      type: object
+      properties:
+        format:
+          type: string
+          enum: &a96
+            - json
+            - csv
+            - yaml
+        include_secrets:
+          type: string
+          enum: &a97
+            - "true"
+            - "false"
+        webhook_ids:
+          type: string
+          description: Controller schema expects UUID array; URL parser currently supplies
+            raw strings.
+    CreateWebhookBodyV1:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        url:
+          type: string
+          format: uri
+        method:
+          type: string
+          enum:
+            - GET
+            - POST
+            - PUT
+            - PATCH
+            - DELETE
+        event_types:
+          type: array
+          items:
+            type: string
+          minItems: 1
+        security:
+          type: object
+          additionalProperties: {}
+        payload_format:
+          type: string
+          enum:
+            - json
+            - xml
+            - form_data
+            - custom
+        content_type:
+          type: string
+        custom_headers:
+          type: object
+          additionalProperties:
+            type: string
+        event_filter:
+          type: object
+          additionalProperties: {}
+        payload_transformation:
+          type: object
+          additionalProperties: {}
+        retry_config:
+          type: object
+          additionalProperties: {}
+        is_active:
+          type: boolean
+        is_test_mode:
+          type: boolean
+        verify_ssl:
+          type: boolean
+        secret_token:
+          type: string
+        rate_limit:
+          type: object
+          additionalProperties: {}
+        metadata:
+          type: object
+          additionalProperties: {}
+        tags:
+          type: array
+          items:
+            type: string
+      required:
+        - name
+        - url
+        - event_types
+    WebhookTestBodyV1:
+      type: object
+      properties:
+        webhook_id:
+          type: string
+          format: uuid
+        test_event_type:
+          type: string
+        test_payload:
+          type: object
+          additionalProperties: {}
+        override_url:
+          type: string
+          format: uri
+      required:
+        - test_event_type
+    BulkWebhookBodyV1:
+      type: object
+      properties:
+        webhook_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          maxItems: 100
+        operation:
+          type: string
+          enum:
+            - activate
+            - deactivate
+            - delete
+            - test
+        test_event_type:
+          type: string
+      required:
+        - webhook_ids
+        - operation
+    WebhookSubscriptionBodyV1:
+      type: object
+      properties:
+        entity_type:
+          type: string
+        entity_id:
+          type: string
+          format: uuid
+        event_types:
+          type: array
+          items:
+            type: string
+          minItems: 1
+        is_active:
+          type: boolean
+        expires_at:
+          type: string
+      required:
+        - entity_type
+        - event_types
+    WebhookTemplateBodyV1:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        default_config:
+          type: object
+          additionalProperties: {}
+        required_fields:
+          type: array
+          items:
+            type: string
+        supported_events:
+          type: array
+          items:
+            type: string
+        is_system_template:
+          type: boolean
+      required:
+        - name
+        - category
+        - default_config
+    WebhookTemplateCreateBodyV1:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        url:
+          type: string
+          format: uri
+        custom_config:
+          type: object
+          additionalProperties: {}
+      required:
+        - name
+        - url
+    WebhookTransformBodyV1:
+      type: object
+      properties:
+        sample_event:
+          type: object
+          additionalProperties: {}
+        transformation:
+          type: object
+          properties:
+            template:
+              type: string
+            include_fields:
+              type: array
+              items:
+                type: string
+            exclude_fields:
+              type: array
+              items:
+                type: string
+            custom_fields:
+              type: object
+              additionalProperties: {}
+      required:
+        - sample_event
+    WebhookFilterTestBodyV1:
+      type: object
+      properties:
+        sample_event:
+          type: object
+          additionalProperties: {}
+        filter:
+          type: object
+          properties:
+            entity_types:
+              type: array
+              items:
+                type: string
+            entity_ids:
+              type: array
+              items:
+                type: string
+                format: uuid
+            conditions:
+              type: array
+              items:
+                type: object
+                additionalProperties: {}
+            tags:
+              type: array
+              items:
+                type: string
+      required:
+        - sample_event
+    WebhookSignatureBodyV1:
+      type: object
+      properties:
+        algorithm:
+          type: string
+          enum:
+            - sha1
+            - sha256
+            - sha512
+        signature:
+          type: string
+        timestamp:
+          type: number
+        body:
+          type: string
+      required:
+        - algorithm
+        - signature
+        - body
+    WebhookEventBodyV1:
+      type: object
+      additionalProperties: {}
+    WebhookApiErrorV1:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details: {}
+          required:
+            - code
+            - message
+      required:
+        - error
+    WebhookApiSuccessV1:
+      type: object
+      properties:
+        data: {}
+        meta:
+          type: object
+          additionalProperties: {}
+    WebhookApiPaginatedV1:
+      type: object
+      properties:
+        data:
+          type: array
+          items: {}
         pagination:
           type: object
           properties:
@@ -29951,6 +30378,2332 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/webhooks:
+    get:
+      summary: List webhooks
+      description: Lists webhooks with pagination/filter query fields.
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: read
+        x-controller-method: ApiWebhookController.list()
+      parameters:
+        - schema:
+            type: string
+          required: false
+          name: page
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: sort
+          in: query
+        - schema:
+            type: string
+            enum: *a91
+          required: false
+          name: order
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: name
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: url
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: event_type
+          in: query
+        - schema:
+            type: string
+            enum: *a92
+          required: false
+          name: is_active
+          in: query
+        - schema:
+            type: string
+            enum: *a93
+          required: false
+          name: is_test_mode
+          in: query
+        - schema:
+            type: string
+            enum: *a94
+          required: false
+          name: payload_format
+          in: query
+        - schema:
+            type: string
+            enum: *a95
+          required: false
+          name: has_failures
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: last_delivery_from
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: last_delivery_to
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: delivery_rate_min
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: delivery_rate_max
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: query
+          in: query
+      responses:
+        "200":
+          description: Paginated data returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiPaginatedV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+    post:
+      summary: Create webhook
+      description: Creates a webhook configuration and delivery settings.
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: create
+        x-controller-method: ApiWebhookController.create()
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWebhookBodyV1"
+      responses:
+        "201":
+          description: Resource created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+  /api/v1/webhooks/analytics:
+    get:
+      summary: Get system webhook analytics
+      description: Returns system-wide webhook analytics for date range.
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: analytics
+        x-controller-method: ApiWebhookController.getAnalytics()
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: webhook_id
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: date_from
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: date_to
+          in: query
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+  /api/v1/webhooks/bulk:
+    post:
+      summary: Run bulk webhook operation
+      description: Runs activate/deactivate/delete/test operations over webhook ID list.
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: bulk_update
+        x-controller-method: ApiWebhookController.bulkOperation()
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkWebhookBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+  /api/v1/webhooks/events:
+    get:
+      summary: List available webhook events
+      description: Returns supported event type list (current controller returns stub
+        values).
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: read
+        x-controller-method: ApiWebhookController.listEvents()
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+  /api/v1/webhooks/events/trigger:
+    post:
+      summary: Trigger webhook event manually
+      description: Triggers a webhook event payload (current controller returns stub
+        result).
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: trigger
+        x-controller-method: ApiWebhookController.triggerEvent()
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookEventBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+  /api/v1/webhooks/export:
+    get:
+      summary: Export webhooks
+      description: Exports webhook definitions; query supports format and include_secrets.
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: export
+        x-controller-method: ApiWebhookController.export()
+      parameters:
+        - schema:
+            type: string
+            enum: *a96
+          required: false
+          name: format
+          in: query
+        - schema:
+            type: string
+            enum: *a97
+          required: false
+          name: include_secrets
+          in: query
+        - schema:
+            type: string
+            description: Controller schema expects UUID array; URL parser currently supplies
+              raw strings.
+          required: false
+          description: Controller schema expects UUID array; URL parser currently supplies
+            raw strings.
+          name: webhook_ids
+          in: query
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+  /api/v1/webhooks/filter/test:
+    post:
+      summary: Test generic webhook event filter
+      description: Tests filter logic against sample event without a specific webhook.
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: test
+        x-controller-method: ApiWebhookController.testFilterGeneric()
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookFilterTestBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+  /api/v1/webhooks/health:
+    get:
+      summary: Get system webhook health
+      description: Returns system-level webhook health summary (currently stubbed).
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: read
+        x-controller-method: ApiWebhookController.getSystemHealth()
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+  /api/v1/webhooks/search:
+    get:
+      summary: Search webhooks (currently list wiring)
+      description: Route currently calls ApiWebhookController.list() instead of
+        search(); behaves as list endpoint with standard list filters.
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: read
+        x-controller-method: ApiWebhookController.list()
+        x-route-to-controller-mismatch: true
+        x-controller-expected: ApiWebhookController.search()
+      parameters:
+        - schema:
+            type: string
+          required: false
+          name: page
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: sort
+          in: query
+        - schema:
+            type: string
+            enum: *a91
+          required: false
+          name: order
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: name
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: url
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: event_type
+          in: query
+        - schema:
+            type: string
+            enum: *a92
+          required: false
+          name: is_active
+          in: query
+        - schema:
+            type: string
+            enum: *a93
+          required: false
+          name: is_test_mode
+          in: query
+        - schema:
+            type: string
+            enum: *a94
+          required: false
+          name: payload_format
+          in: query
+        - schema:
+            type: string
+            enum: *a95
+          required: false
+          name: has_failures
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: last_delivery_from
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: last_delivery_to
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: delivery_rate_min
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: delivery_rate_max
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: query
+          in: query
+      responses:
+        "200":
+          description: Paginated data returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiPaginatedV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+  /api/v1/webhooks/subscriptions:
+    get:
+      summary: List webhook subscriptions (global path wiring gap)
+      description: Calls getSubscriptions() on global path; method expects webhook id
+        and currently fails UUID extraction for non-ID route.
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: read
+        x-controller-method: ApiWebhookController.getSubscriptions()
+        x-route-to-controller-mismatch: true
+        x-id-extraction-gap: true
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Current wiring calls ID-dependent methods
+            (`getSubscriptions`/`createSubscription`) on a non-ID path, so
+            extractIdFromPath validates the literal segment `subscriptions` as
+            UUID and returns 400.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+    post:
+      summary: Create webhook subscription (global path wiring gap)
+      description: Calls createSubscription() on global path; method expects webhook
+        id and currently fails UUID extraction for non-ID route.
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: manage_subscriptions
+        x-controller-method: ApiWebhookController.createSubscription()
+        x-route-to-controller-mismatch: true
+        x-id-extraction-gap: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookSubscriptionBodyV1"
+      responses:
+        "201":
+          description: Resource created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+  /api/v1/webhooks/templates:
+    get:
+      summary: List webhook templates
+      description: Returns webhook templates for tenant/system scope.
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: read
+        x-controller-method: ApiWebhookController.listTemplates()
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+    post:
+      summary: Create webhook template
+      description: Creates a reusable webhook template.
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: system_settings
+        x-controller-method: ApiWebhookController.createTemplate()
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookTemplateBodyV1"
+      responses:
+        "201":
+          description: Resource created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+  /api/v1/webhooks/templates/{id}:
+    get:
+      summary: Get webhook template detail (webhook getById wiring)
+      description: Template detail route currently delegates to webhook
+        getById/update/delete handlers and therefore operates on webhooks, not
+        template records.
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: read
+        x-controller-method: ApiWebhookController.getById()
+        x-route-to-controller-mismatch: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Webhook UUID from webhooks.webhook_id.
+          required: true
+          description: Webhook UUID from webhooks.webhook_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "404":
+          description: Webhook not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+    put:
+      summary: Update webhook template (webhook update wiring)
+      description: Template update route currently delegates to webhook update() handler.
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: update
+        x-controller-method: ApiWebhookController.update()
+        x-route-to-controller-mismatch: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Webhook UUID from webhooks.webhook_id.
+          required: true
+          description: Webhook UUID from webhooks.webhook_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWebhookBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "404":
+          description: Webhook not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+    delete:
+      summary: Delete webhook template (webhook delete wiring)
+      description: Template delete route currently delegates to webhook delete() handler.
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: delete
+        x-controller-method: ApiWebhookController.delete()
+        x-route-to-controller-mismatch: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Webhook UUID from webhooks.webhook_id.
+          required: true
+          description: Webhook UUID from webhooks.webhook_id.
+          name: id
+          in: path
+      responses:
+        "204":
+          description: Webhook deleted.
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "404":
+          description: Webhook not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+  /api/v1/webhooks/templates/{id}/create:
+    post:
+      summary: Create webhook from template
+      description: Creates webhook configuration from template + override payload.
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: create
+        x-controller-method: ApiWebhookController.useTemplate()
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Webhook UUID from webhooks.webhook_id.
+          required: true
+          description: Webhook UUID from webhooks.webhook_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookTemplateCreateBodyV1"
+      responses:
+        "201":
+          description: Resource created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+  /api/v1/webhooks/test:
+    post:
+      summary: Test webhook configuration
+      description: Runs test delivery against provided webhook test payload.
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: test
+        x-controller-method: ApiWebhookController.test()
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookTestBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+  /api/v1/webhooks/transform/test:
+    post:
+      summary: Test generic payload transformation
+      description: Evaluates transformation config against sample event (controller
+        currently returns stub transformation output).
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: test
+        x-controller-method: ApiWebhookController.testTransformGeneric()
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookTransformBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+  /api/v1/webhooks/validate:
+    post:
+      summary: Validate webhook payload configuration
+      description: Validates webhook config payload using controller-side stub
+        validation response.
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: read
+        x-controller-method: ApiWebhookController.validateGeneric()
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWebhookBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+  /api/v1/webhooks/verify:
+    post:
+      summary: Verify webhook signature
+      description: "Validates signature payload (controller currently returns stub `{
+        valid: true }`)."
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: verify
+        x-controller-method: ApiWebhookController.verifySignature()
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookSignatureBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+  /api/v1/webhooks/{id}:
+    delete:
+      summary: Delete webhook
+      description: Deletes one webhook by id.
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: delete
+        x-controller-method: ApiWebhookController.delete()
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Webhook UUID from webhooks.webhook_id.
+          required: true
+          description: Webhook UUID from webhooks.webhook_id.
+          name: id
+          in: path
+      responses:
+        "204":
+          description: Webhook deleted.
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "404":
+          description: Webhook not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+    get:
+      summary: Get webhook
+      description: Gets one webhook by id.
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: read
+        x-controller-method: ApiWebhookController.getById()
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Webhook UUID from webhooks.webhook_id.
+          required: true
+          description: Webhook UUID from webhooks.webhook_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "404":
+          description: Webhook not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+    put:
+      summary: Update webhook
+      description: Updates one webhook by id.
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: update
+        x-controller-method: ApiWebhookController.update()
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Webhook UUID from webhooks.webhook_id.
+          required: true
+          description: Webhook UUID from webhooks.webhook_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWebhookBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "404":
+          description: Webhook not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+  /api/v1/webhooks/{id}/analytics:
+    get:
+      summary: Get webhook analytics
+      description: Returns analytics for one webhook id and date window.
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: analytics
+        x-controller-method: ApiWebhookController.getWebhookAnalytics()
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Webhook UUID from webhooks.webhook_id.
+          required: true
+          description: Webhook UUID from webhooks.webhook_id.
+          name: id
+          in: path
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: webhook_id
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: date_from
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: date_to
+          in: query
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "404":
+          description: Webhook not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+  /api/v1/webhooks/{id}/deliveries:
+    get:
+      summary: List webhook deliveries
+      description: Returns paginated delivery history for one webhook id.
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: read
+        x-controller-method: ApiWebhookController.getDeliveries()
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Webhook UUID from webhooks.webhook_id.
+          required: true
+          description: Webhook UUID from webhooks.webhook_id.
+          name: id
+          in: path
+        - schema:
+            type: string
+          required: false
+          name: page
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+            enum: *a98
+          required: false
+          name: status
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: from_date
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: to_date
+          in: query
+      responses:
+        "200":
+          description: Paginated data returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiPaginatedV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "404":
+          description: Webhook not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+  /api/v1/webhooks/{id}/deliveries/{delivery_id}:
+    get:
+      summary: Get delivery detail
+      description: Returns one delivery detail. Controller derives delivery_id from
+        URL segment.
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: read
+        x-controller-method: ApiWebhookController.getDelivery()
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Webhook UUID from webhooks.webhook_id.
+          required: true
+          description: Webhook UUID from webhooks.webhook_id.
+          name: id
+          in: path
+        - schema:
+            type: string
+            description: Webhook delivery identifier extracted from URL path segment.
+          required: true
+          description: Webhook delivery identifier extracted from URL path segment.
+          name: delivery_id
+          in: path
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "404":
+          description: Delivery not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+  /api/v1/webhooks/{id}/deliveries/{delivery_id}/retry:
+    post:
+      summary: Retry delivery
+      description: Retries failed delivery by URL-derived delivery_id.
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: retry
+        x-controller-method: ApiWebhookController.retryDelivery()
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Webhook UUID from webhooks.webhook_id.
+          required: true
+          description: Webhook UUID from webhooks.webhook_id.
+          name: id
+          in: path
+        - schema:
+            type: string
+            description: Webhook delivery identifier extracted from URL path segment.
+          required: true
+          description: Webhook delivery identifier extracted from URL path segment.
+          name: delivery_id
+          in: path
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+  /api/v1/webhooks/{id}/filter/test:
+    post:
+      summary: Test webhook filter
+      description: Evaluates filter rules against sample event for one webhook.
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: test
+        x-controller-method: ApiWebhookController.testFilter()
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Webhook UUID from webhooks.webhook_id.
+          required: true
+          description: Webhook UUID from webhooks.webhook_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookFilterTestBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+  /api/v1/webhooks/{id}/health:
+    get:
+      summary: Get webhook health
+      description: Returns health status for one webhook (controller currently returns
+        stub health payload).
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: read
+        x-controller-method: ApiWebhookController.getHealth()
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Webhook UUID from webhooks.webhook_id.
+          required: true
+          description: Webhook UUID from webhooks.webhook_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "404":
+          description: Webhook not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+  /api/v1/webhooks/{id}/secret/rotate:
+    post:
+      summary: Rotate webhook secret
+      description: Rotates webhook secret token (controller currently returns stub
+        secret value).
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: manage_security
+        x-controller-method: ApiWebhookController.rotateSecret()
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Webhook UUID from webhooks.webhook_id.
+          required: true
+          description: Webhook UUID from webhooks.webhook_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+  /api/v1/webhooks/{id}/subscriptions:
+    get:
+      summary: List webhook subscriptions
+      description: Returns subscriptions for one webhook id (currently stubbed empty list).
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: read
+        x-controller-method: ApiWebhookController.getSubscriptions()
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Webhook UUID from webhooks.webhook_id.
+          required: true
+          description: Webhook UUID from webhooks.webhook_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+    post:
+      summary: Create webhook subscription
+      description: Creates subscription under one webhook id (controller currently
+        returns stub created subscription).
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: manage_subscriptions
+        x-controller-method: ApiWebhookController.createSubscription()
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Webhook UUID from webhooks.webhook_id.
+          required: true
+          description: Webhook UUID from webhooks.webhook_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookSubscriptionBodyV1"
+      responses:
+        "201":
+          description: Resource created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+  /api/v1/webhooks/{id}/test:
+    post:
+      summary: Test webhook by id
+      description: Runs test delivery for one webhook id.
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: test
+        x-controller-method: ApiWebhookController.testById()
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Webhook UUID from webhooks.webhook_id.
+          required: true
+          description: Webhook UUID from webhooks.webhook_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookTestBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+  /api/v1/webhooks/{id}/transform/test:
+    post:
+      summary: Test webhook transformation
+      description: Runs transformation test for one webhook id (controller returns
+        stub transformation output).
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: test
+        x-controller-method: ApiWebhookController.testTransform()
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Webhook UUID from webhooks.webhook_id.
+          required: true
+          description: Webhook UUID from webhooks.webhook_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookTransformBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+  /api/v1/webhooks/{id}/validate:
+    post:
+      summary: Validate webhook by id
+      description: Validates persisted webhook config by id (controller currently
+        returns stub validation result).
+      tags:
+        - Webhooks
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: webhook
+        x-rbac-action: read
+        x-controller-method: ApiWebhookController.validate()
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Webhook UUID from webhooks.webhook_id.
+          required: true
+          description: Webhook UUID from webhooks.webhook_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiSuccessV1"
+        "400":
+          description: Invalid request payload/query/identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "401":
+          description: API key missing/invalid or key user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "403":
+          description: Webhook RBAC permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "404":
+          description: Webhook not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "500":
+          description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
   /api/v1/projects/{id}/task-status-mappings:
     get:
       summary: List project task status mappings
@@ -37685,1231 +40438,6 @@ paths:
         x-placeholder: true
       responses:
         "204":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/webhooks:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/webhooks/analytics:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/webhooks/bulk:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/webhooks/events:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/webhooks/events/trigger:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/webhooks/export:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/webhooks/filter/test:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/webhooks/health:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/webhooks/search:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/webhooks/subscriptions:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/webhooks/templates:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/webhooks/templates/{id}:
-    delete:
-      summary: DELETE v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "204":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    put:
-      summary: PUT v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/webhooks/templates/{id}/create:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/webhooks/test:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/webhooks/transform/test:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/webhooks/validate:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/webhooks/verify:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/webhooks/{id}:
-    delete:
-      summary: DELETE v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "204":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    put:
-      summary: PUT v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/webhooks/{id}/analytics:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/webhooks/{id}/deliveries:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/webhooks/{id}/deliveries/{delivery_id}:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/webhooks/{id}/deliveries/{delivery_id}/retry:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/webhooks/{id}/filter/test:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/webhooks/{id}/health:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/webhooks/{id}/secret/rotate:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/webhooks/{id}/subscriptions:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/webhooks/{id}/test:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/webhooks/{id}/transform/test:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/webhooks/{id}/validate:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - webhooks
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
           description: Placeholder success response
           content:
             application/json:

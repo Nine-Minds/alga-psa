@@ -52,7 +52,7 @@
   {
     "id": "F007",
     "description": "Document webhook route family including CRUD, analytics, events, deliveries, testing, retry, subscription, and bulk endpoints.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals"
     ]

@@ -402,3 +402,39 @@ python3 <CE and EE placeholder scans for F005 family + global counts>
 3. `POST /api/v1/feature-flags`
 4. `GET /api/v1/quotes`
 5. `POST /api/v1/quotes`
+
+## 2026-04-24 — Webhook Family Completed (F007)
+
+### Scope completed
+
+- Added registrar: `server/src/lib/api/openapi/routes/webhooks.ts`.
+- Registered in `server/src/lib/api/openapi/index.ts` before inventory backfill.
+- Documented all previously-placeholder webhook routes under `/api/v1/webhooks*` (37 operations).
+
+### Key source-grounded wiring notes documented
+
+- `/api/v1/webhooks/search` route currently calls `ApiWebhookController.list()` (not `search()`); documented as route-to-controller mismatch.
+- `/api/v1/webhooks/templates/{id}` `GET|PUT|DELETE` routes currently call generic webhook `getById|update|delete` methods; documented as template-route wiring mismatch.
+- Global subscription routes (`/api/v1/webhooks/subscriptions` `GET|POST`) call methods that require webhook `{id}` path extraction; current behavior yields UUID validation failure for literal `subscriptions` path segment.
+- Several controller paths intentionally return stub/TODO responses (health checks, validation, secret rotation, template/subscription helpers, delivery detail helpers); these are explicitly called out in descriptions/extensions.
+
+### Validation results
+
+- CE webhook placeholder check: `ce_webhooks_remaining = 0`.
+- EE webhook placeholder check: `ee_webhooks_remaining = 0`.
+- Regeneration commands succeeded:
+  - `npm --prefix sdk run openapi:generate`
+  - `npm --prefix sdk run openapi:generate -- --edition ee`
+
+### Remaining placeholder counts after this pass
+
+- CE: `242`
+- EE: `250`
+
+### Next cursor (CE)
+
+1. `POST /api/v1/feature-access`
+2. `GET /api/v1/feature-flags`
+3. `POST /api/v1/feature-flags`
+4. `GET /api/v1/quotes`
+5. `POST /api/v1/quotes`
