@@ -267,7 +267,7 @@
     "id": "T045",
     "description": "Template render test: appointment-assigned renders the Join button for the assigned technician when onlineMeetingUrl is present.",
     "featureIds": ["F023", "F024"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T046",
