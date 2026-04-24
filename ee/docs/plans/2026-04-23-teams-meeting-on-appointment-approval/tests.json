@@ -147,7 +147,7 @@
     "id": "T025",
     "description": "Reschedule integration test: Graph PATCH failure → reschedule succeeds; response includes teamsMeetingWarning.",
     "featureIds": ["F011"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T026",

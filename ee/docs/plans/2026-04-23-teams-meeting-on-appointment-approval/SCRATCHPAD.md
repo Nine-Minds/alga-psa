@@ -165,6 +165,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-24: Completed `T023` in the same suite, asserting a soft Graph create failure leaves the appointment approved, keeps meeting columns empty, and omits `onlineMeetingUrl` from the approval email payload.
 - 2026-04-24: Completed `T052` in the same approval suite, asserting requester-local wall-clock times are converted to the correct UTC instants before `createTeamsMeeting()` is called.
 - 2026-04-24: Completed `T024` in the same integration file, asserting approved reschedules call `updateTeamsMeeting()` with the expected new UTC start/end timestamps for the stored Teams meeting.
+- 2026-04-24: Completed `T025` in the same reschedule integration slice, asserting a soft Graph PATCH failure still returns `success: true` and surfaces `teamsMeetingWarning` to the caller.
 
 ## Working notes
 
