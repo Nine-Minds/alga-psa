@@ -297,7 +297,7 @@
     "id": "T050",
     "description": "Observability: during a full approve + reschedule + cancel lifecycle, three structured log lines are emitted (create, update, delete) each containing tenant, appointment_request_id, operation, status.",
     "featureIds": ["F028"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T051",

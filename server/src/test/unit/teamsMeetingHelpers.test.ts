@@ -416,6 +416,86 @@ describe('Teams meeting helpers', () => {
         })
       );
     });
+
+    it('emits structured info logs across create, update, and delete operations for the same appointment lifecycle', async () => {
+      const db = buildTeamsIntegrationKnex({
+        tenant: 'tenant-1',
+        install_status: 'active',
+        selected_profile_id: 'profile-1',
+        default_meeting_organizer_upn: 'organizer@example.com',
+      });
+      createTenantKnexMock.mockResolvedValue({ knex: db.knex, tenant: 'tenant-1' });
+
+      fetchMock
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 201,
+          json: async () => ({
+            id: 'meeting-123',
+            joinWebUrl: 'https://teams.example.com/meeting/123',
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          text: async () => '',
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 204,
+          text: async () => '',
+        });
+
+      await createTeamsMeeting({
+        tenantId: 'tenant-1',
+        subject: 'Virtual consultation',
+        startDateTime: '2026-04-24T14:00:00.000Z',
+        endDateTime: '2026-04-24T14:30:00.000Z',
+        appointmentRequestId: 'request-1',
+      });
+
+      await updateTeamsMeeting({
+        tenantId: 'tenant-1',
+        meetingId: 'meeting-123',
+        startDateTime: '2026-04-24T15:00:00.000Z',
+        endDateTime: '2026-04-24T15:30:00.000Z',
+        appointmentRequestId: 'request-1',
+      });
+
+      await deleteTeamsMeeting({
+        tenantId: 'tenant-1',
+        meetingId: 'meeting-123',
+        appointmentRequestId: 'request-1',
+      });
+
+      expect(loggerInfoMock).toHaveBeenCalledWith(
+        '[TeamsMeetings] Created Teams meeting',
+        expect.objectContaining({
+          tenant: 'tenant-1',
+          appointment_request_id: 'request-1',
+          operation: 'create',
+          status: 201,
+        })
+      );
+      expect(loggerInfoMock).toHaveBeenCalledWith(
+        '[TeamsMeetings] Updated Teams meeting',
+        expect.objectContaining({
+          tenant: 'tenant-1',
+          appointment_request_id: 'request-1',
+          operation: 'update',
+          status: 200,
+        })
+      );
+      expect(loggerInfoMock).toHaveBeenCalledWith(
+        '[TeamsMeetings] Deleted Teams meeting',
+        expect.objectContaining({
+          tenant: 'tenant-1',
+          appointment_request_id: 'request-1',
+          operation: 'delete',
+          status: 204,
+        })
+      );
+    });
   });
 
   describe('getTeamsMeetingCapability', () => {

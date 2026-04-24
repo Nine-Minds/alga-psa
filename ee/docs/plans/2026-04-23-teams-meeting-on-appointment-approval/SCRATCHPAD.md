@@ -180,6 +180,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-24: Completed `T037` in the client-portal detail page test file, asserting `AppointmentRequestDetailsPage` renders the `Join Teams Meeting` button when `online_meeting_url` is populated.
 - 2026-04-24: Completed `T038` with `server/src/test/unit/appointments/AvailabilitySettings.teams.test.tsx`, asserting the `Teams Meetings` tab is rendered only when the tab-state action reports it visible.
 - 2026-04-24: Completed `T039` in the same Availability Settings test file, asserting the organizer UPN input saves through `setDefaultMeetingOrganizer()` and persists the returned organizer value in the form.
+- 2026-04-24: Completed `T050` in `server/src/test/unit/teamsMeetingHelpers.test.ts`, asserting a create/update/delete helper lifecycle emits three structured INFO logs with tenant, appointment request ID, operation, and status.
 
 ## Working notes
 
