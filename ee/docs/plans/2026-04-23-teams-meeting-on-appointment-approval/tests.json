@@ -15,85 +15,85 @@
     "id": "T003",
     "description": "createTeamsMeeting unit test (happy path): given a ready profile and organizer UPN, returns { joinWebUrl, meetingId } matching the mocked Graph response.",
     "featureIds": ["F003"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T004",
     "description": "createTeamsMeeting returns null and logs a WARN when Graph responds 403 (missing OnlineMeetings permission).",
     "featureIds": ["F003"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T005",
     "description": "createTeamsMeeting returns null and logs a WARN when Graph responds 404 (organizer UPN not found).",
     "featureIds": ["F003"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T006",
     "description": "createTeamsMeeting returns null and logs a WARN when token fetch fails (invalid client secret).",
     "featureIds": ["F003"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T007",
     "description": "createTeamsMeeting returns null when teams_integrations row is absent or install_status != 'active'.",
     "featureIds": ["F003"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T008",
     "description": "createTeamsMeeting returns null when default_meeting_organizer_upn is NULL.",
     "featureIds": ["F003"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T009",
     "description": "updateTeamsMeeting PATCHes with correct ISO-8601 UTC start/end and returns true on 200.",
     "featureIds": ["F004"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T010",
     "description": "updateTeamsMeeting returns false and logs WARN on Graph 404 (meeting already deleted).",
     "featureIds": ["F004"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T011",
     "description": "deleteTeamsMeeting returns true on 204 and false on any error; logs WARN on failure.",
     "featureIds": ["F005"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T012",
     "description": "getTeamsMeetingCapability returns { available: false, reason: 'not_configured' } when no teams_integrations row exists for tenant.",
     "featureIds": ["F006"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T013",
     "description": "getTeamsMeetingCapability returns { available: false, reason: 'not_configured' } when install_status is 'install_pending' or 'error'.",
     "featureIds": ["F006"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T014",
     "description": "getTeamsMeetingCapability returns { available: false, reason: 'no_organizer' } when install_status is 'active' but default_meeting_organizer_upn is NULL.",
     "featureIds": ["F006"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T015",
     "description": "getTeamsMeetingCapability returns { available: true } when install_status='active' AND default_meeting_organizer_upn is set.",
     "featureIds": ["F006"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T016",
     "description": "getTeamsMeetingCapability returns { available: false, reason: 'ee_disabled' } when EDITION is not 'ee'.",
     "featureIds": ["F006", "F007"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T017",
@@ -105,7 +105,7 @@
     "id": "T018",
     "description": "CE shim returns no-op handlers: createTeamsMeeting/updateTeamsMeeting/deleteTeamsMeeting all resolve to null/false when EE is unavailable, without throwing.",
     "featureIds": ["F007"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T019",
@@ -303,7 +303,7 @@
     "id": "T051",
     "description": "Multi-tenant isolation test: creating a Teams meeting for tenant A never surfaces or reuses credentials/profile of tenant B.",
     "featureIds": ["F003", "F007"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T052",
