@@ -3,6 +3,13 @@ import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 export function registerSoftwareOneRoutes(registry: ApiOpenApiRegistry) {
   const tag = 'SoftwareOne Extensions';
 
+  const MiddlewareUnauthorizedResponse = registry.registerSchema(
+    'MiddlewareUnauthorizedResponse',
+    zOpenApi.object({
+      error: zOpenApi.string().describe('Middleware authentication error message, such as Unauthorized: API key missing.'),
+    }),
+  );
+
   const SoftwareOneAgreement = registry.registerSchema(
     'SoftwareOneAgreement',
     zOpenApi.object({
@@ -31,10 +38,59 @@ export function registerSoftwareOneRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  const SoftwareOneAgreementDetail = registry.registerSchema(
+    'SoftwareOneAgreementDetail',
+    SoftwareOneAgreement.extend({
+      startDate: zOpenApi.string().optional().describe('Agreement start date in YYYY-MM-DD format.'),
+      endDate: zOpenApi.string().optional().describe('Agreement end date in YYYY-MM-DD format.'),
+      billingCycle: zOpenApi.string().optional().describe('Billing cycle cadence, such as monthly or annual.'),
+      paymentTerms: zOpenApi.string().optional().describe('Payment terms, such as Net 30.'),
+      description: zOpenApi.string().optional().describe('Free-text agreement description.'),
+      contactPerson: zOpenApi.string().optional().describe('Primary contact name for the agreement.'),
+      contactEmail: zOpenApi.string().email().optional().describe('Primary contact email address.'),
+      licenseCount: zOpenApi.number().int().optional().describe('Number of licenses covered by the agreement.'),
+      pricePerLicense: zOpenApi.number().optional().describe('Price per license in the agreement currency.'),
+    }),
+  );
+
+  const SoftwareOneStatement = registry.registerSchema(
+    'SoftwareOneStatement',
+    zOpenApi.object({
+      id: zOpenApi.string().describe('SoftwareOne statement identifier, such as stmt-001. This is an external SoftwareOne-style ID, not an Alga UUID.'),
+      statementNumber: zOpenApi.string().describe('Human-readable statement number, such as STMT-2024-001.'),
+      period: zOpenApi.string().describe('Billing period in YYYY-MM format.'),
+      consumer: zOpenApi.string().describe('End-customer organization name.'),
+      consumerId: zOpenApi.string().describe('SoftwareOne consumer identifier.'),
+      agreementName: zOpenApi.string().describe('Human-readable name of the associated agreement.'),
+      agreementId: zOpenApi.string().describe('SoftwareOne agreement identifier associated with this statement.'),
+      totalAmount: zOpenApi.number().describe('Total statement amount in the billing currency.'),
+      currency: zOpenApi.string().describe('Three-letter billing currency code, such as USD.'),
+      lineItemCount: zOpenApi.number().int().describe('Number of line-item charges on the statement.'),
+      status: zOpenApi.enum(['draft', 'finalized', 'imported']).describe('Statement lifecycle status used by the MVP handler.'),
+      dueDate: zOpenApi.string().describe('Payment due date in YYYY-MM-DD format.'),
+      createdAt: zOpenApi.string().describe('ISO 8601 timestamp when the statement was created.'),
+      importedAt: zOpenApi.string().nullable().describe('ISO 8601 timestamp when imported into Alga, or null if not imported.'),
+      subtotal: zOpenApi.number().optional().describe('Statement subtotal before tax. Present on detail responses.'),
+      taxAmount: zOpenApi.number().optional().describe('Statement tax amount. Present on detail responses.'),
+      description: zOpenApi.string().optional().describe('Statement description. Present on detail responses.'),
+      billingAddress: zOpenApi
+        .object({
+          client: zOpenApi.string().describe('Billing client organization name.'),
+          street: zOpenApi.string().describe('Street address.'),
+          city: zOpenApi.string().describe('City.'),
+          state: zOpenApi.string().describe('State or province.'),
+          zipCode: zOpenApi.string().describe('Postal or ZIP code.'),
+          country: zOpenApi.string().describe('Country.'),
+        })
+        .optional()
+        .describe('Billing address. Present on detail responses.'),
+    }),
+  );
+
   const SoftwareOnePaginationMeta = registry.registerSchema(
     'SoftwareOnePaginationMeta',
     zOpenApi.object({
-      total: zOpenApi.number().int().describe('Total agreements returned by the current dummy implementation.'),
+      total: zOpenApi.number().int().describe('Total records returned by the current dummy implementation.'),
       page: zOpenApi.number().int().describe('Current page number. Currently hardcoded to 1.'),
       pageSize: zOpenApi.number().int().describe('Page size. Currently hardcoded to 50.'),
     }),
@@ -49,11 +105,64 @@ export function registerSoftwareOneRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  const SoftwareOneAgreementDetailResponse = registry.registerSchema(
+    'SoftwareOneAgreementDetailResponse',
+    zOpenApi.object({
+      success: zOpenApi.literal(true).describe('Request succeeded.'),
+      data: SoftwareOneAgreementDetail,
+    }),
+  );
+
+  const SoftwareOneStatementsListResponse = registry.registerSchema(
+    'SoftwareOneStatementsListResponse',
+    zOpenApi.object({
+      success: zOpenApi.literal(true).describe('Request succeeded.'),
+      data: zOpenApi.array(SoftwareOneStatement).describe('SoftwareOne statement records.'),
+      meta: SoftwareOnePaginationMeta,
+    }),
+  );
+
+  const SoftwareOneStatementDetailResponse = registry.registerSchema(
+    'SoftwareOneStatementDetailResponse',
+    zOpenApi.object({
+      success: zOpenApi.literal(true).describe('Request succeeded.'),
+      data: SoftwareOneStatement,
+    }),
+  );
+
+  const SoftwareOneSyncResponse = registry.registerSchema(
+    'SoftwareOneSyncResponse',
+    zOpenApi.object({
+      success: zOpenApi.literal(true).describe('Sync request completed successfully.'),
+      message: zOpenApi.string().describe('Human-readable sync result message.'),
+      count: zOpenApi.number().int().describe('Number of dummy records included in the sync result.'),
+    }),
+  );
+
+  const SoftwareOneSyncRequest = registry.registerSchema(
+    'SoftwareOneSyncRequest',
+    zOpenApi
+      .object({
+        fullSync: zOpenApi.boolean().optional().describe('Optional future full-sync flag. Currently ignored by the MVP handlers.'),
+        syncStatements: zOpenApi.boolean().optional().describe('Optional future statement sync flag. Currently ignored by the MVP handlers.'),
+        syncAgreements: zOpenApi.boolean().optional().describe('Optional future agreement sync flag. Currently ignored by the MVP handlers.'),
+      })
+      .passthrough()
+      .describe('Sync options. The current SoftwareOne MVP handlers parse JSON but ignore all body fields.'),
+  );
+
   const SoftwareOneErrorResponse = registry.registerSchema(
     'SoftwareOneErrorResponse',
     zOpenApi.object({
       success: zOpenApi.literal(false).describe('Request failed.'),
       error: zOpenApi.string().describe('Human-readable error message.'),
+    }),
+  );
+
+  const SoftwareOneIdParams = registry.registerSchema(
+    'SoftwareOneIdParams',
+    zOpenApi.object({
+      id: zOpenApi.string().describe('SoftwareOne external identifier, such as agr-001 or stmt-001. This is not an Alga UUID.'),
     }),
   );
 
@@ -72,10 +181,181 @@ export function registerSoftwareOneRoutes(registry: ApiOpenApiRegistry) {
       },
       401: {
         description: 'API key missing at middleware before the handler executes.',
-        schema: zOpenApi.object({ error: zOpenApi.string().describe('Middleware authentication error message.') }),
+        schema: MiddlewareUnauthorizedResponse,
       },
       500: {
         description: 'Unexpected failure while fetching agreements.',
+        schema: SoftwareOneErrorResponse,
+      },
+    },
+    extensions: {
+      'x-placeholder-implementation': true,
+      'x-extension': 'softwareone',
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/extensions/softwareone/agreements',
+    summary: 'Sync SoftwareOne agreements',
+    description:
+      'Triggers the SoftwareOne agreements sync placeholder. The current handler parses the JSON body but ignores all fields, then returns a dummy count. A full implementation is expected to validate permissions, derive tenant context, call the SoftwareOne API, persist agreements, and return actual sync counts. This route is not in the middleware API-key skip list, so callers must provide x-api-key at the API layer.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      body: {
+        schema: SoftwareOneSyncRequest,
+        description: 'Optional sync options. Currently ignored by the MVP handler.',
+      },
+    },
+    responses: {
+      200: {
+        description: 'Agreements sync placeholder completed successfully.',
+        schema: SoftwareOneSyncResponse,
+      },
+      401: {
+        description: 'API key missing at middleware before the handler executes.',
+        schema: MiddlewareUnauthorizedResponse,
+      },
+      500: {
+        description: 'Unexpected failure while syncing agreements.',
+        schema: SoftwareOneErrorResponse,
+      },
+    },
+    extensions: {
+      'x-placeholder-implementation': true,
+      'x-extension': 'softwareone',
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/extensions/softwareone/agreements/{id}',
+    summary: 'Get SoftwareOne agreement',
+    description:
+      'Returns one SoftwareOne agreement by external agreement ID, including additional detail fields such as dates, payment terms, contact, and license count. The current handler is an MVP placeholder backed by hardcoded dummy data. The id path parameter is a SoftwareOne-style string such as agr-001, not an Alga UUID.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      params: SoftwareOneIdParams,
+    },
+    responses: {
+      200: {
+        description: 'Agreement detail returned successfully.',
+        schema: SoftwareOneAgreementDetailResponse,
+      },
+      401: {
+        description: 'API key missing at middleware before the handler executes.',
+        schema: MiddlewareUnauthorizedResponse,
+      },
+      404: {
+        description: 'Agreement not found.',
+        schema: SoftwareOneErrorResponse,
+      },
+      500: {
+        description: 'Unexpected failure while fetching agreement detail.',
+        schema: SoftwareOneErrorResponse,
+      },
+    },
+    extensions: {
+      'x-placeholder-implementation': true,
+      'x-extension': 'softwareone',
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/extensions/softwareone/statements',
+    summary: 'List SoftwareOne statements',
+    description:
+      'Returns SoftwareOne billing statement records available to the SoftwareOne extension. The current handler is an MVP placeholder backed by hardcoded dummy data; comments in the route indicate that a full implementation will validate permissions, derive tenant context, fetch from the SoftwareOne API, and apply filtering, sorting, and pagination. This route is not in the middleware API-key skip list, so callers must provide x-api-key at the API layer.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    responses: {
+      200: {
+        description: 'Statement list returned successfully.',
+        schema: SoftwareOneStatementsListResponse,
+      },
+      401: {
+        description: 'API key missing at middleware before the handler executes.',
+        schema: MiddlewareUnauthorizedResponse,
+      },
+      500: {
+        description: 'Unexpected failure while fetching statements.',
+        schema: SoftwareOneErrorResponse,
+      },
+    },
+    extensions: {
+      'x-placeholder-implementation': true,
+      'x-extension': 'softwareone',
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/extensions/softwareone/statements',
+    summary: 'Sync SoftwareOne statements',
+    description:
+      'Triggers the SoftwareOne statements sync placeholder. The current handler parses the JSON body but ignores all fields, then returns a dummy count. A full implementation is expected to validate permissions, derive tenant context, call the SoftwareOne API, persist statements, and return actual sync counts. This route is not in the middleware API-key skip list, so callers must provide x-api-key at the API layer.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      body: {
+        schema: SoftwareOneSyncRequest,
+        description: 'Optional sync options. Currently ignored by the MVP handler.',
+      },
+    },
+    responses: {
+      200: {
+        description: 'Statements sync placeholder completed successfully.',
+        schema: SoftwareOneSyncResponse,
+      },
+      401: {
+        description: 'API key missing at middleware before the handler executes.',
+        schema: MiddlewareUnauthorizedResponse,
+      },
+      500: {
+        description: 'Unexpected failure while syncing statements.',
+        schema: SoftwareOneErrorResponse,
+      },
+    },
+    extensions: {
+      'x-placeholder-implementation': true,
+      'x-extension': 'softwareone',
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/extensions/softwareone/statements/{id}',
+    summary: 'Get SoftwareOne statement',
+    description:
+      'Returns one SoftwareOne billing statement by external statement ID, including additional detail fields such as subtotal, tax amount, description, and billing address. The current handler is an MVP placeholder backed by hardcoded dummy data. The id path parameter is a SoftwareOne-style string such as stmt-001, not an Alga UUID.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      params: SoftwareOneIdParams,
+    },
+    responses: {
+      200: {
+        description: 'Statement detail returned successfully.',
+        schema: SoftwareOneStatementDetailResponse,
+      },
+      401: {
+        description: 'API key missing at middleware before the handler executes.',
+        schema: MiddlewareUnauthorizedResponse,
+      },
+      404: {
+        description: 'Statement not found.',
+        schema: SoftwareOneErrorResponse,
+      },
+      500: {
+        description: 'Unexpected failure while fetching statement detail.',
         schema: SoftwareOneErrorResponse,
       },
     },
