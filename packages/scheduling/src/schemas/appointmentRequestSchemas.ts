@@ -36,11 +36,12 @@ export const approveAppointmentRequestSchema = z.object({
   final_date: dateStringSchema.optional().nullable(),
   final_time: timeStringSchema.optional().nullable(),
   assigned_user_id: z.string().uuid('Assigned user ID must be a valid UUID'),
+  generate_teams_meeting: z.boolean().default(false),
   internal_notes: z.string().max(2000, 'Notes cannot exceed 2000 characters').optional().nullable(),
   ticket_id: z.string().uuid('Ticket ID must be a valid UUID').optional().nullable(),
 });
 
-export type ApproveAppointmentRequestInput = z.infer<typeof approveAppointmentRequestSchema>;
+export type ApproveAppointmentRequestInput = z.input<typeof approveAppointmentRequestSchema>;
 
 export const declineAppointmentRequestSchema = z.object({
   appointment_request_id: z.string().uuid('Request ID must be a valid UUID'),
@@ -65,4 +66,3 @@ export const associateRequestToTicketSchema = z.object({
 });
 
 export type AssociateRequestToTicketInput = z.infer<typeof associateRequestToTicketSchema>;
-

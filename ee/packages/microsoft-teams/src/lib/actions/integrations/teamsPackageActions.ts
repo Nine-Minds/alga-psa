@@ -130,7 +130,7 @@ interface PersistedTeamsPackageMetadata {
 }
 
 const TEAMS_MANIFEST_VERSION = '1.24';
-const TEAMS_PACKAGE_VERSION = '1.0.0';
+const TEAMS_PACKAGE_VERSION = '1.0.1';
 
 function isClientPortalUser(user: any): boolean {
   return user?.user_type === 'client';
@@ -182,8 +182,8 @@ function buildTeamsAppManifest(baseUrl: string, tenant: string, profile: Microso
     developer: {
       name: 'Alga PSA',
       websiteUrl: baseUrl,
-      privacyUrl: `${baseUrl}/privacy`,
-      termsOfUseUrl: `${baseUrl}/terms`,
+      privacyUrl: `${baseUrl}/static/privacy_policy`,
+      termsOfUseUrl: `${baseUrl}/static/master_terms`,
     },
     name: {
       short: 'Alga PSA',

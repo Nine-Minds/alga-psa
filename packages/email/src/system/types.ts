@@ -99,6 +99,7 @@ export interface AppointmentRequestApprovedData {
   technicianName?: string;
   technicianEmail?: string;
   technicianPhone?: string;
+  onlineMeetingUrl?: string;
   calendarLink?: string;
   cancellationPolicy?: string;
   minimumNoticeHours: number;
@@ -128,6 +129,7 @@ export interface AppointmentAssignedToTechnicianData {
   duration: number;
   clientName?: string;
   description?: string;
+  onlineMeetingUrl?: string;
   calendarLink?: string;
   contactEmail: string;
   contactPhone?: string;

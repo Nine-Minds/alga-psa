@@ -160,6 +160,8 @@ export default defineConfig({
       { find: /^@alga-psa\/event-bus\/publishers$/, replacement: path.resolve(__dirname, '../packages/event-bus/src/publishers/index.ts') },
       { find: /^@alga-psa\/event-bus$/, replacement: path.resolve(__dirname, '../packages/event-bus/src/index.ts') },
       { find: /^@alga-psa\/event-bus\/(.*)$/, replacement: path.resolve(__dirname, '../packages/event-bus/src/$1') },
+      { find: /^@alga-psa\/notifications$/, replacement: path.resolve(__dirname, '../packages/notifications/src/index.ts') },
+      { find: /^@alga-psa\/notifications\/(.*)$/, replacement: path.resolve(__dirname, '../packages/notifications/src/$1') },
       { find: /^@alga-psa\/email$/, replacement: path.resolve(__dirname, '../packages/email/src/index.ts') },
       { find: /^@alga-psa\/email\/(.*)$/, replacement: path.resolve(__dirname, '../packages/email/src/$1') },
       { find: /^@alga-psa\/core$/, replacement: path.resolve(__dirname, '../packages/core/src/index.ts') },

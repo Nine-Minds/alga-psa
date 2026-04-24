@@ -149,15 +149,20 @@
       "labels": {
         "reference": "11111",
         "client": "11111",
+        "requester": "11111",
         "contact": "11111",
         "email": "11111",
         "phone": "11111",
         "service": "11111",
         "requestedTime": "11111",
         "duration": "11111",
+        "teamsMeeting": "11111",
         "status": "11111",
         "linkedTicket": "11111",
         "description": "11111"
+      },
+      "actions": {
+        "joinTeamsMeeting": "11111"
       }
     },
     "approval": {
@@ -165,6 +170,7 @@
       "fields": {
         "assignedTechnician": "11111",
         "finalDateTime": "11111",
+        "generateTeamsMeeting": "11111",
         "internalNotes": "11111",
         "linkedTicket": "11111"
       },
@@ -201,7 +207,8 @@
       "general": "11111",
       "userHours": "11111",
       "serviceRules": "11111",
-      "exceptions": "11111"
+      "exceptions": "11111",
+      "teamsMeetings": "11111"
     },
     "days": {
       "sunday": "11111",
@@ -331,7 +338,7 @@
       },
       "deleteDialog": {
         "title": "11111",
-        "message": "11111"
+        "message": "11111 {{userName}} 11111"
       }
     },
     "serviceRules": {
@@ -379,7 +386,7 @@
       },
       "deleteDialog": {
         "title": "11111",
-        "message": "11111"
+        "message": "11111 {{serviceName}} 11111"
       }
     },
     "exceptions": {
@@ -420,6 +427,56 @@
         "addError": "11111",
         "deleteSuccess": "11111",
         "deleteError": "11111"
+      }
+    },
+    "teamsMeetings": {
+      "prerequisites": {
+        "title": "11111",
+        "description": "11111",
+        "steps": {
+          "toggle": "11111",
+          "step1": {
+            "title": "11111",
+            "item1": "11111",
+            "item2": "11111",
+            "item3": "11111",
+            "item4": "11111"
+          },
+          "step2": {
+            "title": "11111",
+            "intro": "11111",
+            "note": "11111"
+          }
+        }
+      },
+      "organizer": {
+        "title": "11111",
+        "label": "11111",
+        "help": "11111",
+        "placeholder": "11111"
+      },
+      "actions": {
+        "save": "11111",
+        "saving": "11111",
+        "verify": "11111",
+        "verifying": "11111"
+      },
+      "feedback": {
+        "saveSuccess": "11111",
+        "saveError": "11111",
+        "verifySuccess": "11111",
+        "verifyError": "11111"
+      },
+      "verify": {
+        "valid": "11111",
+        "validWithName": "11111 {{displayName}} 11111",
+        "reasons": {
+          "eeDisabled": "11111",
+          "notConfigured": "11111",
+          "userNotFound": "11111",
+          "policyMissing": "11111",
+          "graphError": "11111"
+        }
       }
     }
   },
@@ -469,7 +526,8 @@
       "approved": {
         "title": "11111",
         "descriptionWithDate": "11111 {{date}} 11111",
-        "description": "11111"
+        "description": "11111",
+        "joinTeamsMeeting": "11111"
       },
       "pending": {
         "title": "11111",
@@ -484,10 +542,18 @@
         "title": "11111",
         "description": "11111"
       },
+      "requesterInfo": {
+        "title": "11111",
+        "company": "11111",
+        "name": "11111",
+        "email": "11111",
+        "phone": "11111"
+      },
       "requestedDateTimeLabel": "11111",
       "assignTechnicianLabel": "11111",
       "assignTechnicianPlaceholder": "11111",
       "scheduledDateTimeLabel": "11111",
+      "generateTeamsMeeting": "11111",
       "noNotes": "11111",
       "declineReasonLabel": "11111",
       "declineReasonPlaceholder": "11111",
@@ -532,6 +598,8 @@
     "delete": {
       "validationFailed": "11111",
       "entityFallback": "11111",
+      "confirm": "11111",
+      "confirmWithTeamsWarning": "11111",
       "scopeDialog": {
         "title": "11111",
         "message": "11111",

@@ -684,6 +684,7 @@ We typically respond within ${data.responseTime}. If you have questions, contact
         <p><strong>Time:</strong> ${data.appointmentTime}</p>
         <p><strong>Duration:</strong> ${data.duration} minutes</p>
         ${data.technicianName ? `<p><strong>Assigned Technician:</strong> ${data.technicianName}</p>` : ''}
+        ${data.onlineMeetingUrl ? `<p><a href="${data.onlineMeetingUrl}" style="display: inline-block; padding: 10px 20px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 5px; margin-right: 8px;">Join Teams Meeting</a></p>` : ''}
         ${data.calendarLink ? `<p><a href="${data.calendarLink}" style="display: inline-block; padding: 10px 20px; background-color: #8a4dea; color: white; text-decoration: none; border-radius: 5px;">Add to Calendar</a></p>` : ''}
         <hr style="margin-top: 30px;">
         <p style="color: #666; font-size: 12px;">If you need to reschedule or cancel, please contact us at least ${data.minimumNoticeHours} hours in advance at ${data.contactEmail}${data.contactPhone ? ` or ${data.contactPhone}` : ''}.</p>
@@ -704,6 +705,7 @@ Time: ${data.appointmentTime}
 Duration: ${data.duration} minutes
 ${data.technicianName ? `Assigned Technician: ${data.technicianName}` : ''}
 
+${data.onlineMeetingUrl ? `Join Teams Meeting: ${data.onlineMeetingUrl}` : ''}
 ${data.calendarLink ? `Add to Calendar: ${data.calendarLink}` : ''}
 
 If you need to reschedule or cancel, please contact us at least ${data.minimumNoticeHours} hours in advance at ${data.contactEmail}${data.contactPhone ? ` or ${data.contactPhone}` : ''}.

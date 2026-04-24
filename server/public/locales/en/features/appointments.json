@@ -113,6 +113,8 @@
     "reference": "Reference",
     "service": "Service",
     "dateTime": "Date & Time",
+    "teamsMeeting": "Teams Meeting",
+    "joinTeamsMeeting": "Join Teams Meeting",
     "technician": "Assigned Technician",
     "linkedTicket": "Linked Ticket",
     "description": "Description",
@@ -123,6 +125,7 @@
   "cancel": {
     "title": "Cancel Appointment",
     "message": "Are you sure you want to cancel this appointment request? This action cannot be undone.",
+    "messageWithTeamsWarning": "Are you sure you want to cancel this appointment request? This action cannot be undone. This will also delete the Microsoft Teams meeting.",
     "confirm": "Yes, Cancel"
   },
   "ticketSection": {

@@ -149,6 +149,7 @@
       "labels": {
         "reference": "Référence",
         "client": "Client",
+        "requester": "Demandeur",
         "contact": "Contact",
         "email": "E-mail",
         "phone": "Téléphone",
@@ -157,7 +158,11 @@
         "duration": "Durée",
         "status": "Statut",
         "linkedTicket": "Billet lié",
-        "description": "Description"
+        "description": "Description",
+        "teamsMeeting": "Réunion Teams"
+      },
+      "actions": {
+        "joinTeamsMeeting": "Rejoindre la réunion Teams"
       }
     },
     "approval": {
@@ -166,7 +171,8 @@
         "assignedTechnician": "Attribuer un technicien *",
         "finalDateTime": "Date et heure finales",
         "internalNotes": "Notes internes (facultatif)",
-        "linkedTicket": "Lien vers le billet (facultatif)"
+        "linkedTicket": "Lien vers le billet (facultatif)",
+        "generateTeamsMeeting": "Générer un lien de réunion Microsoft Teams"
       },
       "placeholders": {
         "assignedTechnician": "Sélectionner un technicien",
@@ -201,7 +207,8 @@
       "general": "Paramètres généraux",
       "userHours": "Heures d'utilisation",
       "serviceRules": "Règles de service",
-      "exceptions": "Exceptions"
+      "exceptions": "Exceptions",
+      "teamsMeetings": "Réunions Teams"
     },
     "days": {
       "sunday": "Dimanche",
@@ -421,6 +428,56 @@
         "deleteSuccess": "Exception supprimée",
         "deleteError": "Échec de la suppression de l'exception"
       }
+    },
+    "teamsMeetings": {
+      "prerequisites": {
+        "title": "Prérequis Azure",
+        "description": "Avant d'activer cette fonctionnalité, accordez à l'application l'autorisation OnlineMeetings.ReadWrite.All et créez une Application Access Policy pour le compte organisateur.",
+        "steps": {
+          "toggle": "Afficher les étapes de configuration Azure",
+          "step1": {
+            "title": "1. Accorder l'autorisation d'application Graph",
+            "item1": "Ouvrez le centre d'administration Entra → Inscriptions d'applications.",
+            "item2": "Sélectionnez l'application utilisée par l'intégration Teams de ce locataire.",
+            "item3": "Autorisations d'API → Ajouter → Microsoft Graph → Autorisations d'application.",
+            "item4": "Ajoutez OnlineMeetings.ReadWrite.All et accordez le consentement administrateur."
+          },
+          "step2": {
+            "title": "2. Créer une Application Access Policy",
+            "intro": "La création de réunions en mode application uniquement doit être explicitement autorisée pour le compte organisateur.",
+            "note": "Attendez 5 à 10 minutes pour la propagation de la stratégie avant de cliquer sur Vérifier."
+          }
+        }
+      },
+      "organizer": {
+        "title": "Organisateur de la réunion",
+        "label": "Organisateur de réunion par défaut (UPN ou ID utilisateur Microsoft)",
+        "help": "Les rendez-vous approuvés créent des réunions Teams au nom de cet utilisateur Microsoft. Un UPN tel que scheduling@acme.com est généralement le choix le plus sûr.",
+        "placeholder": "scheduling@acme.com"
+      },
+      "actions": {
+        "save": "Enregistrer",
+        "saving": "Enregistrement...",
+        "verify": "Vérifier",
+        "verifying": "Vérification..."
+      },
+      "feedback": {
+        "saveSuccess": "Organisateur de réunion Teams enregistré",
+        "saveError": "Échec de l'enregistrement de l'organisateur de réunion Teams",
+        "verifySuccess": "Organisateur de réunion Teams vérifié",
+        "verifyError": "Échec de la vérification de l'organisateur de réunion Teams"
+      },
+      "verify": {
+        "valid": "Organisateur Microsoft vérifié avec succès.",
+        "validWithName": "Utilisateur Microsoft vérifié : {{displayName}}.",
+        "reasons": {
+          "eeDisabled": "La vérification des réunions Teams n'est disponible qu'en Enterprise Edition.",
+          "notConfigured": "L'intégration Teams doit être active avant de pouvoir vérifier un organisateur.",
+          "userNotFound": "Microsoft n'a pas trouvé d'utilisateur pour cette valeur d'organisateur.",
+          "policyMissing": "L'utilisateur Microsoft existe, mais l'Application Access Policy n'autorise pas encore la création de réunions.",
+          "graphError": "Microsoft Graph n'a pas pu vérifier cet organisateur pour le moment."
+        }
+      }
     }
   },
   "entryPopup": {
@@ -469,7 +526,8 @@
       "approved": {
         "title": "Nomination approuvée",
         "descriptionWithDate": "Ce rendez-vous découle d'une demande d'un client et a été approuvé le {{date}}.",
-        "description": "Ce rendez-vous est né d'une demande d'un client."
+        "description": "Ce rendez-vous est né d'une demande d'un client.",
+        "joinTeamsMeeting": "Rejoindre la réunion Teams"
       },
       "pending": {
         "title": "Demande de rendez-vous en attente",
@@ -483,6 +541,13 @@
       "cancelled": {
         "title": "Demande de rendez-vous annulée",
         "description": "Cette demande de rendez-vous a été annulée par le client."
+      },
+      "requesterInfo": {
+        "title": "Informations du demandeur",
+        "company": "Entreprise",
+        "name": "Nom",
+        "email": "E-mail",
+        "phone": "Téléphone"
       },
       "requestedDateTimeLabel": "Date et heure demandées",
       "assignTechnicianLabel": "Attribuer un technicien *",
@@ -503,7 +568,8 @@
         "declineReasonRequired": "Veuillez fournir une raison pour votre refus",
         "declined": "Demande de rendez-vous refusée",
         "declineFailed": "Échec du refus de la demande"
-      }
+      },
+      "generateTeamsMeeting": "Générer un lien de réunion Microsoft Teams"
     },
     "recurrence": {
       "label": "Récurrence",
@@ -536,7 +602,9 @@
         "title": "Supprimer l'entrée de planification",
         "message": "Sélectionnez les événements à supprimer :",
         "confirm": "Continuer"
-      }
+      },
+      "confirm": "Êtes-vous sûr de vouloir supprimer cette entrée de planning ? Cette action est irréversible.",
+      "confirmWithTeamsWarning": "Êtes-vous sûr de vouloir supprimer cette entrée de planning ? Cette action est irréversible. La réunion Microsoft Teams associée sera également supprimée."
     },
     "scopeOptions": {
       "single": "Seulement cet événement",

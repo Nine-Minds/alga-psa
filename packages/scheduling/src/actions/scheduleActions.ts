@@ -41,6 +41,7 @@ import {
   shouldEmitTechnicianDispatchEvents,
 } from '@alga-psa/workflow-streams';
 import { maybePublishCapacityThresholdReached } from '../lib/capacityThresholdWorkflowEvents';
+import { resolveTeamsMeetingService } from '../lib/teamsMeetingService';
 
 export type ScheduleActionResult<T> =
   | { success: true; entries: T; error?: never }
@@ -670,6 +671,18 @@ export const deleteScheduleEntry = withAuth(async (
       };
     }
 
+    const appointmentRequestRow =
+      existingEntry.work_item_type === 'appointment_request' && existingEntry.work_item_id
+        ? await withTransaction(db, async (trx: Knex.Transaction) => {
+            return await trx('appointment_requests')
+              .where({
+                appointment_request_id: existingEntry.work_item_id,
+                tenant,
+              })
+              .first();
+          })
+        : null;
+
     const result = await deleteEntityWithValidation('schedule_entry', masterEntryId, db, tenant, async (trx, tenantId) => {
       // Clean up schedule conflicts referencing this entry
       await trx('schedule_conflicts')
@@ -691,6 +704,39 @@ export const deleteScheduleEntry = withAuth(async (
         success: false,
         error: result.message ?? 'Failed to delete schedule entry'
       };
+    }
+
+    if (appointmentRequestRow) {
+      await withTransaction(db, async (trx: Knex.Transaction) => {
+        const nextUpdate: Record<string, unknown> = {
+          schedule_entry_id: null,
+          online_meeting_provider: null,
+          online_meeting_url: null,
+          online_meeting_id: null,
+          updated_at: new Date(),
+        };
+
+        if (appointmentRequestRow.status === 'approved') {
+          nextUpdate.status = 'cancelled';
+          nextUpdate.declined_reason = 'Cancelled by MSP';
+        }
+
+        await trx('appointment_requests')
+          .where({
+            appointment_request_id: appointmentRequestRow.appointment_request_id,
+            tenant,
+          })
+          .update(nextUpdate);
+      });
+
+      if (appointmentRequestRow.online_meeting_provider === 'teams' && appointmentRequestRow.online_meeting_id) {
+        const teamsMeetingService = await resolveTeamsMeetingService();
+        await teamsMeetingService.deleteTeamsMeeting({
+          tenantId: tenant,
+          meetingId: appointmentRequestRow.online_meeting_id,
+          appointmentRequestId: appointmentRequestRow.appointment_request_id,
+        });
+      }
     }
 
     try {

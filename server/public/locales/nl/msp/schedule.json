@@ -149,6 +149,7 @@
       "labels": {
         "reference": "Referentie",
         "client": "Cliënt",
+        "requester": "Aanvrager",
         "contact": "Contact",
         "email": "E-mail",
         "phone": "Telefoon",
@@ -157,7 +158,11 @@
         "duration": "Duur",
         "status": "Status",
         "linkedTicket": "Gekoppeld kaartje",
-        "description": "Beschrijving"
+        "description": "Beschrijving",
+        "teamsMeeting": "Teams-vergadering"
+      },
+      "actions": {
+        "joinTeamsMeeting": "Deelnemen aan Teams-vergadering"
       }
     },
     "approval": {
@@ -166,7 +171,8 @@
         "assignedTechnician": "Technicus toewijzen *",
         "finalDateTime": "Laatste datum en tijd",
         "internalNotes": "Interne opmerkingen (optioneel)",
-        "linkedTicket": "Link naar ticket (optioneel)"
+        "linkedTicket": "Link naar ticket (optioneel)",
+        "generateTeamsMeeting": "Microsoft Teams-vergaderlink genereren"
       },
       "placeholders": {
         "assignedTechnician": "Selecteer technicus",
@@ -201,7 +207,8 @@
       "general": "Algemene instellingen",
       "userHours": "Gebruikersuren",
       "serviceRules": "Serviceregels",
-      "exceptions": "Uitzonderingen"
+      "exceptions": "Uitzonderingen",
+      "teamsMeetings": "Teams-vergaderingen"
     },
     "days": {
       "sunday": "Zondag",
@@ -421,6 +428,56 @@
         "deleteSuccess": "Uitzondering verwijderd",
         "deleteError": "Kan uitzondering niet verwijderen"
       }
+    },
+    "teamsMeetings": {
+      "prerequisites": {
+        "title": "Azure-vereisten",
+        "description": "Voordat u dit inschakelt, verleent u de app de toepassingsmachtiging OnlineMeetings.ReadWrite.All en maakt u een Application Access Policy voor het organisatoraccount.",
+        "steps": {
+          "toggle": "Azure-installatiestappen tonen",
+          "step1": {
+            "title": "1. Graph-toepassingsmachtiging verlenen",
+            "item1": "Open het Entra-beheercentrum → App-registraties.",
+            "item2": "Selecteer de app die door de Teams-integratie van deze tenant wordt gebruikt.",
+            "item3": "API-machtigingen → Toevoegen → Microsoft Graph → Toepassingsmachtigingen.",
+            "item4": "Voeg OnlineMeetings.ReadWrite.All toe en verleen beheerderstoestemming."
+          },
+          "step2": {
+            "title": "2. Een Application Access Policy maken",
+            "intro": "Het aanmaken van vergaderingen uitsluitend via de app moet expliciet worden toegestaan voor het organisatoraccount.",
+            "note": "Wacht 5–10 minuten op de doorvoering van het beleid voordat u op Verifiëren klikt."
+          }
+        }
+      },
+      "organizer": {
+        "title": "Vergaderorganisator",
+        "label": "Standaard vergaderorganisator (UPN of Microsoft-gebruikers-ID)",
+        "help": "Goedgekeurde afspraken maken Teams-vergaderingen aan als deze Microsoft-gebruiker. Een UPN zoals scheduling@acme.com is meestal de veiligste keuze.",
+        "placeholder": "scheduling@acme.com"
+      },
+      "actions": {
+        "save": "Opslaan",
+        "saving": "Opslaan...",
+        "verify": "Verifiëren",
+        "verifying": "Verifiëren..."
+      },
+      "feedback": {
+        "saveSuccess": "Teams-vergaderorganisator opgeslagen",
+        "saveError": "Opslaan van Teams-vergaderorganisator mislukt",
+        "verifySuccess": "Teams-vergaderorganisator geverifieerd",
+        "verifyError": "Verifiëren van Teams-vergaderorganisator mislukt"
+      },
+      "verify": {
+        "valid": "Microsoft-organisator succesvol geverifieerd.",
+        "validWithName": "Geverifieerde Microsoft-gebruiker: {{displayName}}.",
+        "reasons": {
+          "eeDisabled": "Verificatie van Teams-vergaderingen is alleen beschikbaar in de Enterprise Edition.",
+          "notConfigured": "De Teams-integratie moet actief zijn voordat een organisator kan worden geverifieerd.",
+          "userNotFound": "Microsoft kon geen gebruiker vinden voor deze organisatorwaarde.",
+          "policyMissing": "De Microsoft-gebruiker bestaat, maar de Application Access Policy staat het maken van vergaderingen nog niet toe.",
+          "graphError": "Microsoft Graph kan deze organisator op dit moment niet verifiëren."
+        }
+      }
     }
   },
   "entryPopup": {
@@ -469,7 +526,8 @@
       "approved": {
         "title": "Goedgekeurde afspraak",
         "descriptionWithDate": "Deze afspraak kwam voort uit een verzoek van een klant en werd goedgekeurd op {{date}}.",
-        "description": "Deze afspraak is ontstaan ​​vanuit een verzoek van een cliënt."
+        "description": "Deze afspraak is ontstaan ​​vanuit een verzoek van een cliënt.",
+        "joinTeamsMeeting": "Deelnemen aan Teams-vergadering"
       },
       "pending": {
         "title": "Afspraakverzoek in behandeling",
@@ -483,6 +541,13 @@
       "cancelled": {
         "title": "Afspraakverzoek geannuleerd",
         "description": "Dit afspraakverzoek is door de cliënt geannuleerd."
+      },
+      "requesterInfo": {
+        "title": "Aanvragerinformatie",
+        "company": "Bedrijf",
+        "name": "Naam",
+        "email": "E-mail",
+        "phone": "Telefoon"
       },
       "requestedDateTimeLabel": "Gevraagde datum en tijd",
       "assignTechnicianLabel": "Technicus toewijzen *",
@@ -503,7 +568,8 @@
         "declineReasonRequired": "Geef een reden op voor de weigering",
         "declined": "Afspraakverzoek afgewezen",
         "declineFailed": "Kan het verzoek niet weigeren"
-      }
+      },
+      "generateTeamsMeeting": "Microsoft Teams-vergaderlink genereren"
     },
     "recurrence": {
       "label": "Herhaling",
@@ -536,7 +602,9 @@
         "title": "Schema-item verwijderen",
         "message": "Selecteer welke evenementen u wilt verwijderen:",
         "confirm": "Doorgaan"
-      }
+      },
+      "confirm": "Weet u zeker dat u deze planningsitem wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+      "confirmWithTeamsWarning": "Weet u zeker dat u deze planningsitem wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt. De bijbehorende Microsoft Teams-vergadering wordt ook verwijderd."
     },
     "scopeOptions": {
       "single": "Alleen dit evenement",

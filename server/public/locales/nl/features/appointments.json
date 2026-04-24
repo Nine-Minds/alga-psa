@@ -118,12 +118,15 @@
     "description": "Beschrijving",
     "created": "Aangevraagd",
     "approved": "Goedgekeurd",
-    "cancelButton": "Afspraak annuleren"
+    "cancelButton": "Afspraak annuleren",
+    "teamsMeeting": "Teams-vergadering",
+    "joinTeamsMeeting": "Deelnemen aan Teams-vergadering"
   },
   "cancel": {
     "title": "Afspraak annuleren",
     "message": "Weet u zeker dat u dit afspraakverzoek wilt annuleren? Deze actie kan niet ongedaan worden gemaakt.",
-    "confirm": "Ja, annuleren"
+    "confirm": "Ja, annuleren",
+    "messageWithTeamsWarning": "Weet u zeker dat u dit afspraakverzoek wilt annuleren? Deze actie kan niet ongedaan worden gemaakt. De bijbehorende Microsoft Teams-vergadering wordt ook verwijderd."
   },
   "ticketSection": {
     "title": "Afspraakverzoeken",
