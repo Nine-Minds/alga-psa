@@ -48,6 +48,7 @@ interface AppointmentRequest {
   ticket_number?: string;
   approved_at?: string;
   declined_reason?: string;
+  online_meeting_url?: string | null;
   created_at: string;
 }
 
@@ -116,6 +117,11 @@ export default function AppointmentsPage() {
     }
     return appointments.filter(apt => apt.status === filterStatus);
   }, [appointments, filterStatus]);
+
+  const appointmentToCancelRecord = useMemo(
+    () => appointments.find((appointment) => appointment.appointment_request_id === appointmentToCancel) || null,
+    [appointmentToCancel, appointments]
+  );
 
   const getStatusBadge = (status: AppointmentRequest['status']) => {
     const variants: Record<AppointmentRequest['status'], { variant: 'default' | 'primary' | 'success' | 'warning' | 'error'; label: string }> = {
@@ -503,7 +509,7 @@ export default function AppointmentsPage() {
             </div>
 
             <DialogFooter className="mt-6">
-              {selectedAppointment.status === 'pending' && (
+              {(selectedAppointment.status === 'pending' || selectedAppointment.status === 'approved') && (
                 <Button
                   id="cancel-appointment-details-button"
                   variant="destructive"
@@ -533,7 +539,9 @@ export default function AppointmentsPage() {
         onClose={() => setAppointmentToCancel(null)}
         onConfirm={handleCancelAppointment}
         title={t('cancel.title')}
-        message={t('cancel.message')}
+        message={appointmentToCancelRecord?.online_meeting_url
+          ? t('cancel.messageWithTeamsWarning', 'Are you sure you want to cancel this appointment request? This action cannot be undone. This will also delete the Microsoft Teams meeting.')
+          : t('cancel.message')}
         confirmLabel={t('cancel.confirm')}
         cancelLabel={tCommon('common.cancel')}
       />

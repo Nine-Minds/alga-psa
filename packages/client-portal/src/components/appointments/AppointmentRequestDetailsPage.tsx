@@ -49,6 +49,7 @@ interface AppointmentRequestDetails {
   approver_last_name?: string;
   approved_at?: string;
   declined_reason?: string;
+  online_meeting_url?: string | null;
   created_at: string;
 }
 
@@ -320,7 +321,7 @@ export function AppointmentRequestDetailsPage() {
             </div>
 
             {/* Actions */}
-            {appointment.status === 'pending' && (
+            {(appointment.status === 'pending' || appointment.status === 'approved') && (
               <div className="pt-4 border-t border-gray-200 flex justify-end">
                 <Button
                   id="cancel-appointment-button"
@@ -341,7 +342,9 @@ export function AppointmentRequestDetailsPage() {
         onClose={() => setShowCancelConfirmation(false)}
         onConfirm={handleCancelAppointment}
         title={t('cancel.title', 'Cancel Appointment Request')}
-        message={t('cancel.message', 'Are you sure you want to cancel this appointment request? This action cannot be undone.')}
+        message={appointment.online_meeting_url
+          ? t('cancel.messageWithTeamsWarning', 'Are you sure you want to cancel this appointment request? This action cannot be undone. This will also delete the Microsoft Teams meeting.')
+          : t('cancel.message', 'Are you sure you want to cancel this appointment request? This action cannot be undone.')}
         confirmLabel={t('cancel.confirm', 'Yes, Cancel')}
         cancelLabel={tCommon('common.cancel', 'Cancel')}
       />

@@ -396,6 +396,13 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
   const [pendingDeleteScope, setPendingDeleteScope] = useState<IEditScope | undefined>(undefined);
   const [pendingUpdateData, setPendingUpdateData] = useState<Omit<IScheduleEntry, 'tenant'>>();
+  const deleteConfirmationMessage = appointmentRequestData?.online_meeting_url
+    ? t('entryPopup.delete.confirmWithTeamsWarning', {
+        defaultValue: 'Are you sure you want to delete this schedule entry? This action cannot be undone. This will also delete the Microsoft Teams meeting.',
+      })
+    : t('entryPopup.delete.confirm', {
+        defaultValue: 'Are you sure you want to delete this schedule entry? This action cannot be undone.',
+      });
 
   useEffect(() => {
     if (!isDeleteDialogOpen || !event) {
@@ -1383,6 +1390,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         onClose={resetDeleteState}
         onConfirmDelete={handleDeleteDialogConfirm}
         entityName={event?.title || t('entryPopup.delete.entityFallback', { defaultValue: 'this schedule entry' })}
+        confirmationMessage={deleteConfirmationMessage}
         validationResult={deleteValidation}
         isValidating={isDeleteValidating}
         isDeleting={isDeleteProcessing}

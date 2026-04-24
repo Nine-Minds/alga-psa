@@ -74,7 +74,7 @@
   {
     "id": "F013",
     "description": "Cancel/delete confirmation dialogs include a warning message when a Teams meeting will also be deleted.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-11"]
   },
   {
