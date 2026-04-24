@@ -130,6 +130,97 @@ export function registerSoftwareOneRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  const SoftwareOneCharge = registry.registerSchema(
+    'SoftwareOneCharge',
+    zOpenApi.object({
+      id: zOpenApi.string().describe('SoftwareOne charge identifier, unique within the statement, such as 1-1.'),
+      statementId: zOpenApi.string().describe('Parent SoftwareOne statement identifier, such as stmt-001.'),
+      description: zOpenApi.string().describe('Human-readable line item description.'),
+      product: zOpenApi.string().describe('Product or SKU for the charge.'),
+      quantity: zOpenApi.number().describe('Quantity billed for this line item.'),
+      unitPrice: zOpenApi.number().describe('Unit price in the statement currency.'),
+      totalAmount: zOpenApi.number().describe('Total line amount.'),
+      agreementId: zOpenApi.string().describe('Related SoftwareOne agreement identifier, such as agr-001.'),
+      period: zOpenApi.string().describe('Billing period in YYYY-MM format.'),
+      category: zOpenApi.string().describe('Charge category, such as Software License, Compute, Storage, or Support.'),
+    }),
+  );
+
+  const SoftwareOneChargesListResponse = registry.registerSchema(
+    'SoftwareOneChargesListResponse',
+    zOpenApi.object({
+      success: zOpenApi.literal(true).describe('Request succeeded.'),
+      data: zOpenApi.array(SoftwareOneCharge).describe('Charge line items for the requested statement. Unknown statement IDs return an empty array.'),
+      meta: zOpenApi.object({
+        total: zOpenApi.number().int().describe('Number of charge records returned.'),
+        statementId: zOpenApi.string().describe('Statement ID from the path parameter.'),
+      }),
+    }),
+  );
+
+  const SoftwareOneFullSyncResponse = registry.registerSchema(
+    'SoftwareOneFullSyncResponse',
+    zOpenApi.object({
+      success: zOpenApi.literal(true).describe('Sync request completed successfully.'),
+      message: zOpenApi.string().describe('Human-readable sync result message.'),
+      data: zOpenApi.object({
+        agreementsCount: zOpenApi.number().int().describe('Number of agreements synced. Zero when syncAgreements is false.'),
+        statementsCount: zOpenApi.number().int().describe('Number of statements synced. Zero when syncStatements is false.'),
+        syncedAt: zOpenApi.string().datetime().describe('ISO timestamp when the dummy sync completed.'),
+      }),
+    }),
+  );
+
+  const ExtensionIdParams = registry.registerSchema(
+    'ExtensionIdParams',
+    zOpenApi.object({
+      extensionId: zOpenApi.string().describe('Extension identifier from the URL. The MVP generic routes accept any value and echo it in response metadata.'),
+    }),
+  );
+
+  const ExtensionScopedIdParams = registry.registerSchema(
+    'ExtensionScopedIdParams',
+    zOpenApi.object({
+      extensionId: zOpenApi.string().describe('Extension identifier from the URL. The MVP generic routes accept any value and echo it in response metadata.'),
+      id: zOpenApi.string().describe('SoftwareOne-style external record identifier, such as agr-001 or stmt-001. This is not an Alga UUID.'),
+    }),
+  );
+
+  const GenericExtensionAgreementsListResponse = registry.registerSchema(
+    'GenericExtensionAgreementsListResponse',
+    zOpenApi.object({
+      success: zOpenApi.literal(true).describe('Request succeeded.'),
+      data: zOpenApi.array(SoftwareOneAgreement).describe('Agreement records returned by the generic extension MVP handler.'),
+      meta: zOpenApi.object({
+        total: zOpenApi.number().int().describe('Number of agreements returned.'),
+        extensionId: zOpenApi.string().describe('Extension ID echoed from the path.'),
+      }),
+    }),
+  );
+
+  const GenericExtensionAgreementDetailResponse = registry.registerSchema(
+    'GenericExtensionAgreementDetailResponse',
+    zOpenApi.object({
+      success: zOpenApi.literal(true).describe('Request succeeded.'),
+      data: SoftwareOneAgreementDetail,
+      meta: zOpenApi.object({
+        extensionId: zOpenApi.string().describe('Extension ID echoed from the path.'),
+      }),
+    }),
+  );
+
+  const GenericExtensionStatementsListResponse = registry.registerSchema(
+    'GenericExtensionStatementsListResponse',
+    zOpenApi.object({
+      success: zOpenApi.literal(true).describe('Request succeeded.'),
+      data: zOpenApi.array(SoftwareOneStatement).describe('Statement records returned by the generic extension MVP handler.'),
+      meta: zOpenApi.object({
+        total: zOpenApi.number().int().describe('Number of statements returned.'),
+        extensionId: zOpenApi.string().describe('Extension ID echoed from the path.'),
+      }),
+    }),
+  );
+
   const SoftwareOneSyncResponse = registry.registerSchema(
     'SoftwareOneSyncResponse',
     zOpenApi.object({
@@ -362,6 +453,174 @@ export function registerSoftwareOneRoutes(registry: ApiOpenApiRegistry) {
     extensions: {
       'x-placeholder-implementation': true,
       'x-extension': 'softwareone',
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/extensions/softwareone/statements/{id}/charges',
+    summary: 'List SoftwareOne statement charges',
+    description:
+      'Returns line-item charges for a SoftwareOne billing statement. The current handler is an MVP placeholder backed by hardcoded dummy data keyed by SoftwareOne statement IDs such as stmt-001. Unknown statement IDs return 200 with an empty data array rather than 404. The id path parameter is not an Alga UUID.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      params: SoftwareOneIdParams,
+    },
+    responses: {
+      200: {
+        description: 'Charge list returned successfully. Data may be empty when the statement ID is unknown.',
+        schema: SoftwareOneChargesListResponse,
+      },
+      401: {
+        description: 'API key missing at middleware before the handler executes.',
+        schema: MiddlewareUnauthorizedResponse,
+      },
+      500: {
+        description: 'Unexpected failure while fetching statement charges.',
+        schema: SoftwareOneErrorResponse,
+      },
+    },
+    extensions: {
+      'x-placeholder-implementation': true,
+      'x-extension': 'softwareone',
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/extensions/softwareone/sync',
+    summary: 'Sync SoftwareOne data',
+    description:
+      'Triggers the SoftwareOne aggregate sync placeholder. The current handler accepts optional syncAgreements and syncStatements booleans, waits briefly to simulate work, and returns dummy counts and a syncedAt timestamp. A full implementation will validate permissions, derive tenant context, connect to the SoftwareOne API, and persist agreement and statement data.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      body: {
+        schema: SoftwareOneSyncRequest,
+        description: 'Sync options. The current sync endpoint consumes syncAgreements and syncStatements; unknown fields are ignored.',
+        required: false,
+      },
+    },
+    responses: {
+      200: {
+        description: 'Sync placeholder completed successfully with dummy counts.',
+        schema: SoftwareOneFullSyncResponse,
+      },
+      401: {
+        description: 'API key missing at middleware before the handler executes.',
+        schema: MiddlewareUnauthorizedResponse,
+      },
+      500: {
+        description: 'Unexpected failure while syncing SoftwareOne data.',
+        schema: SoftwareOneErrorResponse,
+      },
+    },
+    extensions: {
+      'x-placeholder-implementation': true,
+      'x-extension': 'softwareone',
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/extensions/{extensionId}/agreements',
+    summary: 'List agreements for extension',
+    description:
+      'Generic extension agreements placeholder. The current handler accepts any extensionId, performs no handler-level extension validation, and returns hardcoded SoftwareOne-style agreement data with meta.extensionId echoed from the path. A full implementation will validate the extension ID, check permissions, derive tenant context, and fetch extension-specific data.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      params: ExtensionIdParams,
+    },
+    responses: {
+      200: {
+        description: 'Agreement list returned successfully for the requested extension placeholder.',
+        schema: GenericExtensionAgreementsListResponse,
+      },
+      401: {
+        description: 'API key missing at middleware before the handler executes.',
+        schema: MiddlewareUnauthorizedResponse,
+      },
+      500: {
+        description: 'Unexpected failure while fetching extension agreements.',
+        schema: SoftwareOneErrorResponse,
+      },
+    },
+    extensions: {
+      'x-placeholder-implementation': true,
+      'x-extension-scoped': true,
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/extensions/{extensionId}/agreements/{id}',
+    summary: 'Get agreement for extension',
+    description:
+      'Generic extension agreement detail placeholder. The current handler accepts any extensionId, looks up an agreement by SoftwareOne-style external ID such as agr-001, and returns hardcoded detail data with meta.extensionId echoed from the path. The id path parameter is not an Alga UUID.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      params: ExtensionScopedIdParams,
+    },
+    responses: {
+      200: {
+        description: 'Agreement detail returned successfully for the requested extension placeholder.',
+        schema: GenericExtensionAgreementDetailResponse,
+      },
+      401: {
+        description: 'API key missing at middleware before the handler executes.',
+        schema: MiddlewareUnauthorizedResponse,
+      },
+      404: {
+        description: 'Agreement not found.',
+        schema: SoftwareOneErrorResponse,
+      },
+      500: {
+        description: 'Unexpected failure while fetching extension agreement detail.',
+        schema: SoftwareOneErrorResponse,
+      },
+    },
+    extensions: {
+      'x-placeholder-implementation': true,
+      'x-extension-scoped': true,
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/extensions/{extensionId}/statements',
+    summary: 'List statements for extension',
+    description:
+      'Generic extension statements placeholder. The current handler accepts any extensionId, performs no handler-level extension validation, and returns hardcoded SoftwareOne-style statement data with meta.extensionId echoed from the path. A full implementation will validate the extension ID, check permissions, derive tenant context, and fetch extension-specific data.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      params: ExtensionIdParams,
+    },
+    responses: {
+      200: {
+        description: 'Statement list returned successfully for the requested extension placeholder.',
+        schema: GenericExtensionStatementsListResponse,
+      },
+      401: {
+        description: 'API key missing at middleware before the handler executes.',
+        schema: MiddlewareUnauthorizedResponse,
+      },
+      500: {
+        description: 'Unexpected failure while fetching extension statements.',
+        schema: SoftwareOneErrorResponse,
+      },
+    },
+    extensions: {
+      'x-placeholder-implementation': true,
+      'x-extension-scoped': true,
     },
     edition: 'both',
   });

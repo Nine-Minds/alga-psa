@@ -3674,6 +3674,291 @@
           "data"
         ]
       },
+      "SoftwareOneCharge": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "SoftwareOne charge identifier, unique within the statement, such as 1-1."
+          },
+          "statementId": {
+            "type": "string",
+            "description": "Parent SoftwareOne statement identifier, such as stmt-001."
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable line item description."
+          },
+          "product": {
+            "type": "string",
+            "description": "Product or SKU for the charge."
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Quantity billed for this line item."
+          },
+          "unitPrice": {
+            "type": "number",
+            "description": "Unit price in the statement currency."
+          },
+          "totalAmount": {
+            "type": "number",
+            "description": "Total line amount."
+          },
+          "agreementId": {
+            "type": "string",
+            "description": "Related SoftwareOne agreement identifier, such as agr-001."
+          },
+          "period": {
+            "type": "string",
+            "description": "Billing period in YYYY-MM format."
+          },
+          "category": {
+            "type": "string",
+            "description": "Charge category, such as Software License, Compute, Storage, or Support."
+          }
+        },
+        "required": [
+          "id",
+          "statementId",
+          "description",
+          "product",
+          "quantity",
+          "unitPrice",
+          "totalAmount",
+          "agreementId",
+          "period",
+          "category"
+        ]
+      },
+      "SoftwareOneChargesListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ],
+            "description": "Request succeeded."
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SoftwareOneCharge"
+            },
+            "description": "Charge line items for the requested statement. Unknown statement IDs return an empty array."
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "description": "Number of charge records returned."
+              },
+              "statementId": {
+                "type": "string",
+                "description": "Statement ID from the path parameter."
+              }
+            },
+            "required": [
+              "total",
+              "statementId"
+            ]
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ]
+      },
+      "SoftwareOneFullSyncResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ],
+            "description": "Sync request completed successfully."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable sync result message."
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "agreementsCount": {
+                "type": "integer",
+                "description": "Number of agreements synced. Zero when syncAgreements is false."
+              },
+              "statementsCount": {
+                "type": "integer",
+                "description": "Number of statements synced. Zero when syncStatements is false."
+              },
+              "syncedAt": {
+                "type": "string",
+                "format": "date-time",
+                "description": "ISO timestamp when the dummy sync completed."
+              }
+            },
+            "required": [
+              "agreementsCount",
+              "statementsCount",
+              "syncedAt"
+            ]
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "ExtensionIdParams": {
+        "type": "object",
+        "properties": {
+          "extensionId": {
+            "type": "string",
+            "description": "Extension identifier from the URL. The MVP generic routes accept any value and echo it in response metadata."
+          }
+        },
+        "required": [
+          "extensionId"
+        ]
+      },
+      "ExtensionScopedIdParams": {
+        "type": "object",
+        "properties": {
+          "extensionId": {
+            "type": "string",
+            "description": "Extension identifier from the URL. The MVP generic routes accept any value and echo it in response metadata."
+          },
+          "id": {
+            "type": "string",
+            "description": "SoftwareOne-style external record identifier, such as agr-001 or stmt-001. This is not an Alga UUID."
+          }
+        },
+        "required": [
+          "extensionId",
+          "id"
+        ]
+      },
+      "GenericExtensionAgreementsListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ],
+            "description": "Request succeeded."
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SoftwareOneAgreement"
+            },
+            "description": "Agreement records returned by the generic extension MVP handler."
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "description": "Number of agreements returned."
+              },
+              "extensionId": {
+                "type": "string",
+                "description": "Extension ID echoed from the path."
+              }
+            },
+            "required": [
+              "total",
+              "extensionId"
+            ]
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ]
+      },
+      "GenericExtensionAgreementDetailResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ],
+            "description": "Request succeeded."
+          },
+          "data": {
+            "$ref": "#/components/schemas/SoftwareOneAgreementDetail"
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "extensionId": {
+                "type": "string",
+                "description": "Extension ID echoed from the path."
+              }
+            },
+            "required": [
+              "extensionId"
+            ]
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ]
+      },
+      "GenericExtensionStatementsListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ],
+            "description": "Request succeeded."
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SoftwareOneStatement"
+            },
+            "description": "Statement records returned by the generic extension MVP handler."
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "description": "Number of statements returned."
+              },
+              "extensionId": {
+                "type": "string",
+                "description": "Extension ID echoed from the path."
+              }
+            },
+            "required": [
+              "total",
+              "extensionId"
+            ]
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ]
+      },
       "SoftwareOneSyncResponse": {
         "type": "object",
         "properties": {
@@ -10035,42 +10320,59 @@
     },
     "/api/extensions/softwareone/statements/{id}/charges": {
       "get": {
-        "summary": "GET extensions",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "summary": "List SoftwareOne statement charges",
+        "description": "Returns line-item charges for a SoftwareOne billing statement. The current handler is an MVP placeholder backed by hardcoded dummy data keyed by SoftwareOne statement IDs such as stmt-001. Unknown statement IDs return 200 with an empty data array rather than 404. The id path parameter is not an Alga UUID.",
         "tags": [
-          "extensions"
+          "SoftwareOne Extensions"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
         ],
         "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
+          "x-placeholder-implementation": true,
+          "x-extension": "softwareone"
         },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "SoftwareOne external identifier, such as agr-001 or stmt-001. This is not an Alga UUID."
+            },
+            "required": true,
+            "description": "SoftwareOne external identifier, such as agr-001 or stmt-001. This is not an Alga UUID.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Placeholder success response",
+            "description": "Charge list returned successfully. Data may be empty when the statement ID is unknown.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
+                  "$ref": "#/components/schemas/SoftwareOneChargesListResponse"
                 }
               }
             }
           },
           "401": {
-            "description": "Authentication required",
+            "description": "API key missing at middleware before the handler executes.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/MiddlewareUnauthorizedResponse"
                 }
               }
             }
           },
-          "403": {
-            "description": "Forbidden",
+          "500": {
+            "description": "Unexpected failure while fetching statement charges.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/SoftwareOneErrorResponse"
                 }
               }
             }
@@ -10080,54 +10382,59 @@
     },
     "/api/extensions/softwareone/sync": {
       "post": {
-        "summary": "POST extensions",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "summary": "Sync SoftwareOne data",
+        "description": "Triggers the SoftwareOne aggregate sync placeholder. The current handler accepts optional syncAgreements and syncStatements booleans, waits briefly to simulate work, and returns dummy counts and a syncedAt timestamp. A full implementation will validate permissions, derive tenant context, connect to the SoftwareOne API, and persist agreement and statement data.",
         "tags": [
-          "extensions"
+          "SoftwareOne Extensions"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
         ],
         "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
+          "x-placeholder-implementation": true,
+          "x-extension": "softwareone"
         },
         "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
+          "description": "Sync options. The current sync endpoint consumes syncAgreements and syncStatements; unknown fields are ignored.",
+          "required": false,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
+                "$ref": "#/components/schemas/SoftwareOneSyncRequest"
               },
-              "description": "Placeholder request body"
+              "description": "Sync options. The current sync endpoint consumes syncAgreements and syncStatements; unknown fields are ignored."
             }
           }
         },
         "responses": {
-          "201": {
-            "description": "Placeholder success response",
+          "200": {
+            "description": "Sync placeholder completed successfully with dummy counts.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
+                  "$ref": "#/components/schemas/SoftwareOneFullSyncResponse"
                 }
               }
             }
           },
           "401": {
-            "description": "Authentication required",
+            "description": "API key missing at middleware before the handler executes.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/MiddlewareUnauthorizedResponse"
                 }
               }
             }
           },
-          "403": {
-            "description": "Forbidden",
+          "500": {
+            "description": "Unexpected failure while syncing SoftwareOne data.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/SoftwareOneErrorResponse"
                 }
               }
             }
@@ -10137,42 +10444,59 @@
     },
     "/api/extensions/{extensionId}/agreements": {
       "get": {
-        "summary": "GET extensions",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "summary": "List agreements for extension",
+        "description": "Generic extension agreements placeholder. The current handler accepts any extensionId, performs no handler-level extension validation, and returns hardcoded SoftwareOne-style agreement data with meta.extensionId echoed from the path. A full implementation will validate the extension ID, check permissions, derive tenant context, and fetch extension-specific data.",
         "tags": [
-          "extensions"
+          "SoftwareOne Extensions"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
         ],
         "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
+          "x-placeholder-implementation": true,
+          "x-extension-scoped": true
         },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Extension identifier from the URL. The MVP generic routes accept any value and echo it in response metadata."
+            },
+            "required": true,
+            "description": "Extension identifier from the URL. The MVP generic routes accept any value and echo it in response metadata.",
+            "name": "extensionId",
+            "in": "path"
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Placeholder success response",
+            "description": "Agreement list returned successfully for the requested extension placeholder.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
+                  "$ref": "#/components/schemas/GenericExtensionAgreementsListResponse"
                 }
               }
             }
           },
           "401": {
-            "description": "Authentication required",
+            "description": "API key missing at middleware before the handler executes.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/MiddlewareUnauthorizedResponse"
                 }
               }
             }
           },
-          "403": {
-            "description": "Forbidden",
+          "500": {
+            "description": "Unexpected failure while fetching extension agreements.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/SoftwareOneErrorResponse"
                 }
               }
             }
@@ -10182,42 +10506,79 @@
     },
     "/api/extensions/{extensionId}/agreements/{id}": {
       "get": {
-        "summary": "GET extensions",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "summary": "Get agreement for extension",
+        "description": "Generic extension agreement detail placeholder. The current handler accepts any extensionId, looks up an agreement by SoftwareOne-style external ID such as agr-001, and returns hardcoded detail data with meta.extensionId echoed from the path. The id path parameter is not an Alga UUID.",
         "tags": [
-          "extensions"
+          "SoftwareOne Extensions"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
         ],
         "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
+          "x-placeholder-implementation": true,
+          "x-extension-scoped": true
         },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Extension identifier from the URL. The MVP generic routes accept any value and echo it in response metadata."
+            },
+            "required": true,
+            "description": "Extension identifier from the URL. The MVP generic routes accept any value and echo it in response metadata.",
+            "name": "extensionId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "SoftwareOne-style external record identifier, such as agr-001 or stmt-001. This is not an Alga UUID."
+            },
+            "required": true,
+            "description": "SoftwareOne-style external record identifier, such as agr-001 or stmt-001. This is not an Alga UUID.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Placeholder success response",
+            "description": "Agreement detail returned successfully for the requested extension placeholder.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
+                  "$ref": "#/components/schemas/GenericExtensionAgreementDetailResponse"
                 }
               }
             }
           },
           "401": {
-            "description": "Authentication required",
+            "description": "API key missing at middleware before the handler executes.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/MiddlewareUnauthorizedResponse"
                 }
               }
             }
           },
-          "403": {
-            "description": "Forbidden",
+          "404": {
+            "description": "Agreement not found.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/SoftwareOneErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure while fetching extension agreement detail.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoftwareOneErrorResponse"
                 }
               }
             }
@@ -10227,42 +10588,59 @@
     },
     "/api/extensions/{extensionId}/statements": {
       "get": {
-        "summary": "GET extensions",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "summary": "List statements for extension",
+        "description": "Generic extension statements placeholder. The current handler accepts any extensionId, performs no handler-level extension validation, and returns hardcoded SoftwareOne-style statement data with meta.extensionId echoed from the path. A full implementation will validate the extension ID, check permissions, derive tenant context, and fetch extension-specific data.",
         "tags": [
-          "extensions"
+          "SoftwareOne Extensions"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
         ],
         "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
+          "x-placeholder-implementation": true,
+          "x-extension-scoped": true
         },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Extension identifier from the URL. The MVP generic routes accept any value and echo it in response metadata."
+            },
+            "required": true,
+            "description": "Extension identifier from the URL. The MVP generic routes accept any value and echo it in response metadata.",
+            "name": "extensionId",
+            "in": "path"
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Placeholder success response",
+            "description": "Statement list returned successfully for the requested extension placeholder.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
+                  "$ref": "#/components/schemas/GenericExtensionStatementsListResponse"
                 }
               }
             }
           },
           "401": {
-            "description": "Authentication required",
+            "description": "API key missing at middleware before the handler executes.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/MiddlewareUnauthorizedResponse"
                 }
               }
             }
           },
-          "403": {
-            "description": "Forbidden",
+          "500": {
+            "description": "Unexpected failure while fetching extension statements.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/SoftwareOneErrorResponse"
                 }
               }
             }
