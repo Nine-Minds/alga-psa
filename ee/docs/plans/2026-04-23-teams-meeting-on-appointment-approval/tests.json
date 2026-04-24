@@ -129,7 +129,7 @@
     "id": "T022",
     "description": "Approval integration test: with toggle ON but capability unavailable (no organizer), no Graph call is made, appointment is approved without meeting columns, returns teamsMeetingWarning='no_organizer' or equivalent.",
     "featureIds": ["F009", "F010"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T023",
