@@ -239,3 +239,40 @@ python3 <targeted CE/EE contract-line placeholder checks + global counts>
 3. `POST /api/v1/categories/bulk/delete`
 4. `GET /api/v1/categories/search`
 5. `DELETE /api/v1/categories/service/{id}`
+
+## 2026-04-24 — Category Family Completed (F003)
+
+### Scope completed
+
+- Extended `server/src/lib/api/openapi/routes/serviceCategories.ts` to document all previously-placeholder category operations:
+  - `GET /api/v1/categories/analytics`
+  - `POST /api/v1/categories/bulk/delete`
+  - `GET /api/v1/categories/search`
+  - `DELETE|GET|PUT /api/v1/categories/service/{id}`
+  - `GET|POST /api/v1/categories/ticket`
+  - `POST /api/v1/categories/ticket/move`
+  - `GET /api/v1/categories/ticket/tree`
+  - `GET /api/v1/categories/ticket/tree/{boardId}`
+  - `DELETE|GET|PUT /api/v1/categories/ticket/{id}`
+
+### Key source-grounded notes
+
+- Permission resource is dynamic for search/analytics/bulk delete endpoints (`billing_settings` for service categories, `ticket_settings` otherwise).
+- `GET /api/v1/categories/ticket/tree` currently derives board id from URL last segment; on this route it passes literal `tree` to service (implementation quirk documented).
+- Tree-by-board route currently works because the final path segment is the board id, even though controller still parses from URL rather than params.
+
+### Validation
+
+- CE category placeholder set: all targeted operations are non-placeholder.
+- EE category placeholder set: all targeted operations are non-placeholder.
+- Remaining placeholder counts after this pass:
+  - CE: `434`
+  - EE: `442`
+
+### Next cursor (CE)
+
+1. `GET /api/v1/billing-analytics/overview`
+2. `GET /api/v1/clients`
+3. `POST /api/v1/clients`
+4. `GET /api/v1/clients/stats`
+5. `DELETE /api/v1/clients/{id}`

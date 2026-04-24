@@ -15,6 +15,7 @@ tags:
   - name: Automation
   - name: Billing
   - name: Boards
+  - name: Categories
   - name: Chat
   - name: Contract Lines
   - name: Documents
@@ -34,8 +35,8 @@ tags:
   - name: Storage
   - name: System
   - name: Telemetry
+  - name: Ticket Categories
   - name: billing-analytics
-  - name: categories
   - name: client-contract-lines
   - name: clients
   - name: contacts
@@ -5419,6 +5420,373 @@ components:
           minimum: 1
           maximum: 100
       description: Query parameters for listing service categories.
+    CategoryIdParam:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Category UUID from service_categories.category_id or
+            ticket_categories.category_id.
+      required:
+        - id
+    CategoryBoardIdParam:
+      type: object
+      properties:
+        boardId:
+          type: string
+          format: uuid
+          description: Board UUID used by ticket category tree queries.
+      required:
+        - boardId
+    TicketCategory:
+      type: object
+      properties:
+        category_id:
+          type: string
+          format: uuid
+        category_name:
+          type: string
+        parent_category:
+          type:
+            - string
+            - "null"
+          format: uuid
+        board_id:
+          type: string
+          format: uuid
+        description:
+          type:
+            - string
+            - "null"
+        created_by:
+          type: string
+          format: uuid
+        updated_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        tenant:
+          type: string
+          format: uuid
+        children:
+          type: array
+          items: {}
+        depth:
+          type: number
+        path:
+          type: string
+        children_count:
+          type: number
+      required:
+        - category_id
+        - category_name
+        - board_id
+        - created_by
+        - updated_by
+        - tenant
+      description: Ticket category resource from ticket_categories, including optional
+        hierarchy fields.
+    TicketCategoryCreateRequest:
+      type: object
+      properties:
+        category_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        board_id:
+          type: string
+          format: uuid
+        parent_category:
+          type: string
+          format: uuid
+        description:
+          type: string
+          maxLength: 1000
+      required:
+        - category_name
+        - board_id
+    TicketCategoryUpdateRequest:
+      type: object
+      properties:
+        category_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        board_id:
+          type: string
+          format: uuid
+        parent_category:
+          type: string
+          format: uuid
+        description:
+          type: string
+          maxLength: 1000
+    TicketCategoryListQuery:
+      type: object
+      properties:
+        page:
+          type: string
+        limit:
+          type: string
+        sort:
+          type: string
+        order:
+          type: string
+          enum: &a41
+            - asc
+            - desc
+        search:
+          type: string
+        created_from:
+          type: string
+          format: date-time
+        created_to:
+          type: string
+          format: date-time
+        updated_from:
+          type: string
+          format: date-time
+        updated_to:
+          type: string
+          format: date-time
+        category_name:
+          type: string
+        board_id:
+          type: string
+          format: uuid
+        parent_category:
+          type: string
+          format: uuid
+        is_parent:
+          type: string
+          enum: &a42
+            - "true"
+            - "false"
+        is_child:
+          type: string
+          enum: &a43
+            - "true"
+            - "false"
+        depth:
+          type: string
+        active:
+          type: string
+          enum: &a44
+            - "true"
+            - "false"
+        offset:
+          type: string
+        sort_by:
+          type: string
+        sort_order:
+          type: string
+          enum: &a45
+            - asc
+            - desc
+        include_hierarchy:
+          type: string
+          enum: &a46
+            - "true"
+            - "false"
+        category_type:
+          type: string
+          enum: &a47
+            - service
+            - ticket
+    CategoryMoveRequest:
+      type: object
+      properties:
+        category_id:
+          type: string
+          format: uuid
+        new_parent_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        position:
+          type: integer
+          minimum: 0
+      required:
+        - category_id
+    CategorySearchQuery:
+      type: object
+      properties:
+        search_term:
+          type: string
+          minLength: 1
+        category_type:
+          type: string
+          enum: &a48
+            - service
+            - ticket
+        board_id:
+          type: string
+          format: uuid
+        include_inactive:
+          type: string
+          enum: &a49
+            - "true"
+            - "false"
+        limit:
+          type: string
+        offset:
+          type: string
+      required:
+        - search_term
+    CategoryAnalyticsQuery:
+      type: object
+      properties:
+        category_type:
+          type: string
+          enum: &a50
+            - service
+            - ticket
+        board_id:
+          type: string
+          format: uuid
+        date_from:
+          type: string
+          format: date-time
+        date_to:
+          type: string
+          format: date-time
+        include_usage:
+          type: string
+          enum: &a51
+            - "true"
+            - "false"
+    CategoryAnalyticsResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            analytics:
+              type: object
+              additionalProperties: {}
+              description: Aggregated category analytics from
+                CategoryService.getCategoryAnalytics.
+            generated_at:
+              type: string
+              format: date-time
+          required:
+            - analytics
+            - generated_at
+      required:
+        - data
+    CategoryTreeResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            tree:
+              type: array
+              items: {}
+              description: Hierarchical category tree nodes from
+                CategoryService.getCategoryTree.
+            total_categories:
+              type: integer
+              minimum: 0
+          required:
+            - tree
+            - total_categories
+      required:
+        - data
+    BulkDeleteCategoriesRequest:
+      type: object
+      properties:
+        category_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          maxItems: 50
+        category_type:
+          type: string
+          enum:
+            - service
+            - ticket
+        force:
+          anyOf:
+            - type: string
+              enum:
+                - "true"
+                - "false"
+            - type: boolean
+          description: Optional force flag; schema accepts both boolean and string boolean
+            values.
+      required:
+        - category_ids
+        - category_type
+    BulkDeleteCategoriesResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            message:
+              type: string
+            success:
+              type: integer
+              minimum: 0
+            failed:
+              type: integer
+              minimum: 0
+            errors:
+              type: array
+              items:
+                type: object
+                additionalProperties: {}
+          required:
+            - message
+            - success
+            - failed
+      required:
+        - data
+    PaginatedTicketCategoryResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/TicketCategory"
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+            limit:
+              type: integer
+            total:
+              type: integer
+            totalPages:
+              type: integer
+            hasNext:
+              type: boolean
+            hasPrev:
+              type: boolean
+          required:
+            - page
+            - limit
+            - total
+            - totalPages
+            - hasNext
+            - hasPrev
+        meta:
+          type: object
+          additionalProperties: {}
+      required:
+        - data
+        - pagination
     PaginatedServiceCategoryResponse:
       type: object
       properties:
@@ -5792,7 +6160,7 @@ components:
           type: string
         billing_method:
           type: string
-          enum: &a45
+          enum: &a56
             - fixed
             - hourly
             - usage
@@ -14798,6 +15166,941 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/categories/service/{id}:
+    get:
+      summary: Get service category
+      description: Returns one service category by category_id for the authenticated
+        tenant. Requires billing_settings:read permission.
+      tags:
+        - Service Categories
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: billing_settings
+        x-rbac-action: read
+        x-id-provenance:
+          category_id: service_categories.category_id
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Category UUID from service_categories.category_id or
+              ticket_categories.category_id.
+          required: true
+          description: Category UUID from service_categories.category_id or
+            ticket_categories.category_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Service category returned successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ServiceCategory"
+                required:
+                  - data
+        "400":
+          description: Invalid category id format.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated user lacks billing settings read permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Service category not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      summary: Update service category
+      description: Updates one service category by category_id. Requires
+        billing_settings:update permission.
+      tags:
+        - Service Categories
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: billing_settings
+        x-rbac-action: update
+        x-id-provenance:
+          category_id: service_categories.category_id
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Category UUID from service_categories.category_id or
+              ticket_categories.category_id.
+          required: true
+          description: Category UUID from service_categories.category_id or
+            ticket_categories.category_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceCategoryCreateRequest"
+      responses:
+        "200":
+          description: Service category updated successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ServiceCategory"
+                required:
+                  - data
+        "400":
+          description: Invalid category id or request payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated user lacks billing settings update permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Service category not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      summary: Delete service category
+      description: Deletes one service category by category_id. Requires
+        billing_settings:delete permission.
+      tags:
+        - Service Categories
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: billing_settings
+        x-rbac-action: delete
+        x-id-provenance:
+          category_id: service_categories.category_id
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Category UUID from service_categories.category_id or
+              ticket_categories.category_id.
+          required: true
+          description: Category UUID from service_categories.category_id or
+            ticket_categories.category_id.
+          name: id
+          in: path
+      responses:
+        "204":
+          description: Service category deleted successfully.
+        "400":
+          description: Invalid category id format.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated user lacks billing settings delete permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Service category not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/categories/ticket:
+    get:
+      summary: List ticket categories
+      description: Returns paginated ticket categories. Requires ticket_settings:read
+        permission.
+      tags:
+        - Ticket Categories
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: ticket_settings
+        x-rbac-action: read
+      parameters:
+        - schema:
+            type: string
+          required: false
+          name: page
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: sort
+          in: query
+        - schema:
+            type: string
+            enum: *a41
+          required: false
+          name: order
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: search
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: created_from
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: created_to
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: updated_from
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: updated_to
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: category_name
+          in: query
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: board_id
+          in: query
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: parent_category
+          in: query
+        - schema:
+            type: string
+            enum: *a42
+          required: false
+          name: is_parent
+          in: query
+        - schema:
+            type: string
+            enum: *a43
+          required: false
+          name: is_child
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: depth
+          in: query
+        - schema:
+            type: string
+            enum: *a44
+          required: false
+          name: active
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: offset
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: sort_by
+          in: query
+        - schema:
+            type: string
+            enum: *a45
+          required: false
+          name: sort_order
+          in: query
+        - schema:
+            type: string
+            enum: *a46
+          required: false
+          name: include_hierarchy
+          in: query
+        - schema:
+            type: string
+            enum: *a47
+          required: false
+          name: category_type
+          in: query
+      responses:
+        "200":
+          description: Ticket categories returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedTicketCategoryResponse"
+        "400":
+          description: Invalid query parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated user lacks ticket settings read permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: Create ticket category
+      description: Creates a ticket category row for one board. Requires
+        ticket_settings:create permission.
+      tags:
+        - Ticket Categories
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: ticket_settings
+        x-rbac-action: create
+        x-id-provenance:
+          category_id: ticket_categories.category_id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TicketCategoryCreateRequest"
+      responses:
+        "201":
+          description: Ticket category created successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/TicketCategory"
+                required:
+                  - data
+        "400":
+          description: Invalid request payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated user lacks ticket settings create permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/categories/ticket/{id}:
+    get:
+      summary: Get ticket category
+      description: Returns one ticket category by category_id. Requires
+        ticket_settings:read permission.
+      tags:
+        - Ticket Categories
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: ticket_settings
+        x-rbac-action: read
+        x-id-provenance:
+          category_id: ticket_categories.category_id
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Category UUID from service_categories.category_id or
+              ticket_categories.category_id.
+          required: true
+          description: Category UUID from service_categories.category_id or
+            ticket_categories.category_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Ticket category returned successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/TicketCategory"
+                required:
+                  - data
+        "400":
+          description: Invalid category id format.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated user lacks ticket settings read permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Ticket category not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      summary: Update ticket category
+      description: Updates one ticket category by category_id. Requires
+        ticket_settings:update permission.
+      tags:
+        - Ticket Categories
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: ticket_settings
+        x-rbac-action: update
+        x-id-provenance:
+          category_id: ticket_categories.category_id
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Category UUID from service_categories.category_id or
+              ticket_categories.category_id.
+          required: true
+          description: Category UUID from service_categories.category_id or
+            ticket_categories.category_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TicketCategoryUpdateRequest"
+      responses:
+        "200":
+          description: Ticket category updated successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/TicketCategory"
+                required:
+                  - data
+        "400":
+          description: Invalid category id or request payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated user lacks ticket settings update permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Ticket category not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      summary: Delete ticket category
+      description: Deletes one ticket category by category_id. Requires
+        ticket_settings:delete permission.
+      tags:
+        - Ticket Categories
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: ticket_settings
+        x-rbac-action: delete
+        x-id-provenance:
+          category_id: ticket_categories.category_id
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Category UUID from service_categories.category_id or
+              ticket_categories.category_id.
+          required: true
+          description: Category UUID from service_categories.category_id or
+            ticket_categories.category_id.
+          name: id
+          in: path
+      responses:
+        "204":
+          description: Ticket category deleted successfully.
+        "400":
+          description: Invalid category id format.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated user lacks ticket settings delete permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Ticket category not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/categories/ticket/tree:
+    get:
+      summary: Get ticket category tree (implicit board id)
+      description: Calls getCategoryTree and derives boardId from the last URL path
+        segment. For this path without a board parameter, the current
+        implementation passes literal `tree` as boardId to
+        CategoryService.getCategoryTree.
+      tags:
+        - Ticket Categories
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: ticket_settings
+        x-rbac-action: read
+        x-board-id-derived-from-last-path-segment: true
+        x-no-board-param-route-currently-passes-tree-literal: true
+      responses:
+        "200":
+          description: Category tree response for derived board id value.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryTreeResponse"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated user lacks ticket settings read permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected category tree failure for invalid derived board id.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/categories/ticket/tree/{boardId}:
+    get:
+      summary: Get ticket category tree by board
+      description: Returns hierarchical ticket categories for a board route. Current
+        controller still derives board id from the last path segment instead of
+        reading req.params directly; this works for this route because the last
+        segment is boardId.
+      tags:
+        - Ticket Categories
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: ticket_settings
+        x-rbac-action: read
+        x-board-id-derived-from-last-path-segment: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Board UUID used by ticket category tree queries.
+          required: true
+          description: Board UUID used by ticket category tree queries.
+          name: boardId
+          in: path
+      responses:
+        "200":
+          description: Category tree returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryTreeResponse"
+        "400":
+          description: Invalid board id format.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated user lacks ticket settings read permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected category tree failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/categories/ticket/move:
+    post:
+      summary: Move ticket category in hierarchy
+      description: Moves a ticket category under a new parent. Requires
+        ticket_settings:update permission.
+      tags:
+        - Ticket Categories
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: ticket_settings
+        x-rbac-action: update
+        x-id-provenance:
+          category_id: ticket_categories.category_id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryMoveRequest"
+      responses:
+        "200":
+          description: Category moved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/TicketCategory"
+                required:
+                  - data
+        "400":
+          description: Invalid request payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated user lacks ticket settings update permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Category not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/categories/search:
+    get:
+      summary: Search categories
+      description: Searches categories across service/ticket types. Permission
+        resource is chosen dynamically from category_type (defaults to
+        ticket_settings when omitted).
+      tags:
+        - Categories
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource-dynamic-by-category-type:
+          service: billing_settings
+          ticket_or_default: ticket_settings
+        x-rbac-action: read
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          required: true
+          name: search_term
+          in: query
+        - schema:
+            type: string
+            enum: *a48
+          required: false
+          name: category_type
+          in: query
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: board_id
+          in: query
+        - schema:
+            type: string
+            enum: *a49
+          required: false
+          name: include_inactive
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: offset
+          in: query
+      responses:
+        "200":
+          description: Category search results returned.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: {}
+                  pagination:
+                    type: object
+                    additionalProperties: {}
+                  meta:
+                    type: object
+                    additionalProperties: {}
+                required:
+                  - data
+                  - pagination
+        "400":
+          description: Invalid query parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated user lacks the derived settings read permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/categories/analytics:
+    get:
+      summary: Get category analytics
+      description: Returns category analytics with generation timestamp. Permission
+        resource is chosen dynamically from category_type (defaults to
+        ticket_settings when omitted).
+      tags:
+        - Categories
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource-dynamic-by-category-type:
+          service: billing_settings
+          ticket_or_default: ticket_settings
+        x-rbac-action: read
+      parameters:
+        - schema:
+            type: string
+            enum: *a50
+          required: false
+          name: category_type
+          in: query
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: board_id
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: date_from
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: date_to
+          in: query
+        - schema:
+            type: string
+            enum: *a51
+          required: false
+          name: include_usage
+          in: query
+      responses:
+        "200":
+          description: Category analytics returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryAnalyticsResponse"
+        "400":
+          description: Invalid query parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated user lacks the derived settings read permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/categories/bulk/delete:
+    post:
+      summary: Bulk delete categories
+      description: Deletes multiple category ids. Permission resource is chosen
+        dynamically from category_type; response includes success/failed counts
+        and per-item errors.
+      tags:
+        - Categories
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource-dynamic-by-category-type:
+          service: billing_settings
+          ticket: ticket_settings
+        x-rbac-action: delete
+        x-partial-failures-in-response: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkDeleteCategoriesRequest"
+      responses:
+        "200":
+          description: Bulk deletion completed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkDeleteCategoriesResponse"
+        "400":
+          description: Invalid request payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated user lacks the derived settings delete permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/services:
     get:
       summary: List services
@@ -14805,7 +16108,7 @@ paths:
         this endpoint to inspect existing service catalog records and to gather
         prerequisite IDs such as custom_service_type_id and category_id before
         creating a new service.
-      tags: &a41
+      tags: &a52
         - Services
         - Service Catalog
       security:
@@ -14879,7 +16182,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: &a42
+            enum: &a53
               - fixed
               - hourly
               - usage
@@ -14927,7 +16230,7 @@ paths:
         with GET /api/v1/service-types and category_id with GET
         /api/v1/categories/service before calling this endpoint. Use this
         endpoint for fixed, hourly, or usage-based service offerings.
-      tags: *a41
+      tags: *a52
       security:
         - ApiKeyAuth: []
       extensions:
@@ -14954,7 +16257,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: *a42
+                  enum: *a53
                 default_rate:
                   type: number
                   minimum: 0
@@ -15016,7 +16319,7 @@ paths:
     get:
       summary: Get service
       description: Returns a single service catalog entry by UUID.
-      tags: *a41
+      tags: *a52
       security:
         - ApiKeyAuth: []
       extensions:
@@ -15063,7 +16366,7 @@ paths:
     put:
       summary: Update service
       description: Updates a service catalog entry by UUID.
-      tags: *a41
+      tags: *a52
       security:
         - ApiKeyAuth: []
       extensions:
@@ -15099,7 +16402,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: *a42
+                  enum: *a53
                 default_rate:
                   type: number
                   minimum: 0
@@ -15160,7 +16463,7 @@ paths:
     delete:
       summary: Delete service
       description: Deletes a service catalog entry by UUID.
-      tags: *a41
+      tags: *a52
       security:
         - ApiKeyAuth: []
       extensions:
@@ -15207,7 +16510,7 @@ paths:
         this endpoint to inspect existing product catalog records and to gather
         prerequisite IDs such as custom_service_type_id and category_id before
         creating a new product.
-      tags: &a43
+      tags: &a54
         - Products
         - Service Catalog
       security:
@@ -15316,7 +16619,7 @@ paths:
         /api/v1/categories/service before calling this endpoint. Products are
         catalog entries with item_kind product and always use billing_method
         usage.
-      tags: *a43
+      tags: *a54
       security:
         - ApiKeyAuth: []
       extensions:
@@ -15343,7 +16646,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: &a44
+                  enum: &a55
                     - usage
                   default: usage
                 default_rate:
@@ -15482,7 +16785,7 @@ paths:
     get:
       summary: Get product
       description: Returns a single product catalog entry by UUID.
-      tags: *a43
+      tags: *a54
       security:
         - ApiKeyAuth: []
       extensions:
@@ -15529,7 +16832,7 @@ paths:
     put:
       summary: Update product
       description: Updates a product catalog entry by UUID.
-      tags: *a43
+      tags: *a54
       security:
         - ApiKeyAuth: []
       extensions:
@@ -15565,7 +16868,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: *a44
+                  enum: *a55
                   default: usage
                 default_rate:
                   type: number
@@ -15704,7 +17007,7 @@ paths:
     delete:
       summary: Delete product
       description: Deletes a product catalog entry by UUID.
-      tags: *a43
+      tags: *a54
       security:
         - ApiKeyAuth: []
       extensions:
@@ -15750,7 +17053,7 @@ paths:
       description: Returns tenant service types. Use this endpoint to resolve
         custom_service_type_id before creating or updating services and products
         in the service catalog.
-      tags: &a46
+      tags: &a57
         - Service Types
         - Service Catalog
       security:
@@ -15770,7 +17073,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a45
+            enum: *a56
           required: false
           name: billing_method
           in: query
@@ -15815,7 +17118,7 @@ paths:
     get:
       summary: Get service type
       description: Returns a single tenant service type by UUID.
-      tags: *a46
+      tags: *a57
       security:
         - ApiKeyAuth: []
       extensions:
@@ -16931,447 +18234,6 @@ paths:
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/categories/analytics:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - categories
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/categories/bulk/delete:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - categories
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/categories/search:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - categories
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/categories/service/{id}:
-    delete:
-      summary: DELETE v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - categories
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "204":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - categories
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    put:
-      summary: PUT v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - categories
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/categories/ticket:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - categories
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - categories
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/categories/ticket/move:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - categories
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/categories/ticket/tree:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - categories
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/categories/ticket/tree/{boardId}:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - categories
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/categories/ticket/{id}:
-    delete:
-      summary: DELETE v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - categories
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "204":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - categories
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    put:
-      summary: PUT v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - categories
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
       responses:
         "200":
           description: Placeholder success response

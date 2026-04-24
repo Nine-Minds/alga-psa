@@ -19,7 +19,7 @@
   {
     "id": "F003",
     "description": "Document category routes for service categories, ticket categories, trees, move operations, search, analytics, and bulk delete.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals"
     ]
