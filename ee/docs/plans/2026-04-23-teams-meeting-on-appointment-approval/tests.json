@@ -213,7 +213,7 @@
     "id": "T036",
     "description": "UI (Playwright): AppointmentRequestsPanel detail view shows the Teams join URL for approved requests that have a stored URL.",
     "featureIds": ["F017"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T037",
