@@ -158,6 +158,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-23: Completed `T043` with `packages/scheduling/tests/availabilitySettingsActions.permission.test.ts`, asserting `setDefaultMeetingOrganizer` rejects callers who lack the settings-update permission.
 - 2026-04-23: Completed `T040-T042` with `server/src/test/unit/verifyMeetingOrganizer.test.ts`, covering successful organizer verification, missing-user handling, and Application Access Policy failures that map to `reason: 'policy_missing'`.
 - 2026-04-23: Completed `T001-T002` with `server/src/test/unit/teamsMeetingMigrations.test.ts`, executing both migration `up()` functions against mocked `knex.schema` surfaces and asserting the new columns are added as nullable `text`.
+- 2026-04-23: Completed `T017` by hardening CE build wiring and rerunning `npm run build:ce`. Root `build`/`build:ce` scripts now force `EDITION=community NEXT_PUBLIC_EDITION=community`, and `server/next.config.mjs` maps `@alga-psa/ee-microsoft-teams` to `./src/empty` for CE so the built manifest no longer points at `ee/packages/microsoft-teams`.
 
 ## Working notes
 
@@ -191,3 +192,5 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - Additional validation command: `npx vitest --root packages/scheduling --config vitest.config.ts run tests/availabilitySettingsActions.permission.test.ts`
 - Additional validation command: `npx vitest --root server --config vitest.config.ts run src/test/unit/verifyMeetingOrganizer.test.ts --coverage.enabled false`
 - Additional validation command: `npx vitest --root server --config vitest.config.ts run src/test/unit/teamsMeetingMigrations.test.ts --coverage.enabled false`
+- Additional validation command: `rm -rf server/.next && npm run build:ce`
+- Additional validation command: `rg -n "@alga-psa/ee-microsoft-teams|ee/packages/microsoft-teams" server/.next`

@@ -99,7 +99,7 @@
     "id": "T017",
     "description": "CE build (npm run build without EE) compiles without any reference to ee/packages/microsoft-teams.",
     "featureIds": ["F007"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T018",

@@ -209,8 +209,8 @@ const nextConfig = {
       '@alga-psa/scheduling/': '../packages/scheduling/src/',
       '@alga-psa/ee-calendar': '../ee/packages/calendar/src/index.ts',
       '@alga-psa/ee-calendar/': '../ee/packages/calendar/src/',
-      '@alga-psa/ee-microsoft-teams': '../ee/packages/microsoft-teams/src/index.ts',
-      '@alga-psa/ee-microsoft-teams/': '../ee/packages/microsoft-teams/src/',
+      '@alga-psa/ee-microsoft-teams': isEE ? '../ee/packages/microsoft-teams/src/index.ts' : './src/empty/index.ts',
+      '@alga-psa/ee-microsoft-teams/': isEE ? '../ee/packages/microsoft-teams/src/' : './src/empty/',
       '@alga-psa/ee-stubs': isEE ? '../ee/server/src' : '../packages/ee/src',
       '@alga-psa/ee-stubs/': isEE ? '../ee/server/src/' : '../packages/ee/src/',
       '@alga-psa/tags': '../packages/tags/src',
@@ -506,7 +506,9 @@ const nextConfig = {
       // Source-transpiled packages
       '@alga-psa/scheduling': path.join(__dirname, '../packages/scheduling/src'),
       '@alga-psa/ee-calendar': path.join(__dirname, '../ee/packages/calendar/src'),
-      '@alga-psa/ee-microsoft-teams': path.join(__dirname, '../ee/packages/microsoft-teams/src'),
+      '@alga-psa/ee-microsoft-teams': isEE
+        ? path.join(__dirname, '../ee/packages/microsoft-teams/src')
+        : path.join(__dirname, 'src/empty'),
       '@alga-psa/users': path.join(__dirname, '../packages/users/src'),
       '@alga-psa/teams': path.join(__dirname, '../packages/teams/src'),
       '@alga-psa/surveys': path.join(__dirname, '../packages/surveys/src'),
