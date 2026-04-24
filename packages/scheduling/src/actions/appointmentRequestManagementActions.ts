@@ -77,6 +77,14 @@ export interface AppointmentRequestResult<T> {
   teamsMeetingWarning?: string;
 }
 
+export const getTeamsMeetingCapability = withAuth(async (
+  _user,
+  { tenant }
+) => {
+  const teamsMeetingService = await resolveTeamsMeetingService();
+  return teamsMeetingService.getTeamsMeetingCapability(tenant);
+});
+
 /**
  * Get a single appointment request by ID
  */

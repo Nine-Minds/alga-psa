@@ -132,6 +132,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-23: Completed `F011` by extending `updateAppointmentRequestDateTime()` to support approved requests, update linked schedule entries, publish `SCHEDULE_ENTRY_UPDATED` for approved reschedules, and PATCH an existing Teams meeting when `online_meeting_id` is present. PATCH failures now surface through `teamsMeetingWarning`.
 - 2026-04-23: Completed `F012` by wiring Teams meeting deletion into both client-portal cancellation and MSP-side schedule-entry deletion. Both paths now clear `online_meeting_*` metadata from `appointment_requests`, sever the schedule-entry link, and attempt a best-effort Graph DELETE when the stored provider is `teams`.
 - 2026-04-23: Completed `F013` by adding conditional Teams deletion warnings to the client-portal cancel confirmations and MSP delete dialogs. Approved appointments can now be cancelled from the client portal, and delete confirmations explicitly warn when the linked Teams meeting will also be removed.
+- 2026-04-23: Completed `F014` by adding a scheduling-side `getTeamsMeetingCapability` action wrapper and wiring `AppointmentRequestsPanel` to it. The approval form now shows a default-on Teams toggle only when the current tenant is capable of generating meetings.
 
 ## Working notes
 

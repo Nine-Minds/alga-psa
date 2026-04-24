@@ -80,7 +80,7 @@
   {
     "id": "F014",
     "description": "AppointmentRequestsPanel approval form renders the 'Generate Teams meeting link' toggle only when getTeamsMeetingCapability returns available; default checked.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-12"]
   },
   {

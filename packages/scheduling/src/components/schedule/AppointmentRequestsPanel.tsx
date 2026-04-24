@@ -7,6 +7,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
+import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
@@ -19,6 +20,7 @@ import { getAllUsersBasic, getCurrentUser, getUserAvatarUrlsBatchAction } from '
 import { IUser } from '@shared/interfaces/user.interfaces';
 import {
   getAppointmentRequests,
+  getTeamsMeetingCapability,
   approveAppointmentRequest as approveRequest,
   declineAppointmentRequest as declineRequest,
   IAppointmentRequest
@@ -53,6 +55,8 @@ export default function AppointmentRequestsPanel({
   const [finalDateTime, setFinalDateTime] = useState<Date | null>(null);
   const [internalNotes, setInternalNotes] = useState('');
   const [linkedTicketId, setLinkedTicketId] = useState('');
+  const [generateTeamsMeeting, setGenerateTeamsMeeting] = useState(true);
+  const [teamsMeetingCapability, setTeamsMeetingCapability] = useState<{ available: boolean; reason?: string } | null>(null);
 
   // Decline form state
   const [declineReason, setDeclineReason] = useState('');
@@ -69,6 +73,7 @@ export default function AppointmentRequestsPanel({
     if (isOpen) {
       loadRequests();
       loadTechnicians();
+      loadTeamsMeetingCapability();
     }
   }, [isOpen]);
 
@@ -120,6 +125,16 @@ export default function AppointmentRequestsPanel({
           updated_at: new Date()
         }]);
       }
+    }
+  };
+
+  const loadTeamsMeetingCapability = async () => {
+    try {
+      const capability = await getTeamsMeetingCapability();
+      setTeamsMeetingCapability(capability);
+    } catch (error) {
+      console.error('Failed to load Teams meeting capability:', error);
+      setTeamsMeetingCapability({ available: false, reason: 'not_configured' });
     }
   };
 
@@ -175,6 +190,7 @@ export default function AppointmentRequestsPanel({
     setInternalNotes('');
     setLinkedTicketId(request.ticket_id || '');
     setDeclineReason('');
+    setGenerateTeamsMeeting(true);
   };
 
   // Auto-select highlighted request when requests are loaded
@@ -239,6 +255,7 @@ export default function AppointmentRequestsPanel({
         assigned_user_id: assignedTechnicianId,
         final_date: approvalDate,
         final_time: approvalTime,
+        generate_teams_meeting: Boolean(teamsMeetingCapability?.available && generateTeamsMeeting),
         ticket_id: linkedTicketId || undefined
       });
 
@@ -628,6 +645,19 @@ export default function AppointmentRequestsPanel({
                           rows={3}
                         />
                       </div>
+
+                      {teamsMeetingCapability?.available && (
+                        <div>
+                          <Switch
+                            id="generate-teams-meeting"
+                            checked={generateTeamsMeeting}
+                            onCheckedChange={setGenerateTeamsMeeting}
+                            label={t('requests.approval.fields.generateTeamsMeeting', {
+                              defaultValue: 'Generate Microsoft Teams meeting link',
+                            })}
+                          />
+                        </div>
+                      )}
 
                       {!selectedRequest.ticket_id && (
                         <div>
