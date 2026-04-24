@@ -111,7 +111,7 @@
     "id": "T019",
     "description": "Schema test: approveAppointmentRequestSchema accepts generate_teams_meeting=true, generate_teams_meeting=false, and omission (defaults to false).",
     "featureIds": ["F008"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T020",

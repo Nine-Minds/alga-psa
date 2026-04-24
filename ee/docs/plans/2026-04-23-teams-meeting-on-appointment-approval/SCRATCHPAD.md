@@ -147,6 +147,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-23: Completed `F026` by adding the new Teams UI keys to English locale files, backfilling the same keys across shipped human locales to satisfy the translation validator, and regenerating pseudo-locales.
 - 2026-04-23: Completed `F027` by authoring the Azure admin runbook at `docs/integrations/teams-meetings-setup.md`, adding a browser-served copy under `server/public/docs/...`, and repointing the Availability Settings banner link to that runbook.
 - 2026-04-23: Completed `F028` by normalizing Teams meeting helper logs so create/update/delete success paths log structured INFO rows and non-response warning paths still include `status: null` alongside tenant, request, and operation context.
+- 2026-04-23: Completed `T019` with `packages/scheduling/tests/appointmentRequestSchemas.test.ts`, covering `generate_teams_meeting` explicit true/false values plus omission defaulting to `false`.
 
 ## Working notes
 
@@ -172,3 +173,4 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - Additional validation command: `npm -w packages/scheduling run typecheck`
 - Additional validation command: `node scripts/generate-pseudo-locales.cjs`
 - Additional validation command: `node scripts/validate-translations.cjs`
+- Additional validation command: `npx vitest --root packages/scheduling --config vitest.config.ts run tests/appointmentRequestSchemas.test.ts`
