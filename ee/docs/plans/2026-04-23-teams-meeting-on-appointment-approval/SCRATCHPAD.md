@@ -171,6 +171,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-24: Completed `T028` in the same deletion lifecycle slice, asserting MSP schedule-entry deletion also calls `deleteTeamsMeeting()` for approved appointments that carry Teams metadata.
 - 2026-04-24: Completed `T029` by fixing `cancelAppointmentRequest()` to return `teamsMeetingWarning` when the best-effort Teams DELETE fails, then asserting the cancellation still succeeds and surfaces that warning.
 - 2026-04-24: Completed `T030` with `server/src/test/unit/appointments/AppointmentRequestDetailsPage.teams.test.tsx`, asserting the client-portal cancel confirmation includes the Teams deletion warning when `online_meeting_url` is present.
+- 2026-04-24: Completed `T031` in the same client-portal detail test file, asserting the cancel confirmation falls back to the normal message when there is no Teams meeting URL.
 
 ## Working notes
 
