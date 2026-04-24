@@ -23,6 +23,26 @@ export function registerDocumentRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  const DocumentIdDownloadParams = registry.registerSchema(
+    'DocumentIdDownloadParams',
+    zOpenApi.object({
+      documentId: zOpenApi
+        .string()
+        .uuid()
+        .describe('Document UUID from documents.document_id, or file UUID from documents.file_id. The handler resolves document_id first and falls back to file_id.'),
+    }),
+  );
+
+  const DocumentIdDownloadHeaders = registry.registerSchema(
+    'DocumentIdDownloadHeaders',
+    zOpenApi.object({
+      'x-api-key': zOpenApi
+        .string()
+        .optional()
+        .describe('Optional API key for machine-to-machine download requests. Used only when no valid Auth.js session cookie is present.'),
+    }),
+  );
+
   const DocumentDownloadQuery = registry.registerSchema(
     'DocumentDownloadQuery',
     zOpenApi.object({
@@ -112,6 +132,53 @@ export function registerDocumentRoutes(registry: ApiOpenApiRegistry) {
     extensions: {
       'x-download-formats': ['original', 'pdf', 'markdown'],
       'x-api-key-auth-skipped': true,
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/documents/{documentId}/download',
+    summary: 'Download document attachment',
+    description:
+      'Downloads the original stored file for a document as an attachment. The documentId path value is resolved against documents.document_id first, then documents.file_id. The route supports Auth.js session-cookie authentication and x-api-key fallback for machine clients, derives the tenant from the authenticated principal, requires document:read permission, and runs document authorization rules before reading the file from storage.',
+    tags: [tag],
+    security: [{ SessionCookieAuth: [] }, { ApiKeyAuth: [] }],
+    request: {
+      params: DocumentIdDownloadParams,
+      headers: DocumentIdDownloadHeaders,
+    },
+    responses: {
+      200: {
+        description: 'Binary file stream with attachment Content-Disposition headers. Content-Type varies by stored MIME type.',
+        contentType: 'application/octet-stream',
+        schema: BinaryFileResponse,
+      },
+      400: {
+        description: 'Missing documentId path parameter.',
+        schema: DocumentDownloadError,
+      },
+      401: {
+        description: 'No valid session or API key was supplied.',
+        schema: DocumentDownloadError,
+      },
+      403: {
+        description: 'Authenticated user lacks document:read permission.',
+        schema: DocumentDownloadError,
+      },
+      404: {
+        description: 'Document not found, document has no file_id, or file metadata/storage record was not found.',
+        schema: DocumentDownloadError,
+      },
+      500: {
+        description: 'Unexpected internal failure while downloading the document.',
+        schema: DocumentDownloadError,
+      },
+    },
+    extensions: {
+      'x-auth-modes': ['session-cookie', 'api-key'],
+      'x-id-resolution': 'document_id_then_file_id',
+      'x-rbac-required': 'document:read',
     },
     edition: 'both',
   });

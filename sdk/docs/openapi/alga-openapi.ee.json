@@ -32,6 +32,9 @@
       "name": "Documents"
     },
     {
+      "name": "Email"
+    },
+    {
       "name": "Products"
     },
     {
@@ -87,9 +90,6 @@
     },
     {
       "name": "contracts"
-    },
-    {
-      "name": "documents"
     },
     {
       "name": "email"
@@ -223,6 +223,12 @@
         "in": "header",
         "name": "x-webhook-signature",
         "description": "HMAC-SHA256 signature generated with ALGA_WEBHOOK_SECRET. POST signs the raw JSON body. GET signs the string GET:<tenant_id>."
+      },
+      "GooglePubSubJWT": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "Google Pub/Sub JWT",
+        "description": "Google-signed JWT from Pub/Sub push. The webhook validates the audience against the webhook URL and checks the issuer/service account against tenant Google configuration."
       }
     },
     "schemas": {
@@ -994,6 +1000,28 @@
           "fileId"
         ]
       },
+      "DocumentIdDownloadParams": {
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Document UUID from documents.document_id, or file UUID from documents.file_id. The handler resolves document_id first and falls back to file_id."
+          }
+        },
+        "required": [
+          "documentId"
+        ]
+      },
+      "DocumentIdDownloadHeaders": {
+        "type": "object",
+        "properties": {
+          "x-api-key": {
+            "type": "string",
+            "description": "Optional API key for machine-to-machine download requests. Used only when no valid Auth.js session cookie is present."
+          }
+        }
+      },
       "DocumentDownloadQuery": {
         "type": "object",
         "properties": {
@@ -1045,6 +1073,311 @@
       "DocumentPlainTextError": {
         "type": "string",
         "description": "Plain text error response."
+      },
+      "EmailErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Human-readable error message."
+          },
+          "success": {
+            "type": "boolean",
+            "description": "Present on some failure responses."
+          },
+          "retryable": {
+            "type": "boolean",
+            "description": "Whether a webhook sender should retry the request."
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "EmailOAuthInitiateRequest": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "microsoft",
+              "google"
+            ],
+            "description": "Email OAuth provider to authorize."
+          },
+          "redirectUri": {
+            "type": "string",
+            "format": "uri",
+            "description": "Optional OAuth callback URI. If omitted, the server builds /api/auth/{provider}/callback from the configured base URL."
+          },
+          "providerId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Email provider configuration ID to carry through OAuth state and use during callback token persistence."
+          }
+        },
+        "required": [
+          "provider"
+        ]
+      },
+      "EmailOAuthInitiateResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ],
+            "description": "OAuth initiation succeeded."
+          },
+          "authUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Provider authorization URL for the browser to visit."
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "microsoft",
+              "google"
+            ],
+            "description": "Email OAuth provider being authorized."
+          },
+          "state": {
+            "type": "string",
+            "description": "Base64-encoded OAuth state containing tenant, userId, providerId, redirectUri, timestamp, nonce, and hosted flag."
+          }
+        },
+        "required": [
+          "success",
+          "authUrl",
+          "provider",
+          "state"
+        ]
+      },
+      "EmailOAuthState": {
+        "type": "object",
+        "properties": {
+          "tenant": {
+            "type": "string",
+            "description": "Tenant identifier from the authenticated user session."
+          },
+          "userId": {
+            "type": "string",
+            "description": "User UUID from the authenticated session."
+          },
+          "providerId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Email provider configuration UUID from the initiate request."
+          },
+          "redirectUri": {
+            "type": "string",
+            "description": "OAuth redirect URI included in the authorization request."
+          },
+          "timestamp": {
+            "type": "number",
+            "description": "Epoch milliseconds when state was generated."
+          },
+          "nonce": {
+            "type": "string",
+            "description": "Random hex nonce for CSRF correlation."
+          },
+          "hosted": {
+            "type": "boolean",
+            "description": "Whether hosted credentials are used for the flow."
+          }
+        },
+        "required": [
+          "tenant",
+          "redirectUri",
+          "timestamp",
+          "nonce"
+        ]
+      },
+      "EmailRefreshWatchRequest": {
+        "type": "object",
+        "properties": {
+          "providerId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Active Gmail email provider ID from email_providers.id to refresh."
+          }
+        },
+        "required": [
+          "providerId"
+        ]
+      },
+      "EmailRefreshWatchResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ],
+            "description": "Refresh completed successfully."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable success message."
+          },
+          "providerId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Email provider ID that was refreshed."
+          },
+          "mailbox": {
+            "type": "string",
+            "format": "email",
+            "description": "Mailbox address for the Gmail provider."
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "providerId",
+          "mailbox"
+        ]
+      },
+      "GooglePubSubMessage": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "string",
+            "description": "Base64-encoded Gmail notification JSON containing emailAddress and historyId."
+          },
+          "messageId": {
+            "type": "string",
+            "description": "Google Pub/Sub message ID."
+          },
+          "publishTime": {
+            "type": "string",
+            "description": "ISO timestamp when Pub/Sub published the message."
+          }
+        },
+        "required": [
+          "data",
+          "messageId",
+          "publishTime"
+        ]
+      },
+      "GooglePubSubPushBody": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "$ref": "#/components/schemas/GooglePubSubMessage"
+          },
+          "subscription": {
+            "type": "string",
+            "description": "Full Pub/Sub subscription path, such as projects/{project}/subscriptions/{subscriptionName}."
+          }
+        },
+        "required": [
+          "message",
+          "subscription"
+        ]
+      },
+      "GmailNotificationPayload": {
+        "type": "object",
+        "properties": {
+          "emailAddress": {
+            "type": "string",
+            "format": "email",
+            "description": "Gmail mailbox address with new activity."
+          },
+          "historyId": {
+            "type": "string",
+            "description": "Gmail history ID indicating the mailbox change position."
+          }
+        },
+        "required": [
+          "emailAddress",
+          "historyId"
+        ]
+      },
+      "GoogleWebhookEnqueueResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ],
+            "description": "Webhook was accepted."
+          },
+          "queued": {
+            "type": "boolean",
+            "enum": [
+              true
+            ],
+            "description": "The notification was enqueued for asynchronous processing."
+          },
+          "handoff": {
+            "type": "string",
+            "enum": [
+              "unified_pointer_queue"
+            ],
+            "description": "Queue handoff mechanism used for the Gmail notification pointer."
+          },
+          "providerId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Resolved email_providers.id for the Gmail mailbox."
+          },
+          "tenant": {
+            "type": "string",
+            "description": "Tenant identifier owning the provider."
+          },
+          "historyId": {
+            "type": "string",
+            "description": "Gmail history ID from the decoded notification."
+          },
+          "jobId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID assigned to the Redis queue job."
+          },
+          "queueDepth": {
+            "type": "integer",
+            "description": "Redis queue depth after enqueue."
+          }
+        },
+        "required": [
+          "success",
+          "queued",
+          "handoff",
+          "providerId",
+          "tenant",
+          "historyId",
+          "jobId",
+          "queueDepth"
+        ]
+      },
+      "GoogleWebhookSkippedResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ],
+            "description": "Webhook request was accepted but no job was enqueued."
+          },
+          "message": {
+            "type": "string",
+            "enum": [
+              "No data to process",
+              "No provider found",
+              "No google config found"
+            ],
+            "description": "Reason the webhook did not enqueue work."
+          }
+        },
+        "required": [
+          "success",
+          "message"
+        ]
       },
       "BoardIdParams": {
         "type": "object",
@@ -3854,6 +4187,116 @@
         }
       }
     },
+    "/api/documents/{documentId}/download": {
+      "get": {
+        "summary": "Download document attachment",
+        "description": "Downloads the original stored file for a document as an attachment. The documentId path value is resolved against documents.document_id first, then documents.file_id. The route supports Auth.js session-cookie authentication and x-api-key fallback for machine clients, derives the tenant from the authenticated principal, requires document:read permission, and runs document authorization rules before reading the file from storage.",
+        "tags": [
+          "Documents"
+        ],
+        "security": [
+          {
+            "SessionCookieAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-auth-modes": [
+            "session-cookie",
+            "api-key"
+          ],
+          "x-id-resolution": "document_id_then_file_id",
+          "x-rbac-required": "document:read"
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Document UUID from documents.document_id, or file UUID from documents.file_id. The handler resolves document_id first and falls back to file_id."
+            },
+            "required": true,
+            "description": "Document UUID from documents.document_id, or file UUID from documents.file_id. The handler resolves document_id first and falls back to file_id.",
+            "name": "documentId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optional API key for machine-to-machine download requests. Used only when no valid Auth.js session cookie is present."
+            },
+            "required": false,
+            "description": "Optional API key for machine-to-machine download requests. Used only when no valid Auth.js session cookie is present.",
+            "name": "x-api-key",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Binary file stream with attachment Content-Disposition headers. Content-Type varies by stored MIME type.",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/BinaryFileResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing documentId path parameter.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentDownloadError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session or API key was supplied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentDownloadError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks document:read permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentDownloadError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Document not found, document has no file_id, or file metadata/storage record was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentDownloadError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected internal failure while downloading the document.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentDownloadError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/documents/view/{fileId}": {
       "get": {
         "summary": "View document file inline",
@@ -3985,6 +4428,252 @@
               "text/plain": {
                 "schema": {
                   "$ref": "#/components/schemas/DocumentPlainTextError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/email/oauth/initiate": {
+      "post": {
+        "summary": "Initiate email OAuth flow",
+        "description": "Starts the OAuth 2.0 authorization flow for a Google or Microsoft email provider. Requires a valid Auth.js session cookie. The handler builds secure OAuth state containing tenant, user, providerId, redirect URI, timestamp, and nonce, resolves the provider client ID from configured secrets, and returns the authorization URL for the browser to visit.",
+        "tags": [
+          "Email"
+        ],
+        "security": [
+          {
+            "SessionCookieAuth": []
+          }
+        ],
+        "extensions": {
+          "x-api-key-auth-skipped": true
+        },
+        "requestBody": {
+          "description": "Email OAuth initiation payload.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailOAuthInitiateRequest"
+              },
+              "description": "Email OAuth initiation payload."
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OAuth authorization URL generated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailOAuthInitiateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Provider is missing or not supported.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No authenticated user session was found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "OAuth client ID was not configured or initiation failed unexpectedly.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/email/refresh-watch": {
+      "post": {
+        "summary": "Refresh Gmail watch registration",
+        "description": "Forces Pub/Sub setup and Gmail watch registration refresh for an active Google email provider. Requires a valid Auth.js session. The providerId must reference email_providers.id for a provider_type=google record with a google_email_provider_config row and project_id. Internally this calls configureGmailProvider with force=true.",
+        "tags": [
+          "Email"
+        ],
+        "security": [
+          {
+            "SessionCookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "description": "Gmail provider refresh request.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailRefreshWatchRequest"
+              },
+              "description": "Gmail provider refresh request."
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Gmail provider Pub/Sub and watch registration refreshed successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailRefreshWatchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "providerId is missing, or the Gmail provider has no project_id configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No authenticated user session was found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Gmail provider or Gmail configuration row was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Refresh failed unexpectedly. Response includes success=false and an error message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/email/webhooks/google": {
+      "options": {
+        "summary": "CORS preflight for Google email webhook",
+        "description": "CORS preflight response for the Gmail Pub/Sub webhook endpoint. This is handled by global middleware before route authentication or business logic. It does not require a session, API key, tenant, JWT, request body, or query parameter, and always returns 204 No Content with CORS headers.",
+        "tags": [
+          "Email"
+        ],
+        "security": [],
+        "extensions": {
+          "x-cors-preflight": true,
+          "x-handled-by": "middleware"
+        },
+        "responses": {
+          "204": {
+            "description": "CORS preflight accepted; response body is empty."
+          }
+        }
+      },
+      "post": {
+        "summary": "Receive Google Gmail Pub/Sub webhook",
+        "description": "Receives Google Pub/Sub push notifications for Gmail watches. Standard session and API-key middleware are bypassed; the handler requires an Authorization: Bearer Google-signed JWT, decodes the Pub/Sub message data into a Gmail notification with emailAddress and historyId, resolves the tenant and email provider by subscription name or mailbox, validates Google configuration, and enqueues a pointer-only job into the unified inbound email queue. It does not fetch or return email content.",
+        "tags": [
+          "Email"
+        ],
+        "security": [
+          {
+            "GooglePubSubJWT": []
+          }
+        ],
+        "extensions": {
+          "x-api-key-auth-skipped": true,
+          "x-session-auth-skipped": true,
+          "x-webhook-provider": "google-pubsub"
+        },
+        "requestBody": {
+          "description": "Google Pub/Sub push message containing a base64-encoded Gmail notification.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GooglePubSubPushBody"
+              },
+              "description": "Google Pub/Sub push message containing a base64-encoded Gmail notification."
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Webhook accepted. Either a queue job was enqueued, or the notification was safely skipped.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/GoogleWebhookEnqueueResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/GoogleWebhookSkippedResponse"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Permanent parse or validation error; Pub/Sub should not retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Bearer JWT is missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Transient enqueue or processing failure; Pub/Sub may retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailErrorResponse"
                 }
               }
             }
@@ -7200,265 +7889,6 @@
           },
           "404": {
             "description": "Project task not found, or its parent project could not be resolved.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/documents/{documentId}/download": {
-      "get": {
-        "summary": "GET documents",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "documents"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/email/oauth/initiate": {
-      "post": {
-        "summary": "POST email",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "email"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/email/refresh-watch": {
-      "post": {
-        "summary": "POST email",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "email"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/email/webhooks/google": {
-      "options": {
-        "summary": "OPTIONS email",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "email"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "POST email",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "email"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
             "content": {
               "application/json": {
                 "schema": {
