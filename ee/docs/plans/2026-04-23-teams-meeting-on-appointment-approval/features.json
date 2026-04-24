@@ -146,7 +146,7 @@
   {
     "id": "F025",
     "description": "ICS generator receives url = online_meeting_url and location = 'Microsoft Teams Meeting' when a meeting exists.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-17"]
   },
   {

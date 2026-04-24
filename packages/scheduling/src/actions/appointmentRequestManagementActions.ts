@@ -775,16 +775,24 @@ export const approveAppointmentRequest = withAuth(async (
         const formattedTime = await formatTime(localTimeStr);
 
         // Generate ICS file for email attachment
+        const icsDescriptionLines = [
+          request.description || `Appointment for ${service.service_name}`,
+        ];
+
+        if (onlineMeetingUrl) {
+          icsDescriptionLines.push(`Join Teams Meeting: ${onlineMeetingUrl}`);
+        }
+
         const icsEventData: ICSEventData = {
           uid: scheduleEntry.entry_id,
           title: `Appointment: ${service.service_name}`,
-          description: request.description || `Appointment for ${service.service_name}`,
-          location: `${tenantSettings.tenantName}`,
+          description: icsDescriptionLines.join('\n'),
+          location: onlineMeetingUrl ? 'Microsoft Teams Meeting' : undefined,
           startDate: new Date(scheduleEntryWithDetails.scheduled_start),
           endDate: new Date(scheduleEntryWithDetails.scheduled_end),
           organizerName: `${assignedUser.first_name} ${assignedUser.last_name}`,
           organizerEmail: assignedUser.email || tenantSettings.contactEmail,
-          url: onlineMeetingUrl || `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/client-portal/appointments/${request.appointment_request_id}`
+          url: onlineMeetingUrl || undefined,
         };
         const icsBuffer = generateICSBuffer(icsEventData);
         const icsFilename = generateICSFilename(`Appointment-${service.service_name}`);
