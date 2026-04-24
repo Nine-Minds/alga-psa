@@ -304,14 +304,25 @@ export class TenantSecretProvider {
    * Returns a map of secret names to the workflow IDs that reference them.
    */
   async getSecretUsage(): Promise<Map<string, string[]>> {
-    // Scan published workflow versions (workflow_definition_versions.definition_json)
-    // and in-progress drafts (workflow_definitions.draft_definition) for $secret references.
-    // workflow_definitions/_versions are not tenant-scoped in the DB, so no tenant filter.
+    // workflow_definitions / workflow_definition_versions have no tenant column,
+    // so we scope via tenant_workflow_schedule (the same linking table used elsewhere,
+    // e.g. workflow-runtime-v2-actions.ts:loadWorkflowScheduleStateMap).
+    const scheduled = await this.knex('tenant_workflow_schedule')
+      .where({ tenant_id: this.tenantId })
+      .select<{ workflow_id: string }[]>('workflow_id');
+
+    const workflowIds = scheduled.map((row) => row.workflow_id);
+    if (workflowIds.length === 0) {
+      return new Map();
+    }
+
     const [versions, drafts] = await Promise.all([
       this.knex('workflow_definition_versions')
+        .whereIn('workflow_id', workflowIds)
         .whereRaw("definition_json::text LIKE '%$secret%'")
         .select<{ workflow_id: string; definition_json: unknown }[]>('workflow_id', 'definition_json'),
       this.knex('workflow_definitions')
+        .whereIn('workflow_id', workflowIds)
         .whereRaw("draft_definition::text LIKE '%$secret%'")
         .select<{ workflow_id: string; draft_definition: unknown }[]>('workflow_id', 'draft_definition'),
     ]);
