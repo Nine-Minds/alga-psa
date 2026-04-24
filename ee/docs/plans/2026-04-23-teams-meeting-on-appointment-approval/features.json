@@ -38,7 +38,7 @@
   {
     "id": "F007",
     "description": "CE-safe shim in packages/scheduling that dynamically resolves the EE Teams meeting service and returns no-op handlers when EE is unavailable.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-7"]
   },
   {

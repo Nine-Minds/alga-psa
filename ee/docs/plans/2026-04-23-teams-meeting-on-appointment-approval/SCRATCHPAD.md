@@ -10,6 +10,7 @@
 - Availability Settings UI: `packages/scheduling/src/components/schedule/AvailabilitySettings.tsx` (tabs at L778-784, total ~1371 lines)
 - Availability Settings action: `packages/scheduling/src/actions/availabilitySettingsActions.ts`
 - ICS generator: `packages/scheduling/src/utils/icsGenerator.ts` (interface `ICSEventData` L6-18; already supports `url` L101-102 and `location` L97-99)
+- CE shim: `packages/scheduling/src/lib/teamsMeetingService.ts`
 
 **Client portal**
 - Detail page: `packages/client-portal/src/components/appointments/AppointmentRequestDetailsPage.tsx`
@@ -124,6 +125,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-23: Completed `F004` by adding `updateTeamsMeeting()` in the same EE meetings module. It reuses the shared tenant readiness/config resolver, PATCHes Graph with the new ISO datetimes, returns `false` on soft failure, and emits structured update logs.
 - 2026-04-23: Completed `F005` by adding `deleteTeamsMeeting()` in the EE meetings module. It issues a Graph DELETE against the organizer-scoped online meeting endpoint, logs failures without throwing, and returns `false` on any soft failure.
 - 2026-04-23: Completed `F006` by adding `getTeamsMeetingCapability(tenantId)` under `ee/packages/microsoft-teams/src/lib/actions/meetings/`. Capability follows the PRD contract: `ee_disabled` outside EE, `not_configured` when Teams is inactive or missing a selected profile, `no_organizer` when the organizer UPN is blank, otherwise `available: true`.
+- 2026-04-23: Completed `F007` by adding `packages/scheduling/src/lib/teamsMeetingService.ts`. The scheduling package now uses a local EE dynamic-import boundary that returns CE-safe no-op handlers when enterprise code is unavailable or fails to load.
 
 ## Working notes
 
@@ -131,6 +133,8 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - `teams_integrations` migration does not need a Citus redistribution step for a nullable non-key column; guarded `alterTable` is sufficient.
 - Extracted Graph app-token acquisition into `ee/packages/microsoft-teams/src/lib/graphAuth.ts` so meeting helpers and notification delivery share the same OAuth client-credentials flow.
 - Added `resolveTeamsMeetingExecutionConfig()` as the central place for readiness checks needed by create/update/delete helpers: install status must be `active`, `selected_profile_id` must exist, organizer UPN must be set, and the Microsoft profile must resolve as `ready`.
+- Scheduling-side EE boundary mirrors the calendar-actions pattern: memoized dynamic import of `@alga-psa/ee-microsoft-teams/lib`, fallback logging on load failure, and CE no-op implementations instead of hard EE imports.
 - Runbook command used for validation so far: `node -c server/migrations/20260423130000_add_online_meeting_columns_to_appointment_requests.cjs`
 - Additional validation command: `node -c ee/server/migrations/20260423131000_add_default_meeting_organizer_to_teams_integrations.cjs`
 - Additional validation command: `npm -w ee/packages/microsoft-teams run typecheck`
+- Additional validation command: `npm -w packages/scheduling run typecheck`
