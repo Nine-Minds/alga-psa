@@ -44,7 +44,7 @@
   {
     "id": "F008",
     "description": "approveAppointmentRequestSchema accepts generate_teams_meeting: boolean (default false).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-8"]
   },
   {

@@ -126,6 +126,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-23: Completed `F005` by adding `deleteTeamsMeeting()` in the EE meetings module. It issues a Graph DELETE against the organizer-scoped online meeting endpoint, logs failures without throwing, and returns `false` on any soft failure.
 - 2026-04-23: Completed `F006` by adding `getTeamsMeetingCapability(tenantId)` under `ee/packages/microsoft-teams/src/lib/actions/meetings/`. Capability follows the PRD contract: `ee_disabled` outside EE, `not_configured` when Teams is inactive or missing a selected profile, `no_organizer` when the organizer UPN is blank, otherwise `available: true`.
 - 2026-04-23: Completed `F007` by adding `packages/scheduling/src/lib/teamsMeetingService.ts`. The scheduling package now uses a local EE dynamic-import boundary that returns CE-safe no-op handlers when enterprise code is unavailable or fails to load.
+- 2026-04-23: Completed `F008` by extending the scheduling approval schema with `generate_teams_meeting` defaulting to `false`. This keeps existing approval callers backward compatible while allowing the UI to opt in explicitly when capability is available.
 
 ## Working notes
 
