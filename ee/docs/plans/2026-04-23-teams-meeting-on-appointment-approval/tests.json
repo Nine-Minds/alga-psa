@@ -309,7 +309,7 @@
     "id": "T052",
     "description": "Timezone test: approving a request whose requester_timezone is non-UTC produces Graph startDateTime / endDateTime in correct UTC instants that round-trip to the requester's local time.",
     "featureIds": ["F009"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T053",

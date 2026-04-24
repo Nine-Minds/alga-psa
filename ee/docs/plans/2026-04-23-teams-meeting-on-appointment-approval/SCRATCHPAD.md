@@ -163,6 +163,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-24: Completed `T021` in the same approval integration suite, asserting `generate_teams_meeting: false` leaves `online_meeting_*` columns `NULL` and never calls the Teams meeting service.
 - 2026-04-24: Completed `T022` in the same suite, asserting approval still succeeds when Teams capability is unavailable, no Graph create runs, and `teamsMeetingWarning` explains the organizer/setup gap.
 - 2026-04-24: Completed `T023` in the same suite, asserting a soft Graph create failure leaves the appointment approved, keeps meeting columns empty, and omits `onlineMeetingUrl` from the approval email payload.
+- 2026-04-24: Completed `T052` in the same approval suite, asserting requester-local wall-clock times are converted to the correct UTC instants before `createTeamsMeeting()` is called.
 
 ## Working notes
 
