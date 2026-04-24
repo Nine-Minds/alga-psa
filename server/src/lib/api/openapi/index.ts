@@ -12,6 +12,7 @@ import { registerDocumentRoutes } from './routes/documents';
 import { registerEmailRoutes } from './routes/email';
 import { registerExtensionGatewayRoutes } from './routes/extensionGateway';
 import { registerFileRoutes } from './routes/files';
+import { registerFinancialInvoiceRoutes } from './routes/financialInvoices';
 import { registerInstallRoutes } from './routes/installs';
 import { registerStatusRoutes } from './routes/statuses';
 import { registerProjectRoutes } from './routes/projects';
@@ -42,6 +43,7 @@ export function buildBaseRegistry(options: RegistryInitOptions = {}): ApiOpenApi
   registerDocumentRoutes(registry);
   registerEmailRoutes(registry);
   registerExtensionGatewayRoutes(registry);
+  registerFinancialInvoiceRoutes(registry);
   registerFileRoutes(registry);
   registerSystemRoutes(registry);
   registerInstallRoutes(registry);

@@ -35,7 +35,7 @@
   {
     "id": "F005",
     "description": "Document financial, billing analytics, invoices, credits, transactions, payment terms, billing calculation, bulk invoice, and invoice lifecycle routes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals"
     ]

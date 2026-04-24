@@ -309,3 +309,51 @@ python3 <targeted CE/EE contract-line placeholder checks + global counts>
 3. `GET /api/v1/feature-flags`
 4. `POST /api/v1/feature-flags`
 5. `POST /api/v1/financial/billing/calculate`
+
+## 2026-04-24 — Financial/Invoice/Billing-Analytics Family Completed (F005)
+
+### Scope completed
+
+- Added registrar: `server/src/lib/api/openapi/routes/financialInvoices.ts`.
+- Registered in `server/src/lib/api/openapi/index.ts` before inventory backfill.
+- Documented all previously-placeholder operations under:
+  - `/api/v1/billing-analytics/overview`
+  - `/api/v1/financial/*`
+  - `/api/v1/invoices/*`
+
+### Key source-grounded decisions / gaps documented
+
+- `GET /api/v1/billing-analytics/overview` maps to `ApiContractLineController.getBillingOverviewAnalytics()` and currently requires `req.context` without route-level auth wiring; documented `x-request-context-wiring-gap`.
+- Multiple `/api/v1/financial/*` routes are currently wired to generic `ApiFinancialController.list/create/update/getById/delete` methods (transaction-oriented) rather than route-name-specific resources (`payment-methods`, `tax/rates`, `financial/invoices/{id}/*`); documented as route-to-controller mismatches.
+- `POST /api/v1/financial/bulk/transactions` and `POST /api/v1/financial/bulk/credits` currently return `501 Not implemented`; documented as implementation gaps.
+- Recurring invoice template routes include TODO stubs (`list` returns empty array, `update` synthetic response, `delete` direct 204); documented explicitly.
+- `GET /api/v1/invoices/{id}/pdf` returns redirect behavior (`307`) when `download_url` exists; documented as redirect endpoint.
+
+### Validation / tests completed in this pass
+
+- `T001` completed: CE placeholder scan for the F005 route family (`ce_f005_remaining = 0`).
+- `T002` completed: EE placeholder scan for the same family (`ee_f005_remaining = 0`).
+- `T003` completed: `npm --prefix sdk run openapi:generate` succeeded.
+- `T004` completed: `npm --prefix sdk run openapi:generate -- --edition ee` succeeded.
+- `T005` completed: verified `registerFinancialInvoiceRoutes()` is imported and called in `openapi/index.ts` before `registerInventoryBackfillRoutes()`.
+
+### Remaining placeholder counts after this pass
+
+- CE: `353`
+- EE: `361`
+
+### Next cursor (CE)
+
+1. `POST /api/v1/feature-access`
+2. `GET /api/v1/feature-flags`
+3. `POST /api/v1/feature-flags`
+4. `GET /api/v1/integrations/quickbooks/accounts`
+5. `GET /api/v1/integrations/quickbooks/accounts/mappings`
+
+### Commands / runbook executed
+
+```bash
+npm --prefix sdk run openapi:generate
+npm --prefix sdk run openapi:generate -- --edition ee
+python3 <CE and EE placeholder scans for F005 family + global counts>
+```
