@@ -27,7 +27,7 @@
   {
     "id": "F004",
     "description": "Document client, client-contract-line, contact, and related location/contact subresource routes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals"
     ]

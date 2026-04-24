@@ -276,3 +276,36 @@ python3 <targeted CE/EE contract-line placeholder checks + global counts>
 3. `POST /api/v1/clients`
 4. `GET /api/v1/clients/stats`
 5. `DELETE /api/v1/clients/{id}`
+
+## 2026-04-24 — Client/Contact Family Completed (F004)
+
+### Scope completed
+
+- Added registrar: `server/src/lib/api/openapi/routes/clientsContacts.ts`.
+- Registered in `server/src/lib/api/openapi/index.ts` before inventory backfill.
+- Documented all 20 previously-placeholder operations under:
+  - `/api/v1/clients*`
+  - `/api/v1/contacts*`
+  - `/api/v1/client-contract-lines*`
+
+### Key source-grounded notes
+
+- Client/contact custom routes (`stats`, `search`, `export`, nested client subresources) perform explicit API key validation in-controller and set request context directly.
+- Client-contract-line routes reuse `ApiContractLineController` request-context-dependent methods; documented current request-context wiring gap and TODO-stub behavior for list endpoint.
+- Contact export can return CSV file response when `format=csv`; documented this response-mode distinction.
+
+### Validation
+
+- CE placeholder check for the full client/contact/client-contract-line set: all operations are non-placeholder.
+- EE placeholder check for the same set: all operations are non-placeholder.
+- Remaining placeholder counts after this pass:
+  - CE: `414`
+  - EE: `422`
+
+### Next cursor (CE)
+
+1. `GET /api/v1/billing-analytics/overview`
+2. `POST /api/v1/feature-access`
+3. `GET /api/v1/feature-flags`
+4. `POST /api/v1/feature-flags`
+5. `POST /api/v1/financial/billing/calculate`
