@@ -144,6 +144,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-23: Completed `F024` by extending `@alga-psa/email` appointment payload types with `onlineMeetingUrl` and wiring the approved-email fallback template to render a Teams join action when the URL is present.
 - 2026-04-23: Completed `F025` by changing approval-email ICS generation to emit `LOCATION: Microsoft Teams Meeting`, `URL: <join link>`, and a `Join Teams Meeting: ...` description line only when a Teams meeting was created.
 - 2026-04-23: Completed `F023` by updating the source-of-truth appointment email templates plus a new re-upsert migration so both approved-client and assigned-technician emails render a conditional `Join Teams Meeting` block when `onlineMeetingUrl` is populated.
+- 2026-04-23: Completed `F026` by adding the new Teams UI keys to English locale files, backfilling the same keys across shipped human locales to satisfy the translation validator, and regenerating pseudo-locales.
 
 ## Working notes
 
@@ -159,8 +160,11 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - `SystemEmailService.sendAppointmentAssignedNotification()` already passes the full payload object through `replaceVariables()`, so `onlineMeetingUrl` only needed a type update there; the explicit fallback template change was only necessary for the approved-client email path.
 - The previous ICS behavior always included a client-portal URL and tenant-name location. Teams-meeting acceptance criteria required narrowing that behavior so URL/location are only emitted for actual online meetings.
 - Email template updates follow the repo’s source-of-truth pattern: modify `server/migrations/utils/templates/email/appointments/*.cjs` and add a migration that re-upserts existing DB rows, rather than editing seeded SQL or relying on future installs only.
+- Translation validator enforces new keys across all shipped human locales (`de/es/fr/it/nl/pl/pt`) as well as pseudo locales. Adding English-only keys is not enough to make `node scripts/validate-translations.cjs` pass.
 - Approval flow nuance: when the approver keeps the originally requested time, `requested_date`/`requested_time` must be converted from the requester's local wall clock via `fromZonedTime(...)`; only explicit `final_date`/`final_time` values sent from the UI are already normalized to UTC strings.
 - Runbook command used for validation so far: `node -c server/migrations/20260423130000_add_online_meeting_columns_to_appointment_requests.cjs`
 - Additional validation command: `node -c ee/server/migrations/20260423131000_add_default_meeting_organizer_to_teams_integrations.cjs`
 - Additional validation command: `npm -w ee/packages/microsoft-teams run typecheck`
 - Additional validation command: `npm -w packages/scheduling run typecheck`
+- Additional validation command: `node scripts/generate-pseudo-locales.cjs`
+- Additional validation command: `node scripts/validate-translations.cjs`

@@ -158,7 +158,11 @@
         "duration": "Duración",
         "status": "Estado",
         "linkedTicket": "Boleto vinculado",
-        "description": "Descripción"
+        "description": "Descripción",
+        "teamsMeeting": "Teams Meeting"
+      },
+      "actions": {
+        "joinTeamsMeeting": "Join Teams Meeting"
       }
     },
     "approval": {
@@ -167,7 +171,8 @@
         "assignedTechnician": "Asignar técnico *",
         "finalDateTime": "Fecha y hora finales",
         "internalNotes": "Notas internas (opcional)",
-        "linkedTicket": "Enlace al boleto (opcional)"
+        "linkedTicket": "Enlace al boleto (opcional)",
+        "generateTeamsMeeting": "Generate Microsoft Teams meeting link"
       },
       "placeholders": {
         "assignedTechnician": "Seleccionar técnico",
@@ -202,7 +207,8 @@
       "general": "Configuraciones generales",
       "userHours": "Horas de usuario",
       "serviceRules": "Reglas de servicio",
-      "exceptions": "Excepciones"
+      "exceptions": "Excepciones",
+      "teamsMeetings": "Teams Meetings"
     },
     "days": {
       "sunday": "Domingo",
@@ -422,6 +428,42 @@
         "deleteSuccess": "Excepción eliminada",
         "deleteError": "No se pudo eliminar la excepción"
       }
+    },
+    "teamsMeetings": {
+      "prerequisites": {
+        "title": "Azure prerequisites",
+        "description": "Before you turn this on, grant the app the OnlineMeetings.ReadWrite.All application permission and create an Application Access Policy for the organizer account.",
+        "link": "Open Microsoft setup guidance"
+      },
+      "organizer": {
+        "title": "Meeting organizer",
+        "label": "Default meeting organizer (UPN or Microsoft user ID)",
+        "help": "Approved appointments create Teams meetings as this Microsoft user. A UPN such as scheduling@acme.com is usually the safest choice.",
+        "placeholder": "scheduling@acme.com"
+      },
+      "actions": {
+        "save": "Save",
+        "saving": "Saving...",
+        "verify": "Verify",
+        "verifying": "Verifying..."
+      },
+      "feedback": {
+        "saveSuccess": "Teams meeting organizer saved",
+        "saveError": "Failed to save Teams meeting organizer",
+        "verifySuccess": "Teams meeting organizer verified",
+        "verifyError": "Failed to verify Teams meeting organizer"
+      },
+      "verify": {
+        "valid": "Microsoft organizer verified successfully.",
+        "validWithName": "Verified Microsoft user: {{displayName}}.",
+        "reasons": {
+          "eeDisabled": "Teams meeting verification is only available in Enterprise Edition.",
+          "notConfigured": "Teams integration must be active before an organizer can be verified.",
+          "userNotFound": "Microsoft could not find a user for that organizer value.",
+          "policyMissing": "The Microsoft user exists, but the application access policy is not allowing meeting creation yet.",
+          "graphError": "Microsoft Graph could not verify this organizer right now."
+        }
+      }
     }
   },
   "entryPopup": {
@@ -470,7 +512,8 @@
       "approved": {
         "title": "Cita aprobada",
         "descriptionWithDate": "Esta cita se originó a partir de una solicitud de un cliente y fue aprobada el {{date}}.",
-        "description": "Esta cita se originó a partir de una solicitud de un cliente."
+        "description": "Esta cita se originó a partir de una solicitud de un cliente.",
+        "joinTeamsMeeting": "Join Teams Meeting"
       },
       "pending": {
         "title": "Solicitud de cita pendiente",
@@ -511,7 +554,8 @@
         "declineReasonRequired": "Por favor proporcione una razón para rechazar",
         "declined": "Solicitud de cita rechazada",
         "declineFailed": "No se pudo rechazar la solicitud"
-      }
+      },
+      "generateTeamsMeeting": "Generate Microsoft Teams meeting link"
     },
     "recurrence": {
       "label": "Reaparición",
@@ -544,7 +588,9 @@
         "title": "Eliminar entrada de programación",
         "message": "Seleccione qué eventos eliminar:",
         "confirm": "Continuar"
-      }
+      },
+      "confirm": "Are you sure you want to delete this schedule entry? This action cannot be undone.",
+      "confirmWithTeamsWarning": "Are you sure you want to delete this schedule entry? This action cannot be undone. This will also delete the Microsoft Teams meeting."
     },
     "scopeOptions": {
       "single": "Sólo este evento",

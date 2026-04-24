@@ -158,7 +158,11 @@
         "duration": "Duration",
         "status": "Status",
         "linkedTicket": "Linked Ticket",
-        "description": "Description"
+        "description": "Description",
+        "teamsMeeting": "Teams Meeting"
+      },
+      "actions": {
+        "joinTeamsMeeting": "Join Teams Meeting"
       }
     },
     "approval": {
@@ -167,7 +171,8 @@
         "assignedTechnician": "Assign Technician *",
         "finalDateTime": "Final Date & Time",
         "internalNotes": "Internal Notes (Optional)",
-        "linkedTicket": "Link to Ticket (Optional)"
+        "linkedTicket": "Link to Ticket (Optional)",
+        "generateTeamsMeeting": "Generate Microsoft Teams meeting link"
       },
       "placeholders": {
         "assignedTechnician": "Select technician",
@@ -202,7 +207,8 @@
       "general": "General Settings",
       "userHours": "User Hours",
       "serviceRules": "Service Rules",
-      "exceptions": "Exceptions"
+      "exceptions": "Exceptions",
+      "teamsMeetings": "Teams Meetings"
     },
     "days": {
       "sunday": "Sunday",
@@ -422,6 +428,42 @@
         "deleteSuccess": "Exception deleted",
         "deleteError": "Failed to delete exception"
       }
+    },
+    "teamsMeetings": {
+      "prerequisites": {
+        "title": "Azure prerequisites",
+        "description": "Before you turn this on, grant the app the OnlineMeetings.ReadWrite.All application permission and create an Application Access Policy for the organizer account.",
+        "link": "Open Microsoft setup guidance"
+      },
+      "organizer": {
+        "title": "Meeting organizer",
+        "label": "Default meeting organizer (UPN or Microsoft user ID)",
+        "help": "Approved appointments create Teams meetings as this Microsoft user. A UPN such as scheduling@acme.com is usually the safest choice.",
+        "placeholder": "scheduling@acme.com"
+      },
+      "actions": {
+        "save": "Save",
+        "saving": "Saving...",
+        "verify": "Verify",
+        "verifying": "Verifying..."
+      },
+      "feedback": {
+        "saveSuccess": "Teams meeting organizer saved",
+        "saveError": "Failed to save Teams meeting organizer",
+        "verifySuccess": "Teams meeting organizer verified",
+        "verifyError": "Failed to verify Teams meeting organizer"
+      },
+      "verify": {
+        "valid": "Microsoft organizer verified successfully.",
+        "validWithName": "Verified Microsoft user: {{displayName}}.",
+        "reasons": {
+          "eeDisabled": "Teams meeting verification is only available in Enterprise Edition.",
+          "notConfigured": "Teams integration must be active before an organizer can be verified.",
+          "userNotFound": "Microsoft could not find a user for that organizer value.",
+          "policyMissing": "The Microsoft user exists, but the application access policy is not allowing meeting creation yet.",
+          "graphError": "Microsoft Graph could not verify this organizer right now."
+        }
+      }
     }
   },
   "entryPopup": {
@@ -470,7 +512,8 @@
       "approved": {
         "title": "Approved Appointment",
         "descriptionWithDate": "This appointment originated from a client request and was approved on {{date}}.",
-        "description": "This appointment originated from a client request."
+        "description": "This appointment originated from a client request.",
+        "joinTeamsMeeting": "Join Teams Meeting"
       },
       "pending": {
         "title": "Pending Appointment Request",
@@ -511,7 +554,8 @@
         "declineReasonRequired": "Please provide a reason for declining",
         "declined": "Appointment request declined",
         "declineFailed": "Failed to decline request"
-      }
+      },
+      "generateTeamsMeeting": "Generate Microsoft Teams meeting link"
     },
     "recurrence": {
       "label": "Recurrence",
@@ -544,7 +588,9 @@
         "title": "Delete Schedule Entry",
         "message": "Select which events to delete:",
         "confirm": "Continue"
-      }
+      },
+      "confirm": "Are you sure you want to delete this schedule entry? This action cannot be undone.",
+      "confirmWithTeamsWarning": "Are you sure you want to delete this schedule entry? This action cannot be undone. This will also delete the Microsoft Teams meeting."
     },
     "scopeOptions": {
       "single": "Only this event",

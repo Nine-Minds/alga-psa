@@ -118,12 +118,15 @@
     "description": "Descripción",
     "created": "Solicitada",
     "approved": "Aprobada",
-    "cancelButton": "Cancelar cita"
+    "cancelButton": "Cancelar cita",
+    "teamsMeeting": "Teams Meeting",
+    "joinTeamsMeeting": "Join Teams Meeting"
   },
   "cancel": {
     "title": "Cancelar cita",
     "message": "¿Está seguro de que desea cancelar esta solicitud de cita? Esta acción no se puede deshacer.",
-    "confirm": "Sí, cancelar"
+    "confirm": "Sí, cancelar",
+    "messageWithTeamsWarning": "Are you sure you want to cancel this appointment request? This action cannot be undone. This will also delete the Microsoft Teams meeting."
   },
   "ticketSection": {
     "title": "Solicitudes de cita",

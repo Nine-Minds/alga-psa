@@ -118,12 +118,15 @@
     "description": "Description",
     "created": "Demandé",
     "approved": "Approuvé",
-    "cancelButton": "Annuler le rendez-vous"
+    "cancelButton": "Annuler le rendez-vous",
+    "teamsMeeting": "Teams Meeting",
+    "joinTeamsMeeting": "Join Teams Meeting"
   },
   "cancel": {
     "title": "Annuler le rendez-vous",
     "message": "Êtes-vous sûr de vouloir annuler cette demande de rendez-vous ? Cette action ne peut pas être annulée.",
-    "confirm": "Oui, annuler"
+    "confirm": "Oui, annuler",
+    "messageWithTeamsWarning": "Are you sure you want to cancel this appointment request? This action cannot be undone. This will also delete the Microsoft Teams meeting."
   },
   "ticketSection": {
     "title": "Demandes de rendez-vous",

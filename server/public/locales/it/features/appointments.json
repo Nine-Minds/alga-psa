@@ -118,12 +118,15 @@
     "description": "Descrizione",
     "created": "Richiesto",
     "approved": "Approvato",
-    "cancelButton": "Annulla appuntamento"
+    "cancelButton": "Annulla appuntamento",
+    "teamsMeeting": "Teams Meeting",
+    "joinTeamsMeeting": "Join Teams Meeting"
   },
   "cancel": {
     "title": "Annulla appuntamento",
     "message": "Sei sicuro di voler annullare questa richiesta di appuntamento? Questa azione non può essere annullata.",
-    "confirm": "Sì, annulla"
+    "confirm": "Sì, annulla",
+    "messageWithTeamsWarning": "Are you sure you want to cancel this appointment request? This action cannot be undone. This will also delete the Microsoft Teams meeting."
   },
   "ticketSection": {
     "title": "Richieste di appuntamento",

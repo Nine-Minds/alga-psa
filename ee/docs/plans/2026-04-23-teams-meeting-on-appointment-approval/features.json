@@ -152,7 +152,7 @@
   {
     "id": "F026",
     "description": "i18n keys added to English schedule.json for toggle label, join button, Teams Meetings tab, organizer input + verify copy; pseudo-locales regenerated.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-18"]
   },
   {
