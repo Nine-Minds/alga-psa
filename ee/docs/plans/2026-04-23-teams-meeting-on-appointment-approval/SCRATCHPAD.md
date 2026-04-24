@@ -138,6 +138,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-23: Completed `F017` by exposing the stored Teams meeting URL and a "Join Teams Meeting" button in the `AppointmentRequestsPanel` detail view for approved requests.
 - 2026-04-23: Completed `F018` by adding a primary "Join Teams Meeting" button to `packages/client-portal/src/components/appointments/AppointmentRequestDetailsPage.tsx` when `online_meeting_url` is populated.
 - 2026-04-23: Completed `F019` by adding a conditional "Teams Meetings" tab to `AvailabilitySettings.tsx`. Visibility is driven by a new scheduling action that checks whether `teams_integrations` exists and whether the tenant's install status is `active`.
+- 2026-04-23: Completed `F021` by adding `setDefaultMeetingOrganizer` in `availabilitySettingsActions.ts`. The action is CE-safe, enforces `system_settings:update`, verifies that Teams is active for the tenant, and writes the trimmed organizer UPN (or `NULL` when cleared).
 
 ## Working notes
 

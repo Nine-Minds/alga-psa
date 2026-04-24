@@ -122,7 +122,7 @@
   {
     "id": "F021",
     "description": "setDefaultMeetingOrganizer server action writes UPN to teams_integrations with permission check.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-15"]
   },
   {

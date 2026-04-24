@@ -56,6 +56,10 @@ export interface TeamsMeetingsTabState {
   organizerUpn?: string | null;
 }
 
+export interface TeamsMeetingOrganizerState {
+  organizerUpn: string | null;
+}
+
 export const getTeamsMeetingsTabState = withAuth(async (
   user,
   { tenant }
@@ -87,6 +91,54 @@ export const getTeamsMeetingsTabState = withAuth(async (
   } catch (error) {
     console.error('Error loading Teams meetings tab state:', error);
     const message = error instanceof Error ? error.message : 'Failed to load Teams meetings tab state';
+    return { success: false, error: message };
+  }
+});
+
+export const setDefaultMeetingOrganizer = withAuth(async (
+  user,
+  { tenant },
+  input: { upn?: string | null }
+): Promise<AvailabilitySettingsResult<TeamsMeetingOrganizerState>> => {
+  try {
+    const { knex: db } = await createTenantKnex();
+    const canManage = await hasPermission(user, 'system_settings', 'update', db);
+    if (!canManage) {
+      return { success: false, error: 'Insufficient permissions to manage Teams meeting settings' };
+    }
+
+    const hasTeamsIntegrationsTable = await db.schema.hasTable('teams_integrations');
+    if (!hasTeamsIntegrationsTable) {
+      return { success: false, error: 'Teams integration is not available in this environment' };
+    }
+
+    const integration = await db('teams_integrations')
+      .where({ tenant })
+      .select('tenant', 'install_status')
+      .first();
+
+    if (!integration || integration.install_status !== 'active') {
+      return { success: false, error: 'Teams integration must be active before setting a meeting organizer' };
+    }
+
+    const organizerUpn = (input.upn || '').trim() || null;
+    await db('teams_integrations')
+      .where({ tenant })
+      .update({
+        default_meeting_organizer_upn: organizerUpn,
+        updated_at: new Date(),
+        updated_by: user?.user_id || null,
+      });
+
+    return {
+      success: true,
+      data: {
+        organizerUpn,
+      },
+    };
+  } catch (error) {
+    console.error('Error saving Teams meeting organizer:', error);
+    const message = error instanceof Error ? error.message : 'Failed to save Teams meeting organizer';
     return { success: false, error: message };
   }
 });
