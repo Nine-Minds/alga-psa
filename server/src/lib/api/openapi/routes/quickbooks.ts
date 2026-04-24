@@ -20,7 +20,41 @@ export function registerQuickBooksRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  const QboRouteMissingResponse = registry.registerSchema(
+    'QboRouteMissingResponse',
+    zOpenApi.string().describe('Default Next.js 404 page or not-found response. The route file listed in inventory is absent in this worktree.'),
+  );
+
   registry.registerRoute({
+    method: 'get',
+    path: '/api/integrations/qbo/status',
+    summary: 'QuickBooks Online status route unavailable',
+    description:
+      'This path appears in the generated route inventory, but server/src/app/api/integrations/qbo/status/route.ts is not present in the current worktree. Without an x-api-key, API middleware returns 401 before routing. With the middleware requirement satisfied, Next.js has no handler for this path and returns the framework not-found response. QuickBooks connection status is currently exposed through server actions such as getQboConnectionStatus and through versioned QuickBooks API routes, not this inventory-only path.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    deprecated: true,
+    responses: {
+      401: {
+        description: 'x-api-key is missing at middleware before routing.',
+        schema: QboErrorResponse,
+      },
+      404: {
+        description: 'No route handler exists for this inventory-only path in the current worktree.',
+        contentType: 'text/html',
+        schema: QboRouteMissingResponse,
+      },
+    },
+    extensions: {
+      'x-route-inventory-only': true,
+      'x-route-file-missing': 'server/src/app/api/integrations/qbo/status/route.ts',
+      'x-oauth-provider': 'quickbooks-online',
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+
     method: 'get',
     path: '/api/integrations/qbo/connect',
     summary: 'Start QuickBooks Online OAuth flow',

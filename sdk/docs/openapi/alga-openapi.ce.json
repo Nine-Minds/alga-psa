@@ -17,6 +17,12 @@
   ],
   "tags": [
     {
+      "name": "Admin"
+    },
+    {
+      "name": "Assets"
+    },
+    {
       "name": "Auth"
     },
     {
@@ -77,7 +83,7 @@
       "name": "System"
     },
     {
-      "name": "admin"
+      "name": "Telemetry"
     },
     {
       "name": "assets"
@@ -144,9 +150,6 @@
     },
     {
       "name": "rbac"
-    },
-    {
-      "name": "readyz"
     },
     {
       "name": "roles"
@@ -718,6 +721,528 @@
       "RedirectResponse": {
         "type": "string",
         "description": "HTTP redirect response. NextAuth sets or clears cookies depending on the action."
+      },
+      "TelemetrySettingsGetResponse": {
+        "type": "object",
+        "properties": {
+          "usageStatsEnabled": {
+            "type": "boolean",
+            "description": "Whether usage statistics are enabled by the ALGA_USAGE_STATS environment variable."
+          },
+          "environmentVariable": {
+            "type": "string",
+            "enum": [
+              "ALGA_USAGE_STATS"
+            ],
+            "description": "Environment variable controlling telemetry collection."
+          },
+          "currentValue": {
+            "type": "string",
+            "description": "Raw ALGA_USAGE_STATS environment value, or not set when absent."
+          },
+          "controlledBy": {
+            "type": "string",
+            "enum": [
+              "environment"
+            ],
+            "description": "Telemetry is controlled by process environment, not runtime API writes."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable explanation of the current telemetry setting."
+          }
+        },
+        "required": [
+          "usageStatsEnabled",
+          "environmentVariable",
+          "currentValue",
+          "controlledBy",
+          "message"
+        ]
+      },
+      "TelemetrySettingsPostResponse": {
+        "type": "object",
+        "properties": {
+          "usageStatsEnabled": {
+            "type": "boolean",
+            "description": "Whether usage statistics are enabled by the ALGA_USAGE_STATS environment variable."
+          },
+          "controlledBy": {
+            "type": "string",
+            "enum": [
+              "environment"
+            ],
+            "description": "Telemetry is controlled by process environment, not runtime API writes."
+          },
+          "message": {
+            "type": "string",
+            "description": "Explains that telemetry settings cannot be changed through this API."
+          }
+        },
+        "required": [
+          "usageStatsEnabled",
+          "controlledBy",
+          "message"
+        ]
+      },
+      "AdminTelemetryErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error message such as Authentication required, Insufficient permissions, or the handler failure message."
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "AssetListQuery": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "string",
+            "description": "Page number as a query string. Defaults to 1 after validation."
+          },
+          "limit": {
+            "type": "string",
+            "description": "Page size as a query string. Must parse to 1 through 100; defaults to 25."
+          },
+          "sort": {
+            "type": "string",
+            "description": "Sort column. Defaults to created_at."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction. Defaults to desc."
+          },
+          "search": {
+            "type": "string",
+            "description": "General search filter accepted by the shared filter schema."
+          },
+          "created_from": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Filter records created at or after this timestamp."
+          },
+          "created_to": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Filter records created at or before this timestamp."
+          },
+          "updated_from": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Filter records updated at or after this timestamp."
+          },
+          "updated_to": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Filter records updated at or before this timestamp."
+          },
+          "is_active": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "description": "Boolean query value accepted by validation. The current AssetService.list implementation does not apply this filter."
+          },
+          "asset_tag": {
+            "type": "string",
+            "description": "Partial asset tag match using ILIKE."
+          },
+          "name": {
+            "type": "string",
+            "description": "Partial asset name match using ILIKE."
+          },
+          "client_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Client UUID from clients.client_id."
+          },
+          "asset_type": {
+            "type": "string",
+            "enum": [
+              "workstation",
+              "network_device",
+              "server",
+              "mobile_device",
+              "printer",
+              "unknown"
+            ],
+            "description": "Asset type stored in assets.asset_type."
+          },
+          "status": {
+            "type": "string",
+            "description": "Exact asset status match."
+          },
+          "location": {
+            "type": "string",
+            "description": "Partial location match using ILIKE."
+          },
+          "client_name": {
+            "type": "string",
+            "description": "Partial client name match; joins clients on client_id and tenant."
+          },
+          "has_warranty": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "description": "true requires warranty_end_date to be non-null; false requires it to be null."
+          },
+          "warranty_expired": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "description": "true filters warranty_end_date before now; false filters future warranty dates or no warranty."
+          },
+          "maintenance_due": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "description": "Accepted by validation, but not currently applied by AssetService.list."
+          },
+          "purchase_date_from": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Filter purchase_date greater than or equal to this timestamp."
+          },
+          "purchase_date_to": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Filter purchase_date less than or equal to this timestamp."
+          },
+          "warranty_end_from": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Filter warranty_end_date greater than or equal to this timestamp."
+          },
+          "warranty_end_to": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Filter warranty_end_date less than or equal to this timestamp."
+          }
+        }
+      },
+      "HateoasLink": {
+        "type": "object",
+        "properties": {
+          "href": {
+            "type": "string",
+            "description": "Target URL for the related operation."
+          },
+          "method": {
+            "type": "string",
+            "description": "HTTP method for the link when supplied."
+          }
+        },
+        "required": [
+          "href"
+        ]
+      },
+      "AssetLinks": {
+        "type": "object",
+        "properties": {
+          "self": {
+            "$ref": "#/components/schemas/HateoasLink"
+          },
+          "edit": {
+            "$ref": "#/components/schemas/HateoasLink"
+          },
+          "delete": {
+            "$ref": "#/components/schemas/HateoasLink"
+          },
+          "list": {
+            "$ref": "#/components/schemas/HateoasLink"
+          },
+          "documents": {
+            "$ref": "#/components/schemas/HateoasLink"
+          },
+          "maintenance": {
+            "$ref": "#/components/schemas/HateoasLink"
+          },
+          "history": {
+            "$ref": "#/components/schemas/HateoasLink"
+          }
+        },
+        "description": "HATEOAS links generated from the asset_id."
+      },
+      "AssetListItem": {
+        "type": "object",
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Primary key from assets.asset_id."
+          },
+          "client_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Client UUID from assets.client_id."
+          },
+          "asset_type": {
+            "type": "string",
+            "enum": [
+              "workstation",
+              "network_device",
+              "server",
+              "mobile_device",
+              "printer",
+              "unknown"
+            ],
+            "description": "Asset type stored in assets.asset_type."
+          },
+          "asset_tag": {
+            "type": "string",
+            "description": "Tenant-specific asset tag."
+          },
+          "name": {
+            "type": "string",
+            "description": "Asset display name."
+          },
+          "status": {
+            "type": "string",
+            "description": "Asset status."
+          },
+          "location": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Asset location, when recorded."
+          },
+          "serial_number": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Asset serial number, when recorded."
+          },
+          "purchase_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Asset purchase date from assets.purchase_date."
+          },
+          "warranty_end_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Warranty end date from assets.warranty_end_date."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Asset creation timestamp."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Asset last update timestamp."
+          },
+          "tenant": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Tenant UUID from assets.tenant; filtered to the authenticated request context."
+          },
+          "client_name": {
+            "type": "string",
+            "description": "Client name selected from the joined clients table."
+          },
+          "warranty_status": {
+            "type": "string",
+            "enum": [
+              "no_warranty",
+              "expired",
+              "expiring_soon",
+              "active"
+            ],
+            "description": "Computed from warranty_end_date by SQL CASE expression."
+          },
+          "maintenance_status": {
+            "type": "string",
+            "description": "Optional computed maintenance status when present in service results."
+          },
+          "_links": {
+            "$ref": "#/components/schemas/AssetLinks"
+          }
+        },
+        "required": [
+          "asset_id",
+          "client_id",
+          "asset_type",
+          "asset_tag",
+          "name",
+          "status",
+          "created_at",
+          "updated_at",
+          "tenant"
+        ]
+      },
+      "AssetListPagination": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Current page number."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size."
+          },
+          "total": {
+            "type": "integer",
+            "description": "Total matching asset count."
+          },
+          "totalPages": {
+            "type": "integer",
+            "description": "Total number of pages calculated from total and limit."
+          }
+        },
+        "required": [
+          "page",
+          "limit",
+          "total",
+          "totalPages"
+        ]
+      },
+      "AssetCollectionLinks": {
+        "type": "object",
+        "properties": {
+          "self": {
+            "$ref": "#/components/schemas/HateoasLink"
+          },
+          "create": {
+            "$ref": "#/components/schemas/HateoasLink"
+          },
+          "search": {
+            "$ref": "#/components/schemas/HateoasLink"
+          },
+          "export": {
+            "$ref": "#/components/schemas/HateoasLink"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/HateoasLink"
+          }
+        },
+        "description": "Collection links returned by ApiAssetController.list. These currently point at /api/v2/assets paths."
+      },
+      "ApiResponseMeta": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Response timestamp generated by createApiResponse/createErrorResponse."
+          },
+          "version": {
+            "type": "string",
+            "description": "API response version string."
+          }
+        },
+        "required": [
+          "timestamp",
+          "version"
+        ]
+      },
+      "AssetListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ],
+            "description": "Indicates the controller returned a successful response envelope."
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssetListItem"
+            },
+            "description": "Asset records for the requested page."
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/AssetListPagination"
+          },
+          "_links": {
+            "$ref": "#/components/schemas/AssetCollectionLinks"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ApiResponseMeta"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "pagination",
+          "_links",
+          "meta"
+        ]
+      },
+      "AssetApiErrorEnvelope": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              false
+            ],
+            "description": "Indicates the API response is an error envelope."
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string",
+                "description": "Human-readable error message."
+              },
+              "code": {
+                "type": "string",
+                "description": "Machine-readable error code such as VALIDATION_ERROR or INTERNAL_ERROR."
+              },
+              "details": {
+                "description": "Optional structured details, including Zod validation errors."
+              }
+            },
+            "required": [
+              "message",
+              "code"
+            ]
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ApiResponseMeta"
+          }
+        },
+        "required": [
+          "success",
+          "error"
+        ]
+      },
+      "AssetMiddlewareUnauthorizedResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Middleware-level error, usually Unauthorized: API key missing."
+          }
+        },
+        "required": [
+          "error"
+        ]
       },
       "LicenceCountHeaders": {
         "type": "object",
@@ -1780,6 +2305,98 @@
           "version"
         ]
       },
+      "ReadyzChecks": {
+        "type": "object",
+        "properties": {
+          "database": {
+            "type": "boolean",
+            "description": "True when a SELECT 1 database connectivity check succeeds."
+          },
+          "redis": {
+            "type": "boolean",
+            "description": "Redis readiness placeholder. Currently mirrors the database check result."
+          }
+        },
+        "required": [
+          "database",
+          "redis"
+        ]
+      },
+      "ReadyzReadyResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready"
+            ],
+            "description": "All critical dependencies checked by this handler are available."
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO timestamp generated when the readiness check is handled."
+          },
+          "uptime": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Process uptime in seconds from process.uptime()."
+          },
+          "version": {
+            "type": "string",
+            "description": "Application version from npm_package_version, with handler fallback."
+          },
+          "checks": {
+            "$ref": "#/components/schemas/ReadyzChecks"
+          }
+        },
+        "required": [
+          "status",
+          "timestamp",
+          "uptime",
+          "version",
+          "checks"
+        ]
+      },
+      "ReadyzNotReadyResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "not_ready"
+            ],
+            "description": "One or more critical dependencies are unavailable."
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO timestamp generated when the readiness check is handled."
+          },
+          "uptime": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Process uptime in seconds. Present in the dependency-failure branch, omitted by the catch branch."
+          },
+          "version": {
+            "type": "string",
+            "description": "Application version. Present only in the ready response branch."
+          },
+          "checks": {
+            "$ref": "#/components/schemas/ReadyzChecks"
+          },
+          "error": {
+            "type": "string",
+            "description": "Readiness failure reason or caught exception message."
+          }
+        },
+        "required": [
+          "status",
+          "timestamp",
+          "checks",
+          "error"
+        ]
+      },
       "RunnerCanaryHeaders": {
         "type": "object",
         "properties": {
@@ -1929,6 +2546,10 @@
         "required": [
           "error"
         ]
+      },
+      "QboRouteMissingResponse": {
+        "type": "string",
+        "description": "Default Next.js 404 page or not-found response. The route file listed in inventory is absent in this worktree."
       },
       "BoardIdParams": {
         "type": "object",
@@ -5158,6 +5779,556 @@
         }
       }
     },
+    "/api/v1/admin/telemetry-settings": {
+      "get": {
+        "summary": "Get telemetry settings",
+        "description": "Returns tenant admin telemetry status derived from the ALGA_USAGE_STATS environment variable. The handler resolves the tenant with createTenantKnex, requires an authenticated current user, and checks the tenant-scoped users.role value for admin or owner. The route does not read or write tenant telemetry settings from the database. Because this session-authenticated route is not currently in apiKeySkipPaths, API middleware also requires an x-api-key header to be present before the handler can run.",
+        "tags": [
+          "Admin",
+          "Telemetry"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": [],
+            "SessionCookieAuth": []
+          }
+        ],
+        "extensions": {
+          "x-rbac-roles": [
+            "admin",
+            "owner"
+          ],
+          "x-tenant-scoped": true,
+          "x-controlled-by": "ALGA_USAGE_STATS",
+          "x-middleware-api-key-required-currently": true
+        },
+        "responses": {
+          "200": {
+            "description": "Current telemetry setting returned successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelemetrySettingsGetResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No authenticated current user, no tenant context, or x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminTelemetryErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user is not an admin or owner in the tenant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminTelemetryErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure while loading telemetry settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminTelemetryErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Check telemetry settings update status",
+        "description": "No-op endpoint for telemetry settings. The handler authenticates the current user, verifies the tenant-scoped users.role is admin or owner, ignores the request body, performs no database write, and returns the current ALGA_USAGE_STATS-derived status with a message explaining that telemetry cannot be changed through the API. Because this session-authenticated route is not currently in apiKeySkipPaths, API middleware also requires an x-api-key header to be present before the handler can run.",
+        "tags": [
+          "Admin",
+          "Telemetry"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": [],
+            "SessionCookieAuth": []
+          }
+        ],
+        "extensions": {
+          "x-rbac-roles": [
+            "admin",
+            "owner"
+          ],
+          "x-tenant-scoped": true,
+          "x-controlled-by": "ALGA_USAGE_STATS",
+          "x-request-body-ignored": true,
+          "x-runtime-mutation": false,
+          "x-middleware-api-key-required-currently": true
+        },
+        "responses": {
+          "200": {
+            "description": "Telemetry status returned; no setting was changed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelemetrySettingsPostResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No authenticated current user, no tenant context, or x-api-key missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminTelemetryErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user is not an admin or owner in the tenant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminTelemetryErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure while processing the no-op update request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminTelemetryErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets": {
+      "get": {
+        "summary": "List assets",
+        "description": "Lists assets for the authenticated tenant with pagination, sorting, and asset filters. The controller validates query parameters with assetListQuerySchema, calls requireRequestContext, queries assets filtered by assets.tenant, joins clients for client_name, computes warranty_status, and adds HATEOAS links from asset_id. In the current route wiring, the edge middleware only checks x-api-key presence and the route is not wrapped with withApiKeyAuth or ApiBaseController authentication, so req.context may be absent and produce a 500 INTERNAL_ERROR before the intended tenant-scoped list can run.",
+        "tags": [
+          "Assets"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "asset",
+          "x-rbac-action": "read",
+          "x-request-context-required": true,
+          "x-current-auth-wiring-missing": true,
+          "x-unapplied-validated-filters": [
+            "maintenance_due",
+            "is_active",
+            "search",
+            "created_from",
+            "created_to",
+            "updated_from",
+            "updated_to"
+          ]
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Page number as a query string. Defaults to 1 after validation."
+            },
+            "required": false,
+            "description": "Page number as a query string. Defaults to 1 after validation.",
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Page size as a query string. Must parse to 1 through 100; defaults to 25."
+            },
+            "required": false,
+            "description": "Page size as a query string. Must parse to 1 through 100; defaults to 25.",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Sort column. Defaults to created_at."
+            },
+            "required": false,
+            "description": "Sort column. Defaults to created_at.",
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "description": "Sort direction. Defaults to desc."
+            },
+            "required": false,
+            "description": "Sort direction. Defaults to desc.",
+            "name": "order",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "General search filter accepted by the shared filter schema."
+            },
+            "required": false,
+            "description": "General search filter accepted by the shared filter schema.",
+            "name": "search",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Filter records created at or after this timestamp."
+            },
+            "required": false,
+            "description": "Filter records created at or after this timestamp.",
+            "name": "created_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Filter records created at or before this timestamp."
+            },
+            "required": false,
+            "description": "Filter records created at or before this timestamp.",
+            "name": "created_to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Filter records updated at or after this timestamp."
+            },
+            "required": false,
+            "description": "Filter records updated at or after this timestamp.",
+            "name": "updated_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Filter records updated at or before this timestamp."
+            },
+            "required": false,
+            "description": "Filter records updated at or before this timestamp.",
+            "name": "updated_to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "description": "Boolean query value accepted by validation. The current AssetService.list implementation does not apply this filter."
+            },
+            "required": false,
+            "description": "Boolean query value accepted by validation. The current AssetService.list implementation does not apply this filter.",
+            "name": "is_active",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Partial asset tag match using ILIKE."
+            },
+            "required": false,
+            "description": "Partial asset tag match using ILIKE.",
+            "name": "asset_tag",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Partial asset name match using ILIKE."
+            },
+            "required": false,
+            "description": "Partial asset name match using ILIKE.",
+            "name": "name",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Client UUID from clients.client_id."
+            },
+            "required": false,
+            "description": "Client UUID from clients.client_id.",
+            "name": "client_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "workstation",
+                "network_device",
+                "server",
+                "mobile_device",
+                "printer",
+                "unknown"
+              ],
+              "description": "Asset type stored in assets.asset_type."
+            },
+            "required": false,
+            "description": "Asset type stored in assets.asset_type.",
+            "name": "asset_type",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Exact asset status match."
+            },
+            "required": false,
+            "description": "Exact asset status match.",
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Partial location match using ILIKE."
+            },
+            "required": false,
+            "description": "Partial location match using ILIKE.",
+            "name": "location",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Partial client name match; joins clients on client_id and tenant."
+            },
+            "required": false,
+            "description": "Partial client name match; joins clients on client_id and tenant.",
+            "name": "client_name",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "description": "true requires warranty_end_date to be non-null; false requires it to be null."
+            },
+            "required": false,
+            "description": "true requires warranty_end_date to be non-null; false requires it to be null.",
+            "name": "has_warranty",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "description": "true filters warranty_end_date before now; false filters future warranty dates or no warranty."
+            },
+            "required": false,
+            "description": "true filters warranty_end_date before now; false filters future warranty dates or no warranty.",
+            "name": "warranty_expired",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "description": "Accepted by validation, but not currently applied by AssetService.list."
+            },
+            "required": false,
+            "description": "Accepted by validation, but not currently applied by AssetService.list.",
+            "name": "maintenance_due",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Filter purchase_date greater than or equal to this timestamp."
+            },
+            "required": false,
+            "description": "Filter purchase_date greater than or equal to this timestamp.",
+            "name": "purchase_date_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Filter purchase_date less than or equal to this timestamp."
+            },
+            "required": false,
+            "description": "Filter purchase_date less than or equal to this timestamp.",
+            "name": "purchase_date_to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Filter warranty_end_date greater than or equal to this timestamp."
+            },
+            "required": false,
+            "description": "Filter warranty_end_date greater than or equal to this timestamp.",
+            "name": "warranty_end_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Filter warranty_end_date less than or equal to this timestamp."
+            },
+            "required": false,
+            "description": "Filter warranty_end_date less than or equal to this timestamp.",
+            "name": "warranty_end_to",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated asset list returned successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Query parameter validation failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key is missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated request context lacks permission to read assets when auth wiring is present.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error, including missing req.context in the current route wiring.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "POST v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "assets"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/billing/licence-count": {
       "get": {
         "summary": "Get tenant licence usage",
@@ -7203,6 +8374,44 @@
         }
       }
     },
+    "/api/readyz": {
+      "get": {
+        "summary": "Readiness probe",
+        "description": "Kubernetes readiness endpoint for the Next.js API route. It checks database connectivity with SELECT 1 and returns 200 only when critical dependencies are available. The Redis check is currently a placeholder that mirrors the database result. This endpoint is unauthenticated and is explicitly skipped by API-key middleware.",
+        "tags": [
+          "System"
+        ],
+        "security": [],
+        "extensions": {
+          "x-api-key-auth-skipped": true,
+          "x-dependency-checks": true,
+          "x-kubernetes-probe": "readiness",
+          "x-redis-check-stubbed": true
+        },
+        "responses": {
+          "200": {
+            "description": "All critical dependencies checked by this handler are available.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadyzReadyResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "One or more critical dependencies are unavailable, or a readiness check threw an exception.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadyzNotReadyResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/installs/lookup-by-host": {
       "get": {
         "summary": "Lookup extension install by runner host",
@@ -7398,6 +8607,48 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/InstallValidateResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/integrations/qbo/status": {
+      "get": {
+        "summary": "QuickBooks Online status route unavailable",
+        "description": "This path appears in the generated route inventory, but server/src/app/api/integrations/qbo/status/route.ts is not present in the current worktree. Without an x-api-key, API middleware returns 401 before routing. With the middleware requirement satisfied, Next.js has no handler for this path and returns the framework not-found response. QuickBooks connection status is currently exposed through server actions such as getQboConnectionStatus and through versioned QuickBooks API routes, not this inventory-only path.",
+        "deprecated": true,
+        "tags": [
+          "Integrations - QuickBooks"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/integrations/qbo/status/route.ts",
+          "x-oauth-provider": "quickbooks-online"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key is missing at middleware before routing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QboErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only path in the current worktree.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/QboRouteMissingResponse"
                 }
               }
             }
@@ -11658,296 +12909,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SoftwareOneErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/integrations/qbo/status": {
-      "get": {
-        "summary": "GET integrations",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "integrations"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/readyz": {
-      "get": {
-        "summary": "GET readyz",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "readyz"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/admin/telemetry-settings": {
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "admin"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "admin"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/assets": {
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "assets"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "assets"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
