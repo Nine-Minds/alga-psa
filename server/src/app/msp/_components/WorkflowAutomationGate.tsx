@@ -11,9 +11,6 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { DynamicWorkflowComponent } from '@alga-psa/workflows/components/WorkflowComponentLoader';
 import type { WorkflowProps } from '@alga-psa/workflows/components/WorkflowComponentLoader';
 import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
-import { TIER_FEATURES, FEATURE_MINIMUM_TIER } from '@alga-psa/types';
-import { useTier } from 'server/src/context/TierContext';
-import { FeatureUpgradeNotice } from '@alga-psa/ui/components/tier-gating/FeatureUpgradeNotice';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface WorkflowAutomationGateProps {
@@ -24,7 +21,6 @@ export default function WorkflowAutomationGate({ workflowProps }: WorkflowAutoma
   const { t } = useTranslation('msp/workflows');
   const router = useRouter();
   const { status } = useSession();
-  const { hasFeature } = useTier();
   const [workflowAutomationEnabled, setWorkflowAutomationEnabled] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -66,17 +62,6 @@ export default function WorkflowAutomationGate({ workflowProps }: WorkflowAutoma
           layout="stacked"
           text={t('automationGate.loading', { defaultValue: 'Loading workflow automation...' })}
           spinnerProps={{ size: 'md' }}
-        />
-      </div>
-    );
-  }
-
-  if (!hasFeature(TIER_FEATURES.WORKFLOW_DESIGNER)) {
-    return (
-      <div className="h-full p-6">
-        <FeatureUpgradeNotice
-          featureName={t('automationGate.featureName', { defaultValue: 'Workflow Automation' })}
-          requiredTier={FEATURE_MINIMUM_TIER[TIER_FEATURES.WORKFLOW_DESIGNER]}
         />
       </div>
     );
