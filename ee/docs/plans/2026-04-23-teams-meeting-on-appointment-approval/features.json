@@ -56,7 +56,7 @@
   {
     "id": "F010",
     "description": "approveAppointmentRequest returns teamsMeetingWarning in its response when Graph creation fails; approval still succeeds.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-9"]
   },
   {

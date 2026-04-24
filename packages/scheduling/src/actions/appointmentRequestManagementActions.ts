@@ -74,6 +74,7 @@ export interface AppointmentRequestResult<T> {
   success: boolean;
   data?: T;
   error?: string;
+  teamsMeetingWarning?: string;
 }
 
 /**
@@ -474,6 +475,7 @@ export const approveAppointmentRequest = withAuth(async (
       const scheduledEnd = new Date(scheduledStart.getTime() + request.requested_duration * 60000);
       let onlineMeetingUrl: string | null = null;
       let onlineMeetingId: string | null = null;
+      let teamsMeetingWarning: string | undefined;
 
       let scheduleEntry;
 
@@ -649,17 +651,36 @@ export const approveAppointmentRequest = withAuth(async (
 
       if (validatedData.generate_teams_meeting) {
         const teamsMeetingService = await resolveTeamsMeetingService();
-        const createdMeeting = await teamsMeetingService.createTeamsMeeting({
-          tenantId: tenant,
-          subject: `Appointment: ${service.service_name}`,
-          startDateTime: scheduledStart.toISOString(),
-          endDateTime: scheduledEnd.toISOString(),
-          appointmentRequestId: request.appointment_request_id,
-        });
+        const capability = await teamsMeetingService.getTeamsMeetingCapability(tenant);
 
-        if (createdMeeting) {
-          onlineMeetingUrl = createdMeeting.joinWebUrl;
-          onlineMeetingId = createdMeeting.meetingId;
+        if (!capability.available) {
+          switch (capability.reason) {
+            case 'no_organizer':
+              teamsMeetingWarning = 'Microsoft Teams meeting was not created because no default organizer is configured.';
+              break;
+            case 'ee_disabled':
+              teamsMeetingWarning = 'Microsoft Teams meetings are only available in Enterprise Edition.';
+              break;
+            case 'not_configured':
+            default:
+              teamsMeetingWarning = 'Microsoft Teams meeting was not created because Teams is not configured for this tenant.';
+              break;
+          }
+        } else {
+          const createdMeeting = await teamsMeetingService.createTeamsMeeting({
+            tenantId: tenant,
+            subject: `Appointment: ${service.service_name}`,
+            startDateTime: scheduledStart.toISOString(),
+            endDateTime: scheduledEnd.toISOString(),
+            appointmentRequestId: request.appointment_request_id,
+          });
+
+          if (createdMeeting) {
+            onlineMeetingUrl = createdMeeting.joinWebUrl;
+            onlineMeetingId = createdMeeting.meetingId;
+          } else {
+            teamsMeetingWarning = 'Appointment approved, but the Microsoft Teams meeting could not be created. Please try again or create it manually in Teams.';
+          }
         }
       }
 
@@ -840,10 +861,17 @@ export const approveAppointmentRequest = withAuth(async (
         // Don't fail the approval if email fails
       }
 
-      return updatedRequest;
+      return {
+        updatedRequest,
+        teamsMeetingWarning,
+      };
     });
 
-    return { success: true, data: result as IAppointmentRequest };
+    return {
+      success: true,
+      data: result.updatedRequest as IAppointmentRequest,
+      teamsMeetingWarning: result.teamsMeetingWarning,
+    };
   } catch (error) {
     console.error('Error approving appointment request:', error);
     const message = error instanceof Error ? error.message : 'Failed to approve appointment request';

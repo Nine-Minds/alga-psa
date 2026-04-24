@@ -128,6 +128,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-23: Completed `F007` by adding `packages/scheduling/src/lib/teamsMeetingService.ts`. The scheduling package now uses a local EE dynamic-import boundary that returns CE-safe no-op handlers when enterprise code is unavailable or fails to load.
 - 2026-04-23: Completed `F008` by extending the scheduling approval schema with `generate_teams_meeting` defaulting to `false`. This keeps existing approval callers backward compatible while allowing the UI to opt in explicitly when capability is available.
 - 2026-04-23: Completed `F009` by wiring `approveAppointmentRequest()` to the scheduling Teams meeting service. When `generate_teams_meeting` is true it now creates the meeting, persists `online_meeting_*` columns on success, and threads the join URL into the outgoing approval/assignment email payloads plus the ICS event URL.
+- 2026-04-23: Completed `F010` by extending approval responses with `teamsMeetingWarning`. The action now distinguishes capability/setup issues from Graph create failures and still returns `success: true` when the appointment itself was approved.
 
 ## Working notes
 
