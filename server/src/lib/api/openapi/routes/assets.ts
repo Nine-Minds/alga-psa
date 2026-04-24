@@ -416,6 +416,177 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  const MaintenanceScheduleCreateRequest = registry.registerSchema(
+    'AssetMaintenanceScheduleCreateRequest',
+    zOpenApi.object({
+      schedule_type: zOpenApi.enum(['preventive', 'inspection', 'calibration', 'replacement']).describe('Required type of maintenance schedule.'),
+      frequency: zOpenApi.enum(['daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'custom']).describe('Required recurrence frequency used to calculate next_maintenance.'),
+      frequency_interval: zOpenApi.number().min(1).optional().describe('Frequency multiplier. Defaults to service logic when absent.'),
+      start_date: zOpenApi.string().datetime().optional().describe('Schedule start date/time. The current schema makes this optional; the service falls back to now when absent.'),
+      end_date: zOpenApi.string().datetime().optional().describe('Optional schedule end date/time.'),
+      notes: zOpenApi.string().optional().describe('Free-text schedule notes.'),
+      assigned_to: zOpenApi.string().uuid().optional().describe('Assigned user UUID from users.user_id.'),
+      is_active: zOpenApi.boolean().optional().describe('Whether the schedule is active. Defaults to true in validation.'),
+      schedule_config: zOpenApi.record(zOpenApi.unknown()).optional().describe('Custom scheduling configuration.'),
+    }),
+  );
+
+  const MaintenanceScheduleListPayload = registry.registerSchema(
+    'AssetMaintenanceScheduleListPayload',
+    zOpenApi.object({
+      data: zOpenApi.array(MaintenanceScheduleResource).describe('Maintenance schedule rows for the asset. Empty when no schedules exist or the asset is not found.'),
+      _links: zOpenApi.object({
+        self: HateoasLink.optional(),
+        create: HateoasLink.optional(),
+        history: HateoasLink.optional(),
+        parent: HateoasLink.optional(),
+      }).describe('Collection links. The controller currently points these at /api/v2/assets paths.'),
+    }),
+  );
+
+  const MaintenanceScheduleListResponse = registry.registerSchema(
+    'AssetMaintenanceScheduleListResponse',
+    zOpenApi.object({
+      success: zOpenApi.literal(true),
+      data: MaintenanceScheduleListPayload,
+      meta: ApiResponseMeta,
+    }),
+  );
+
+  const MaintenanceHistoryResource = registry.registerSchema(
+    'AssetMaintenanceHistoryResource',
+    zOpenApi.object({
+      history_id: zOpenApi.string().uuid().describe('Primary key from asset_maintenance_history.history_id.'),
+      asset_id: zOpenApi.string().uuid().describe('Asset UUID from asset_maintenance_history.asset_id.'),
+      schedule_id: zOpenApi.string().uuid().nullable().optional().describe('Optional related maintenance schedule UUID.'),
+      maintenance_type: zOpenApi.enum(['preventive', 'corrective', 'inspection', 'calibration', 'replacement']).or(zOpenApi.string()).describe('Maintenance type recorded for the history row.'),
+      performed_by: zOpenApi.string().uuid().describe('User UUID supplied in the maintenance record.'),
+      performed_at: zOpenApi.string().datetime().describe('Timestamp when maintenance was performed.'),
+      duration_hours: zOpenApi.number().nullable().optional().describe('Maintenance duration in hours, when recorded.'),
+      cost: zOpenApi.number().nullable().optional().describe('Maintenance cost, when recorded.'),
+      notes: zOpenApi.string().nullable().optional().describe('Free-text notes.'),
+      parts_used: zOpenApi.array(zOpenApi.string()).nullable().optional().describe('Parts used, when recorded.'),
+      maintenance_data: zOpenApi.record(zOpenApi.unknown()).nullable().optional().describe('Arbitrary structured maintenance data.'),
+      description: zOpenApi.string().nullable().optional().describe('Description column when present in the maintenance history table.'),
+      created_at: zOpenApi.string().datetime().describe('History creation timestamp.'),
+      tenant: zOpenApi.string().uuid().describe('Tenant UUID scoped from the request context.'),
+      performed_by_user_name: zOpenApi.string().nullable().optional().describe('Concatenated user name from the joined users table.'),
+    }),
+  );
+
+  const MaintenanceHistoryPayload = registry.registerSchema(
+    'AssetMaintenanceHistoryPayload',
+    zOpenApi.object({
+      data: zOpenApi.array(MaintenanceHistoryResource).describe('Maintenance history rows ordered by performed_at descending.'),
+      _links: zOpenApi.object({
+        self: HateoasLink.optional(),
+        schedules: HateoasLink.optional(),
+        parent: HateoasLink.optional(),
+      }).describe('History links. The controller currently points these at /api/v2/assets paths.'),
+    }),
+  );
+
+  const MaintenanceHistoryResponse = registry.registerSchema(
+    'AssetMaintenanceHistoryResponse',
+    zOpenApi.object({
+      success: zOpenApi.literal(true),
+      data: MaintenanceHistoryPayload,
+      meta: ApiResponseMeta,
+    }),
+  );
+
+  const RecordMaintenanceRequest = registry.registerSchema(
+    'AssetRecordMaintenanceRequest',
+    zOpenApi.object({
+      schedule_id: zOpenApi.string().uuid().optional().describe('Optional maintenance schedule UUID. If present and found for the tenant, the schedule last_maintenance and next_maintenance are updated.'),
+      maintenance_type: zOpenApi.enum(['preventive', 'corrective', 'inspection', 'calibration', 'replacement']).describe('Required type of maintenance performed.'),
+      performed_by: zOpenApi.string().uuid().describe('Required UUID of the user who performed maintenance. The service does not validate this user before insert.'),
+      performed_at: zOpenApi.string().datetime().describe('Required timestamp when maintenance was performed.'),
+      duration_hours: zOpenApi.number().min(0).optional().describe('Optional duration in hours.'),
+      cost: zOpenApi.number().min(0).optional().describe('Optional cost.'),
+      notes: zOpenApi.string().optional().describe('Optional notes.'),
+      parts_used: zOpenApi.array(zOpenApi.string()).optional().describe('Optional list of parts used.'),
+      maintenance_data: zOpenApi.record(zOpenApi.unknown()).optional().describe('Optional structured maintenance data.'),
+    }),
+  );
+
+  const RecordMaintenancePayload = registry.registerSchema(
+    'AssetRecordMaintenancePayload',
+    zOpenApi.object({
+      data: MaintenanceHistoryResource.describe('Inserted asset_maintenance_history row returned from the database.'),
+    }),
+  );
+
+  const RecordMaintenanceResponse = registry.registerSchema(
+    'AssetRecordMaintenanceResponse',
+    zOpenApi.object({
+      success: zOpenApi.literal(true),
+      data: RecordMaintenancePayload,
+      meta: ApiResponseMeta,
+    }),
+  );
+
+  const AssetRelationshipCreateRequest = registry.registerSchema(
+    'AssetRelationshipCreateRequest',
+    zOpenApi.object({
+      related_asset_id: zOpenApi.string().uuid().describe('Related asset UUID from assets.asset_id.'),
+      relationship_type: zOpenApi.string().min(1).describe('Free-form relationship type. Must be non-empty.'),
+    }),
+  );
+
+  const AssetRelationshipRow = registry.registerSchema(
+    'AssetRelationshipRow',
+    zOpenApi.object({
+      relationship_id: zOpenApi.string().uuid().describe('Primary key from asset_relationships.relationship_id.'),
+      asset_id: zOpenApi.string().uuid().describe('Source asset UUID from asset_relationships.asset_id.'),
+      related_asset_id: zOpenApi.string().uuid().describe('Related asset UUID from asset_relationships.related_asset_id.'),
+      relationship_type: zOpenApi.string().describe('Free-form relationship type.'),
+      tenant: zOpenApi.string().uuid().describe('Tenant UUID from asset_relationships.tenant.'),
+      created_at: zOpenApi.string().datetime().optional().describe('Relationship creation timestamp.'),
+      asset_tag: zOpenApi.string().optional().describe('Related asset tag from joined related_assets, present in list responses.'),
+      related_asset_name: zOpenApi.string().optional().describe('Related asset name from joined related_assets, present in list responses.'),
+      asset_type: AssetType.optional().describe('Related asset type from joined related_assets, present in list responses.'),
+      status: zOpenApi.string().optional().describe('Related asset status from joined related_assets, present in list responses.'),
+    }),
+  );
+
+  const AssetRelationshipListPayload = registry.registerSchema(
+    'AssetRelationshipListPayload',
+    zOpenApi.object({
+      data: zOpenApi.array(AssetRelationshipRow).describe('Relationship rows for the asset. Empty when no relationships exist or the asset is not found.'),
+      _links: zOpenApi.object({
+        self: HateoasLink.optional(),
+        create: HateoasLink.optional(),
+        parent: HateoasLink.optional(),
+      }).describe('Relationship links. The controller currently points these at /api/v2/assets paths.'),
+    }),
+  );
+
+  const AssetRelationshipListResponse = registry.registerSchema(
+    'AssetRelationshipListResponse',
+    zOpenApi.object({
+      success: zOpenApi.literal(true),
+      data: AssetRelationshipListPayload,
+      meta: ApiResponseMeta,
+    }),
+  );
+
+  const AssetRelationshipPayload = registry.registerSchema(
+    'AssetRelationshipPayload',
+    zOpenApi.object({
+      data: AssetRelationshipRow.describe('Inserted asset_relationships row returned from the database.'),
+    }),
+  );
+
+  const AssetRelationshipResponse = registry.registerSchema(
+    'AssetRelationshipResponse',
+    zOpenApi.object({
+      success: zOpenApi.literal(true),
+      data: AssetRelationshipPayload,
+      meta: ApiResponseMeta,
+    }),
+  );
+
   const AssetSearchQuery = registry.registerSchema(
     'AssetSearchQuery',
     zOpenApi.object({
@@ -1193,6 +1364,182 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       'x-no-asset-existence-check': true,
       'x-no-tenant-cross-check-for-document': true,
       'x-created-by-set': false,
+      'x-no-event-published': true,
+    },
+    edition: 'both',
+  });
+
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/assets/{id}/history',
+    summary: 'List asset maintenance history',
+    description:
+      'Returns all maintenance history rows for the path asset ID in the authenticated tenant, ordered by performed_at descending. The service joins users to add performed_by_user_name and filters asset_maintenance_history by asset_id and context.tenant. It performs no asset existence check, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths. In the current v1 asset route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before lookup.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: AssetIdParams },
+    responses: {
+      200: { description: 'Maintenance history rows returned successfully.', schema: MaintenanceHistoryResponse },
+      401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Authenticated request context lacks permission to read asset history when auth wiring is present.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error, including missing req.context in the current route wiring.', schema: ApiErrorEnvelope },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'read',
+      'x-no-asset-existence-check': true,
+      'x-not-paginated': true,
+      'x-response-links-path-version': 'v2',
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/assets/{id}/maintenance',
+    summary: 'List asset maintenance schedules',
+    description:
+      'Returns maintenance schedule rows for the path asset ID in the authenticated tenant. The service filters asset_maintenance_schedules by asset_id and context.tenant and joins users to add assigned_user_name. It performs no asset existence check, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths. In the current v1 asset route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before lookup.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: AssetIdParams },
+    responses: {
+      200: { description: 'Maintenance schedules returned successfully.', schema: MaintenanceScheduleListResponse },
+      401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Authenticated request context lacks permission to read asset maintenance schedules when auth wiring is present.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error, including missing req.context in the current route wiring.', schema: ApiErrorEnvelope },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'read',
+      'x-no-asset-existence-check': true,
+      'x-response-links-path-version': 'v2',
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/assets/{id}/maintenance',
+    summary: 'Create asset maintenance schedule',
+    description:
+      'Creates a maintenance schedule for the path asset ID in the authenticated tenant. The request body is validated with createMaintenanceScheduleSchema; schedule_type and frequency are required, while start_date is optional in the current shared date schema and the service falls back to now when absent. The service inserts asset_id from the path, tenant from context, timestamps, and a calculated next_maintenance value. It does not verify asset existence, does not set created_by, and publishes no event. In the current v1 asset route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before insert.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      params: AssetIdParams,
+      body: { schema: MaintenanceScheduleCreateRequest, description: 'Maintenance schedule creation data.', required: true },
+    },
+    responses: {
+      201: { description: 'Maintenance schedule created successfully.', schema: MaintenanceScheduleResponse },
+      400: { description: 'Request body validation failed or the database rejected an invalid reference.', schema: ApiErrorEnvelope },
+      401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Authenticated request context lacks permission to create or update asset maintenance schedules when auth wiring is present.', schema: ApiErrorEnvelope },
+      409: { description: 'Database unique constraint conflict if one is enforced.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error, including missing req.context in the current route wiring.', schema: ApiErrorEnvelope },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'update',
+      'x-no-asset-existence-check': true,
+      'x-calculates-next-maintenance': true,
+      'x-created-by-set': false,
+      'x-no-event-published': true,
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/assets/{id}/maintenance/record',
+    summary: 'Record asset maintenance',
+    description:
+      'Inserts an asset_maintenance_history row for the path asset ID in the authenticated tenant. The request body requires maintenance_type, performed_by, and performed_at; schedule_id, duration, cost, notes, parts, and structured maintenance_data are optional. If schedule_id is supplied and a matching tenant schedule exists, the service updates that schedule last_maintenance and next_maintenance. It does not verify asset existence or performed_by before insert, does not set created_by, and publishes no event. In the current v1 asset route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before insert.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      params: AssetIdParams,
+      body: { schema: RecordMaintenanceRequest, description: 'Maintenance history record data.', required: true },
+    },
+    responses: {
+      201: { description: 'Maintenance record created successfully.', schema: RecordMaintenanceResponse },
+      400: { description: 'Request body validation failed or the database rejected an invalid reference.', schema: ApiErrorEnvelope },
+      401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Authenticated request context lacks permission to update asset maintenance records when auth wiring is present.', schema: ApiErrorEnvelope },
+      409: { description: 'Database unique constraint conflict if one is enforced.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error, including missing req.context in the current route wiring.', schema: ApiErrorEnvelope },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'update',
+      'x-no-asset-existence-check': true,
+      'x-performed-by-not-validated': true,
+      'x-schedule-update-on-linked': true,
+      'x-created-by-set': false,
+      'x-no-event-published': true,
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/assets/{id}/relationships',
+    summary: 'List asset relationships',
+    description:
+      'Returns asset_relationships rows for the path asset ID in the authenticated tenant, joined with the related assets table for display fields. The service filters by asset_relationships.asset_id and context.tenant and joins related assets on matching tenant. It performs no parent asset existence check and does not filter soft-deleted related assets. Response links currently point at /api/v2/assets paths. In the current v1 asset route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before lookup.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: AssetIdParams },
+    responses: {
+      200: { description: 'Asset relationships returned successfully.', schema: AssetRelationshipListResponse },
+      401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Authenticated request context lacks permission to read asset relationships when auth wiring is present.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error, including missing req.context in the current route wiring.', schema: ApiErrorEnvelope },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'read',
+      'x-no-asset-existence-check': true,
+      'x-related-asset-soft-delete-filter': false,
+      'x-response-links-path-version': 'v2',
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/assets/{id}/relationships',
+    summary: 'Create asset relationship',
+    description:
+      'Creates a relationship row between the path asset ID and related_asset_id for the authenticated tenant. The request body requires related_asset_id and non-empty relationship_type. The service rejects self relationships and duplicate source/related pairs, but currently throws generic Errors for those cases, which surface as 500 rather than 400 or 409. The inserted row is returned without joined related asset details. In the current v1 asset route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before insert.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      params: AssetIdParams,
+      body: { schema: AssetRelationshipCreateRequest, description: 'Relationship creation data.', required: true },
+    },
+    responses: {
+      201: { description: 'Asset relationship created successfully.', schema: AssetRelationshipResponse },
+      400: { description: 'Request body validation failed or a database reference is invalid.', schema: ApiErrorEnvelope },
+      401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Authenticated request context lacks permission to update asset relationships when auth wiring is present.', schema: ApiErrorEnvelope },
+      409: { description: 'Intended duplicate conflict response; current duplicate check throws a generic Error that may surface as 500.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error, including missing req.context, self-relationship errors, or duplicate relationship errors in the current implementation.', schema: ApiErrorEnvelope },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'update',
+      'x-self-relationship-check': true,
+      'x-duplicate-check': true,
+      'x-self-relationship-error-is-500': true,
+      'x-duplicate-error-is-500': true,
       'x-no-event-published': true,
     },
     edition: 'both',

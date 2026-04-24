@@ -12,6 +12,7 @@ tags:
   - name: Admin
   - name: Assets
   - name: Auth
+  - name: Automation
   - name: Billing
   - name: Boards
   - name: Chat
@@ -32,7 +33,6 @@ tags:
   - name: Storage
   - name: System
   - name: Telemetry
-  - name: assets
   - name: automation
   - name: billing-analytics
   - name: categories
@@ -544,7 +544,7 @@ components:
           description: Sort column. Defaults to created_at.
         order:
           type: string
-          enum: &a4
+          enum: &a6
             - asc
             - desc
           description: Sort direction. Defaults to desc.
@@ -574,7 +574,7 @@ components:
             AssetService.list.
         is_active:
           type: string
-          enum: &a5
+          enum: &a7
             - "true"
             - "false"
           description: Accepted by validation, but not currently applied by
@@ -610,21 +610,21 @@ components:
           description: Partial client name match; joins clients on client_id and tenant.
         has_warranty:
           type: string
-          enum: &a6
+          enum: &a8
             - "true"
             - "false"
           description: true requires warranty_end_date to be non-null; false requires it
             to be null.
         warranty_expired:
           type: string
-          enum: &a7
+          enum: &a9
             - "true"
             - "false"
           description: true filters warranty_end_date before now; false filters future
             warranty dates or no warranty.
         maintenance_due:
           type: string
-          enum: &a8
+          enum: &a10
             - "true"
             - "false"
           description: Accepted by validation, but not currently applied by
@@ -650,7 +650,7 @@ components:
       properties:
         format:
           type: string
-          enum: &a9
+          enum: &a11
             - csv
             - json
             - xlsx
@@ -658,21 +658,21 @@ components:
             the same JSON envelope.
         include_extension_data:
           type: string
-          enum: &a10
+          enum: &a12
             - "true"
             - "false"
           description: Accepted by validation, but currently ignored by
             ApiAssetController.export.
         include_maintenance:
           type: string
-          enum: &a11
+          enum: &a13
             - "true"
             - "false"
           description: Accepted by validation, but currently ignored by
             ApiAssetController.export.
         include_documents:
           type: string
-          enum: &a12
+          enum: &a14
             - "true"
             - "false"
           description: Accepted by validation, but currently ignored by
@@ -1512,6 +1512,424 @@ components:
         - success
         - data
         - meta
+    AssetMaintenanceScheduleCreateRequest:
+      type: object
+      properties:
+        schedule_type:
+          type: string
+          enum:
+            - preventive
+            - inspection
+            - calibration
+            - replacement
+          description: Required type of maintenance schedule.
+        frequency:
+          type: string
+          enum:
+            - daily
+            - weekly
+            - monthly
+            - quarterly
+            - yearly
+            - custom
+          description: Required recurrence frequency used to calculate next_maintenance.
+        frequency_interval:
+          type: number
+          minimum: 1
+          description: Frequency multiplier. Defaults to service logic when absent.
+        start_date:
+          type: string
+          format: date-time
+          description: Schedule start date/time. The current schema makes this optional;
+            the service falls back to now when absent.
+        end_date:
+          type: string
+          format: date-time
+          description: Optional schedule end date/time.
+        notes:
+          type: string
+          description: Free-text schedule notes.
+        assigned_to:
+          type: string
+          format: uuid
+          description: Assigned user UUID from users.user_id.
+        is_active:
+          type: boolean
+          description: Whether the schedule is active. Defaults to true in validation.
+        schedule_config:
+          type: object
+          additionalProperties: {}
+          description: Custom scheduling configuration.
+      required:
+        - schedule_type
+        - frequency
+    AssetMaintenanceScheduleListPayload:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssetMaintenanceScheduleResource"
+          description: Maintenance schedule rows for the asset. Empty when no schedules
+            exist or the asset is not found.
+        _links:
+          type: object
+          properties:
+            self:
+              $ref: "#/components/schemas/HateoasLink"
+            create:
+              $ref: "#/components/schemas/HateoasLink"
+            history:
+              $ref: "#/components/schemas/HateoasLink"
+            parent:
+              $ref: "#/components/schemas/HateoasLink"
+          description: Collection links. The controller currently points these at
+            /api/v2/assets paths.
+      required:
+        - data
+        - _links
+    AssetMaintenanceScheduleListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          $ref: "#/components/schemas/AssetMaintenanceScheduleListPayload"
+        meta:
+          $ref: "#/components/schemas/ApiResponseMeta"
+      required:
+        - success
+        - data
+        - meta
+    AssetMaintenanceHistoryResource:
+      type: object
+      properties:
+        history_id:
+          type: string
+          format: uuid
+          description: Primary key from asset_maintenance_history.history_id.
+        asset_id:
+          type: string
+          format: uuid
+          description: Asset UUID from asset_maintenance_history.asset_id.
+        schedule_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Optional related maintenance schedule UUID.
+        maintenance_type:
+          anyOf:
+            - type: string
+              enum:
+                - preventive
+                - corrective
+                - inspection
+                - calibration
+                - replacement
+            - type: string
+          description: Maintenance type recorded for the history row.
+        performed_by:
+          type: string
+          format: uuid
+          description: User UUID supplied in the maintenance record.
+        performed_at:
+          type: string
+          format: date-time
+          description: Timestamp when maintenance was performed.
+        duration_hours:
+          type:
+            - number
+            - "null"
+          description: Maintenance duration in hours, when recorded.
+        cost:
+          type:
+            - number
+            - "null"
+          description: Maintenance cost, when recorded.
+        notes:
+          type:
+            - string
+            - "null"
+          description: Free-text notes.
+        parts_used:
+          type:
+            - array
+            - "null"
+          items:
+            type: string
+          description: Parts used, when recorded.
+        maintenance_data:
+          type:
+            - object
+            - "null"
+          additionalProperties: {}
+          description: Arbitrary structured maintenance data.
+        description:
+          type:
+            - string
+            - "null"
+          description: Description column when present in the maintenance history table.
+        created_at:
+          type: string
+          format: date-time
+          description: History creation timestamp.
+        tenant:
+          type: string
+          format: uuid
+          description: Tenant UUID scoped from the request context.
+        performed_by_user_name:
+          type:
+            - string
+            - "null"
+          description: Concatenated user name from the joined users table.
+      required:
+        - history_id
+        - asset_id
+        - maintenance_type
+        - performed_by
+        - performed_at
+        - created_at
+        - tenant
+    AssetMaintenanceHistoryPayload:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssetMaintenanceHistoryResource"
+          description: Maintenance history rows ordered by performed_at descending.
+        _links:
+          type: object
+          properties:
+            self:
+              $ref: "#/components/schemas/HateoasLink"
+            schedules:
+              $ref: "#/components/schemas/HateoasLink"
+            parent:
+              $ref: "#/components/schemas/HateoasLink"
+          description: History links. The controller currently points these at
+            /api/v2/assets paths.
+      required:
+        - data
+        - _links
+    AssetMaintenanceHistoryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          $ref: "#/components/schemas/AssetMaintenanceHistoryPayload"
+        meta:
+          $ref: "#/components/schemas/ApiResponseMeta"
+      required:
+        - success
+        - data
+        - meta
+    AssetRecordMaintenanceRequest:
+      type: object
+      properties:
+        schedule_id:
+          type: string
+          format: uuid
+          description: Optional maintenance schedule UUID. If present and found for the
+            tenant, the schedule last_maintenance and next_maintenance are
+            updated.
+        maintenance_type:
+          type: string
+          enum:
+            - preventive
+            - corrective
+            - inspection
+            - calibration
+            - replacement
+          description: Required type of maintenance performed.
+        performed_by:
+          type: string
+          format: uuid
+          description: Required UUID of the user who performed maintenance. The service
+            does not validate this user before insert.
+        performed_at:
+          type: string
+          format: date-time
+          description: Required timestamp when maintenance was performed.
+        duration_hours:
+          type: number
+          minimum: 0
+          description: Optional duration in hours.
+        cost:
+          type: number
+          minimum: 0
+          description: Optional cost.
+        notes:
+          type: string
+          description: Optional notes.
+        parts_used:
+          type: array
+          items:
+            type: string
+          description: Optional list of parts used.
+        maintenance_data:
+          type: object
+          additionalProperties: {}
+          description: Optional structured maintenance data.
+      required:
+        - maintenance_type
+        - performed_by
+        - performed_at
+    AssetRecordMaintenancePayload:
+      type: object
+      properties:
+        data:
+          allOf:
+            - $ref: "#/components/schemas/AssetMaintenanceHistoryResource"
+            - description: Inserted asset_maintenance_history row returned from the database.
+      required:
+        - data
+    AssetRecordMaintenanceResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          $ref: "#/components/schemas/AssetRecordMaintenancePayload"
+        meta:
+          $ref: "#/components/schemas/ApiResponseMeta"
+      required:
+        - success
+        - data
+        - meta
+    AssetRelationshipCreateRequest:
+      type: object
+      properties:
+        related_asset_id:
+          type: string
+          format: uuid
+          description: Related asset UUID from assets.asset_id.
+        relationship_type:
+          type: string
+          minLength: 1
+          description: Free-form relationship type. Must be non-empty.
+      required:
+        - related_asset_id
+        - relationship_type
+    AssetRelationshipRow:
+      type: object
+      properties:
+        relationship_id:
+          type: string
+          format: uuid
+          description: Primary key from asset_relationships.relationship_id.
+        asset_id:
+          type: string
+          format: uuid
+          description: Source asset UUID from asset_relationships.asset_id.
+        related_asset_id:
+          type: string
+          format: uuid
+          description: Related asset UUID from asset_relationships.related_asset_id.
+        relationship_type:
+          type: string
+          description: Free-form relationship type.
+        tenant:
+          type: string
+          format: uuid
+          description: Tenant UUID from asset_relationships.tenant.
+        created_at:
+          type: string
+          format: date-time
+          description: Relationship creation timestamp.
+        asset_tag:
+          type: string
+          description: Related asset tag from joined related_assets, present in list
+            responses.
+        related_asset_name:
+          type: string
+          description: Related asset name from joined related_assets, present in list
+            responses.
+        asset_type:
+          type: string
+          enum: *a1
+          description: Related asset type from joined related_assets, present in list
+            responses.
+        status:
+          type: string
+          description: Related asset status from joined related_assets, present in list
+            responses.
+      required:
+        - relationship_id
+        - asset_id
+        - related_asset_id
+        - relationship_type
+        - tenant
+    AssetRelationshipListPayload:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssetRelationshipRow"
+          description: Relationship rows for the asset. Empty when no relationships exist
+            or the asset is not found.
+        _links:
+          type: object
+          properties:
+            self:
+              $ref: "#/components/schemas/HateoasLink"
+            create:
+              $ref: "#/components/schemas/HateoasLink"
+            parent:
+              $ref: "#/components/schemas/HateoasLink"
+          description: Relationship links. The controller currently points these at
+            /api/v2/assets paths.
+      required:
+        - data
+        - _links
+    AssetRelationshipListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          $ref: "#/components/schemas/AssetRelationshipListPayload"
+        meta:
+          $ref: "#/components/schemas/ApiResponseMeta"
+      required:
+        - success
+        - data
+        - meta
+    AssetRelationshipPayload:
+      type: object
+      properties:
+        data:
+          allOf:
+            - $ref: "#/components/schemas/AssetRelationshipRow"
+            - description: Inserted asset_relationships row returned from the database.
+      required:
+        - data
+    AssetRelationshipResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          $ref: "#/components/schemas/AssetRelationshipPayload"
+        meta:
+          $ref: "#/components/schemas/ApiResponseMeta"
+      required:
+        - success
+        - data
+        - meta
     AssetSearchQuery:
       type: object
       properties:
@@ -1523,7 +1941,7 @@ components:
           type: array
           items:
             type: string
-            enum: &a13
+            enum: &a15
               - asset_tag
               - name
               - serial_number
@@ -1550,7 +1968,7 @@ components:
           description: Optional client UUID filters.
         include_extension_data:
           type: string
-          enum: &a14
+          enum: &a16
             - "true"
             - "false"
           description: When true, the service fetches asset-type-specific extension data
@@ -1684,6 +2102,395 @@ components:
         - success
         - data
         - meta
+    AutomationExecutionParams:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Automation execution UUID from automation_executions.execution_id.
+      required:
+        - id
+    AutomationExecutionsListQuery:
+      type: object
+      properties:
+        page:
+          type: string
+          description: Page number as a query string. Defaults to 1.
+        limit:
+          type: string
+          description: Page size as a query string. Must parse to 1 through 100; defaults
+            to 25.
+        sort:
+          type: string
+          description: Accepted by shared list query validation; the service currently
+            orders executions by started_at desc.
+        order:
+          type: string
+          enum: &a17
+            - asc
+            - desc
+          description: Accepted by shared list query validation.
+        search:
+          type: string
+          description: Accepted by shared filter validation.
+        created_from:
+          type: string
+          format: date-time
+          description: Accepted by shared filter validation.
+        created_to:
+          type: string
+          format: date-time
+          description: Accepted by shared filter validation.
+        updated_from:
+          type: string
+          format: date-time
+          description: Accepted by shared filter validation.
+        updated_to:
+          type: string
+          format: date-time
+          description: Accepted by shared filter validation.
+        is_active:
+          type: string
+          enum: &a18
+            - "true"
+            - "false"
+          description: Accepted by shared filter validation and transformed to boolean.
+        automation_rule_id:
+          type: string
+          format: uuid
+          description: Filter executions by parent automation rule UUID.
+        status:
+          type: string
+          enum: &a2
+            - pending
+            - running
+            - completed
+            - failed
+            - cancelled
+            - timeout
+            - skipped
+          description: Filter by execution status.
+        started_from:
+          type: string
+          format: date-time
+          description: Filter executions started at or after this timestamp.
+        started_to:
+          type: string
+          format: date-time
+          description: Filter executions started at or before this timestamp.
+        duration_min_ms:
+          type: number
+          minimum: 0
+          description: Minimum execution duration in milliseconds.
+        duration_max_ms:
+          type: number
+          minimum: 0
+          description: Maximum execution duration in milliseconds.
+        has_errors:
+          type: string
+          enum: &a19
+            - "true"
+            - "false"
+          description: Filter by whether the execution has errors; transformed to boolean
+            by validation.
+        trigger_type:
+          type: string
+          enum: &a3
+            - time_based
+            - event_based
+            - condition_based
+            - manual
+            - recurring
+            - webhook
+          description: Filter by automation trigger type.
+    AutomationExecutionLogEntry:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Log timestamp.
+        level:
+          type: string
+          enum:
+            - debug
+            - info
+            - warn
+            - error
+          description: Log level.
+        message:
+          type: string
+          description: Log message.
+        action_index:
+          type: integer
+          description: Optional action index that produced the log.
+        metadata:
+          type: object
+          additionalProperties: {}
+          description: Optional structured log metadata.
+      required:
+        - level
+        - message
+    AutomationLinks:
+      type: object
+      additionalProperties: {}
+      description: HATEOAS links generated by the automation controller. Some generic
+        links may point to methods not implemented by a route file.
+    AutomationExecution:
+      type: object
+      properties:
+        execution_id:
+          type: string
+          format: uuid
+          description: Execution UUID generated with crypto.randomUUID when the execution
+            is created.
+        automation_rule_id:
+          type: string
+          format: uuid
+          description: Parent automation rule UUID.
+        trigger_data:
+          type: object
+          additionalProperties: {}
+          description: Trigger payload captured when execution started.
+        status:
+          type: string
+          enum: *a2
+          description: Current execution status.
+        started_at:
+          type: string
+          format: date-time
+          description: Timestamp when execution started.
+        completed_at:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: Timestamp when execution completed.
+        duration_ms:
+          type:
+            - number
+            - "null"
+          minimum: 0
+          description: Execution duration in milliseconds.
+        actions_total:
+          type: integer
+          minimum: 0
+          description: Number of actions planned for this execution.
+        actions_successful:
+          type: integer
+          minimum: 0
+          description: Number of actions completed successfully.
+        actions_failed:
+          type: integer
+          minimum: 0
+          description: Number of actions that failed.
+        error_message:
+          type:
+            - string
+            - "null"
+          description: Top-level error message, when failed.
+        error_stack:
+          type:
+            - string
+            - "null"
+          description: Error stack, when captured.
+        failed_action_index:
+          type:
+            - integer
+            - "null"
+          description: Index of failed action, when applicable.
+        execution_context:
+          type: object
+          additionalProperties: {}
+          description: Execution context data.
+        logs:
+          type: array
+          items:
+            $ref: "#/components/schemas/AutomationExecutionLogEntry"
+          description: Execution log entries.
+        tenant:
+          type: string
+          format: uuid
+          description: Tenant UUID scoped from the API key context.
+        _links:
+          $ref: "#/components/schemas/AutomationLinks"
+      required:
+        - execution_id
+        - automation_rule_id
+        - status
+        - actions_total
+        - actions_successful
+        - actions_failed
+        - tenant
+    AutomationPagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          description: Current page number.
+        limit:
+          type: integer
+          description: Page size.
+        total:
+          type: integer
+          description: Total matching executions.
+        totalPages:
+          type: integer
+          description: Total page count.
+        hasNext:
+          type: boolean
+          description: Whether another page exists.
+        hasPrev:
+          type: boolean
+          description: Whether a previous page exists.
+      required:
+        - page
+        - limit
+        - total
+        - totalPages
+        - hasNext
+        - hasPrev
+    AutomationExecutionListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AutomationExecution"
+          description: Automation execution rows. Current service code wraps the DB result
+            array in another array; this schema documents the intended flat
+            shape returned by createPaginatedResponse.
+        pagination:
+          $ref: "#/components/schemas/AutomationPagination"
+        meta:
+          type: object
+          properties:
+            filters:
+              type: object
+              additionalProperties: {}
+              description: Validated filters echoed by the controller.
+            resource:
+              type: string
+              enum:
+                - automation_execution
+              description: Resource name supplied by the controller.
+      required:
+        - data
+        - pagination
+    AutomationExecutionResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/AutomationExecution"
+      required:
+        - data
+    AutomationErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Machine-readable error code, such as UNAUTHORIZED, FORBIDDEN,
+                VALIDATION_ERROR, or INTERNAL_ERROR.
+            message:
+              type: string
+              description: Human-readable error message.
+            details:
+              description: Optional structured error details.
+          required:
+            - code
+            - message
+      required:
+        - error
+    AutomationMetaResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            trigger_types:
+              type: array
+              items:
+                type: string
+                enum: *a3
+              description: Valid automation trigger types.
+            action_types:
+              type: array
+              items:
+                type: string
+                enum:
+                  - email_notification
+                  - sms_notification
+                  - webhook_call
+                  - database_update
+                  - ticket_creation
+                  - ticket_update
+                  - project_update
+                  - time_entry_creation
+                  - invoice_generation
+                  - custom_script
+                  - workflow_execution
+                  - system_command
+              description: Valid automation action types.
+            rule_statuses:
+              type: array
+              items:
+                type: string
+                enum:
+                  - active
+                  - inactive
+                  - draft
+                  - error
+              description: Valid automation rule statuses.
+            execution_statuses:
+              type: array
+              items:
+                type: string
+                enum: *a2
+              description: Valid automation execution statuses.
+            priority_levels:
+              type: array
+              items:
+                type: string
+                enum:
+                  - low
+                  - normal
+                  - high
+                  - critical
+              description: Valid automation priority levels.
+            condition_operators:
+              type: array
+              items:
+                type: string
+                enum:
+                  - equals
+                  - not_equals
+                  - greater_than
+                  - less_than
+                  - greater_than_or_equal
+                  - less_than_or_equal
+                  - contains
+                  - not_contains
+                  - starts_with
+                  - ends_with
+                  - in
+                  - not_in
+                  - exists
+                  - not_exists
+                  - regex_match
+              description: Valid condition operators.
+          required:
+            - trigger_types
+            - action_types
+            - rule_statuses
+            - execution_statuses
+            - priority_levels
+            - condition_operators
+      required:
+        - data
     LicenceCountHeaders:
       type: object
       properties:
@@ -1915,7 +2722,7 @@ components:
       properties:
         format:
           type: string
-          enum: &a15
+          enum: &a20
             - pdf
             - markdown
             - md
@@ -2810,12 +3617,12 @@ components:
           type: boolean
         category_type:
           type: string
-          enum: &a2
+          enum: &a4
             - custom
             - itil
         priority_type:
           type: string
-          enum: &a3
+          enum: &a5
             - custom
             - itil
         default_assigned_to:
@@ -2848,10 +3655,10 @@ components:
           type: boolean
         category_type:
           type: string
-          enum: *a2
+          enum: *a4
         priority_type:
           type: string
-          enum: *a3
+          enum: *a5
         default_assigned_to:
           type:
             - string
@@ -3443,7 +4250,7 @@ components:
           type: string
         billing_method:
           type: string
-          enum: &a20
+          enum: &a25
             - fixed
             - hourly
             - usage
@@ -5220,7 +6027,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a4
+            enum: *a6
             description: Sort direction. Defaults to desc.
           required: false
           description: Sort direction. Defaults to desc.
@@ -5278,7 +6085,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a5
+            enum: *a7
             description: Accepted by validation, but not currently applied by
               AssetService.list.
           required: false
@@ -5339,7 +6146,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a6
+            enum: *a8
             description: true requires warranty_end_date to be non-null; false requires it
               to be null.
           required: false
@@ -5349,7 +6156,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a7
+            enum: *a9
             description: true filters warranty_end_date before now; false filters future
               warranty dates or no warranty.
           required: false
@@ -5359,7 +6166,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a8
+            enum: *a10
             description: Accepted by validation, but not currently applied by
               AssetService.list.
           required: false
@@ -5705,7 +6512,7 @@ paths:
       parameters:
         - schema:
             type: string
-            enum: *a9
+            enum: *a11
             description: Export format. csv returns text/csv; json and xlsx currently return
               the same JSON envelope.
           required: false
@@ -5715,7 +6522,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a10
+            enum: *a12
             description: Accepted by validation, but currently ignored by
               ApiAssetController.export.
           required: false
@@ -5725,7 +6532,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a11
+            enum: *a13
             description: Accepted by validation, but currently ignored by
               ApiAssetController.export.
           required: false
@@ -5735,7 +6542,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a12
+            enum: *a14
             description: Accepted by validation, but currently ignored by
               ApiAssetController.export.
           required: false
@@ -6053,7 +6860,7 @@ paths:
             type: array
             items:
               type: string
-              enum: *a13
+              enum: *a15
             description: Search fields. If omitted, the service searches asset_tag, name,
               serial_number, and location.
           required: false
@@ -6092,7 +6899,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a14
+            enum: *a16
             description: When true, the service fetches asset-type-specific extension data
               for every result.
           required: false
@@ -6568,6 +7375,826 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
+  /api/v1/assets/{id}/history:
+    get:
+      summary: List asset maintenance history
+      description: Returns all maintenance history rows for the path asset ID in the
+        authenticated tenant, ordered by performed_at descending. The service
+        joins users to add performed_by_user_name and filters
+        asset_maintenance_history by asset_id and context.tenant. It performs no
+        asset existence check, so nonexistent or cross-tenant asset IDs return
+        200 with an empty array. Response links currently point at
+        /api/v2/assets paths. In the current v1 asset route wiring, req.context
+        may be absent because no route-level API-key auth wrapper sets it,
+        causing a 500 before lookup.
+      tags:
+        - Assets
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-current-auth-wiring-missing: true
+        x-rbac-resource: asset
+        x-rbac-action: read
+        x-no-asset-existence-check: true
+        x-not-paginated: true
+        x-response-links-path-version: v2
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Asset UUID from assets.asset_id.
+          required: true
+          description: Asset UUID from assets.asset_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Maintenance history rows returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMaintenanceHistoryResponse"
+        "401":
+          description: x-api-key is missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+        "403":
+          description: Authenticated request context lacks permission to read asset
+            history when auth wiring is present.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "500":
+          description: Unexpected error, including missing req.context in the current
+            route wiring.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+  /api/v1/assets/{id}/maintenance:
+    get:
+      summary: List asset maintenance schedules
+      description: Returns maintenance schedule rows for the path asset ID in the
+        authenticated tenant. The service filters asset_maintenance_schedules by
+        asset_id and context.tenant and joins users to add assigned_user_name.
+        It performs no asset existence check, so nonexistent or cross-tenant
+        asset IDs return 200 with an empty array. Response links currently point
+        at /api/v2/assets paths. In the current v1 asset route wiring,
+        req.context may be absent because no route-level API-key auth wrapper
+        sets it, causing a 500 before lookup.
+      tags:
+        - Assets
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-current-auth-wiring-missing: true
+        x-rbac-resource: asset
+        x-rbac-action: read
+        x-no-asset-existence-check: true
+        x-response-links-path-version: v2
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Asset UUID from assets.asset_id.
+          required: true
+          description: Asset UUID from assets.asset_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Maintenance schedules returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMaintenanceScheduleListResponse"
+        "401":
+          description: x-api-key is missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+        "403":
+          description: Authenticated request context lacks permission to read asset
+            maintenance schedules when auth wiring is present.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "500":
+          description: Unexpected error, including missing req.context in the current
+            route wiring.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+    post:
+      summary: Create asset maintenance schedule
+      description: Creates a maintenance schedule for the path asset ID in the
+        authenticated tenant. The request body is validated with
+        createMaintenanceScheduleSchema; schedule_type and frequency are
+        required, while start_date is optional in the current shared date schema
+        and the service falls back to now when absent. The service inserts
+        asset_id from the path, tenant from context, timestamps, and a
+        calculated next_maintenance value. It does not verify asset existence,
+        does not set created_by, and publishes no event. In the current v1 asset
+        route wiring, req.context may be absent because no route-level API-key
+        auth wrapper sets it, causing a 500 before insert.
+      tags:
+        - Assets
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-current-auth-wiring-missing: true
+        x-rbac-resource: asset
+        x-rbac-action: update
+        x-no-asset-existence-check: true
+        x-calculates-next-maintenance: true
+        x-created-by-set: false
+        x-no-event-published: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Asset UUID from assets.asset_id.
+          required: true
+          description: Asset UUID from assets.asset_id.
+          name: id
+          in: path
+      requestBody:
+        description: Maintenance schedule creation data.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssetMaintenanceScheduleCreateRequest"
+            description: Maintenance schedule creation data.
+      responses:
+        "201":
+          description: Maintenance schedule created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMaintenanceScheduleResponse"
+        "400":
+          description: Request body validation failed or the database rejected an invalid
+            reference.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "401":
+          description: x-api-key is missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+        "403":
+          description: Authenticated request context lacks permission to create or update
+            asset maintenance schedules when auth wiring is present.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "409":
+          description: Database unique constraint conflict if one is enforced.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "500":
+          description: Unexpected error, including missing req.context in the current
+            route wiring.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+  /api/v1/assets/{id}/maintenance/record:
+    post:
+      summary: Record asset maintenance
+      description: Inserts an asset_maintenance_history row for the path asset ID in
+        the authenticated tenant. The request body requires maintenance_type,
+        performed_by, and performed_at; schedule_id, duration, cost, notes,
+        parts, and structured maintenance_data are optional. If schedule_id is
+        supplied and a matching tenant schedule exists, the service updates that
+        schedule last_maintenance and next_maintenance. It does not verify asset
+        existence or performed_by before insert, does not set created_by, and
+        publishes no event. In the current v1 asset route wiring, req.context
+        may be absent because no route-level API-key auth wrapper sets it,
+        causing a 500 before insert.
+      tags:
+        - Assets
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-current-auth-wiring-missing: true
+        x-rbac-resource: asset
+        x-rbac-action: update
+        x-no-asset-existence-check: true
+        x-performed-by-not-validated: true
+        x-schedule-update-on-linked: true
+        x-created-by-set: false
+        x-no-event-published: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Asset UUID from assets.asset_id.
+          required: true
+          description: Asset UUID from assets.asset_id.
+          name: id
+          in: path
+      requestBody:
+        description: Maintenance history record data.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssetRecordMaintenanceRequest"
+            description: Maintenance history record data.
+      responses:
+        "201":
+          description: Maintenance record created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetRecordMaintenanceResponse"
+        "400":
+          description: Request body validation failed or the database rejected an invalid
+            reference.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "401":
+          description: x-api-key is missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+        "403":
+          description: Authenticated request context lacks permission to update asset
+            maintenance records when auth wiring is present.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "409":
+          description: Database unique constraint conflict if one is enforced.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "500":
+          description: Unexpected error, including missing req.context in the current
+            route wiring.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+  /api/v1/assets/{id}/relationships:
+    get:
+      summary: List asset relationships
+      description: Returns asset_relationships rows for the path asset ID in the
+        authenticated tenant, joined with the related assets table for display
+        fields. The service filters by asset_relationships.asset_id and
+        context.tenant and joins related assets on matching tenant. It performs
+        no parent asset existence check and does not filter soft-deleted related
+        assets. Response links currently point at /api/v2/assets paths. In the
+        current v1 asset route wiring, req.context may be absent because no
+        route-level API-key auth wrapper sets it, causing a 500 before lookup.
+      tags:
+        - Assets
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-current-auth-wiring-missing: true
+        x-rbac-resource: asset
+        x-rbac-action: read
+        x-no-asset-existence-check: true
+        x-related-asset-soft-delete-filter: false
+        x-response-links-path-version: v2
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Asset UUID from assets.asset_id.
+          required: true
+          description: Asset UUID from assets.asset_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Asset relationships returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetRelationshipListResponse"
+        "401":
+          description: x-api-key is missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+        "403":
+          description: Authenticated request context lacks permission to read asset
+            relationships when auth wiring is present.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "500":
+          description: Unexpected error, including missing req.context in the current
+            route wiring.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+    post:
+      summary: Create asset relationship
+      description: Creates a relationship row between the path asset ID and
+        related_asset_id for the authenticated tenant. The request body requires
+        related_asset_id and non-empty relationship_type. The service rejects
+        self relationships and duplicate source/related pairs, but currently
+        throws generic Errors for those cases, which surface as 500 rather than
+        400 or 409. The inserted row is returned without joined related asset
+        details. In the current v1 asset route wiring, req.context may be absent
+        because no route-level API-key auth wrapper sets it, causing a 500
+        before insert.
+      tags:
+        - Assets
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-current-auth-wiring-missing: true
+        x-rbac-resource: asset
+        x-rbac-action: update
+        x-self-relationship-check: true
+        x-duplicate-check: true
+        x-self-relationship-error-is-500: true
+        x-duplicate-error-is-500: true
+        x-no-event-published: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Asset UUID from assets.asset_id.
+          required: true
+          description: Asset UUID from assets.asset_id.
+          name: id
+          in: path
+      requestBody:
+        description: Relationship creation data.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssetRelationshipCreateRequest"
+            description: Relationship creation data.
+      responses:
+        "201":
+          description: Asset relationship created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetRelationshipResponse"
+        "400":
+          description: Request body validation failed or a database reference is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "401":
+          description: x-api-key is missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+        "403":
+          description: Authenticated request context lacks permission to update asset
+            relationships when auth wiring is present.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "409":
+          description: Intended duplicate conflict response; current duplicate check
+            throws a generic Error that may surface as 500.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "500":
+          description: Unexpected error, including missing req.context, self-relationship
+            errors, or duplicate relationship errors in the current
+            implementation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+  /api/v1/automation/executions:
+    get:
+      summary: List automation executions
+      description: Returns a paginated list of automation executions for the
+        authenticated tenant. Authentication uses x-api-key with optional
+        x-tenant-id; the controller validates the API key, resolves the user and
+        tenant, runs under tenant context, and requires automation:read
+        permission. The service forces tenant into the execution query
+        conditions. Current service code appears to wrap the execution array in
+        another array before createPaginatedResponse, which may produce nested
+        data in practice.
+      tags:
+        - Automation
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: automation
+        x-rbac-action: read
+        x-service-data-wrapping-bug: true
+      parameters:
+        - schema:
+            type: string
+            description: Page number as a query string. Defaults to 1.
+          required: false
+          description: Page number as a query string. Defaults to 1.
+          name: page
+          in: query
+        - schema:
+            type: string
+            description: Page size as a query string. Must parse to 1 through 100; defaults
+              to 25.
+          required: false
+          description: Page size as a query string. Must parse to 1 through 100; defaults
+            to 25.
+          name: limit
+          in: query
+        - schema:
+            type: string
+            description: Accepted by shared list query validation; the service currently
+              orders executions by started_at desc.
+          required: false
+          description: Accepted by shared list query validation; the service currently
+            orders executions by started_at desc.
+          name: sort
+          in: query
+        - schema:
+            type: string
+            enum: *a17
+            description: Accepted by shared list query validation.
+          required: false
+          description: Accepted by shared list query validation.
+          name: order
+          in: query
+        - schema:
+            type: string
+            description: Accepted by shared filter validation.
+          required: false
+          description: Accepted by shared filter validation.
+          name: search
+          in: query
+        - schema:
+            type: string
+            format: date-time
+            description: Accepted by shared filter validation.
+          required: false
+          description: Accepted by shared filter validation.
+          name: created_from
+          in: query
+        - schema:
+            type: string
+            format: date-time
+            description: Accepted by shared filter validation.
+          required: false
+          description: Accepted by shared filter validation.
+          name: created_to
+          in: query
+        - schema:
+            type: string
+            format: date-time
+            description: Accepted by shared filter validation.
+          required: false
+          description: Accepted by shared filter validation.
+          name: updated_from
+          in: query
+        - schema:
+            type: string
+            format: date-time
+            description: Accepted by shared filter validation.
+          required: false
+          description: Accepted by shared filter validation.
+          name: updated_to
+          in: query
+        - schema:
+            type: string
+            enum: *a18
+            description: Accepted by shared filter validation and transformed to boolean.
+          required: false
+          description: Accepted by shared filter validation and transformed to boolean.
+          name: is_active
+          in: query
+        - schema:
+            type: string
+            format: uuid
+            description: Filter executions by parent automation rule UUID.
+          required: false
+          description: Filter executions by parent automation rule UUID.
+          name: automation_rule_id
+          in: query
+        - schema:
+            type: string
+            enum: *a2
+            description: Filter by execution status.
+          required: false
+          description: Filter by execution status.
+          name: status
+          in: query
+        - schema:
+            type: string
+            format: date-time
+            description: Filter executions started at or after this timestamp.
+          required: false
+          description: Filter executions started at or after this timestamp.
+          name: started_from
+          in: query
+        - schema:
+            type: string
+            format: date-time
+            description: Filter executions started at or before this timestamp.
+          required: false
+          description: Filter executions started at or before this timestamp.
+          name: started_to
+          in: query
+        - schema:
+            type: number
+            minimum: 0
+            description: Minimum execution duration in milliseconds.
+          required: false
+          description: Minimum execution duration in milliseconds.
+          name: duration_min_ms
+          in: query
+        - schema:
+            type: number
+            minimum: 0
+            description: Maximum execution duration in milliseconds.
+          required: false
+          description: Maximum execution duration in milliseconds.
+          name: duration_max_ms
+          in: query
+        - schema:
+            type: string
+            enum: *a19
+            description: Filter by whether the execution has errors; transformed to boolean
+              by validation.
+          required: false
+          description: Filter by whether the execution has errors; transformed to boolean
+            by validation.
+          name: has_errors
+          in: query
+        - schema:
+            type: string
+            enum: *a3
+            description: Filter by automation trigger type.
+          required: false
+          description: Filter by automation trigger type.
+          name: trigger_type
+          in: query
+      responses:
+        "200":
+          description: Automation executions returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutomationExecutionListResponse"
+        "400":
+          description: Query parameter validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutomationErrorResponse"
+        "401":
+          description: API key is missing, invalid, expired, over limit, or the key user
+            was not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutomationErrorResponse"
+        "403":
+          description: Authenticated user lacks automation:read permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutomationErrorResponse"
+        "500":
+          description: Unexpected automation execution listing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutomationErrorResponse"
+  /api/v1/automation/executions/{id}:
+    get:
+      summary: Get automation execution
+      description: Returns one automation execution by execution_id for the
+        authenticated tenant, with HATEOAS links to the parent rule and retry
+        endpoint when the status is failed. Authentication uses x-api-key with
+        optional x-tenant-id; the controller validates the API key, resolves
+        tenant context, validates the UUID path parameter, and requires
+        automation:read permission. The service scopes lookup by execution_id
+        and tenant. Missing executions currently throw a generic Error and may
+        surface as 500 rather than 404.
+      tags:
+        - Automation
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: automation
+        x-rbac-action: read
+        x-no-clean-not-found-currently: true
+        x-generic-resource-links-may-include-unimplemented-methods: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Automation execution UUID from automation_executions.execution_id.
+          required: true
+          description: Automation execution UUID from automation_executions.execution_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Automation execution returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutomationExecutionResponse"
+        "400":
+          description: Invalid execution UUID format.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutomationErrorResponse"
+        "401":
+          description: API key is missing, invalid, expired, over limit, or the key user
+            was not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutomationErrorResponse"
+        "403":
+          description: Authenticated user lacks automation:read permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutomationErrorResponse"
+        "404":
+          description: Intended not-found response for a missing execution; current
+            service may surface this as 500.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutomationErrorResponse"
+        "500":
+          description: Unexpected failure, including current generic not-found errors.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutomationErrorResponse"
+  /api/v1/automation/executions/{id}/retry:
+    post:
+      summary: Retry automation execution
+      description: Retries a failed automation execution. The controller authenticates
+        with x-api-key, requires automation:execute permission, validates the
+        execution UUID, resets a failed execution to pending, clears
+        completion/error counters, queues the execution, publishes
+        automation.execution.retried, and returns the updated execution with
+        links. The service only allows status=failed; missing executions and
+        non-failed executions currently throw generic Errors and may surface as
+        500 rather than 404 or 400. The queueExecution helper is currently a
+        stub.
+      tags:
+        - Automation
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: automation
+        x-rbac-action: execute
+        x-requires-current-status: failed
+        x-queues-execution-stubbed: true
+        x-publishes-event: automation.execution.retried
+        x-no-clean-not-found-currently: true
+        x-not-failed-error-is-500-currently: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Automation execution UUID from automation_executions.execution_id.
+          required: true
+          description: Automation execution UUID from automation_executions.execution_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Execution reset and queued for retry.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutomationExecutionResponse"
+        "400":
+          description: Invalid execution UUID format, or intended response when execution
+            is not failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutomationErrorResponse"
+        "401":
+          description: API key is missing, invalid, expired, over limit, or the key user
+            was not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutomationErrorResponse"
+        "403":
+          description: Authenticated user lacks automation:execute permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutomationErrorResponse"
+        "404":
+          description: Intended not-found response for a missing execution; current
+            service may surface this as 500.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutomationErrorResponse"
+        "500":
+          description: Unexpected failure, including current generic not-found or
+            not-failed errors.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutomationErrorResponse"
+  /api/v1/automation/meta:
+    get:
+      summary: Get automation metadata
+      description: "Returns a static reference catalog of automation enum values:
+        trigger types, action types, rule statuses, execution statuses, priority
+        levels, and condition operators. Authentication uses x-api-key with
+        optional x-tenant-id; the controller validates the API key, resolves
+        tenant context, and requires automation:read permission. The response is
+        hardcoded and performs no service or database lookup beyond
+        authentication/RBAC."
+      tags:
+        - Automation
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: automation
+        x-rbac-action: read
+        x-static-reference-data: true
+      responses:
+        "200":
+          description: Automation metadata returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutomationMetaResponse"
+        "401":
+          description: API key is missing, invalid, expired, over limit, or the key user
+            was not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutomationErrorResponse"
+        "403":
+          description: Authenticated user lacks automation:read permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutomationErrorResponse"
+        "500":
+          description: Unexpected automation metadata failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutomationErrorResponse"
   /api/billing/licence-count:
     get:
       summary: Get tenant licence usage
@@ -6873,7 +8500,7 @@ paths:
           in: path
         - schema:
             type: string
-            enum: *a15
+            enum: *a20
             description: Optional export format. pdf generates a PDF; markdown or md exports
               markdown; omitted downloads the original stored file.
           required: false
@@ -9052,7 +10679,7 @@ paths:
         this endpoint to inspect existing service catalog records and to gather
         prerequisite IDs such as custom_service_type_id and category_id before
         creating a new service.
-      tags: &a16
+      tags: &a21
         - Services
         - Service Catalog
       security:
@@ -9126,7 +10753,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: &a17
+            enum: &a22
               - fixed
               - hourly
               - usage
@@ -9174,7 +10801,7 @@ paths:
         with GET /api/v1/service-types and category_id with GET
         /api/v1/categories/service before calling this endpoint. Use this
         endpoint for fixed, hourly, or usage-based service offerings.
-      tags: *a16
+      tags: *a21
       security:
         - ApiKeyAuth: []
       extensions:
@@ -9201,7 +10828,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: *a17
+                  enum: *a22
                 default_rate:
                   type: number
                   minimum: 0
@@ -9263,7 +10890,7 @@ paths:
     get:
       summary: Get service
       description: Returns a single service catalog entry by UUID.
-      tags: *a16
+      tags: *a21
       security:
         - ApiKeyAuth: []
       extensions:
@@ -9310,7 +10937,7 @@ paths:
     put:
       summary: Update service
       description: Updates a service catalog entry by UUID.
-      tags: *a16
+      tags: *a21
       security:
         - ApiKeyAuth: []
       extensions:
@@ -9346,7 +10973,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: *a17
+                  enum: *a22
                 default_rate:
                   type: number
                   minimum: 0
@@ -9407,7 +11034,7 @@ paths:
     delete:
       summary: Delete service
       description: Deletes a service catalog entry by UUID.
-      tags: *a16
+      tags: *a21
       security:
         - ApiKeyAuth: []
       extensions:
@@ -9454,7 +11081,7 @@ paths:
         this endpoint to inspect existing product catalog records and to gather
         prerequisite IDs such as custom_service_type_id and category_id before
         creating a new product.
-      tags: &a18
+      tags: &a23
         - Products
         - Service Catalog
       security:
@@ -9563,7 +11190,7 @@ paths:
         /api/v1/categories/service before calling this endpoint. Products are
         catalog entries with item_kind product and always use billing_method
         usage.
-      tags: *a18
+      tags: *a23
       security:
         - ApiKeyAuth: []
       extensions:
@@ -9590,7 +11217,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: &a19
+                  enum: &a24
                     - usage
                   default: usage
                 default_rate:
@@ -9729,7 +11356,7 @@ paths:
     get:
       summary: Get product
       description: Returns a single product catalog entry by UUID.
-      tags: *a18
+      tags: *a23
       security:
         - ApiKeyAuth: []
       extensions:
@@ -9776,7 +11403,7 @@ paths:
     put:
       summary: Update product
       description: Updates a product catalog entry by UUID.
-      tags: *a18
+      tags: *a23
       security:
         - ApiKeyAuth: []
       extensions:
@@ -9812,7 +11439,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: *a19
+                  enum: *a24
                   default: usage
                 default_rate:
                   type: number
@@ -9951,7 +11578,7 @@ paths:
     delete:
       summary: Delete product
       description: Deletes a product catalog entry by UUID.
-      tags: *a18
+      tags: *a23
       security:
         - ApiKeyAuth: []
       extensions:
@@ -9997,7 +11624,7 @@ paths:
       description: Returns tenant service types. Use this endpoint to resolve
         custom_service_type_id before creating or updating services and products
         in the service catalog.
-      tags: &a21
+      tags: &a26
         - Service Types
         - Service Catalog
       security:
@@ -10017,7 +11644,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a20
+            enum: *a25
           required: false
           name: billing_method
           in: query
@@ -10062,7 +11689,7 @@ paths:
     get:
       summary: Get service type
       description: Returns a single tenant service type by UUID.
-      tags: *a21
+      tags: *a26
       security:
         - ApiKeyAuth: []
       extensions:
@@ -11168,326 +12795,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SoftwareOneErrorResponse"
-  /api/v1/assets/{id}/history:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - assets
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/assets/{id}/maintenance:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - assets
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - assets
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/assets/{id}/maintenance/record:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - assets
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/assets/{id}/relationships:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - assets
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - assets
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/automation/executions:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - automation
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/automation/executions/{id}:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - automation
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/automation/executions/{id}/retry:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - automation
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/automation/meta:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - automation
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/automation/performance:
     get:
       summary: GET v1

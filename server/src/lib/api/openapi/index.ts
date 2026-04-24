@@ -1,6 +1,7 @@
 import { registerBaseComponents } from './components';
 import { registerAdminRoutes } from './routes/admin';
 import { registerAssetRoutes } from './routes/assets';
+import { registerAutomationRoutes } from './routes/automation';
 import { registerAuthRoutes } from './routes/auth';
 import { registerBillingRoutes } from './routes/billing';
 import { registerBoardRoutes } from './routes/boards';
@@ -31,6 +32,7 @@ export function buildBaseRegistry(options: RegistryInitOptions = {}): ApiOpenApi
   registerAuthRoutes(registry, components);
   registerAdminRoutes(registry);
   registerAssetRoutes(registry);
+  registerAutomationRoutes(registry);
   registerBillingRoutes(registry);
   registerChatRoutes(registry);
   registerDocumentRoutes(registry);
