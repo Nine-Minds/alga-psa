@@ -1,4 +1,4 @@
-import { getAdminConnection } from '@alga-psa/db/admin.js';
+import { getAdminConnection } from '@alga-psa/db/admin';
 import { getFormValidationService } from '@shared/task-inbox';
 import {
   WorkflowRuntimeV2,
@@ -506,7 +506,9 @@ export async function executeWorkflowRuntimeV2ActionStep(input: {
     version: config.version,
     args: resolvedInput,
     expressionContext,
-    stepConfig: config,
+    // Preserve the authored action config for handlers that read action-specific
+    // configuration outside inputMapping, such as transform.compose_text outputs.
+    stepConfig: input.step.config,
     idempotencyKey: explicitIdempotency === null || explicitIdempotency === undefined
       ? undefined
       : String(explicitIdempotency),
