@@ -1163,7 +1163,6 @@ export default function AccountManagement() {
                       <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>{t('planTier.proFeatureExtensions')}</span></li>
                       <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>{t('planTier.proFeatureSso')}</span></li>
                       <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>{t('planTier.proFeatureRmm')}</span></li>
-                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>{t('planTier.proFeatureWorkflow')}</span></li>
                       <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>{t('planTier.proFeatureMobile')}</span></li>
                     </ul>
                     <Button id="upgrade-to-pro-btn" onClick={() => handleUpgradeClick('pro')} disabled={upgrading || loadingPreview} className="w-full">
