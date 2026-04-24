@@ -544,36 +544,41 @@ components:
           description: Sort column. Defaults to created_at.
         order:
           type: string
-          enum: &a3
+          enum: &a4
             - asc
             - desc
           description: Sort direction. Defaults to desc.
         search:
           type: string
-          description: General search filter accepted by the shared filter schema.
+          description: General search filter accepted by the shared filter schema. The
+            current AssetService.list implementation does not apply this filter.
         created_from:
           type: string
           format: date-time
-          description: Filter records created at or after this timestamp.
+          description: Accepted by validation, but not currently applied by
+            AssetService.list.
         created_to:
           type: string
           format: date-time
-          description: Filter records created at or before this timestamp.
+          description: Accepted by validation, but not currently applied by
+            AssetService.list.
         updated_from:
           type: string
           format: date-time
-          description: Filter records updated at or after this timestamp.
+          description: Accepted by validation, but not currently applied by
+            AssetService.list.
         updated_to:
           type: string
           format: date-time
-          description: Filter records updated at or before this timestamp.
+          description: Accepted by validation, but not currently applied by
+            AssetService.list.
         is_active:
           type: string
-          enum: &a4
+          enum: &a5
             - "true"
             - "false"
-          description: Boolean query value accepted by validation. The current
-            AssetService.list implementation does not apply this filter.
+          description: Accepted by validation, but not currently applied by
+            AssetService.list.
         asset_tag:
           type: string
           description: Partial asset tag match using ILIKE.
@@ -586,7 +591,7 @@ components:
           description: Client UUID from clients.client_id.
         asset_type:
           type: string
-          enum: &a5
+          enum: &a1
             - workstation
             - network_device
             - server
@@ -640,6 +645,206 @@ components:
           type: string
           format: date-time
           description: Filter warranty_end_date less than or equal to this timestamp.
+    AssetExportQuery:
+      type: object
+      properties:
+        format:
+          type: string
+          enum: &a9
+            - csv
+            - json
+            - xlsx
+          description: Export format. csv returns text/csv; json and xlsx currently return
+            the same JSON envelope.
+        include_extension_data:
+          type: string
+          enum: &a10
+            - "true"
+            - "false"
+          description: Accepted by validation, but currently ignored by
+            ApiAssetController.export.
+        include_maintenance:
+          type: string
+          enum: &a11
+            - "true"
+            - "false"
+          description: Accepted by validation, but currently ignored by
+            ApiAssetController.export.
+        include_documents:
+          type: string
+          enum: &a12
+            - "true"
+            - "false"
+          description: Accepted by validation, but currently ignored by
+            ApiAssetController.export.
+        asset_types:
+          type: array
+          items:
+            type: string
+            enum: *a1
+          description: Accepted by validation as an array, but the controller builds query
+            values with Object.fromEntries and does not apply this filter.
+        statuses:
+          type: array
+          items:
+            type: string
+          description: Accepted by validation as an array, but not currently applied.
+        client_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Accepted by validation as an array, but not currently applied.
+        fields:
+          type: array
+          items:
+            type: string
+          description: Accepted by validation as an array, but not currently used to
+            select export columns.
+    AssetDocumentAssociationParams:
+      type: object
+      properties:
+        associationId:
+          type: string
+          format: uuid
+          description: Document association UUID from document_associations.association_id.
+      required:
+        - associationId
+    AssetExtensionData:
+      type: object
+      additionalProperties: {}
+      description: Asset-type-specific extension data written to the corresponding
+        extension table for workstation, network device, server, mobile device,
+        or printer assets.
+    AssetCreateRequest:
+      type: object
+      properties:
+        client_id:
+          type: string
+          format: uuid
+          description: Client UUID from clients.client_id. Required.
+        asset_type:
+          type: string
+          enum: *a1
+          description: Asset type. Determines the optional extension data table.
+        asset_tag:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Required tenant-specific asset tag.
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Required asset name.
+        status:
+          type: string
+          minLength: 1
+          description: Required asset status.
+        location:
+          type: string
+          description: Optional asset location.
+        serial_number:
+          type: string
+          description: Optional serial number.
+        purchase_date:
+          type: string
+          format: date-time
+          description: Optional purchase date/time.
+        warranty_end_date:
+          type: string
+          format: date-time
+          description: Optional warranty end date/time.
+        extension_data:
+          $ref: "#/components/schemas/AssetExtensionData"
+      required:
+        - client_id
+        - asset_type
+        - asset_tag
+        - name
+        - status
+    AssetUpdateData:
+      type: object
+      properties:
+        client_id:
+          type: string
+          format: uuid
+          description: Client UUID to assign to the asset.
+        asset_type:
+          type: string
+          enum: *a1
+          description: Asset type to store in assets.asset_type.
+        asset_tag:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Tenant-specific asset tag.
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Asset name.
+        status:
+          type: string
+          minLength: 1
+          description: Asset status.
+        location:
+          type: string
+          description: Asset location.
+        serial_number:
+          type: string
+          description: Serial number.
+        purchase_date:
+          type: string
+          format: date-time
+          description: Purchase date/time.
+        warranty_end_date:
+          type: string
+          format: date-time
+          description: Warranty end date/time.
+    AssetBulkUpdateRequest:
+      type: object
+      properties:
+        assets:
+          type: array
+          items:
+            type: object
+            properties:
+              asset_id:
+                type: string
+                format: uuid
+                description: Asset UUID from assets.asset_id.
+              data:
+                allOf:
+                  - $ref: "#/components/schemas/AssetUpdateData"
+                  - description: Partial update data validated with updateAssetSchema.
+            required:
+              - asset_id
+              - data
+          minItems: 1
+          maxItems: 50
+          description: Assets to update. Limited to 1 through 50 entries by validation.
+      required:
+        - assets
+    AssetBulkStatusRequest:
+      type: object
+      properties:
+        asset_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          maxItems: 50
+          description: Asset UUIDs from assets.asset_id. Limited to 1 through 50 entries
+            by validation.
+        status:
+          type: string
+          minLength: 1
+          description: New status assigned to every asset in asset_ids.
+      required:
+        - asset_ids
+        - status
     HateoasLink:
       type: object
       properties:
@@ -669,7 +874,7 @@ components:
         history:
           $ref: "#/components/schemas/HateoasLink"
       description: HATEOAS links generated from the asset_id.
-    AssetListItem:
+    AssetResource:
       type: object
       properties:
         asset_id:
@@ -682,13 +887,7 @@ components:
           description: Client UUID from assets.client_id.
         asset_type:
           type: string
-          enum:
-            - workstation
-            - network_device
-            - server
-            - mobile_device
-            - printer
-            - unknown
+          enum: *a1
           description: Asset type stored in assets.asset_type.
         asset_tag:
           type: string
@@ -746,6 +945,32 @@ components:
         maintenance_status:
           type: string
           description: Optional computed maintenance status when present in service results.
+        extension_data:
+          allOf:
+            - $ref: "#/components/schemas/AssetExtensionData"
+            - type:
+                - object
+                - "null"
+              description: Asset-type-specific extension data returned by getWithDetails after
+                create.
+        relationships:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          description: Related asset rows included by getWithDetails after create.
+        documents:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          description: Associated document rows included by getWithDetails after create.
+        maintenance_schedules:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          description: Maintenance schedule rows included by getWithDetails after create.
         _links:
           $ref: "#/components/schemas/AssetLinks"
       required:
@@ -807,6 +1032,22 @@ components:
       required:
         - timestamp
         - version
+    AssetListPayload:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssetResource"
+          description: Asset records for the requested page.
+        pagination:
+          $ref: "#/components/schemas/AssetListPagination"
+        _links:
+          $ref: "#/components/schemas/AssetCollectionLinks"
+      required:
+        - data
+        - pagination
+        - _links
     AssetListResponse:
       type: object
       properties:
@@ -816,21 +1057,97 @@ components:
             - true
           description: Indicates the controller returned a successful response envelope.
         data:
-          type: array
-          items:
-            $ref: "#/components/schemas/AssetListItem"
-          description: Asset records for the requested page.
-        pagination:
-          $ref: "#/components/schemas/AssetListPagination"
-        _links:
-          $ref: "#/components/schemas/AssetCollectionLinks"
+          allOf:
+            - $ref: "#/components/schemas/AssetListPayload"
+            - description: Nested payload passed to createApiResponse by
+                ApiAssetController.list.
         meta:
           $ref: "#/components/schemas/ApiResponseMeta"
       required:
         - success
         - data
-        - pagination
-        - _links
+        - meta
+    AssetResourcePayload:
+      type: object
+      properties:
+        data:
+          allOf:
+            - $ref: "#/components/schemas/AssetResource"
+            - description: Asset record returned by the service.
+      required:
+        - data
+    AssetResourceResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          allOf:
+            - $ref: "#/components/schemas/AssetResourcePayload"
+            - description: Nested payload passed to createApiResponse by
+                ApiAssetController.create.
+        meta:
+          $ref: "#/components/schemas/ApiResponseMeta"
+      required:
+        - success
+        - data
+        - meta
+    AssetBulkUpdatePayload:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssetResource"
+          description: Updated asset rows returned from AssetService.update.
+        message:
+          type: string
+          description: Human-readable count of updated assets.
+      required:
+        - data
+        - message
+    AssetBulkUpdateResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          $ref: "#/components/schemas/AssetBulkUpdatePayload"
+        meta:
+          $ref: "#/components/schemas/ApiResponseMeta"
+      required:
+        - success
+        - data
+        - meta
+    AssetExportJsonPayload:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssetResource"
+          description: All asset rows returned by AssetService.list with default list
+            options. Export filters are currently not applied.
+      required:
+        - data
+    AssetExportJsonResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          $ref: "#/components/schemas/AssetExportJsonPayload"
+        meta:
+          $ref: "#/components/schemas/ApiResponseMeta"
+      required:
+        - success
+        - data
         - meta
     AssetApiErrorEnvelope:
       type: object
@@ -1099,7 +1416,7 @@ components:
       properties:
         format:
           type: string
-          enum: &a9
+          enum: &a13
             - pdf
             - markdown
             - md
@@ -1994,12 +2311,12 @@ components:
           type: boolean
         category_type:
           type: string
-          enum: &a1
+          enum: &a2
             - custom
             - itil
         priority_type:
           type: string
-          enum: &a2
+          enum: &a3
             - custom
             - itil
         default_assigned_to:
@@ -2032,10 +2349,10 @@ components:
           type: boolean
         category_type:
           type: string
-          enum: *a1
+          enum: *a2
         priority_type:
           type: string
-          enum: *a2
+          enum: *a3
         default_assigned_to:
           type:
             - string
@@ -2627,7 +2944,7 @@ components:
           type: string
         billing_method:
           type: string
-          enum: &a14
+          enum: &a18
             - fixed
             - hourly
             - usage
@@ -4366,10 +4683,10 @@ paths:
         - ApiKeyAuth: []
       extensions:
         x-tenant-scoped: true
-        x-rbac-resource: asset
-        x-rbac-action: read
         x-request-context-required: true
         x-current-auth-wiring-missing: true
+        x-rbac-resource: asset
+        x-rbac-action: read
         x-unapplied-validated-filters:
           - maintenance_due
           - is_active
@@ -4404,7 +4721,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a3
+            enum: *a4
             description: Sort direction. Defaults to desc.
           required: false
           description: Sort direction. Defaults to desc.
@@ -4412,51 +4729,62 @@ paths:
           in: query
         - schema:
             type: string
-            description: General search filter accepted by the shared filter schema.
+            description: General search filter accepted by the shared filter schema. The
+              current AssetService.list implementation does not apply this
+              filter.
           required: false
-          description: General search filter accepted by the shared filter schema.
+          description: General search filter accepted by the shared filter schema. The
+            current AssetService.list implementation does not apply this filter.
           name: search
           in: query
         - schema:
             type: string
             format: date-time
-            description: Filter records created at or after this timestamp.
+            description: Accepted by validation, but not currently applied by
+              AssetService.list.
           required: false
-          description: Filter records created at or after this timestamp.
+          description: Accepted by validation, but not currently applied by
+            AssetService.list.
           name: created_from
           in: query
         - schema:
             type: string
             format: date-time
-            description: Filter records created at or before this timestamp.
+            description: Accepted by validation, but not currently applied by
+              AssetService.list.
           required: false
-          description: Filter records created at or before this timestamp.
+          description: Accepted by validation, but not currently applied by
+            AssetService.list.
           name: created_to
           in: query
         - schema:
             type: string
             format: date-time
-            description: Filter records updated at or after this timestamp.
+            description: Accepted by validation, but not currently applied by
+              AssetService.list.
           required: false
-          description: Filter records updated at or after this timestamp.
+          description: Accepted by validation, but not currently applied by
+            AssetService.list.
           name: updated_from
           in: query
         - schema:
             type: string
             format: date-time
-            description: Filter records updated at or before this timestamp.
+            description: Accepted by validation, but not currently applied by
+              AssetService.list.
           required: false
-          description: Filter records updated at or before this timestamp.
+          description: Accepted by validation, but not currently applied by
+            AssetService.list.
           name: updated_to
           in: query
         - schema:
             type: string
-            enum: *a4
-            description: Boolean query value accepted by validation. The current
-              AssetService.list implementation does not apply this filter.
+            enum: *a5
+            description: Accepted by validation, but not currently applied by
+              AssetService.list.
           required: false
-          description: Boolean query value accepted by validation. The current
-            AssetService.list implementation does not apply this filter.
+          description: Accepted by validation, but not currently applied by
+            AssetService.list.
           name: is_active
           in: query
         - schema:
@@ -4483,7 +4811,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a5
+            enum: *a1
             description: Asset type stored in assets.asset_type.
           required: false
           description: Asset type stored in assets.asset_type.
@@ -4574,7 +4902,8 @@ paths:
           in: query
       responses:
         "200":
-          description: Paginated asset list returned successfully.
+          description: Paginated asset list returned successfully. The pagination and
+            links are nested under the top-level data envelope.
           content:
             application/json:
               schema:
@@ -4606,41 +4935,393 @@ paths:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
     post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
+      summary: Create asset
+      description: Creates an asset for the authenticated tenant. The request body is
+        validated with createAssetWithExtensionSchema; client_id, asset_type,
+        asset_tag, name, and status are required. AssetService.create writes
+        assets.tenant from the request context, inserts the asset, optionally
+        upserts asset-type-specific extension_data, publishes an ASSET_CREATED
+        event, and returns getWithDetails with HATEOAS links. In the current
+        route wiring, req.context may be absent because no route-level API-key
+        auth wrapper sets it, causing a 500 before creation.
       tags:
-        - assets
+        - Assets
+      security:
+        - ApiKeyAuth: []
       extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-current-auth-wiring-missing: true
+        x-rbac-resource: asset
+        x-rbac-action: create
+        x-publishes-event: ASSET_CREATED
       requestBody:
-        description: Placeholder request body
+        description: Asset fields plus optional asset-type-specific extension_data.
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
+              $ref: "#/components/schemas/AssetCreateRequest"
+            description: Asset fields plus optional asset-type-specific extension_data.
       responses:
         "201":
-          description: Placeholder success response
+          description: Asset created successfully.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PlaceholderObject"
+                $ref: "#/components/schemas/AssetResourceResponse"
+        "400":
+          description: Request body validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
         "401":
-          description: Authentication required
+          description: x-api-key is missing at middleware.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
         "403":
-          description: Forbidden
+          description: Authenticated request context lacks permission to create assets
+            when auth wiring is present.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "500":
+          description: Unexpected error, including missing req.context in the current
+            route wiring.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+  /api/v1/assets/bulk-status:
+    put:
+      summary: Bulk update asset status
+      description: Updates the status field for up to 50 assets in the authenticated
+        tenant. The controller validates asset_ids and status with
+        bulkAssetStatusSchema, then calls AssetService.update for each asset_id
+        with { status }. Each update is tenant-scoped by assets.asset_id and
+        assets.tenant and publishes an ASSET_UPDATED event. In the current route
+        wiring, req.context may be absent because no route-level API-key auth
+        wrapper sets it, causing a 500 before updates.
+      tags:
+        - Assets
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-current-auth-wiring-missing: true
+        x-rbac-resource: asset
+        x-rbac-action: update
+        x-max-items: 50
+        x-publishes-event: ASSET_UPDATED
+      requestBody:
+        description: Asset IDs and the new status to apply to all assets.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssetBulkStatusRequest"
+            description: Asset IDs and the new status to apply to all assets.
+      responses:
+        "200":
+          description: Status updated for all requested assets.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetBulkUpdateResponse"
+        "400":
+          description: Request body validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "401":
+          description: x-api-key is missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+        "403":
+          description: Authenticated request context lacks permission to update assets
+            when auth wiring is present.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "500":
+          description: Unexpected error, including missing req.context in the current
+            route wiring.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+  /api/v1/assets/bulk-update:
+    put:
+      summary: Bulk update assets
+      description: Updates up to 50 assets in the authenticated tenant. Each array
+        item supplies an asset_id and partial update data validated with
+        updateAssetSchema. The controller calls AssetService.update for every
+        item, tenant-scoping each update by asset_id and context.tenant and
+        publishing ASSET_UPDATED events. In the current route wiring,
+        req.context may be absent because no route-level API-key auth wrapper
+        sets it, causing a 500 before updates.
+      tags:
+        - Assets
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-current-auth-wiring-missing: true
+        x-rbac-resource: asset
+        x-rbac-action: update
+        x-max-items: 50
+        x-publishes-event: ASSET_UPDATED
+      requestBody:
+        description: Array of asset_id plus partial update data objects.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssetBulkUpdateRequest"
+            description: Array of asset_id plus partial update data objects.
+      responses:
+        "200":
+          description: Assets updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetBulkUpdateResponse"
+        "400":
+          description: Request body validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "401":
+          description: x-api-key is missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+        "403":
+          description: Authenticated request context lacks permission to update assets
+            when auth wiring is present.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "500":
+          description: Unexpected error, including missing req.context in the current
+            route wiring.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+  /api/v1/assets/documents/{associationId}:
+    delete:
+      summary: Remove asset document association
+      description: Removes a document association row by
+        document_associations.association_id for the authenticated tenant. The
+        service deletes rows where association_id and tenant match and does not
+        verify entity_type in this method. The controller intends to return an
+        empty success response after deletion, but currently calls
+        createApiResponse(null, 204) inside NextResponse.json, which can throw
+        because JSON responses cannot use status 204 with a body. In the current
+        route wiring, req.context may also be absent because no route-level
+        API-key auth wrapper sets it, causing a 500 before deletion.
+      tags:
+        - Assets
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-current-auth-wiring-missing: true
+        x-rbac-resource: asset
+        x-rbac-action: update
+        x-current-204-json-response-bug: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Document association UUID from
+              document_associations.association_id.
+          required: true
+          description: Document association UUID from document_associations.association_id.
+          name: associationId
+          in: path
+      responses:
+        "204":
+          description: Intended successful deletion response with no body.
+        "401":
+          description: x-api-key is missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+        "403":
+          description: Authenticated request context lacks permission to update asset
+            documents when auth wiring is present.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "500":
+          description: Unexpected error, including missing req.context or the current 204
+            JSON response construction issue.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+  /api/v1/assets/export:
+    get:
+      summary: Export assets
+      description: Exports assets for the authenticated tenant. The controller
+        validates assetExportQuerySchema, but currently ignores the validated
+        filters and include flags and calls AssetService.list with default
+        options. When format=csv or omitted, it returns text/csv with
+        Content-Disposition attachment filename=assets.csv. When format=json or
+        format=xlsx, it returns a JSON success envelope; xlsx generation is not
+        implemented. In the current route wiring, req.context may be absent
+        because no route-level API-key auth wrapper sets it, causing a 500
+        before export.
+      tags:
+        - Assets
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-current-auth-wiring-missing: true
+        x-rbac-resource: asset
+        x-rbac-action: read
+        x-csv-content-disposition: attachment; filename=assets.csv
+        x-export-filters-currently-ignored: true
+        x-xlsx-generation-implemented: false
+      parameters:
+        - schema:
+            type: string
+            enum: *a9
+            description: Export format. csv returns text/csv; json and xlsx currently return
+              the same JSON envelope.
+          required: false
+          description: Export format. csv returns text/csv; json and xlsx currently return
+            the same JSON envelope.
+          name: format
+          in: query
+        - schema:
+            type: string
+            enum: *a10
+            description: Accepted by validation, but currently ignored by
+              ApiAssetController.export.
+          required: false
+          description: Accepted by validation, but currently ignored by
+            ApiAssetController.export.
+          name: include_extension_data
+          in: query
+        - schema:
+            type: string
+            enum: *a11
+            description: Accepted by validation, but currently ignored by
+              ApiAssetController.export.
+          required: false
+          description: Accepted by validation, but currently ignored by
+            ApiAssetController.export.
+          name: include_maintenance
+          in: query
+        - schema:
+            type: string
+            enum: *a12
+            description: Accepted by validation, but currently ignored by
+              ApiAssetController.export.
+          required: false
+          description: Accepted by validation, but currently ignored by
+            ApiAssetController.export.
+          name: include_documents
+          in: query
+        - schema:
+            type: array
+            items:
+              type: string
+              enum: *a1
+            description: Accepted by validation as an array, but the controller builds query
+              values with Object.fromEntries and does not apply this filter.
+          required: false
+          description: Accepted by validation as an array, but the controller builds query
+            values with Object.fromEntries and does not apply this filter.
+          name: asset_types
+          in: query
+        - schema:
+            type: array
+            items:
+              type: string
+            description: Accepted by validation as an array, but not currently applied.
+          required: false
+          description: Accepted by validation as an array, but not currently applied.
+          name: statuses
+          in: query
+        - schema:
+            type: array
+            items:
+              type: string
+              format: uuid
+            description: Accepted by validation as an array, but not currently applied.
+          required: false
+          description: Accepted by validation as an array, but not currently applied.
+          name: client_ids
+          in: query
+        - schema:
+            type: array
+            items:
+              type: string
+            description: Accepted by validation as an array, but not currently used to
+              select export columns.
+          required: false
+          description: Accepted by validation as an array, but not currently used to
+            select export columns.
+          name: fields
+          in: query
+      responses:
+        "200":
+          description: Asset export returned successfully. For format=csv or omitted, the
+            handler returns text/csv with an attachment filename; for
+            format=json or format=xlsx, the handler currently returns this JSON
+            envelope.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetExportJsonResponse"
+        "400":
+          description: Query parameter validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "401":
+          description: x-api-key is missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+        "403":
+          description: Authenticated request context lacks permission to read/export
+            assets when auth wiring is present.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "500":
+          description: Unexpected error, including missing req.context in the current
+            route wiring.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
   /api/billing/licence-count:
     get:
       summary: Get tenant licence usage
@@ -4946,7 +5627,7 @@ paths:
           in: path
         - schema:
             type: string
-            enum: *a9
+            enum: *a13
             description: Optional export format. pdf generates a PDF; markdown or md exports
               markdown; omitted downloads the original stored file.
           required: false
@@ -7125,7 +7806,7 @@ paths:
         this endpoint to inspect existing service catalog records and to gather
         prerequisite IDs such as custom_service_type_id and category_id before
         creating a new service.
-      tags: &a10
+      tags: &a14
         - Services
         - Service Catalog
       security:
@@ -7199,7 +7880,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: &a11
+            enum: &a15
               - fixed
               - hourly
               - usage
@@ -7247,7 +7928,7 @@ paths:
         with GET /api/v1/service-types and category_id with GET
         /api/v1/categories/service before calling this endpoint. Use this
         endpoint for fixed, hourly, or usage-based service offerings.
-      tags: *a10
+      tags: *a14
       security:
         - ApiKeyAuth: []
       extensions:
@@ -7274,7 +7955,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: *a11
+                  enum: *a15
                 default_rate:
                   type: number
                   minimum: 0
@@ -7336,7 +8017,7 @@ paths:
     get:
       summary: Get service
       description: Returns a single service catalog entry by UUID.
-      tags: *a10
+      tags: *a14
       security:
         - ApiKeyAuth: []
       extensions:
@@ -7383,7 +8064,7 @@ paths:
     put:
       summary: Update service
       description: Updates a service catalog entry by UUID.
-      tags: *a10
+      tags: *a14
       security:
         - ApiKeyAuth: []
       extensions:
@@ -7419,7 +8100,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: *a11
+                  enum: *a15
                 default_rate:
                   type: number
                   minimum: 0
@@ -7480,7 +8161,7 @@ paths:
     delete:
       summary: Delete service
       description: Deletes a service catalog entry by UUID.
-      tags: *a10
+      tags: *a14
       security:
         - ApiKeyAuth: []
       extensions:
@@ -7527,7 +8208,7 @@ paths:
         this endpoint to inspect existing product catalog records and to gather
         prerequisite IDs such as custom_service_type_id and category_id before
         creating a new product.
-      tags: &a12
+      tags: &a16
         - Products
         - Service Catalog
       security:
@@ -7636,7 +8317,7 @@ paths:
         /api/v1/categories/service before calling this endpoint. Products are
         catalog entries with item_kind product and always use billing_method
         usage.
-      tags: *a12
+      tags: *a16
       security:
         - ApiKeyAuth: []
       extensions:
@@ -7663,7 +8344,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: &a13
+                  enum: &a17
                     - usage
                   default: usage
                 default_rate:
@@ -7802,7 +8483,7 @@ paths:
     get:
       summary: Get product
       description: Returns a single product catalog entry by UUID.
-      tags: *a12
+      tags: *a16
       security:
         - ApiKeyAuth: []
       extensions:
@@ -7849,7 +8530,7 @@ paths:
     put:
       summary: Update product
       description: Updates a product catalog entry by UUID.
-      tags: *a12
+      tags: *a16
       security:
         - ApiKeyAuth: []
       extensions:
@@ -7885,7 +8566,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: *a13
+                  enum: *a17
                   default: usage
                 default_rate:
                   type: number
@@ -8024,7 +8705,7 @@ paths:
     delete:
       summary: Delete product
       description: Deletes a product catalog entry by UUID.
-      tags: *a12
+      tags: *a16
       security:
         - ApiKeyAuth: []
       extensions:
@@ -8070,7 +8751,7 @@ paths:
       description: Returns tenant service types. Use this endpoint to resolve
         custom_service_type_id before creating or updating services and products
         in the service catalog.
-      tags: &a15
+      tags: &a19
         - Service Types
         - Service Catalog
       security:
@@ -8090,7 +8771,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a14
+            enum: *a18
           required: false
           name: billing_method
           in: query
@@ -8135,7 +8816,7 @@ paths:
     get:
       summary: Get service type
       description: Returns a single tenant service type by UUID.
-      tags: *a15
+      tags: *a19
       security:
         - ApiKeyAuth: []
       extensions:
@@ -9241,138 +9922,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SoftwareOneErrorResponse"
-  /api/v1/assets/bulk-status:
-    put:
-      summary: PUT v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - assets
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/assets/bulk-update:
-    put:
-      summary: PUT v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - assets
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/assets/documents/{associationId}:
-    delete:
-      summary: DELETE v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - assets
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "204":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/assets/export:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - assets
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/assets/maintenance/{scheduleId}:
     delete:
       summary: DELETE v1
