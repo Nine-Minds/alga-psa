@@ -261,7 +261,7 @@
     "id": "T044",
     "description": "Template render test: appointment-request-approved-client renders the Join button when onlineMeetingUrl is present and omits it otherwise.",
     "featureIds": ["F023", "F024"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T045",

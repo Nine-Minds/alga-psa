@@ -152,6 +152,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-23: Completed `T047` by tightening the minimal ICS generator test so events without a meeting URL assert both `LOCATION` and `URL` are absent.
 - 2026-04-23: Completed `T048` by re-running `node scripts/generate-pseudo-locales.cjs` and `node scripts/validate-translations.cjs`, ending with validator output `Errors: 0` and `Warnings: 0`.
 - 2026-04-23: Completed `T049` with `packages/scheduling/tests/teamsMeetingsRunbook.contract.test.ts`, asserting the canonical runbook content exists and the Availability Settings banner opens the browser-served copy.
+- 2026-04-23: Completed `T044` with `server/src/test/unit/appointmentEmailTemplates.test.ts`, rendering the approved-client Handlebars template directly and asserting the Teams join button appears only when `onlineMeetingUrl` is provided.
 
 ## Working notes
 
@@ -180,3 +181,4 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - Additional validation command: `npx vitest --root packages/scheduling --config vitest.config.ts run tests/appointmentRequestSchemas.test.ts`
 - Additional validation command: `npx vitest --root server --config vitest.config.ts run src/test/unit/icsGenerator.test.ts --coverage.enabled false`
 - Additional validation command: `npx vitest --root packages/scheduling --config vitest.config.ts run tests/teamsMeetingsRunbook.contract.test.ts`
+- Additional validation command: `npx vitest --root server --config vitest.config.ts run src/test/unit/appointmentEmailTemplates.test.ts --coverage.enabled false`
