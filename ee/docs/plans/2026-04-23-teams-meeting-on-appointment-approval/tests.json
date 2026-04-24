@@ -273,7 +273,7 @@
     "id": "T046",
     "description": "ICS generator test: when url + location are supplied, the ICS output contains a URL line matching the join URL and LOCATION: Microsoft Teams Meeting.",
     "featureIds": ["F025"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T047",
