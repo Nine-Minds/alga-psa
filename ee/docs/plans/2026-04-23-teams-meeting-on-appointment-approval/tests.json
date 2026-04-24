@@ -237,19 +237,19 @@
     "id": "T040",
     "description": "Verify button calls Graph /users/{upn} and returns valid:true with displayName for an existing user.",
     "featureIds": ["F022"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T041",
     "description": "Verify button returns valid:false with reason='user_not_found' when Graph returns 404.",
     "featureIds": ["F022"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T042",
     "description": "Verify button returns valid:false with reason='policy_missing' when a deeper check fails with specific Graph error code for application access policy.",
     "featureIds": ["F022"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T043",
