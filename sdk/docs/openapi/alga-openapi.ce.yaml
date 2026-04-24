@@ -1185,6 +1185,347 @@ components:
           description: "Middleware-level error, usually Unauthorized: API key missing."
       required:
         - error
+    AssetMaintenanceScheduleParams:
+      type: object
+      properties:
+        scheduleId:
+          type: string
+          format: uuid
+          description: Maintenance schedule UUID from
+            asset_maintenance_schedules.schedule_id.
+      required:
+        - scheduleId
+    AssetRelationshipParams:
+      type: object
+      properties:
+        relationshipId:
+          type: string
+          format: uuid
+          description: Asset relationship UUID from asset_relationships.relationship_id.
+      required:
+        - relationshipId
+    AssetMaintenanceScheduleUpdateRequest:
+      type: object
+      properties:
+        schedule_type:
+          type: string
+          enum:
+            - preventive
+            - inspection
+            - calibration
+            - replacement
+          description: Type of maintenance schedule.
+        frequency:
+          type: string
+          enum:
+            - daily
+            - weekly
+            - monthly
+            - quarterly
+            - yearly
+            - custom
+          description: Recurrence frequency. Changing this triggers next_maintenance
+            recalculation.
+        frequency_interval:
+          type: number
+          minimum: 1
+          description: Frequency multiplier used when calculating the next maintenance date.
+        start_date:
+          type: string
+          format: date-time
+          description: Schedule start date/time. Changing this triggers next_maintenance
+            recalculation.
+        end_date:
+          type: string
+          format: date-time
+          description: Optional schedule end date/time.
+        notes:
+          type: string
+          description: Free-text schedule notes.
+        assigned_to:
+          type: string
+          format: uuid
+          description: Assigned user UUID from users.user_id.
+        is_active:
+          type: boolean
+          description: Whether the schedule is active.
+        schedule_config:
+          type: object
+          additionalProperties: {}
+          description: Custom scheduling configuration.
+    AssetMaintenanceScheduleResource:
+      type: object
+      properties:
+        schedule_id:
+          type: string
+          format: uuid
+          description: Primary key from asset_maintenance_schedules.schedule_id.
+        asset_id:
+          type: string
+          format: uuid
+          description: Asset UUID from asset_maintenance_schedules.asset_id.
+        schedule_type:
+          type: string
+          description: Maintenance schedule type as used by ApiAssetController.
+        frequency:
+          type: string
+          description: Recurrence frequency.
+        frequency_interval:
+          type:
+            - number
+            - "null"
+          description: Frequency multiplier.
+        start_date:
+          type:
+            - string
+            - "null"
+          description: Schedule start date/time.
+        end_date:
+          type:
+            - string
+            - "null"
+          description: Schedule end date/time.
+        last_maintenance:
+          type:
+            - string
+            - "null"
+          description: Last recorded maintenance date/time.
+        next_maintenance:
+          type:
+            - string
+            - "null"
+          description: Next calculated maintenance date/time.
+        notes:
+          type:
+            - string
+            - "null"
+          description: Free-text schedule notes.
+        assigned_to:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Assigned user UUID.
+        is_active:
+          type: boolean
+          description: Whether the schedule is active.
+        schedule_config:
+          type:
+            - object
+            - "null"
+          additionalProperties: {}
+          description: Custom scheduling configuration.
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp.
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp.
+        tenant:
+          type: string
+          format: uuid
+          description: Tenant UUID scoped from the request context.
+      required:
+        - schedule_id
+        - asset_id
+        - tenant
+    AssetMaintenanceSchedulePayload:
+      type: object
+      properties:
+        data:
+          allOf:
+            - $ref: "#/components/schemas/AssetMaintenanceScheduleResource"
+            - description: Updated schedule row. Undefined when the schedule ID does not exist
+                or belongs to another tenant.
+    AssetMaintenanceScheduleResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          $ref: "#/components/schemas/AssetMaintenanceSchedulePayload"
+        meta:
+          $ref: "#/components/schemas/ApiResponseMeta"
+      required:
+        - success
+        - data
+        - meta
+    AssetSearchQuery:
+      type: object
+      properties:
+        query:
+          type: string
+          minLength: 1
+          description: Required search term used in ILIKE clauses.
+        fields:
+          type: array
+          items:
+            type: string
+            enum: &a13
+              - asset_tag
+              - name
+              - serial_number
+              - location
+              - client_name
+          description: Search fields. If omitted, the service searches asset_tag, name,
+            serial_number, and location.
+        asset_types:
+          type: array
+          items:
+            type: string
+            enum: *a1
+          description: Optional asset type filters.
+        statuses:
+          type: array
+          items:
+            type: string
+          description: Optional status filters.
+        client_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Optional client UUID filters.
+        include_extension_data:
+          type: string
+          enum: &a14
+            - "true"
+            - "false"
+          description: When true, the service fetches asset-type-specific extension data
+            for every result.
+        limit:
+          type: string
+          description: Maximum result count as a query string. Must parse to 1 through
+            100; defaults to 25.
+      required:
+        - query
+    AssetSearchPayload:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssetResource"
+          description: Matching assets with HATEOAS links.
+        _links:
+          type: object
+          properties:
+            self:
+              $ref: "#/components/schemas/HateoasLink"
+          description: Search collection link. The controller currently points this at
+            /api/v2/assets/search.
+      required:
+        - data
+        - _links
+    AssetSearchResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          $ref: "#/components/schemas/AssetSearchPayload"
+        meta:
+          $ref: "#/components/schemas/ApiResponseMeta"
+      required:
+        - success
+        - data
+        - meta
+    AssetStatsPayload:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            total_assets:
+              type: integer
+              description: Total asset count for the tenant.
+            assets_added_this_month:
+              type: integer
+              description: Count of assets created since the start of the current month.
+            average_asset_age_days:
+              type:
+                - integer
+                - "null"
+              description: Rounded average age in days from purchase_date, or null when
+                unavailable.
+            total_asset_value:
+              type: number
+              description: Sum of purchase_price values, treating null as zero.
+            assets_by_type:
+              type: object
+              additionalProperties:
+                type: integer
+              description: Counts grouped by assets.asset_type.
+            assets_by_status:
+              type: object
+              additionalProperties:
+                type: integer
+              description: Counts grouped by assets.status.
+            assets_by_client:
+              type: object
+              additionalProperties:
+                type: integer
+              description: Top client counts grouped by clients.client_name. The service
+                limits this grouping to 10 clients.
+            warranty_expiring_soon:
+              type: integer
+              description: Count of warranties ending within 30 days.
+            warranty_expired:
+              type: integer
+              description: Count of warranties already expired.
+            maintenance_due:
+              type: integer
+              description: Count of active maintenance schedules with next_maintenance due now
+                or earlier.
+            maintenance_overdue:
+              type: integer
+              description: Count of active maintenance schedules overdue by more than seven
+                days.
+          required:
+            - total_assets
+            - assets_added_this_month
+            - average_asset_age_days
+            - total_asset_value
+            - assets_by_type
+            - assets_by_status
+            - assets_by_client
+            - warranty_expiring_soon
+            - warranty_expired
+            - maintenance_due
+            - maintenance_overdue
+        _links:
+          type: object
+          properties:
+            self:
+              $ref: "#/components/schemas/HateoasLink"
+            assets:
+              $ref: "#/components/schemas/HateoasLink"
+          description: Stats links. The controller currently points these at
+            /api/v2/assets paths.
+      required:
+        - data
+        - _links
+    AssetStatsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          $ref: "#/components/schemas/AssetStatsPayload"
+        meta:
+          $ref: "#/components/schemas/ApiResponseMeta"
+      required:
+        - success
+        - data
+        - meta
     LicenceCountHeaders:
       type: object
       properties:
@@ -1416,7 +1757,7 @@ components:
       properties:
         format:
           type: string
-          enum: &a13
+          enum: &a15
             - pdf
             - markdown
             - md
@@ -2944,7 +3285,7 @@ components:
           type: string
         billing_method:
           type: string
-          enum: &a18
+          enum: &a20
             - fixed
             - hourly
             - usage
@@ -5322,6 +5663,377 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
+  /api/v1/assets/maintenance/{scheduleId}:
+    delete:
+      summary: Delete asset maintenance schedule
+      description: Deletes a maintenance schedule by
+        asset_maintenance_schedules.schedule_id for the authenticated tenant.
+        The service scopes deletion by schedule_id and context.tenant and
+        performs no existence check, so missing or cross-tenant IDs are silent
+        no-ops. The controller intends to return 204 with no body, but currently
+        constructs a JSON response with status 204, which can throw in
+        NextResponse. In the current route wiring, req.context may also be
+        absent because no route-level API-key auth wrapper sets it, causing a
+        500 before deletion.
+      tags:
+        - Assets
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-current-auth-wiring-missing: true
+        x-rbac-resource: asset
+        x-rbac-action: delete
+        x-idempotent: true
+        x-no-existence-check: true
+        x-current-204-json-response-bug: true
+        x-no-event-published: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Maintenance schedule UUID from
+              asset_maintenance_schedules.schedule_id.
+          required: true
+          description: Maintenance schedule UUID from
+            asset_maintenance_schedules.schedule_id.
+          name: scheduleId
+          in: path
+      responses:
+        "204":
+          description: Maintenance schedule deleted successfully, or it was already absent.
+        "401":
+          description: x-api-key is missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+        "403":
+          description: Authenticated request context lacks permission to delete or update
+            asset maintenance schedules when auth wiring is present.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "500":
+          description: Unexpected error, including missing req.context or the current 204
+            JSON response construction issue.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+    put:
+      summary: Update asset maintenance schedule
+      description: Updates a maintenance schedule by
+        asset_maintenance_schedules.schedule_id for the authenticated tenant.
+        All request fields are optional because updateMaintenanceScheduleSchema
+        is a partial form of the create schema. If frequency,
+        frequency_interval, or start_date are supplied, the service loads the
+        existing schedule for the tenant and recalculates next_maintenance.
+        Missing or cross-tenant schedule IDs result in a 200 response with an
+        undefined nested data value rather than 404. In the current route
+        wiring, req.context may be absent because no route-level API-key auth
+        wrapper sets it, causing a 500 before update.
+      tags:
+        - Assets
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-current-auth-wiring-missing: true
+        x-rbac-resource: asset
+        x-rbac-action: update
+        x-recalculates-next-maintenance: true
+        x-no-not-found-on-missing-id: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Maintenance schedule UUID from
+              asset_maintenance_schedules.schedule_id.
+          required: true
+          description: Maintenance schedule UUID from
+            asset_maintenance_schedules.schedule_id.
+          name: scheduleId
+          in: path
+      requestBody:
+        description: Partial maintenance schedule update data.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssetMaintenanceScheduleUpdateRequest"
+            description: Partial maintenance schedule update data.
+      responses:
+        "200":
+          description: Maintenance schedule updated successfully. If the ID is not found,
+            the nested data field may be absent.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMaintenanceScheduleResponse"
+        "400":
+          description: Request body validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "401":
+          description: x-api-key is missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+        "403":
+          description: Authenticated request context lacks permission to update asset
+            maintenance schedules when auth wiring is present.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "500":
+          description: Unexpected error, including missing req.context in the current
+            route wiring.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+  /api/v1/assets/relationships/{relationshipId}:
+    delete:
+      summary: Delete asset relationship
+      description: Deletes an asset relationship by
+        asset_relationships.relationship_id for the authenticated tenant. The
+        service hard-deletes rows where relationship_id and context.tenant
+        match, publishes no event, and performs no existence check; missing or
+        cross-tenant IDs are silent no-ops. The controller intends to return 204
+        with no body, but currently constructs a JSON response with status 204,
+        which can throw in NextResponse. In the current route wiring,
+        req.context may also be absent because no route-level API-key auth
+        wrapper sets it, causing a 500 before deletion.
+      tags:
+        - Assets
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-current-auth-wiring-missing: true
+        x-rbac-resource: asset
+        x-rbac-action: update
+        x-idempotent: true
+        x-no-existence-check: true
+        x-current-204-json-response-bug: true
+        x-no-event-published: true
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Asset relationship UUID from asset_relationships.relationship_id.
+          required: true
+          description: Asset relationship UUID from asset_relationships.relationship_id.
+          name: relationshipId
+          in: path
+      responses:
+        "204":
+          description: Relationship deleted successfully, or it was already absent.
+        "401":
+          description: x-api-key is missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+        "403":
+          description: Authenticated request context lacks permission to update asset
+            relationships when auth wiring is present.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "500":
+          description: Unexpected error, including missing req.context or the current 204
+            JSON response construction issue.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+  /api/v1/assets/search:
+    get:
+      summary: Search assets
+      description: Searches tenant assets with a required query term and optional
+        field, asset type, status, client, extension-data, and limit parameters.
+        The service searches assets scoped to context.tenant, joins clients for
+        client_name, and optionally loads asset-type-specific extension data per
+        result. The response is not paginated and includes HATEOAS links for
+        each asset; the top-level search link currently points at
+        /api/v2/assets/search. In the current route wiring, req.context may be
+        absent because no route-level API-key auth wrapper sets it, causing a
+        500 before search.
+      tags:
+        - Assets
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-current-auth-wiring-missing: true
+        x-rbac-resource: asset
+        x-rbac-action: read
+        x-not-paginated: true
+        x-response-links-path-version: v2
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+            description: Required search term used in ILIKE clauses.
+          required: true
+          description: Required search term used in ILIKE clauses.
+          name: query
+          in: query
+        - schema:
+            type: array
+            items:
+              type: string
+              enum: *a13
+            description: Search fields. If omitted, the service searches asset_tag, name,
+              serial_number, and location.
+          required: false
+          description: Search fields. If omitted, the service searches asset_tag, name,
+            serial_number, and location.
+          name: fields
+          in: query
+        - schema:
+            type: array
+            items:
+              type: string
+              enum: *a1
+            description: Optional asset type filters.
+          required: false
+          description: Optional asset type filters.
+          name: asset_types
+          in: query
+        - schema:
+            type: array
+            items:
+              type: string
+            description: Optional status filters.
+          required: false
+          description: Optional status filters.
+          name: statuses
+          in: query
+        - schema:
+            type: array
+            items:
+              type: string
+              format: uuid
+            description: Optional client UUID filters.
+          required: false
+          description: Optional client UUID filters.
+          name: client_ids
+          in: query
+        - schema:
+            type: string
+            enum: *a14
+            description: When true, the service fetches asset-type-specific extension data
+              for every result.
+          required: false
+          description: When true, the service fetches asset-type-specific extension data
+            for every result.
+          name: include_extension_data
+          in: query
+        - schema:
+            type: string
+            description: Maximum result count as a query string. Must parse to 1 through
+              100; defaults to 25.
+          required: false
+          description: Maximum result count as a query string. Must parse to 1 through
+            100; defaults to 25.
+          name: limit
+          in: query
+      responses:
+        "200":
+          description: Matching assets returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetSearchResponse"
+        "400":
+          description: Query parameter validation failed, including missing required query.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "401":
+          description: x-api-key is missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+        "403":
+          description: Authenticated request context lacks permission to read assets when
+            auth wiring is present.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "500":
+          description: Unexpected error, including missing req.context in the current
+            route wiring.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+  /api/v1/assets/stats:
+    get:
+      summary: Get asset statistics
+      description: Returns tenant-scoped aggregate asset statistics including total
+        counts, counts by type/status/client, warranty counts, and maintenance
+        due/overdue counts. The service runs multiple aggregate queries filtered
+        by context.tenant; assets_by_client is limited to the top 10 client
+        names. The response links currently point at /api/v2/assets paths. In
+        the current route wiring, req.context may be absent because no
+        route-level API-key auth wrapper sets it, causing a 500 before
+        statistics can be calculated.
+      tags:
+        - Assets
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-current-auth-wiring-missing: true
+        x-rbac-resource: asset
+        x-rbac-action: read
+        x-assets-by-client-limit: 10
+        x-response-links-path-version: v2
+      responses:
+        "200":
+          description: Asset statistics returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetStatsResponse"
+        "401":
+          description: x-api-key is missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+        "403":
+          description: Authenticated request context lacks permission to read assets when
+            auth wiring is present.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "500":
+          description: Unexpected error, including missing req.context in the current
+            route wiring.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
   /api/billing/licence-count:
     get:
       summary: Get tenant licence usage
@@ -5627,7 +6339,7 @@ paths:
           in: path
         - schema:
             type: string
-            enum: *a13
+            enum: *a15
             description: Optional export format. pdf generates a PDF; markdown or md exports
               markdown; omitted downloads the original stored file.
           required: false
@@ -7806,7 +8518,7 @@ paths:
         this endpoint to inspect existing service catalog records and to gather
         prerequisite IDs such as custom_service_type_id and category_id before
         creating a new service.
-      tags: &a14
+      tags: &a16
         - Services
         - Service Catalog
       security:
@@ -7880,7 +8592,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: &a15
+            enum: &a17
               - fixed
               - hourly
               - usage
@@ -7928,7 +8640,7 @@ paths:
         with GET /api/v1/service-types and category_id with GET
         /api/v1/categories/service before calling this endpoint. Use this
         endpoint for fixed, hourly, or usage-based service offerings.
-      tags: *a14
+      tags: *a16
       security:
         - ApiKeyAuth: []
       extensions:
@@ -7955,7 +8667,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: *a15
+                  enum: *a17
                 default_rate:
                   type: number
                   minimum: 0
@@ -8017,7 +8729,7 @@ paths:
     get:
       summary: Get service
       description: Returns a single service catalog entry by UUID.
-      tags: *a14
+      tags: *a16
       security:
         - ApiKeyAuth: []
       extensions:
@@ -8064,7 +8776,7 @@ paths:
     put:
       summary: Update service
       description: Updates a service catalog entry by UUID.
-      tags: *a14
+      tags: *a16
       security:
         - ApiKeyAuth: []
       extensions:
@@ -8100,7 +8812,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: *a15
+                  enum: *a17
                 default_rate:
                   type: number
                   minimum: 0
@@ -8161,7 +8873,7 @@ paths:
     delete:
       summary: Delete service
       description: Deletes a service catalog entry by UUID.
-      tags: *a14
+      tags: *a16
       security:
         - ApiKeyAuth: []
       extensions:
@@ -8208,7 +8920,7 @@ paths:
         this endpoint to inspect existing product catalog records and to gather
         prerequisite IDs such as custom_service_type_id and category_id before
         creating a new product.
-      tags: &a16
+      tags: &a18
         - Products
         - Service Catalog
       security:
@@ -8317,7 +9029,7 @@ paths:
         /api/v1/categories/service before calling this endpoint. Products are
         catalog entries with item_kind product and always use billing_method
         usage.
-      tags: *a16
+      tags: *a18
       security:
         - ApiKeyAuth: []
       extensions:
@@ -8344,7 +9056,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: &a17
+                  enum: &a19
                     - usage
                   default: usage
                 default_rate:
@@ -8483,7 +9195,7 @@ paths:
     get:
       summary: Get product
       description: Returns a single product catalog entry by UUID.
-      tags: *a16
+      tags: *a18
       security:
         - ApiKeyAuth: []
       extensions:
@@ -8530,7 +9242,7 @@ paths:
     put:
       summary: Update product
       description: Updates a product catalog entry by UUID.
-      tags: *a16
+      tags: *a18
       security:
         - ApiKeyAuth: []
       extensions:
@@ -8566,7 +9278,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum: *a17
+                  enum: *a19
                   default: usage
                 default_rate:
                   type: number
@@ -8705,7 +9417,7 @@ paths:
     delete:
       summary: Delete product
       description: Deletes a product catalog entry by UUID.
-      tags: *a16
+      tags: *a18
       security:
         - ApiKeyAuth: []
       extensions:
@@ -8751,7 +9463,7 @@ paths:
       description: Returns tenant service types. Use this endpoint to resolve
         custom_service_type_id before creating or updating services and products
         in the service catalog.
-      tags: &a19
+      tags: &a21
         - Service Types
         - Service Catalog
       security:
@@ -8771,7 +9483,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a18
+            enum: *a20
           required: false
           name: billing_method
           in: query
@@ -8816,7 +9528,7 @@ paths:
     get:
       summary: Get service type
       description: Returns a single tenant service type by UUID.
-      tags: *a19
+      tags: *a21
       security:
         - ApiKeyAuth: []
       extensions:
@@ -9922,158 +10634,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SoftwareOneErrorResponse"
-  /api/v1/assets/maintenance/{scheduleId}:
-    delete:
-      summary: DELETE v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - assets
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "204":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    put:
-      summary: PUT v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - assets
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/assets/relationships/{relationshipId}:
-    delete:
-      summary: DELETE v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - assets
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "204":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/assets/search:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - assets
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/assets/stats:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - assets
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/assets/{id}:
     delete:
       summary: DELETE v1

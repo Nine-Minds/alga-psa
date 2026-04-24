@@ -274,6 +274,137 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  const MaintenanceScheduleParams = registry.registerSchema(
+    'AssetMaintenanceScheduleParams',
+    zOpenApi.object({
+      scheduleId: zOpenApi.string().uuid().describe('Maintenance schedule UUID from asset_maintenance_schedules.schedule_id.'),
+    }),
+  );
+
+  const AssetRelationshipParams = registry.registerSchema(
+    'AssetRelationshipParams',
+    zOpenApi.object({
+      relationshipId: zOpenApi.string().uuid().describe('Asset relationship UUID from asset_relationships.relationship_id.'),
+    }),
+  );
+
+  const MaintenanceScheduleUpdateRequest = registry.registerSchema(
+    'AssetMaintenanceScheduleUpdateRequest',
+    zOpenApi.object({
+      schedule_type: zOpenApi.enum(['preventive', 'inspection', 'calibration', 'replacement']).optional().describe('Type of maintenance schedule.'),
+      frequency: zOpenApi.enum(['daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'custom']).optional().describe('Recurrence frequency. Changing this triggers next_maintenance recalculation.'),
+      frequency_interval: zOpenApi.number().min(1).optional().describe('Frequency multiplier used when calculating the next maintenance date.'),
+      start_date: zOpenApi.string().datetime().optional().describe('Schedule start date/time. Changing this triggers next_maintenance recalculation.'),
+      end_date: zOpenApi.string().datetime().optional().describe('Optional schedule end date/time.'),
+      notes: zOpenApi.string().optional().describe('Free-text schedule notes.'),
+      assigned_to: zOpenApi.string().uuid().optional().describe('Assigned user UUID from users.user_id.'),
+      is_active: zOpenApi.boolean().optional().describe('Whether the schedule is active.'),
+      schedule_config: zOpenApi.record(zOpenApi.unknown()).optional().describe('Custom scheduling configuration.'),
+    }),
+  );
+
+  const MaintenanceScheduleResource = registry.registerSchema(
+    'AssetMaintenanceScheduleResource',
+    zOpenApi.object({
+      schedule_id: zOpenApi.string().uuid().describe('Primary key from asset_maintenance_schedules.schedule_id.'),
+      asset_id: zOpenApi.string().uuid().describe('Asset UUID from asset_maintenance_schedules.asset_id.'),
+      schedule_type: zOpenApi.string().optional().describe('Maintenance schedule type as used by ApiAssetController.'),
+      frequency: zOpenApi.string().optional().describe('Recurrence frequency.'),
+      frequency_interval: zOpenApi.number().nullable().optional().describe('Frequency multiplier.'),
+      start_date: zOpenApi.string().nullable().optional().describe('Schedule start date/time.'),
+      end_date: zOpenApi.string().nullable().optional().describe('Schedule end date/time.'),
+      last_maintenance: zOpenApi.string().nullable().optional().describe('Last recorded maintenance date/time.'),
+      next_maintenance: zOpenApi.string().nullable().optional().describe('Next calculated maintenance date/time.'),
+      notes: zOpenApi.string().nullable().optional().describe('Free-text schedule notes.'),
+      assigned_to: zOpenApi.string().uuid().nullable().optional().describe('Assigned user UUID.'),
+      is_active: zOpenApi.boolean().optional().describe('Whether the schedule is active.'),
+      schedule_config: zOpenApi.record(zOpenApi.unknown()).nullable().optional().describe('Custom scheduling configuration.'),
+      created_at: zOpenApi.string().datetime().optional().describe('Creation timestamp.'),
+      updated_at: zOpenApi.string().datetime().optional().describe('Last update timestamp.'),
+      tenant: zOpenApi.string().uuid().describe('Tenant UUID scoped from the request context.'),
+    }),
+  );
+
+  const MaintenanceSchedulePayload = registry.registerSchema(
+    'AssetMaintenanceSchedulePayload',
+    zOpenApi.object({
+      data: MaintenanceScheduleResource.optional().describe('Updated schedule row. Undefined when the schedule ID does not exist or belongs to another tenant.'),
+    }),
+  );
+
+  const MaintenanceScheduleResponse = registry.registerSchema(
+    'AssetMaintenanceScheduleResponse',
+    zOpenApi.object({
+      success: zOpenApi.literal(true),
+      data: MaintenanceSchedulePayload,
+      meta: ApiResponseMeta,
+    }),
+  );
+
+  const AssetSearchQuery = registry.registerSchema(
+    'AssetSearchQuery',
+    zOpenApi.object({
+      query: zOpenApi.string().min(1).describe('Required search term used in ILIKE clauses.'),
+      fields: zOpenApi.array(zOpenApi.enum(['asset_tag', 'name', 'serial_number', 'location', 'client_name'])).optional().describe('Search fields. If omitted, the service searches asset_tag, name, serial_number, and location.'),
+      asset_types: zOpenApi.array(AssetType).optional().describe('Optional asset type filters.'),
+      statuses: zOpenApi.array(zOpenApi.string()).optional().describe('Optional status filters.'),
+      client_ids: zOpenApi.array(zOpenApi.string().uuid()).optional().describe('Optional client UUID filters.'),
+      include_extension_data: zOpenApi.enum(['true', 'false']).optional().describe('When true, the service fetches asset-type-specific extension data for every result.'),
+      limit: zOpenApi.string().optional().describe('Maximum result count as a query string. Must parse to 1 through 100; defaults to 25.'),
+    }),
+  );
+
+  const AssetSearchPayload = registry.registerSchema(
+    'AssetSearchPayload',
+    zOpenApi.object({
+      data: zOpenApi.array(AssetResource).describe('Matching assets with HATEOAS links.'),
+      _links: zOpenApi.object({
+        self: HateoasLink.optional(),
+      }).describe('Search collection link. The controller currently points this at /api/v2/assets/search.'),
+    }),
+  );
+
+  const AssetSearchResponse = registry.registerSchema(
+    'AssetSearchResponse',
+    zOpenApi.object({
+      success: zOpenApi.literal(true),
+      data: AssetSearchPayload,
+      meta: ApiResponseMeta,
+    }),
+  );
+
+  const AssetStatsPayload = registry.registerSchema(
+    'AssetStatsPayload',
+    zOpenApi.object({
+      data: zOpenApi.object({
+        total_assets: zOpenApi.number().int().describe('Total asset count for the tenant.'),
+        assets_added_this_month: zOpenApi.number().int().describe('Count of assets created since the start of the current month.'),
+        average_asset_age_days: zOpenApi.number().int().nullable().describe('Rounded average age in days from purchase_date, or null when unavailable.'),
+        total_asset_value: zOpenApi.number().describe('Sum of purchase_price values, treating null as zero.'),
+        assets_by_type: zOpenApi.record(zOpenApi.number().int()).describe('Counts grouped by assets.asset_type.'),
+        assets_by_status: zOpenApi.record(zOpenApi.number().int()).describe('Counts grouped by assets.status.'),
+        assets_by_client: zOpenApi.record(zOpenApi.number().int()).describe('Top client counts grouped by clients.client_name. The service limits this grouping to 10 clients.'),
+        warranty_expiring_soon: zOpenApi.number().int().describe('Count of warranties ending within 30 days.'),
+        warranty_expired: zOpenApi.number().int().describe('Count of warranties already expired.'),
+        maintenance_due: zOpenApi.number().int().describe('Count of active maintenance schedules with next_maintenance due now or earlier.'),
+        maintenance_overdue: zOpenApi.number().int().describe('Count of active maintenance schedules overdue by more than seven days.'),
+      }),
+      _links: zOpenApi.object({
+        self: HateoasLink.optional(),
+        assets: HateoasLink.optional(),
+      }).describe('Stats links. The controller currently points these at /api/v2/assets paths.'),
+    }),
+  );
+
+  const AssetStatsResponse = registry.registerSchema(
+    'AssetStatsResponse',
+    zOpenApi.object({
+      success: zOpenApi.literal(true),
+      data: AssetStatsPayload,
+      meta: ApiResponseMeta,
+    }),
+  );
+
   const assetRouteExtensions = {
     'x-tenant-scoped': true,
     'x-request-context-required': true,
@@ -540,6 +671,215 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       'x-csv-content-disposition': 'attachment; filename=assets.csv',
       'x-export-filters-currently-ignored': true,
       'x-xlsx-generation-implemented': false,
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete',
+    path: '/api/v1/assets/maintenance/{scheduleId}',
+    summary: 'Delete asset maintenance schedule',
+    description:
+      'Deletes a maintenance schedule by asset_maintenance_schedules.schedule_id for the authenticated tenant. The service scopes deletion by schedule_id and context.tenant and performs no existence check, so missing or cross-tenant IDs are silent no-ops. The controller intends to return 204 with no body, but currently constructs a JSON response with status 204, which can throw in NextResponse. In the current route wiring, req.context may also be absent because no route-level API-key auth wrapper sets it, causing a 500 before deletion.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      params: MaintenanceScheduleParams,
+    },
+    responses: {
+      204: {
+        description: 'Maintenance schedule deleted successfully, or it was already absent.',
+        emptyBody: true,
+      },
+      401: {
+        description: 'x-api-key is missing at middleware.',
+        schema: MiddlewareUnauthorizedResponse,
+      },
+      403: {
+        description: 'Authenticated request context lacks permission to delete or update asset maintenance schedules when auth wiring is present.',
+        schema: ApiErrorEnvelope,
+      },
+      500: {
+        description: 'Unexpected error, including missing req.context or the current 204 JSON response construction issue.',
+        schema: ApiErrorEnvelope,
+      },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'delete',
+      'x-idempotent': true,
+      'x-no-existence-check': true,
+      'x-current-204-json-response-bug': true,
+      'x-no-event-published': true,
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'put',
+    path: '/api/v1/assets/maintenance/{scheduleId}',
+    summary: 'Update asset maintenance schedule',
+    description:
+      'Updates a maintenance schedule by asset_maintenance_schedules.schedule_id for the authenticated tenant. All request fields are optional because updateMaintenanceScheduleSchema is a partial form of the create schema. If frequency, frequency_interval, or start_date are supplied, the service loads the existing schedule for the tenant and recalculates next_maintenance. Missing or cross-tenant schedule IDs result in a 200 response with an undefined nested data value rather than 404. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before update.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      params: MaintenanceScheduleParams,
+      body: {
+        schema: MaintenanceScheduleUpdateRequest,
+        description: 'Partial maintenance schedule update data.',
+        required: true,
+      },
+    },
+    responses: {
+      200: {
+        description: 'Maintenance schedule updated successfully. If the ID is not found, the nested data field may be absent.',
+        schema: MaintenanceScheduleResponse,
+      },
+      400: {
+        description: 'Request body validation failed.',
+        schema: ApiErrorEnvelope,
+      },
+      401: {
+        description: 'x-api-key is missing at middleware.',
+        schema: MiddlewareUnauthorizedResponse,
+      },
+      403: {
+        description: 'Authenticated request context lacks permission to update asset maintenance schedules when auth wiring is present.',
+        schema: ApiErrorEnvelope,
+      },
+      500: {
+        description: 'Unexpected error, including missing req.context in the current route wiring.',
+        schema: ApiErrorEnvelope,
+      },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'update',
+      'x-recalculates-next-maintenance': true,
+      'x-no-not-found-on-missing-id': true,
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete',
+    path: '/api/v1/assets/relationships/{relationshipId}',
+    summary: 'Delete asset relationship',
+    description:
+      'Deletes an asset relationship by asset_relationships.relationship_id for the authenticated tenant. The service hard-deletes rows where relationship_id and context.tenant match, publishes no event, and performs no existence check; missing or cross-tenant IDs are silent no-ops. The controller intends to return 204 with no body, but currently constructs a JSON response with status 204, which can throw in NextResponse. In the current route wiring, req.context may also be absent because no route-level API-key auth wrapper sets it, causing a 500 before deletion.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      params: AssetRelationshipParams,
+    },
+    responses: {
+      204: {
+        description: 'Relationship deleted successfully, or it was already absent.',
+        emptyBody: true,
+      },
+      401: {
+        description: 'x-api-key is missing at middleware.',
+        schema: MiddlewareUnauthorizedResponse,
+      },
+      403: {
+        description: 'Authenticated request context lacks permission to update asset relationships when auth wiring is present.',
+        schema: ApiErrorEnvelope,
+      },
+      500: {
+        description: 'Unexpected error, including missing req.context or the current 204 JSON response construction issue.',
+        schema: ApiErrorEnvelope,
+      },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'update',
+      'x-idempotent': true,
+      'x-no-existence-check': true,
+      'x-current-204-json-response-bug': true,
+      'x-no-event-published': true,
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/assets/search',
+    summary: 'Search assets',
+    description:
+      'Searches tenant assets with a required query term and optional field, asset type, status, client, extension-data, and limit parameters. The service searches assets scoped to context.tenant, joins clients for client_name, and optionally loads asset-type-specific extension data per result. The response is not paginated and includes HATEOAS links for each asset; the top-level search link currently points at /api/v2/assets/search. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before search.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      query: AssetSearchQuery,
+    },
+    responses: {
+      200: {
+        description: 'Matching assets returned successfully.',
+        schema: AssetSearchResponse,
+      },
+      400: {
+        description: 'Query parameter validation failed, including missing required query.',
+        schema: ApiErrorEnvelope,
+      },
+      401: {
+        description: 'x-api-key is missing at middleware.',
+        schema: MiddlewareUnauthorizedResponse,
+      },
+      403: {
+        description: 'Authenticated request context lacks permission to read assets when auth wiring is present.',
+        schema: ApiErrorEnvelope,
+      },
+      500: {
+        description: 'Unexpected error, including missing req.context in the current route wiring.',
+        schema: ApiErrorEnvelope,
+      },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'read',
+      'x-not-paginated': true,
+      'x-response-links-path-version': 'v2',
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/assets/stats',
+    summary: 'Get asset statistics',
+    description:
+      'Returns tenant-scoped aggregate asset statistics including total counts, counts by type/status/client, warranty counts, and maintenance due/overdue counts. The service runs multiple aggregate queries filtered by context.tenant; assets_by_client is limited to the top 10 client names. The response links currently point at /api/v2/assets paths. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before statistics can be calculated.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    responses: {
+      200: {
+        description: 'Asset statistics returned successfully.',
+        schema: AssetStatsResponse,
+      },
+      401: {
+        description: 'x-api-key is missing at middleware.',
+        schema: MiddlewareUnauthorizedResponse,
+      },
+      403: {
+        description: 'Authenticated request context lacks permission to read assets when auth wiring is present.',
+        schema: ApiErrorEnvelope,
+      },
+      500: {
+        description: 'Unexpected error, including missing req.context in the current route wiring.',
+        schema: ApiErrorEnvelope,
+      },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'read',
+      'x-assets-by-client-limit': 10,
+      'x-response-links-path-version': 'v2',
     },
     edition: 'both',
   });
