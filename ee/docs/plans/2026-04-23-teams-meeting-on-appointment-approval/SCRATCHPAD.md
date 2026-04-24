@@ -167,6 +167,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-24: Completed `T024` in the same integration file, asserting approved reschedules call `updateTeamsMeeting()` with the expected new UTC start/end timestamps for the stored Teams meeting.
 - 2026-04-24: Completed `T025` in the same reschedule integration slice, asserting a soft Graph PATCH failure still returns `success: true` and surfaces `teamsMeetingWarning` to the caller.
 - 2026-04-24: Completed `T026` in the same reschedule integration slice, asserting approved requests without `online_meeting_id` reschedule normally without calling the Teams meeting service.
+- 2026-04-24: Completed `T027` in the deletion lifecycle integration slice, asserting client-side cancellation of an approved appointment calls `deleteTeamsMeeting()` with the stored Teams meeting ID.
 
 ## Working notes
 

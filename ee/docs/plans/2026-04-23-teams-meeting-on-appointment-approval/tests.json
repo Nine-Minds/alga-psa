@@ -159,7 +159,7 @@
     "id": "T027",
     "description": "Cancel integration test: cancelling an approved appointment with online_meeting_id calls deleteTeamsMeeting.",
     "featureIds": ["F012"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T028",
