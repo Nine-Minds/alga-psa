@@ -207,7 +207,7 @@
     "id": "T035",
     "description": "UI (Playwright): EntryPopup approved banner renders 'Join Teams Meeting' button only when online_meeting_url is present; opens in new tab.",
     "featureIds": ["F016"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T036",
