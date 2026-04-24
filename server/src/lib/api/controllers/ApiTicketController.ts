@@ -77,7 +77,6 @@ export class ApiTicketController extends ApiBaseController {
       clientId: typeof ticket.client_id === 'string' ? ticket.client_id : undefined,
       boardId: typeof ticket.board_id === 'string' ? ticket.board_id : undefined,
       teamIds: typeof ticket.assigned_team_id === 'string' ? [ticket.assigned_team_id] : [],
-      is_client_visible: typeof ticket.is_client_visible === 'boolean' ? ticket.is_client_visible : undefined,
       statusId: ticket.status_id,
     };
   }

@@ -234,18 +234,15 @@ async function resolveAuthorizationSubjectForUser(
     };
 }
 
-function toProjectAuthorizationRecord(project: { project_id?: string | null; client_id?: string | null; assigned_to?: string | null; assigned_team_id?: string | null }): AuthorizationRecord {
+function toProjectAuthorizationRecord(project: { project_id?: string | null; client_id?: string | null; assigned_to?: string | null }): AuthorizationRecord {
     const assignedUserIds =
         typeof project.assigned_to === 'string' && project.assigned_to.length > 0 ? [project.assigned_to] : [];
-    const teamIds =
-        typeof project.assigned_team_id === 'string' && project.assigned_team_id.length > 0 ? [project.assigned_team_id] : [];
 
     return {
         id: project.project_id ?? null,
         ownerUserId: project.assigned_to ?? null,
         assignedUserIds,
         clientId: project.client_id ?? null,
-        teamIds,
     };
 }
 
@@ -253,7 +250,7 @@ async function createProjectReadAuthorizer(
     trx: Knex.Transaction,
     tenant: string,
     user: IUserWithRoles
-): Promise<(project: { project_id?: string | null; client_id?: string | null; assigned_to?: string | null; assigned_team_id?: string | null }) => Promise<boolean>> {
+): Promise<(project: { project_id?: string | null; client_id?: string | null; assigned_to?: string | null }) => Promise<boolean>> {
     const subject = await resolveAuthorizationSubjectForUser(trx, tenant, user);
     const authorizationKernel = createAuthorizationKernel({
         builtinProvider: new BuiltinAuthorizationKernelProvider(),
@@ -351,7 +348,6 @@ export async function filterAuthorizedTicketIds(
             'assigned_team_id',
             'client_id',
             'board_id',
-            'is_client_visible',
             'status_id'
         );
 
@@ -367,7 +363,6 @@ export async function filterAuthorizedTicketIds(
                     clientId: ticket.client_id ?? null,
                     boardId: ticket.board_id ?? undefined,
                     teamIds: ticket.assigned_team_id ? [ticket.assigned_team_id] : [],
-                    is_client_visible: ticket.is_client_visible === true,
                     statusId: ticket.status_id,
                 },
                 requestCache: context.requestCache,
@@ -1052,7 +1047,7 @@ export const getLinkedTasksForTicketAction = withAuth(async (
             const projects = await trx('projects')
                 .where({ tenant })
                 .whereIn('project_id', Array.from(new Set(linkedTasks.map((task) => task.project_id).filter(Boolean))))
-                .select('project_id', 'client_id', 'assigned_to', 'assigned_team_id');
+                .select('project_id', 'client_id', 'assigned_to');
 
             const allowedProjectIds = new Set<string>();
             await Promise.all(projects.map(async (project) => {

@@ -154,15 +154,12 @@ async function resolveAuthorizationSubjectForUser(
 function toProjectAuthorizationRecord(project: Partial<IProject>): AuthorizationRecord {
   const assignedUserIds =
     typeof project.assigned_to === 'string' && project.assigned_to.length > 0 ? [project.assigned_to] : [];
-  const assignedTeamId = (project as { assigned_team_id?: string | null }).assigned_team_id;
-  const teamIds = typeof assignedTeamId === 'string' && assignedTeamId.length > 0 ? [assignedTeamId] : [];
 
   return {
     id: project.project_id ?? null,
     ownerUserId: project.assigned_to ?? null,
     assignedUserIds,
     clientId: project.client_id ?? null,
-    teamIds,
   };
 }
 
@@ -330,7 +327,7 @@ export const getProjectsWithPhases = withAuth(async (
       const [projects, phases, statusMappings] = await Promise.all([
         trx('projects')
           .where({ tenant })
-          .select('project_id', 'project_name', 'is_inactive', 'client_id', 'assigned_to', 'assigned_team_id')
+          .select('project_id', 'project_name', 'is_inactive', 'client_id', 'assigned_to')
           .orderBy('project_name'),
         trx('project_phases')
           .where({ tenant })
