@@ -177,7 +177,7 @@
     "id": "T030",
     "description": "UI (Playwright): cancel confirmation dialog shows warning text 'This will also delete the Microsoft Teams meeting' when appointment has online_meeting_url.",
     "featureIds": ["F013"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T031",
