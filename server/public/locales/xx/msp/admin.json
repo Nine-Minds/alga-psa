@@ -521,5 +521,54 @@
         "clientTicketNotSupported": "11111"
       }
     }
+  },
+  "emailLogs": {
+    "page": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "metrics": {
+      "totalSent": "11111",
+      "failedRate": "11111",
+      "today": "11111"
+    },
+    "filters": {
+      "startDate": "11111",
+      "endDate": "11111",
+      "status": "11111",
+      "recipient": "11111",
+      "recipientPlaceholder": "11111",
+      "ticket": "11111",
+      "ticketPlaceholder": "11111",
+      "statusOptions": {
+        "all": "11111",
+        "sent": "11111",
+        "failed": "11111"
+      }
+    },
+    "table": {
+      "time": "11111",
+      "ticket": "11111",
+      "recipient": "11111",
+      "subject": "11111",
+      "status": "11111"
+    },
+    "loading": "11111",
+    "results_one": "11111 {{count}} 11111",
+    "results_other": "11111 {{count}} 11111",
+    "refresh": "11111",
+    "close": "11111",
+    "detail": {
+      "title": "11111",
+      "noSubject": "11111",
+      "sentAt": "11111",
+      "status": "11111",
+      "provider": "11111",
+      "messageId": "11111",
+      "to": "11111",
+      "from": "11111",
+      "error": "11111",
+      "metadata": "11111"
+    }
   }
 }

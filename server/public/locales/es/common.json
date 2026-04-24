@@ -1028,5 +1028,46 @@
       "Pacific": "Pacífico",
       "Etc": "Otros"
     }
+  },
+  "pages": {
+    "errors": {
+      "somethingWentWrong": "¡Algo salió mal!",
+      "genericError": "Ocurrió un error. Por favor, inténtelo de nuevo más tarde.",
+      "notFoundTitle": "404 - Página no encontrada",
+      "notFoundDescription": "La página que busca no existe.",
+      "userNotAuthenticated": "Usuario no autenticado",
+      "userNotAuthenticatedError": "Error: Usuario no autenticado",
+      "missingRunId": "Falta el ID de ejecución.",
+      "teamLeadAccessRequired": "Se requiere acceso de líder de equipo",
+      "teamsTabUnavailable": "Pestaña de Teams no disponible",
+      "teamsSignInUnavailable": "Inicio de sesión de Teams no disponible",
+      "assetNotFound": "Activo no encontrado",
+      "contactNotFound": "Contacto no encontrado",
+      "templateNotFound": "Plantilla no encontrada",
+      "contactLoadError": "Error al cargar el contacto",
+      "unknownError": "Ocurrió un error desconocido",
+      "templateNotFoundDetail": "La plantilla que busca no existe o ha sido eliminada.",
+      "teamLeadAccessDetail": "Para aprobar hojas de tiempo de los miembros de su equipo, debe ser líder de equipo.",
+      "teamsTabEnableHint": "Pida a un administrador de PSA que habilite la integración de Teams para este tenant antes de volver a abrir la pestaña."
+    },
+    "actions": {
+      "tryAgain": "Reintentar",
+      "goToTeamSettings": "Ir a la configuración del equipo",
+      "selectDateRange": "Seleccionar rango de fechas"
+    },
+    "loading": {
+      "billingDashboard": "Cargando panel de facturación...",
+      "onboarding": "Cargando onboarding...",
+      "extension": "Cargando extensión...",
+      "extensionSettings": "Cargando configuración de la extensión...",
+      "ssoSettings": "Cargando configuración de SSO..."
+    },
+    "titles": {
+      "emailLogs": "Registros de correo",
+      "editAsset": "Editar activo",
+      "slaSettings": "Configuración de SLA",
+      "documentEditor": "Editor de documentos",
+      "accountManagement": "Gestión de cuenta"
+    }
   }
 }

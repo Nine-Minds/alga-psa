@@ -1028,5 +1028,46 @@
       "Pacific": "Stille Oceaan",
       "Etc": "Overig"
     }
+  },
+  "pages": {
+    "errors": {
+      "somethingWentWrong": "Er is iets misgegaan!",
+      "genericError": "Er is een fout opgetreden. Probeer het later opnieuw.",
+      "notFoundTitle": "404 - Pagina niet gevonden",
+      "notFoundDescription": "De pagina die u zoekt, bestaat niet.",
+      "userNotAuthenticated": "Gebruiker niet geauthenticeerd",
+      "userNotAuthenticatedError": "Fout: Gebruiker niet geauthenticeerd",
+      "missingRunId": "Uitvoerings-ID ontbreekt.",
+      "teamLeadAccessRequired": "Teamleider-toegang vereist",
+      "teamsTabUnavailable": "Teams-tabblad niet beschikbaar",
+      "teamsSignInUnavailable": "Teams-aanmelding niet beschikbaar",
+      "assetNotFound": "Asset niet gevonden",
+      "contactNotFound": "Contact niet gevonden",
+      "templateNotFound": "Sjabloon niet gevonden",
+      "contactLoadError": "Fout bij het laden van contact",
+      "unknownError": "Er is een onbekende fout opgetreden",
+      "templateNotFoundDetail": "Het sjabloon dat u zoekt, bestaat niet of is verwijderd.",
+      "teamLeadAccessDetail": "Om urenstaten voor uw teamleden goed te keuren, moet u teamleider zijn.",
+      "teamsTabEnableHint": "Vraag een PSA-beheerder om de Teams-integratie voor deze tenant in te schakelen voordat u het tabblad opnieuw opent."
+    },
+    "actions": {
+      "tryAgain": "Opnieuw proberen",
+      "goToTeamSettings": "Ga naar team-instellingen",
+      "selectDateRange": "Datumbereik selecteren"
+    },
+    "loading": {
+      "billingDashboard": "Facturatiedashboard laden...",
+      "onboarding": "Onboarding laden...",
+      "extension": "Extensie laden...",
+      "extensionSettings": "Extensie-instellingen laden...",
+      "ssoSettings": "SSO-instellingen laden..."
+    },
+    "titles": {
+      "emailLogs": "E-maillogboeken",
+      "editAsset": "Asset bewerken",
+      "slaSettings": "SLA-instellingen",
+      "documentEditor": "Documenteditor",
+      "accountManagement": "Accountbeheer"
+    }
   }
 }

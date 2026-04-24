@@ -609,11 +609,67 @@
   },
   "assetPatchStatusSection": {
     "title": "Sección de estado del parche de activos",
-    "description": "Parche empresarial y contenedor de estado del antivirus que se muestran en la experiencia de detalle de activos"
+    "description": "Parche empresarial y contenedor de estado del antivirus que se muestran en la experiencia de detalle de activos",
+    "heading": "Estado de parches",
+    "compliance": {
+      "unknown": "Desconocido",
+      "actionRequired": "Acción requerida",
+      "updatesAvailable": "Actualizaciones disponibles",
+      "minorUpdates": "Actualizaciones menores",
+      "upToDate": "Actualizado"
+    },
+    "relativeTime": {
+      "never": "Nunca",
+      "justNow": "Justo ahora",
+      "minutesAgo": "hace {{count}}m",
+      "hoursAgo": "hace {{count}}h",
+      "daysAgo": "hace {{count}}d"
+    },
+    "labels": {
+      "osPatches": "Parches del SO",
+      "software": "Software",
+      "failed": "Fallidos",
+      "lastScan": "Último escaneo",
+      "pending": "pendientes",
+      "patches": "parches"
+    }
   },
   "assetSoftwareInventory": {
     "title": "Inventario de software de activos",
-    "description": "Envoltorio de inventario de software empresarial para software instalado y datos de versión"
+    "description": "Envoltorio de inventario de software empresarial para software instalado y datos de versión",
+    "heading": "Inventario de software",
+    "searchPlaceholder": "Buscar software...",
+    "appsCount": "{{count}} aplicaciones",
+    "unknownName": "Desconocido",
+    "noMatch": "Ningún software coincide con su búsqueda",
+    "version": "v{{version}}",
+    "by": "por {{publisher}}",
+    "showingOfApplications": "Mostrando {{shown}} de {{total}} aplicaciones",
+    "more": "+{{count}} más"
+  },
+  "remoteAccess": {
+    "remoteDesktop": "Escritorio remoto",
+    "remoteShell": "Shell remoto",
+    "remoteAccess": "Acceso remoto",
+    "deviceOverdue": "El dispositivo está vencido",
+    "deviceOffline": "El dispositivo está desconectado",
+    "errors": {
+      "urlFetchFailed": "Error al obtener la URL de acceso remoto",
+      "initiateFailed": "Error al iniciar el acceso remoto"
+    },
+    "indicator": {
+      "online": "En línea",
+      "offline": "Desconectado",
+      "available": "Acceso remoto disponible",
+      "deviceOffline": "Dispositivo desconectado"
+    }
+  },
+  "assetListErrors": {
+    "genericError": "Ocurrió un error. Inténtelo de nuevo más tarde.",
+    "assetNotFound": "Activo no encontrado"
+  },
+  "assetEdit": {
+    "pageTitle": "Editar activo"
   },
   "associatedAssets": {
     "title": "Activos asociados",

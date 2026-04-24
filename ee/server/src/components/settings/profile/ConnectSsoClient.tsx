@@ -13,11 +13,12 @@ import { Badge } from "@alga-psa/ui/components/Badge";
 import clsx from "clsx";
 import { Loader2, ShieldCheck, KeyRound, LogIn } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
+import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 
 type ProviderBranding = {
   icon: ReactNode;
   iconBg: string;
-  buttonLabel: string;
+  buttonLabelKey: string;
   buttonClass?: string;
   buttonVariant?: React.ComponentProps<typeof Button>["variant"];
   cardClass?: string;
@@ -36,7 +37,7 @@ const providerBranding: Record<string, ProviderBranding> = {
   google: {
     icon: <SiGoogle className="h-16 w-16" style={{ color: "#34A853" }} aria-hidden />,
     iconBg: "bg-[#E8F0FE]",
-    buttonLabel: "Continue with Google",
+    buttonLabelKey: "connectSso.providers.branding.google",
     buttonClass: "bg-[#34A853] hover:bg-[#2d8659] text-white",
     buttonVariant: "default",
     cardClass: "hover:shadow-lg hover:shadow-[#34A853]/10",
@@ -44,7 +45,7 @@ const providerBranding: Record<string, ProviderBranding> = {
   "azure-ad": {
     icon: <MicrosoftMulticolorLogo />,
     iconBg: "bg-[#F3F2F1]",
-    buttonLabel: "Continue with Microsoft",
+    buttonLabelKey: "connectSso.providers.branding.microsoft",
     buttonClass: "bg-[#0078D4] hover:bg-[#005a9e] text-white",
     buttonVariant: "default",
     cardClass: "hover:shadow-lg hover:shadow-[#0078D4]/10",
@@ -52,7 +53,7 @@ const providerBranding: Record<string, ProviderBranding> = {
   microsoft: {
     icon: <MicrosoftMulticolorLogo />,
     iconBg: "bg-[#F3F2F1]",
-    buttonLabel: "Continue with Microsoft",
+    buttonLabelKey: "connectSso.providers.branding.microsoft",
     buttonClass: "bg-[#0078D4] hover:bg-[#005a9e] text-white",
     buttonVariant: "default",
     cardClass: "hover:shadow-lg hover:shadow-[#0078D4]/10",
@@ -60,7 +61,7 @@ const providerBranding: Record<string, ProviderBranding> = {
   default: {
     icon: <LogIn className="h-16 w-16 text-primary" aria-hidden />,
     iconBg: "bg-primary/10",
-    buttonLabel: "Continue",
+    buttonLabelKey: "connectSso.providers.branding.default",
     buttonVariant: "secondary",
     cardClass: "hover:shadow-md hover:shadow-primary/10",
   },
@@ -96,6 +97,7 @@ export default function ConnectSsoClient({
   providerOptions,
   linkStatus,
 }: ConnectSsoClientProps) {
+  const { t } = useTranslation("msp/profile");
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [twoFactorCode, setTwoFactorCode] = useState("");
@@ -106,7 +108,7 @@ export default function ConnectSsoClient({
   const [reauthComplete, setReauthComplete] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(
-    linkStatus === "linked" ? "Provider linked successfully." : null
+    linkStatus === "linked" ? t("connectSso.verify.linkedSuccess") : null
   );
   const [isPending, startTransition] = useTransition();
 
@@ -138,7 +140,7 @@ export default function ConnectSsoClient({
       });
 
       if (!result.success) {
-        setFormError(result.error ?? "Unable to verify credentials.");
+        setFormError(result.error ?? t("connectSso.verify.verifyFailed"));
         if (result.requiresTwoFactor) {
           setRequiresTwoFactor(true);
         }
@@ -151,18 +153,14 @@ export default function ConnectSsoClient({
       setReauthNonce(result.nonce ?? null);
       setReauthNonceIssuedAt(result.nonceIssuedAt ?? null);
       setReauthNonceSignature(result.nonceSignature ?? null);
-      setFormSuccess(
-        "Credentials verified. Choose a provider below to finish linking your account."
-      );
+      setFormSuccess(t("connectSso.verify.credentialsVerified"));
       setFormError(null);
     });
   };
 
   const handleProviderClick = async (providerId: string) => {
     if (!reauthComplete || !reauthNonce || !reauthNonceIssuedAt || !reauthNonceSignature) {
-      setFormError(
-        "Verify your password (and two-factor code if required) before connecting a provider."
-      );
+      setFormError(t("connectSso.verify.verifyBeforeProvider"));
       return;
     }
 
@@ -212,20 +210,20 @@ export default function ConnectSsoClient({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-primary" /> Secure your account with SSO
+            <ShieldCheck className="h-5 w-5 text-primary" /> {t("connectSso.verify.title")}
           </CardTitle>
           <CardDescription>
-            Link Azure AD or Google Workspace to reuse organizational policies and skip local two-factor prompts.
+            {t("connectSso.verify.description")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleAuthorize} className="space-y-4 max-w-xl">
             <div>
-              <Label htmlFor="email">Signed in as</Label>
+              <Label htmlFor="email">{t("connectSso.verify.signedInAs")}</Label>
               <Input id="email" value={email} disabled className="bg-muted/50" />
             </div>
             <div>
-              <Label htmlFor="password">Current password</Label>
+              <Label htmlFor="password">{t("connectSso.verify.currentPassword")}</Label>
               <Input
                 id="password"
                 type="password"
@@ -237,14 +235,14 @@ export default function ConnectSsoClient({
             </div>
             {requiresTwoFactor && (
               <div>
-                <Label htmlFor="twoFactor">Two-factor code</Label>
+                <Label htmlFor="twoFactor">{t("connectSso.verify.twoFactorCode")}</Label>
                 <Input
                   id="twoFactor"
                   inputMode="numeric"
                   autoComplete="one-time-code"
                   value={twoFactorCode}
                   onChange={(event) => setTwoFactorCode(event.target.value)}
-                  placeholder="123456"
+                  placeholder={t("connectSso.verify.twoFactorPlaceholder")}
                   maxLength={6}
                 />
               </div>
@@ -264,18 +262,18 @@ export default function ConnectSsoClient({
                 {isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Verifying...
+                    {t("connectSso.verify.verifying")}
                   </>
                 ) : (
                   <>
                     <KeyRound className="mr-2 h-4 w-4" />
-                    Verify Credentials
+                    {t("connectSso.verify.verifyCredentials")}
                   </>
                 )}
               </Button>
               {reauthComplete && (
                 <Button id="reset" type="button" variant="ghost" onClick={handleReset}>
-                  Reset
+                  {t("connectSso.verify.reset")}
                 </Button>
               )}
             </div>
@@ -286,17 +284,17 @@ export default function ConnectSsoClient({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <LogIn className="h-5 w-5 text-primary" /> Connect a provider
+            <LogIn className="h-5 w-5 text-primary" /> {t("connectSso.providers.title")}
           </CardTitle>
           <CardDescription>
-            Choose a provider to finish the SSO link. You’ll be redirected through the provider’s login flow.
+            {t("connectSso.providers.description")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {!hasConfiguredProvider && (
             <Alert variant="destructive">
               <AlertDescription>
-                No SSO providers are configured for this environment. Ask your administrator to configure Google or Microsoft credentials.
+                {t("connectSso.providers.noneConfigured")}
               </AlertDescription>
             </Alert>
           )}
@@ -350,7 +348,7 @@ export default function ConnectSsoClient({
                       <p className="text-sm text-muted-foreground">{provider.description}</p>
                       {!provider.configured && (
                         <p className="text-xs text-destructive mt-2 font-medium">
-                          Not configured
+                          {t("connectSso.providers.notConfigured")}
                         </p>
                       )}
                     </div>
@@ -367,7 +365,7 @@ export default function ConnectSsoClient({
                         void handleProviderClick(provider.id);
                       }}
                     >
-                      {branding.buttonLabel}
+                      {t(branding.buttonLabelKey)}
                     </Button>
                   </div>
                 </div>
@@ -379,15 +377,15 @@ export default function ConnectSsoClient({
 
       <Card>
         <CardHeader>
-          <CardTitle>Linked accounts</CardTitle>
+          <CardTitle>{t("connectSso.linked.title")}</CardTitle>
           <CardDescription>
-            We'll refresh the link the next time you sign in through a connected provider.
+            {t("connectSso.linked.description")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {linkedAccounts.length === 0 ? (
             <p className="text-muted-foreground text-sm">
-              No SSO providers linked yet. Complete the steps above to connect one.
+              {t("connectSso.linked.empty")}
             </p>
           ) : (
             <div className="space-y-3">
@@ -406,15 +404,13 @@ export default function ConnectSsoClient({
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Linked {new Date(account.linked_at).toLocaleString()}
+                      {t("connectSso.linked.linkedAt", { date: new Date(account.linked_at).toLocaleString() })}
                     </p>
                   </div>
                   <div className="text-xs text-muted-foreground md:text-right">
-                    {account.last_used_at ? (
-                      <>Last used {new Date(account.last_used_at).toLocaleString()}</>
-                    ) : (
-                      <>Not used yet</>
-                    )}
+                    {account.last_used_at
+                      ? t("connectSso.linked.lastUsed", { date: new Date(account.last_used_at).toLocaleString() })
+                      : t("connectSso.linked.notUsedYet")}
                   </div>
                 </div>
               ))}

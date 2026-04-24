@@ -960,6 +960,66 @@
         "forgotPassword": "Nie pamiętasz hasła?",
         "mspStaffLogin": "Pracownik MSP? Zaloguj się tutaj →"
       }
+    },
+    "domain": {
+      "title": "Domena niestandardowa",
+      "description": "Skonfiguruj firmową nazwę hosta dla portalu klienta. Po zweryfikowaniu DNS automatycznie wystawimy certyfikaty TLS.",
+      "currentStatus": "Aktualny status",
+      "noDomainConfigured": "Nie skonfigurowano domeny niestandardowej",
+      "defaultStatusMessage": "Nie zarejestrowano jeszcze żadnej domeny niestandardowej.",
+      "lastChecked": "Ostatnio sprawdzono: {{value}}",
+      "updatingDomainPrefix": "Aktualizowanie domeny do ",
+      "updatingDomainSuffix": ". Provisioning zostanie ponownie uruchomiony po aktualizacji.",
+      "editInstructions": "Aby zmienić domenę, edytuj wartość poniżej i prześlij, aby uruchomić nowe wdrożenie.",
+      "actions": {
+        "refresh": "Odśwież",
+        "refreshing": "Odświeżanie...",
+        "retry": "Ponów",
+        "retrying": "Ponawianie…",
+        "removeDomain": "Usuń domenę",
+        "saveDomain": "Zapisz domenę",
+        "updateDomain": "Aktualizuj domenę",
+        "submitting": "Wysyłanie…",
+        "cancelEdit": "Anuluj edycję"
+      },
+      "form": {
+        "label": "Domena niestandardowa",
+        "helpTextPrefix": "Dodaj rekord CNAME wskazujący na ",
+        "helpTextSuffix": " przed wysłaniem.",
+        "placeholder": "portal.przyklad.com"
+      },
+      "checklist": {
+        "title": "Lista kontrolna konfiguracji",
+        "step1Prefix": "Utwórz rekord CNAME dla wybranego hosta wskazujący na ",
+        "step1Suffix": ".",
+        "step2": "Kliknij \"Zapisz domenę\", aby uruchomić weryfikację DNS i wystawienie certyfikatu.",
+        "step3": "Użyj przycisku Odśwież, aby sprawdzać postęp wdrożenia. Wyślemy administratorom wiadomość e-mail, jeśli wdrożenie się nie powiedzie.",
+        "canonicalHostFallback": "host kanoniczny"
+      },
+      "badges": {
+        "pending_dns": "Oczekuje na DNS",
+        "verifying_dns": "Weryfikacja DNS",
+        "dns_failed": "DNS nieudane",
+        "pending_certificate": "Oczekuje na certyfikat",
+        "certificate_issuing": "Wystawianie certyfikatu",
+        "certificate_failed": "Certyfikat nieudany",
+        "deploying": "Wdrażanie",
+        "active": "Aktywna",
+        "disabled": "Wyłączona",
+        "unknown": "Nieznany"
+      },
+      "messages": {
+        "requestSubmitted": "Wysłano żądanie domeny niestandardowej.",
+        "retryQueued": "Ponowienie zostało zakolejkowane. Sprawdź status za chwilę.",
+        "removalRequested": "Wysłano żądanie usunięcia domeny niestandardowej.",
+        "enterDomainFirst": "Wprowadź domenę przed wysłaniem.",
+        "confirmRemove": "Usunąć aktualną domenę niestandardową? Ruch zostanie przekierowany na domyślny adres hostowany.",
+        "loadFailed": "Nie udało się wczytać statusu domeny portalu.",
+        "registerFailed": "Nie udało się zarejestrować domeny niestandardowej.",
+        "refreshFailed": "Nie udało się odświeżyć statusu domeny.",
+        "retryFailed": "Ponowienie nie powiodło się.",
+        "disableFailed": "Nie udało się wyłączyć domeny niestandardowej."
+      }
     }
   },
   "mspLanguage": {
@@ -991,7 +1051,21 @@
       "telemetry": "Telemetria"
     },
     "internalTabs": {
-      "categories": "Kategorie"
+      "categories": "Kategorie",
+      "categoriesTypes": "Kategorie i typy"
+    },
+    "loading": {
+      "settings": "Ładowanie ustawień...",
+      "templates": "Ładowanie szablonów...",
+      "categories": "Ładowanie kategorii..."
+    },
+    "unsaved": {
+      "title": "Niezapisane zmiany",
+      "message": "Posiadasz niezapisane ustawienia powiadomień. Czy na pewno chcesz opuścić stronę? Twoje zmiany zostaną utracone."
+    },
+    "tenantDescription": {
+      "email": "Konfiguracja ustawień powiadomień e-mail w skali całej organizacji",
+      "internal": "Konfiguracja ustawień powiadomień wewnętrznych w skali całej organizacji"
     },
     "sections": {
       "globalSettings": {
@@ -1271,6 +1345,113 @@
       "apiKeys": "Ładowanie konfiguracji kluczy API...",
       "sso": "Ładowanie narzędzi zarządzania SSO...",
       "sessions": "Ładowanie aktywnych sesji..."
+    },
+    "ssoBulk": {
+      "loading": {
+        "title": "Single Sign-On",
+        "description": "Ładowanie narzędzi do masowego przypisywania SSO..."
+      },
+      "autoLink": {
+        "title": "Automatyczne konfigurowanie SSO dla nowych użytkowników wewnętrznych",
+        "description": "Włącz tę opcję, aby każde nowe konto pracownika było natychmiast udostępniane Państwa korporacyjnemu dostawcy SSO, dzięki czemu nigdy nie będzie wymagane logowanie hasłem.",
+        "body": "Po włączeniu nowo dodani użytkownicy MSP mogą logować się przez Google lub Microsoft, używając swojego służbowego adresu Email. Nie będą musieli ręcznie łączyć swojego konta.",
+        "toggleLabel": "Przełącz automatyczne dopasowywanie SSO",
+        "disabledInfo": "Włącz ten przełącznik, aby nowi i obecni pracownicy mogli pominąć proces „Połącz SSO”, gdy ich Email pasuje już do skonfigurowanego dostawcy. Każde automatyczne powiązanie nadal będzie rejestrowane."
+      },
+      "bulk": {
+        "title": "Masowe przypisanie Single Sign-On",
+        "description": "Wybierz wewnętrznych użytkowników z listy poniżej i powiąż ich ze skonfigurowanym dostawcą Google lub Microsoft. Skorzystaj z podglądu, aby dwukrotnie sprawdzić wpływ przed wykonaniem.",
+        "noProviders": "Nie skonfigurowano jeszcze żadnych dostawców SSO. Dodaj poświadczenia OAuth, aby kontynuować masowe przypisywanie."
+      },
+      "errors": {
+        "loadProviders": "Nie udało się wczytać konfiguracji dostawcy SSO.",
+        "updatePreferences": "Nie udało się zaktualizować preferencji SSO."
+      },
+      "form": {
+        "title": "Wybierz dostawcę i wybierz użytkowników",
+        "description": "Wybierz skonfigurowanego dostawcę SSO dla swojego personelu, a następnie wyszukaj i wybierz użytkowników, którzy mają zostać powiązani.",
+        "providerLabel": "Dostawca",
+        "notConfigured": "Nie skonfigurowano",
+        "providerNotConfiguredAlert": "Podaj poświadczenia OAuth dla tego dostawcy przed powiązaniem kont.",
+        "actionLabel": "Akcja",
+        "linkSelected": "Powiąż wybranych użytkowników",
+        "unlinkSelected": "Odłącz wybranych użytkowników",
+        "actionPlaceholder": "Wybierz akcję masową SSO",
+        "actionDescription": "Powiązanie dodaje dostawcę do każdego wybranego użytkownika. Odłączenie usuwa dostawcę, więc użytkownik wraca do logowania hasłem/TOTP, dopóki ponownie nie połączy konta.",
+        "searchLabel": "Znajdź użytkowników wewnętrznych",
+        "searchPlaceholder": "Szukaj po Email lub nazwisku",
+        "noneSelected": "Nie wybrano jeszcze żadnych użytkowników.",
+        "selected_one": "Wybrano {{count}} użytkownika.",
+        "selected_few": "Wybrano {{count}} użytkowników.",
+        "selected_many": "Wybrano {{count}} użytkowników.",
+        "selected_other": "Wybrano {{count}} użytkowników.",
+        "clearSelection": "Wyczyść wybór",
+        "loadingUsers": "Ładowanie użytkowników...",
+        "noMatch": "Brak użytkowników pasujących do tego wyszukiwania.",
+        "noUsers": "Nie znaleziono użytkowników wewnętrznych.",
+        "clientPortalComing": "Masowe przypisania w portalu klienta będą dostępne wkrótce. Obecnie to narzędzie dotyczy tylko wewnętrznych użytkowników MSP.",
+        "loadUsersFailed": "Nie udało się wczytać użytkowników do przypisania.",
+        "actions": {
+          "previewLink": "Podgląd przypisania",
+          "previewUnlink": "Podgląd odłączenia",
+          "link": "Powiąż konta",
+          "unlink": "Odłącz konta",
+          "preparingPreview": "Przygotowywanie podglądu…",
+          "linking": "Powiązywanie kont…",
+          "unlinking": "Odłączanie kont…",
+          "bulkLabel": "Masowe akcje SSO {{location}}"
+        },
+        "table": {
+          "email": "Email",
+          "id": "ID",
+          "name": "Nazwa",
+          "status": "Status",
+          "active": "Aktywny",
+          "inactive": "Nieaktywny",
+          "linkedProviders": "Powiązani dostawcy",
+          "unlinked": "Odłączony",
+          "lastLogin": "Ostatnie logowanie"
+        },
+        "toast": {
+          "providerRequiredTitle": "Wymagany dostawca",
+          "providerRequiredDescription": "Wybierz skonfigurowanego dostawcę przed kontynuacją.",
+          "noUsersTitle": "Nie wybrano użytkowników",
+          "noUsersDescription": "Wybierz co najmniej jednego użytkownika z tabeli.",
+          "failedTitle": "Masowe przypisanie nie powiodło się",
+          "failedDescription": "Nie udało się przetworzyć masowego przypisania SSO.",
+          "linkCompleteTitle": "Powiązanie zakończone",
+          "unlinkCompleteTitle": "Odłączenie zakończone",
+          "previewReadyTitle": "Podgląd gotowy",
+          "linkedCount": "Powiązano {{count}} kont przez {{provider}}.",
+          "unlinkedCount": "Odłączono {{count}} kont przez {{provider}}.",
+          "previewUnlink_one": "Podgląd gotowy. Odłączymy {{count}} wybranego użytkownika.",
+          "previewUnlink_few": "Podgląd gotowy. Odłączymy {{count}} wybranych użytkowników.",
+          "previewUnlink_many": "Podgląd gotowy. Odłączymy {{count}} wybranych użytkowników.",
+          "previewUnlink_other": "Podgląd gotowy. Odłączymy {{count}} wybranych użytkowników.",
+          "previewLink": "Podgląd gotowy. Przejrzyj podsumowanie przed powiązaniem kont."
+        },
+        "results": {
+          "completeTitle": "Przypisanie zakończone",
+          "previewTitle": "Wyniki podglądu",
+          "noneMatched": "Żaden z wybranych użytkowników nie pasował do bieżących filtrów.",
+          "processed_one": "Przetworzono {{count}} użytkownika.",
+          "processed_few": "Przetworzono {{count}} użytkowników.",
+          "processed_many": "Przetworzono {{count}} użytkowników.",
+          "processed_other": "Przetworzono {{count}} użytkowników.",
+          "candidatesSelected": "wybrano {{count}}",
+          "unlinked": "Odłączono",
+          "wouldUnlink": "Zostałoby odłączonych",
+          "linked": "Powiązano",
+          "wouldLink": "Zostałoby powiązanych",
+          "alreadyUnlinked": "Już odłączeni",
+          "alreadyLinked": "Już powiązani",
+          "skippedInactive": "Pominięto (nieaktywny)"
+        },
+        "providerNames": {
+          "google": "Google Workspace",
+          "microsoft": "Microsoft 365"
+        }
+      }
     },
     "userRoles": {
       "title": "Przypisywanie ról użytkownikom",

@@ -521,5 +521,54 @@
         "clientTicketNotSupported": "Ticketcontroles voor cliënt-gebruikers zijn nog niet beschikbaar in de simulator omdat de zichtbaarheid van ticket-boards niet is inbegrepen. Probeer een interne gebruiker, of verifieer de ticket-toegang voor cliënten in de app."
       }
     }
+  },
+  "emailLogs": {
+    "page": {
+      "title": "E-maillogboeken",
+      "description": "Bekijk uitgaande e-mailactiviteit en los problemen met meldingsbezorging op."
+    },
+    "metrics": {
+      "totalSent": "Totaal verzonden",
+      "failedRate": "Mislukkingspercentage",
+      "today": "Vandaag"
+    },
+    "filters": {
+      "startDate": "Startdatum",
+      "endDate": "Einddatum",
+      "status": "Status",
+      "recipient": "Ontvanger",
+      "recipientPlaceholder": "Zoek e-mail…",
+      "ticket": "Ticket",
+      "ticketPlaceholder": "Ticket #…",
+      "statusOptions": {
+        "all": "Alle",
+        "sent": "Verzonden",
+        "failed": "Mislukt"
+      }
+    },
+    "table": {
+      "time": "Tijd",
+      "ticket": "Ticket",
+      "recipient": "Ontvanger",
+      "subject": "Onderwerp",
+      "status": "Status"
+    },
+    "loading": "Laden...",
+    "results_one": "{{count}} resultaat",
+    "results_other": "{{count}} resultaten",
+    "refresh": "Vernieuwen",
+    "close": "Sluiten",
+    "detail": {
+      "title": "E-mailloggegevens",
+      "noSubject": "Geen onderwerp",
+      "sentAt": "Verzonden op",
+      "status": "Status",
+      "provider": "Provider",
+      "messageId": "Message ID",
+      "to": "Aan",
+      "from": "Van",
+      "error": "Fout",
+      "metadata": "Metadata"
+    }
   }
 }

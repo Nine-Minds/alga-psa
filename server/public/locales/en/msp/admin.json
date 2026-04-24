@@ -521,5 +521,54 @@
         "clientTicketNotSupported": "Ticket checks for client users are not available in the simulator yet because ticket board visibility is not included. Try an internal user, or verify client ticket access in the app."
       }
     }
+  },
+  "emailLogs": {
+    "page": {
+      "title": "Email Logs",
+      "description": "Review outbound email activity and troubleshoot notification delivery."
+    },
+    "metrics": {
+      "totalSent": "Total sent",
+      "failedRate": "Failed rate",
+      "today": "Today"
+    },
+    "filters": {
+      "startDate": "Start date",
+      "endDate": "End date",
+      "status": "Status",
+      "recipient": "Recipient",
+      "recipientPlaceholder": "Search email…",
+      "ticket": "Ticket",
+      "ticketPlaceholder": "Ticket #…",
+      "statusOptions": {
+        "all": "All",
+        "sent": "Sent",
+        "failed": "Failed"
+      }
+    },
+    "table": {
+      "time": "Time",
+      "ticket": "Ticket",
+      "recipient": "Recipient",
+      "subject": "Subject",
+      "status": "Status"
+    },
+    "loading": "Loading…",
+    "results_one": "{{count}} result",
+    "results_other": "{{count}} results",
+    "refresh": "Refresh",
+    "close": "Close",
+    "detail": {
+      "title": "Email Log Details",
+      "noSubject": "No subject",
+      "sentAt": "Sent at",
+      "status": "Status",
+      "provider": "Provider",
+      "messageId": "Message ID",
+      "to": "To",
+      "from": "From",
+      "error": "Error",
+      "metadata": "Metadata"
+    }
   }
 }

@@ -1,6 +1,7 @@
 import { cache } from 'react';
 import { InteractionsFeed } from '@alga-psa/clients';
 import { getContactByContactNameId, getInteractionsForEntity } from '@alga-psa/clients/actions';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { Metadata } from 'next';
 
 const getCachedContact = cache((id: string) => getContactByContactNameId(id));
@@ -24,7 +25,8 @@ export default async function ContactActivityPage({ params }: { params: Promise<
   const interactions = await getInteractionsForEntity(resolvedParams.id, 'contact');
 
   if (!contact) {
-    return <div>Contact not found</div>;
+    const { t } = await getServerTranslation(undefined, 'common');
+    return <div>{t('pages.errors.contactNotFound')}</div>;
   }
 
   return (

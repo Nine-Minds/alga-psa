@@ -960,6 +960,66 @@
         "forgotPassword": "Forgot your password?",
         "mspStaffLogin": "MSP Staff? Login here →"
       }
+    },
+    "domain": {
+      "title": "Custom Domain",
+      "description": "Configure a branded hostname for your client portal. We will provision TLS certificates automatically once DNS is verified.",
+      "currentStatus": "Current status",
+      "noDomainConfigured": "No custom domain configured",
+      "defaultStatusMessage": "No custom domain registered yet.",
+      "lastChecked": "Last checked: {{value}}",
+      "updatingDomainPrefix": "Updating domain to ",
+      "updatingDomainSuffix": ". Provisioning will restart once you update.",
+      "editInstructions": "To change your domain, edit the value below and submit to kick off a new provisioning run.",
+      "actions": {
+        "refresh": "Refresh",
+        "refreshing": "Refreshing...",
+        "retry": "Retry",
+        "retrying": "Retrying…",
+        "removeDomain": "Remove Domain",
+        "saveDomain": "Save Domain",
+        "updateDomain": "Update Domain",
+        "submitting": "Submitting…",
+        "cancelEdit": "Cancel Edit"
+      },
+      "form": {
+        "label": "Custom domain",
+        "helpTextPrefix": "Add a CNAME record pointing to ",
+        "helpTextSuffix": " before submitting.",
+        "placeholder": "portal.example.com"
+      },
+      "checklist": {
+        "title": "Setup checklist",
+        "step1Prefix": "Create a CNAME record for your chosen host pointing to ",
+        "step1Suffix": ".",
+        "step2": "Click \"Save Domain\" to trigger DNS verification and certificate provisioning.",
+        "step3": "Use the Refresh button to poll provisioning progress. We will email your administrators if provisioning fails.",
+        "canonicalHostFallback": "canonical host"
+      },
+      "badges": {
+        "pending_dns": "Pending DNS",
+        "verifying_dns": "Verifying DNS",
+        "dns_failed": "DNS Failed",
+        "pending_certificate": "Pending Certificate",
+        "certificate_issuing": "Issuing Certificate",
+        "certificate_failed": "Certificate Failed",
+        "deploying": "Deploying",
+        "active": "Active",
+        "disabled": "Disabled",
+        "unknown": "Unknown"
+      },
+      "messages": {
+        "requestSubmitted": "Custom domain request submitted.",
+        "retryQueued": "Retry queued. Re-check status in a few moments.",
+        "removalRequested": "Custom domain removal requested.",
+        "enterDomainFirst": "Enter a domain before submitting.",
+        "confirmRemove": "Remove the current custom domain? Traffic will revert to the default hosted address.",
+        "loadFailed": "Unable to load portal domain status.",
+        "registerFailed": "Failed to register custom domain.",
+        "refreshFailed": "Failed to refresh domain status.",
+        "retryFailed": "Retry failed.",
+        "disableFailed": "Failed to disable custom domain."
+      }
     }
   },
   "mspLanguage": {
@@ -991,7 +1051,21 @@
       "telemetry": "Telemetry"
     },
     "internalTabs": {
-      "categories": "Categories"
+      "categories": "Categories",
+      "categoriesTypes": "Categories & Types"
+    },
+    "loading": {
+      "settings": "Loading settings...",
+      "templates": "Loading templates...",
+      "categories": "Loading categories..."
+    },
+    "unsaved": {
+      "title": "Unsaved Changes",
+      "message": "You have unsaved notification settings. Are you sure you want to leave? Your changes will be lost."
+    },
+    "tenantDescription": {
+      "email": "Configure tenant-wide email notification settings",
+      "internal": "Configure tenant-wide internal notification settings"
     },
     "sections": {
       "globalSettings": {
@@ -1271,6 +1345,107 @@
       "apiKeys": "Loading API key configuration...",
       "sso": "Loading SSO management tools...",
       "sessions": "Loading active sessions..."
+    },
+    "ssoBulk": {
+      "loading": {
+        "title": "Single Sign-On",
+        "description": "Loading SSO bulk assignment tools..."
+      },
+      "autoLink": {
+        "title": "Automatically set up SSO for new internal users",
+        "description": "Turn this on to provision every new staff account with your corporate SSO provider right away, so they never need a password-based sign-in.",
+        "body": "When enabled, newly added MSP users can sign in with Google or Microsoft using their work email. They will not have to manually link their account.",
+        "toggleLabel": "Toggle automatic SSO matching",
+        "disabledInfo": "Enable this toggle to let new and existing staff skip the “Connect SSO” flow when their email already matches a configured provider. We’ll still log every automatic link."
+      },
+      "bulk": {
+        "title": "Bulk Single Sign-On Assignment",
+        "description": "Select internal users from the list below and link them to a configured Google or Microsoft provider. Use preview to double-check the impact before executing.",
+        "noProviders": "No SSO providers are configured yet. Add OAuth credentials to continue with bulk assignments."
+      },
+      "errors": {
+        "loadProviders": "Unable to load SSO provider configuration.",
+        "updatePreferences": "Unable to update SSO preferences."
+      },
+      "form": {
+        "title": "Choose provider & select users",
+        "description": "Pick the configured SSO provider for your staff, then search and select the users who should be linked.",
+        "providerLabel": "Provider",
+        "notConfigured": "Not configured",
+        "providerNotConfiguredAlert": "Provide OAuth credentials for this provider before linking accounts.",
+        "actionLabel": "Action",
+        "linkSelected": "Link selected users",
+        "unlinkSelected": "Unlink selected users",
+        "actionPlaceholder": "Select SSO bulk action",
+        "actionDescription": "Linking adds the provider to each selected user. Unlinking removes the provider so the user returns to password/TOTP sign-in until they link again.",
+        "searchLabel": "Find internal users",
+        "searchPlaceholder": "Search by email or name",
+        "noneSelected": "No users selected yet.",
+        "selected_one": "{{count}} user selected.",
+        "selected_other": "{{count}} users selected.",
+        "clearSelection": "Clear selection",
+        "loadingUsers": "Loading users...",
+        "noMatch": "No users match this search.",
+        "noUsers": "No internal users found.",
+        "clientPortalComing": "Client portal bulk assignments are coming soon. For now, this tool applies only to internal MSP users.",
+        "loadUsersFailed": "Unable to load assignable users.",
+        "actions": {
+          "previewLink": "Preview assignment",
+          "previewUnlink": "Preview unlink",
+          "link": "Link accounts",
+          "unlink": "Unlink accounts",
+          "preparingPreview": "Preparing preview…",
+          "linking": "Linking accounts…",
+          "unlinking": "Unlinking accounts…",
+          "bulkLabel": "Bulk SSO actions {{location}}"
+        },
+        "table": {
+          "email": "Email",
+          "id": "ID",
+          "name": "Name",
+          "status": "Status",
+          "active": "Active",
+          "inactive": "Inactive",
+          "linkedProviders": "Linked providers",
+          "unlinked": "Unlinked",
+          "lastLogin": "Last login"
+        },
+        "toast": {
+          "providerRequiredTitle": "Provider required",
+          "providerRequiredDescription": "Select a configured provider before continuing.",
+          "noUsersTitle": "No users selected",
+          "noUsersDescription": "Select at least one user from the table.",
+          "failedTitle": "Bulk assignment failed",
+          "failedDescription": "Unable to process SSO bulk assignment.",
+          "linkCompleteTitle": "Link complete",
+          "unlinkCompleteTitle": "Unlink complete",
+          "previewReadyTitle": "Preview ready",
+          "linkedCount": "Linked {{count}} accounts via {{provider}}.",
+          "unlinkedCount": "Unlinked {{count}} accounts via {{provider}}.",
+          "previewUnlink_one": "Preview ready. We'll unlink {{count}} selected user.",
+          "previewUnlink_other": "Preview ready. We'll unlink {{count}} selected users.",
+          "previewLink": "Preview ready. Review the summary before linking accounts."
+        },
+        "results": {
+          "completeTitle": "Assignment complete",
+          "previewTitle": "Preview results",
+          "noneMatched": "None of the selected users matched the current filters.",
+          "processed_one": "Processed {{count}} user.",
+          "processed_other": "Processed {{count}} users.",
+          "candidatesSelected": "{{count}} selected",
+          "unlinked": "Unlinked",
+          "wouldUnlink": "Would unlink",
+          "linked": "Linked",
+          "wouldLink": "Would link",
+          "alreadyUnlinked": "Already unlinked",
+          "alreadyLinked": "Already linked",
+          "skippedInactive": "Skipped (inactive)"
+        },
+        "providerNames": {
+          "google": "Google Workspace",
+          "microsoft": "Microsoft 365"
+        }
+      }
     },
     "userRoles": {
       "title": "Assign Roles to Users",

@@ -521,5 +521,54 @@
         "clientTicketNotSupported": "Les vérifications de tickets pour les utilisateurs clients ne sont pas encore disponibles dans le simulateur, car la visibilité du tableau de tickets n'est pas incluse. Essayez avec un utilisateur interne, ou vérifiez l'accès aux tickets client dans l'application."
       }
     }
+  },
+  "emailLogs": {
+    "page": {
+      "title": "Journaux d'e-mails",
+      "description": "Consultez l'activité des e-mails sortants et dépannez la livraison des notifications."
+    },
+    "metrics": {
+      "totalSent": "Total envoyés",
+      "failedRate": "Taux d'échec",
+      "today": "Aujourd'hui"
+    },
+    "filters": {
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "status": "Statut",
+      "recipient": "Destinataire",
+      "recipientPlaceholder": "Rechercher un e-mail…",
+      "ticket": "Ticket",
+      "ticketPlaceholder": "Ticket n°…",
+      "statusOptions": {
+        "all": "Tous",
+        "sent": "Envoyé",
+        "failed": "Échoué"
+      }
+    },
+    "table": {
+      "time": "Heure",
+      "ticket": "Ticket",
+      "recipient": "Destinataire",
+      "subject": "Objet",
+      "status": "Statut"
+    },
+    "loading": "Chargement…",
+    "results_one": "{{count}} résultat",
+    "results_other": "{{count}} résultats",
+    "refresh": "Actualiser",
+    "close": "Fermer",
+    "detail": {
+      "title": "Détails du journal d'e-mail",
+      "noSubject": "Aucun objet",
+      "sentAt": "Envoyé le",
+      "status": "Statut",
+      "provider": "Fournisseur",
+      "messageId": "Message ID",
+      "to": "À",
+      "from": "De",
+      "error": "Erreur",
+      "metadata": "Métadonnées"
+    }
   }
 }

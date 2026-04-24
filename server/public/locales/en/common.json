@@ -1028,5 +1028,46 @@
       "Pacific": "Pacific",
       "Etc": "Other"
     }
+  },
+  "pages": {
+    "errors": {
+      "somethingWentWrong": "Something went wrong!",
+      "genericError": "An error occurred. Please try again later.",
+      "notFoundTitle": "404 - Page Not Found",
+      "notFoundDescription": "The page you are looking for does not exist.",
+      "userNotAuthenticated": "User not authenticated",
+      "userNotAuthenticatedError": "Error: User not authenticated",
+      "missingRunId": "Missing run id.",
+      "teamLeadAccessRequired": "Team lead access required",
+      "teamsTabUnavailable": "Teams tab unavailable",
+      "teamsSignInUnavailable": "Teams sign-in unavailable",
+      "assetNotFound": "Asset not found",
+      "contactNotFound": "Contact not found",
+      "templateNotFound": "Template not found",
+      "contactLoadError": "Error loading contact",
+      "unknownError": "Unknown error occurred",
+      "templateNotFoundDetail": "The template you're looking for doesn't exist or has been deleted.",
+      "teamLeadAccessDetail": "To approve time sheets for your team members, you need to be a team lead.",
+      "teamsTabEnableHint": "Ask a PSA administrator to enable the Teams integration for this tenant before reopening the tab."
+    },
+    "actions": {
+      "tryAgain": "Try again",
+      "goToTeamSettings": "Go to Team Settings",
+      "selectDateRange": "Select date range"
+    },
+    "loading": {
+      "billingDashboard": "Loading billing dashboard...",
+      "onboarding": "Loading onboarding...",
+      "extension": "Loading extension...",
+      "extensionSettings": "Loading extension settings...",
+      "ssoSettings": "Loading SSO settings..."
+    },
+    "titles": {
+      "emailLogs": "Email Logs",
+      "editAsset": "Edit Asset",
+      "slaSettings": "SLA Settings",
+      "documentEditor": "Document Editor",
+      "accountManagement": "Account Management"
+    }
   }
 }

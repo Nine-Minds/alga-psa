@@ -960,6 +960,66 @@
         "forgotPassword": "Forgot your password?",
         "mspStaffLogin": "MSP Staff? Login here →"
       }
+    },
+    "domain": {
+      "title": "Domínio Personalizado",
+      "description": "Configure um nome de anfitrião personalizado para o seu portal do cliente. Os certificados TLS serão aprovisionados automaticamente assim que o DNS for verificado.",
+      "currentStatus": "Estado atual",
+      "noDomainConfigured": "Nenhum domínio personalizado configurado",
+      "defaultStatusMessage": "Ainda não foi registado nenhum domínio personalizado.",
+      "lastChecked": "Última verificação: {{value}}",
+      "updatingDomainPrefix": "A atualizar o domínio para ",
+      "updatingDomainSuffix": ". O aprovisionamento será reiniciado após a atualização.",
+      "editInstructions": "Para alterar o seu domínio, edite o valor abaixo e submeta para iniciar uma nova execução de aprovisionamento.",
+      "actions": {
+        "refresh": "Atualizar",
+        "refreshing": "A atualizar...",
+        "retry": "Tentar novamente",
+        "retrying": "A tentar novamente…",
+        "removeDomain": "Remover Domínio",
+        "saveDomain": "Guardar Domínio",
+        "updateDomain": "Atualizar Domínio",
+        "submitting": "A submeter…",
+        "cancelEdit": "Cancelar Edição"
+      },
+      "form": {
+        "label": "Domínio personalizado",
+        "helpTextPrefix": "Adicione um registo CNAME a apontar para ",
+        "helpTextSuffix": " antes de submeter.",
+        "placeholder": "portal.example.com"
+      },
+      "checklist": {
+        "title": "Lista de verificação de configuração",
+        "step1Prefix": "Crie um registo CNAME para o anfitrião escolhido a apontar para ",
+        "step1Suffix": ".",
+        "step2": "Clique em \"Guardar Domínio\" para iniciar a verificação de DNS e o aprovisionamento do certificado.",
+        "step3": "Use o botão Atualizar para acompanhar o progresso do aprovisionamento. Os seus administradores serão notificados por email se o aprovisionamento falhar.",
+        "canonicalHostFallback": "anfitrião canónico"
+      },
+      "badges": {
+        "pending_dns": "DNS Pendente",
+        "verifying_dns": "A Verificar DNS",
+        "dns_failed": "DNS Falhou",
+        "pending_certificate": "Certificado Pendente",
+        "certificate_issuing": "A Emitir Certificado",
+        "certificate_failed": "Certificado Falhou",
+        "deploying": "A Implementar",
+        "active": "Ativo",
+        "disabled": "Desativado",
+        "unknown": "Desconhecido"
+      },
+      "messages": {
+        "requestSubmitted": "Pedido de domínio personalizado submetido.",
+        "retryQueued": "Nova tentativa colocada em fila. Verifique o estado novamente dentro de momentos.",
+        "removalRequested": "Remoção do domínio personalizado solicitada.",
+        "enterDomainFirst": "Introduza um domínio antes de submeter.",
+        "confirmRemove": "Remover o domínio personalizado atual? O tráfego será revertido para o endereço alojado predefinido.",
+        "loadFailed": "Não foi possível carregar o estado do domínio do portal.",
+        "registerFailed": "Falha ao registar o domínio personalizado.",
+        "refreshFailed": "Falha ao atualizar o estado do domínio.",
+        "retryFailed": "A nova tentativa falhou.",
+        "disableFailed": "Falha ao desativar o domínio personalizado."
+      }
     }
   },
   "mspLanguage": {
@@ -991,7 +1051,21 @@
       "telemetry": "Telemetry"
     },
     "internalTabs": {
-      "categories": "Categories"
+      "categories": "Categories",
+      "categoriesTypes": "Categorias e Tipos"
+    },
+    "loading": {
+      "settings": "A carregar definições...",
+      "templates": "A carregar modelos...",
+      "categories": "A carregar categorias..."
+    },
+    "unsaved": {
+      "title": "Alterações Não Guardadas",
+      "message": "Tem alterações não guardadas nas definições de notificações. Tem a certeza de que pretende sair? As suas alterações serão perdidas."
+    },
+    "tenantDescription": {
+      "email": "Configure as definições de notificações por email para todo o tenant",
+      "internal": "Configure as definições de notificações internas para todo o tenant"
     },
     "sections": {
       "globalSettings": {
@@ -1271,6 +1345,107 @@
       "apiKeys": "Loading API key configuration...",
       "sso": "Loading SSO management tools...",
       "sessions": "Loading active sessions..."
+    },
+    "ssoBulk": {
+      "loading": {
+        "title": "SSO",
+        "description": "A carregar ferramentas de atribuição em massa de SSO..."
+      },
+      "autoLink": {
+        "title": "Configurar SSO automaticamente para novos utilizadores internos",
+        "description": "Ative esta opção para aprovisionar imediatamente cada nova conta de colaborador com o seu fornecedor de SSO empresarial, dispensando o início de sessão por palavra-passe.",
+        "body": "Quando ativado, os novos utilizadores MSP podem iniciar sessão com Google ou Microsoft utilizando o seu email profissional. Não terão de associar manualmente a conta.",
+        "toggleLabel": "Alternar associação automática de SSO",
+        "disabledInfo": "Ative esta opção para que colaboradores novos e existentes possam dispensar o fluxo \"Conectar SSO\" quando o seu email já corresponde a um fornecedor configurado. Continuaremos a registar todas as associações automáticas."
+      },
+      "bulk": {
+        "title": "Atribuição em Massa de SSO",
+        "description": "Selecione utilizadores internos da lista abaixo e associe-os a um fornecedor Google ou Microsoft configurado. Use a pré-visualização para confirmar o impacto antes de executar.",
+        "noProviders": "Ainda não existem fornecedores SSO configurados. Adicione credenciais OAuth para continuar com as atribuições em massa."
+      },
+      "errors": {
+        "loadProviders": "Não foi possível carregar a configuração do fornecedor SSO.",
+        "updatePreferences": "Não foi possível atualizar as preferências de SSO."
+      },
+      "form": {
+        "title": "Escolher fornecedor e selecionar utilizadores",
+        "description": "Escolha o fornecedor SSO configurado para a sua equipa e, em seguida, pesquise e selecione os utilizadores a associar.",
+        "providerLabel": "Fornecedor",
+        "notConfigured": "Não configurado",
+        "providerNotConfiguredAlert": "Forneça credenciais OAuth para este fornecedor antes de associar contas.",
+        "actionLabel": "Ação",
+        "linkSelected": "Associar utilizadores selecionados",
+        "unlinkSelected": "Desassociar utilizadores selecionados",
+        "actionPlaceholder": "Selecionar ação em massa de SSO",
+        "actionDescription": "Associar adiciona o fornecedor a cada utilizador selecionado. Desassociar remove o fornecedor para que o utilizador volte ao início de sessão por palavra-passe/TOTP até voltar a associar.",
+        "searchLabel": "Procurar utilizadores internos",
+        "searchPlaceholder": "Pesquisar por email ou nome",
+        "noneSelected": "Ainda não há utilizadores selecionados.",
+        "selected_one": "{{count}} utilizador selecionado.",
+        "selected_other": "{{count}} utilizadores selecionados.",
+        "clearSelection": "Limpar seleção",
+        "loadingUsers": "A carregar utilizadores...",
+        "noMatch": "Nenhum utilizador corresponde a esta pesquisa.",
+        "noUsers": "Não foram encontrados utilizadores internos.",
+        "clientPortalComing": "As atribuições em massa do portal do cliente estarão disponíveis em breve. Por agora, esta ferramenta aplica-se apenas a utilizadores MSP internos.",
+        "loadUsersFailed": "Não foi possível carregar os utilizadores atribuíveis.",
+        "actions": {
+          "previewLink": "Pré-visualizar atribuição",
+          "previewUnlink": "Pré-visualizar desassociação",
+          "link": "Associar contas",
+          "unlink": "Desassociar contas",
+          "preparingPreview": "A preparar pré-visualização…",
+          "linking": "A associar contas…",
+          "unlinking": "A desassociar contas…",
+          "bulkLabel": "Ações de SSO em massa {{location}}"
+        },
+        "table": {
+          "email": "Email",
+          "id": "ID",
+          "name": "Nome",
+          "status": "Estado",
+          "active": "Ativo",
+          "inactive": "Inativo",
+          "linkedProviders": "Fornecedores associados",
+          "unlinked": "Não associado",
+          "lastLogin": "Último início de sessão"
+        },
+        "toast": {
+          "providerRequiredTitle": "Fornecedor obrigatório",
+          "providerRequiredDescription": "Selecione um fornecedor configurado antes de continuar.",
+          "noUsersTitle": "Nenhum utilizador selecionado",
+          "noUsersDescription": "Selecione pelo menos um utilizador da tabela.",
+          "failedTitle": "Atribuição em massa falhou",
+          "failedDescription": "Não foi possível processar a atribuição em massa de SSO.",
+          "linkCompleteTitle": "Associação concluída",
+          "unlinkCompleteTitle": "Desassociação concluída",
+          "previewReadyTitle": "Pré-visualização pronta",
+          "linkedCount": "Associadas {{count}} contas via {{provider}}.",
+          "unlinkedCount": "Desassociadas {{count}} contas via {{provider}}.",
+          "previewUnlink_one": "Pré-visualização pronta. Iremos desassociar {{count}} utilizador selecionado.",
+          "previewUnlink_other": "Pré-visualização pronta. Iremos desassociar {{count}} utilizadores selecionados.",
+          "previewLink": "Pré-visualização pronta. Reveja o resumo antes de associar contas."
+        },
+        "results": {
+          "completeTitle": "Atribuição concluída",
+          "previewTitle": "Resultados da pré-visualização",
+          "noneMatched": "Nenhum dos utilizadores selecionados corresponde aos filtros atuais.",
+          "processed_one": "Processado {{count}} utilizador.",
+          "processed_other": "Processados {{count}} utilizadores.",
+          "candidatesSelected": "{{count}} selecionados",
+          "unlinked": "Desassociados",
+          "wouldUnlink": "Seriam desassociados",
+          "linked": "Associados",
+          "wouldLink": "Seriam associados",
+          "alreadyUnlinked": "Já não associados",
+          "alreadyLinked": "Já associados",
+          "skippedInactive": "Ignorados (inativos)"
+        },
+        "providerNames": {
+          "google": "Google Workspace",
+          "microsoft": "Microsoft 365"
+        }
+      }
     },
     "userRoles": {
       "title": "Assign Roles to Users",

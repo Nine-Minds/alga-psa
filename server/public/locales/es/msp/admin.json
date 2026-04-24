@@ -521,5 +521,54 @@
         "clientTicketNotSupported": "Las comprobaciones de tickets para usuarios cliente aún no están disponibles en el simulador porque la visibilidad del tablero de tickets no está incluida. Pruebe con un usuario interno o verifique el acceso de tickets de cliente en la aplicación."
       }
     }
+  },
+  "emailLogs": {
+    "page": {
+      "title": "Registros de correo electrónico",
+      "description": "Revise la actividad de correo electrónico saliente y solucione problemas de entrega de notificaciones."
+    },
+    "metrics": {
+      "totalSent": "Total enviados",
+      "failedRate": "Tasa de fallos",
+      "today": "Hoy"
+    },
+    "filters": {
+      "startDate": "Fecha de inicio",
+      "endDate": "Fecha de fin",
+      "status": "Estado",
+      "recipient": "Destinatario",
+      "recipientPlaceholder": "Buscar Email…",
+      "ticket": "Ticket",
+      "ticketPlaceholder": "Ticket #…",
+      "statusOptions": {
+        "all": "Todos",
+        "sent": "Enviado",
+        "failed": "Fallido"
+      }
+    },
+    "table": {
+      "time": "Hora",
+      "ticket": "Ticket",
+      "recipient": "Destinatario",
+      "subject": "Asunto",
+      "status": "Estado"
+    },
+    "loading": "Cargando…",
+    "results_one": "{{count}} resultado",
+    "results_other": "{{count}} resultados",
+    "refresh": "Actualizar",
+    "close": "Cerrar",
+    "detail": {
+      "title": "Detalles del registro de correo electrónico",
+      "noSubject": "Sin asunto",
+      "sentAt": "Enviado el",
+      "status": "Estado",
+      "provider": "Proveedor",
+      "messageId": "ID de mensaje",
+      "to": "Para",
+      "from": "De",
+      "error": "Error",
+      "metadata": "Metadatos"
+    }
   }
 }

@@ -9,6 +9,7 @@ import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 import {
   disablePortalDomainAction,
@@ -25,27 +26,17 @@ interface StatusBadgeConfig {
   variant: BadgeVariant;
 }
 
-const STATUS_BADGES: Record<PortalDomainStatus, StatusBadgeConfig> = {
-  pending_dns: { label: 'Pending DNS', variant: 'warning' },
-  verifying_dns: { label: 'Verifying DNS', variant: 'warning' },
-  dns_failed: { label: 'DNS Failed', variant: 'error' },
-  pending_certificate: { label: 'Pending Certificate', variant: 'warning' },
-  certificate_issuing: { label: 'Issuing Certificate', variant: 'warning' },
-  certificate_failed: { label: 'Certificate Failed', variant: 'error' },
-  deploying: { label: 'Deploying', variant: 'secondary' },
-  active: { label: 'Active', variant: 'success' },
-  disabled: { label: 'Disabled', variant: 'default' },
+const STATUS_BADGE_VARIANTS: Record<PortalDomainStatus, BadgeVariant> = {
+  pending_dns: 'warning',
+  verifying_dns: 'warning',
+  dns_failed: 'error',
+  pending_certificate: 'warning',
+  certificate_issuing: 'warning',
+  certificate_failed: 'error',
+  deploying: 'secondary',
+  active: 'success',
+  disabled: 'default',
 };
-
-const DEFAULT_STATUS_MESSAGE = 'No custom domain registered yet.';
-
-function getStatusBadge(status: PortalDomainStatus | undefined): StatusBadgeConfig {
-  if (!status) {
-    return { label: 'Unknown', variant: 'default' };
-  }
-
-  return STATUS_BADGES[status] ?? { label: status.replace(/_/g, ' '), variant: 'default' };
-}
 
 function formatTimestamp(value: string | null | undefined): string {
   if (!value) {
@@ -54,6 +45,23 @@ function formatTimestamp(value: string | null | undefined): string {
 
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString();
+}
+
+function useStatusBadge() {
+  const { t } = useTranslation('msp/settings');
+  return (status: PortalDomainStatus | undefined): StatusBadgeConfig => {
+    if (!status) {
+      return { label: t('clientPortal.domain.badges.unknown'), variant: 'default' };
+    }
+    const variant = STATUS_BADGE_VARIANTS[status];
+    if (!variant) {
+      return { label: status.replace(/_/g, ' '), variant: 'default' };
+    }
+    return {
+      label: t(`clientPortal.domain.badges.${status}` as const),
+      variant,
+    };
+  };
 }
 
 function resolveErrorMessage(error: unknown, fallback: string): string {
@@ -73,6 +81,8 @@ function resolveErrorMessage(error: unknown, fallback: string): string {
 }
 
 const ClientPortalDomainSettings = () => {
+  const { t } = useTranslation('msp/settings');
+  const getStatusBadge = useStatusBadge();
   const [portalStatus, setPortalStatus] = useState<PortalDomainStatusResponse | null>(null);
   const [portalLoading, setPortalLoading] = useState(true);
   const [domainInput, setDomainInput] = useState('');
@@ -93,14 +103,14 @@ const ClientPortalDomainSettings = () => {
       setDomainInput(status.domain ?? '');
       setPortalError(null);
     } catch (error) {
-      const message = resolveErrorMessage(error, 'Unable to load portal domain status.');
+      const message = resolveErrorMessage(error, t('clientPortal.domain.messages.loadFailed'));
       setPortalError(message);
       console.error('Failed to load portal domain status:', error);
       toast.error(message);
     } finally {
       setPortalLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     syncPortalStatus();
@@ -110,7 +120,7 @@ const ClientPortalDomainSettings = () => {
     event.preventDefault();
 
     if (!domainInput.trim()) {
-      const message = 'Enter a domain before submitting.';
+      const message = t('clientPortal.domain.messages.enterDomainFirst');
       setPortalError(message);
       toast.error(message);
       return;
@@ -122,9 +132,9 @@ const ClientPortalDomainSettings = () => {
       setPortalStatus(result.status);
       setDomainInput(result.status.domain ?? domainInput.trim());
       setPortalError(null);
-      toast.success('Custom domain request submitted.');
+      toast.success(t('clientPortal.domain.messages.requestSubmitted'));
     } catch (error: any) {
-      const message = resolveErrorMessage(error, 'Failed to register custom domain.');
+      const message = resolveErrorMessage(error, t('clientPortal.domain.messages.registerFailed'));
       setPortalError(message);
       console.error('Failed to register portal domain:', error);
       toast.error(message);
@@ -141,7 +151,7 @@ const ClientPortalDomainSettings = () => {
       setDomainInput(status.domain ?? domainInput);
       setPortalError(null);
     } catch (error) {
-      const message = resolveErrorMessage(error, 'Failed to refresh domain status.');
+      const message = resolveErrorMessage(error, t('clientPortal.domain.messages.refreshFailed'));
       setPortalError(message);
       console.error('Failed to refresh portal domain status:', error);
       toast.error(message);
@@ -157,9 +167,9 @@ const ClientPortalDomainSettings = () => {
       setPortalStatus(status);
       setDomainInput(status.domain ?? domainInput);
       setPortalError(null);
-      toast.success('Retry queued. Re-check status in a few moments.');
+      toast.success(t('clientPortal.domain.messages.retryQueued'));
     } catch (error: any) {
-      const message = resolveErrorMessage(error, 'Retry failed.');
+      const message = resolveErrorMessage(error, t('clientPortal.domain.messages.retryFailed'));
       setPortalError(message);
       console.error('Failed to retry custom domain provisioning:', error);
       toast.error(message);
@@ -174,7 +184,7 @@ const ClientPortalDomainSettings = () => {
     }
 
     const confirmed = typeof window !== 'undefined'
-      ? window.confirm('Remove the current custom domain? Traffic will revert to the default hosted address.')
+      ? window.confirm(t('clientPortal.domain.messages.confirmRemove'))
       : true;
 
     if (!confirmed) {
@@ -187,9 +197,9 @@ const ClientPortalDomainSettings = () => {
       setPortalStatus(status);
       setDomainInput(status.domain ?? '');
       setPortalError(null);
-      toast.success('Custom domain removal requested.');
+      toast.success(t('clientPortal.domain.messages.removalRequested'));
     } catch (error) {
-      const message = resolveErrorMessage(error, 'Failed to disable custom domain.');
+      const message = resolveErrorMessage(error, t('clientPortal.domain.messages.disableFailed'));
       setPortalError(message);
       console.error('Failed to disable custom domain:', error);
       toast.error(message);
@@ -212,12 +222,12 @@ const ClientPortalDomainSettings = () => {
         <CardTitle>
           <div className="flex flex-wrap items-center gap-2">
             <AtSign className="h-5 w-5" />
-            Custom Domain
+            {t('clientPortal.domain.title')}
             <Badge variant={badge.variant}>{badge.label}</Badge>
           </div>
         </CardTitle>
         <CardDescription>
-          Configure a branded hostname for your client portal. We will provision TLS certificates automatically once DNS is verified.
+          {t('clientPortal.domain.description')}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -240,30 +250,32 @@ const ClientPortalDomainSettings = () => {
             <div className="rounded border border-gray-200 bg-gray-50 p-4">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="space-y-2">
-                  <div className="text-sm font-medium text-gray-700">Current status</div>
+                  <div className="text-sm font-medium text-gray-700">{t('clientPortal.domain.currentStatus')}</div>
                   <div className="text-sm text-gray-900">
                     {portalStatus?.domain ? (
                       <span className="font-semibold">{portalStatus.domain}</span>
                     ) : (
-                      <span className="text-gray-500">No custom domain configured</span>
+                      <span className="text-gray-500">{t('clientPortal.domain.noDomainConfigured')}</span>
                     )}
                   </div>
                   <p className="text-sm text-gray-600">
-                    {portalStatus?.statusMessage || DEFAULT_STATUS_MESSAGE}
+                    {portalStatus?.statusMessage || t('clientPortal.domain.defaultStatusMessage')}
                   </p>
                   <p className="text-xs text-gray-500">
-                    Last checked: {formatTimestamp(portalStatus?.lastCheckedAt)}
+                    {t('clientPortal.domain.lastChecked', { value: formatTimestamp(portalStatus?.lastCheckedAt) })}
                   </p>
                   {editingExistingDomain && (
                     <Alert variant="warning" showIcon={false} className="text-xs">
                       <AlertDescription>
                         {isDirtyDomain ? (
                           <span>
-                            Updating domain to <strong>{normalizedInput || '—'}</strong>. Provisioning will restart once you update.
+                            {t('clientPortal.domain.updatingDomainPrefix')}
+                            <strong>{normalizedInput || '—'}</strong>
+                            {t('clientPortal.domain.updatingDomainSuffix')}
                           </span>
                         ) : (
                           <span>
-                            To change your domain, edit the value below and submit to kick off a new provisioning run.
+                            {t('clientPortal.domain.editInstructions')}
                           </span>
                         )}
                       </AlertDescription>
@@ -278,7 +290,7 @@ const ClientPortalDomainSettings = () => {
                     onClick={handleRefresh}
                     disabled={submitting || refreshing || retrying}
                   >
-                    {refreshing ? 'Refreshing...' : 'Refresh'}
+                    {refreshing ? t('clientPortal.domain.actions.refreshing') : t('clientPortal.domain.actions.refresh')}
                   </Button>
                   {isFailureState && (
                     <Button
@@ -288,7 +300,7 @@ const ClientPortalDomainSettings = () => {
                       onClick={handleRetry}
                       disabled={submitting || retrying}
                     >
-                      {retrying ? 'Retrying…' : 'Retry'}
+                      {retrying ? t('clientPortal.domain.actions.retrying') : t('clientPortal.domain.actions.retry')}
                     </Button>
                   )}
                   {portalStatus?.domain && (
@@ -299,7 +311,7 @@ const ClientPortalDomainSettings = () => {
                       onClick={handleDisable}
                       disabled={submitting}
                     >
-                      Remove Domain
+                      {t('clientPortal.domain.actions.removeDomain')}
                     </Button>
                   )}
                 </div>
@@ -309,10 +321,12 @@ const ClientPortalDomainSettings = () => {
             <form className="space-y-3" onSubmit={handleDomainSubmit}>
               <div>
                 <label htmlFor="client-portal-domain-input" className="text-sm font-medium text-gray-700">
-                  Custom domain
+                  {t('clientPortal.domain.form.label')}
                 </label>
                 <p className="text-xs text-gray-500">
-                  Add a CNAME record pointing to <code className="rounded bg-gray-100 px-1 py-0.5">{portalStatus?.canonicalHost}</code> before submitting.
+                  {t('clientPortal.domain.form.helpTextPrefix')}
+                  <code className="rounded bg-gray-100 px-1 py-0.5">{portalStatus?.canonicalHost}</code>
+                  {t('clientPortal.domain.form.helpTextSuffix')}
                 </p>
                 <div className="mt-2 flex flex-col gap-2 sm:flex-row">
                   <Input
@@ -325,7 +339,7 @@ const ClientPortalDomainSettings = () => {
                         onEditDomainIntent({ previous: existingDomain, next: nextValue.trim() });
                       }
                     }}
-                    placeholder="portal.example.com"
+                    placeholder={t('clientPortal.domain.form.placeholder')}
                     disabled={submitting}
                     autoComplete="off"
                   />
@@ -339,12 +353,12 @@ const ClientPortalDomainSettings = () => {
                       }
                     >
                       {submitting
-                        ? 'Submitting…'
+                        ? t('clientPortal.domain.actions.submitting')
                       : editingExistingDomain
                         ? isDirtyDomain
-                          ? 'Update Domain'
-                          : 'Save Domain'
-                        : 'Save Domain'}
+                          ? t('clientPortal.domain.actions.updateDomain')
+                          : t('clientPortal.domain.actions.saveDomain')
+                        : t('clientPortal.domain.actions.saveDomain')}
                   </Button>
                   {editingExistingDomain && isDirtyDomain && (
                     <Button
@@ -354,7 +368,7 @@ const ClientPortalDomainSettings = () => {
                       onClick={() => setDomainInput(existingDomain)}
                       disabled={submitting}
                     >
-                      Cancel Edit
+                      {t('clientPortal.domain.actions.cancelEdit')}
                     </Button>
                   )}
                 </div>
@@ -362,14 +376,16 @@ const ClientPortalDomainSettings = () => {
             </form>
 
             <div className="rounded border border-dashed border-gray-200 bg-white p-4 text-sm text-gray-600">
-              <div className="font-medium text-gray-700">Setup checklist</div>
+              <div className="font-medium text-gray-700">{t('clientPortal.domain.checklist.title')}</div>
               <ol className="mt-2 list-decimal space-y-2 pl-4">
                 <li>
-                  Create a CNAME record for your chosen host pointing to <code className="rounded bg-gray-100 px-1 py-0.5">{portalStatus?.canonicalHost ?? 'canonical host'}</code>.
+                  {t('clientPortal.domain.checklist.step1Prefix')}
+                  <code className="rounded bg-gray-100 px-1 py-0.5">{portalStatus?.canonicalHost ?? t('clientPortal.domain.checklist.canonicalHostFallback')}</code>
+                  {t('clientPortal.domain.checklist.step1Suffix')}
                 </li>
-                <li>Click "Save Domain" to trigger DNS verification and certificate provisioning.</li>
+                <li>{t('clientPortal.domain.checklist.step2')}</li>
                 <li>
-                  Use the Refresh button to poll provisioning progress. We will email your administrators if provisioning fails.
+                  {t('clientPortal.domain.checklist.step3')}
                 </li>
               </ol>
             </div>

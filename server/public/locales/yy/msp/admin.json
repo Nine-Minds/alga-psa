@@ -521,5 +521,54 @@
         "clientTicketNotSupported": "55555"
       }
     }
+  },
+  "emailLogs": {
+    "page": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "metrics": {
+      "totalSent": "55555",
+      "failedRate": "55555",
+      "today": "55555"
+    },
+    "filters": {
+      "startDate": "55555",
+      "endDate": "55555",
+      "status": "55555",
+      "recipient": "55555",
+      "recipientPlaceholder": "55555",
+      "ticket": "55555",
+      "ticketPlaceholder": "55555",
+      "statusOptions": {
+        "all": "55555",
+        "sent": "55555",
+        "failed": "55555"
+      }
+    },
+    "table": {
+      "time": "55555",
+      "ticket": "55555",
+      "recipient": "55555",
+      "subject": "55555",
+      "status": "55555"
+    },
+    "loading": "55555",
+    "results_one": "55555 {{count}} 55555",
+    "results_other": "55555 {{count}} 55555",
+    "refresh": "55555",
+    "close": "55555",
+    "detail": {
+      "title": "55555",
+      "noSubject": "55555",
+      "sentAt": "55555",
+      "status": "55555",
+      "provider": "55555",
+      "messageId": "55555",
+      "to": "55555",
+      "from": "55555",
+      "error": "55555",
+      "metadata": "55555"
+    }
   }
 }

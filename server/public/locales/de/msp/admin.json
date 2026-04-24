@@ -521,5 +521,54 @@
         "clientTicketNotSupported": "Ticketprüfungen für Client-Benutzer sind im Simulator noch nicht verfügbar, da die Sichtbarkeit von Ticket-Boards nicht enthalten ist. Versuchen Sie es mit einem internen Benutzer oder überprüfen Sie den Client-Ticket-Zugriff in der App."
       }
     }
+  },
+  "emailLogs": {
+    "page": {
+      "title": "E-Mail-Protokolle",
+      "description": "Überprüfen Sie ausgehende E-Mail-Aktivitäten und beheben Sie Probleme bei der Zustellung von Benachrichtigungen."
+    },
+    "metrics": {
+      "totalSent": "Insgesamt gesendet",
+      "failedRate": "Fehlerquote",
+      "today": "Heute"
+    },
+    "filters": {
+      "startDate": "Startdatum",
+      "endDate": "Enddatum",
+      "status": "Status",
+      "recipient": "Empfänger",
+      "recipientPlaceholder": "E-Mail suchen…",
+      "ticket": "Ticket",
+      "ticketPlaceholder": "Ticket-Nr.…",
+      "statusOptions": {
+        "all": "Alle",
+        "sent": "Gesendet",
+        "failed": "Fehlgeschlagen"
+      }
+    },
+    "table": {
+      "time": "Zeit",
+      "ticket": "Ticket",
+      "recipient": "Empfänger",
+      "subject": "Betreff",
+      "status": "Status"
+    },
+    "loading": "Wird geladen…",
+    "results_one": "{{count}} Ergebnis",
+    "results_other": "{{count}} Ergebnisse",
+    "refresh": "Aktualisieren",
+    "close": "Schließen",
+    "detail": {
+      "title": "Details zum E-Mail-Protokoll",
+      "noSubject": "Kein Betreff",
+      "sentAt": "Gesendet am",
+      "status": "Status",
+      "provider": "Anbieter",
+      "messageId": "Nachrichten-ID",
+      "to": "An",
+      "from": "Von",
+      "error": "Fehler",
+      "metadata": "Metadaten"
+    }
   }
 }

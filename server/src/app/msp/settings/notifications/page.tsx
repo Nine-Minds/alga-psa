@@ -7,6 +7,7 @@ import { CustomTabs } from "@alga-psa/ui/components/CustomTabs";
 import ViewSwitcher, { ViewSwitcherOption } from "@alga-psa/ui/components/ViewSwitcher";
 import { Card } from "@alga-psa/ui/components/Card";
 import { UnsavedChangesProvider, useUnsavedChanges } from "@alga-psa/ui";
+import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 
 type NotificationView = 'email' | 'internal';
 
@@ -17,10 +18,11 @@ const DEFAULT_EMAIL_TAB = 'settings';
 const DEFAULT_INTERNAL_TAB = 'categories-types';
 
 export default function NotificationsSettingsPage() {
+  const { t } = useTranslation('msp/settings');
   return (
     <UnsavedChangesProvider
-      dialogTitle="Unsaved Changes"
-      dialogMessage="You have unsaved notification settings. Are you sure you want to leave? Your changes will be lost."
+      dialogTitle={t('notifications.unsaved.title')}
+      dialogMessage={t('notifications.unsaved.message')}
     >
       <NotificationsSettingsContent />
     </UnsavedChangesProvider>
@@ -28,6 +30,7 @@ export default function NotificationsSettingsPage() {
 }
 
 function NotificationsSettingsContent() {
+  const { t } = useTranslation('msp/settings');
   const searchParams = useSearchParams();
   const viewParam = searchParams?.get('view');
   const tabParam = searchParams?.get('tab');
@@ -96,8 +99,8 @@ function NotificationsSettingsContent() {
   }, []);
 
   const viewOptions: ViewSwitcherOption<NotificationView>[] = [
-    { value: 'email', label: 'Email Notifications' },
-    { value: 'internal', label: 'Internal Notifications' },
+    { value: 'email', label: t('notifications.viewSwitcher.email') },
+    { value: 'internal', label: t('notifications.viewSwitcher.internal') },
   ];
 
   // Handle view change with confirmation
@@ -125,27 +128,27 @@ function NotificationsSettingsContent() {
   const emailTabs = [
     {
       id: 'settings',
-      label: "Settings",
+      label: t('notifications.emailTabs.settings'),
       content: (
-        <Suspense fallback={<div>Loading settings...</div>}>
+        <Suspense fallback={<div>{t('notifications.loading.settings')}</div>}>
           <NotificationSettings />
         </Suspense>
       ),
     },
     {
       id: 'email-templates',
-      label: "Email Templates",
+      label: t('notifications.emailTabs.emailTemplates'),
       content: (
-        <Suspense fallback={<div>Loading templates...</div>}>
+        <Suspense fallback={<div>{t('notifications.loading.templates')}</div>}>
           <EmailTemplates />
         </Suspense>
       ),
     },
     {
       id: 'categories',
-      label: "Categories",
+      label: t('notifications.emailTabs.categories'),
       content: (
-        <Suspense fallback={<div>Loading categories...</div>}>
+        <Suspense fallback={<div>{t('notifications.loading.categories')}</div>}>
           <NotificationCategories />
         </Suspense>
       ),
@@ -155,9 +158,9 @@ function NotificationsSettingsContent() {
   const internalTabs = [
     {
       id: 'categories-types',
-      label: "Categories & Types",
+      label: t('notifications.internalTabs.categoriesTypes'),
       content: (
-        <Suspense fallback={<div>Loading categories...</div>}>
+        <Suspense fallback={<div>{t('notifications.loading.categories')}</div>}>
           <InternalNotificationCategories />
         </Suspense>
       ),
@@ -168,11 +171,11 @@ function NotificationsSettingsContent() {
     <div className="container mx-auto p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold">Notification Settings</h1>
+          <h1 className="text-2xl font-semibold">{t('notifications.title')}</h1>
           <p className="text-gray-600 text-sm mt-1">
             {currentView === 'email'
-              ? 'Configure tenant-wide email notification settings'
-              : 'Configure tenant-wide internal notification settings'}
+              ? t('notifications.tenantDescription.email')
+              : t('notifications.tenantDescription.internal')}
           </p>
         </div>
         <ViewSwitcher

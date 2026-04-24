@@ -521,5 +521,56 @@
         "clientTicketNotSupported": "Sprawdzenia biletów dla użytkowników klienta nie są jeszcze dostępne w symulatorze, ponieważ widoczność tablicy biletów nie jest uwzględniona. Spróbuj z użytkownikiem wewnętrznym lub zweryfikuj dostęp klienta do biletów w aplikacji."
       }
     }
+  },
+  "emailLogs": {
+    "page": {
+      "title": "Dzienniki Email",
+      "description": "Przeglądaj aktywność wychodzących wiadomości email i rozwiązuj problemy z dostarczaniem powiadomień."
+    },
+    "metrics": {
+      "totalSent": "Łącznie wysłanych",
+      "failedRate": "Wskaźnik niepowodzeń",
+      "today": "Dzisiaj"
+    },
+    "filters": {
+      "startDate": "Data początkowa",
+      "endDate": "Data końcowa",
+      "status": "Status",
+      "recipient": "Odbiorca",
+      "recipientPlaceholder": "Szukaj Email…",
+      "ticket": "Zgłoszenie",
+      "ticketPlaceholder": "Nr zgłoszenia…",
+      "statusOptions": {
+        "all": "Wszystkie",
+        "sent": "Wysłane",
+        "failed": "Nieudane"
+      }
+    },
+    "table": {
+      "time": "Czas",
+      "ticket": "Zgłoszenie",
+      "recipient": "Odbiorca",
+      "subject": "Temat",
+      "status": "Status"
+    },
+    "loading": "Ładowanie...",
+    "results_one": "{{count}} wynik",
+    "results_few": "{{count}} wyniki",
+    "results_many": "{{count}} wyników",
+    "results_other": "{{count}} wyników",
+    "refresh": "Odśwież",
+    "close": "Zamknij",
+    "detail": {
+      "title": "Szczegóły dziennika Email",
+      "noSubject": "Brak tematu",
+      "sentAt": "Wysłano",
+      "status": "Status",
+      "provider": "Dostawca",
+      "messageId": "ID wiadomości",
+      "to": "Do",
+      "from": "Od",
+      "error": "Błąd",
+      "metadata": "Metadane"
+    }
   }
 }

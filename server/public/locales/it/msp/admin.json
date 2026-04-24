@@ -521,5 +521,54 @@
         "clientTicketNotSupported": "I controlli dei ticket per gli utenti client non sono ancora disponibili nel simulatore perché la visibilità della board dei ticket non è inclusa. Prova con un utente interno o verifica l'accesso ai ticket client nell'app."
       }
     }
+  },
+  "emailLogs": {
+    "page": {
+      "title": "Log Email",
+      "description": "Esamini l'attività delle email in uscita e risolva i problemi di consegna delle notifiche."
+    },
+    "metrics": {
+      "totalSent": "Totale inviate",
+      "failedRate": "Tasso di errore",
+      "today": "Oggi"
+    },
+    "filters": {
+      "startDate": "Data di inizio",
+      "endDate": "Data di fine",
+      "status": "Stato",
+      "recipient": "Destinatario",
+      "recipientPlaceholder": "Cerca email…",
+      "ticket": "Ticket",
+      "ticketPlaceholder": "Ticket #…",
+      "statusOptions": {
+        "all": "Tutti",
+        "sent": "Inviata",
+        "failed": "Non riuscita"
+      }
+    },
+    "table": {
+      "time": "Ora",
+      "ticket": "Ticket",
+      "recipient": "Destinatario",
+      "subject": "Oggetto",
+      "status": "Stato"
+    },
+    "loading": "Caricamento…",
+    "results_one": "{{count}} risultato",
+    "results_other": "{{count}} risultati",
+    "refresh": "Aggiorna",
+    "close": "Chiudi",
+    "detail": {
+      "title": "Dettagli Log Email",
+      "noSubject": "Nessun oggetto",
+      "sentAt": "Inviata il",
+      "status": "Stato",
+      "provider": "Provider",
+      "messageId": "ID messaggio",
+      "to": "A",
+      "from": "Da",
+      "error": "Errore",
+      "metadata": "Metadati"
+    }
   }
 }

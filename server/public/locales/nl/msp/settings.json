@@ -960,6 +960,66 @@
         "forgotPassword": "Wachtwoord vergeten?",
         "mspStaffLogin": "MSP-medewerker? Log hier in →"
       }
+    },
+    "domain": {
+      "title": "Aangepast domein",
+      "description": "Configureer een hostnaam met huisstijl voor uw klantenportaal. We voorzien automatisch in TLS-certificaten zodra DNS is geverifieerd.",
+      "currentStatus": "Huidige status",
+      "noDomainConfigured": "Geen aangepast domein geconfigureerd",
+      "defaultStatusMessage": "Nog geen aangepast domein geregistreerd.",
+      "lastChecked": "Laatst gecontroleerd: {{value}}",
+      "updatingDomainPrefix": "Domein wordt bijgewerkt naar ",
+      "updatingDomainSuffix": ". Provisioning start opnieuw zodra u bijwerkt.",
+      "editInstructions": "Bewerk de waarde hieronder en verzend om uw domein te wijzigen en een nieuwe provisioning-run te starten.",
+      "actions": {
+        "refresh": "Vernieuwen",
+        "refreshing": "Vernieuwen...",
+        "retry": "Opnieuw proberen",
+        "retrying": "Opnieuw proberen…",
+        "removeDomain": "Domein verwijderen",
+        "saveDomain": "Domein opslaan",
+        "updateDomain": "Domein bijwerken",
+        "submitting": "Bezig met verzenden…",
+        "cancelEdit": "Bewerken annuleren"
+      },
+      "form": {
+        "label": "Aangepast domein",
+        "helpTextPrefix": "Voeg een CNAME-record toe dat verwijst naar ",
+        "helpTextSuffix": " voordat u verzendt.",
+        "placeholder": "portaal.voorbeeld.nl"
+      },
+      "checklist": {
+        "title": "Configuratiechecklist",
+        "step1Prefix": "Maak een CNAME-record voor de gekozen host die verwijst naar ",
+        "step1Suffix": ".",
+        "step2": "Klik op \"Domein opslaan\" om DNS-verificatie en certificaatprovisioning te starten.",
+        "step3": "Gebruik de knop Vernieuwen om de voortgang van provisioning te volgen. We e-mailen uw beheerders als provisioning mislukt.",
+        "canonicalHostFallback": "canonieke host"
+      },
+      "badges": {
+        "pending_dns": "DNS in behandeling",
+        "verifying_dns": "DNS verifiëren",
+        "dns_failed": "DNS mislukt",
+        "pending_certificate": "Certificaat in behandeling",
+        "certificate_issuing": "Certificaat uitgeven",
+        "certificate_failed": "Certificaat mislukt",
+        "deploying": "Implementeren",
+        "active": "Actief",
+        "disabled": "Uitgeschakeld",
+        "unknown": "Onbekend"
+      },
+      "messages": {
+        "requestSubmitted": "Aanvraag voor aangepast domein verzonden.",
+        "retryQueued": "Nieuwe poging in wachtrij. Controleer de status over enkele ogenblikken opnieuw.",
+        "removalRequested": "Verwijdering van aangepast domein aangevraagd.",
+        "enterDomainFirst": "Voer een domein in voordat u verzendt.",
+        "confirmRemove": "Het huidige aangepaste domein verwijderen? Verkeer wordt teruggezet naar het standaard gehoste adres.",
+        "loadFailed": "Kan portaaldomeinstatus niet laden.",
+        "registerFailed": "Kan aangepast domein niet registreren.",
+        "refreshFailed": "Kan domeinstatus niet vernieuwen.",
+        "retryFailed": "Opnieuw proberen mislukt.",
+        "disableFailed": "Kan aangepast domein niet uitschakelen."
+      }
     }
   },
   "mspLanguage": {
@@ -991,7 +1051,21 @@
       "telemetry": "Telemetrie"
     },
     "internalTabs": {
-      "categories": "Categorieën"
+      "categories": "Categorieën",
+      "categoriesTypes": "Categorieën en typen"
+    },
+    "loading": {
+      "settings": "Instellingen laden...",
+      "templates": "Sjablonen laden...",
+      "categories": "Categorieën laden..."
+    },
+    "unsaved": {
+      "title": "Niet-opgeslagen wijzigingen",
+      "message": "U heeft niet-opgeslagen meldingsinstellingen. Weet u zeker dat u wilt vertrekken? Uw wijzigingen gaan verloren."
+    },
+    "tenantDescription": {
+      "email": "Configureer tenantbrede e-mailmeldingsinstellingen",
+      "internal": "Configureer tenantbrede interne meldingsinstellingen"
     },
     "sections": {
       "globalSettings": {
@@ -1271,6 +1345,107 @@
       "apiKeys": "API-sleutelconfiguratie laden...",
       "sso": "SSO-beheertools laden...",
       "sessions": "Actieve sessies laden..."
+    },
+    "ssoBulk": {
+      "loading": {
+        "title": "Single sign-on",
+        "description": "SSO-tools voor bulktoewijzing laden..."
+      },
+      "autoLink": {
+        "title": "SSO automatisch instellen voor nieuwe interne gebruikers",
+        "description": "Schakel dit in om elk nieuw personeelsaccount direct te voorzien van uw zakelijke SSO-provider, zodat ze nooit een wachtwoordgebaseerde aanmelding nodig hebben.",
+        "body": "Wanneer ingeschakeld, kunnen nieuw toegevoegde MSP-gebruikers zich aanmelden met Google of Microsoft via hun zakelijk e-mailadres. Ze hoeven hun account niet handmatig te koppelen.",
+        "toggleLabel": "Automatische SSO-matching in-/uitschakelen",
+        "disabledInfo": "Schakel dit in om nieuw en bestaand personeel de “SSO koppelen”-flow over te laten slaan wanneer hun e-mailadres al overeenkomt met een geconfigureerde provider. We registreren nog steeds elke automatische koppeling."
+      },
+      "bulk": {
+        "title": "Bulk Single sign-on-toewijzing",
+        "description": "Selecteer interne gebruikers uit de onderstaande lijst en koppel ze aan een geconfigureerde Google- of Microsoft-provider. Gebruik voorbeeld om de impact te dubbelchecken voordat u uitvoert.",
+        "noProviders": "Er zijn nog geen SSO-providers geconfigureerd. Voeg OAuth-inloggegevens toe om door te gaan met bulktoewijzingen."
+      },
+      "errors": {
+        "loadProviders": "Kan SSO-providerconfiguratie niet laden.",
+        "updatePreferences": "Kan SSO-voorkeuren niet bijwerken."
+      },
+      "form": {
+        "title": "Provider kiezen en gebruikers selecteren",
+        "description": "Kies de geconfigureerde SSO-provider voor uw personeel, zoek vervolgens en selecteer de gebruikers die gekoppeld moeten worden.",
+        "providerLabel": "Provider",
+        "notConfigured": "Niet geconfigureerd",
+        "providerNotConfiguredAlert": "Voer OAuth-inloggegevens voor deze provider in voordat u accounts koppelt.",
+        "actionLabel": "Actie",
+        "linkSelected": "Geselecteerde gebruikers koppelen",
+        "unlinkSelected": "Koppeling van geselecteerde gebruikers verwijderen",
+        "actionPlaceholder": "Selecteer SSO-bulkactie",
+        "actionDescription": "Koppelen voegt de provider toe aan elke geselecteerde gebruiker. Ontkoppelen verwijdert de provider zodat de gebruiker terugkeert naar wachtwoord/TOTP-aanmelding totdat hij opnieuw koppelt.",
+        "searchLabel": "Interne gebruikers zoeken",
+        "searchPlaceholder": "Zoek op e-mail of naam",
+        "noneSelected": "Nog geen gebruikers geselecteerd.",
+        "selected_one": "{{count}} gebruiker geselecteerd.",
+        "selected_other": "{{count}} gebruikers geselecteerd.",
+        "clearSelection": "Selectie wissen",
+        "loadingUsers": "Gebruikers laden...",
+        "noMatch": "Geen gebruikers komen overeen met deze zoekopdracht.",
+        "noUsers": "Geen interne gebruikers gevonden.",
+        "clientPortalComing": "Bulktoewijzingen voor het klantenportaal komen binnenkort. Voorlopig is deze tool alleen van toepassing op interne MSP-gebruikers.",
+        "loadUsersFailed": "Kan toewijsbare gebruikers niet laden.",
+        "actions": {
+          "previewLink": "Toewijzing voorbeeld",
+          "previewUnlink": "Ontkoppeling voorbeeld",
+          "link": "Accounts koppelen",
+          "unlink": "Accounts ontkoppelen",
+          "preparingPreview": "Voorbeeld voorbereiden…",
+          "linking": "Accounts koppelen…",
+          "unlinking": "Accounts ontkoppelen…",
+          "bulkLabel": "SSO-bulkacties {{location}}"
+        },
+        "table": {
+          "email": "Email",
+          "id": "ID",
+          "name": "Naam",
+          "status": "Status",
+          "active": "Actief",
+          "inactive": "Inactief",
+          "linkedProviders": "Gekoppelde providers",
+          "unlinked": "Ontkoppeld",
+          "lastLogin": "Laatste aanmelding"
+        },
+        "toast": {
+          "providerRequiredTitle": "Provider vereist",
+          "providerRequiredDescription": "Selecteer een geconfigureerde provider voordat u doorgaat.",
+          "noUsersTitle": "Geen gebruikers geselecteerd",
+          "noUsersDescription": "Selecteer ten minste één gebruiker uit de tabel.",
+          "failedTitle": "Bulktoewijzing mislukt",
+          "failedDescription": "Kan SSO-bulktoewijzing niet verwerken.",
+          "linkCompleteTitle": "Koppeling voltooid",
+          "unlinkCompleteTitle": "Ontkoppeling voltooid",
+          "previewReadyTitle": "Voorbeeld klaar",
+          "linkedCount": "{{count}} accounts gekoppeld via {{provider}}.",
+          "unlinkedCount": "{{count}} accounts ontkoppeld via {{provider}}.",
+          "previewUnlink_one": "Voorbeeld klaar. We ontkoppelen {{count}} geselecteerde gebruiker.",
+          "previewUnlink_other": "Voorbeeld klaar. We ontkoppelen {{count}} geselecteerde gebruikers.",
+          "previewLink": "Voorbeeld klaar. Bekijk het overzicht voordat u accounts koppelt."
+        },
+        "results": {
+          "completeTitle": "Toewijzing voltooid",
+          "previewTitle": "Voorbeeldresultaten",
+          "noneMatched": "Geen van de geselecteerde gebruikers kwam overeen met de huidige filters.",
+          "processed_one": "{{count}} gebruiker verwerkt.",
+          "processed_other": "{{count}} gebruikers verwerkt.",
+          "candidatesSelected": "{{count}} geselecteerd",
+          "unlinked": "Ontkoppeld",
+          "wouldUnlink": "Zou ontkoppelen",
+          "linked": "Gekoppeld",
+          "wouldLink": "Zou koppelen",
+          "alreadyUnlinked": "Al ontkoppeld",
+          "alreadyLinked": "Al gekoppeld",
+          "skippedInactive": "Overgeslagen (inactief)"
+        },
+        "providerNames": {
+          "google": "Google Workspace",
+          "microsoft": "Microsoft 365"
+        }
+      }
     },
     "userRoles": {
       "title": "Rollen toewijzen aan gebruikers",

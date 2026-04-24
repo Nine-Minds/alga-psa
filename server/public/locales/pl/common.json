@@ -1028,5 +1028,46 @@
       "Pacific": "Pacyfik",
       "Etc": "Inne"
     }
+  },
+  "pages": {
+    "errors": {
+      "somethingWentWrong": "Coś poszło nie tak!",
+      "genericError": "Wystąpił błąd. Spróbuj ponownie później.",
+      "notFoundTitle": "404 - Nie znaleziono strony",
+      "notFoundDescription": "Szukana strona nie istnieje.",
+      "userNotAuthenticated": "Użytkownik nieuwierzytelniony",
+      "userNotAuthenticatedError": "Błąd: Użytkownik nieuwierzytelniony",
+      "missingRunId": "Brak ID uruchomienia.",
+      "teamLeadAccessRequired": "Wymagany dostęp lidera zespołu",
+      "teamsTabUnavailable": "Karta Teams niedostępna",
+      "teamsSignInUnavailable": "Logowanie Teams niedostępne",
+      "assetNotFound": "Nie znaleziono zasobu",
+      "contactNotFound": "Nie znaleziono kontaktu",
+      "templateNotFound": "Nie znaleziono szablonu",
+      "contactLoadError": "Błąd podczas ładowania kontaktu",
+      "unknownError": "Wystąpił nieznany błąd",
+      "templateNotFoundDetail": "Szukany szablon nie istnieje lub został usunięty.",
+      "teamLeadAccessDetail": "Aby zatwierdzać karty czasu pracy członków zespołu, musisz być liderem zespołu.",
+      "teamsTabEnableHint": "Poproś administratora PSA o włączenie integracji Teams dla tego tenanta przed ponownym otwarciem karty."
+    },
+    "actions": {
+      "tryAgain": "Spróbuj ponownie",
+      "goToTeamSettings": "Przejdź do ustawień zespołu",
+      "selectDateRange": "Wybierz zakres dat"
+    },
+    "loading": {
+      "billingDashboard": "Ładowanie pulpitu rozliczeń...",
+      "onboarding": "Ładowanie wprowadzenia...",
+      "extension": "Ładowanie rozszerzenia...",
+      "extensionSettings": "Ładowanie ustawień rozszerzenia...",
+      "ssoSettings": "Ładowanie ustawień SSO..."
+    },
+    "titles": {
+      "emailLogs": "Dzienniki e-mail",
+      "editAsset": "Edytuj zasób",
+      "slaSettings": "Ustawienia SLA",
+      "documentEditor": "Edytor dokumentów",
+      "accountManagement": "Zarządzanie kontem"
+    }
   }
 }

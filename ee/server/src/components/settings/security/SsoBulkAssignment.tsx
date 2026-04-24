@@ -8,9 +8,11 @@ import SettingsTabSkeleton from "@alga-psa/ui/components/skeletons/SettingsTabSk
 import type { SsoProviderOption } from "@ee/lib/auth/providerConfig";
 import { getSsoProviderOptionsAction } from "@ee/lib/actions/auth/getSsoProviderOptions";
 import { getSsoPreferencesAction, updateSsoPreferencesAction, type SsoPreferences } from "@ee/lib/actions/auth/ssoPreferences";
+import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import SsoBulkAssignmentForm from "./SsoBulkAssignmentForm";
 
 export default function SsoBulkAssignment() {
+  const { t } = useTranslation("msp/settings");
   const [providerOptions, setProviderOptions] = useState<SsoProviderOption[] | null>(null);
   const [preferences, setPreferences] = useState<SsoPreferences | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,7 +35,7 @@ export default function SsoBulkAssignment() {
         }
       } catch (err: any) {
         if (!cancelled) {
-          setError(err?.message ?? "Unable to load SSO provider configuration.");
+          setError(err?.message ?? t("ssoBulk.errors.loadProviders"));
           setProviderOptions([]);
         }
       } finally {
@@ -48,13 +50,13 @@ export default function SsoBulkAssignment() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   if (isLoading) {
     return (
       <SettingsTabSkeleton
-        title="Single Sign-On"
-        description="Loading SSO bulk assignment tools..."
+        title={t("ssoBulk.loading.title")}
+        description={t("ssoBulk.loading.description")}
         showTable
       />
     );
@@ -69,7 +71,7 @@ export default function SsoBulkAssignment() {
       const updated = await updateSsoPreferencesAction({ autoLinkInternal: checked });
       setPreferences(updated);
     } catch (err: any) {
-      setError(err?.message ?? "Unable to update SSO preferences.");
+      setError(err?.message ?? t("ssoBulk.errors.updatePreferences"));
     } finally {
       setPrefPending(false);
     }
@@ -79,32 +81,29 @@ export default function SsoBulkAssignment() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Automatically set up SSO for new internal users</CardTitle>
+          <CardTitle>{t("ssoBulk.autoLink.title")}</CardTitle>
           <CardDescription>
-            Turn this on to provision every new staff account with your corporate SSO provider right away, so they never
-            need a password-based sign-in.
+            {t("ssoBulk.autoLink.description")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between rounded-lg border border-muted-foreground/20 p-4">
             <div className="max-w-xl space-y-1">
               <p className="text-sm text-muted-foreground">
-                When enabled, newly added MSP users can sign in with Google or Microsoft using their work email. They
-                will not have to manually link their account.
+                {t("ssoBulk.autoLink.body")}
               </p>
             </div>
             <Switch
               checked={autoLinkEnabled}
               onCheckedChange={handleAutoLinkToggle}
               disabled={prefPending}
-              aria-label="Toggle automatic SSO matching"
+              aria-label={t("ssoBulk.autoLink.toggleLabel")}
             />
           </div>
           {!autoLinkEnabled && (
             <Alert variant="info">
               <AlertDescription>
-                Enable this toggle to let new and existing staff skip the “Connect SSO” flow when their email already
-                matches a configured provider. We’ll still log every automatic link.
+                {t("ssoBulk.autoLink.disabledInfo")}
               </AlertDescription>
             </Alert>
           )}
@@ -113,18 +112,16 @@ export default function SsoBulkAssignment() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Bulk Single Sign-On Assignment</CardTitle>
+          <CardTitle>{t("ssoBulk.bulk.title")}</CardTitle>
           <CardDescription>
-            Select internal users from the list below and link them to a configured Google or Microsoft provider.
-            Use preview to double-check the impact before executing.
+            {t("ssoBulk.bulk.description")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {shouldShowFallback ? (
             <Alert variant="info">
               <AlertDescription>
-                {error ??
-                  "No SSO providers are configured yet. Add OAuth credentials to continue with bulk assignments."}
+                {error ?? t("ssoBulk.bulk.noProviders")}
               </AlertDescription>
             </Alert>
           ) : (

@@ -521,5 +521,54 @@
         "clientTicketNotSupported": "As verificações de chamados para usuários cliente ainda não estão disponíveis no simulador porque a visibilidade do quadro de chamados não está incluída. Tente com um usuário interno ou verifique o acesso de chamados do cliente no aplicativo."
       }
     }
+  },
+  "emailLogs": {
+    "page": {
+      "title": "Registos de Email",
+      "description": "Reveja a atividade de envio de emails e resolva problemas de entrega de notificações."
+    },
+    "metrics": {
+      "totalSent": "Total enviado",
+      "failedRate": "Taxa de falhas",
+      "today": "Hoje"
+    },
+    "filters": {
+      "startDate": "Data de início",
+      "endDate": "Data de fim",
+      "status": "Estado",
+      "recipient": "Destinatário",
+      "recipientPlaceholder": "Pesquisar email…",
+      "ticket": "Ticket",
+      "ticketPlaceholder": "Ticket #…",
+      "statusOptions": {
+        "all": "Todos",
+        "sent": "Enviado",
+        "failed": "Falhou"
+      }
+    },
+    "table": {
+      "time": "Hora",
+      "ticket": "Ticket",
+      "recipient": "Destinatário",
+      "subject": "Assunto",
+      "status": "Estado"
+    },
+    "loading": "A carregar…",
+    "results_one": "{{count}} resultado",
+    "results_other": "{{count}} resultados",
+    "refresh": "Atualizar",
+    "close": "Fechar",
+    "detail": {
+      "title": "Detalhes do Registo de Email",
+      "noSubject": "Sem assunto",
+      "sentAt": "Enviado em",
+      "status": "Estado",
+      "provider": "Fornecedor",
+      "messageId": "ID da Mensagem",
+      "to": "Para",
+      "from": "De",
+      "error": "Erro",
+      "metadata": "Metadados"
+    }
   }
 }

@@ -609,11 +609,67 @@
   },
   "assetPatchStatusSection": {
     "title": "Sezione Stato patch risorse",
-    "description": "Patch aziendale e wrapper dello stato antivirus mostrati nell'esperienza dei dettagli della risorsa"
+    "description": "Patch aziendale e wrapper dello stato antivirus mostrati nell'esperienza dei dettagli della risorsa",
+    "heading": "Stato Patch",
+    "compliance": {
+      "unknown": "Sconosciuto",
+      "actionRequired": "Azione richiesta",
+      "updatesAvailable": "Aggiornamenti disponibili",
+      "minorUpdates": "Aggiornamenti minori",
+      "upToDate": "Aggiornato"
+    },
+    "relativeTime": {
+      "never": "Mai",
+      "justNow": "Adesso",
+      "minutesAgo": "{{count}}m fa",
+      "hoursAgo": "{{count}}h fa",
+      "daysAgo": "{{count}}g fa"
+    },
+    "labels": {
+      "osPatches": "Patch sistema operativo",
+      "software": "Software",
+      "failed": "Non riuscito",
+      "lastScan": "Ultima scansione",
+      "pending": "in sospeso",
+      "patches": "patch"
+    }
   },
   "assetSoftwareInventory": {
     "title": "Inventario del software delle risorse",
-    "description": "Wrapper di inventario software aziendale per il software installato e i dati sulla versione"
+    "description": "Wrapper di inventario software aziendale per il software installato e i dati sulla versione",
+    "heading": "Inventario Software",
+    "searchPlaceholder": "Cerca software...",
+    "appsCount": "{{count}} app",
+    "unknownName": "Sconosciuto",
+    "noMatch": "Nessun software corrisponde alla sua ricerca",
+    "version": "v{{version}}",
+    "by": "di {{publisher}}",
+    "showingOfApplications": "Visualizzazione di {{shown}} su {{total}} applicazioni",
+    "more": "+{{count}} altri"
+  },
+  "remoteAccess": {
+    "remoteDesktop": "Desktop remoto",
+    "remoteShell": "Shell remota",
+    "remoteAccess": "Accesso remoto",
+    "deviceOverdue": "Il dispositivo è in ritardo",
+    "deviceOffline": "Il dispositivo è offline",
+    "errors": {
+      "urlFetchFailed": "Impossibile ottenere l'URL di accesso remoto",
+      "initiateFailed": "Impossibile avviare l'accesso remoto"
+    },
+    "indicator": {
+      "online": "Online",
+      "offline": "Offline",
+      "available": "Accesso remoto disponibile",
+      "deviceOffline": "Dispositivo offline"
+    }
+  },
+  "assetListErrors": {
+    "genericError": "Si è verificato un errore. La preghiamo di riprovare più tardi.",
+    "assetNotFound": "Risorsa non trovata"
+  },
+  "assetEdit": {
+    "pageTitle": "Modifica risorsa"
   },
   "associatedAssets": {
     "title": "Beni associati",
