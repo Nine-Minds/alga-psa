@@ -29,6 +29,7 @@ export async function updateTeamsMeeting(
         appointment_request_id: input.appointmentRequestId ?? null,
         operation: 'update',
         meeting_id: input.meetingId,
+        status: null,
       });
       return false;
     }
@@ -82,6 +83,7 @@ export async function updateTeamsMeeting(
       appointment_request_id: input.appointmentRequestId ?? null,
       operation: 'update',
       meeting_id: input.meetingId,
+      status: null,
       error: normalizeErrorMessage(error),
     });
     return false;

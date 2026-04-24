@@ -164,7 +164,7 @@
   {
     "id": "F028",
     "description": "Structured log lines emitted for each Graph call (create/update/delete) at INFO on success and WARN on failure with tenant, request id, operation, and Graph status code.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Observability"]
   }
 ]

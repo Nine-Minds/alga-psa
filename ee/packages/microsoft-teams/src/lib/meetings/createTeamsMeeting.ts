@@ -42,6 +42,7 @@ export async function createTeamsMeeting(
         tenant: input.tenantId,
         appointment_request_id: input.appointmentRequestId ?? null,
         operation: 'create',
+        status: null,
       });
       return null;
     }
@@ -112,6 +113,7 @@ export async function createTeamsMeeting(
       tenant: input.tenantId,
       appointment_request_id: input.appointmentRequestId ?? null,
       operation: 'create',
+      status: null,
       error: normalizeErrorMessage(error),
     });
     return null;
