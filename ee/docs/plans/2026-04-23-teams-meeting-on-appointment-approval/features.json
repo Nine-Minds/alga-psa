@@ -20,7 +20,7 @@
   {
     "id": "F004",
     "description": "updateTeamsMeeting helper PATCHes Graph /users/{upn}/onlineMeetings/{id} with new start/end times.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-4"]
   },
   {

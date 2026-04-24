@@ -120,6 +120,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-23: Completed `F001` by adding `server/migrations/20260423130000_add_online_meeting_columns_to_appointment_requests.cjs`. Used guarded `hasColumn` checks so the migration is idempotent and safe to re-run in local/dev environments.
 - 2026-04-23: Completed `F002` by adding `ee/server/migrations/20260423131000_add_default_meeting_organizer_to_teams_integrations.cjs`. Kept it EE-local and nullable so tenant setup remains opt-in.
 - 2026-04-23: Completed `F003` by adding `createTeamsMeeting()` plus shared meeting config and Graph auth helpers under `ee/packages/microsoft-teams/src/lib/meetings/`. The helper reads `teams_integrations.default_meeting_organizer_upn`, resolves the tenant Microsoft profile, POSTs to Graph, logs success/failure, and returns `null` on any soft failure.
+- 2026-04-23: Completed `F004` by adding `updateTeamsMeeting()` in the same EE meetings module. It reuses the shared tenant readiness/config resolver, PATCHes Graph with the new ISO datetimes, returns `false` on soft failure, and emits structured update logs.
 
 ## Working notes
 

@@ -3,6 +3,7 @@ export * from './actions/integrations/teamsPackageActions';
 export * from './auth/teamsMicrosoftProviderResolution';
 export * from './graphAuth';
 export * from './meetings/createTeamsMeeting';
+export * from './meetings/updateTeamsMeeting';
 export * from './notifications/teamsNotificationDelivery';
 export * from './teams/actions/teamsActionRegistry';
 export * from './teams/bot/teamsBotHandler';
