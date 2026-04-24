@@ -89,9 +89,6 @@
       "name": "Telemetry"
     },
     {
-      "name": "automation"
-    },
-    {
       "name": "billing-analytics"
     },
     {
@@ -2971,6 +2968,32 @@
           "id"
         ]
       },
+      "AutomationRuleParams": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Automation rule UUID from automation_rules.rule_id."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "AutomationTemplateParams": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Automation template UUID from automation_templates.template_id."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
       "AutomationExecutionsListQuery": {
         "type": "object",
         "properties": {
@@ -3083,6 +3106,240 @@
               "webhook"
             ],
             "description": "Filter by automation trigger type."
+          }
+        }
+      },
+      "AutomationRulesListQuery": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "string",
+            "description": "Page number as a query string. Defaults to 1."
+          },
+          "limit": {
+            "type": "string",
+            "description": "Page size as a query string. Must parse to 1 through 100; defaults to 25."
+          },
+          "sort": {
+            "type": "string",
+            "description": "Accepted by shared list query validation; service currently orders rules by created_at desc."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Accepted by shared list query validation."
+          },
+          "search": {
+            "type": "string",
+            "description": "Accepted by shared filter validation."
+          },
+          "created_from": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Accepted by shared filter validation."
+          },
+          "created_to": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Accepted by shared filter validation."
+          },
+          "updated_from": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Accepted by shared filter validation."
+          },
+          "updated_to": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Accepted by shared filter validation."
+          },
+          "is_active": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "description": "Accepted by shared filter validation and transformed to boolean."
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional rule name filter."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive",
+              "draft",
+              "error"
+            ],
+            "description": "Filter by automation rule status."
+          },
+          "trigger_type": {
+            "type": "string",
+            "enum": [
+              "time_based",
+              "event_based",
+              "condition_based",
+              "manual",
+              "recurring",
+              "webhook"
+            ],
+            "description": "Filter by trigger type."
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "low",
+              "normal",
+              "high",
+              "critical"
+            ],
+            "description": "Filter by priority level."
+          },
+          "template_category": {
+            "type": "string",
+            "description": "Filter template category."
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Filter by creator user UUID from automation_rules.created_by."
+          },
+          "last_executed_from": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Filter for rules last executed at or after timestamp."
+          },
+          "last_executed_to": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Filter for rules last executed at or before timestamp."
+          },
+          "execution_count_min": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Minimum execution count filter."
+          },
+          "execution_count_max": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Maximum execution count filter."
+          }
+        }
+      },
+      "AutomationTemplatesListQuery": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "string",
+            "description": "Page number as a query string. Defaults to 1."
+          },
+          "limit": {
+            "type": "string",
+            "description": "Page size as a query string. Must parse to 1 through 100; defaults to 25."
+          },
+          "sort": {
+            "type": "string",
+            "description": "Accepted by shared list query validation; service currently orders templates by created_at desc."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Accepted by shared list query validation."
+          },
+          "search": {
+            "type": "string",
+            "description": "Accepted by shared filter validation."
+          },
+          "created_from": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Accepted by shared filter validation."
+          },
+          "created_to": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Accepted by shared filter validation."
+          },
+          "updated_from": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Accepted by shared filter validation."
+          },
+          "updated_to": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Accepted by shared filter validation."
+          },
+          "is_active": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "description": "Accepted by shared filter validation and transformed to boolean."
+          },
+          "category": {
+            "type": "string",
+            "description": "Filter templates by category."
+          },
+          "compatible_version": {
+            "type": "string",
+            "description": "Filter templates by compatibility version tag."
+          },
+          "author": {
+            "type": "string",
+            "description": "Filter templates by author/user id value saved on the template."
+          },
+          "usage_count_min": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Minimum usage_count filter."
+          },
+          "usage_count_max": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Maximum usage_count filter."
+          }
+        }
+      },
+      "AutomationPerformanceQuery": {
+        "type": "object",
+        "properties": {
+          "date_from": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Optional lower bound for performance window."
+          },
+          "date_to": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Optional upper bound for performance window."
+          },
+          "group_by": {
+            "type": "string",
+            "enum": [
+              "hour",
+              "day",
+              "week",
+              "month"
+            ],
+            "description": "Aggregation bucket size; defaults to day."
+          },
+          "rule_ids": {
+            "type": "string",
+            "description": "Raw query value copied from URL. The controller expects an array UUID schema but validateQueryParams passes string values, so array filters currently require custom caller-side encoding or fail validation."
+          },
+          "metrics": {
+            "type": "string",
+            "description": "Raw query value copied from URL. The controller expects an array enum schema but validateQueryParams passes string values, so array filters currently require custom caller-side encoding or fail validation."
           }
         }
       },
@@ -3475,6 +3732,1178 @@
               "execution_statuses",
               "priority_levels",
               "condition_operators"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "AutomationRuleCondition": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string",
+            "description": "Field path evaluated for this condition."
+          },
+          "operator": {
+            "type": "string",
+            "enum": [
+              "equals",
+              "not_equals",
+              "greater_than",
+              "less_than",
+              "greater_than_or_equal",
+              "less_than_or_equal",
+              "contains",
+              "not_contains",
+              "starts_with",
+              "ends_with",
+              "in",
+              "not_in",
+              "exists",
+              "not_exists",
+              "regex_match"
+            ]
+          },
+          "value": {
+            "description": "Condition comparison value."
+          },
+          "data_type": {
+            "type": "string",
+            "enum": [
+              "string",
+              "number",
+              "boolean",
+              "date",
+              "array",
+              "object"
+            ]
+          }
+        },
+        "required": [
+          "field",
+          "operator"
+        ]
+      },
+      "AutomationRuleAction": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "email_notification",
+              "sms_notification",
+              "webhook_call",
+              "database_update",
+              "ticket_creation",
+              "ticket_update",
+              "project_update",
+              "time_entry_creation",
+              "invoice_generation",
+              "custom_script",
+              "workflow_execution",
+              "system_command"
+            ],
+            "description": "Automation action type."
+          },
+          "config": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Action configuration object. Expected keys depend on action type."
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Execution order (1-based)."
+          },
+          "continue_on_error": {
+            "type": "boolean",
+            "description": "Continue execution after a failed action."
+          },
+          "timeout_seconds": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Optional per-action timeout in seconds."
+          },
+          "retry_attempts": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5,
+            "description": "Optional retry count for this action."
+          }
+        },
+        "required": [
+          "type",
+          "config",
+          "order"
+        ]
+      },
+      "AutomationNotificationSettings": {
+        "type": "object",
+        "properties": {
+          "notify_on_success": {
+            "type": "boolean"
+          },
+          "notify_on_failure": {
+            "type": "boolean"
+          },
+          "notification_emails": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "email"
+            }
+          },
+          "notification_webhooks": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        }
+      },
+      "AutomationRule": {
+        "type": "object",
+        "properties": {
+          "rule_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Rule UUID generated with crypto.randomUUID when a rule is created."
+          },
+          "tenant": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Tenant UUID scoped from API key authentication."
+          },
+          "name": {
+            "type": "string",
+            "description": "Rule display name."
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive",
+              "draft",
+              "error"
+            ],
+            "description": "Current automation rule status."
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "low",
+              "normal",
+              "high",
+              "critical"
+            ],
+            "description": "Current automation rule priority."
+          },
+          "trigger_type": {
+            "type": "string",
+            "enum": [
+              "time_based",
+              "event_based",
+              "condition_based",
+              "manual",
+              "recurring",
+              "webhook"
+            ],
+            "description": "Trigger type used to start rule execution."
+          },
+          "trigger_config": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Trigger configuration object stored with the rule."
+          },
+          "conditions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutomationRuleCondition"
+            },
+            "description": "Optional additional rule conditions."
+          },
+          "condition_logic": {
+            "type": "string",
+            "enum": [
+              "and",
+              "or"
+            ],
+            "description": "Condition combination logic."
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutomationRuleAction"
+            },
+            "description": "Ordered action list for this rule."
+          },
+          "max_concurrent_executions": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "execution_timeout_minutes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "retry_failed_executions": {
+            "type": "boolean"
+          },
+          "is_template": {
+            "type": "boolean"
+          },
+          "template_category": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "notification_settings": {
+            "$ref": "#/components/schemas/AutomationNotificationSettings"
+          },
+          "created_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "User UUID from API key context that created the rule."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "execution_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "last_executed": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "execution_statistics": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Included on GET /rules/{id} by service lookup helper."
+          },
+          "_links": {
+            "$ref": "#/components/schemas/AutomationLinks"
+          }
+        },
+        "required": [
+          "rule_id",
+          "tenant",
+          "name",
+          "status",
+          "priority",
+          "trigger_type",
+          "trigger_config",
+          "actions"
+        ]
+      },
+      "CreateAutomationRuleRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive",
+              "draft",
+              "error"
+            ],
+            "description": "Defaults to draft when omitted."
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "low",
+              "normal",
+              "high",
+              "critical"
+            ],
+            "description": "Defaults to normal when omitted."
+          },
+          "trigger_type": {
+            "type": "string",
+            "enum": [
+              "time_based",
+              "event_based",
+              "condition_based",
+              "manual",
+              "recurring",
+              "webhook"
+            ]
+          },
+          "trigger_config": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Trigger-type-specific configuration object."
+          },
+          "conditions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutomationRuleCondition"
+            }
+          },
+          "condition_logic": {
+            "type": "string",
+            "enum": [
+              "and",
+              "or"
+            ]
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutomationRuleAction"
+            },
+            "minItems": 1
+          },
+          "max_concurrent_executions": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "execution_timeout_minutes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "retry_failed_executions": {
+            "type": "boolean"
+          },
+          "is_template": {
+            "type": "boolean"
+          },
+          "template_category": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "notification_settings": {
+            "$ref": "#/components/schemas/AutomationNotificationSettings"
+          }
+        },
+        "required": [
+          "name",
+          "trigger_type",
+          "trigger_config",
+          "actions"
+        ]
+      },
+      "UpdateAutomationRuleRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive",
+              "draft",
+              "error"
+            ],
+            "description": "Defaults to draft when omitted."
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "low",
+              "normal",
+              "high",
+              "critical"
+            ],
+            "description": "Defaults to normal when omitted."
+          },
+          "trigger_type": {
+            "type": "string",
+            "enum": [
+              "time_based",
+              "event_based",
+              "condition_based",
+              "manual",
+              "recurring",
+              "webhook"
+            ]
+          },
+          "trigger_config": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Trigger-type-specific configuration object."
+          },
+          "conditions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutomationRuleCondition"
+            }
+          },
+          "condition_logic": {
+            "type": "string",
+            "enum": [
+              "and",
+              "or"
+            ]
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutomationRuleAction"
+            },
+            "minItems": 1
+          },
+          "max_concurrent_executions": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "execution_timeout_minutes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "retry_failed_executions": {
+            "type": "boolean"
+          },
+          "is_template": {
+            "type": "boolean"
+          },
+          "template_category": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "notification_settings": {
+            "$ref": "#/components/schemas/AutomationNotificationSettings"
+          }
+        }
+      },
+      "ManualExecutionRequest": {
+        "type": "object",
+        "properties": {
+          "automation_rule_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Required by current validation schema but ignored by controller/service, which execute the path rule ID."
+          },
+          "execution_data": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "override_conditions": {
+            "type": "boolean",
+            "description": "Set true to allow execution of inactive rules."
+          },
+          "dry_run": {
+            "type": "boolean",
+            "description": "When true, returns a completed execution without queueing actions."
+          }
+        },
+        "required": [
+          "automation_rule_id"
+        ]
+      },
+      "BulkStatusUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "maxItems": 100,
+            "description": "Rule UUIDs from automation_rules.rule_id."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive",
+              "draft",
+              "error"
+            ],
+            "description": "Status to apply to each provided rule id."
+          }
+        },
+        "required": [
+          "ids",
+          "status"
+        ]
+      },
+      "BulkExecuteRequest": {
+        "type": "object",
+        "properties": {
+          "automation_rule_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "maxItems": 20,
+            "description": "Rule UUIDs to execute."
+          },
+          "execution_data": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Optional shared execution payload for each run."
+          },
+          "override_conditions": {
+            "type": "boolean",
+            "description": "Allow execution of inactive rules when true."
+          },
+          "sequential_execution": {
+            "type": "boolean",
+            "description": "When true, executes rules sequentially; otherwise Promise.all is used."
+          }
+        },
+        "required": [
+          "automation_rule_ids"
+        ]
+      },
+      "AutomationTemplateVariable": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "string",
+              "number",
+              "boolean",
+              "date",
+              "select",
+              "multiselect"
+            ]
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "default_value": {},
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "value": {}
+              },
+              "required": [
+                "label"
+              ]
+            }
+          },
+          "validation": {
+            "type": "object",
+            "properties": {
+              "min": {
+                "type": "number"
+              },
+              "max": {
+                "type": "number"
+              },
+              "pattern": {
+                "type": "string"
+              },
+              "custom_validator": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "required": [
+          "name",
+          "type"
+        ]
+      },
+      "AutomationTemplate": {
+        "type": "object",
+        "properties": {
+          "template_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Template UUID generated with crypto.randomUUID."
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "category": {
+            "type": "string"
+          },
+          "icon": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "template_config": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Template rule blueprint derived from an automation rule."
+          },
+          "version": {
+            "type": "string"
+          },
+          "author": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "compatible_versions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "required_permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "usage_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "last_used": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "template_variables": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutomationTemplateVariable"
+            }
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "is_featured": {
+            "type": "boolean"
+          },
+          "tenant": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "_links": {
+            "$ref": "#/components/schemas/AutomationLinks"
+          }
+        },
+        "required": [
+          "template_id",
+          "name",
+          "category",
+          "template_config",
+          "tenant"
+        ]
+      },
+      "CreateAutomationTemplateRequest": {
+        "type": "object",
+        "properties": {
+          "automation_rule_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Source automation_rules.rule_id copied into template_config."
+          },
+          "template_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "template_description": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1
+          },
+          "template_variables": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "rule_field_path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "variable_name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "display_name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "description": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "string",
+                    "number",
+                    "boolean",
+                    "date",
+                    "select",
+                    "multiselect"
+                  ]
+                },
+                "required": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "rule_field_path",
+                "variable_name",
+                "display_name",
+                "type"
+              ]
+            }
+          }
+        },
+        "required": [
+          "automation_rule_id",
+          "template_name",
+          "category"
+        ]
+      },
+      "UseAutomationTemplateRequest": {
+        "type": "object",
+        "properties": {
+          "variables": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Optional variable substitutions applied to template_config before creating a new automation rule."
+          }
+        }
+      },
+      "AutomationRuleResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AutomationRule"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "AutomationRuleListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutomationRule"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/AutomationPagination"
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "filters": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "resource": {
+                "type": "string",
+                "enum": [
+                  "automation_rule"
+                ]
+              }
+            }
+          }
+        },
+        "required": [
+          "data",
+          "pagination"
+        ]
+      },
+      "AutomationTemplateResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AutomationTemplate"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "AutomationTemplateListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutomationTemplate"
+            },
+            "description": "Template rows. Current service code wraps the DB result array in another array before createPaginatedResponse, which can produce nested data in practice."
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/AutomationPagination"
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "filters": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "resource": {
+                "type": "string",
+                "enum": [
+                  "automation_template"
+                ]
+              }
+            }
+          }
+        },
+        "required": [
+          "data",
+          "pagination"
+        ]
+      },
+      "AutomationStatisticsResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "total_rules": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "active_rules": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "inactive_rules": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "draft_rules": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "error_rules": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total_executions": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "successful_executions": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "failed_executions": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "executions_today": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "executions_this_week": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "executions_this_month": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "avg_execution_time_ms": {
+                "type": "number",
+                "minimum": 0
+              },
+              "success_rate_percent": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "_links": {
+                "type": "object",
+                "properties": {
+                  "self": {
+                    "type": "string",
+                    "enum": [
+                      "/api/v1/automation/statistics"
+                    ]
+                  },
+                  "rules": {
+                    "type": "string",
+                    "enum": [
+                      "/api/v1/automation/rules"
+                    ]
+                  },
+                  "executions": {
+                    "type": "string",
+                    "enum": [
+                      "/api/v1/automation/executions"
+                    ]
+                  },
+                  "templates": {
+                    "type": "string",
+                    "enum": [
+                      "/api/v1/automation/templates"
+                    ]
+                  },
+                  "performance": {
+                    "type": "string",
+                    "enum": [
+                      "/api/v1/automation/performance"
+                    ]
+                  }
+                },
+                "required": [
+                  "self",
+                  "rules",
+                  "executions",
+                  "templates",
+                  "performance"
+                ]
+              }
+            },
+            "required": [
+              "total_rules",
+              "active_rules",
+              "inactive_rules",
+              "draft_rules",
+              "error_rules",
+              "total_executions",
+              "successful_executions",
+              "failed_executions",
+              "executions_today",
+              "executions_this_week",
+              "executions_this_month"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "AutomationPerformanceResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "allOf": [
+              {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "_links": {
+                    "type": "object",
+                    "properties": {
+                      "self": {
+                        "type": "string",
+                        "enum": [
+                          "/api/v1/automation/performance"
+                        ]
+                      },
+                      "statistics": {
+                        "type": "string",
+                        "enum": [
+                          "/api/v1/automation/statistics"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "self",
+                      "statistics"
+                    ]
+                  }
+                }
+              }
+            ],
+            "description": "Performance payload from AutomationService.calculatePerformanceMetrics plus links."
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "BulkStatusUpdateResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "enum": [
+                  "bulk_status_update"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "active",
+                  "inactive",
+                  "draft",
+                  "error"
+                ]
+              },
+              "rule_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "updated": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "errors": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Per-rule failures emitted as `<ruleId>: <error message>` entries."
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "action",
+              "status",
+              "rule_ids",
+              "updated",
+              "errors",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "BulkExecuteResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "enum": [
+                  "bulk_execute"
+                ]
+              },
+              "rule_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "started": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "errors": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Per-rule failures emitted as `<ruleId>: <error message>` entries."
+              },
+              "sequential": {
+                "type": "boolean"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "action",
+              "rule_ids",
+              "started",
+              "errors",
+              "message"
             ]
           }
         },
@@ -11065,6 +12494,1714 @@
         }
       }
     },
+    "/api/v1/automation/rules": {
+      "get": {
+        "summary": "List automation rules",
+        "description": "Returns a paginated list of automation rules scoped to the authenticated tenant. Authentication uses x-api-key with optional x-tenant-id, then RBAC requires automation:read. The controller validates query params with automationRulesListSchema, parses page/limit from the URL, and the service enforces tenant filtering on automation_rules.",
+        "tags": [
+          "Automation"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "automation",
+          "x-rbac-action": "read",
+          "x-id-provenance": {
+            "rule_id": "automation_rules.rule_id",
+            "tenant": "automation_rules.tenant"
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Page number as a query string. Defaults to 1."
+            },
+            "required": false,
+            "description": "Page number as a query string. Defaults to 1.",
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Page size as a query string. Must parse to 1 through 100; defaults to 25."
+            },
+            "required": false,
+            "description": "Page size as a query string. Must parse to 1 through 100; defaults to 25.",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Accepted by shared list query validation; service currently orders rules by created_at desc."
+            },
+            "required": false,
+            "description": "Accepted by shared list query validation; service currently orders rules by created_at desc.",
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "description": "Accepted by shared list query validation."
+            },
+            "required": false,
+            "description": "Accepted by shared list query validation.",
+            "name": "order",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Accepted by shared filter validation."
+            },
+            "required": false,
+            "description": "Accepted by shared filter validation.",
+            "name": "search",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Accepted by shared filter validation."
+            },
+            "required": false,
+            "description": "Accepted by shared filter validation.",
+            "name": "created_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Accepted by shared filter validation."
+            },
+            "required": false,
+            "description": "Accepted by shared filter validation.",
+            "name": "created_to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Accepted by shared filter validation."
+            },
+            "required": false,
+            "description": "Accepted by shared filter validation.",
+            "name": "updated_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Accepted by shared filter validation."
+            },
+            "required": false,
+            "description": "Accepted by shared filter validation.",
+            "name": "updated_to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "description": "Accepted by shared filter validation and transformed to boolean."
+            },
+            "required": false,
+            "description": "Accepted by shared filter validation and transformed to boolean.",
+            "name": "is_active",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optional rule name filter."
+            },
+            "required": false,
+            "description": "Optional rule name filter.",
+            "name": "name",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "inactive",
+                "draft",
+                "error"
+              ],
+              "description": "Filter by automation rule status."
+            },
+            "required": false,
+            "description": "Filter by automation rule status.",
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "time_based",
+                "event_based",
+                "condition_based",
+                "manual",
+                "recurring",
+                "webhook"
+              ],
+              "description": "Filter by trigger type."
+            },
+            "required": false,
+            "description": "Filter by trigger type.",
+            "name": "trigger_type",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "low",
+                "normal",
+                "high",
+                "critical"
+              ],
+              "description": "Filter by priority level."
+            },
+            "required": false,
+            "description": "Filter by priority level.",
+            "name": "priority",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter template category."
+            },
+            "required": false,
+            "description": "Filter template category.",
+            "name": "template_category",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Filter by creator user UUID from automation_rules.created_by."
+            },
+            "required": false,
+            "description": "Filter by creator user UUID from automation_rules.created_by.",
+            "name": "created_by",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Filter for rules last executed at or after timestamp."
+            },
+            "required": false,
+            "description": "Filter for rules last executed at or after timestamp.",
+            "name": "last_executed_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Filter for rules last executed at or before timestamp."
+            },
+            "required": false,
+            "description": "Filter for rules last executed at or before timestamp.",
+            "name": "last_executed_to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Minimum execution count filter."
+            },
+            "required": false,
+            "description": "Minimum execution count filter.",
+            "name": "execution_count_min",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Maximum execution count filter."
+            },
+            "required": false,
+            "description": "Maximum execution count filter.",
+            "name": "execution_count_max",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Automation rules returned successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationRuleListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Query parameter validation failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key is missing, invalid, expired, over limit, or the key user was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks automation:read permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected automation rules listing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create automation rule",
+        "description": "Creates a tenant-scoped automation rule in automation_rules. Authentication uses x-api-key with optional x-tenant-id; RBAC requires automation:create. The controller validates request body via createAutomationRuleSchema, and the service validates trigger/action config, inserts the rule with crypto.randomUUID generated rule_id, and emits automation.rule.created + audit log events.",
+        "tags": [
+          "Automation"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "automation",
+          "x-rbac-action": "create",
+          "x-id-provenance": {
+            "rule_id": "automation_rules.rule_id (crypto.randomUUID)",
+            "created_by": "API key context userId"
+          },
+          "x-publishes-event": "automation.rule.created",
+          "x-audit-log-action": "automation_rule_created"
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAutomationRuleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Automation rule created successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationRuleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Body validation failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key is missing, invalid, expired, over limit, or the key user was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks automation:create permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected automation rule creation failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/automation/rules/{id}": {
+      "get": {
+        "summary": "Get automation rule",
+        "description": "Returns one automation rule by rule_id for the authenticated tenant with generated links and execution statistics. Authentication uses x-api-key with optional x-tenant-id; RBAC requires automation:read. The service scopes by {rule_id, tenant}. Missing rules currently throw generic Error and surface as 500 rather than 404.",
+        "tags": [
+          "Automation"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "automation",
+          "x-rbac-action": "read",
+          "x-id-provenance": {
+            "rule_id": "automation_rules.rule_id"
+          },
+          "x-no-clean-not-found-currently": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Automation rule UUID from automation_rules.rule_id."
+            },
+            "required": true,
+            "description": "Automation rule UUID from automation_rules.rule_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Automation rule returned successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationRuleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid rule UUID format.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key is missing, invalid, expired, over limit, or the key user was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks automation:read permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Intended not-found response for missing rules; current service may surface this as 500.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure, including current generic not-found errors.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update automation rule",
+        "description": "Updates an automation rule by rule_id for the authenticated tenant. Authentication uses x-api-key with optional x-tenant-id; RBAC requires automation:update. The controller validates partial updates with updateAutomationRuleSchema and the service revalidates trigger/action config when changed, updates automation_rules, and emits automation.rule.updated + audit log events. Missing rules currently surface as 500.",
+        "tags": [
+          "Automation"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "automation",
+          "x-rbac-action": "update",
+          "x-publishes-event": "automation.rule.updated",
+          "x-audit-log-action": "automation_rule_updated",
+          "x-no-clean-not-found-currently": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Automation rule UUID from automation_rules.rule_id."
+            },
+            "required": true,
+            "description": "Automation rule UUID from automation_rules.rule_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAutomationRuleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Automation rule updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationRuleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid UUID format or body validation failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key is missing, invalid, expired, over limit, or the key user was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks automation:update permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Intended not-found response for missing rules; current service may surface this as 500.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure, including current generic not-found errors.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete automation rule",
+        "description": "Deletes one automation rule by rule_id for the authenticated tenant. Authentication uses x-api-key with optional x-tenant-id; RBAC requires automation:delete. The service blocks deletion when pending/running executions exist, unschedules active rules, deletes automation_rules row, and emits automation.rule.deleted + audit log events. Missing rules and delete constraints currently bubble as 500 errors.",
+        "tags": [
+          "Automation"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "automation",
+          "x-rbac-action": "delete",
+          "x-publishes-event": "automation.rule.deleted",
+          "x-audit-log-action": "automation_rule_deleted",
+          "x-no-clean-not-found-currently": true,
+          "x-delete-blocked-when-running-executions": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Automation rule UUID from automation_rules.rule_id."
+            },
+            "required": true,
+            "description": "Automation rule UUID from automation_rules.rule_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Automation rule deleted successfully."
+          },
+          "400": {
+            "description": "Invalid rule UUID format.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key is missing, invalid, expired, over limit, or the key user was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks automation:delete permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Intended not-found response for missing rules; current service may surface this as 500.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure, including running-execution constraints and generic not-found errors.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/automation/rules/{id}/execute": {
+      "post": {
+        "summary": "Execute automation rule manually",
+        "description": "Starts a manual execution for one automation rule identified by path rule_id. Authentication uses x-api-key with optional x-tenant-id; RBAC requires automation:execute. The current request schema requires automation_rule_id in the body, but controller/service execute the path rule ID and do not cross-check the body ID. For dry_run=false the service creates automation_executions row and queues execution via a currently stubbed queue helper.",
+        "tags": [
+          "Automation"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "automation",
+          "x-rbac-action": "execute",
+          "x-body-automation-rule-id-not-used": true,
+          "x-id-provenance": {
+            "execution_id": "automation_executions.execution_id (crypto.randomUUID)",
+            "automation_rule_id": "URL path param /rules/{id}"
+          },
+          "x-publishes-event": "automation.execution.started",
+          "x-audit-log-action": "automation_execution_started",
+          "x-queues-execution-stubbed": true,
+          "x-no-clean-not-found-currently": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Automation rule UUID from automation_rules.rule_id."
+            },
+            "required": true,
+            "description": "Automation rule UUID from automation_rules.rule_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualExecutionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Manual execution created successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationExecutionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid UUID format or body validation failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key is missing, invalid, expired, over limit, or the key user was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks automation:execute permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Intended not-found response for missing rules; current service may surface this as 500.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure, including current generic not-found and inactive-rule errors.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/automation/rules/bulk-status": {
+      "post": {
+        "summary": "Bulk update automation rule status",
+        "description": "Updates status for up to 100 automation rules under the authenticated tenant. Authentication uses x-api-key with optional x-tenant-id; RBAC requires automation:update. The controller validates ids/status with bulkStatusUpdateSchema and calls updateAutomationRule per id. Failures are collected into an errors array and still return HTTP 200 with partial-success details.",
+        "tags": [
+          "Automation"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "automation",
+          "x-rbac-action": "update",
+          "x-partial-failures-return-200": true
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkStatusUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bulk status update attempted for all ids; includes per-id errors.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkStatusUpdateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Body validation failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key is missing, invalid, expired, over limit, or the key user was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks automation:update permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure before result aggregation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/automation/rules/bulk-execute": {
+      "post": {
+        "summary": "Bulk execute automation rules",
+        "description": "Starts execution attempts for up to 20 automation rules for the authenticated tenant. Authentication uses x-api-key with optional x-tenant-id; RBAC requires automation:execute. The controller validates bulkExecutionSchema and calls executeAutomationRule per id. sequential_execution=true runs serially; otherwise Promise.all is used. Per-rule errors are returned in a 200 response.",
+        "tags": [
+          "Automation"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "automation",
+          "x-rbac-action": "execute",
+          "x-partial-failures-return-200": true,
+          "x-sequential-execution-supported": true
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkExecuteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bulk execution attempted for all ids; includes started count and per-id errors.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkExecuteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Body validation failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key is missing, invalid, expired, over limit, or the key user was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks automation:execute permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure before result aggregation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/automation/templates": {
+      "get": {
+        "summary": "List automation templates",
+        "description": "Returns a paginated list of automation templates for the authenticated tenant. Authentication uses x-api-key with optional x-tenant-id; RBAC requires automation:read. The controller validates query params with templatesListSchema and the service filters automation_templates by tenant. Current service code wraps template array before createPaginatedResponse, which can produce nested data in practice.",
+        "tags": [
+          "Automation"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "automation",
+          "x-rbac-action": "read",
+          "x-service-data-wrapping-bug": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Page number as a query string. Defaults to 1."
+            },
+            "required": false,
+            "description": "Page number as a query string. Defaults to 1.",
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Page size as a query string. Must parse to 1 through 100; defaults to 25."
+            },
+            "required": false,
+            "description": "Page size as a query string. Must parse to 1 through 100; defaults to 25.",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Accepted by shared list query validation; service currently orders templates by created_at desc."
+            },
+            "required": false,
+            "description": "Accepted by shared list query validation; service currently orders templates by created_at desc.",
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "description": "Accepted by shared list query validation."
+            },
+            "required": false,
+            "description": "Accepted by shared list query validation.",
+            "name": "order",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Accepted by shared filter validation."
+            },
+            "required": false,
+            "description": "Accepted by shared filter validation.",
+            "name": "search",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Accepted by shared filter validation."
+            },
+            "required": false,
+            "description": "Accepted by shared filter validation.",
+            "name": "created_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Accepted by shared filter validation."
+            },
+            "required": false,
+            "description": "Accepted by shared filter validation.",
+            "name": "created_to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Accepted by shared filter validation."
+            },
+            "required": false,
+            "description": "Accepted by shared filter validation.",
+            "name": "updated_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Accepted by shared filter validation."
+            },
+            "required": false,
+            "description": "Accepted by shared filter validation.",
+            "name": "updated_to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "description": "Accepted by shared filter validation and transformed to boolean."
+            },
+            "required": false,
+            "description": "Accepted by shared filter validation and transformed to boolean.",
+            "name": "is_active",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter templates by category."
+            },
+            "required": false,
+            "description": "Filter templates by category.",
+            "name": "category",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter templates by compatibility version tag."
+            },
+            "required": false,
+            "description": "Filter templates by compatibility version tag.",
+            "name": "compatible_version",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter templates by author/user id value saved on the template."
+            },
+            "required": false,
+            "description": "Filter templates by author/user id value saved on the template.",
+            "name": "author",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Minimum usage_count filter."
+            },
+            "required": false,
+            "description": "Minimum usage_count filter.",
+            "name": "usage_count_min",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Maximum usage_count filter."
+            },
+            "required": false,
+            "description": "Maximum usage_count filter.",
+            "name": "usage_count_max",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Automation templates returned successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationTemplateListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Query parameter validation failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key is missing, invalid, expired, over limit, or the key user was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks automation:read permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected automation templates listing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create automation template from rule",
+        "description": "Creates a template row by copying one source automation rule into automation_templates.template_config. Authentication uses x-api-key with optional x-tenant-id; RBAC requires automation:create. The controller validates createTemplateFromRuleSchema and service emits automation.template.created + audit log events. Missing source rules currently throw generic Error and surface as 500.",
+        "tags": [
+          "Automation"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "automation",
+          "x-rbac-action": "create",
+          "x-id-provenance": {
+            "template_id": "automation_templates.template_id (crypto.randomUUID)",
+            "automation_rule_id": "automation_rules.rule_id"
+          },
+          "x-publishes-event": "automation.template.created",
+          "x-audit-log-action": "automation_template_created",
+          "x-no-clean-not-found-currently": true
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAutomationTemplateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Automation template created successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationTemplateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Body validation failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key is missing, invalid, expired, over limit, or the key user was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks automation:create permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Intended not-found response for missing source rules; current service may surface this as 500.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure, including current generic source-rule not-found errors.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/automation/templates/{id}": {
+      "get": {
+        "summary": "Get automation template",
+        "description": "Returns one automation template by template_id for the authenticated tenant. Authentication uses x-api-key with optional x-tenant-id; RBAC requires automation:read. Service lookup is scoped by {template_id, tenant}. Missing templates currently throw generic Error and surface as 500 rather than 404.",
+        "tags": [
+          "Automation"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "automation",
+          "x-rbac-action": "read",
+          "x-id-provenance": {
+            "template_id": "automation_templates.template_id"
+          },
+          "x-no-clean-not-found-currently": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Automation template UUID from automation_templates.template_id."
+            },
+            "required": true,
+            "description": "Automation template UUID from automation_templates.template_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Automation template returned successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationTemplateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid template UUID format.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key is missing, invalid, expired, over limit, or the key user was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks automation:read permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Intended not-found response for missing templates; current service may surface this as 500.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure, including current generic not-found errors.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/automation/templates/{id}/use": {
+      "post": {
+        "summary": "Create automation rule from template",
+        "description": "Uses one template_id to create a new automation rule under the authenticated tenant. Authentication uses x-api-key with optional x-tenant-id; RBAC requires automation:create. The controller validates `{ variables }`, then service loads template, applies substitutions into template_config, creates rule via createAutomationRule, and increments automation_templates.usage_count/last_used. Missing templates surface as 500.",
+        "tags": [
+          "Automation"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "automation",
+          "x-rbac-action": "create",
+          "x-id-provenance": {
+            "template_id": "automation_templates.template_id",
+            "rule_id": "automation_rules.rule_id (crypto.randomUUID from createAutomationRule)"
+          },
+          "x-uses-template-config-clone": true,
+          "x-no-clean-not-found-currently": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Automation template UUID from automation_templates.template_id."
+            },
+            "required": true,
+            "description": "Automation template UUID from automation_templates.template_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UseAutomationTemplateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Automation rule created from template.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationRuleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid template UUID format or body validation failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key is missing, invalid, expired, over limit, or the key user was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks automation:create permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Intended not-found response for missing templates; current service may surface this as 500.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure, including current generic template not-found errors.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/automation/statistics": {
+      "get": {
+        "summary": "Get automation statistics",
+        "description": "Returns tenant-scoped automation aggregate counts (rules and executions) plus HATEOAS links. Authentication uses x-api-key with optional x-tenant-id; RBAC requires automation:read. The service computes counts from automation_rules and automation_executions plus period-based execution totals and success rate.",
+        "tags": [
+          "Automation"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "automation",
+          "x-rbac-action": "read",
+          "x-analytics-from-tables": [
+            "automation_rules",
+            "automation_executions"
+          ]
+        },
+        "responses": {
+          "200": {
+            "description": "Automation statistics returned successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationStatisticsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key is missing, invalid, expired, over limit, or the key user was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks automation:read permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected automation statistics failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/automation/performance": {
+      "get": {
+        "summary": "Get automation performance metrics",
+        "description": "Returns performance metrics calculated by AutomationService.calculatePerformanceMetrics for the authenticated tenant. Authentication uses x-api-key with optional x-tenant-id; RBAC requires automation:read. Query is validated with performanceMetricsRequestSchema; because validateQueryParams maps URL values to strings, array filters (rule_ids, metrics) currently have parsing limitations and may fail validation unless encoded specially.",
+        "tags": [
+          "Automation"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "automation",
+          "x-rbac-action": "read",
+          "x-query-array-parsing-gap": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Optional lower bound for performance window."
+            },
+            "required": false,
+            "description": "Optional lower bound for performance window.",
+            "name": "date_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Optional upper bound for performance window."
+            },
+            "required": false,
+            "description": "Optional upper bound for performance window.",
+            "name": "date_to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "hour",
+                "day",
+                "week",
+                "month"
+              ],
+              "description": "Aggregation bucket size; defaults to day."
+            },
+            "required": false,
+            "description": "Aggregation bucket size; defaults to day.",
+            "name": "group_by",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Raw query value copied from URL. The controller expects an array UUID schema but validateQueryParams passes string values, so array filters currently require custom caller-side encoding or fail validation."
+            },
+            "required": false,
+            "description": "Raw query value copied from URL. The controller expects an array UUID schema but validateQueryParams passes string values, so array filters currently require custom caller-side encoding or fail validation.",
+            "name": "rule_ids",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Raw query value copied from URL. The controller expects an array enum schema but validateQueryParams passes string values, so array filters currently require custom caller-side encoding or fail validation."
+            },
+            "required": false,
+            "description": "Raw query value copied from URL. The controller expects an array enum schema but validateQueryParams passes string values, so array filters currently require custom caller-side encoding or fail validation.",
+            "name": "metrics",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Automation performance payload returned successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationPerformanceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Query parameter validation failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key is missing, invalid, expired, over limit, or the key user was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks automation:read permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected performance metrics failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/automation/meta": {
       "get": {
         "summary": "Get automation metadata",
@@ -17707,712 +20844,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SoftwareOneErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/automation/performance": {
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "automation"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/automation/rules": {
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "automation"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "automation"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/automation/rules/bulk-execute": {
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "automation"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/automation/rules/bulk-status": {
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "automation"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/automation/rules/{id}": {
-      "delete": {
-        "summary": "DELETE v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "automation"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "204": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "automation"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "summary": "PUT v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "automation"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/automation/rules/{id}/execute": {
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "automation"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/automation/statistics": {
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "automation"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/automation/templates": {
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "automation"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "automation"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/automation/templates/{id}": {
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "automation"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/automation/templates/{id}/use": {
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "automation"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }

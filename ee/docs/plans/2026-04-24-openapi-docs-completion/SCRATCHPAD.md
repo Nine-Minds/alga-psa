@@ -139,3 +139,59 @@ Expected persistent unstaged file:
 ```
 
 Do not `git add .`; stage exact registrar/spec/plan files only.
+
+## 2026-04-24 — Batch 17 Completed (Automation Rules/Performance + Remaining Automation Family)
+
+### Scope completed
+
+- Documented all remaining placeholder automation endpoints in `server/src/lib/api/openapi/routes/automation.ts`:
+  - `GET /api/v1/automation/performance`
+  - `GET /api/v1/automation/rules`
+  - `POST /api/v1/automation/rules`
+  - `POST /api/v1/automation/rules/bulk-execute`
+  - `POST /api/v1/automation/rules/bulk-status`
+  - `DELETE /api/v1/automation/rules/{id}`
+  - `GET /api/v1/automation/rules/{id}`
+  - `PUT /api/v1/automation/rules/{id}`
+  - `POST /api/v1/automation/rules/{id}/execute`
+  - `GET /api/v1/automation/statistics`
+  - `GET /api/v1/automation/templates`
+  - `POST /api/v1/automation/templates`
+  - `GET /api/v1/automation/templates/{id}`
+  - `POST /api/v1/automation/templates/{id}/use`
+
+### Key source-grounded decisions (with rationale)
+
+- Documented service/controller mismatch where `manualExecutionSchema` requires `automation_rule_id` in request body but execution uses path `/rules/{id}`. Kept this explicit in schema/description to avoid hiding runtime behavior.
+- Documented known 500-vs-404/400 gaps where `AutomationService` throws generic `Error` for not-found or invalid-state conditions.
+- Documented query-array parsing gap on performance route because controller query parsing (`validateQueryParams`) maps URL params to string values while schema expects arrays for `rule_ids` and `metrics`.
+- Preserved tenant/RBAC metadata using base-controller auth flow (`x-api-key` + optional `x-tenant-id`, `hasPermission` against resource `automation`).
+
+### Commands / runbook executed
+
+```bash
+npm --prefix sdk run openapi:generate
+npm --prefix sdk run openapi:generate -- --edition ee
+python3 <placeholder scan script for CE+EE targeted automation ops + remaining counts>
+```
+
+### Validation results
+
+- CE targeted automation placeholder check: all 14 automation operations now non-placeholder.
+- EE targeted automation placeholder check: all 14 automation operations now non-placeholder.
+- Remaining placeholder counts after batch:
+  - CE: `474` (down from 488)
+  - EE: `482`
+
+### Updated next cursor
+
+- Next unresolved CE operations:
+  1. `GET /api/v1/billing-analytics/overview`
+  2. `GET /api/v1/contract-lines`
+  3. `POST /api/v1/contract-lines`
+  4. `DELETE /api/v1/contract-lines/bulk`
+  5. `POST /api/v1/contract-lines/bulk`
+
+### Gotchas reinforced
+
+- OpenAPI registry request bodies must be registered as `request: { body: { schema: ... } }`; passing the schema directly (`body: Schema`) causes `zod-to-openapi` generation failure.
