@@ -49,10 +49,25 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  const AssetIdParams = registry.registerSchema(
+    'AssetIdParams',
+    zOpenApi.object({
+      id: zOpenApi.string().uuid().describe('Asset UUID from assets.asset_id.'),
+    }),
+  );
+
   const AssetDocumentAssociationParams = registry.registerSchema(
     'AssetDocumentAssociationParams',
     zOpenApi.object({
       associationId: zOpenApi.string().uuid().describe('Document association UUID from document_associations.association_id.'),
+    }),
+  );
+
+  const AssetDocumentAssociationRequest = registry.registerSchema(
+    'AssetDocumentAssociationRequest',
+    zOpenApi.object({
+      document_id: zOpenApi.string().uuid().describe('Document UUID from documents.document_id to associate with the asset.'),
+      notes: zOpenApi.string().optional().describe('Optional notes stored on document_associations.notes.'),
     }),
   );
 
@@ -129,6 +144,66 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       maintenance: HateoasLink.optional(),
       history: HateoasLink.optional(),
     }).describe('HATEOAS links generated from the asset_id.'),
+  );
+
+  const AssetDocumentAssociationRow = registry.registerSchema(
+    'AssetDocumentAssociationRow',
+    zOpenApi.object({
+      association_id: zOpenApi.string().uuid().describe('Primary key from document_associations.association_id.'),
+      entity_type: zOpenApi.literal('asset').describe('Entity type stored on document_associations; always asset for these routes.'),
+      entity_id: zOpenApi.string().uuid().describe('Asset UUID from document_associations.entity_id.'),
+      document_id: zOpenApi.string().uuid().describe('Document UUID from document_associations.document_id.'),
+      notes: zOpenApi.string().nullable().optional().describe('Optional association notes.'),
+      tenant: zOpenApi.string().uuid().describe('Tenant UUID from document_associations.tenant.'),
+      created_at: zOpenApi.string().datetime().optional().describe('Association creation timestamp.'),
+      original_filename: zOpenApi.string().optional().describe('Original filename from the joined documents table, present on list responses.'),
+      file_size: zOpenApi.number().optional().describe('File size in bytes from the joined documents table, present on list responses.'),
+      mime_type: zOpenApi.string().optional().describe('MIME type from the joined documents table, present on list responses.'),
+      uploaded_at: zOpenApi.string().datetime().optional().describe('Document upload timestamp from the joined documents table, present on list responses.'),
+    }),
+  );
+
+  const AssetDocumentListPayload = registry.registerSchema(
+    'AssetDocumentListPayload',
+    zOpenApi.object({
+      data: zOpenApi.array(AssetDocumentAssociationRow).describe('Document association rows for the asset. Empty when no associations exist or the asset is not found.'),
+      _links: zOpenApi.object({
+        self: HateoasLink.optional(),
+        create: HateoasLink.optional(),
+        parent: HateoasLink.optional(),
+      }).describe('Collection links. The controller currently points these at /api/v2/assets paths.'),
+    }),
+  );
+
+  const AssetDocumentListResponse = registry.registerSchema(
+    'AssetDocumentListResponse',
+    zOpenApi.object({
+      success: zOpenApi.literal(true),
+      data: AssetDocumentListPayload,
+      meta: zOpenApi.object({
+        timestamp: zOpenApi.string().datetime(),
+        version: zOpenApi.string(),
+      }),
+    }),
+  );
+
+  const AssetDocumentAssociationPayload = registry.registerSchema(
+    'AssetDocumentAssociationPayload',
+    zOpenApi.object({
+      data: AssetDocumentAssociationRow.describe('Inserted document association row returned from document_associations.returning(*).'),
+    }),
+  );
+
+  const AssetDocumentAssociationResponse = registry.registerSchema(
+    'AssetDocumentAssociationResponse',
+    zOpenApi.object({
+      success: zOpenApi.literal(true),
+      data: AssetDocumentAssociationPayload,
+      meta: zOpenApi.object({
+        timestamp: zOpenApi.string().datetime(),
+        version: zOpenApi.string(),
+      }),
+    }),
   );
 
   const AssetResource = registry.registerSchema(
@@ -883,4 +958,244 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     },
     edition: 'both',
   });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/assets/{id}',
+    summary: 'Get asset details',
+    description:
+      'Returns detailed asset information for the authenticated tenant, including joined client_name, computed warranty_status, client details, type-specific extension_data, relationships, document associations, maintenance schedules, and HATEOAS links. The service first loads assets by asset_id and context.tenant, then loads related data in parallel. If the asset is not found, the controller returns a 404 error envelope. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before lookup.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      params: AssetIdParams,
+    },
+    responses: {
+      200: {
+        description: 'Asset details returned successfully.',
+        schema: AssetResourceResponse,
+      },
+      401: {
+        description: 'x-api-key is missing at middleware.',
+        schema: MiddlewareUnauthorizedResponse,
+      },
+      403: {
+        description: 'Authenticated request context lacks permission to read assets when auth wiring is present.',
+        schema: ApiErrorEnvelope,
+      },
+      404: {
+        description: 'No asset exists for the supplied asset_id in the authenticated tenant.',
+        schema: ApiErrorEnvelope,
+      },
+      500: {
+        description: 'Unexpected error, including missing req.context in the current route wiring.',
+        schema: ApiErrorEnvelope,
+      },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'read',
+      'x-includes-related-resources': ['client', 'extension_data', 'relationships', 'documents', 'maintenance_schedules'],
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'put',
+    path: '/api/v1/assets/{id}',
+    summary: 'Update asset',
+    description:
+      'Partially updates base asset fields for the authenticated tenant. The request body is validated with updateAssetSchema, where all fields are optional. AssetService.update scopes the update by asset_id and context.tenant, writes updated_at, publishes ASSET_UPDATED, and returns the refreshed base asset with joined client_name and warranty_status. This REST path does not update extension data, create asset history records, or wrap the update in a transaction. Missing assets currently lead to a 500 when the controller tries to add links to a null result rather than a clean 404. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before update.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      params: AssetIdParams,
+      body: {
+        schema: AssetUpdateData,
+        description: 'Partial base asset update data. Extension data is not accepted by this REST endpoint.',
+        required: true,
+      },
+    },
+    responses: {
+      200: {
+        description: 'Asset updated successfully.',
+        schema: AssetResourceResponse,
+      },
+      400: {
+        description: 'Request body validation failed, or the database rejected an invalid reference.',
+        schema: ApiErrorEnvelope,
+      },
+      401: {
+        description: 'x-api-key is missing at middleware.',
+        schema: MiddlewareUnauthorizedResponse,
+      },
+      403: {
+        description: 'Authenticated request context lacks permission to update assets when auth wiring is present.',
+        schema: ApiErrorEnvelope,
+      },
+      404: {
+        description: 'Intended not-found response for missing assets; the current controller path may surface this as 500.',
+        schema: ApiErrorEnvelope,
+      },
+      409: {
+        description: 'Database unique constraint conflict, such as a duplicate asset tag if enforced by schema.',
+        schema: ApiErrorEnvelope,
+      },
+      500: {
+        description: 'Unexpected error, including missing req.context or null asset result handling in the current route wiring.',
+        schema: ApiErrorEnvelope,
+      },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'update',
+      'x-publishes-event': 'ASSET_UPDATED',
+      'x-extension-data-handled': false,
+      'x-history-recorded': false,
+      'x-transactional': false,
+      'x-no-clean-not-found-currently': true,
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete',
+    path: '/api/v1/assets/{id}',
+    summary: 'Delete asset',
+    description:
+      'Hard-deletes an asset for the authenticated tenant. AssetService.delete first loads the asset by asset_id and context.tenant, deletes asset-type-specific extension data, deletes tenant_external_entity_mappings for the asset, deletes the assets row, and publishes ASSET_DELETED. The method overrides the BaseService softDelete configuration and does not explicitly clean every related table handled by the server-action delete path. Missing assets throw a generic Error and currently surface as 500 via handleApiError rather than 404. The controller also constructs a JSON response with status 204, which can throw in NextResponse. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before deletion.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      params: AssetIdParams,
+    },
+    responses: {
+      204: {
+        description: 'Asset deleted successfully. Intended response has no body.',
+        emptyBody: true,
+      },
+      401: {
+        description: 'x-api-key is missing at middleware.',
+        schema: MiddlewareUnauthorizedResponse,
+      },
+      403: {
+        description: 'Authenticated request context lacks permission to delete assets when auth wiring is present.',
+        schema: ApiErrorEnvelope,
+      },
+      404: {
+        description: 'Intended not-found response for missing assets; the current service throws a generic Error that may surface as 500.',
+        schema: ApiErrorEnvelope,
+      },
+      500: {
+        description: 'Unexpected error, including missing req.context, generic Asset not found errors, or the current 204 JSON response construction issue.',
+        schema: ApiErrorEnvelope,
+      },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'delete',
+      'x-hard-delete': true,
+      'x-publishes-event': 'ASSET_DELETED',
+      'x-current-204-json-response-bug': true,
+      'x-no-clean-not-found-currently': true,
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/assets/{id}/documents',
+    summary: 'List asset document associations',
+    description:
+      'Returns document_associations rows for an asset in the authenticated tenant where entity_type is asset and entity_id is the path asset ID. The service joins documents to add original_filename, file_size, mime_type, and uploaded_at. It does not check whether the asset exists first, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before lookup.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      params: AssetIdParams,
+    },
+    responses: {
+      200: {
+        description: 'Document associations returned successfully. Empty when no associations exist or the asset is not found.',
+        schema: AssetDocumentListResponse,
+      },
+      401: {
+        description: 'x-api-key is missing at middleware.',
+        schema: MiddlewareUnauthorizedResponse,
+      },
+      403: {
+        description: 'Authenticated request context lacks permission to read asset documents when auth wiring is present.',
+        schema: ApiErrorEnvelope,
+      },
+      500: {
+        description: 'Unexpected error, including missing req.context in the current route wiring.',
+        schema: ApiErrorEnvelope,
+      },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'read',
+      'x-no-asset-existence-check': true,
+      'x-response-links-path-version': 'v2',
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/assets/{id}/documents',
+    summary: 'Associate document with asset',
+    description:
+      'Creates a document_associations row that links the path asset ID to the supplied document_id. The body is validated with createAssetDocumentSchema; document_id is required and notes is optional. The service inserts entity_type=asset, entity_id from the path, document_id, notes, tenant from context, and created_at, then returns the inserted row. It does not verify that the asset or document belongs to the same tenant before insert, does not set created_by, and publishes no event. Foreign-key or unique constraint errors surface through handleApiError. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before insert.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      params: AssetIdParams,
+      body: {
+        schema: AssetDocumentAssociationRequest,
+        description: 'Document UUID and optional association notes.',
+        required: true,
+      },
+    },
+    responses: {
+      201: {
+        description: 'Document association created successfully.',
+        schema: AssetDocumentAssociationResponse,
+      },
+      400: {
+        description: 'Request body validation failed or a database foreign-key reference is invalid.',
+        schema: ApiErrorEnvelope,
+      },
+      401: {
+        description: 'x-api-key is missing at middleware.',
+        schema: MiddlewareUnauthorizedResponse,
+      },
+      403: {
+        description: 'Authenticated request context lacks permission to update asset documents when auth wiring is present.',
+        schema: ApiErrorEnvelope,
+      },
+      409: {
+        description: 'Duplicate association rejected by a database unique constraint.',
+        schema: ApiErrorEnvelope,
+      },
+      500: {
+        description: 'Unexpected error, including missing req.context in the current route wiring.',
+        schema: ApiErrorEnvelope,
+      },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'update',
+      'x-no-asset-existence-check': true,
+      'x-no-tenant-cross-check-for-document': true,
+      'x-created-by-set': false,
+      'x-no-event-published': true,
+    },
+    edition: 'both',
+  });
+
 }

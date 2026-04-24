@@ -1010,6 +1010,19 @@
           }
         }
       },
+      "AssetIdParams": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Asset UUID from assets.asset_id."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
       "AssetDocumentAssociationParams": {
         "type": "object",
         "properties": {
@@ -1021,6 +1034,23 @@
         },
         "required": [
           "associationId"
+        ]
+      },
+      "AssetDocumentAssociationRequest": {
+        "type": "object",
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Document UUID from documents.document_id to associate with the asset."
+          },
+          "notes": {
+            "type": "string",
+            "description": "Optional notes stored on document_associations.notes."
+          }
+        },
+        "required": [
+          "document_id"
         ]
       },
       "AssetExtensionData": {
@@ -1256,6 +1286,193 @@
           }
         },
         "description": "HATEOAS links generated from the asset_id."
+      },
+      "AssetDocumentAssociationRow": {
+        "type": "object",
+        "properties": {
+          "association_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Primary key from document_associations.association_id."
+          },
+          "entity_type": {
+            "type": "string",
+            "enum": [
+              "asset"
+            ],
+            "description": "Entity type stored on document_associations; always asset for these routes."
+          },
+          "entity_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Asset UUID from document_associations.entity_id."
+          },
+          "document_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Document UUID from document_associations.document_id."
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional association notes."
+          },
+          "tenant": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Tenant UUID from document_associations.tenant."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Association creation timestamp."
+          },
+          "original_filename": {
+            "type": "string",
+            "description": "Original filename from the joined documents table, present on list responses."
+          },
+          "file_size": {
+            "type": "number",
+            "description": "File size in bytes from the joined documents table, present on list responses."
+          },
+          "mime_type": {
+            "type": "string",
+            "description": "MIME type from the joined documents table, present on list responses."
+          },
+          "uploaded_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Document upload timestamp from the joined documents table, present on list responses."
+          }
+        },
+        "required": [
+          "association_id",
+          "entity_type",
+          "entity_id",
+          "document_id",
+          "tenant"
+        ]
+      },
+      "AssetDocumentListPayload": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssetDocumentAssociationRow"
+            },
+            "description": "Document association rows for the asset. Empty when no associations exist or the asset is not found."
+          },
+          "_links": {
+            "type": "object",
+            "properties": {
+              "self": {
+                "$ref": "#/components/schemas/HateoasLink"
+              },
+              "create": {
+                "$ref": "#/components/schemas/HateoasLink"
+              },
+              "parent": {
+                "$ref": "#/components/schemas/HateoasLink"
+              }
+            },
+            "description": "Collection links. The controller currently points these at /api/v2/assets paths."
+          }
+        },
+        "required": [
+          "data",
+          "_links"
+        ]
+      },
+      "AssetDocumentListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/AssetDocumentListPayload"
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "timestamp": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "version": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "timestamp",
+              "version"
+            ]
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ]
+      },
+      "AssetDocumentAssociationPayload": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AssetDocumentAssociationRow"
+              },
+              {
+                "description": "Inserted document association row returned from document_associations.returning(*)."
+              }
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "AssetDocumentAssociationResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/AssetDocumentAssociationPayload"
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "timestamp": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "version": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "timestamp",
+              "version"
+            ]
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ]
       },
       "AssetResource": {
         "type": "object",
@@ -8209,6 +8426,489 @@
         }
       }
     },
+    "/api/v1/assets/{id}": {
+      "get": {
+        "summary": "Get asset details",
+        "description": "Returns detailed asset information for the authenticated tenant, including joined client_name, computed warranty_status, client details, type-specific extension_data, relationships, document associations, maintenance schedules, and HATEOAS links. The service first loads assets by asset_id and context.tenant, then loads related data in parallel. If the asset is not found, the controller returns a 404 error envelope. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before lookup.",
+        "tags": [
+          "Assets"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-request-context-required": true,
+          "x-current-auth-wiring-missing": true,
+          "x-rbac-resource": "asset",
+          "x-rbac-action": "read",
+          "x-includes-related-resources": [
+            "client",
+            "extension_data",
+            "relationships",
+            "documents",
+            "maintenance_schedules"
+          ]
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Asset UUID from assets.asset_id."
+            },
+            "required": true,
+            "description": "Asset UUID from assets.asset_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Asset details returned successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetResourceResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key is missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated request context lacks permission to read assets when auth wiring is present.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No asset exists for the supplied asset_id in the authenticated tenant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error, including missing req.context in the current route wiring.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update asset",
+        "description": "Partially updates base asset fields for the authenticated tenant. The request body is validated with updateAssetSchema, where all fields are optional. AssetService.update scopes the update by asset_id and context.tenant, writes updated_at, publishes ASSET_UPDATED, and returns the refreshed base asset with joined client_name and warranty_status. This REST path does not update extension data, create asset history records, or wrap the update in a transaction. Missing assets currently lead to a 500 when the controller tries to add links to a null result rather than a clean 404. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before update.",
+        "tags": [
+          "Assets"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-request-context-required": true,
+          "x-current-auth-wiring-missing": true,
+          "x-rbac-resource": "asset",
+          "x-rbac-action": "update",
+          "x-publishes-event": "ASSET_UPDATED",
+          "x-extension-data-handled": false,
+          "x-history-recorded": false,
+          "x-transactional": false,
+          "x-no-clean-not-found-currently": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Asset UUID from assets.asset_id."
+            },
+            "required": true,
+            "description": "Asset UUID from assets.asset_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "description": "Partial base asset update data. Extension data is not accepted by this REST endpoint.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssetUpdateData"
+              },
+              "description": "Partial base asset update data. Extension data is not accepted by this REST endpoint."
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Asset updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetResourceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request body validation failed, or the database rejected an invalid reference.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key is missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated request context lacks permission to update assets when auth wiring is present.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Intended not-found response for missing assets; the current controller path may surface this as 500.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Database unique constraint conflict, such as a duplicate asset tag if enforced by schema.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error, including missing req.context or null asset result handling in the current route wiring.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete asset",
+        "description": "Hard-deletes an asset for the authenticated tenant. AssetService.delete first loads the asset by asset_id and context.tenant, deletes asset-type-specific extension data, deletes tenant_external_entity_mappings for the asset, deletes the assets row, and publishes ASSET_DELETED. The method overrides the BaseService softDelete configuration and does not explicitly clean every related table handled by the server-action delete path. Missing assets throw a generic Error and currently surface as 500 via handleApiError rather than 404. The controller also constructs a JSON response with status 204, which can throw in NextResponse. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before deletion.",
+        "tags": [
+          "Assets"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-request-context-required": true,
+          "x-current-auth-wiring-missing": true,
+          "x-rbac-resource": "asset",
+          "x-rbac-action": "delete",
+          "x-hard-delete": true,
+          "x-publishes-event": "ASSET_DELETED",
+          "x-current-204-json-response-bug": true,
+          "x-no-clean-not-found-currently": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Asset UUID from assets.asset_id."
+            },
+            "required": true,
+            "description": "Asset UUID from assets.asset_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Asset deleted successfully. Intended response has no body."
+          },
+          "401": {
+            "description": "x-api-key is missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated request context lacks permission to delete assets when auth wiring is present.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Intended not-found response for missing assets; the current service throws a generic Error that may surface as 500.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error, including missing req.context, generic Asset not found errors, or the current 204 JSON response construction issue.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{id}/documents": {
+      "get": {
+        "summary": "List asset document associations",
+        "description": "Returns document_associations rows for an asset in the authenticated tenant where entity_type is asset and entity_id is the path asset ID. The service joins documents to add original_filename, file_size, mime_type, and uploaded_at. It does not check whether the asset exists first, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before lookup.",
+        "tags": [
+          "Assets"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-request-context-required": true,
+          "x-current-auth-wiring-missing": true,
+          "x-rbac-resource": "asset",
+          "x-rbac-action": "read",
+          "x-no-asset-existence-check": true,
+          "x-response-links-path-version": "v2"
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Asset UUID from assets.asset_id."
+            },
+            "required": true,
+            "description": "Asset UUID from assets.asset_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Document associations returned successfully. Empty when no associations exist or the asset is not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetDocumentListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key is missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated request context lacks permission to read asset documents when auth wiring is present.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error, including missing req.context in the current route wiring.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Associate document with asset",
+        "description": "Creates a document_associations row that links the path asset ID to the supplied document_id. The body is validated with createAssetDocumentSchema; document_id is required and notes is optional. The service inserts entity_type=asset, entity_id from the path, document_id, notes, tenant from context, and created_at, then returns the inserted row. It does not verify that the asset or document belongs to the same tenant before insert, does not set created_by, and publishes no event. Foreign-key or unique constraint errors surface through handleApiError. In the current route wiring, req.context may be absent because no route-level API-key auth wrapper sets it, causing a 500 before insert.",
+        "tags": [
+          "Assets"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-request-context-required": true,
+          "x-current-auth-wiring-missing": true,
+          "x-rbac-resource": "asset",
+          "x-rbac-action": "update",
+          "x-no-asset-existence-check": true,
+          "x-no-tenant-cross-check-for-document": true,
+          "x-created-by-set": false,
+          "x-no-event-published": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Asset UUID from assets.asset_id."
+            },
+            "required": true,
+            "description": "Asset UUID from assets.asset_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "description": "Document UUID and optional association notes.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssetDocumentAssociationRequest"
+              },
+              "description": "Document UUID and optional association notes."
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Document association created successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetDocumentAssociationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request body validation failed or a database foreign-key reference is invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-api-key is missing at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated request context lacks permission to update asset documents when auth wiring is present.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Duplicate association rejected by a database unique constraint.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error, including missing req.context in the current route wiring.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetApiErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/billing/licence-count": {
       "get": {
         "summary": "Get tenant licence usage",
@@ -14789,249 +15489,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SoftwareOneErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/assets/{id}": {
-      "delete": {
-        "summary": "DELETE v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "assets"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "204": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "assets"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "summary": "PUT v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "assets"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/assets/{id}/documents": {
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "assets"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "assets"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
