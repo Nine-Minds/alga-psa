@@ -189,7 +189,7 @@
     "id": "T032",
     "description": "UI (Playwright): approval form in AppointmentRequestsPanel shows the Teams toggle when capability returns available, default checked.",
     "featureIds": ["F014"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T033",

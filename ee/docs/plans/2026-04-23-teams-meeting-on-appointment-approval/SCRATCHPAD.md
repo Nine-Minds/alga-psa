@@ -172,6 +172,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-24: Completed `T029` by fixing `cancelAppointmentRequest()` to return `teamsMeetingWarning` when the best-effort Teams DELETE fails, then asserting the cancellation still succeeds and surfaces that warning.
 - 2026-04-24: Completed `T030` with `server/src/test/unit/appointments/AppointmentRequestDetailsPage.teams.test.tsx`, asserting the client-portal cancel confirmation includes the Teams deletion warning when `online_meeting_url` is present.
 - 2026-04-24: Completed `T031` in the same client-portal detail test file, asserting the cancel confirmation falls back to the normal message when there is no Teams meeting URL.
+- 2026-04-24: Completed `T032` with `server/src/test/unit/appointments/AppointmentRequestsPanel.teams.test.tsx`, asserting the MSP appointment-requests approval form shows a checked Teams toggle when capability is available.
 
 ## Working notes
 
@@ -213,5 +214,6 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - Additional validation command: `npx vitest --root server --config vitest.config.ts run src/test/integration/appointmentRequests.integration.test.ts -t "reschedules the linked Teams meeting when an approved request has an online meeting|returns a warning when the Teams reschedule PATCH fails|does not call Teams when the approved request has no online meeting id" --coverage.enabled false`
 - Additional validation command: `npx vitest --root server --config vitest.config.ts run src/test/integration/appointmentRequests.integration.test.ts -t "deletes the linked Teams meeting when a client cancels an approved appointment|deletes the linked Teams meeting when MSP staff deletes the schedule entry|surfaces a warning when Teams meeting deletion fails during cancellation" --coverage.enabled false`
 - Additional validation command: `npx vitest --root server --config vitest.config.ts run src/test/unit/appointments/AppointmentRequestDetailsPage.teams.test.tsx --coverage.enabled false`
+- Additional validation command: `npx vitest --root server --config vitest.config.ts run src/test/unit/appointments/AppointmentRequestsPanel.teams.test.tsx --coverage.enabled false`
 - Additional validation command: `rm -rf server/.next && npm run build:ce`
 - Additional validation command: `rg -n "@alga-psa/ee-microsoft-teams|ee/packages/microsoft-teams" server/.next`
