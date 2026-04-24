@@ -1,0 +1,170 @@
+[
+  {
+    "id": "F001",
+    "description": "Migration adds online_meeting_provider, online_meeting_url, online_meeting_id columns to appointment_requests (nullable text).",
+    "implemented": false,
+    "prdRefs": ["FR-1"]
+  },
+  {
+    "id": "F002",
+    "description": "EE migration adds default_meeting_organizer_upn column to teams_integrations (nullable text).",
+    "implemented": false,
+    "prdRefs": ["FR-2"]
+  },
+  {
+    "id": "F003",
+    "description": "createTeamsMeeting helper resolves tenant Microsoft profile and POSTs to Graph /users/{upn}/onlineMeetings, returning { joinWebUrl, meetingId } or null on failure.",
+    "implemented": false,
+    "prdRefs": ["FR-3"]
+  },
+  {
+    "id": "F004",
+    "description": "updateTeamsMeeting helper PATCHes Graph /users/{upn}/onlineMeetings/{id} with new start/end times.",
+    "implemented": false,
+    "prdRefs": ["FR-4"]
+  },
+  {
+    "id": "F005",
+    "description": "deleteTeamsMeeting helper DELETEs the Graph online meeting; errors are logged but do not throw.",
+    "implemented": false,
+    "prdRefs": ["FR-5"]
+  },
+  {
+    "id": "F006",
+    "description": "getTeamsMeetingCapability(tenantId) server action returns { available, reason } for driving toggle visibility.",
+    "implemented": false,
+    "prdRefs": ["FR-6"]
+  },
+  {
+    "id": "F007",
+    "description": "CE-safe shim in packages/scheduling that dynamically resolves the EE Teams meeting service and returns no-op handlers when EE is unavailable.",
+    "implemented": false,
+    "prdRefs": ["FR-7"]
+  },
+  {
+    "id": "F008",
+    "description": "approveAppointmentRequestSchema accepts generate_teams_meeting: boolean (default false).",
+    "implemented": false,
+    "prdRefs": ["FR-8"]
+  },
+  {
+    "id": "F009",
+    "description": "approveAppointmentRequest server action calls createTeamsMeeting when generate_teams_meeting is true, persists the three columns, and passes the URL into email + ICS payloads.",
+    "implemented": false,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F010",
+    "description": "approveAppointmentRequest returns teamsMeetingWarning in its response when Graph creation fails; approval still succeeds.",
+    "implemented": false,
+    "prdRefs": ["FR-9"]
+  },
+  {
+    "id": "F011",
+    "description": "updateAppointmentRequestDateTime invokes updateTeamsMeeting when online_meeting_id is present; failure becomes teamsMeetingWarning.",
+    "implemented": false,
+    "prdRefs": ["FR-10"]
+  },
+  {
+    "id": "F012",
+    "description": "cancelAppointmentRequest and MSP-side appointment deletion call deleteTeamsMeeting when an associated Teams meeting exists.",
+    "implemented": false,
+    "prdRefs": ["FR-11"]
+  },
+  {
+    "id": "F013",
+    "description": "Cancel/delete confirmation dialogs include a warning message when a Teams meeting will also be deleted.",
+    "implemented": false,
+    "prdRefs": ["FR-11"]
+  },
+  {
+    "id": "F014",
+    "description": "AppointmentRequestsPanel approval form renders the 'Generate Teams meeting link' toggle only when getTeamsMeetingCapability returns available; default checked.",
+    "implemented": false,
+    "prdRefs": ["FR-12"]
+  },
+  {
+    "id": "F015",
+    "description": "EntryPopup pending-branch approval form renders the same toggle with the same visibility rules.",
+    "implemented": false,
+    "prdRefs": ["FR-12"]
+  },
+  {
+    "id": "F016",
+    "description": "EntryPopup approved-appointment banner displays a 'Join Teams Meeting' button when online_meeting_url is present.",
+    "implemented": false,
+    "prdRefs": ["FR-13"]
+  },
+  {
+    "id": "F017",
+    "description": "AppointmentRequestsPanel detail view displays the join URL / Join button when online_meeting_url is present on an approved request.",
+    "implemented": false,
+    "prdRefs": ["FR-13"]
+  },
+  {
+    "id": "F018",
+    "description": "Client-portal AppointmentRequestDetailsPage renders a primary 'Join Teams Meeting' button when online_meeting_url is present.",
+    "implemented": false,
+    "prdRefs": ["FR-14"]
+  },
+  {
+    "id": "F019",
+    "description": "AvailabilitySettings.tsx adds a conditional 'Teams Meetings' TabsTrigger + TabsContent, visible only when teams_integrations.install_status = 'active'.",
+    "implemented": false,
+    "prdRefs": ["FR-15"]
+  },
+  {
+    "id": "F020",
+    "description": "Teams Meetings tab contains an organizer UPN input, Save action, and Verify button that performs a best-effort Graph check.",
+    "implemented": false,
+    "prdRefs": ["FR-15"]
+  },
+  {
+    "id": "F021",
+    "description": "setDefaultMeetingOrganizer server action writes UPN to teams_integrations with permission check.",
+    "implemented": false,
+    "prdRefs": ["FR-15"]
+  },
+  {
+    "id": "F022",
+    "description": "verifyMeetingOrganizer server action calls Graph /users/{upn} and optionally performs a test-create-and-delete round-trip; returns { valid, displayName?, reason? }.",
+    "implemented": false,
+    "prdRefs": ["FR-15"]
+  },
+  {
+    "id": "F023",
+    "description": "Email template migration adds a conditional 'Join Teams Meeting' block to appointment-request-approved-client and appointment-assigned templates keyed on {{onlineMeetingUrl}}.",
+    "implemented": false,
+    "prdRefs": ["FR-16"]
+  },
+  {
+    "id": "F024",
+    "description": "SystemEmailService approved/assigned methods accept onlineMeetingUrl in their payload type and pass it through to template variables.",
+    "implemented": false,
+    "prdRefs": ["FR-16"]
+  },
+  {
+    "id": "F025",
+    "description": "ICS generator receives url = online_meeting_url and location = 'Microsoft Teams Meeting' when a meeting exists.",
+    "implemented": false,
+    "prdRefs": ["FR-17"]
+  },
+  {
+    "id": "F026",
+    "description": "i18n keys added to English schedule.json for toggle label, join button, Teams Meetings tab, organizer input + verify copy; pseudo-locales regenerated.",
+    "implemented": false,
+    "prdRefs": ["FR-18"]
+  },
+  {
+    "id": "F027",
+    "description": "Azure admin runbook authored at docs/integrations/teams-meetings-setup.md describing required app permission and Application Access Policy.",
+    "implemented": false,
+    "prdRefs": ["Phase 3"]
+  },
+  {
+    "id": "F028",
+    "description": "Structured log lines emitted for each Graph call (create/update/delete) at INFO on success and WARN on failure with tenant, request id, operation, and Graph status code.",
+    "implemented": false,
+    "prdRefs": ["Observability"]
+  }
+]

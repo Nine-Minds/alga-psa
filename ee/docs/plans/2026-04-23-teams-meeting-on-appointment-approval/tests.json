@@ -1,0 +1,326 @@
+[
+  {
+    "id": "T001",
+    "description": "Migration: after apply, `appointment_requests` has nullable columns online_meeting_provider, online_meeting_url, online_meeting_id with correct types.",
+    "featureIds": ["F001"],
+    "implemented": false
+  },
+  {
+    "id": "T002",
+    "description": "Migration: after apply, `teams_integrations` has nullable column default_meeting_organizer_upn.",
+    "featureIds": ["F002"],
+    "implemented": false
+  },
+  {
+    "id": "T003",
+    "description": "createTeamsMeeting unit test (happy path): given a ready profile and organizer UPN, returns { joinWebUrl, meetingId } matching the mocked Graph response.",
+    "featureIds": ["F003"],
+    "implemented": false
+  },
+  {
+    "id": "T004",
+    "description": "createTeamsMeeting returns null and logs a WARN when Graph responds 403 (missing OnlineMeetings permission).",
+    "featureIds": ["F003"],
+    "implemented": false
+  },
+  {
+    "id": "T005",
+    "description": "createTeamsMeeting returns null and logs a WARN when Graph responds 404 (organizer UPN not found).",
+    "featureIds": ["F003"],
+    "implemented": false
+  },
+  {
+    "id": "T006",
+    "description": "createTeamsMeeting returns null and logs a WARN when token fetch fails (invalid client secret).",
+    "featureIds": ["F003"],
+    "implemented": false
+  },
+  {
+    "id": "T007",
+    "description": "createTeamsMeeting returns null when teams_integrations row is absent or install_status != 'active'.",
+    "featureIds": ["F003"],
+    "implemented": false
+  },
+  {
+    "id": "T008",
+    "description": "createTeamsMeeting returns null when default_meeting_organizer_upn is NULL.",
+    "featureIds": ["F003"],
+    "implemented": false
+  },
+  {
+    "id": "T009",
+    "description": "updateTeamsMeeting PATCHes with correct ISO-8601 UTC start/end and returns true on 200.",
+    "featureIds": ["F004"],
+    "implemented": false
+  },
+  {
+    "id": "T010",
+    "description": "updateTeamsMeeting returns false and logs WARN on Graph 404 (meeting already deleted).",
+    "featureIds": ["F004"],
+    "implemented": false
+  },
+  {
+    "id": "T011",
+    "description": "deleteTeamsMeeting returns true on 204 and false on any error; logs WARN on failure.",
+    "featureIds": ["F005"],
+    "implemented": false
+  },
+  {
+    "id": "T012",
+    "description": "getTeamsMeetingCapability returns { available: false, reason: 'not_configured' } when no teams_integrations row exists for tenant.",
+    "featureIds": ["F006"],
+    "implemented": false
+  },
+  {
+    "id": "T013",
+    "description": "getTeamsMeetingCapability returns { available: false, reason: 'not_configured' } when install_status is 'install_pending' or 'error'.",
+    "featureIds": ["F006"],
+    "implemented": false
+  },
+  {
+    "id": "T014",
+    "description": "getTeamsMeetingCapability returns { available: false, reason: 'no_organizer' } when install_status is 'active' but default_meeting_organizer_upn is NULL.",
+    "featureIds": ["F006"],
+    "implemented": false
+  },
+  {
+    "id": "T015",
+    "description": "getTeamsMeetingCapability returns { available: true } when install_status='active' AND default_meeting_organizer_upn is set.",
+    "featureIds": ["F006"],
+    "implemented": false
+  },
+  {
+    "id": "T016",
+    "description": "getTeamsMeetingCapability returns { available: false, reason: 'ee_disabled' } when EDITION is not 'ee'.",
+    "featureIds": ["F006", "F007"],
+    "implemented": false
+  },
+  {
+    "id": "T017",
+    "description": "CE build (npm run build without EE) compiles without any reference to ee/packages/microsoft-teams.",
+    "featureIds": ["F007"],
+    "implemented": false
+  },
+  {
+    "id": "T018",
+    "description": "CE shim returns no-op handlers: createTeamsMeeting/updateTeamsMeeting/deleteTeamsMeeting all resolve to null/false when EE is unavailable, without throwing.",
+    "featureIds": ["F007"],
+    "implemented": false
+  },
+  {
+    "id": "T019",
+    "description": "Schema test: approveAppointmentRequestSchema accepts generate_teams_meeting=true, generate_teams_meeting=false, and omission (defaults to false).",
+    "featureIds": ["F008"],
+    "implemented": false
+  },
+  {
+    "id": "T020",
+    "description": "Approval integration test: with toggle on and Teams configured, approving inserts join URL into appointment_requests and email payload includes onlineMeetingUrl.",
+    "featureIds": ["F009"],
+    "implemented": false
+  },
+  {
+    "id": "T021",
+    "description": "Approval integration test: with toggle OFF, no Graph call is made and online_meeting_* columns remain NULL.",
+    "featureIds": ["F009"],
+    "implemented": false
+  },
+  {
+    "id": "T022",
+    "description": "Approval integration test: with toggle ON but capability unavailable (no organizer), no Graph call is made, appointment is approved without meeting columns, returns teamsMeetingWarning='no_organizer' or equivalent.",
+    "featureIds": ["F009", "F010"],
+    "implemented": false
+  },
+  {
+    "id": "T023",
+    "description": "Approval integration test: Graph returns 500 → approval still succeeds, columns remain NULL, response includes teamsMeetingWarning, email is sent WITHOUT the join button block.",
+    "featureIds": ["F010"],
+    "implemented": false
+  },
+  {
+    "id": "T024",
+    "description": "Reschedule integration test: updating final_date/final_time calls updateTeamsMeeting with the new ISO times when online_meeting_id is present.",
+    "featureIds": ["F011"],
+    "implemented": false
+  },
+  {
+    "id": "T025",
+    "description": "Reschedule integration test: Graph PATCH failure → reschedule succeeds; response includes teamsMeetingWarning.",
+    "featureIds": ["F011"],
+    "implemented": false
+  },
+  {
+    "id": "T026",
+    "description": "Reschedule integration test: updating a request WITHOUT online_meeting_id does not call Graph.",
+    "featureIds": ["F011"],
+    "implemented": false
+  },
+  {
+    "id": "T027",
+    "description": "Cancel integration test: cancelling an approved appointment with online_meeting_id calls deleteTeamsMeeting.",
+    "featureIds": ["F012"],
+    "implemented": false
+  },
+  {
+    "id": "T028",
+    "description": "Delete integration test: deleting a schedule_entry for an approved appointment with online_meeting_id calls deleteTeamsMeeting.",
+    "featureIds": ["F012"],
+    "implemented": false
+  },
+  {
+    "id": "T029",
+    "description": "Cancel/delete integration test: Graph DELETE failure → cancel succeeds with a warning response; logs WARN.",
+    "featureIds": ["F012"],
+    "implemented": false
+  },
+  {
+    "id": "T030",
+    "description": "UI (Playwright): cancel confirmation dialog shows warning text 'This will also delete the Microsoft Teams meeting' when appointment has online_meeting_url.",
+    "featureIds": ["F013"],
+    "implemented": false
+  },
+  {
+    "id": "T031",
+    "description": "UI (Playwright): cancel confirmation dialog does NOT show Teams warning when appointment has no online_meeting_url.",
+    "featureIds": ["F013"],
+    "implemented": false
+  },
+  {
+    "id": "T032",
+    "description": "UI (Playwright): approval form in AppointmentRequestsPanel shows the Teams toggle when capability returns available, default checked.",
+    "featureIds": ["F014"],
+    "implemented": false
+  },
+  {
+    "id": "T033",
+    "description": "UI (Playwright): approval form in AppointmentRequestsPanel does NOT render the Teams toggle when capability returns { available: false }.",
+    "featureIds": ["F014"],
+    "implemented": false
+  },
+  {
+    "id": "T034",
+    "description": "UI (Playwright): EntryPopup pending approval view shows the same Teams toggle when capability is available.",
+    "featureIds": ["F015"],
+    "implemented": false
+  },
+  {
+    "id": "T035",
+    "description": "UI (Playwright): EntryPopup approved banner renders 'Join Teams Meeting' button only when online_meeting_url is present; opens in new tab.",
+    "featureIds": ["F016"],
+    "implemented": false
+  },
+  {
+    "id": "T036",
+    "description": "UI (Playwright): AppointmentRequestsPanel detail view shows the Teams join URL for approved requests that have a stored URL.",
+    "featureIds": ["F017"],
+    "implemented": false
+  },
+  {
+    "id": "T037",
+    "description": "UI (Playwright, client portal): AppointmentRequestDetailsPage renders a primary 'Join Teams Meeting' button when online_meeting_url is populated.",
+    "featureIds": ["F018"],
+    "implemented": false
+  },
+  {
+    "id": "T038",
+    "description": "UI (Playwright): AvailabilitySettings shows the 'Teams Meetings' tab only when teams_integrations.install_status = 'active' for the current tenant.",
+    "featureIds": ["F019"],
+    "implemented": false
+  },
+  {
+    "id": "T039",
+    "description": "UI (Playwright): setting + saving organizer UPN in Teams Meetings tab persists the value and triggers capability to flip to available.",
+    "featureIds": ["F020", "F021"],
+    "implemented": false
+  },
+  {
+    "id": "T040",
+    "description": "Verify button calls Graph /users/{upn} and returns valid:true with displayName for an existing user.",
+    "featureIds": ["F022"],
+    "implemented": false
+  },
+  {
+    "id": "T041",
+    "description": "Verify button returns valid:false with reason='user_not_found' when Graph returns 404.",
+    "featureIds": ["F022"],
+    "implemented": false
+  },
+  {
+    "id": "T042",
+    "description": "Verify button returns valid:false with reason='policy_missing' when a deeper check fails with specific Graph error code for application access policy.",
+    "featureIds": ["F022"],
+    "implemented": false
+  },
+  {
+    "id": "T043",
+    "description": "Permission test: setDefaultMeetingOrganizer rejects callers without the required tenant_integrations:update permission.",
+    "featureIds": ["F021"],
+    "implemented": false
+  },
+  {
+    "id": "T044",
+    "description": "Template render test: appointment-request-approved-client renders the Join button when onlineMeetingUrl is present and omits it otherwise.",
+    "featureIds": ["F023", "F024"],
+    "implemented": false
+  },
+  {
+    "id": "T045",
+    "description": "Template render test: appointment-assigned renders the Join button for the assigned technician when onlineMeetingUrl is present.",
+    "featureIds": ["F023", "F024"],
+    "implemented": false
+  },
+  {
+    "id": "T046",
+    "description": "ICS generator test: when url + location are supplied, the ICS output contains a URL line matching the join URL and LOCATION: Microsoft Teams Meeting.",
+    "featureIds": ["F025"],
+    "implemented": false
+  },
+  {
+    "id": "T047",
+    "description": "ICS generator test: when url is absent, no URL line is emitted and LOCATION is unset.",
+    "featureIds": ["F025"],
+    "implemented": false
+  },
+  {
+    "id": "T048",
+    "description": "i18n validator (scripts/validate-translations.cjs) reports 0 errors / 0 warnings after adding new keys and regenerating pseudo-locales.",
+    "featureIds": ["F026"],
+    "implemented": false
+  },
+  {
+    "id": "T049",
+    "description": "Docs: docs/integrations/teams-meetings-setup.md exists and links are reachable from the Teams Meetings tab's prerequisites banner.",
+    "featureIds": ["F027"],
+    "implemented": false
+  },
+  {
+    "id": "T050",
+    "description": "Observability: during a full approve + reschedule + cancel lifecycle, three structured log lines are emitted (create, update, delete) each containing tenant, appointment_request_id, operation, status.",
+    "featureIds": ["F028"],
+    "implemented": false
+  },
+  {
+    "id": "T051",
+    "description": "Multi-tenant isolation test: creating a Teams meeting for tenant A never surfaces or reuses credentials/profile of tenant B.",
+    "featureIds": ["F003", "F007"],
+    "implemented": false
+  },
+  {
+    "id": "T052",
+    "description": "Timezone test: approving a request whose requester_timezone is non-UTC produces Graph startDateTime / endDateTime in correct UTC instants that round-trip to the requester's local time.",
+    "featureIds": ["F009"],
+    "implemented": false
+  },
+  {
+    "id": "T053",
+    "description": "Regression: CE build succeeds without EE package available (validates the dynamic-import guard).",
+    "featureIds": ["F007"],
+    "implemented": false
+  },
+  {
+    "id": "T054",
+    "description": "Regression: EE build succeeds and all new UI surfaces type-check.",
+    "featureIds": ["F003", "F014", "F019"],
+    "implemented": false
+  }
+]
