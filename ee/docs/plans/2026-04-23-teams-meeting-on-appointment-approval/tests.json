@@ -141,7 +141,7 @@
     "id": "T024",
     "description": "Reschedule integration test: updating final_date/final_time calls updateTeamsMeeting with the new ISO times when online_meeting_id is present.",
     "featureIds": ["F011"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T025",

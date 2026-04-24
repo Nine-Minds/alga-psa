@@ -164,6 +164,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-24: Completed `T022` in the same suite, asserting approval still succeeds when Teams capability is unavailable, no Graph create runs, and `teamsMeetingWarning` explains the organizer/setup gap.
 - 2026-04-24: Completed `T023` in the same suite, asserting a soft Graph create failure leaves the appointment approved, keeps meeting columns empty, and omits `onlineMeetingUrl` from the approval email payload.
 - 2026-04-24: Completed `T052` in the same approval suite, asserting requester-local wall-clock times are converted to the correct UTC instants before `createTeamsMeeting()` is called.
+- 2026-04-24: Completed `T024` in the same integration file, asserting approved reschedules call `updateTeamsMeeting()` with the expected new UTC start/end timestamps for the stored Teams meeting.
 
 ## Working notes
 
@@ -183,6 +184,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - Repo docs under `docs/` are not automatically browser-accessible from the MSP UI. For in-app documentation links, a static copy under `server/public/...` is needed unless a dedicated docs route already exists.
 - Teams meeting helper logs already covered Graph response success/failure. The final observability cleanup was making the non-response warning paths structurally consistent by always including a `status` field as well.
 - Approval flow nuance: when the approver keeps the originally requested time, `requested_date`/`requested_time` must be converted from the requester's local wall clock via `fromZonedTime(...)`; only explicit `final_date`/`final_time` values sent from the UI are already normalized to UTC strings.
+- Integration harness nuance: initialize the Teams meeting mocks in `beforeEach`, not only `afterEach`, so isolated Vitest filters still see a configured `getTeamsMeetingCapability()` on the first matching test.
 - The server integration harness needed both `@alga-psa/db` and `@alga-psa/auth`-layer synchronization. Mocking only `server/src/lib/db` and `@alga-psa/users/actions` is insufficient now that these actions import package-level wrappers directly.
 - Approval-path integration tests also need UUID-shaped staff fixture IDs because `appointment_requests.approved_by_user_id` is typed as `uuid`; old placeholder strings caused PostgreSQL `22P02` failures before Teams assertions ran.
 - Runbook command used for validation so far: `node -c server/migrations/20260423130000_add_online_meeting_columns_to_appointment_requests.cjs`
@@ -200,5 +202,6 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - Additional validation command: `npx vitest --root server --config vitest.config.ts run src/test/unit/verifyMeetingOrganizer.test.ts --coverage.enabled false`
 - Additional validation command: `npx vitest --root server --config vitest.config.ts run src/test/unit/teamsMeetingMigrations.test.ts --coverage.enabled false`
 - Additional validation command: `npx vitest --root server --config vitest.config.ts run src/test/integration/appointmentRequests.integration.test.ts -t "creates and stores a Teams meeting when approval opts in|skips Teams meeting creation when the toggle is off|returns a warning and skips Graph create when Teams capability is unavailable|keeps approval successful when Teams meeting creation fails|converts requester-local approval times to UTC before creating the Teams meeting" --coverage.enabled false`
+- Additional validation command: `npx vitest --root server --config vitest.config.ts run src/test/integration/appointmentRequests.integration.test.ts -t "reschedules the linked Teams meeting when an approved request has an online meeting|returns a warning when the Teams reschedule PATCH fails|does not call Teams when the approved request has no online meeting id" --coverage.enabled false`
 - Additional validation command: `rm -rf server/.next && npm run build:ce`
 - Additional validation command: `rg -n "@alga-psa/ee-microsoft-teams|ee/packages/microsoft-teams" server/.next`

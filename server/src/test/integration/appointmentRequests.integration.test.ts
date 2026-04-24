@@ -1,4 +1,4 @@
-import { beforeAll, afterAll, afterEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { formatInTimeZone } from 'date-fns-tz';
@@ -80,6 +80,7 @@ const mockEmailInstance = {
   sendAppointmentRequestReceived: vi.fn(() => Promise.resolve()),
   sendNewAppointmentRequest: vi.fn(() => Promise.resolve()),
   sendAppointmentRequestApproved: vi.fn(() => Promise.resolve()),
+  sendAppointmentAssignedNotification: vi.fn(() => Promise.resolve()),
   sendAppointmentRequestDeclined: vi.fn(() => Promise.resolve()),
   sendEmail: vi.fn(() => Promise.resolve())
 };
@@ -136,6 +137,17 @@ vi.mock('@alga-psa/scheduling/actions', async () => {
 });
 
 describe('Appointment Request Integration Tests', () => {
+  const resetIntegrationMocks = () => {
+    enterpriseState.value = true;
+    teamsMeetingCapabilityMock.mockResolvedValue({ available: true });
+    createTeamsMeetingMock.mockResolvedValue({
+      joinWebUrl: 'https://teams.example.com/meeting/123',
+      meetingId: 'meeting-123',
+    });
+    updateTeamsMeetingMock.mockResolvedValue(true);
+    deleteTeamsMeetingMock.mockResolvedValue(true);
+  };
+
   beforeAll(async () => {
     process.env.APP_ENV = process.env.APP_ENV || 'test';
     process.env.DB_USER_ADMIN = process.env.DB_USER_ADMIN || 'postgres';
@@ -155,6 +167,10 @@ describe('Appointment Request Integration Tests', () => {
     ({ approveAppointmentRequest, declineAppointmentRequest, deleteScheduleEntry } = await import('@alga-psa/scheduling/actions'));
   }, 120_000);
 
+  beforeEach(() => {
+    resetIntegrationMocks();
+  });
+
   afterAll(async () => {
     await db?.destroy();
   });
@@ -164,14 +180,7 @@ describe('Appointment Request Integration Tests', () => {
       await cleanupCreatedRecords(db, tenantId, createdIds);
     }
     createdIds = { availabilitySettingIds: [] };
-    enterpriseState.value = true;
-    teamsMeetingCapabilityMock.mockResolvedValue({ available: true });
-    createTeamsMeetingMock.mockResolvedValue({
-      joinWebUrl: 'https://teams.example.com/meeting/123',
-      meetingId: 'meeting-123',
-    });
-    updateTeamsMeetingMock.mockResolvedValue(true);
-    deleteTeamsMeetingMock.mockResolvedValue(true);
+    resetIntegrationMocks();
     vi.clearAllMocks();
   });
 
