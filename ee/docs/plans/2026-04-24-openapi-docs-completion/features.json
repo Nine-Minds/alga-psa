@@ -60,7 +60,7 @@
   {
     "id": "F008",
     "description": "Document workflow route family including CRUD, events, execution, templates, validation, analytics, import/export, and versioning endpoints.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals"
     ]

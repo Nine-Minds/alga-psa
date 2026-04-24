@@ -438,3 +438,39 @@ python3 <CE and EE placeholder scans for F005 family + global counts>
 3. `POST /api/v1/feature-flags`
 4. `GET /api/v1/quotes`
 5. `POST /api/v1/quotes`
+
+## 2026-04-24 — Workflow Family Completed (F008)
+
+### Scope completed
+
+- Added registrar: `server/src/lib/api/openapi/routes/workflowsV1.ts`.
+- Registered in `server/src/lib/api/openapi/index.ts` before inventory backfill.
+- Documented all previously-placeholder `/api/v1/workflows*` operations (34 routes).
+
+### Source-grounded findings and decisions
+
+- There are no `server/src/app/api/v1/workflows/**/route.ts` handlers in this worktree.
+- The inventory placeholders for `/api/v1/workflows*` were documented explicitly as inventory-only/missing-handler routes rather than inventing behavior.
+- Descriptions now point to existing workflow APIs under `/api/workflow-definitions`, `/api/workflow-runs`, and `/api/workflow/events` to avoid ambiguity.
+
+### Validation / tests completed in this pass
+
+- CE workflow placeholder check: `ce_workflows_remaining = 0`.
+- EE workflow placeholder check: `ee_workflows_remaining = 0`.
+- Regeneration commands succeeded:
+  - `npm --prefix sdk run openapi:generate`
+  - `npm --prefix sdk run openapi:generate -- --edition ee`
+- `T009` completed by documenting webhook family security/payload behavior and workflow family missing-handler reality with security/missing-route behavior.
+
+### Remaining placeholder counts after this pass
+
+- CE: `208`
+- EE: `216`
+
+### Next cursor (CE)
+
+1. `POST /api/v1/feature-access`
+2. `GET /api/v1/feature-flags`
+3. `POST /api/v1/feature-flags`
+4. `GET /api/v1/quotes`
+5. `POST /api/v1/quotes`

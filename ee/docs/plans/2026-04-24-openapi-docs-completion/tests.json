@@ -80,7 +80,7 @@
   {
     "id": "T009",
     "description": "For webhook and workflow route families, verify security schemes and callback/event payload schemas against route handlers and service code.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F008",

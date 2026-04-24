@@ -122,6 +122,9 @@
       "name": "Webhooks"
     },
     {
+      "name": "Workflows v1"
+    },
+    {
       "name": "contracts"
     },
     {
@@ -183,9 +186,6 @@
     },
     {
       "name": "users"
-    },
-    {
-      "name": "workflows"
     }
   ],
   "components": {
@@ -11798,6 +11798,34 @@
           "data",
           "pagination"
         ]
+      },
+      "WorkflowV1MissingApiError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {}
+            },
+            "required": [
+              "code",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "WorkflowV1MissingRouteResponse": {
+        "type": "string",
+        "description": "Default Next.js not-found response body for missing route handlers."
       },
       "ProjectIdParams": {
         "type": "object",
@@ -48368,6 +48396,1378 @@
         }
       }
     },
+    "/api/v1/workflows": {
+      "get": {
+        "summary": "List workflows (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create workflow (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/analytics": {
+      "get": {
+        "summary": "Get workflow analytics (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/events": {
+      "get": {
+        "summary": "List workflow events (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create workflow event (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/events/{id}": {
+      "get": {
+        "summary": "Get workflow event by id (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/executions": {
+      "get": {
+        "summary": "List workflow executions (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create workflow execution (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/executions/bulk": {
+      "post": {
+        "summary": "Bulk create workflow executions (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/executions/bulk-action": {
+      "post": {
+        "summary": "Bulk action workflow executions (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/executions/{id}": {
+      "get": {
+        "summary": "Get workflow execution by id (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update workflow execution (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/executions/{id}/cancel": {
+      "post": {
+        "summary": "Cancel workflow execution (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/executions/{id}/pause": {
+      "post": {
+        "summary": "Pause workflow execution (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/executions/{id}/restart": {
+      "post": {
+        "summary": "Restart workflow execution (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/executions/{id}/resume": {
+      "post": {
+        "summary": "Resume workflow execution (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/export": {
+      "get": {
+        "summary": "Export workflows (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/import": {
+      "post": {
+        "summary": "Import workflows (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/search": {
+      "get": {
+        "summary": "Search workflows (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/tasks": {
+      "get": {
+        "summary": "List workflow tasks (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create workflow task (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/tasks/bulk-assign": {
+      "post": {
+        "summary": "Bulk assign workflow tasks (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/tasks/{id}": {
+      "get": {
+        "summary": "Get workflow task by id (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update workflow task (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/tasks/{id}/claim": {
+      "post": {
+        "summary": "Claim workflow task (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/tasks/{id}/complete": {
+      "post": {
+        "summary": "Complete workflow task (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/templates": {
+      "get": {
+        "summary": "List workflow templates (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create workflow template (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/templates/{id}": {
+      "delete": {
+        "summary": "Delete workflow template (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Get workflow template by id (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update workflow template (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/{id}": {
+      "delete": {
+        "summary": "Delete workflow by id (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Get workflow by id (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update workflow (route inventory only)",
+        "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+        "tags": [
+          "Workflows v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-route-inventory-only": true,
+          "x-route-file-missing": "server/src/app/api/v1/workflows/**/route.ts",
+          "x-family-status": "missing-handler"
+        },
+        "responses": {
+          "401": {
+            "description": "x-api-key missing/invalid at middleware.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No route handler exists for this inventory-only /api/v1/workflows path.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowV1MissingRouteResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/projects/{id}/task-status-mappings": {
       "get": {
         "summary": "List project task status mappings",
@@ -60164,1742 +61564,6 @@
         },
         "responses": {
           "204": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/workflows": {
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/workflows/analytics": {
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/workflows/events": {
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/workflows/events/{id}": {
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/workflows/executions": {
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/workflows/executions/bulk": {
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/workflows/executions/bulk-action": {
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/workflows/executions/{id}": {
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "summary": "PUT v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/workflows/executions/{id}/cancel": {
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/workflows/executions/{id}/pause": {
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/workflows/executions/{id}/restart": {
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/workflows/executions/{id}/resume": {
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/workflows/export": {
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/workflows/import": {
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/workflows/search": {
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/workflows/tasks": {
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/workflows/tasks/bulk-assign": {
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/workflows/tasks/{id}": {
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "summary": "PUT v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/workflows/tasks/{id}/claim": {
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/workflows/tasks/{id}/complete": {
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/workflows/templates": {
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/workflows/templates/{id}": {
-      "delete": {
-        "summary": "DELETE v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "204": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "summary": "PUT v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/workflows/{id}": {
-      "delete": {
-        "summary": "DELETE v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "204": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "summary": "GET v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "responses": {
-          "200": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "summary": "PUT v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "workflows"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "200": {
             "description": "Placeholder success response",
             "content": {
               "application/json": {

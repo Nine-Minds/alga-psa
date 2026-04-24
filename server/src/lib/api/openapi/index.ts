@@ -26,6 +26,7 @@ import { registerSoftwareOneRoutes } from './routes/softwareOne';
 import { registerStorageRoutes } from './routes/extensionStorage';
 import { registerSystemRoutes } from './routes/system';
 import { registerWebhookRoutes } from './routes/webhooks';
+import { registerWorkflowV1Routes } from './routes/workflowsV1';
 import { registerInventoryBackfillRoutes } from './backfill';
 import { ApiOpenApiRegistry, RegistryInitOptions, buildDocument, createRegistry } from './registry';
 import { DocumentBuildOptions } from './types';
@@ -58,6 +59,7 @@ export function buildBaseRegistry(options: RegistryInitOptions = {}): ApiOpenApi
   registerProductRoutes(registry, components);
   registerServiceTypeRoutes(registry, components);
   registerWebhookRoutes(registry);
+  registerWorkflowV1Routes(registry);
   registerProjectRoutes(registry, components);
   registerSoftwareOneRoutes(registry);
   registerInventoryBackfillRoutes(registry, components);
