@@ -173,6 +173,7 @@ curl -X POST "https://graph.microsoft.com/v1.0/users/scheduling@acme.com/onlineM
 - 2026-04-24: Completed `T030` with `server/src/test/unit/appointments/AppointmentRequestDetailsPage.teams.test.tsx`, asserting the client-portal cancel confirmation includes the Teams deletion warning when `online_meeting_url` is present.
 - 2026-04-24: Completed `T031` in the same client-portal detail test file, asserting the cancel confirmation falls back to the normal message when there is no Teams meeting URL.
 - 2026-04-24: Completed `T032` with `server/src/test/unit/appointments/AppointmentRequestsPanel.teams.test.tsx`, asserting the MSP appointment-requests approval form shows a checked Teams toggle when capability is available.
+- 2026-04-24: Completed `T033` in the same appointment-requests panel test file, asserting the approval form hides the Teams toggle when capability reports unavailable.
 
 ## Working notes
 
