@@ -225,11 +225,23 @@ vi.mock('@alga-psa/authorization/bundles/service', () => ({
 }));
 
 import {
+  type AuthorizationBundleSimulationActionResult,
+  type AuthorizationBundleSimulationPayload,
   listAuthorizationBundlesAction,
   listAuthorizationSimulationPrincipalsAction,
   listAuthorizationSimulationRecordsAction,
   runAuthorizationBundleSimulationAction,
 } from '../../../../../ee/server/src/lib/actions/auth/authorizationBundleActions';
+
+function expectSuccessfulSimulation(
+  result: AuthorizationBundleSimulationActionResult
+): AuthorizationBundleSimulationPayload {
+  expect(result.ok).toBe(true);
+  if (!result.ok) {
+    throw new Error(result.error.message);
+  }
+  return result.data;
+}
 
 describe('runAuthorizationBundleSimulationAction', () => {
   const principalUserId = 'principal-user';
@@ -308,13 +320,13 @@ describe('runAuthorizationBundleSimulationAction', () => {
     const recordOptions = await listAuthorizationSimulationRecordsAction({ resourceType: 'ticket' });
     expect(recordOptions).toEqual([{ id: ticketId, label: 'Ticket 1' }]);
 
-    const result = await runAuthorizationBundleSimulationAction({
+    const result = expectSuccessfulSimulation(await runAuthorizationBundleSimulationAction({
       bundleId: 'bundle-1',
       principalUserId,
       resourceType: 'ticket',
       action: 'read',
       resourceId: ticketId,
-    });
+    }));
 
     expect(result.published.allowed).toBe(true);
     expect(result.draft.allowed).toBe(false);
@@ -326,7 +338,7 @@ describe('runAuthorizationBundleSimulationAction', () => {
   });
 
   it('supports synthetic scenarios without a persisted resource lookup', async () => {
-    const result = await runAuthorizationBundleSimulationAction({
+    const result = expectSuccessfulSimulation(await runAuthorizationBundleSimulationAction({
       bundleId: 'bundle-1',
       principalUserId,
       resourceType: 'ticket',
@@ -337,7 +349,7 @@ describe('runAuthorizationBundleSimulationAction', () => {
         boardId: null,
         isClientVisible: true,
       },
-    });
+    }));
 
     expect(result.published.allowed).toBe(true);
     expect(result.draft.allowed).toBe(false);
@@ -356,13 +368,13 @@ describe('runAuthorizationBundleSimulationAction', () => {
       return true;
     });
 
-    const result = await runAuthorizationBundleSimulationAction({
+    const result = expectSuccessfulSimulation(await runAuthorizationBundleSimulationAction({
       bundleId: 'bundle-1',
       principalUserId,
       resourceType: 'ticket',
       action: 'read',
       resourceId: ticketId,
-    });
+    }));
 
     expect(result.published.allowed).toBe(true);
     expect(result.draft.allowed).toBe(true);
@@ -373,13 +385,13 @@ describe('runAuthorizationBundleSimulationAction', () => {
     const recordOptions = await listAuthorizationSimulationRecordsAction({ resourceType: 'billing' });
     expect(recordOptions).toEqual([{ id: quoteId, label: 'Q-1001' }]);
 
-    const result = await runAuthorizationBundleSimulationAction({
+    const result = expectSuccessfulSimulation(await runAuthorizationBundleSimulationAction({
       bundleId: 'bundle-1',
       principalUserId,
       resourceType: 'billing',
       action: 'approve',
       resourceId: quoteId,
-    });
+    }));
 
     expect(result.published.allowed).toBe(false);
     expect(result.draft.allowed).toBe(false);
@@ -429,26 +441,32 @@ describe('runAuthorizationBundleSimulationAction', () => {
       tenant: authContext.tenant,
     });
 
-    const documentDecision = await runAuthorizationBundleSimulationAction({
+    const documentDecision = expectSuccessfulSimulation(await runAuthorizationBundleSimulationAction({
       bundleId: 'bundle-1',
       principalUserId: clientPrincipalId,
       resourceType: 'document',
       action: 'read',
       resourceId: documentId,
-    });
+    }));
 
     expect(documentDecision.published.allowed).toBe(false);
     expect(documentDecision.published.reasonCodes).toContain('builtin:document_client_visibility_denied');
 
-    await expect(
-      runAuthorizationBundleSimulationAction({
-        bundleId: 'bundle-1',
-        principalUserId,
-        resourceType: 'ticket',
-        action: 'delete',
-        resourceId: ticketId,
-      })
-    ).rejects.toThrow('Simulator only supports read/approve actions');
+    const unsupportedAction = await runAuthorizationBundleSimulationAction({
+      bundleId: 'bundle-1',
+      principalUserId,
+      resourceType: 'ticket',
+      action: 'delete',
+      resourceId: ticketId,
+    });
+
+    expect(unsupportedAction).toEqual({
+      ok: false,
+      error: expect.objectContaining({
+        code: 'unsupported_simulation_action',
+        message: expect.stringContaining('supports only Read and Approve checks'),
+      }),
+    });
   });
 
   it('fails closed for unsupported simulator resource types', async () => {
@@ -456,14 +474,20 @@ describe('runAuthorizationBundleSimulationAction', () => {
       listAuthorizationSimulationRecordsAction({ resourceType: 'unknown_resource' })
     ).rejects.toThrow('Unsupported simulation resource type: unknown_resource');
 
-    await expect(
-      runAuthorizationBundleSimulationAction({
-        bundleId: 'bundle-1',
-        principalUserId,
-        resourceType: 'unknown_resource',
-        action: 'read',
-        syntheticRecord: { ownerUserId: principalUserId },
-      })
-    ).rejects.toThrow('Unsupported simulation resource type: unknown_resource');
+    const unsupportedResource = await runAuthorizationBundleSimulationAction({
+      bundleId: 'bundle-1',
+      principalUserId,
+      resourceType: 'unknown_resource',
+      action: 'read',
+      syntheticRecord: { ownerUserId: principalUserId },
+    });
+
+    expect(unsupportedResource).toEqual({
+      ok: false,
+      error: {
+        code: 'unsupported_simulation_resource_type',
+        message: 'This record type is not available in the simulator yet. Choose a supported record type and try again.',
+      },
+    });
   });
 });
