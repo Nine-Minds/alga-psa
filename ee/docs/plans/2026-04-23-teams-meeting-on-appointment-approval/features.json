@@ -8,7 +8,7 @@
   {
     "id": "F002",
     "description": "EE migration adds default_meeting_organizer_upn column to teams_integrations (nullable text).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2"]
   },
   {
