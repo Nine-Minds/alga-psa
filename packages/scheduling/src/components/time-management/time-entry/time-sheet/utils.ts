@@ -1,4 +1,4 @@
-import { formatISO, parseISO, setHours, setMinutes } from 'date-fns';
+import { addMinutes, formatISO, isSameDay, parseISO, setHours, setMinutes } from 'date-fns';
 import { ITimeEntryWithNew } from './types';
 
 export function formatTimeForInput(date: Date): string {
@@ -18,13 +18,20 @@ export function calculateDuration(startTime: Date, endTime: Date): number {
 }
 
 export function validateTimeEntry(timeEntry: ITimeEntryWithNew): boolean {
-  if (parseISO(timeEntry.start_time) >= parseISO(timeEntry.end_time)) {
+  const startTime = parseISO(timeEntry.start_time);
+  const endTime = parseISO(timeEntry.end_time);
+
+  if (startTime >= endTime) {
     alert('Start time must be before end time');
     return false;
   }
+  if (!isSameDay(startTime, endTime)) {
+    alert('Time entry must end on the same day');
+    return false;
+  }
   const duration = calculateDuration(
-    parseISO(timeEntry.start_time),
-    parseISO(timeEntry.end_time)
+    startTime,
+    endTime
   );
   if (timeEntry.billable_duration > duration) {
     alert('Billable duration cannot exceed total duration');
@@ -42,6 +49,45 @@ export function getDurationParts(totalDuration: number) {
   return {
     hours: Math.floor(totalDuration / 60),
     minutes: totalDuration % 60
+  };
+}
+
+export function getLatestSameDayEndTime(startTime: Date): Date {
+  const latestEndTime = new Date(startTime);
+  latestEndTime.setHours(23, 59, 0, 0);
+  return latestEndTime;
+}
+
+export function getSameDayDurationLimit(startTime: Date): number {
+  if (Number.isNaN(startTime.getTime())) {
+    return 0;
+  }
+
+  return Math.max(0, calculateDuration(startTime, getLatestSameDayEndTime(startTime)));
+}
+
+export function clampDurationToSameDay(startTime: Date, requestedDurationMinutes: number) {
+  const maxDurationMinutes = getSameDayDurationLimit(startTime);
+  const normalizedDurationMinutes = Number.isFinite(requestedDurationMinutes)
+    ? Math.max(1, Math.floor(requestedDurationMinutes))
+    : Number.POSITIVE_INFINITY;
+
+  if (maxDurationMinutes < 1) {
+    return {
+      durationMinutes: 0,
+      endTime: getLatestSameDayEndTime(startTime),
+      maxDurationMinutes,
+      wasClampedToSameDay: true,
+    };
+  }
+
+  const durationMinutes = Math.min(normalizedDurationMinutes, maxDurationMinutes);
+
+  return {
+    durationMinutes,
+    endTime: addMinutes(startTime, durationMinutes),
+    maxDurationMinutes,
+    wasClampedToSameDay: normalizedDurationMinutes > maxDurationMinutes,
   };
 }
 
