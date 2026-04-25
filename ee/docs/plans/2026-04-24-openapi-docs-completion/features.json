@@ -76,7 +76,7 @@
   {
     "id": "F010",
     "description": "Document project, ticket, tag, schedule, time-entry, time-sheet, time-period, and time approval route families.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals"
     ]

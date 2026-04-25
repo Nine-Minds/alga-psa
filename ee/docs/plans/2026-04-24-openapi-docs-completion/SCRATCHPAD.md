@@ -520,3 +520,54 @@ python3 <CE and EE placeholder scans for F005 family + global counts>
 3. `POST /api/v1/feature-flags`
 4. `GET /api/v1/quotes`
 5. `POST /api/v1/quotes`
+
+## 2026-04-24 — Project/Ticket/Tag/Schedule/Time Families Completed (F010)
+
+### Scope completed
+
+- Added registrar: `server/src/lib/api/openapi/routes/workManagementV1.ts`.
+- Registered it in `server/src/lib/api/openapi/index.ts` before inventory backfill.
+- Documented all previously-placeholder operations across:
+  - `/api/v1/projects*`
+  - `/api/v1/tickets*`
+  - `/api/v1/tags*`
+  - `/api/v1/schedules*`
+  - `/api/v1/time-entries*`
+  - `/api/v1/time-sheets*`
+  - `/api/v1/time-periods*`
+
+### Key source-grounded notes / wiring gaps documented
+
+- `GET /api/v1/schedules/search` and `GET /api/v1/schedules/{id}/conflicts` currently delegate to `ApiTimeSheetController.list()`.
+- `GET /api/v1/schedules/{id}` currently delegates to `ApiTimeSheetController.getById()` (time-sheet read path) instead of schedule-specific getter.
+- `GET /api/v1/time-periods/current` currently delegates to `ApiTimeSheetController.list()`.
+- `POST /api/v1/time-periods/{id}/close` and `/reopen` currently delegate to `ApiTimeSheetController.update()` (time-sheet update path).
+- Several time-sheet subroutes are currently wired to generic handlers rather than route-intent-specific methods:
+  - `POST /api/v1/time-sheets/bulk` -> `list()`
+  - `GET /api/v1/time-sheets/search` -> `list()`
+  - `POST /api/v1/time-sheets/{id}/add-entry` -> `create()`
+  - `GET /api/v1/time-sheets/{id}/entries` -> `list()`
+  - `POST /api/v1/time-sheets/{id}/reject` -> `update()`
+  - `DELETE /api/v1/time-sheets/{id}/remove-entry` -> `delete()`
+  - `GET /api/v1/time-sheets/{id}/summary` -> `list()`
+
+### Validation
+
+- CE F010 placeholder check: `ce_f010_remaining = 0`.
+- EE F010 placeholder check: `ee_f010_remaining = 0`.
+- Regeneration commands succeeded:
+  - `npm --prefix sdk run openapi:generate`
+  - `npm --prefix sdk run openapi:generate -- --edition ee`
+
+### Remaining placeholder counts after this pass
+
+- CE: `41`
+- EE: `49`
+
+### Next cursor (CE)
+
+1. `POST /api/v1/feature-access`
+2. `GET /api/v1/feature-flags`
+3. `POST /api/v1/feature-flags`
+4. `GET /api/v1/quotes`
+5. `POST /api/v1/quotes`
