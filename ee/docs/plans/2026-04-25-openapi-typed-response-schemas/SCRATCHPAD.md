@@ -270,3 +270,10 @@ Result: pass.
 
 - First version of scan script assumed repo-root execution path for generated docs and failed under `npm --prefix sdk`; corrected defaults to `docs/openapi/...` relative to script working directory.
 
+
+### Commit / Push Checkpoint
+
+- Commit: `b416f7fac`
+- Branch: `docs/api-docs-input-output`
+- Push: `origin/docs/api-docs-input-output` updated successfully.
+- Pre/post-commit verification confirmed `.env.localtest` remained unstaged.
