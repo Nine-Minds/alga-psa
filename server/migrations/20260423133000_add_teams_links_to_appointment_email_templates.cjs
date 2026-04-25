@@ -5,6 +5,8 @@
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
+exports.config = { transaction: false };
+
 const ensureSequentialMode = async (knex) => {
   await knex.raw(`
     DO $$
