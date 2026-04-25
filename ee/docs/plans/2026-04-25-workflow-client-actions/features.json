@@ -199,7 +199,7 @@
   {
     "id": "F024",
     "description": "Add DB-backed workflow action tests for representative successful client mutations and high-risk guard failures",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance Criteria"
     ]

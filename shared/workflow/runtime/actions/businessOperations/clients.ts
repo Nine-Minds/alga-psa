@@ -428,6 +428,8 @@ async function ensureClientTagMappings(
 
   const added: Array<z.infer<typeof tagResultSchema>> = [];
   const existing: Array<z.infer<typeof tagResultSchema>> = [];
+  const tagDefinitionColumns = await getTableColumns(tx, 'tag_definitions');
+  const tagMappingColumns = await getTableColumns(tx, 'tag_mappings');
 
   for (const tagText of normalizedTags) {
     const { backgroundColor, textColor } = generateTagColors(tagText);
@@ -441,44 +443,59 @@ async function ensureClientTagMappings(
       .first();
 
     if (!definition) {
-      const definitionRow = {
-        tenant: tx.tenantId,
-        tag_id: uuidv4(),
-        tag_text: tagText,
-        tagged_type: 'client',
-        channel_id: null,
-        background_color: backgroundColor,
-        text_color: textColor,
-        created_at: new Date().toISOString(),
-      };
+      const definitionRow = pickExistingFields(
+        {
+          tenant: tx.tenantId,
+          tag_id: uuidv4(),
+          tag_text: tagText,
+          tagged_type: 'client',
+          background_color: backgroundColor,
+          text_color: textColor,
+          created_at: new Date().toISOString(),
+        },
+        tagDefinitionColumns,
+        new Set([
+          'tenant',
+          'tag_id',
+          'tag_text',
+          'tagged_type',
+          'background_color',
+          'text_color',
+          'created_at',
+        ])
+      );
 
-      try {
-        await tx.trx('tag_definitions').insert(definitionRow);
-        definition = definitionRow;
-      } catch (error) {
-        const code = typeof error === 'object' && error !== null && 'code' in error ? String((error as any).code) : undefined;
-        const message = error instanceof Error ? error.message : String(error);
-        if (code === '23505' || /duplicate|unique/i.test(message)) {
-          definition = await tx.trx('tag_definitions')
-            .where({
-              tenant: tx.tenantId,
-              tag_text: tagText,
-              tagged_type: 'client',
-            })
-            .first();
-        } else {
-          throw error;
-        }
-      }
+      await tx.trx('tag_definitions').insert(definitionRow);
+      definition = await tx.trx('tag_definitions')
+        .where({
+          tenant: tx.tenantId,
+          tag_text: tagText,
+          tagged_type: 'client',
+        })
+        .first();
     }
 
     if (!definition?.tag_id) {
       throw new Error(`Failed to resolve tag definition for \"${tagText}\"`);
     }
 
+    const mapping = await tx.trx('tag_mappings')
+      .where({
+        tenant: tx.tenantId,
+        tag_id: definition.tag_id,
+        tagged_id: clientId,
+        tagged_type: 'client',
+      })
+      .first();
+
+    if (mapping) {
+      existing.push(tagResultSchema.parse({ tag_id: definition.tag_id, tag_text: definition.tag_text }));
+      continue;
+    }
+
     const mappingId = uuidv4();
-    try {
-      await tx.trx('tag_mappings').insert({
+    const mappingRow = pickExistingFields(
+      {
         tenant: tx.tenantId,
         mapping_id: mappingId,
         tag_id: definition.tag_id,
@@ -486,17 +503,19 @@ async function ensureClientTagMappings(
         tagged_type: 'client',
         created_by: tx.actorUserId,
         created_at: new Date().toISOString(),
-      });
-      added.push(tagResultSchema.parse({ tag_id: definition.tag_id, tag_text: definition.tag_text, mapping_id: mappingId }));
-    } catch (error) {
-      const code = typeof error === 'object' && error !== null && 'code' in error ? String((error as any).code) : undefined;
-      const message = error instanceof Error ? error.message : String(error);
-      if (code === '23505' || /duplicate|unique/i.test(message)) {
-        existing.push(tagResultSchema.parse({ tag_id: definition.tag_id, tag_text: definition.tag_text }));
-        continue;
-      }
-      throw error;
-    }
+      },
+      tagMappingColumns,
+      new Set(['tenant', 'mapping_id', 'tag_id', 'tagged_id', 'tagged_type', 'created_by', 'created_at'])
+    );
+
+    await tx.trx('tag_mappings').insert(mappingRow);
+    added.push(
+      tagResultSchema.parse({
+        tag_id: definition.tag_id,
+        tag_text: definition.tag_text,
+        mapping_id: typeof mappingRow.mapping_id === 'string' ? mappingRow.mapping_id : undefined,
+      })
+    );
   }
 
   return { added, existing };
@@ -904,28 +923,45 @@ export function registerClientActions(): void {
           await ensureClientExists(ctx, tx, input.parent_client_id);
         }
 
-        let created: any;
+        const clientColumns = await getTableColumns(tx, 'clients');
+        const createdId = uuidv4();
+        const nowIso = new Date().toISOString();
+        const createRow = pickExistingFields(
+          {
+            tenant: tx.tenantId,
+            client_id: createdId,
+            client_name: input.client_name,
+            client_type: input.client_type ?? 'company',
+            url: input.url ?? null,
+            billing_email: input.email ?? null,
+            notes: input.notes ?? null,
+            properties: input.properties ? JSON.stringify(input.properties) : null,
+            default_currency_code: input.default_currency_code ?? 'USD',
+            parent_client_id: input.parent_client_id ?? null,
+            contract_line_id: input.contract_line_id ?? null,
+            is_default: input.is_default ?? false,
+            is_inactive: false,
+            created_at: nowIso,
+            updated_at: nowIso,
+          },
+          clientColumns,
+          new Set([...CLIENT_TABLE_ALLOWED_FIELDS, 'tenant', 'client_id', 'created_at', 'updated_at'])
+        );
         try {
-          created = await ClientModel.createClient(
-            {
-              client_name: input.client_name,
-              client_type: input.client_type,
-              url: input.url,
-              email: input.email,
-              notes: input.notes,
-              properties: input.properties,
-              parent_client_id: input.parent_client_id ?? undefined,
-              contract_line_id: input.contract_line_id ?? undefined,
-            },
-            tx.tenantId,
-            tx.trx,
-            {}
-          );
+          await tx.trx('clients').insert(createRow);
         } catch (error) {
           rethrowAsStandardError(ctx, error);
         }
 
-        const clientColumns = await getTableColumns(tx, 'clients');
+        try {
+          await ensureDefaultContractForClientIfBillingConfigured(tx.trx, {
+            tenant: tx.tenantId,
+            clientId: createdId,
+          });
+        } catch {
+          // Best-effort parity with product behavior.
+        }
+
         const directPatch = pickExistingFields(
           {
             default_currency_code: input.default_currency_code,
@@ -940,13 +976,13 @@ export function registerClientActions(): void {
 
         if (Object.keys(directPatch).length > 0) {
           await tx.trx('clients')
-            .where({ tenant: tx.tenantId, client_id: created.client_id })
+            .where({ tenant: tx.tenantId, client_id: createdId })
             .update(directPatch);
         }
 
         await upsertDefaultClientLocation(
           tx,
-          created.client_id,
+          createdId,
           {
             address: input.address,
             address_2: input.address_2,
@@ -960,14 +996,14 @@ export function registerClientActions(): void {
           { createIfMissing: true }
         );
 
-        const tagResult = await ensureClientTagMappings(tx, created.client_id, input.tags ?? []);
+        const tagResult = await ensureClientTagMappings(tx, createdId, input.tags ?? []);
 
-        const after = await ensureClientExists(ctx, tx, created.client_id);
+        const after = await ensureClientExists(ctx, tx, createdId);
 
         await writeRunAudit(ctx, tx, {
           operation: 'workflow_action:clients.create',
-          changedData: { client_id: created.client_id, client_name: after.client_name },
-          details: { action_id: 'clients.create', action_version: 1, client_id: created.client_id },
+          changedData: { client_id: createdId, client_name: after.client_name },
+          details: { action_id: 'clients.create', action_version: 1, client_id: createdId },
         });
 
         await publishWorkflowDomainEvent({
