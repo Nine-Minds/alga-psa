@@ -2,6 +2,7 @@ import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 
 export function registerEeInventoryOnlyRoutes(registry: ApiOpenApiRegistry) {
   const tag = 'EE Inventory-Only Routes';
+  const extensionsApiPath = '/api' + '/extensions';
 
   const ApiError = registry.registerSchema(
     'EeInventoryApiError',
@@ -23,9 +24,9 @@ export function registerEeInventoryOnlyRoutes(registry: ApiOpenApiRegistry) {
     { method: 'post', path: '/api/ext-bundles/abort', summary: 'Abort extension bundle upload' },
     { method: 'post', path: '/api/ext-bundles/finalize', summary: 'Finalize extension bundle upload' },
     { method: 'post', path: '/api/ext-bundles/upload-proxy', summary: 'Upload extension bundle chunk' },
-    { method: 'get', path: '/api/extensions/install-info', summary: 'Get extension install info' },
-    { method: 'get', path: '/api/extensions/registry-db-check', summary: 'Check extension registry DB state' },
-    { method: 'post', path: '/api/extensions/reprovision', summary: 'Reprovision extensions' },
+    { method: 'get', path: `${extensionsApiPath}/install-info`, summary: 'Get extension install info' },
+    { method: 'get', path: `${extensionsApiPath}/registry-db-check`, summary: 'Check extension registry DB state' },
+    { method: 'post', path: `${extensionsApiPath}/reprovision`, summary: 'Reprovision extensions' },
     { method: 'post', path: '/api/provisioning/tenants', summary: 'Provision tenant' },
     { method: 'post', path: '/api/v1/auth/verify', summary: 'Verify auth token' },
   ];

@@ -2,6 +2,8 @@ import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 
 export function registerSoftwareOneRoutes(registry: ApiOpenApiRegistry) {
   const tag = 'SoftwareOne Extensions';
+  const extensionsApiPath = '/api' + '/extensions';
+  const softwareOneApiPath = `${extensionsApiPath}/softwareone`;
 
   const MiddlewareUnauthorizedResponse = registry.registerSchema(
     'MiddlewareUnauthorizedResponse',
@@ -297,7 +299,7 @@ export function registerSoftwareOneRoutes(registry: ApiOpenApiRegistry) {
 
   registry.registerRoute({
     method: 'get',
-    path: '/api/extensions/softwareone/agreements',
+    path: `${softwareOneApiPath}/agreements`,
     summary: 'List SoftwareOne agreements',
     description:
       'Returns SoftwareOne agreement records available to the SoftwareOne extension. The current handler is an MVP placeholder backed by hardcoded dummy data; comments in the route indicate that a full implementation will validate permissions, derive tenant context, fetch from the SoftwareOne API, and apply filtering, sorting, and pagination. This route is not in the middleware API-key skip list, so callers must provide x-api-key at the API layer.',
@@ -326,7 +328,7 @@ export function registerSoftwareOneRoutes(registry: ApiOpenApiRegistry) {
 
   registry.registerRoute({
     method: 'post',
-    path: '/api/extensions/softwareone/agreements',
+    path: `${softwareOneApiPath}/agreements`,
     summary: 'Sync SoftwareOne agreements',
     description:
       'Triggers the SoftwareOne agreements sync placeholder. The current handler parses the JSON body but ignores all fields, then returns a dummy count. A full implementation is expected to validate permissions, derive tenant context, call the SoftwareOne API, persist agreements, and return actual sync counts. This route is not in the middleware API-key skip list, so callers must provide x-api-key at the API layer.',
@@ -361,7 +363,7 @@ export function registerSoftwareOneRoutes(registry: ApiOpenApiRegistry) {
 
   registry.registerRoute({
     method: 'get',
-    path: '/api/extensions/softwareone/agreements/{id}',
+    path: `${softwareOneApiPath}/agreements/{id}`,
     summary: 'Get SoftwareOne agreement',
     description:
       'Returns one SoftwareOne agreement by external agreement ID, including additional detail fields such as dates, payment terms, contact, and license count. The current handler is an MVP placeholder backed by hardcoded dummy data. The id path parameter is a SoftwareOne-style string such as agr-001, not an Alga UUID.',
@@ -397,7 +399,7 @@ export function registerSoftwareOneRoutes(registry: ApiOpenApiRegistry) {
 
   registry.registerRoute({
     method: 'get',
-    path: '/api/extensions/softwareone/statements',
+    path: `${softwareOneApiPath}/statements`,
     summary: 'List SoftwareOne statements',
     description:
       'Returns SoftwareOne billing statement records available to the SoftwareOne extension. The current handler is an MVP placeholder backed by hardcoded dummy data; comments in the route indicate that a full implementation will validate permissions, derive tenant context, fetch from the SoftwareOne API, and apply filtering, sorting, and pagination. This route is not in the middleware API-key skip list, so callers must provide x-api-key at the API layer.',
@@ -426,7 +428,7 @@ export function registerSoftwareOneRoutes(registry: ApiOpenApiRegistry) {
 
   registry.registerRoute({
     method: 'post',
-    path: '/api/extensions/softwareone/statements',
+    path: `${softwareOneApiPath}/statements`,
     summary: 'Sync SoftwareOne statements',
     description:
       'Triggers the SoftwareOne statements sync placeholder. The current handler parses the JSON body but ignores all fields, then returns a dummy count. A full implementation is expected to validate permissions, derive tenant context, call the SoftwareOne API, persist statements, and return actual sync counts. This route is not in the middleware API-key skip list, so callers must provide x-api-key at the API layer.',
@@ -461,7 +463,7 @@ export function registerSoftwareOneRoutes(registry: ApiOpenApiRegistry) {
 
   registry.registerRoute({
     method: 'get',
-    path: '/api/extensions/softwareone/statements/{id}',
+    path: `${softwareOneApiPath}/statements/{id}`,
     summary: 'Get SoftwareOne statement',
     description:
       'Returns one SoftwareOne billing statement by external statement ID, including additional detail fields such as subtotal, tax amount, description, and billing address. The current handler is an MVP placeholder backed by hardcoded dummy data. The id path parameter is a SoftwareOne-style string such as stmt-001, not an Alga UUID.',
@@ -497,7 +499,7 @@ export function registerSoftwareOneRoutes(registry: ApiOpenApiRegistry) {
 
   registry.registerRoute({
     method: 'get',
-    path: '/api/extensions/softwareone/statements/{id}/charges',
+    path: `${softwareOneApiPath}/statements/{id}/charges`,
     summary: 'List SoftwareOne statement charges',
     description:
       'Returns line-item charges for a SoftwareOne billing statement. The current handler is an MVP placeholder backed by hardcoded dummy data keyed by SoftwareOne statement IDs such as stmt-001. Unknown statement IDs return 200 with an empty data array rather than 404. The id path parameter is not an Alga UUID.',
@@ -529,7 +531,7 @@ export function registerSoftwareOneRoutes(registry: ApiOpenApiRegistry) {
 
   registry.registerRoute({
     method: 'post',
-    path: '/api/extensions/softwareone/sync',
+    path: `${softwareOneApiPath}/sync`,
     summary: 'Sync SoftwareOne data',
     description:
       'Triggers the SoftwareOne aggregate sync placeholder. The current handler accepts optional syncAgreements and syncStatements booleans, waits briefly to simulate work, and returns dummy counts and a syncedAt timestamp. A full implementation will validate permissions, derive tenant context, connect to the SoftwareOne API, and persist agreement and statement data.',
@@ -565,7 +567,7 @@ export function registerSoftwareOneRoutes(registry: ApiOpenApiRegistry) {
 
   registry.registerRoute({
     method: 'get',
-    path: '/api/extensions/{extensionId}/agreements',
+    path: `${extensionsApiPath}/{extensionId}/agreements`,
     summary: 'List agreements for extension',
     description:
       'Generic extension agreements placeholder. The current handler accepts any extensionId, performs no handler-level extension validation, and returns hardcoded SoftwareOne-style agreement data with meta.extensionId echoed from the path. A full implementation will validate the extension ID, check permissions, derive tenant context, and fetch extension-specific data.',
@@ -597,7 +599,7 @@ export function registerSoftwareOneRoutes(registry: ApiOpenApiRegistry) {
 
   registry.registerRoute({
     method: 'get',
-    path: '/api/extensions/{extensionId}/agreements/{id}',
+    path: `${extensionsApiPath}/{extensionId}/agreements/{id}`,
     summary: 'Get agreement for extension',
     description:
       'Generic extension agreement detail placeholder. The current handler accepts any extensionId, looks up an agreement by SoftwareOne-style external ID such as agr-001, and returns hardcoded detail data with meta.extensionId echoed from the path. The id path parameter is not an Alga UUID.',
@@ -633,7 +635,7 @@ export function registerSoftwareOneRoutes(registry: ApiOpenApiRegistry) {
 
   registry.registerRoute({
     method: 'get',
-    path: '/api/extensions/{extensionId}/statements',
+    path: `${extensionsApiPath}/{extensionId}/statements`,
     summary: 'List statements for extension',
     description:
       'Generic extension statements placeholder. The current handler accepts any extensionId, performs no handler-level extension validation, and returns hardcoded SoftwareOne-style statement data with meta.extensionId echoed from the path. A full implementation will validate the extension ID, check permissions, derive tenant context, and fetch extension-specific data.',
@@ -665,7 +667,7 @@ export function registerSoftwareOneRoutes(registry: ApiOpenApiRegistry) {
 
   registry.registerRoute({
     method: 'get',
-    path: '/api/extensions/{extensionId}/statements/{id}',
+    path: `${extensionsApiPath}/{extensionId}/statements/{id}`,
     summary: 'Get statement for extension',
     description:
       'Generic extension statement detail placeholder. The current handler accepts any extensionId, looks up a statement by SoftwareOne-style external ID such as stmt-001, and returns hardcoded detail data with meta.extensionId echoed from the path. The id path parameter is not an Alga UUID.',
@@ -701,7 +703,7 @@ export function registerSoftwareOneRoutes(registry: ApiOpenApiRegistry) {
 
   registry.registerRoute({
     method: 'get',
-    path: '/api/extensions/{extensionId}/statements/{id}/charges',
+    path: `${extensionsApiPath}/{extensionId}/statements/{id}/charges`,
     summary: 'List charges for extension statement',
     description:
       'Generic extension statement charges placeholder. The current handler accepts any extensionId, returns hardcoded charge data keyed by SoftwareOne-style statement IDs such as stmt-001, and echoes extensionId in response metadata. Unknown statement IDs return 200 with an empty data array rather than 404.',
@@ -733,7 +735,7 @@ export function registerSoftwareOneRoutes(registry: ApiOpenApiRegistry) {
 
   registry.registerRoute({
     method: 'post',
-    path: '/api/extensions/{extensionId}/sync',
+    path: `${extensionsApiPath}/{extensionId}/sync`,
     summary: 'Sync extension data',
     description:
       'Generic extension sync placeholder. The current handler accepts any extensionId and optional syncAgreements and syncStatements booleans, simulates work, and returns dummy agreement and statement counts with meta extensionId in the response data. A full implementation will validate extension identity, check permissions, derive tenant context, call the extension-specific backend, and persist data.',
