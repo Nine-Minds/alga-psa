@@ -1,0 +1,27 @@
+[
+  {
+    "id": "F001",
+    "description": "Compute whether the workflow designer has enough width for floating palette, center content, and properties panel using current panel widths.",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "Render the designer in vertically stacked normal flow when floating layout would leave the center content too narrow.",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "description": "Remove floating-layout center padding in stacked mode so the main content can use the available width.",
+    "implemented": true
+  },
+  {
+    "id": "F004",
+    "description": "Make the properties panel full-width and disable its resize handle in stacked mode.",
+    "implemented": true
+  },
+  {
+    "id": "F005",
+    "description": "Keep existing floating behavior unchanged on wide screens.",
+    "implemented": true
+  }
+]

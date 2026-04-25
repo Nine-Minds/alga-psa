@@ -149,6 +149,7 @@
       "labels": {
         "reference": "Odniesienie",
         "client": "Klient",
+        "requester": "Wnioskodawca",
         "contact": "Kontakt",
         "email": "E-mail",
         "phone": "Telefon",
@@ -157,7 +158,11 @@
         "duration": "Czas trwania",
         "status": "Status",
         "linkedTicket": "Połączony bilet",
-        "description": "Opis"
+        "description": "Opis",
+        "teamsMeeting": "Spotkanie Teams"
+      },
+      "actions": {
+        "joinTeamsMeeting": "Dołącz do spotkania Teams"
       }
     },
     "approval": {
@@ -166,7 +171,8 @@
         "assignedTechnician": "Przypisz technika *",
         "finalDateTime": "Ostateczna data i godzina",
         "internalNotes": "Notatki wewnętrzne (opcjonalnie)",
-        "linkedTicket": "Link do biletu (opcjonalnie)"
+        "linkedTicket": "Link do biletu (opcjonalnie)",
+        "generateTeamsMeeting": "Wygeneruj link do spotkania Microsoft Teams"
       },
       "placeholders": {
         "assignedTechnician": "Wybierz technika",
@@ -201,7 +207,8 @@
       "general": "Ustawienia ogólne",
       "userHours": "Godziny użytkownika",
       "serviceRules": "Regulamin serwisu",
-      "exceptions": "Wyjątki"
+      "exceptions": "Wyjątki",
+      "teamsMeetings": "Spotkania Teams"
     },
     "days": {
       "sunday": "Niedziela",
@@ -421,6 +428,56 @@
         "deleteSuccess": "Wyjątek został usunięty",
         "deleteError": "Nie udało się usunąć wyjątku"
       }
+    },
+    "teamsMeetings": {
+      "prerequisites": {
+        "title": "Wymagania wstępne platformy Azure",
+        "description": "Zanim to włączysz, udziel aplikacji uprawnienia OnlineMeetings.ReadWrite.All i utwórz Application Access Policy dla konta organizatora.",
+        "steps": {
+          "toggle": "Pokaż kroki konfiguracji platformy Azure",
+          "step1": {
+            "title": "1. Udziel uprawnień aplikacji Graph",
+            "item1": "Otwórz centrum administracyjne Entra → Rejestracje aplikacji.",
+            "item2": "Wybierz aplikację używaną przez integrację Teams tej dzierżawy.",
+            "item3": "Uprawnienia API → Dodaj → Microsoft Graph → Uprawnienia aplikacji.",
+            "item4": "Dodaj OnlineMeetings.ReadWrite.All i udziel zgody administratora."
+          },
+          "step2": {
+            "title": "2. Utwórz Application Access Policy",
+            "intro": "Tworzenie spotkań tylko przez aplikację musi zostać wyraźnie dozwolone dla konta organizatora.",
+            "note": "Odczekaj 5–10 minut na propagację zasady przed kliknięciem Weryfikuj."
+          }
+        }
+      },
+      "organizer": {
+        "title": "Organizator spotkania",
+        "label": "Domyślny organizator spotkania (UPN lub ID użytkownika Microsoft)",
+        "help": "Zatwierdzone spotkania tworzą spotkania Teams jako ten użytkownik Microsoft. UPN taki jak scheduling@acme.com jest zazwyczaj najbezpieczniejszym wyborem.",
+        "placeholder": "scheduling@acme.com"
+      },
+      "actions": {
+        "save": "Zapisz",
+        "saving": "Zapisywanie...",
+        "verify": "Weryfikuj",
+        "verifying": "Weryfikacja..."
+      },
+      "feedback": {
+        "saveSuccess": "Organizator spotkania Teams zapisany",
+        "saveError": "Nie udało się zapisać organizatora spotkania Teams",
+        "verifySuccess": "Organizator spotkania Teams zweryfikowany",
+        "verifyError": "Nie udało się zweryfikować organizatora spotkania Teams"
+      },
+      "verify": {
+        "valid": "Pomyślnie zweryfikowano organizatora Microsoft.",
+        "validWithName": "Zweryfikowany użytkownik Microsoft: {{displayName}}.",
+        "reasons": {
+          "eeDisabled": "Weryfikacja spotkań Teams jest dostępna tylko w wersji Enterprise Edition.",
+          "notConfigured": "Integracja Teams musi być aktywna, aby można było zweryfikować organizatora.",
+          "userNotFound": "Microsoft nie znalazł użytkownika dla tej wartości organizatora.",
+          "policyMissing": "Użytkownik Microsoft istnieje, ale Application Access Policy nie zezwala jeszcze na tworzenie spotkań.",
+          "graphError": "Microsoft Graph nie mógł teraz zweryfikować tego organizatora."
+        }
+      }
     }
   },
   "entryPopup": {
@@ -469,7 +526,8 @@
       "approved": {
         "title": "Zatwierdzone spotkanie",
         "descriptionWithDate": "To spotkanie powstało na prośbę klienta i zostało zatwierdzone {{date}}.",
-        "description": "Spotkanie to powstało na prośbę klienta."
+        "description": "Spotkanie to powstało na prośbę klienta.",
+        "joinTeamsMeeting": "Dołącz do spotkania Teams"
       },
       "pending": {
         "title": "Oczekujące żądanie spotkania",
@@ -483,6 +541,13 @@
       "cancelled": {
         "title": "Anulowane żądanie spotkania",
         "description": "To zaproszenie na spotkanie zostało anulowane przez klienta."
+      },
+      "requesterInfo": {
+        "title": "Informacje o wnioskodawcy",
+        "company": "Firma",
+        "name": "Imię i nazwisko",
+        "email": "E-mail",
+        "phone": "Telefon"
       },
       "requestedDateTimeLabel": "Żądana data i godzina",
       "assignTechnicianLabel": "Przypisz technika *",
@@ -503,7 +568,8 @@
         "declineReasonRequired": "Podaj powód odrzucenia",
         "declined": "Prośba o spotkanie została odrzucona",
         "declineFailed": "Nie udało się odrzucić prośby"
-      }
+      },
+      "generateTeamsMeeting": "Wygeneruj link do spotkania Microsoft Teams"
     },
     "recurrence": {
       "label": "Powtarzanie",
@@ -536,7 +602,9 @@
         "title": "Usuń wpis harmonogramu",
         "message": "Wybierz, które wydarzenia chcesz usunąć:",
         "confirm": "Kontynuuj"
-      }
+      },
+      "confirm": "Czy na pewno chcesz usunąć ten wpis harmonogramu? Tej akcji nie można cofnąć.",
+      "confirmWithTeamsWarning": "Czy na pewno chcesz usunąć ten wpis harmonogramu? Tej akcji nie można cofnąć. Powiązane spotkanie Microsoft Teams również zostanie usunięte."
     },
     "scopeOptions": {
       "single": "Tylko to wydarzenie",

@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Calendar, Clock, User, FileText, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, User, FileText, AlertCircle, ExternalLink } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -49,6 +49,7 @@ interface AppointmentRequestDetails {
   approver_last_name?: string;
   approved_at?: string;
   declined_reason?: string;
+  online_meeting_url?: string | null;
   created_at: string;
 }
 
@@ -248,6 +249,26 @@ export function AppointmentRequestDetailsPage() {
                 </div>
               </div>
 
+              {appointment.online_meeting_url && (
+                <div className="flex items-start gap-3">
+                  <ExternalLink className="h-5 w-5 text-gray-500 mt-0.5" />
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-gray-700">
+                      {t('details.teamsMeeting', 'Teams Meeting')}
+                    </div>
+                    <Button
+                      id="join-teams-meeting-client-portal"
+                      type="button"
+                      onClick={() => window.open(appointment.online_meeting_url!, '_blank', 'noopener,noreferrer')}
+                      className="mt-2"
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      {t('details.joinTeamsMeeting', 'Join Teams Meeting')}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {preferredTechnicianName && (
                 <div className="flex items-start gap-3">
                   <User className="h-5 w-5 text-gray-500 mt-0.5" />
@@ -320,7 +341,7 @@ export function AppointmentRequestDetailsPage() {
             </div>
 
             {/* Actions */}
-            {appointment.status === 'pending' && (
+            {(appointment.status === 'pending' || appointment.status === 'approved') && (
               <div className="pt-4 border-t border-gray-200 flex justify-end">
                 <Button
                   id="cancel-appointment-button"
@@ -341,7 +362,9 @@ export function AppointmentRequestDetailsPage() {
         onClose={() => setShowCancelConfirmation(false)}
         onConfirm={handleCancelAppointment}
         title={t('cancel.title', 'Cancel Appointment Request')}
-        message={t('cancel.message', 'Are you sure you want to cancel this appointment request? This action cannot be undone.')}
+        message={appointment.online_meeting_url
+          ? t('cancel.messageWithTeamsWarning', 'Are you sure you want to cancel this appointment request? This action cannot be undone. This will also delete the Microsoft Teams meeting.')
+          : t('cancel.message', 'Are you sure you want to cancel this appointment request? This action cannot be undone.')}
         confirmLabel={t('cancel.confirm', 'Yes, Cancel')}
         cancelLabel={tCommon('common.cancel', 'Cancel')}
       />

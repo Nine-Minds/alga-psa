@@ -4,6 +4,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
+import { isEnterprise } from '@alga-psa/core/features';
 import { v4 as uuidv4 } from 'uuid';
 import {
   availabilitySettingSchema,
@@ -50,6 +51,143 @@ export interface AvailabilitySettingsResult<T> {
   data?: T;
   error?: string;
 }
+
+export interface TeamsMeetingsTabState {
+  visible: boolean;
+  organizerUpn?: string | null;
+}
+
+export interface TeamsMeetingOrganizerState {
+  organizerUpn: string | null;
+}
+
+export interface TeamsMeetingOrganizerVerification {
+  valid: boolean;
+  displayName?: string;
+  reason?: 'ee_disabled' | 'not_configured' | 'user_not_found' | 'policy_missing' | 'graph_error';
+}
+
+export const getTeamsMeetingsTabState = withAuth(async (
+  user,
+  { tenant }
+): Promise<AvailabilitySettingsResult<TeamsMeetingsTabState>> => {
+  try {
+    const { knex: db } = await createTenantKnex();
+    const canRead = await hasPermission(user, 'system_settings', 'read', db);
+    if (!canRead) {
+      return { success: false, error: 'Insufficient permissions to view availability settings' };
+    }
+
+    const hasTeamsIntegrationsTable = await db.schema.hasTable('teams_integrations');
+    if (!hasTeamsIntegrationsTable) {
+      return { success: true, data: { visible: false, organizerUpn: null } };
+    }
+
+    const integration = await db('teams_integrations')
+      .where({ tenant })
+      .select('install_status', 'default_meeting_organizer_upn')
+      .first();
+
+    return {
+      success: true,
+      data: {
+        visible: integration?.install_status === 'active',
+        organizerUpn: integration?.default_meeting_organizer_upn ?? null,
+      },
+    };
+  } catch (error) {
+    console.error('Error loading Teams meetings tab state:', error);
+    const message = error instanceof Error ? error.message : 'Failed to load Teams meetings tab state';
+    return { success: false, error: message };
+  }
+});
+
+export const setDefaultMeetingOrganizer = withAuth(async (
+  user,
+  { tenant },
+  input: { upn?: string | null }
+): Promise<AvailabilitySettingsResult<TeamsMeetingOrganizerState>> => {
+  try {
+    const { knex: db } = await createTenantKnex();
+    const canManage = await hasPermission(user, 'system_settings', 'update', db);
+    if (!canManage) {
+      return { success: false, error: 'Insufficient permissions to manage Teams meeting settings' };
+    }
+
+    const hasTeamsIntegrationsTable = await db.schema.hasTable('teams_integrations');
+    if (!hasTeamsIntegrationsTable) {
+      return { success: false, error: 'Teams integration is not available in this environment' };
+    }
+
+    const integration = await db('teams_integrations')
+      .where({ tenant })
+      .select('tenant', 'install_status')
+      .first();
+
+    if (!integration || integration.install_status !== 'active') {
+      return { success: false, error: 'Teams integration must be active before setting a meeting organizer' };
+    }
+
+    const organizerUpn = (input.upn || '').trim() || null;
+    await db('teams_integrations')
+      .where({ tenant })
+      .update({
+        default_meeting_organizer_upn: organizerUpn,
+        updated_at: new Date(),
+        updated_by: user?.user_id || null,
+      });
+
+    return {
+      success: true,
+      data: {
+        organizerUpn,
+      },
+    };
+  } catch (error) {
+    console.error('Error saving Teams meeting organizer:', error);
+    const message = error instanceof Error ? error.message : 'Failed to save Teams meeting organizer';
+    return { success: false, error: message };
+  }
+});
+
+export const verifyMeetingOrganizer = withAuth(async (
+  user,
+  { tenant },
+  input: { upn?: string | null }
+): Promise<AvailabilitySettingsResult<TeamsMeetingOrganizerVerification>> => {
+  try {
+    const { knex: db } = await createTenantKnex();
+    const canManage = await hasPermission(user, 'system_settings', 'update', db);
+    if (!canManage) {
+      return { success: false, error: 'Insufficient permissions to manage Teams meeting settings' };
+    }
+
+    if (!isEnterprise) {
+      return { success: true, data: { valid: false, reason: 'ee_disabled' } };
+    }
+
+    const organizerUpn = (input.upn || '').trim();
+    if (!organizerUpn) {
+      return { success: true, data: { valid: false, reason: 'user_not_found' } };
+    }
+
+    const teamsModule = await import('@alga-psa/ee-microsoft-teams/lib');
+    if (typeof teamsModule.verifyMeetingOrganizer !== 'function') {
+      return { success: true, data: { valid: false, reason: 'ee_disabled' } };
+    }
+
+    const result = await teamsModule.verifyMeetingOrganizer({
+      tenantId: tenant,
+      organizerUpn,
+    });
+
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Error verifying Teams meeting organizer:', error);
+    const message = error instanceof Error ? error.message : 'Failed to verify Teams meeting organizer';
+    return { success: false, error: message };
+  }
+});
 
 /**
  * Create or update an availability setting

@@ -118,12 +118,15 @@
     "description": "Opis",
     "created": "Złożono",
     "approved": "Zatwierdzono",
-    "cancelButton": "Anuluj wizytę"
+    "cancelButton": "Anuluj wizytę",
+    "teamsMeeting": "Spotkanie Teams",
+    "joinTeamsMeeting": "Dołącz do spotkania Teams"
   },
   "cancel": {
     "title": "Anuluj wizytę",
     "message": "Czy na pewno chcesz anulować wniosek o wizytę? Tej operacji nie można cofnąć.",
-    "confirm": "Tak, anuluj"
+    "confirm": "Tak, anuluj",
+    "messageWithTeamsWarning": "Czy na pewno chcesz anulować tę prośbę o wizytę? Tej akcji nie można cofnąć. Powiązane spotkanie Microsoft Teams również zostanie usunięte."
   },
   "ticketSection": {
     "title": "Wnioski o wizytę",

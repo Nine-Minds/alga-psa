@@ -26,6 +26,7 @@ import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import {
   approveAppointmentRequest as approveRequest,
   declineAppointmentRequest as declineRequest,
+  getTeamsMeetingCapability,
   getAppointmentRequestById,
   IAppointmentRequest
 } from '@alga-psa/scheduling/actions';
@@ -134,6 +135,8 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   const [showDeclineForm, setShowDeclineForm] = useState(false);
   const [declineReason, setDeclineReason] = useState('');
   const [assignedTechnicianId, setAssignedTechnicianId] = useState<string>('');
+  const [generateTeamsMeeting, setGenerateTeamsMeeting] = useState(true);
+  const [teamsMeetingCapability, setTeamsMeetingCapability] = useState<{ available: boolean; reason?: string } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const { t } = useTranslation('msp/schedule');
   const { formatDate } = useFormatters();
@@ -164,14 +167,22 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
 
     // Detect if this is an appointment request and fetch its data
     useEffect(() => {
-      const fetchAppointmentRequest = async () => {
-        if (event && event.work_item_type === 'appointment_request' && event.work_item_id) {
-          setIsAppointmentRequest(true);
+    const fetchAppointmentRequest = async () => {
+      if (event && event.work_item_type === 'appointment_request' && event.work_item_id) {
+        setIsAppointmentRequest(true);
 
-          // Fetch the appointment request data to check its status
-          const result = await getAppointmentRequestById(event.work_item_id);
-          if (result.success && result.data) {
-            setAppointmentRequestData(result.data);
+        // Fetch the appointment request data to check its status
+        const result = await getAppointmentRequestById(event.work_item_id);
+        try {
+          const capability = await getTeamsMeetingCapability();
+          setTeamsMeetingCapability(capability);
+        } catch (error) {
+          console.error('Failed to load Teams meeting capability:', error);
+          setTeamsMeetingCapability({ available: false, reason: 'not_configured' });
+        }
+        if (result.success && result.data) {
+          setAppointmentRequestData(result.data);
+          setGenerateTeamsMeeting(true);
 
             // Pre-fill assigned technician if one exists
             if (event.assigned_user_ids && event.assigned_user_ids.length > 0) {
@@ -193,15 +204,16 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                 }));
               }
             }
-          } else {
-            console.error('Failed to fetch appointment request:', result.error);
-            setAppointmentRequestData(null);
-          }
         } else {
-          setIsAppointmentRequest(false);
+          console.error('Failed to fetch appointment request:', result.error);
           setAppointmentRequestData(null);
         }
-      };
+      } else {
+        setIsAppointmentRequest(false);
+        setAppointmentRequestData(null);
+        setTeamsMeetingCapability(null);
+      }
+    };
 
       fetchAppointmentRequest();
     }, [event]);
@@ -396,6 +408,13 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
   const [pendingDeleteScope, setPendingDeleteScope] = useState<IEditScope | undefined>(undefined);
   const [pendingUpdateData, setPendingUpdateData] = useState<Omit<IScheduleEntry, 'tenant'>>();
+  const deleteConfirmationMessage = appointmentRequestData?.online_meeting_url
+    ? t('entryPopup.delete.confirmWithTeamsWarning', {
+        defaultValue: 'Are you sure you want to delete this schedule entry? This action cannot be undone. This will also delete the Microsoft Teams meeting.',
+      })
+    : t('entryPopup.delete.confirm', {
+        defaultValue: 'Are you sure you want to delete this schedule entry? This action cannot be undone.',
+      });
 
   useEffect(() => {
     if (!isDeleteDialogOpen || !event) {
@@ -489,7 +508,8 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         appointment_request_id: event.work_item_id,
         assigned_user_id: assignedTechnicianId,
         final_date: startDate.toISOString().split('T')[0],
-        final_time: startDate.toTimeString().slice(0, 5)
+        final_time: startDate.toTimeString().slice(0, 5),
+        generate_teams_meeting: Boolean(teamsMeetingCapability?.available && generateTeamsMeeting),
       });
 
       if (result.success) {
@@ -758,12 +778,86 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                       date: formatDate(new Date(appointmentRequestData.approved_at), { dateStyle: 'medium' }),
                     })
                   : t('entryPopup.appointmentRequest.approved.description', {
-                      defaultValue: 'This appointment originated from a client request.',
-                    })}
+                    defaultValue: 'This appointment originated from a client request.',
+                  })}
               </p>
+              {appointmentRequestData.online_meeting_url && (
+                <div className="mt-3">
+                  <Button
+                    id="join-teams-meeting-entry-popup"
+                    type="button"
+                    variant="outline"
+                    onClick={() => window.open(appointmentRequestData.online_meeting_url!, '_blank', 'noopener,noreferrer')}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    {t('entryPopup.appointmentRequest.approved.joinTeamsMeeting', {
+                      defaultValue: 'Join Teams Meeting',
+                    })}
+                  </Button>
+                </div>
+              )}
             </AlertDescription>
           </Alert>
         )}
+
+        {/* Requester info — shown for any appointment-request entry when useful fields are populated */}
+        {isAppointmentRequest && appointmentRequestData && (() => {
+          const ar = appointmentRequestData as any;
+          const companyLabel = ar.is_authenticated ? ar.client_company_name : ar.company_name;
+          const contactName = ar.contact_name || (!ar.is_authenticated ? ar.requester_name : null);
+          const contactEmail = ar.contact_email || (!ar.is_authenticated ? ar.requester_email : null);
+          const contactPhone = !ar.is_authenticated ? ar.requester_phone : null;
+          if (!companyLabel && !contactName && !contactEmail && !contactPhone) return null;
+          return (
+            <div className="mb-4 rounded border border-gray-200 bg-gray-50 p-3">
+              <p className="text-sm font-semibold text-gray-700 mb-2">
+                {t('entryPopup.appointmentRequest.requesterInfo.title', { defaultValue: 'Requester Info' })}
+              </p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                {companyLabel && (
+                  <div>
+                    <div className="text-xs text-gray-500">
+                      {t('entryPopup.appointmentRequest.requesterInfo.company', { defaultValue: 'Company' })}
+                    </div>
+                    <div>{companyLabel}</div>
+                  </div>
+                )}
+                {contactName && (
+                  <div>
+                    <div className="text-xs text-gray-500">
+                      {t('entryPopup.appointmentRequest.requesterInfo.name', { defaultValue: 'Name' })}
+                    </div>
+                    <div>{contactName}</div>
+                  </div>
+                )}
+                {contactEmail && (
+                  <div>
+                    <div className="text-xs text-gray-500">
+                      {t('entryPopup.appointmentRequest.requesterInfo.email', { defaultValue: 'Email' })}
+                    </div>
+                    <div>
+                      <a href={`mailto:${contactEmail}`} className="text-blue-600 hover:underline break-all">
+                        {contactEmail}
+                      </a>
+                    </div>
+                  </div>
+                )}
+                {contactPhone && (
+                  <div>
+                    <div className="text-xs text-gray-500">
+                      {t('entryPopup.appointmentRequest.requesterInfo.phone', { defaultValue: 'Phone' })}
+                    </div>
+                    <div>
+                      <a href={`tel:${contactPhone}`} className="text-blue-600 hover:underline">
+                        {contactPhone}
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Status display for declined/cancelled appointment requests */}
         {isAppointmentRequest && event && appointmentRequestData && (appointmentRequestData.status === 'declined' || appointmentRequestData.status === 'cancelled') && (
@@ -855,6 +949,19 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                     buttonWidth="full"
                   />
                 </div>
+
+                {teamsMeetingCapability?.available && (
+                  <div>
+                    <Switch
+                      id="generate-teams-meeting-entry-popup"
+                      checked={generateTeamsMeeting}
+                      onCheckedChange={setGenerateTeamsMeeting}
+                      label={t('entryPopup.appointmentRequest.generateTeamsMeeting', {
+                        defaultValue: 'Generate Microsoft Teams meeting link',
+                      })}
+                    />
+                  </div>
+                )}
 
                 <div>
                   <Label>
@@ -1324,6 +1431,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         onClose={resetDeleteState}
         onConfirmDelete={handleDeleteDialogConfirm}
         entityName={event?.title || t('entryPopup.delete.entityFallback', { defaultValue: 'this schedule entry' })}
+        confirmationMessage={deleteConfirmationMessage}
         validationResult={deleteValidation}
         isValidating={isDeleteValidating}
         isDeleting={isDeleteProcessing}

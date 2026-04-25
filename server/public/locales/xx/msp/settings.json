@@ -297,12 +297,12 @@
         "removeRoleFailed": "11111",
         "updateUserNotFound": "11111",
         "updateFailed": "11111",
-        "passwordTooShort": "11111",
-        "passwordChangeFailed": "11111",
-        "passwordChangeError": "11111",
         "emailAlreadyExists": "11111",
         "reportsToSelf": "11111",
-        "reportsToCycle": "11111"
+        "reportsToCycle": "11111",
+        "passwordTooShort": "11111",
+        "passwordChangeFailed": "11111",
+        "passwordChangeError": "11111"
       }
     }
   },

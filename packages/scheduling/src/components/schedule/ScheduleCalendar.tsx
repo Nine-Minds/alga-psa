@@ -19,7 +19,7 @@ import EntryPopup from './EntryPopup';
 import { CalendarStyleProvider } from './CalendarStyleProvider';
 import TechnicianSidebar from './TechnicianSidebar';
 import WeeklyScheduleEvent from './WeeklyScheduleEvent';
-import { getScheduleEntries, addScheduleEntry, updateScheduleEntry, deleteScheduleEntry } from '@alga-psa/scheduling/actions';
+import { getScheduleEntries, addScheduleEntry, updateScheduleEntry, deleteScheduleEntry, getAppointmentRequestById, IAppointmentRequest } from '@alga-psa/scheduling/actions';
 import { IEditScope, IScheduleEntry, DeletionValidationResult } from '@alga-psa/types';
 import { produce } from 'immer';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
@@ -72,6 +72,7 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
   const { openDrawer, closeDrawer } = useDrawer();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedAppointmentRequest, setSelectedAppointmentRequest] = useState<IAppointmentRequest | null>(null);
   const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
   const [isDeleteValidating, setIsDeleteValidating] = useState(false);
   const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
@@ -104,6 +105,28 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
     }
     setIsDeleteDialogOpen(true);
   };
+
+  useEffect(() => {
+    if (!selectedEvent || selectedEvent.work_item_type !== 'appointment_request' || !selectedEvent.work_item_id) {
+      setSelectedAppointmentRequest(null);
+      return;
+    }
+
+    let isCancelled = false;
+
+    const loadAppointmentRequest = async () => {
+      const result = await getAppointmentRequestById(selectedEvent.work_item_id!);
+      if (!isCancelled) {
+        setSelectedAppointmentRequest(result.success && result.data ? result.data : null);
+      }
+    };
+
+    void loadAppointmentRequest();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [selectedEvent]);
 
   const runDeleteValidation = useCallback(async (eventId: string) => {
     setIsDeleteValidating(true);
@@ -1225,6 +1248,13 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
         entityName={selectedEvent?.title || t('calendar.deleteDialog.entityFallback', {
           defaultValue: 'this schedule entry',
         })}
+        confirmationMessage={selectedAppointmentRequest?.online_meeting_url
+          ? t('calendar.deleteDialog.messageWithTeamsWarning', {
+              defaultValue: 'Are you sure you want to delete this schedule entry? This action cannot be undone. This will also delete the Microsoft Teams meeting.',
+            })
+          : t('calendar.deleteDialog.messageSingle', {
+              defaultValue: 'Are you sure you want to delete this schedule entry? This action cannot be undone.',
+            })}
         validationResult={deleteValidation}
         isValidating={isDeleteValidating}
         isDeleting={isDeleteProcessing}

@@ -149,6 +149,7 @@
       "labels": {
         "reference": "Referenz",
         "client": "Kunde",
+        "requester": "Anfragender",
         "contact": "Kontakt",
         "email": "E-Mail",
         "phone": "Telefon",
@@ -157,7 +158,11 @@
         "duration": "Dauer",
         "status": "Status",
         "linkedTicket": "Verknüpftes Ticket",
-        "description": "Beschreibung"
+        "description": "Beschreibung",
+        "teamsMeeting": "Teams-Besprechung"
+      },
+      "actions": {
+        "joinTeamsMeeting": "An Teams-Besprechung teilnehmen"
       }
     },
     "approval": {
@@ -166,7 +171,8 @@
         "assignedTechnician": "Techniker zuweisen *",
         "finalDateTime": "Endgültiges Datum und Uhrzeit",
         "internalNotes": "Interne Notizen (optional)",
-        "linkedTicket": "Link zum Ticket (optional)"
+        "linkedTicket": "Link zum Ticket (optional)",
+        "generateTeamsMeeting": "Microsoft Teams-Besprechungslink erstellen"
       },
       "placeholders": {
         "assignedTechnician": "Techniker auswählen",
@@ -201,7 +207,8 @@
       "general": "Allgemeine Einstellungen",
       "userHours": "Benutzerstunden",
       "serviceRules": "Serviceregeln",
-      "exceptions": "Ausnahmen"
+      "exceptions": "Ausnahmen",
+      "teamsMeetings": "Teams-Besprechungen"
     },
     "days": {
       "sunday": "Sonntag",
@@ -421,6 +428,56 @@
         "deleteSuccess": "Ausnahme gelöscht",
         "deleteError": "Ausnahme konnte nicht gelöscht werden"
       }
+    },
+    "teamsMeetings": {
+      "prerequisites": {
+        "title": "Azure-Voraussetzungen",
+        "description": "Bevor Sie dies aktivieren, erteilen Sie der App die Anwendungsberechtigung OnlineMeetings.ReadWrite.All und erstellen Sie eine Application Access Policy für das Organisator-Konto.",
+        "steps": {
+          "toggle": "Azure-Einrichtungsschritte anzeigen",
+          "step1": {
+            "title": "1. Graph-Anwendungsberechtigung erteilen",
+            "item1": "Öffnen Sie das Entra Admin Center → App-Registrierungen.",
+            "item2": "Wählen Sie die von der Teams-Integration dieses Mandanten verwendete App aus.",
+            "item3": "API-Berechtigungen → Hinzufügen → Microsoft Graph → Anwendungsberechtigungen.",
+            "item4": "Fügen Sie OnlineMeetings.ReadWrite.All hinzu und erteilen Sie die Administratorzustimmung."
+          },
+          "step2": {
+            "title": "2. Application Access Policy erstellen",
+            "intro": "Die reine App-Besprechungserstellung muss dem Organisator-Konto ausdrücklich erlaubt werden.",
+            "note": "Warten Sie 5–10 Minuten auf die Richtlinienverbreitung, bevor Sie auf Verifizieren klicken."
+          }
+        }
+      },
+      "organizer": {
+        "title": "Besprechungsorganisator",
+        "label": "Standard-Besprechungsorganisator (UPN oder Microsoft-Benutzer-ID)",
+        "help": "Genehmigte Termine erstellen Teams-Besprechungen als dieser Microsoft-Benutzer. Ein UPN wie scheduling@acme.com ist meist die sicherste Wahl.",
+        "placeholder": "scheduling@acme.com"
+      },
+      "actions": {
+        "save": "Speichern",
+        "saving": "Wird gespeichert...",
+        "verify": "Verifizieren",
+        "verifying": "Wird verifiziert..."
+      },
+      "feedback": {
+        "saveSuccess": "Teams-Besprechungsorganisator gespeichert",
+        "saveError": "Speichern des Teams-Besprechungsorganisators fehlgeschlagen",
+        "verifySuccess": "Teams-Besprechungsorganisator verifiziert",
+        "verifyError": "Verifizierung des Teams-Besprechungsorganisators fehlgeschlagen"
+      },
+      "verify": {
+        "valid": "Microsoft-Organisator erfolgreich verifiziert.",
+        "validWithName": "Verifizierter Microsoft-Benutzer: {{displayName}}.",
+        "reasons": {
+          "eeDisabled": "Die Verifizierung von Teams-Besprechungen ist nur in der Enterprise Edition verfügbar.",
+          "notConfigured": "Die Teams-Integration muss aktiv sein, bevor ein Organisator verifiziert werden kann.",
+          "userNotFound": "Microsoft konnte für diesen Organisatorwert keinen Benutzer finden.",
+          "policyMissing": "Der Microsoft-Benutzer existiert, aber die Application Access Policy erlaubt die Besprechungserstellung noch nicht.",
+          "graphError": "Microsoft Graph konnte diesen Organisator derzeit nicht verifizieren."
+        }
+      }
     }
   },
   "entryPopup": {
@@ -469,7 +526,8 @@
       "approved": {
         "title": "Genehmigter Termin",
         "descriptionWithDate": "Dieser Termin entstand aus einer Kundenanfrage und wurde am {{date}} genehmigt.",
-        "description": "Dieser Termin entstand aus einer Kundenanfrage."
+        "description": "Dieser Termin entstand aus einer Kundenanfrage.",
+        "joinTeamsMeeting": "An Teams-Besprechung teilnehmen"
       },
       "pending": {
         "title": "Ausstehende Terminanfrage",
@@ -483,6 +541,13 @@
       "cancelled": {
         "title": "Terminanfrage storniert",
         "description": "Diese Terminanfrage wurde vom Kunden storniert."
+      },
+      "requesterInfo": {
+        "title": "Anfragerinformationen",
+        "company": "Unternehmen",
+        "name": "Name",
+        "email": "E-Mail",
+        "phone": "Telefon"
       },
       "requestedDateTimeLabel": "Gewünschtes Datum und Uhrzeit",
       "assignTechnicianLabel": "Techniker zuweisen *",
@@ -503,7 +568,8 @@
         "declineReasonRequired": "Bitte geben Sie einen Grund für die Ablehnung an",
         "declined": "Terminanfrage abgelehnt",
         "declineFailed": "Anfrage konnte nicht abgelehnt werden"
-      }
+      },
+      "generateTeamsMeeting": "Microsoft Teams-Besprechungslink erstellen"
     },
     "recurrence": {
       "label": "Wiederholung",
@@ -536,7 +602,9 @@
         "title": "Zeitplaneintrag löschen",
         "message": "Wählen Sie aus, welche Ereignisse gelöscht werden sollen:",
         "confirm": "Fortfahren"
-      }
+      },
+      "confirm": "Sind Sie sicher, dass Sie diesen Zeitplaneintrag löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "confirmWithTeamsWarning": "Sind Sie sicher, dass Sie diesen Zeitplaneintrag löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden. Die zugehörige Microsoft Teams-Besprechung wird ebenfalls gelöscht."
     },
     "scopeOptions": {
       "single": "Nur dieses Ereignis",

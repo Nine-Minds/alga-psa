@@ -38,6 +38,7 @@ import {
 } from './appointmentHelpers';
 import { generateICSBuffer, generateICSFilename, ICSEventData } from '../utils/icsGenerator';
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
+import { resolveTeamsMeetingService } from '../lib/teamsMeetingService';
 
 export interface IAppointmentRequest {
   appointment_request_id: string;
@@ -62,6 +63,9 @@ export interface IAppointmentRequest {
   approved_by_user_id?: string;
   approved_at?: string;
   declined_reason?: string;
+  online_meeting_provider?: string | null;
+  online_meeting_url?: string | null;
+  online_meeting_id?: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -70,7 +74,16 @@ export interface AppointmentRequestResult<T> {
   success: boolean;
   data?: T;
   error?: string;
+  teamsMeetingWarning?: string;
 }
+
+export const getTeamsMeetingCapability = withAuth(async (
+  _user,
+  { tenant }
+) => {
+  const teamsMeetingService = await resolveTeamsMeetingService();
+  return teamsMeetingService.getTeamsMeetingCapability(tenant);
+});
 
 /**
  * Get a single appointment request by ID
@@ -427,6 +440,7 @@ export const approveAppointmentRequest = withAuth(async (
 
       const finalDate = validatedData.final_date ?? fallbackDate;
       const finalTime = (validatedData.final_time ?? fallbackTime).slice(0, 5);
+      const approvalUsesRequestedFallback = !validatedData.final_date && !validatedData.final_time;
 
       // Verify assigned user exists
       const assignedUser = await trx('users')
@@ -458,15 +472,18 @@ export const approveAppointmentRequest = withAuth(async (
         throw new Error('Invalid final date provided for approval');
       }
 
-      // Parse the time as UTC to avoid timezone issues
-      // The finalTime should be in HH:MM format
-      const scheduledStart = new Date(`${dateStr}T${finalTime}:00Z`);
+      const scheduledStart = approvalUsesRequestedFallback
+        ? fromZonedTime(`${dateStr}T${finalTime}:00`, request.requester_timezone || 'UTC')
+        : new Date(`${dateStr}T${finalTime}:00Z`);
 
       if (isNaN(scheduledStart.getTime())) {
         throw new Error(`Invalid date/time: ${dateStr}T${finalTime}`);
       }
 
       const scheduledEnd = new Date(scheduledStart.getTime() + request.requested_duration * 60000);
+      let onlineMeetingUrl: string | null = null;
+      let onlineMeetingId: string | null = null;
+      let teamsMeetingWarning: string | undefined;
 
       let scheduleEntry;
 
@@ -640,6 +657,41 @@ export const approveAppointmentRequest = withAuth(async (
 
       const now = new Date();
 
+      if (validatedData.generate_teams_meeting) {
+        const teamsMeetingService = await resolveTeamsMeetingService();
+        const capability = await teamsMeetingService.getTeamsMeetingCapability(tenant);
+
+        if (!capability.available) {
+          switch (capability.reason) {
+            case 'no_organizer':
+              teamsMeetingWarning = 'Microsoft Teams meeting was not created because no default organizer is configured.';
+              break;
+            case 'ee_disabled':
+              teamsMeetingWarning = 'Microsoft Teams meetings are only available in Enterprise Edition.';
+              break;
+            case 'not_configured':
+            default:
+              teamsMeetingWarning = 'Microsoft Teams meeting was not created because Teams is not configured for this tenant.';
+              break;
+          }
+        } else {
+          const createdMeeting = await teamsMeetingService.createTeamsMeeting({
+            tenantId: tenant,
+            subject: `Appointment: ${service.service_name}`,
+            startDateTime: scheduledStart.toISOString(),
+            endDateTime: scheduledEnd.toISOString(),
+            appointmentRequestId: request.appointment_request_id,
+          });
+
+          if (createdMeeting) {
+            onlineMeetingUrl = createdMeeting.joinWebUrl;
+            onlineMeetingId = createdMeeting.meetingId;
+          } else {
+            teamsMeetingWarning = 'Appointment approved, but the Microsoft Teams meeting could not be created. Please try again or create it manually in Teams.';
+          }
+        }
+      }
+
       // Update appointment request
       await trx('appointment_requests')
         .where({
@@ -652,6 +704,9 @@ export const approveAppointmentRequest = withAuth(async (
           approved_by_user_id: user.user_id,
           approved_at: now,
           ticket_id: validatedData.ticket_id || request.ticket_id,
+          online_meeting_provider: onlineMeetingUrl && onlineMeetingId ? 'teams' : request.online_meeting_provider || null,
+          online_meeting_url: onlineMeetingUrl || request.online_meeting_url || null,
+          online_meeting_id: onlineMeetingId || request.online_meeting_id || null,
           updated_at: now
         });
 
@@ -720,16 +775,24 @@ export const approveAppointmentRequest = withAuth(async (
         const formattedTime = await formatTime(localTimeStr);
 
         // Generate ICS file for email attachment
+        const icsDescriptionLines = [
+          request.description || `Appointment for ${service.service_name}`,
+        ];
+
+        if (onlineMeetingUrl) {
+          icsDescriptionLines.push(`Join Teams Meeting: ${onlineMeetingUrl}`);
+        }
+
         const icsEventData: ICSEventData = {
           uid: scheduleEntry.entry_id,
           title: `Appointment: ${service.service_name}`,
-          description: request.description || `Appointment for ${service.service_name}`,
-          location: `${tenantSettings.tenantName}`,
+          description: icsDescriptionLines.join('\n'),
+          location: onlineMeetingUrl ? 'Microsoft Teams Meeting' : undefined,
           startDate: new Date(scheduleEntryWithDetails.scheduled_start),
           endDate: new Date(scheduleEntryWithDetails.scheduled_end),
           organizerName: `${assignedUser.first_name} ${assignedUser.last_name}`,
           organizerEmail: assignedUser.email || tenantSettings.contactEmail,
-          url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/client-portal/appointments/${request.appointment_request_id}`
+          url: onlineMeetingUrl || undefined,
         };
         const icsBuffer = generateICSBuffer(icsEventData);
         const icsFilename = generateICSFilename(`Appointment-${service.service_name}`);
@@ -761,6 +824,7 @@ export const approveAppointmentRequest = withAuth(async (
             technicianName: `${assignedUser.first_name} ${assignedUser.last_name}`,
             technicianEmail: assignedUser.email || '',
             technicianPhone: assignedUser.phone || '',
+            onlineMeetingUrl: onlineMeetingUrl || undefined,
             calendarLink: calendarLink,
             cancellationPolicy: 'Please cancel at least 24 hours in advance.',
             minimumNoticeHours: 24,
@@ -796,6 +860,7 @@ export const approveAppointmentRequest = withAuth(async (
             duration: request.requested_duration,
             clientName,
             description: request.description || '',
+            onlineMeetingUrl: onlineMeetingUrl || undefined,
             calendarLink: calendarLink,
             contactEmail: tenantSettings.contactEmail,
             contactPhone: tenantSettings.contactPhone
@@ -812,10 +877,17 @@ export const approveAppointmentRequest = withAuth(async (
         // Don't fail the approval if email fails
       }
 
-      return updatedRequest;
+      return {
+        updatedRequest,
+        teamsMeetingWarning,
+      };
     });
 
-    return { success: true, data: result as IAppointmentRequest };
+    return {
+      success: true,
+      data: result.updatedRequest as IAppointmentRequest,
+      teamsMeetingWarning: result.teamsMeetingWarning,
+    };
   } catch (error) {
     console.error('Error approving appointment request:', error);
     const message = error instanceof Error ? error.message : 'Failed to approve appointment request';
@@ -1037,13 +1109,14 @@ export const updateAppointmentRequestDateTime = withAuth(async (
         throw new Error('Appointment request not found');
       }
 
-      if (request.status !== 'pending') {
+      if (!['pending', 'approved'].includes(request.status)) {
         throw new Error(`Cannot update request with status: ${request.status}`);
       }
 
       const now = new Date();
       const effectiveTimezone = validatedData.new_timezone ?? request.requester_timezone ?? 'UTC';
       const effectiveDuration = validatedData.new_duration ?? request.requested_duration;
+      let teamsMeetingWarning: string | undefined;
       const updateData: any = {
         requested_date: validatedData.new_date,
         requested_time: validatedData.new_time,
@@ -1066,12 +1139,19 @@ export const updateAppointmentRequestDateTime = withAuth(async (
       // Keep the linked schedule entry in sync with the new local wall-clock.
       // new_date/new_time are the user's naive local time in effectiveTimezone;
       // schedule_entries.scheduled_start must be the corresponding UTC instant.
+      const scheduledStart = fromZonedTime(
+        `${validatedData.new_date}T${validatedData.new_time}:00`,
+        effectiveTimezone
+      );
+      const scheduledEnd = new Date(scheduledStart.getTime() + effectiveDuration * 60000);
+
       if (request.schedule_entry_id) {
-        const scheduledStart = fromZonedTime(
-          `${validatedData.new_date}T${validatedData.new_time}:00`,
-          effectiveTimezone
-        );
-        const scheduledEnd = new Date(scheduledStart.getTime() + effectiveDuration * 60000);
+        const previousScheduleEntry = await trx('schedule_entries')
+          .where({
+            entry_id: request.schedule_entry_id,
+            tenant
+          })
+          .first();
 
         await trx('schedule_entries')
           .where({
@@ -1083,6 +1163,49 @@ export const updateAppointmentRequestDateTime = withAuth(async (
             scheduled_end: scheduledEnd.toISOString(),
             updated_at: now
           });
+
+        if (request.status === 'approved') {
+          const updatedScheduleEntry = await trx('schedule_entries')
+            .where({
+              entry_id: request.schedule_entry_id,
+              tenant
+            })
+            .first();
+
+          if (previousScheduleEntry && updatedScheduleEntry) {
+            try {
+              await publishEvent({
+                eventType: 'SCHEDULE_ENTRY_UPDATED',
+                payload: {
+                  tenantId: tenant,
+                  userId: user.user_id,
+                  entryId: request.schedule_entry_id,
+                  changes: {
+                    before: previousScheduleEntry,
+                    after: updatedScheduleEntry,
+                  }
+                }
+              });
+            } catch (eventError) {
+              console.error('[AppointmentRequestUpdate] Failed to publish SCHEDULE_ENTRY_UPDATED event', eventError);
+            }
+          }
+        }
+      }
+
+      if (request.online_meeting_id && request.online_meeting_provider === 'teams') {
+        const teamsMeetingService = await resolveTeamsMeetingService();
+        const updatedMeeting = await teamsMeetingService.updateTeamsMeeting({
+          tenantId: tenant,
+          meetingId: request.online_meeting_id,
+          startDateTime: scheduledStart.toISOString(),
+          endDateTime: scheduledEnd.toISOString(),
+          appointmentRequestId: request.appointment_request_id,
+        });
+
+        if (!updatedMeeting) {
+          teamsMeetingWarning = 'Appointment updated, but the Microsoft Teams meeting could not be rescheduled. Please update it manually in Teams.';
+        }
       }
 
       // Get updated request
@@ -1093,10 +1216,17 @@ export const updateAppointmentRequestDateTime = withAuth(async (
         })
         .first();
 
-      return updatedRequest;
+      return {
+        updatedRequest,
+        teamsMeetingWarning,
+      };
     });
 
-    return { success: true, data: result as IAppointmentRequest };
+    return {
+      success: true,
+      data: result.updatedRequest as IAppointmentRequest,
+      teamsMeetingWarning: result.teamsMeetingWarning,
+    };
   } catch (error) {
     console.error('Error updating appointment request date/time:', error);
     const message = error instanceof Error ? error.message : 'Failed to update appointment request';

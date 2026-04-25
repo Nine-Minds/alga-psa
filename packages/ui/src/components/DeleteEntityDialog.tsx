@@ -14,6 +14,7 @@ export interface DeleteEntityDialogProps extends AutomationProps {
   onConfirmDelete: () => Promise<void> | void;
   onAlternativeAction?: (action: string) => Promise<void> | void;
   entityName: string;
+  confirmationMessage?: React.ReactNode;
   validationResult?: DeletionValidationResult | null;
   isValidating: boolean;
   isDeleting?: boolean;
@@ -44,6 +45,7 @@ export const DeleteEntityDialog = ({
   onConfirmDelete,
   onAlternativeAction,
   entityName,
+  confirmationMessage,
   validationResult,
   isValidating,
   isDeleting = false,
@@ -78,7 +80,7 @@ export const DeleteEntityDialog = ({
     if (canDelete) {
       return (
         <p className="text-[rgb(var(--color-text-700))]">
-          Are you sure you want to delete "{entityName}"? This action cannot be undone.
+          {confirmationMessage ?? `Are you sure you want to delete "${entityName}"? This action cannot be undone.`}
         </p>
       );
     }
@@ -91,7 +93,7 @@ export const DeleteEntityDialog = ({
         )}
       </div>
     );
-  }, [isValidating, canDelete, blockMessage, dependencies, entityName]);
+  }, [isValidating, canDelete, blockMessage, confirmationMessage, dependencies, entityName]);
 
   return (
     <Dialog

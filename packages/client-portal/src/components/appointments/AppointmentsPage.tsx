@@ -10,7 +10,7 @@ import { RequestAppointmentModal } from './RequestAppointmentModal';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
-import { Calendar, Clock, User, FileText, AlertCircle, X } from 'lucide-react';
+import { Calendar, Clock, User, FileText, AlertCircle, X, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { fromZonedTime } from 'date-fns-tz';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
@@ -48,6 +48,7 @@ interface AppointmentRequest {
   ticket_number?: string;
   approved_at?: string;
   declined_reason?: string;
+  online_meeting_url?: string | null;
   created_at: string;
 }
 
@@ -116,6 +117,11 @@ export default function AppointmentsPage() {
     }
     return appointments.filter(apt => apt.status === filterStatus);
   }, [appointments, filterStatus]);
+
+  const appointmentToCancelRecord = useMemo(
+    () => appointments.find((appointment) => appointment.appointment_request_id === appointmentToCancel) || null,
+    [appointmentToCancel, appointments]
+  );
 
   const getStatusBadge = (status: AppointmentRequest['status']) => {
     const variants: Record<AppointmentRequest['status'], { variant: 'default' | 'primary' | 'success' | 'warning' | 'error'; label: string }> = {
@@ -431,6 +437,26 @@ export default function AppointmentsPage() {
                   </div>
                 </div>
 
+                {selectedAppointment.online_meeting_url && (
+                  <div className="flex items-start gap-3">
+                    <ExternalLink className="h-5 w-5 text-gray-500 mt-0.5" />
+                    <div className="flex-1">
+                      <div className="text-sm font-medium text-gray-700">
+                        {t('details.teamsMeeting', 'Teams Meeting')}
+                      </div>
+                      <Button
+                        id="join-teams-meeting-client-portal-list"
+                        type="button"
+                        onClick={() => window.open(selectedAppointment.online_meeting_url!, '_blank', 'noopener,noreferrer')}
+                        className="mt-2"
+                      >
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        {t('details.joinTeamsMeeting', 'Join Teams Meeting')}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 {selectedAppointment.preferred_assigned_user_name && (
                   <div className="flex items-start gap-3">
                     <User className="h-5 w-5 text-gray-500 mt-0.5" />
@@ -503,7 +529,7 @@ export default function AppointmentsPage() {
             </div>
 
             <DialogFooter className="mt-6">
-              {selectedAppointment.status === 'pending' && (
+              {(selectedAppointment.status === 'pending' || selectedAppointment.status === 'approved') && (
                 <Button
                   id="cancel-appointment-details-button"
                   variant="destructive"
@@ -533,7 +559,9 @@ export default function AppointmentsPage() {
         onClose={() => setAppointmentToCancel(null)}
         onConfirm={handleCancelAppointment}
         title={t('cancel.title')}
-        message={t('cancel.message')}
+        message={appointmentToCancelRecord?.online_meeting_url
+          ? t('cancel.messageWithTeamsWarning', 'Are you sure you want to cancel this appointment request? This action cannot be undone. This will also delete the Microsoft Teams meeting.')
+          : t('cancel.message')}
         confirmLabel={t('cancel.confirm')}
         cancelLabel={tCommon('common.cancel')}
       />

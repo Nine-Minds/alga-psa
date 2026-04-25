@@ -1,0 +1,20 @@
+[
+  {
+    "id": "T001",
+    "description": "Manual smoke: open the workflow designer on a wide viewport and verify the palette and properties panel still float beside the center canvas without visual overlap.",
+    "featureIds": ["F005"],
+    "implemented": false
+  },
+  {
+    "id": "T002",
+    "description": "Manual smoke: narrow the viewport until the designer stacks, then verify the order is palette, main workflow content, then properties/validation panel.",
+    "featureIds": ["F001", "F002", "F003", "F004"],
+    "implemented": false
+  },
+  {
+    "id": "T003",
+    "description": "Manual smoke: in stacked mode, select a workflow step and verify the properties panel remains editable and the resize handle is not active.",
+    "featureIds": ["F004"],
+    "implemented": false
+  }
+]

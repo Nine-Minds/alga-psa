@@ -113,6 +113,8 @@
     "reference": "55555",
     "service": "55555",
     "dateTime": "55555",
+    "teamsMeeting": "55555",
+    "joinTeamsMeeting": "55555",
     "technician": "55555",
     "linkedTicket": "55555",
     "description": "55555",
@@ -123,6 +125,7 @@
   "cancel": {
     "title": "55555",
     "message": "55555",
+    "messageWithTeamsWarning": "55555",
     "confirm": "55555"
   },
   "ticketSection": {

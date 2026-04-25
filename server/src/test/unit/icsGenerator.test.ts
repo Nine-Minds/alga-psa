@@ -68,6 +68,19 @@ describe('ICS Generator', () => {
       expect(ics).toContain('URL:https://example.com/appointments/123');
     });
 
+    it('emits Teams meeting URL and location when both are supplied', () => {
+      const ics = generateICS({
+        ...mockEventData,
+        description: 'Join Teams Meeting: https://teams.example.com/meeting/123',
+        location: 'Microsoft Teams Meeting',
+        url: 'https://teams.example.com/meeting/123',
+      });
+
+      expect(ics).toContain('LOCATION:Microsoft Teams Meeting');
+      expect(ics).toContain('URL:https://teams.example.com/meeting/123');
+      expect(ics).toContain('DESCRIPTION:Join Teams Meeting: https://teams.example.com/meeting/123');
+    });
+
     it('should include UID', () => {
       const ics = generateICS(mockEventData);
 
@@ -108,6 +121,7 @@ describe('ICS Generator', () => {
       expect(ics).toContain('SUMMARY:Minimal Event');
       expect(ics).not.toContain('DESCRIPTION:');
       expect(ics).not.toContain('LOCATION:');
+      expect(ics).not.toContain('URL:');
       expect(ics).not.toContain('ORGANIZER:');
     });
 

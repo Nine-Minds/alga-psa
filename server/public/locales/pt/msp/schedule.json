@@ -148,8 +148,9 @@
       },
       "labels": {
         "reference": "Reference",
-        "client": "Client",
-        "contact": "Contact",
+        "client": "Cliente",
+        "requester": "Requerente",
+        "contact": "Contato",
         "email": "Email",
         "phone": "Phone",
         "service": "Service",
@@ -157,7 +158,11 @@
         "duration": "Duration",
         "status": "Status",
         "linkedTicket": "Linked Ticket",
-        "description": "Description"
+        "description": "Description",
+        "teamsMeeting": "Reunião do Teams"
+      },
+      "actions": {
+        "joinTeamsMeeting": "Participar na reunião do Teams"
       }
     },
     "approval": {
@@ -166,7 +171,8 @@
         "assignedTechnician": "Assign Technician *",
         "finalDateTime": "Final Date & Time",
         "internalNotes": "Internal Notes (Optional)",
-        "linkedTicket": "Link to Ticket (Optional)"
+        "linkedTicket": "Link to Ticket (Optional)",
+        "generateTeamsMeeting": "Gerar link de reunião do Microsoft Teams"
       },
       "placeholders": {
         "assignedTechnician": "Select technician",
@@ -201,7 +207,8 @@
       "general": "General Settings",
       "userHours": "User Hours",
       "serviceRules": "Service Rules",
-      "exceptions": "Exceptions"
+      "exceptions": "Exceptions",
+      "teamsMeetings": "Reuniões do Teams"
     },
     "days": {
       "sunday": "Sunday",
@@ -421,6 +428,56 @@
         "deleteSuccess": "Exception deleted",
         "deleteError": "Failed to delete exception"
       }
+    },
+    "teamsMeetings": {
+      "prerequisites": {
+        "title": "Pré-requisitos do Azure",
+        "description": "Antes de ativar isto, conceda à aplicação a permissão OnlineMeetings.ReadWrite.All e crie uma Application Access Policy para a conta do organizador.",
+        "steps": {
+          "toggle": "Mostrar passos de configuração do Azure",
+          "step1": {
+            "title": "1. Conceder permissão de aplicação do Graph",
+            "item1": "Abra o centro de administração Entra → Registos de aplicações.",
+            "item2": "Selecione a aplicação utilizada pela integração Teams deste inquilino.",
+            "item3": "Permissões de API → Adicionar → Microsoft Graph → Permissões de aplicação.",
+            "item4": "Adicione OnlineMeetings.ReadWrite.All e conceda o consentimento do administrador."
+          },
+          "step2": {
+            "title": "2. Criar uma Application Access Policy",
+            "intro": "A criação de reuniões apenas por aplicação deve ser explicitamente permitida para a conta do organizador.",
+            "note": "Aguarde 5 a 10 minutos para a propagação da política antes de clicar em Verificar."
+          }
+        }
+      },
+      "organizer": {
+        "title": "Organizador da reunião",
+        "label": "Organizador de reunião predefinido (UPN ou ID de utilizador Microsoft)",
+        "help": "Os agendamentos aprovados criam reuniões do Teams como este utilizador Microsoft. Um UPN como scheduling@acme.com costuma ser a opção mais segura.",
+        "placeholder": "scheduling@acme.com"
+      },
+      "actions": {
+        "save": "Guardar",
+        "saving": "A guardar...",
+        "verify": "Verificar",
+        "verifying": "A verificar..."
+      },
+      "feedback": {
+        "saveSuccess": "Organizador de reunião do Teams guardado",
+        "saveError": "Falha ao guardar o organizador de reunião do Teams",
+        "verifySuccess": "Organizador de reunião do Teams verificado",
+        "verifyError": "Falha ao verificar o organizador de reunião do Teams"
+      },
+      "verify": {
+        "valid": "Organizador Microsoft verificado com sucesso.",
+        "validWithName": "Utilizador Microsoft verificado: {{displayName}}.",
+        "reasons": {
+          "eeDisabled": "A verificação de reuniões do Teams só está disponível na Enterprise Edition.",
+          "notConfigured": "A integração do Teams tem de estar ativa antes de poder verificar um organizador.",
+          "userNotFound": "A Microsoft não encontrou um utilizador para esse organizador.",
+          "policyMissing": "O utilizador Microsoft existe, mas a Application Access Policy ainda não permite a criação de reuniões.",
+          "graphError": "O Microsoft Graph não conseguiu verificar este organizador de momento."
+        }
+      }
     }
   },
   "entryPopup": {
@@ -469,7 +526,8 @@
       "approved": {
         "title": "Approved Appointment",
         "descriptionWithDate": "This appointment originated from a client request and was approved on {{date}}.",
-        "description": "This appointment originated from a client request."
+        "description": "This appointment originated from a client request.",
+        "joinTeamsMeeting": "Participar na reunião do Teams"
       },
       "pending": {
         "title": "Pending Appointment Request",
@@ -483,6 +541,13 @@
       "cancelled": {
         "title": "Cancelled Appointment Request",
         "description": "This appointment request was cancelled by the client."
+      },
+      "requesterInfo": {
+        "title": "Informações do requerente",
+        "company": "Empresa",
+        "name": "Nome",
+        "email": "E-mail",
+        "phone": "Telefone"
       },
       "requestedDateTimeLabel": "Requested Date & Time",
       "assignTechnicianLabel": "Assign Technician *",
@@ -503,7 +568,8 @@
         "declineReasonRequired": "Please provide a reason for declining",
         "declined": "Appointment request declined",
         "declineFailed": "Failed to decline request"
-      }
+      },
+      "generateTeamsMeeting": "Gerar link de reunião do Microsoft Teams"
     },
     "recurrence": {
       "label": "Recurrence",
@@ -536,7 +602,9 @@
         "title": "Delete Schedule Entry",
         "message": "Select which events to delete:",
         "confirm": "Continue"
-      }
+      },
+      "confirm": "Tem a certeza de que pretende eliminar este registo do calendário? Esta ação não pode ser anulada.",
+      "confirmWithTeamsWarning": "Tem a certeza de que pretende eliminar este registo do calendário? Esta ação não pode ser anulada. A reunião associada do Microsoft Teams também será eliminada."
     },
     "scopeOptions": {
       "single": "Only this event",

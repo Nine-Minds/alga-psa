@@ -118,12 +118,15 @@
     "description": "Description",
     "created": "Requested",
     "approved": "Approved",
-    "cancelButton": "Cancel Appointment"
+    "cancelButton": "Cancel Appointment",
+    "teamsMeeting": "Reunião do Teams",
+    "joinTeamsMeeting": "Participar na reunião do Teams"
   },
   "cancel": {
     "title": "Cancel Appointment",
     "message": "Are you sure you want to cancel this appointment request? This action cannot be undone.",
-    "confirm": "Yes, Cancel"
+    "confirm": "Yes, Cancel",
+    "messageWithTeamsWarning": "Tem a certeza de que pretende cancelar este pedido de marcação? Esta ação não pode ser anulada. A reunião associada do Microsoft Teams também será eliminada."
   },
   "ticketSection": {
     "title": "Appointment Requests",

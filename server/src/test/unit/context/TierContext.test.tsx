@@ -55,6 +55,18 @@ describe('TierContext', () => {
     expect(result.current.tier).toBe('pro');
   });
 
+  it('grants solo tenants access to WORKFLOW_DESIGNER (now unlocked at solo)', () => {
+    useSession.mockReturnValue({
+      status: 'authenticated',
+      update: vi.fn(),
+      data: { user: { plan: 'solo', addons: [] } },
+    });
+
+    const { result } = renderHook(() => useTier(), { wrapper });
+
+    expect(result.current.hasFeature(TIER_FEATURES.WORKFLOW_DESIGNER)).toBe(true);
+  });
+
   it('provides addOns from the session', () => {
     useSession.mockReturnValue({
       status: 'authenticated',
@@ -115,9 +127,9 @@ describe('TierContext', () => {
     const { result } = renderHook(() => useTier(), { wrapper });
 
     expect(result.current.isSoloProTrial).toBe(true);
-    // WORKFLOW_DESIGNER remains gated at Pro+, so the trial should unlock it
+    // TEAMS_INTEGRATION is gated at Pro+, so the trial should unlock it
     // for Solo tenants while the trial is active.
-    expect(result.current.hasFeature(TIER_FEATURES.WORKFLOW_DESIGNER)).toBe(true);
+    expect(result.current.hasFeature(TIER_FEATURES.TEAMS_INTEGRATION)).toBe(true);
   });
 
   it('reverts Solo -> Pro trial feature access after the trial end passes', () => {
@@ -137,7 +149,7 @@ describe('TierContext', () => {
 
     expect(result.current.isSoloProTrial).toBe(false);
     // Once the trial expires, Solo loses access to the still-gated
-    // WORKFLOW_DESIGNER feature.
-    expect(result.current.hasFeature(TIER_FEATURES.WORKFLOW_DESIGNER)).toBe(false);
+    // TEAMS_INTEGRATION feature.
+    expect(result.current.hasFeature(TIER_FEATURES.TEAMS_INTEGRATION)).toBe(false);
   });
 });

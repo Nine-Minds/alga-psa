@@ -13,6 +13,7 @@
  *   {{duration}}         - Duration in minutes
  *   {{clientName}}       - Client/requester name (optional)
  *   {{description}}      - Appointment notes (optional)
+ *   {{onlineMeetingUrl}} - Teams join link (optional)
  *   {{calendarLink}}     - Link to download ICS file (optional)
  *   {{contactEmail}}     - Support contact email
  *   {{contactPhone}}     - Support contact phone (optional)
@@ -266,8 +267,13 @@ function buildBodyHtml(c) {
                   <div style="color:#475569;font-size:15px;">{{description}}</div>
                 </div>
                 {{/if}}
+                {{#if onlineMeetingUrl}}
+                <div style="text-align:center;margin:24px 0 16px 0;">
+                  <a href="{{onlineMeetingUrl}}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:600;font-size:16px;">Join Teams Meeting</a>
+                </div>
+                {{/if}}
                 {{#if calendarLink}}
-                <div style="text-align:center;margin:24px 0;">
+                <div style="text-align:center;margin:16px 0 24px 0;">
                   <a href="{{calendarLink}}" style="display:inline-block;background:${BRAND_PRIMARY};color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:600;font-size:16px;">${c.calendarButton}</a>
                 </div>
                 {{/if}}
@@ -293,6 +299,10 @@ ${c.textClient}: {{clientName}}
 
 {{#if description}}
 ${c.textNotes}: {{description}}
+{{/if}}
+
+{{#if onlineMeetingUrl}}
+Join Teams Meeting: {{onlineMeetingUrl}}
 {{/if}}
 
 {{#if calendarLink}}

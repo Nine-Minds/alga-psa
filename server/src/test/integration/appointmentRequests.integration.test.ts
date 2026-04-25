@@ -1,6 +1,7 @@
-import { beforeAll, afterAll, afterEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { formatInTimeZone } from 'date-fns-tz';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { setupCommonMocks, createMockUser, setMockUser } from '../../../test-utils/testMocks';
@@ -10,6 +11,16 @@ let tenantId: string;
 let createAppointmentRequest: typeof import('@alga-psa/client-portal/actions').createAppointmentRequest;
 let approveAppointmentRequest: typeof import('@alga-psa/scheduling/actions').approveAppointmentRequest;
 let declineAppointmentRequest: typeof import('@alga-psa/scheduling/actions').declineAppointmentRequest;
+let deleteScheduleEntry: typeof import('@alga-psa/scheduling/actions').deleteScheduleEntry;
+
+const enterpriseState = vi.hoisted(() => ({ value: true }));
+const teamsMeetingCapabilityMock = vi.hoisted(() => vi.fn());
+const createTeamsMeetingMock = vi.hoisted(() => vi.fn());
+const updateTeamsMeetingMock = vi.hoisted(() => vi.fn());
+const deleteTeamsMeetingMock = vi.hoisted(() => vi.fn());
+
+const STAFF_USER_ID = '00000000-0000-0000-0000-000000000101';
+const STAFF_USER_2_ID = '00000000-0000-0000-0000-000000000102';
 
 type CreatedIds = {
   serviceTypeId?: string;
@@ -29,6 +40,16 @@ type CreatedIds = {
 let createdIds: CreatedIds = { availabilitySettingIds: [] };
 
 // Mock the database module to return test database
+vi.mock('@alga-psa/db', async () => {
+  const actual = await vi.importActual<typeof import('@alga-psa/db')>('@alga-psa/db');
+  return {
+    ...actual,
+    createTenantKnex: vi.fn(async () => ({ knex: db, tenant: tenantId })),
+    runWithTenant: vi.fn(async (_tenant: string, fn: () => Promise<any>) => fn()),
+    getTenantContext: vi.fn(() => ({ tenant: tenantId })),
+  };
+});
+
 vi.mock('server/src/lib/db', async () => {
   const actual = await vi.importActual<typeof import('server/src/lib/db')>('server/src/lib/db');
   return {
@@ -44,11 +65,22 @@ vi.mock('server/src/lib/tenant', () => ({
   getTenantFromHeaders: vi.fn(() => tenantId ?? null)
 }));
 
+vi.mock('@alga-psa/core/features', async () => {
+  const actual = await vi.importActual<typeof import('@alga-psa/core/features')>('@alga-psa/core/features');
+  return {
+    ...actual,
+    get isEnterprise() {
+      return enterpriseState.value;
+    }
+  };
+});
+
 // Mock SystemEmailService to prevent actual email sending
 const mockEmailInstance = {
   sendAppointmentRequestReceived: vi.fn(() => Promise.resolve()),
   sendNewAppointmentRequest: vi.fn(() => Promise.resolve()),
   sendAppointmentRequestApproved: vi.fn(() => Promise.resolve()),
+  sendAppointmentAssignedNotification: vi.fn(() => Promise.resolve()),
   sendAppointmentRequestDeclined: vi.fn(() => Promise.resolve()),
   sendEmail: vi.fn(() => Promise.resolve())
 };
@@ -69,25 +101,53 @@ vi.mock('@alga-psa/notifications/actions', () => ({
   createNotificationFromTemplateInternal: vi.fn(() => Promise.resolve())
 }));
 
-// Mock appointment helpers
-vi.mock('@alga-psa/scheduling/actions', () => ({
-  getTenantSettings: vi.fn(() => Promise.resolve({
-    contactEmail: 'support@test.com',
-    contactPhone: '555-1234',
-    tenantName: 'Test Tenant'
+vi.mock('@alga-psa/scheduling/lib/teamsMeetingService', () => ({
+  resolveTeamsMeetingService: vi.fn(async () => ({
+    getTeamsMeetingCapability: teamsMeetingCapabilityMock,
+    createTeamsMeeting: createTeamsMeetingMock,
+    updateTeamsMeeting: updateTeamsMeetingMock,
+    deleteTeamsMeeting: deleteTeamsMeetingMock,
   })),
-  getScheduleApprovers: vi.fn(() => Promise.resolve([
-    { user_id: 'approver-1', email: 'approver1@test.com' }
-  ])),
-  getClientUserIdFromContact: vi.fn(() => Promise.resolve('client-user-id')),
-  formatDate: vi.fn((date: string) => Promise.resolve(date)),
-  formatTime: vi.fn((time: string) => Promise.resolve(time)),
-  getClientCompanyName: vi.fn(() => Promise.resolve('Test Client Company')),
-  generateICSLink: vi.fn(() => Promise.resolve('https://calendar.example.com/event.ics')),
-  getRequestNewAppointmentLink: vi.fn(() => Promise.resolve('https://example.com/appointments'))
 }));
 
+vi.mock('@alga-psa/ee-microsoft-teams/lib', () => ({
+  deleteTeamsMeeting: deleteTeamsMeetingMock,
+}));
+
+// Mock appointment helpers
+vi.mock('@alga-psa/scheduling/actions', async () => {
+  const actual = await vi.importActual<typeof import('@alga-psa/scheduling/actions')>('@alga-psa/scheduling/actions');
+  return {
+    ...actual,
+    getTenantSettings: vi.fn(() => Promise.resolve({
+      contactEmail: 'support@test.com',
+      contactPhone: '555-1234',
+      tenantName: 'Test Tenant'
+    })),
+    getScheduleApprovers: vi.fn(() => Promise.resolve([
+      { user_id: 'approver-1', email: 'approver1@test.com' }
+    ])),
+    getClientUserIdFromContact: vi.fn(() => Promise.resolve('client-user-id')),
+    formatDate: vi.fn((date: string) => Promise.resolve(date)),
+    formatTime: vi.fn((time: string) => Promise.resolve(time)),
+    getClientCompanyName: vi.fn(() => Promise.resolve('Test Client Company')),
+    generateICSLink: vi.fn(() => Promise.resolve('https://calendar.example.com/event.ics')),
+    getRequestNewAppointmentLink: vi.fn(() => Promise.resolve('https://example.com/appointments'))
+  };
+});
+
 describe('Appointment Request Integration Tests', () => {
+  const resetIntegrationMocks = () => {
+    enterpriseState.value = true;
+    teamsMeetingCapabilityMock.mockResolvedValue({ available: true });
+    createTeamsMeetingMock.mockResolvedValue({
+      joinWebUrl: 'https://teams.example.com/meeting/123',
+      meetingId: 'meeting-123',
+    });
+    updateTeamsMeetingMock.mockResolvedValue(true);
+    deleteTeamsMeetingMock.mockResolvedValue(true);
+  };
+
   beforeAll(async () => {
     process.env.APP_ENV = process.env.APP_ENV || 'test';
     process.env.DB_USER_ADMIN = process.env.DB_USER_ADMIN || 'postgres';
@@ -100,13 +160,16 @@ describe('Appointment Request Integration Tests', () => {
     process.env.NEXT_PUBLIC_APP_URL = 'https://test.example.com';
 
     db = await createTestDbConnection();
-    await db.migrate.latest();
     tenantId = await ensureTenant(db);
 
     // Import the actions after mocks are set up
     ({ createAppointmentRequest } = await import('@alga-psa/client-portal/actions'));
-    ({ approveAppointmentRequest, declineAppointmentRequest } = await import('@alga-psa/scheduling/actions'));
+    ({ approveAppointmentRequest, declineAppointmentRequest, deleteScheduleEntry } = await import('@alga-psa/scheduling/actions'));
   }, 120_000);
+
+  beforeEach(() => {
+    resetIntegrationMocks();
+  });
 
   afterAll(async () => {
     await db?.destroy();
@@ -117,6 +180,7 @@ describe('Appointment Request Integration Tests', () => {
       await cleanupCreatedRecords(db, tenantId, createdIds);
     }
     createdIds = { availabilitySettingIds: [] };
+    resetIntegrationMocks();
     vi.clearAllMocks();
   });
 
@@ -430,13 +494,13 @@ describe('Appointment Request Integration Tests', () => {
 
       // Approve request as MSP staff
       const staffUser = createMockUser('internal', {
-        user_id: 'staff-user-id',
+        user_id: STAFF_USER_ID,
         tenant: tenantId
       });
       setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
       setupCommonMocks({
         tenantId,
-        userId: 'staff-user-id',
+        userId: STAFF_USER_ID,
         user: staffUser,
         permissionCheck: () => true
       });
@@ -448,7 +512,7 @@ describe('Appointment Request Integration Tests', () => {
 
       expect(approveResult.success).toBe(true);
       expect(approveResult.data?.status).toBe('approved');
-      expect(approveResult.data?.approved_by_user_id).toBe('staff-user-id');
+      expect(approveResult.data?.approved_by_user_id).toBe(STAFF_USER_ID);
       expect(approveResult.data?.schedule_entry_id).toBeDefined();
 
       // Verify schedule entry was updated
@@ -506,11 +570,11 @@ describe('Appointment Request Integration Tests', () => {
       createdIds.scheduleEntryId = createResult.data?.schedule_entry_id;
 
       const staffUser = createMockUser('internal', {
-        user_id: 'staff-user-id',
+        user_id: STAFF_USER_ID,
         tenant: tenantId
       });
       setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
-      setupCommonMocks({ tenantId, userId: 'staff-user-id', user: staffUser, permissionCheck: () => true });
+      setupCommonMocks({ tenantId, userId: STAFF_USER_ID, user: staffUser, permissionCheck: () => true });
 
 
       const SystemEmailService = (await import('@alga-psa/email')).SystemEmailService;
@@ -563,11 +627,11 @@ describe('Appointment Request Integration Tests', () => {
       createdIds.scheduleEntryId = createResult.data?.schedule_entry_id;
 
       const staffUser = createMockUser('internal', {
-        user_id: 'staff-user-id',
+        user_id: STAFF_USER_ID,
         tenant: tenantId
       });
       setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
-      setupCommonMocks({ tenantId, userId: 'staff-user-id', user: staffUser, permissionCheck: () => true });
+      setupCommonMocks({ tenantId, userId: STAFF_USER_ID, user: staffUser, permissionCheck: () => true });
 
       const { createNotificationFromTemplateInternal } = await import('@alga-psa/notifications/actions');
 
@@ -620,11 +684,11 @@ describe('Appointment Request Integration Tests', () => {
       createdIds.scheduleEntryId = createResult.data?.schedule_entry_id;
 
       const staffUser = createMockUser('internal', {
-        user_id: 'staff-user-id',
+        user_id: STAFF_USER_ID,
         tenant: tenantId
       });
       setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
-      setupCommonMocks({ tenantId, userId: 'staff-user-id', user: staffUser, permissionCheck: () => true });
+      setupCommonMocks({ tenantId, userId: STAFF_USER_ID, user: staffUser, permissionCheck: () => true });
 
 
       const approveResult = await approveAppointmentRequest({
@@ -644,6 +708,163 @@ describe('Appointment Request Integration Tests', () => {
 
       expect(assignees.length).toBe(1);
       expect(assignees[0].user_id).toBe(technicianUserId);
+    });
+
+    it('creates and stores a Teams meeting when approval opts in', async () => {
+      const fixture = await createPendingAppointmentFixture(db, tenantId);
+      setStaffSchedulingContext(tenantId);
+
+      const approveResult = await approveAppointmentRequest({
+        appointment_request_id: fixture.appointmentRequestId,
+        assigned_user_id: fixture.technicianUserId,
+        generate_teams_meeting: true,
+      });
+
+      expect(approveResult.success).toBe(true);
+      expect(createTeamsMeetingMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tenantId,
+          appointmentRequestId: fixture.appointmentRequestId,
+        })
+      );
+
+      const updatedRequest = await db('appointment_requests')
+        .where({
+          appointment_request_id: fixture.appointmentRequestId,
+          tenant: tenantId,
+        })
+        .first();
+
+      expect(updatedRequest.online_meeting_provider).toBe('teams');
+      expect(updatedRequest.online_meeting_url).toBe('https://teams.example.com/meeting/123');
+      expect(updatedRequest.online_meeting_id).toBe('meeting-123');
+      expect(mockEmailInstance.sendAppointmentRequestApproved).toHaveBeenCalledWith(
+        expect.objectContaining({
+          onlineMeetingUrl: 'https://teams.example.com/meeting/123',
+        }),
+        expect.anything()
+      );
+    });
+
+    it('skips Teams meeting creation when the toggle is off', async () => {
+      const fixture = await createPendingAppointmentFixture(db, tenantId);
+      setStaffSchedulingContext(tenantId);
+
+      const approveResult = await approveAppointmentRequest({
+        appointment_request_id: fixture.appointmentRequestId,
+        assigned_user_id: fixture.technicianUserId,
+        generate_teams_meeting: false,
+      });
+
+      expect(approveResult.success).toBe(true);
+      expect(createTeamsMeetingMock).not.toHaveBeenCalled();
+
+      const updatedRequest = await db('appointment_requests')
+        .where({
+          appointment_request_id: fixture.appointmentRequestId,
+          tenant: tenantId,
+        })
+        .first();
+
+      expect(updatedRequest.online_meeting_provider).toBeNull();
+      expect(updatedRequest.online_meeting_url).toBeNull();
+      expect(updatedRequest.online_meeting_id).toBeNull();
+    });
+
+    it('returns a warning and skips Graph create when Teams capability is unavailable', async () => {
+      const fixture = await createPendingAppointmentFixture(db, tenantId);
+      teamsMeetingCapabilityMock.mockResolvedValue({ available: false, reason: 'no_organizer' });
+      setStaffSchedulingContext(tenantId);
+
+      const approveResult = await approveAppointmentRequest({
+        appointment_request_id: fixture.appointmentRequestId,
+        assigned_user_id: fixture.technicianUserId,
+        generate_teams_meeting: true,
+      });
+
+      expect(approveResult.success).toBe(true);
+      expect(approveResult.teamsMeetingWarning).toContain('no default organizer');
+      expect(createTeamsMeetingMock).not.toHaveBeenCalled();
+
+      const updatedRequest = await db('appointment_requests')
+        .where({
+          appointment_request_id: fixture.appointmentRequestId,
+          tenant: tenantId,
+        })
+        .first();
+
+      expect(updatedRequest.online_meeting_provider).toBeNull();
+      expect(updatedRequest.online_meeting_url).toBeNull();
+      expect(updatedRequest.online_meeting_id).toBeNull();
+    });
+
+    it('keeps approval successful when Teams meeting creation fails', async () => {
+      const fixture = await createPendingAppointmentFixture(db, tenantId);
+      createTeamsMeetingMock.mockResolvedValue(null);
+      setStaffSchedulingContext(tenantId);
+
+      const approveResult = await approveAppointmentRequest({
+        appointment_request_id: fixture.appointmentRequestId,
+        assigned_user_id: fixture.technicianUserId,
+        generate_teams_meeting: true,
+      });
+
+      expect(approveResult.success).toBe(true);
+      expect(approveResult.teamsMeetingWarning).toContain('could not be created');
+      expect(mockEmailInstance.sendAppointmentRequestApproved).toHaveBeenCalledWith(
+        expect.not.objectContaining({
+          onlineMeetingUrl: expect.anything(),
+        }),
+        expect.anything()
+      );
+
+      const updatedRequest = await db('appointment_requests')
+        .where({
+          appointment_request_id: fixture.appointmentRequestId,
+          tenant: tenantId,
+        })
+        .first();
+
+      expect(updatedRequest.online_meeting_provider).toBeNull();
+      expect(updatedRequest.online_meeting_url).toBeNull();
+      expect(updatedRequest.online_meeting_id).toBeNull();
+    });
+
+    it('converts requester-local approval times to UTC before creating the Teams meeting', async () => {
+      const fixture = await createPendingAppointmentFixture(db, tenantId, {
+        requestedDate: '2026-04-25',
+        requestedTime: '14:30',
+        requestedDuration: 60,
+      });
+
+      await db('appointment_requests')
+        .where({
+          appointment_request_id: fixture.appointmentRequestId,
+          tenant: tenantId,
+        })
+        .update({
+          requester_timezone: 'America/Los_Angeles',
+        });
+
+      setStaffSchedulingContext(tenantId);
+
+      const approveResult = await approveAppointmentRequest({
+        appointment_request_id: fixture.appointmentRequestId,
+        assigned_user_id: fixture.technicianUserId,
+        generate_teams_meeting: true,
+      });
+
+      expect(approveResult.success).toBe(true);
+      expect(createTeamsMeetingMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          startDateTime: '2026-04-25T21:30:00.000Z',
+          endDateTime: '2026-04-25T22:30:00.000Z',
+        })
+      );
+
+      const createArgs = createTeamsMeetingMock.mock.calls.at(-1)?.[0];
+      expect(formatInTimeZone(createArgs.startDateTime, 'America/Los_Angeles', 'yyyy-MM-dd HH:mm')).toBe('2026-04-25 14:30');
+      expect(formatInTimeZone(createArgs.endDateTime, 'America/Los_Angeles', 'yyyy-MM-dd HH:mm')).toBe('2026-04-25 15:30');
     });
   });
 
@@ -679,11 +900,11 @@ describe('Appointment Request Integration Tests', () => {
       const originalScheduleEntryId = createResult.data?.schedule_entry_id;
 
       const staffUser = createMockUser('internal', {
-        user_id: 'staff-user-id',
+        user_id: STAFF_USER_ID,
         tenant: tenantId
       });
       setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
-      setupCommonMocks({ tenantId, userId: 'staff-user-id', user: staffUser, permissionCheck: () => true });
+      setupCommonMocks({ tenantId, userId: STAFF_USER_ID, user: staffUser, permissionCheck: () => true });
 
 
       const declineResult = await declineAppointmentRequest({
@@ -703,7 +924,7 @@ describe('Appointment Request Integration Tests', () => {
 
       expect(updatedRequest.status).toBe('declined');
       expect(updatedRequest.declined_reason).toBe('No technician available at requested time');
-      expect(updatedRequest.approved_by_user_id).toBe('staff-user-id');
+      expect(updatedRequest.approved_by_user_id).toBe(STAFF_USER_ID);
       expect(updatedRequest.schedule_entry_id).toBeNull();
 
       // Verify schedule entry was deleted
@@ -746,11 +967,11 @@ describe('Appointment Request Integration Tests', () => {
       createdIds.appointmentRequestId = createResult.data?.appointment_request_id;
 
       const staffUser = createMockUser('internal', {
-        user_id: 'staff-user-id',
+        user_id: STAFF_USER_ID,
         tenant: tenantId
       });
       setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
-      setupCommonMocks({ tenantId, userId: 'staff-user-id', user: staffUser, permissionCheck: () => true });
+      setupCommonMocks({ tenantId, userId: STAFF_USER_ID, user: staffUser, permissionCheck: () => true });
 
 
       const SystemEmailService = (await import('@alga-psa/email')).SystemEmailService;
@@ -801,11 +1022,11 @@ describe('Appointment Request Integration Tests', () => {
       createdIds.appointmentRequestId = createResult.data?.appointment_request_id;
 
       const staffUser = createMockUser('internal', {
-        user_id: 'staff-user-id',
+        user_id: STAFF_USER_ID,
         tenant: tenantId
       });
       setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
-      setupCommonMocks({ tenantId, userId: 'staff-user-id', user: staffUser, permissionCheck: () => true });
+      setupCommonMocks({ tenantId, userId: STAFF_USER_ID, user: staffUser, permissionCheck: () => true });
 
       const { createNotificationFromTemplateInternal } = await import('@alga-psa/notifications/actions');
 
@@ -879,11 +1100,11 @@ describe('Appointment Request Integration Tests', () => {
 
       try {
         const staffUser2 = createMockUser('internal', {
-          user_id: 'staff2-user-id',
+          user_id: STAFF_USER_2_ID,
           tenant: tenant2Id
         });
         setMockUser(staffUser2, ['user_schedule:update', 'user_schedule:read']);
-        setupCommonMocks({ tenantId: tenant2Id, userId: 'staff2-user-id', user: staffUser2, permissionCheck: () => true });
+        setupCommonMocks({ tenantId: tenant2Id, userId: STAFF_USER_2_ID, user: staffUser2, permissionCheck: () => true });
 
         const approveResult = await approveAppointmentRequest({
           appointment_request_id: createResult.data!.appointment_request_id,
@@ -1054,11 +1275,11 @@ describe('Appointment Request Integration Tests', () => {
 
       // Approve it
       const staffUser = createMockUser('internal', {
-        user_id: 'staff-user-id',
+        user_id: STAFF_USER_ID,
         tenant: tenantId
       });
       setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
-      setupCommonMocks({ tenantId, userId: 'staff-user-id', user: staffUser, permissionCheck: () => true });
+      setupCommonMocks({ tenantId, userId: STAFF_USER_ID, user: staffUser, permissionCheck: () => true });
 
       await approveAppointmentRequest({
         appointment_request_id: createResult.data!.appointment_request_id,
@@ -1116,11 +1337,11 @@ describe('Appointment Request Integration Tests', () => {
 
       // Approve it
       const staffUser = createMockUser('internal', {
-        user_id: 'staff-user-id',
+        user_id: STAFF_USER_ID,
         tenant: tenantId
       });
       setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
-      setupCommonMocks({ tenantId, userId: 'staff-user-id', user: staffUser, permissionCheck: () => true });
+      setupCommonMocks({ tenantId, userId: STAFF_USER_ID, user: staffUser, permissionCheck: () => true });
 
       await approveAppointmentRequest({
         appointment_request_id: createResult.data!.appointment_request_id,
@@ -1174,11 +1395,11 @@ describe('Appointment Request Integration Tests', () => {
 
       // Approve it once
       const staffUser = createMockUser('internal', {
-        user_id: 'staff-user-id',
+        user_id: STAFF_USER_ID,
         tenant: tenantId
       });
       setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
-      setupCommonMocks({ tenantId, userId: 'staff-user-id', user: staffUser, permissionCheck: () => true });
+      setupCommonMocks({ tenantId, userId: STAFF_USER_ID, user: staffUser, permissionCheck: () => true });
 
 
       const firstApproval = await approveAppointmentRequest({
@@ -1380,11 +1601,11 @@ describe('Appointment Request Integration Tests', () => {
 
       // Associate ticket as staff during approval
       const staffUser = createMockUser('internal', {
-        user_id: 'staff-user-id',
+        user_id: STAFF_USER_ID,
         tenant: tenantId
       });
       setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
-      setupCommonMocks({ tenantId, userId: 'staff-user-id', user: staffUser, permissionCheck: () => true });
+      setupCommonMocks({ tenantId, userId: STAFF_USER_ID, user: staffUser, permissionCheck: () => true });
 
 
       const { associateRequestToTicket } = await import('@alga-psa/scheduling/actions');
@@ -1444,11 +1665,11 @@ describe('Appointment Request Integration Tests', () => {
 
       // Update date/time as staff
       const staffUser = createMockUser('internal', {
-        user_id: 'staff-user-id',
+        user_id: STAFF_USER_ID,
         tenant: tenantId
       });
       setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
-      setupCommonMocks({ tenantId, userId: 'staff-user-id', user: staffUser, permissionCheck: () => true });
+      setupCommonMocks({ tenantId, userId: STAFF_USER_ID, user: staffUser, permissionCheck: () => true });
 
       const { updateAppointmentRequestDateTime } = await import('@alga-psa/scheduling/actions');
 
@@ -1510,11 +1731,11 @@ describe('Appointment Request Integration Tests', () => {
 
       // Approve it
       const staffUser = createMockUser('internal', {
-        user_id: 'staff-user-id',
+        user_id: STAFF_USER_ID,
         tenant: tenantId
       });
       setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
-      setupCommonMocks({ tenantId, userId: 'staff-user-id', user: staffUser, permissionCheck: () => true });
+      setupCommonMocks({ tenantId, userId: STAFF_USER_ID, user: staffUser, permissionCheck: () => true });
 
       await approveAppointmentRequest({
         appointment_request_id: createResult.data!.appointment_request_id,
@@ -1533,6 +1754,160 @@ describe('Appointment Request Integration Tests', () => {
 
       expect(updateResult.success).toBe(false);
       expect(updateResult.error).toMatch(/pending|cannot update|already/i);
+    });
+
+    it('reschedules the linked Teams meeting when an approved request has an online meeting', async () => {
+      const fixture = await createPendingAppointmentFixture(db, tenantId);
+      setStaffSchedulingContext(tenantId);
+
+      const approveResult = await approveAppointmentRequest({
+        appointment_request_id: fixture.appointmentRequestId,
+        assigned_user_id: fixture.technicianUserId,
+        generate_teams_meeting: true,
+      });
+
+      expect(approveResult.success).toBe(true);
+
+      const { updateAppointmentRequestDateTime } = await import('@alga-psa/scheduling/actions');
+      const updateResult = await updateAppointmentRequestDateTime({
+        appointment_request_id: fixture.appointmentRequestId,
+        new_date: '2026-04-30',
+        new_time: '16:45',
+        new_duration: 90,
+      });
+
+      expect(updateResult.success).toBe(true);
+      expect(updateTeamsMeetingMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tenantId,
+          appointmentRequestId: fixture.appointmentRequestId,
+          meetingId: 'meeting-123',
+          startDateTime: '2026-04-30T16:45:00.000Z',
+          endDateTime: '2026-04-30T18:15:00.000Z',
+        })
+      );
+    });
+
+    it('returns a warning when the Teams reschedule PATCH fails', async () => {
+      const fixture = await createPendingAppointmentFixture(db, tenantId);
+      setStaffSchedulingContext(tenantId);
+
+      const approveResult = await approveAppointmentRequest({
+        appointment_request_id: fixture.appointmentRequestId,
+        assigned_user_id: fixture.technicianUserId,
+        generate_teams_meeting: true,
+      });
+
+      expect(approveResult.success).toBe(true);
+      updateTeamsMeetingMock.mockResolvedValue(false);
+
+      const { updateAppointmentRequestDateTime } = await import('@alga-psa/scheduling/actions');
+      const updateResult = await updateAppointmentRequestDateTime({
+        appointment_request_id: fixture.appointmentRequestId,
+        new_date: '2026-05-01',
+        new_time: '11:15',
+        new_duration: 60,
+      });
+
+      expect(updateResult.success).toBe(true);
+      expect(updateResult.teamsMeetingWarning).toContain('could not be rescheduled');
+    });
+
+    it('does not call Teams when the approved request has no online meeting id', async () => {
+      const fixture = await createPendingAppointmentFixture(db, tenantId);
+      setStaffSchedulingContext(tenantId);
+
+      const approveResult = await approveAppointmentRequest({
+        appointment_request_id: fixture.appointmentRequestId,
+        assigned_user_id: fixture.technicianUserId,
+        generate_teams_meeting: false,
+      });
+
+      expect(approveResult.success).toBe(true);
+
+      const { updateAppointmentRequestDateTime } = await import('@alga-psa/scheduling/actions');
+      const updateResult = await updateAppointmentRequestDateTime({
+        appointment_request_id: fixture.appointmentRequestId,
+        new_date: '2026-05-02',
+        new_time: '09:00',
+        new_duration: 45,
+      });
+
+      expect(updateResult.success).toBe(true);
+      expect(updateTeamsMeetingMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Teams meeting deletion lifecycle', () => {
+    it('deletes the linked Teams meeting when a client cancels an approved appointment', async () => {
+      const fixture = await createPendingAppointmentFixture(db, tenantId);
+      setStaffSchedulingContext(tenantId);
+
+      const approveResult = await approveAppointmentRequest({
+        appointment_request_id: fixture.appointmentRequestId,
+        assigned_user_id: fixture.technicianUserId,
+        generate_teams_meeting: true,
+      });
+
+      expect(approveResult.success).toBe(true);
+
+      setClientContext(tenantId, fixture.clientUserId, fixture.contactId);
+      const { cancelAppointmentRequest } = await import('@alga-psa/client-portal/actions');
+      const cancelResult = await cancelAppointmentRequest({
+        appointment_request_id: fixture.appointmentRequestId,
+      });
+
+      expect(cancelResult.success).toBe(true);
+      expect(deleteTeamsMeetingMock).toHaveBeenCalledWith({
+        tenantId,
+        meetingId: 'meeting-123',
+        appointmentRequestId: fixture.appointmentRequestId,
+      });
+    });
+
+    it('deletes the linked Teams meeting when MSP staff deletes the schedule entry', async () => {
+      const fixture = await createPendingAppointmentFixture(db, tenantId);
+      setStaffSchedulingContext(tenantId);
+
+      const approveResult = await approveAppointmentRequest({
+        appointment_request_id: fixture.appointmentRequestId,
+        assigned_user_id: fixture.technicianUserId,
+        generate_teams_meeting: true,
+      });
+
+      expect(approveResult.success).toBe(true);
+
+      const deleteResult = await deleteScheduleEntry(approveResult.data!.schedule_entry_id!);
+
+      expect(deleteResult.success).toBe(true);
+      expect(deleteTeamsMeetingMock).toHaveBeenCalledWith({
+        tenantId,
+        meetingId: 'meeting-123',
+        appointmentRequestId: fixture.appointmentRequestId,
+      });
+    });
+
+    it('surfaces a warning when Teams meeting deletion fails during cancellation', async () => {
+      const fixture = await createPendingAppointmentFixture(db, tenantId);
+      setStaffSchedulingContext(tenantId);
+
+      const approveResult = await approveAppointmentRequest({
+        appointment_request_id: fixture.appointmentRequestId,
+        assigned_user_id: fixture.technicianUserId,
+        generate_teams_meeting: true,
+      });
+
+      expect(approveResult.success).toBe(true);
+      deleteTeamsMeetingMock.mockResolvedValue(false);
+
+      setClientContext(tenantId, fixture.clientUserId, fixture.contactId);
+      const { cancelAppointmentRequest } = await import('@alga-psa/client-portal/actions');
+      const cancelResult = await cancelAppointmentRequest({
+        appointment_request_id: fixture.appointmentRequestId,
+      });
+
+      expect(cancelResult.success).toBe(true);
+      expect(cancelResult.teamsMeetingWarning).toContain('could not be removed');
     });
   });
 });
@@ -1555,6 +1930,78 @@ async function ensureTenant(connection: Knex): Promise<string> {
     updated_at: connection.fn.now()
   });
   return newTenantId;
+}
+
+function getFutureDateString(daysAhead = 1): string {
+  const date = new Date();
+  date.setDate(date.getDate() + daysAhead);
+  return date.toISOString().split('T')[0];
+}
+
+function setStaffSchedulingContext(tenant: string) {
+  const staffUser = createMockUser('internal', {
+    user_id: STAFF_USER_ID,
+    tenant,
+  });
+  setMockUser(staffUser, ['user_schedule:update', 'user_schedule:read']);
+  setupCommonMocks({
+    tenantId: tenant,
+    userId: STAFF_USER_ID,
+    user: staffUser,
+    permissionCheck: () => true,
+  });
+}
+
+function setClientContext(tenant: string, clientUserId: string, contactId: string) {
+  const clientUser = createMockUser('client', {
+    user_id: clientUserId,
+    tenant,
+    contact_id: contactId,
+  });
+  setMockUser(clientUser, []);
+  setupCommonMocks({
+    tenantId: tenant,
+    userId: clientUserId,
+    user: clientUser,
+    permissionCheck: () => true,
+  });
+}
+
+async function createPendingAppointmentFixture(
+  db: Knex,
+  tenantId: string,
+  options: {
+    requestedDate?: string;
+    requestedTime?: string;
+    requestedDuration?: number;
+  } = {}
+) {
+  const setup = await setupTestData(db, tenantId);
+  createdIds.clientId = setup.clientId;
+  createdIds.contactId = setup.contactId;
+  createdIds.serviceId = setup.serviceId;
+  createdIds.clientUserId = setup.clientUserId;
+  createdIds.technicianUserId = setup.technicianUserId;
+
+  setClientContext(tenantId, setup.clientUserId, setup.contactId);
+
+  const createResult = await createAppointmentRequest({
+    service_id: setup.serviceId!,
+    requested_date: options.requestedDate ?? getFutureDateString(),
+    requested_time: options.requestedTime ?? '14:00',
+    requested_duration: options.requestedDuration ?? 60,
+    description: 'Need help with server maintenance',
+  });
+
+  expect(createResult.success).toBe(true);
+  createdIds.appointmentRequestId = createResult.data?.appointment_request_id;
+  createdIds.scheduleEntryId = createResult.data?.schedule_entry_id;
+
+  return {
+    ...setup,
+    appointmentRequestId: createResult.data!.appointment_request_id,
+    scheduleEntryId: createResult.data!.schedule_entry_id,
+  };
 }
 
 /**

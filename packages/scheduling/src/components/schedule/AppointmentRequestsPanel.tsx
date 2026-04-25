@@ -7,6 +7,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
+import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
@@ -14,11 +15,12 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { fromZonedTime } from 'date-fns-tz';
-import { Check, X, Calendar, Clock, User, FileText, Briefcase, Ticket } from 'lucide-react';
+import { Check, X, Calendar, Clock, User, FileText, Briefcase, Ticket, ExternalLink } from 'lucide-react';
 import { getAllUsersBasic, getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import {
   getAppointmentRequests,
+  getTeamsMeetingCapability,
   approveAppointmentRequest as approveRequest,
   declineAppointmentRequest as declineRequest,
   IAppointmentRequest
@@ -53,6 +55,8 @@ export default function AppointmentRequestsPanel({
   const [finalDateTime, setFinalDateTime] = useState<Date | null>(null);
   const [internalNotes, setInternalNotes] = useState('');
   const [linkedTicketId, setLinkedTicketId] = useState('');
+  const [generateTeamsMeeting, setGenerateTeamsMeeting] = useState(true);
+  const [teamsMeetingCapability, setTeamsMeetingCapability] = useState<{ available: boolean; reason?: string } | null>(null);
 
   // Decline form state
   const [declineReason, setDeclineReason] = useState('');
@@ -69,6 +73,7 @@ export default function AppointmentRequestsPanel({
     if (isOpen) {
       loadRequests();
       loadTechnicians();
+      loadTeamsMeetingCapability();
     }
   }, [isOpen]);
 
@@ -120,6 +125,16 @@ export default function AppointmentRequestsPanel({
           updated_at: new Date()
         }]);
       }
+    }
+  };
+
+  const loadTeamsMeetingCapability = async () => {
+    try {
+      const capability = await getTeamsMeetingCapability();
+      setTeamsMeetingCapability(capability);
+    } catch (error) {
+      console.error('Failed to load Teams meeting capability:', error);
+      setTeamsMeetingCapability({ available: false, reason: 'not_configured' });
     }
   };
 
@@ -175,6 +190,7 @@ export default function AppointmentRequestsPanel({
     setInternalNotes('');
     setLinkedTicketId(request.ticket_id || '');
     setDeclineReason('');
+    setGenerateTeamsMeeting(true);
   };
 
   // Auto-select highlighted request when requests are loaded
@@ -239,6 +255,7 @@ export default function AppointmentRequestsPanel({
         assigned_user_id: assignedTechnicianId,
         final_date: approvalDate,
         final_time: approvalTime,
+        generate_teams_meeting: Boolean(teamsMeetingCapability?.available && generateTeamsMeeting),
         ticket_id: linkedTicketId || undefined
       });
 
@@ -419,6 +436,12 @@ export default function AppointmentRequestsPanel({
                           {(request as any).contact_name && (
                             <div className="text-sm text-gray-600">{(request as any).contact_name}</div>
                           )}
+                          {!request.is_authenticated && request.requester_name && (
+                            <div className="text-sm text-gray-600">{request.requester_name}</div>
+                          )}
+                          {!request.is_authenticated && request.requester_email && (
+                            <div className="text-xs text-gray-500">{request.requester_email}</div>
+                          )}
                         </div>
                         <Badge variant={getStatusBadgeVariant(request.status)}>
                           {request.status}
@@ -494,8 +517,18 @@ export default function AppointmentRequestsPanel({
                 </div>
                 <div>
                   <div className="font-semibold text-gray-700">{t('requests.detail.labels.client', { defaultValue: 'Client' })}</div>
-                  <div>{selectedRequest.is_authenticated ? (selectedRequest as any).client_company_name : selectedRequest.company_name}</div>
+                  <div>
+                    {selectedRequest.is_authenticated
+                      ? (selectedRequest as any).client_company_name
+                      : selectedRequest.company_name || t('requests.list.fallbacks.publicRequest', { defaultValue: 'Public Request' })}
+                  </div>
                 </div>
+                {!selectedRequest.is_authenticated && selectedRequest.requester_name && (
+                  <div>
+                    <div className="font-semibold text-gray-700">{t('requests.detail.labels.requester', { defaultValue: 'Requester' })}</div>
+                    <div>{selectedRequest.requester_name}</div>
+                  </div>
+                )}
                 {(selectedRequest as any).contact_name && (
                   <div>
                     <div className="font-semibold text-gray-700">{t('requests.detail.labels.contact', { defaultValue: 'Contact' })}</div>
@@ -511,13 +544,21 @@ export default function AppointmentRequestsPanel({
                 {selectedRequest.requester_email && !selectedRequest.is_authenticated && (
                   <div>
                     <div className="font-semibold text-gray-700">{t('requests.detail.labels.email', { defaultValue: 'Email' })}</div>
-                    <div>{selectedRequest.requester_email}</div>
+                    <div>
+                      <a href={`mailto:${selectedRequest.requester_email}`} className="text-blue-600 hover:underline">
+                        {selectedRequest.requester_email}
+                      </a>
+                    </div>
                   </div>
                 )}
                 {selectedRequest.requester_phone && (
                   <div>
                     <div className="font-semibold text-gray-700">{t('requests.detail.labels.phone', { defaultValue: 'Phone' })}</div>
-                    <div>{selectedRequest.requester_phone}</div>
+                    <div>
+                      <a href={`tel:${selectedRequest.requester_phone}`} className="text-blue-600 hover:underline">
+                        {selectedRequest.requester_phone}
+                      </a>
+                    </div>
                   </div>
                 )}
                 <div>
@@ -552,6 +593,33 @@ export default function AppointmentRequestsPanel({
                           ticket: (selectedRequest as any).ticket_number || selectedRequest.ticket_id.slice(0, 8),
                         })}
                       </button>
+                    </div>
+                  </div>
+                )}
+                {selectedRequest.online_meeting_url && (
+                  <div className="col-span-2">
+                    <div className="font-semibold text-gray-700 mb-2">
+                      {t('requests.detail.labels.teamsMeeting', { defaultValue: 'Teams Meeting' })}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Button
+                        id="join-teams-meeting-request-details"
+                        type="button"
+                        variant="outline"
+                        onClick={() => window.open(selectedRequest.online_meeting_url!, '_blank', 'noopener,noreferrer')}
+                      >
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        {t('requests.detail.actions.joinTeamsMeeting', { defaultValue: 'Join Teams Meeting' })}
+                      </Button>
+                      <a
+                        href={selectedRequest.online_meeting_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-sm text-blue-600 hover:underline break-all"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {selectedRequest.online_meeting_url}
+                      </a>
                     </div>
                   </div>
                 )}
@@ -604,6 +672,19 @@ export default function AppointmentRequestsPanel({
                           rows={3}
                         />
                       </div>
+
+                      {teamsMeetingCapability?.available && (
+                        <div>
+                          <Switch
+                            id="generate-teams-meeting"
+                            checked={generateTeamsMeeting}
+                            onCheckedChange={setGenerateTeamsMeeting}
+                            label={t('requests.approval.fields.generateTeamsMeeting', {
+                              defaultValue: 'Generate Microsoft Teams meeting link',
+                            })}
+                          />
+                        </div>
+                      )}
 
                       {!selectedRequest.ticket_id && (
                         <div>

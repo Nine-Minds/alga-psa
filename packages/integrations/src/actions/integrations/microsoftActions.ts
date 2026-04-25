@@ -462,6 +462,18 @@ async function tenantHasLegacyMicrosoftEmailUsage(knex: any, tenant: string): Pr
   return Boolean(provider);
 }
 
+async function tenantHasLegacyMicrosoftEmailClientCredentials(
+  secretProvider: Awaited<ReturnType<typeof getSecretProviderInstance>>,
+  tenant: string
+): Promise<boolean> {
+  const [clientId, clientSecret] = await Promise.all([
+    secretProvider.getTenantSecret(tenant, MICROSOFT_CLIENT_ID_SECRET),
+    secretProvider.getTenantSecret(tenant, MICROSOFT_CLIENT_SECRET_SECRET),
+  ]);
+
+  return Boolean((clientId || '').trim() && (clientSecret || '').trim());
+}
+
 async function tenantHasLegacyMicrosoftCalendarUsage(knex: any, tenant: string): Promise<boolean> {
   const provider = await knex('calendar_providers')
     .where({ tenant, provider_type: 'microsoft' })
@@ -498,11 +510,13 @@ async function ensureMicrosoftConsumerBindingMigration(
     return existingBindings;
   }
 
-  const [shouldBackfillMspSso, shouldBackfillEmail, shouldBackfillCalendar] = await Promise.all([
+  const [shouldBackfillMspSso, hasLegacyEmailUsage, hasLegacyEmailClientCredentials, shouldBackfillCalendar] = await Promise.all([
     missingConsumers.has('msp_sso') ? tenantHasLegacyMspSsoUsage(knex, tenant) : false,
     missingConsumers.has('email') ? tenantHasLegacyMicrosoftEmailUsage(knex, tenant) : false,
+    missingConsumers.has('email') ? tenantHasLegacyMicrosoftEmailClientCredentials(secretProvider, tenant) : false,
     missingConsumers.has('calendar') ? tenantHasLegacyMicrosoftCalendarUsage(knex, tenant) : false,
   ]);
+  const shouldBackfillEmail = hasLegacyEmailUsage && hasLegacyEmailClientCredentials;
 
   const consumersToBackfill: MicrosoftProfileConsumer[] = [];
 
