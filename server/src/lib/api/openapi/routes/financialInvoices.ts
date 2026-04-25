@@ -1231,7 +1231,7 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
     });
   }
 
-  const invoiceActionRoutes: Array<[string, string, string, string, any?, any?, string]> = [
+  const invoiceActionRoutes: Array<[string, string, string, string, any | undefined, any | undefined, string]> = [
     ['post', '/api/v1/invoices/{id}/approve', 'Approve invoice', 'Approves one invoice; optional execution_id query is forwarded to workflow context.', undefined, ExecutionIdQuery, 'approve'],
     ['post', '/api/v1/invoices/{id}/credit', 'Apply credit to invoice', 'Applies credit amount to one invoice.', InvoiceCreditBody, undefined, 'credit'],
     ['post', '/api/v1/invoices/{id}/duplicate', 'Duplicate invoice', 'Clones an invoice into a new draft/manual invoice.', undefined, undefined, 'create'],
