@@ -474,3 +474,49 @@ python3 <CE and EE placeholder scans for F005 family + global counts>
 3. `POST /api/v1/feature-flags`
 4. `GET /api/v1/quotes`
 5. `POST /api/v1/quotes`
+
+## 2026-04-24 — Access Control/User/Role/Permission/Team Families Completed (F009)
+
+### Scope completed
+
+- Added registrar: `server/src/lib/api/openapi/routes/accessControlUsers.ts`.
+- Registered it in `server/src/lib/api/openapi/index.ts` before inventory backfill.
+- Documented all previously-placeholder operations across:
+  - `/api/v1/users*`
+  - `/api/v1/user-roles`
+  - `/api/v1/roles*`
+  - `/api/v1/permissions*`
+  - `/api/v1/permission-checks`
+  - `/api/v1/rbac/*`
+  - `/api/v1/teams*`
+
+### Key source-grounded notes / gaps documented
+
+- `GET /api/v1/rbac/audit` is currently a hardcoded 501 stub route and does not call an RBAC controller.
+- `POST /api/v1/users/bulk/create` currently delegates to `ApiUserController.create()` (single-user schema/behavior), not bulk-create logic.
+- `PUT /api/v1/users/bulk/deactivate` currently delegates to `ApiUserController.update()` and fails UUID path extraction because the route segment `bulk` is treated as `{id}`.
+- `POST /api/v1/users/{id}/teams` currently delegates to `ApiUserController.create()` (create-user behavior), not team membership creation.
+- `DELETE /api/v1/users/{id}/teams/{teamId}` currently delegates to `ApiUserController.delete()`; `teamId` is ignored and operation acts on user id.
+- `GET /api/v1/teams/hierarchy` currently parses team id from URL tail and uses literal `hierarchy` as id on this route.
+- `DELETE /api/v1/teams/{id}/permissions/{permissionId}` revokes by permission id and does not use team id in service call.
+
+### Validation
+
+- CE F009 placeholder check: `ce_f009_remaining = 0`.
+- EE F009 placeholder check: `ee_f009_remaining = 0`.
+- Regeneration commands succeeded:
+  - `npm --prefix sdk run openapi:generate`
+  - `npm --prefix sdk run openapi:generate -- --edition ee`
+
+### Remaining placeholder counts after this pass
+
+- CE: `139`
+- EE: `147`
+
+### Next cursor (CE)
+
+1. `POST /api/v1/feature-access`
+2. `GET /api/v1/feature-flags`
+3. `POST /api/v1/feature-flags`
+4. `GET /api/v1/quotes`
+5. `POST /api/v1/quotes`

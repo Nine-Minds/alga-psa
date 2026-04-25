@@ -68,7 +68,7 @@
   {
     "id": "F009",
     "description": "Document user, user-role, role, permission, permission-check, RBAC audit/analytics, teams, and team membership/hierarchy route families.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals"
     ]
