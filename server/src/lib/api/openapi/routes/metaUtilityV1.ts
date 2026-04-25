@@ -39,7 +39,16 @@ export function registerMetaUtilityV1Routes(registry: ApiOpenApiRegistry) {
   const ApiSuccess = registry.registerSchema(
     'MetaUtilityApiSuccessV1',
     zOpenApi.object({
-      data: zOpenApi.unknown().optional(),
+      data: zOpenApi
+        .union([
+          zOpenApi.record(zOpenApi.unknown()),
+          zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
+          zOpenApi.string(),
+          zOpenApi.number(),
+          zOpenApi.boolean(),
+        ])
+        .nullable()
+        .optional(),
       flags: zOpenApi.record(zOpenApi.unknown()).optional(),
       context: zOpenApi.record(zOpenApi.unknown()).optional(),
       enabled: zOpenApi.boolean().optional(),

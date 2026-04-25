@@ -26,7 +26,10 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
   const ApiSuccess = registry.registerSchema(
     'FinancialInvoiceApiSuccess',
     zOpenApi.object({
-      data: zOpenApi.unknown(),
+      data: zOpenApi.union([
+        zOpenApi.record(zOpenApi.unknown()),
+        zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
+      ]),
       meta: zOpenApi.record(zOpenApi.unknown()).optional(),
     }),
   );
@@ -34,7 +37,7 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
   const ApiPaginated = registry.registerSchema(
     'FinancialInvoiceApiPaginated',
     zOpenApi.object({
-      data: zOpenApi.array(zOpenApi.unknown()),
+      data: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
       pagination: zOpenApi.object({
         page: zOpenApi.number().int(),
         limit: zOpenApi.number().int(),
@@ -106,7 +109,7 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
   const BillingOverviewResponse = registry.registerSchema(
     'BillingOverviewResponse',
     zOpenApi.object({
-      data: zOpenApi.unknown(),
+      data: zOpenApi.record(zOpenApi.unknown()),
       count: zOpenApi.number().optional(),
       meta: zOpenApi.record(zOpenApi.unknown()).optional(),
     }),

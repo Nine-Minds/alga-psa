@@ -86,7 +86,10 @@ export function registerQuotesContractsV1Routes(registry: ApiOpenApiRegistry) {
   const ApiSuccess = registry.registerSchema(
     'QuotesContractsApiSuccessV1',
     zOpenApi.object({
-      data: zOpenApi.unknown(),
+      data: zOpenApi.union([
+        zOpenApi.record(zOpenApi.unknown()),
+        zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
+      ]),
       meta: zOpenApi.record(zOpenApi.unknown()).optional(),
     }),
   );
@@ -94,7 +97,7 @@ export function registerQuotesContractsV1Routes(registry: ApiOpenApiRegistry) {
   const ApiPaginated = registry.registerSchema(
     'QuotesContractsApiPaginatedV1',
     zOpenApi.object({
-      data: zOpenApi.array(zOpenApi.unknown()),
+      data: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
       pagination: zOpenApi.object({
         page: zOpenApi.number().int(),
         limit: zOpenApi.number().int(),

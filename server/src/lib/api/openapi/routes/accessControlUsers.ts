@@ -379,7 +379,10 @@ export function registerAccessControlUserRoutes(registry: ApiOpenApiRegistry) {
   const ApiSuccess = registry.registerSchema(
     'AccessApiSuccessV1',
     zOpenApi.object({
-      data: zOpenApi.unknown(),
+      data: zOpenApi.union([
+        zOpenApi.record(zOpenApi.unknown()),
+        zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
+      ]),
       meta: zOpenApi.record(zOpenApi.unknown()).optional(),
     }),
   );
@@ -387,7 +390,7 @@ export function registerAccessControlUserRoutes(registry: ApiOpenApiRegistry) {
   const ApiPaginated = registry.registerSchema(
     'AccessApiPaginatedV1',
     zOpenApi.object({
-      data: zOpenApi.array(zOpenApi.unknown()),
+      data: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
       pagination: zOpenApi.object({
         page: zOpenApi.number().int(),
         limit: zOpenApi.number().int(),

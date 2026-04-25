@@ -1,4 +1,14 @@
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
+import {
+  clientLocationResponseSchema,
+  clientResponseSchema,
+  clientStatsResponseSchema,
+} from '../../schemas/client';
+import {
+  registerArrayEnvelope,
+  registerPaginatedEnvelope,
+  registerSuccessEnvelope,
+} from '../responseSchemas';
 
 export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
   const clientTag = 'Clients';
@@ -207,7 +217,129 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
-  const ApiSuccess = registry.registerSchema('ClientContactApiSuccess', zOpenApi.object({ data: zOpenApi.unknown(), meta: zOpenApi.record(zOpenApi.unknown()).optional() }));
+  const ContactResource = registry.registerSchema(
+    'ContactResource',
+    zOpenApi.object({
+      contact_name_id: zOpenApi.string().uuid(),
+      full_name: zOpenApi.string(),
+      client_id: zOpenApi.string().uuid().nullable(),
+      email: zOpenApi.string().email(),
+      role: zOpenApi.string().nullable(),
+      created_at: zOpenApi.string().datetime(),
+      updated_at: zOpenApi.string().datetime(),
+      is_inactive: zOpenApi.boolean(),
+      tenant: zOpenApi.string().uuid(),
+      phone_numbers: zOpenApi
+        .array(
+          zOpenApi.object({
+            contact_phone_number_id: zOpenApi.string().uuid(),
+            phone_number: zOpenApi.string(),
+            normalized_phone_number: zOpenApi.string(),
+            canonical_type: zOpenApi.string().nullable().optional(),
+            custom_phone_type_id: zOpenApi.string().uuid().nullable().optional(),
+            custom_type: zOpenApi.string().nullable(),
+            is_default: zOpenApi.boolean(),
+            display_order: zOpenApi.number().int().nonnegative(),
+          }),
+        )
+        .optional(),
+      additional_email_addresses: zOpenApi
+        .array(
+          zOpenApi.object({
+            contact_additional_email_address_id: zOpenApi.string().uuid(),
+            email_address: zOpenApi.string().email(),
+            normalized_email_address: zOpenApi.string().email(),
+            canonical_type: zOpenApi.string().nullable().optional(),
+            custom_email_type_id: zOpenApi.string().uuid().nullable().optional(),
+            custom_type: zOpenApi.string().nullable(),
+            display_order: zOpenApi.number().int().nonnegative(),
+          }),
+        )
+        .optional(),
+      default_phone_number: zOpenApi.string().nullable().optional(),
+      default_phone_type: zOpenApi.string().nullable().optional(),
+      primary_email_canonical_type: zOpenApi.string().nullable().optional(),
+      primary_email_custom_type_id: zOpenApi.string().uuid().nullable().optional(),
+      primary_email_type: zOpenApi.string().nullable().optional(),
+      notes: zOpenApi.string().nullable().optional(),
+      avatarUrl: zOpenApi.string().nullable().optional(),
+      tags: zOpenApi.array(zOpenApi.string()).optional(),
+      client_name: zOpenApi.string().nullable().optional(),
+    }),
+  );
+
+  const ContactStatsResource = registry.registerSchema(
+    'ContactStatsResource',
+    zOpenApi.object({
+      total_contacts: zOpenApi.number(),
+      active_contacts: zOpenApi.number(),
+      inactive_contacts: zOpenApi.number(),
+      contacts_with_client: zOpenApi.number(),
+      contacts_without_client: zOpenApi.number(),
+      contacts_by_role: zOpenApi.record(zOpenApi.number()),
+      recent_contacts: zOpenApi.number(),
+    }),
+  );
+
+  const ClientContractLineResource = registry.registerSchema(
+    'ClientContractLineResource',
+    zOpenApi.object({
+      client_contract_line_id: zOpenApi.string().uuid(),
+      client_id: zOpenApi.string().uuid(),
+      contract_line_id: zOpenApi.string().uuid(),
+      service_category: zOpenApi.string().nullable().optional(),
+      start_date: zOpenApi.string().datetime(),
+      end_date: zOpenApi.string().datetime().nullable().optional(),
+      is_active: zOpenApi.boolean(),
+      custom_rate: zOpenApi.number().nullable().optional(),
+      client_contract_id: zOpenApi.string().uuid().nullable().optional(),
+      tenant: zOpenApi.string().uuid().optional(),
+    }),
+  );
+
+  const ContactExportRow = registry.registerSchema(
+    'ContactExportRow',
+    zOpenApi.object({
+      contact_name_id: zOpenApi.string().uuid(),
+      full_name: zOpenApi.string(),
+      email: zOpenApi.string().email().nullable(),
+      role: zOpenApi.string().nullable(),
+      is_inactive: zOpenApi.boolean(),
+      created_at: zOpenApi.string().datetime(),
+      client_name: zOpenApi.string().nullable(),
+      default_phone_number: zOpenApi.string().nullable(),
+      default_phone_type: zOpenApi.string().nullable(),
+    }),
+  );
+
+  const ClientEnvelope = registerSuccessEnvelope(registry, 'ClientEnvelope', clientResponseSchema);
+  const PaginatedClientEnvelope = registerPaginatedEnvelope(registry, 'PaginatedClientEnvelope', clientResponseSchema);
+  const ClientStatsEnvelope = registerSuccessEnvelope(registry, 'ClientStatsEnvelope', clientStatsResponseSchema);
+  const ContactEnvelope = registerSuccessEnvelope(registry, 'ClientContactEnvelope', ContactResource);
+  const PaginatedContactEnvelope = registerPaginatedEnvelope(registry, 'PaginatedContactEnvelope', ContactResource);
+  const ContactSearchEnvelope = registerArrayEnvelope(registry, 'ContactSearchEnvelope', ContactResource);
+  const ContactStatsEnvelope = registerSuccessEnvelope(registry, 'ContactStatsEnvelope', ContactStatsResource);
+  const ClientLocationsEnvelope = registerArrayEnvelope(registry, 'ClientLocationsEnvelope', clientLocationResponseSchema);
+  const ClientLocationEnvelope = registerSuccessEnvelope(registry, 'ClientLocationEnvelope', clientLocationResponseSchema);
+  const ContactExportEnvelope = registerArrayEnvelope(registry, 'ContactExportEnvelope', ContactExportRow);
+
+  const ClientContractLineListItem = registry.registerSchema(
+    'ClientContractLineListItem',
+    zOpenApi.object({
+      data: zOpenApi.array(ClientContractLineResource),
+      total: zOpenApi.number().int().nonnegative(),
+    }),
+  );
+  const ClientContractLineListEnvelope = registerSuccessEnvelope(
+    registry,
+    'ClientContractLineListEnvelope',
+    ClientContractLineListItem,
+  );
+  const ClientContractLineEnvelope = registerSuccessEnvelope(
+    registry,
+    'ClientContractLineEnvelope',
+    ClientContractLineResource,
+  );
 
   registry.registerRoute({
     method: 'get',
@@ -218,7 +350,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     security: [{ ApiKeyAuth: [] }],
     request: { query: ClientListQuery },
     responses: {
-      200: { description: 'Paginated clients returned.', schema: ApiSuccess },
+      200: { description: 'Paginated clients returned.', schema: PaginatedClientEnvelope },
       400: { description: 'Invalid query parameters.', schema: ApiError },
       401: { description: 'API key missing/invalid or key user not found.', schema: ApiError },
       403: { description: 'Permission denied for client read.', schema: ApiError },
@@ -237,7 +369,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     security: [{ ApiKeyAuth: [] }],
     request: { body: { schema: ClientBody } },
     responses: {
-      201: { description: 'Client created.', schema: ApiSuccess },
+      201: { description: 'Client created.', schema: ClientEnvelope },
       400: { description: 'Invalid request payload.', schema: ApiError },
       401: { description: 'API key missing/invalid or key user not found.', schema: ApiError },
       403: { description: 'Permission denied for client create.', schema: ApiError },
@@ -256,7 +388,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     security: [{ ApiKeyAuth: [] }],
     request: { params: ClientIdParam },
     responses: {
-      200: { description: 'Client returned.', schema: ApiSuccess },
+      200: { description: 'Client returned.', schema: ClientEnvelope },
       400: { description: 'Invalid client id format.', schema: ApiError },
       401: { description: 'API key missing/invalid or key user not found.', schema: ApiError },
       403: { description: 'Permission denied for client read.', schema: ApiError },
@@ -276,7 +408,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     security: [{ ApiKeyAuth: [] }],
     request: { params: ClientIdParam, body: { schema: ClientBody.partial() } },
     responses: {
-      200: { description: 'Client updated.', schema: ApiSuccess },
+      200: { description: 'Client updated.', schema: ClientEnvelope },
       400: { description: 'Invalid client id or request payload.', schema: ApiError },
       401: { description: 'API key missing/invalid or key user not found.', schema: ApiError },
       403: { description: 'Permission denied for client update.', schema: ApiError },
@@ -315,7 +447,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     tags: [clientTag],
     security: [{ ApiKeyAuth: [] }],
     responses: {
-      200: { description: 'Client stats returned.', schema: ApiSuccess },
+      200: { description: 'Client stats returned.', schema: ClientStatsEnvelope },
       401: { description: 'API key missing/invalid or key user not found.', schema: ApiError },
       403: { description: 'Permission denied for client read.', schema: ApiError },
       500: { description: 'Unexpected client stats failure.', schema: ApiError },
@@ -333,7 +465,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     security: [{ ApiKeyAuth: [] }],
     request: { params: ClientIdParam },
     responses: {
-      200: { description: 'Client contacts returned.', schema: ApiSuccess },
+      200: { description: 'Client contacts returned.', schema: PaginatedContactEnvelope },
       400: { description: 'Invalid client id format.', schema: ApiError },
       401: { description: 'API key missing/invalid or key user not found.', schema: ApiError },
       403: { description: 'Permission denied for client read.', schema: ApiError },
@@ -353,7 +485,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     security: [{ ApiKeyAuth: [] }],
     request: { params: ClientIdParam },
     responses: {
-      200: { description: 'Client locations returned.', schema: ApiSuccess },
+      200: { description: 'Client locations returned.', schema: ClientLocationsEnvelope },
       400: { description: 'Invalid client id format.', schema: ApiError },
       401: { description: 'API key missing/invalid or key user not found.', schema: ApiError },
       403: { description: 'Permission denied for client read.', schema: ApiError },
@@ -373,7 +505,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     security: [{ ApiKeyAuth: [] }],
     request: { params: ClientIdParam, body: { schema: ClientLocationBody } },
     responses: {
-      201: { description: 'Client location created.', schema: ApiSuccess },
+      201: { description: 'Client location created.', schema: ClientLocationEnvelope },
       400: { description: 'Invalid client id or request payload.', schema: ApiError },
       401: { description: 'API key missing/invalid or key user not found.', schema: ApiError },
       403: { description: 'Permission denied for client update.', schema: ApiError },
@@ -393,7 +525,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     security: [{ ApiKeyAuth: [] }],
     request: { query: ContactListQuery },
     responses: {
-      200: { description: 'Paginated contacts returned.', schema: ApiSuccess },
+      200: { description: 'Paginated contacts returned.', schema: PaginatedContactEnvelope },
       400: { description: 'Invalid query parameters.', schema: ApiError },
       401: { description: 'API key missing/invalid or key user not found.', schema: ApiError },
       403: { description: 'Permission denied for contact read.', schema: ApiError },
@@ -412,7 +544,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     security: [{ ApiKeyAuth: [] }],
     request: { body: { schema: ContactBody } },
     responses: {
-      201: { description: 'Contact created.', schema: ApiSuccess },
+      201: { description: 'Contact created.', schema: ContactEnvelope },
       400: { description: 'Invalid request payload.', schema: ApiError },
       401: { description: 'API key missing/invalid or key user not found.', schema: ApiError },
       403: { description: 'Permission denied for contact create.', schema: ApiError },
@@ -431,7 +563,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     security: [{ ApiKeyAuth: [] }],
     request: { params: ContactIdParam },
     responses: {
-      200: { description: 'Contact returned.', schema: ApiSuccess },
+      200: { description: 'Contact returned.', schema: ContactEnvelope },
       400: { description: 'Invalid contact id format.', schema: ApiError },
       401: { description: 'API key missing/invalid or key user not found.', schema: ApiError },
       403: { description: 'Permission denied for contact read.', schema: ApiError },
@@ -451,7 +583,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     security: [{ ApiKeyAuth: [] }],
     request: { params: ContactIdParam, body: { schema: ContactBody.partial() } },
     responses: {
-      200: { description: 'Contact updated.', schema: ApiSuccess },
+      200: { description: 'Contact updated.', schema: ContactEnvelope },
       400: { description: 'Invalid contact id or request payload.', schema: ApiError },
       401: { description: 'API key missing/invalid or key user not found.', schema: ApiError },
       403: { description: 'Permission denied for contact update.', schema: ApiError },
@@ -491,7 +623,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     security: [{ ApiKeyAuth: [] }],
     request: { query: ContactSearchQuery },
     responses: {
-      200: { description: 'Contact search results returned.', schema: ApiSuccess },
+      200: { description: 'Contact search results returned.', schema: ContactSearchEnvelope },
       400: { description: 'Invalid search query.', schema: ApiError },
       401: { description: 'API key missing/invalid or key user not found.', schema: ApiError },
       403: { description: 'Permission denied for contact read.', schema: ApiError },
@@ -510,7 +642,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     security: [{ ApiKeyAuth: [] }],
     request: { query: ContactExportQuery },
     responses: {
-      200: { description: 'Contact export response. CSV format returns text/csv body; JSON format returns standard API envelope.', schema: ApiSuccess },
+      200: { description: 'Contact export response. CSV format returns text/csv body; JSON format returns standard API envelope.', schema: ContactExportEnvelope },
       401: { description: 'API key missing/invalid or key user not found.', schema: ApiError },
       403: { description: 'Permission denied for contact read.', schema: ApiError },
       500: { description: 'Unexpected contact export failure.', schema: ApiError },
@@ -527,7 +659,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     tags: [contactTag],
     security: [{ ApiKeyAuth: [] }],
     responses: {
-      200: { description: 'Contact stats returned.', schema: ApiSuccess },
+      200: { description: 'Contact stats returned.', schema: ContactStatsEnvelope },
       401: { description: 'API key missing/invalid or key user not found.', schema: ApiError },
       403: { description: 'Permission denied for contact read.', schema: ApiError },
       500: { description: 'Unexpected contact stats failure.', schema: ApiError },
@@ -546,7 +678,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     security: [{ ApiKeyAuth: [] }],
     request: { query: ClientContractLineQuery },
     responses: {
-      200: { description: 'Stubbed empty assignment list returned.', schema: ApiSuccess },
+      200: { description: 'Stubbed empty assignment list returned.', schema: ClientContractLineListEnvelope },
       400: { description: 'Invalid query parameters.', schema: ApiError },
       401: { description: 'x-api-key missing at middleware.', schema: ApiError },
       500: { description: 'Request context missing or unhandled failure.', schema: ApiError },
@@ -569,7 +701,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     security: [{ ApiKeyAuth: [] }],
     request: { body: { schema: ClientContractLineBody } },
     responses: {
-      201: { description: 'Client contract line assignment created.', schema: ApiSuccess },
+      201: { description: 'Client contract line assignment created.', schema: ClientContractLineEnvelope },
       400: { description: 'Invalid request payload.', schema: ApiError },
       401: { description: 'x-api-key missing at middleware.', schema: ApiError },
       500: { description: 'Request context missing or unhandled assignment failure.', schema: ApiError },

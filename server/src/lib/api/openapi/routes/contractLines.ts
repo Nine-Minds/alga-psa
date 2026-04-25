@@ -241,7 +241,10 @@ export function registerContractLineRoutes(registry: ApiOpenApiRegistry) {
     'ContractLineApiSuccess',
     zOpenApi.object({
       success: zOpenApi.literal(true),
-      data: zOpenApi.unknown(),
+      data: zOpenApi.union([
+        zOpenApi.record(zOpenApi.unknown()),
+        zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
+      ]),
       meta: zOpenApi
         .object({
           timestamp: zOpenApi.string().datetime(),

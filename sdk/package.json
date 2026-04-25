@@ -8,7 +8,8 @@
     "sample:create-service-category": "tsx samples/node/create-service-category.ts",
     "sample:create-client": "tsx samples/node/create-client.ts",
     "sample:extension-storage": "tsx samples/node/extension-storage.ts",
-    "openapi:generate": "tsx scripts/generate-openapi.ts"
+    "openapi:generate": "tsx scripts/generate-openapi.ts",
+    "openapi:scan-untyped-success-data": "tsx scripts/scan-openapi-untyped-success-data.ts"
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^6.3.1",

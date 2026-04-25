@@ -1690,19 +1690,39 @@
       "AccessApiSuccessV1": {
         "type": "object",
         "properties": {
-          "data": {},
+          "data": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            ]
+          },
           "meta": {
             "type": "object",
             "additionalProperties": {}
           }
-        }
+        },
+        "required": [
+          "data"
+        ]
       },
       "AccessApiPaginatedV1": {
         "type": "object",
         "properties": {
           "data": {
             "type": "array",
-            "items": {}
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            }
           },
           "pagination": {
             "type": "object",
@@ -6777,15 +6797,1475 @@
           "error"
         ]
       },
-      "ClientContactApiSuccess": {
+      "ContactResource": {
         "type": "object",
         "properties": {
-          "data": {},
+          "contact_name_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "full_name": {
+            "type": "string"
+          },
+          "client_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "role": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "is_inactive": {
+            "type": "boolean"
+          },
+          "tenant": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "phone_numbers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "contact_phone_number_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "phone_number": {
+                  "type": "string"
+                },
+                "normalized_phone_number": {
+                  "type": "string"
+                },
+                "canonical_type": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "custom_phone_type_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "custom_type": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "is_default": {
+                  "type": "boolean"
+                },
+                "display_order": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "contact_phone_number_id",
+                "phone_number",
+                "normalized_phone_number",
+                "custom_type",
+                "is_default",
+                "display_order"
+              ]
+            }
+          },
+          "additional_email_addresses": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "contact_additional_email_address_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "email_address": {
+                  "type": "string",
+                  "format": "email"
+                },
+                "normalized_email_address": {
+                  "type": "string",
+                  "format": "email"
+                },
+                "canonical_type": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "custom_email_type_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "custom_type": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "display_order": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "contact_additional_email_address_id",
+                "email_address",
+                "normalized_email_address",
+                "custom_type",
+                "display_order"
+              ]
+            }
+          },
+          "default_phone_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "default_phone_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "primary_email_canonical_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "primary_email_custom_type_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "primary_email_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "avatarUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "client_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "contact_name_id",
+          "full_name",
+          "client_id",
+          "email",
+          "role",
+          "created_at",
+          "updated_at",
+          "is_inactive",
+          "tenant"
+        ]
+      },
+      "ContactStatsResource": {
+        "type": "object",
+        "properties": {
+          "total_contacts": {
+            "type": "number"
+          },
+          "active_contacts": {
+            "type": "number"
+          },
+          "inactive_contacts": {
+            "type": "number"
+          },
+          "contacts_with_client": {
+            "type": "number"
+          },
+          "contacts_without_client": {
+            "type": "number"
+          },
+          "contacts_by_role": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "recent_contacts": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "total_contacts",
+          "active_contacts",
+          "inactive_contacts",
+          "contacts_with_client",
+          "contacts_without_client",
+          "contacts_by_role",
+          "recent_contacts"
+        ]
+      },
+      "ClientContractLineResource": {
+        "type": "object",
+        "properties": {
+          "client_contract_line_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "client_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contract_line_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "service_category": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "end_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "custom_rate": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "client_contract_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "tenant": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "client_contract_line_id",
+          "client_id",
+          "contract_line_id",
+          "start_date",
+          "is_active"
+        ]
+      },
+      "ContactExportRow": {
+        "type": "object",
+        "properties": {
+          "contact_name_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "full_name": {
+            "type": "string"
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "email"
+          },
+          "role": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "is_inactive": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "client_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "default_phone_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "default_phone_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "contact_name_id",
+          "full_name",
+          "email",
+          "role",
+          "is_inactive",
+          "created_at",
+          "client_name",
+          "default_phone_number",
+          "default_phone_type"
+        ]
+      },
+      "ClientEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "client_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "client_name": {
+                "type": "string"
+              },
+              "phone_no": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "credit_balance": {
+                "type": "number"
+              },
+              "email": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "url": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "address": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "is_inactive": {
+                "type": "boolean"
+              },
+              "client_type": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "tax_id_number": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "notes": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "properties": {
+                "type": "object",
+                "properties": {
+                  "industry": {
+                    "type": "string"
+                  },
+                  "company_size": {
+                    "type": "string"
+                  },
+                  "annual_revenue": {
+                    "type": "string"
+                  },
+                  "primary_contact_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "primary_contact_name": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "billing_address": {
+                    "type": "string"
+                  },
+                  "tax_id": {
+                    "type": "string"
+                  },
+                  "notes": {
+                    "type": "string"
+                  },
+                  "payment_terms": {
+                    "type": "string"
+                  },
+                  "website": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "parent_client_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "parent_client_name": {
+                    "type": "string"
+                  },
+                  "last_contact_date": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "logo": {
+                    "type": "string"
+                  }
+                }
+              },
+              "payment_terms": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "billing_cycle": {
+                "type": "string",
+                "enum": [
+                  "weekly",
+                  "bi-weekly",
+                  "monthly",
+                  "quarterly",
+                  "semi-annually",
+                  "annually"
+                ]
+              },
+              "credit_limit": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "preferred_payment_method": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "auto_invoice": {
+                "type": "boolean"
+              },
+              "invoice_delivery_method": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "region_code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "is_tax_exempt": {
+                "type": "boolean"
+              },
+              "tax_exemption_certificate": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "timezone": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "invoice_template_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "billing_contact_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "billing_email": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "account_manager_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "account_manager_full_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "logoUrl": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "tenant": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "client_id",
+              "client_name",
+              "phone_no",
+              "credit_balance",
+              "email",
+              "url",
+              "address",
+              "created_at",
+              "updated_at",
+              "is_inactive",
+              "client_type",
+              "tax_id_number",
+              "notes",
+              "payment_terms",
+              "billing_cycle",
+              "credit_limit",
+              "preferred_payment_method",
+              "auto_invoice",
+              "invoice_delivery_method",
+              "region_code",
+              "is_tax_exempt",
+              "tax_exemption_certificate",
+              "timezone",
+              "invoice_template_id",
+              "billing_contact_id",
+              "billing_email",
+              "account_manager_id",
+              "tenant"
+            ]
+          },
           "meta": {
             "type": "object",
             "additionalProperties": {}
           }
-        }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "PaginatedClientEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "client_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "client_name": {
+                  "type": "string"
+                },
+                "phone_no": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "credit_balance": {
+                  "type": "number"
+                },
+                "email": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "url": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "address": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "is_inactive": {
+                  "type": "boolean"
+                },
+                "client_type": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tax_id_number": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "notes": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "properties": {
+                  "type": "object",
+                  "properties": {
+                    "industry": {
+                      "type": "string"
+                    },
+                    "company_size": {
+                      "type": "string"
+                    },
+                    "annual_revenue": {
+                      "type": "string"
+                    },
+                    "primary_contact_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "primary_contact_name": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    },
+                    "billing_address": {
+                      "type": "string"
+                    },
+                    "tax_id": {
+                      "type": "string"
+                    },
+                    "notes": {
+                      "type": "string"
+                    },
+                    "payment_terms": {
+                      "type": "string"
+                    },
+                    "website": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "parent_client_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "parent_client_name": {
+                      "type": "string"
+                    },
+                    "last_contact_date": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "logo": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "payment_terms": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "billing_cycle": {
+                  "type": "string",
+                  "enum": [
+                    "weekly",
+                    "bi-weekly",
+                    "monthly",
+                    "quarterly",
+                    "semi-annually",
+                    "annually"
+                  ]
+                },
+                "credit_limit": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "preferred_payment_method": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "auto_invoice": {
+                  "type": "boolean"
+                },
+                "invoice_delivery_method": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "region_code": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "is_tax_exempt": {
+                  "type": "boolean"
+                },
+                "tax_exemption_certificate": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "timezone": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "invoice_template_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "billing_contact_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "billing_email": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "account_manager_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "account_manager_full_name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "logoUrl": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tenant": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "client_id",
+                "client_name",
+                "phone_no",
+                "credit_balance",
+                "email",
+                "url",
+                "address",
+                "created_at",
+                "updated_at",
+                "is_inactive",
+                "client_type",
+                "tax_id_number",
+                "notes",
+                "payment_terms",
+                "billing_cycle",
+                "credit_limit",
+                "preferred_payment_method",
+                "auto_invoice",
+                "invoice_delivery_method",
+                "region_code",
+                "is_tax_exempt",
+                "tax_exemption_certificate",
+                "timezone",
+                "invoice_template_id",
+                "billing_contact_id",
+                "billing_email",
+                "account_manager_id",
+                "tenant"
+              ]
+            }
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer"
+              },
+              "limit": {
+                "type": "integer"
+              },
+              "total": {
+                "type": "integer"
+              },
+              "totalPages": {
+                "type": "integer"
+              },
+              "hasNext": {
+                "type": "boolean"
+              },
+              "hasPrev": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages",
+              "hasNext",
+              "hasPrev"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data",
+          "pagination"
+        ]
+      },
+      "ClientStatsEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "total_clients": {
+                "type": "number"
+              },
+              "active_clients": {
+                "type": "number"
+              },
+              "inactive_clients": {
+                "type": "number"
+              },
+              "clients_by_billing_cycle": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "number"
+                }
+              },
+              "clients_by_client_type": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "number"
+                }
+              },
+              "total_credit_balance": {
+                "type": "number"
+              },
+              "average_credit_balance": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "total_clients",
+              "active_clients",
+              "inactive_clients",
+              "clients_by_billing_cycle",
+              "clients_by_client_type",
+              "total_credit_balance",
+              "average_credit_balance"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "ClientContactEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ContactResource"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "PaginatedContactEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContactResource"
+            }
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer"
+              },
+              "limit": {
+                "type": "integer"
+              },
+              "total": {
+                "type": "integer"
+              },
+              "totalPages": {
+                "type": "integer"
+              },
+              "hasNext": {
+                "type": "boolean"
+              },
+              "hasPrev": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages",
+              "hasNext",
+              "hasPrev"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data",
+          "pagination"
+        ]
+      },
+      "ContactSearchEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContactResource"
+            }
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "ContactStatsEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ContactStatsResource"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "ClientLocationsEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "location_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "client_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "location_name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "address_line1": {
+                  "type": "string"
+                },
+                "address_line2": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "address_line3": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "city": {
+                  "type": "string"
+                },
+                "state_province": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "postal_code": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "country_code": {
+                  "type": "string"
+                },
+                "country_name": {
+                  "type": "string"
+                },
+                "region_code": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "is_billing_address": {
+                  "type": "boolean"
+                },
+                "is_shipping_address": {
+                  "type": "boolean"
+                },
+                "is_default": {
+                  "type": "boolean"
+                },
+                "phone": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "fax": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "email": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "notes": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "is_active": {
+                  "type": "boolean"
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "tenant": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "required": [
+                "location_id",
+                "client_id",
+                "location_name",
+                "address_line1",
+                "address_line2",
+                "address_line3",
+                "city",
+                "state_province",
+                "postal_code",
+                "country_code",
+                "country_name",
+                "region_code",
+                "is_billing_address",
+                "is_shipping_address",
+                "is_default",
+                "phone",
+                "fax",
+                "email",
+                "notes",
+                "is_active",
+                "created_at",
+                "updated_at",
+                "tenant"
+              ]
+            }
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "ClientLocationEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "location_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "client_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "location_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "address_line1": {
+                "type": "string"
+              },
+              "address_line2": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "address_line3": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "city": {
+                "type": "string"
+              },
+              "state_province": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "postal_code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "country_code": {
+                "type": "string"
+              },
+              "country_name": {
+                "type": "string"
+              },
+              "region_code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "is_billing_address": {
+                "type": "boolean"
+              },
+              "is_shipping_address": {
+                "type": "boolean"
+              },
+              "is_default": {
+                "type": "boolean"
+              },
+              "phone": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "fax": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "email": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "notes": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "is_active": {
+                "type": "boolean"
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "tenant": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "required": [
+              "location_id",
+              "client_id",
+              "location_name",
+              "address_line1",
+              "address_line2",
+              "address_line3",
+              "city",
+              "state_province",
+              "postal_code",
+              "country_code",
+              "country_name",
+              "region_code",
+              "is_billing_address",
+              "is_shipping_address",
+              "is_default",
+              "phone",
+              "fax",
+              "email",
+              "notes",
+              "is_active",
+              "created_at",
+              "updated_at",
+              "tenant"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "ContactExportEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContactExportRow"
+            }
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "ClientContractLineListItem": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClientContractLineResource"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "data",
+          "total"
+        ]
+      },
+      "ClientContractLineListEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ClientContractLineListItem"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "ClientContractLineEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ClientContractLineResource"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data"
+        ]
       },
       "ContractLineIdParam": {
         "type": "object",
@@ -7531,7 +9011,21 @@
               true
             ]
           },
-          "data": {},
+          "data": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            ]
+          },
           "meta": {
             "type": "object",
             "properties": {
@@ -7550,7 +9044,8 @@
           }
         },
         "required": [
-          "success"
+          "success",
+          "data"
         ]
       },
       "ContractLineApiError": {
@@ -8378,19 +9873,39 @@
       "FinancialInvoiceApiSuccess": {
         "type": "object",
         "properties": {
-          "data": {},
+          "data": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            ]
+          },
           "meta": {
             "type": "object",
             "additionalProperties": {}
           }
-        }
+        },
+        "required": [
+          "data"
+        ]
       },
       "FinancialInvoiceApiPaginated": {
         "type": "object",
         "properties": {
           "data": {
             "type": "array",
-            "items": {}
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            }
           },
           "pagination": {
             "type": "object",
@@ -8623,7 +10138,10 @@
       "BillingOverviewResponse": {
         "type": "object",
         "properties": {
-          "data": {},
+          "data": {
+            "type": "object",
+            "additionalProperties": {}
+          },
           "count": {
             "type": "number"
           },
@@ -8631,7 +10149,10 @@
             "type": "object",
             "additionalProperties": {}
           }
-        }
+        },
+        "required": [
+          "data"
+        ]
       },
       "FinancialCalculateBillingBody": {
         "type": "object",
@@ -10371,19 +11892,39 @@
       "QuickBooksV1ApiSuccess": {
         "type": "object",
         "properties": {
-          "data": {},
+          "data": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            ]
+          },
           "meta": {
             "type": "object",
             "additionalProperties": {}
           }
-        }
+        },
+        "required": [
+          "data"
+        ]
       },
       "QuickBooksV1ApiPaginated": {
         "type": "object",
         "properties": {
           "data": {
             "type": "array",
-            "items": {}
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            }
           },
           "pagination": {
             "type": "object",
@@ -12698,19 +14239,39 @@
       "WebhookApiSuccessV1": {
         "type": "object",
         "properties": {
-          "data": {},
+          "data": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            ]
+          },
           "meta": {
             "type": "object",
             "additionalProperties": {}
           }
-        }
+        },
+        "required": [
+          "data"
+        ]
       },
       "WebhookApiPaginatedV1": {
         "type": "object",
         "properties": {
           "data": {
             "type": "array",
-            "items": {}
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            }
           },
           "pagination": {
             "type": "object",
@@ -13396,19 +14957,39 @@
       "WorkV1ApiSuccess": {
         "type": "object",
         "properties": {
-          "data": {},
+          "data": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            ]
+          },
           "meta": {
             "type": "object",
             "additionalProperties": {}
           }
-        }
+        },
+        "required": [
+          "data"
+        ]
       },
       "WorkV1ApiPaginated": {
         "type": "object",
         "properties": {
           "data": {
             "type": "array",
-            "items": {}
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            }
           },
           "pagination": {
             "type": "object",
@@ -13646,19 +15227,39 @@
       "QuotesContractsApiSuccessV1": {
         "type": "object",
         "properties": {
-          "data": {},
+          "data": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            ]
+          },
           "meta": {
             "type": "object",
             "additionalProperties": {}
           }
-        }
+        },
+        "required": [
+          "data"
+        ]
       },
       "QuotesContractsApiPaginatedV1": {
         "type": "object",
         "properties": {
           "data": {
             "type": "array",
-            "items": {}
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            }
           },
           "pagination": {
             "type": "object",
@@ -13762,7 +15363,33 @@
       "MetaUtilityApiSuccessV1": {
         "type": "object",
         "properties": {
-          "data": {},
+          "data": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "flags": {
             "type": "object",
             "additionalProperties": {}
@@ -27538,7 +29165,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ClientContactApiSuccess"
+                  "$ref": "#/components/schemas/PaginatedClientEnvelope"
                 }
               }
             }
@@ -27617,7 +29244,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ClientContactApiSuccess"
+                  "$ref": "#/components/schemas/ClientEnvelope"
                 }
               }
             }
@@ -27699,7 +29326,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ClientContactApiSuccess"
+                  "$ref": "#/components/schemas/ClientEnvelope"
                 }
               }
             }
@@ -27799,7 +29426,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ClientContactApiSuccess"
+                  "$ref": "#/components/schemas/ClientEnvelope"
                 }
               }
             }
@@ -27963,7 +29590,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ClientContactApiSuccess"
+                  "$ref": "#/components/schemas/ClientStatsEnvelope"
                 }
               }
             }
@@ -28035,7 +29662,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ClientContactApiSuccess"
+                  "$ref": "#/components/schemas/PaginatedContactEnvelope"
                 }
               }
             }
@@ -28128,7 +29755,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ClientContactApiSuccess"
+                  "$ref": "#/components/schemas/ClientLocationsEnvelope"
                 }
               }
             }
@@ -28229,7 +29856,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ClientContactApiSuccess"
+                  "$ref": "#/components/schemas/ClientLocationEnvelope"
                 }
               }
             }
@@ -28465,7 +30092,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ClientContactApiSuccess"
+                  "$ref": "#/components/schemas/PaginatedContactEnvelope"
                 }
               }
             }
@@ -28544,7 +30171,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ClientContactApiSuccess"
+                  "$ref": "#/components/schemas/ClientContactEnvelope"
                 }
               }
             }
@@ -28626,7 +30253,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ClientContactApiSuccess"
+                  "$ref": "#/components/schemas/ClientContactEnvelope"
                 }
               }
             }
@@ -28726,7 +30353,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ClientContactApiSuccess"
+                  "$ref": "#/components/schemas/ClientContactEnvelope"
                 }
               }
             }
@@ -28940,7 +30567,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ClientContactApiSuccess"
+                  "$ref": "#/components/schemas/ContactSearchEnvelope"
                 }
               }
             }
@@ -29057,7 +30684,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ClientContactApiSuccess"
+                  "$ref": "#/components/schemas/ContactExportEnvelope"
                 }
               }
             }
@@ -29118,7 +30745,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ClientContactApiSuccess"
+                  "$ref": "#/components/schemas/ContactStatsEnvelope"
                 }
               }
             }
@@ -29360,7 +30987,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ClientContactApiSuccess"
+                  "$ref": "#/components/schemas/ClientContractLineListEnvelope"
                 }
               }
             }
@@ -29432,7 +31059,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ClientContactApiSuccess"
+                  "$ref": "#/components/schemas/ClientContractLineEnvelope"
                 }
               }
             }
