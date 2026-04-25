@@ -301,7 +301,7 @@ export const listEventCatalogWithMetricsAction = withAuth(async (user, { tenant 
       ? await knex('workflow_definitions')
         .select(knex.raw("trigger->>'eventName' as event_type"))
         .count('* as count')
-        .where({ status: 'published' })
+        .where({ status: 'published', tenant_id: tenant })
         .whereRaw("trigger->>'eventName' is not null")
         .whereIn(knex.raw("trigger->>'eventName'") as any, eventTypes)
         .groupByRaw("trigger->>'eventName'")
@@ -444,11 +444,10 @@ export const listAttachedWorkflowsByEventTypeAction = withAuth(async (user, { te
       'workflow_id',
       'name',
       'status',
-      'is_system',
       'is_paused',
       'is_visible'
     )
-    .where({ status: 'published' })
+    .where({ status: 'published', tenant_id: tenant })
     .whereRaw("trigger->>'eventName' = ?", [parsed.eventType]);
 
   // published version is max from versions table
@@ -472,7 +471,7 @@ export const listAttachedWorkflowsByEventTypeAction = withAuth(async (user, { te
       name: String(r.name),
       status: String(r.status),
       published_version: versionMap.get(String(r.workflow_id)) ?? null,
-      is_system: Boolean(r.is_system),
+      is_system: false,
       is_paused: Boolean(r.is_paused),
       is_visible: r.is_visible !== false
     }))
@@ -575,14 +574,10 @@ export const detachWorkflowTriggerFromEventAction = withAuth(async (user, { tena
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'publish', knex);
 
-  const workflow = await WorkflowDefinitionModelV2.getById(knex, parsed.workflowId);
+  const workflow = await WorkflowDefinitionModelV2.getById(knex, tenant, parsed.workflowId);
   if (!workflow) {
     throw new Error('Workflow not found');
   }
-  if (workflow.is_system) {
-    await requireWorkflowPermission(user, 'admin', knex);
-  }
-
   // Get latest published version definition.
   const versions = await WorkflowDefinitionVersionModelV2.listByWorkflow(knex, parsed.workflowId);
   const latest = versions[0];

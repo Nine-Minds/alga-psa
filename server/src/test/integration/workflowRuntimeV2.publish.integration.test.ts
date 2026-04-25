@@ -439,7 +439,7 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
   it('Publish creates immutable version; later edits do not mutate published JSON. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
     await publishWorkflow(workflowId, 1);
-    await WorkflowDefinitionModelV2.update(db, workflowId, {
+    await WorkflowDefinitionModelV2.update(db, tenantId, workflowId, {
       draft_definition: {
         id: workflowId,
         version: 1,

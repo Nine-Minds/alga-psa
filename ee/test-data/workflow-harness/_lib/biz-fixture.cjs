@@ -322,18 +322,19 @@ async function waitForFixtureRun(ctx, { startedAfter, fixtureNotifyUserId, fixtu
 }
 
 async function withWorkflowPaused(ctx, workflowId, fn) {
-  const rows = await ctx.db.query(`select is_paused from workflow_definitions where workflow_id = $1`, [workflowId]);
+  const tenantId = ctx.config.tenantId;
+  const rows = await ctx.db.query(`select is_paused from workflow_definitions where workflow_id = $1 and tenant_id = $2`, [workflowId, tenantId]);
   const wasPaused = rows[0]?.is_paused ?? false;
 
   if (!wasPaused) {
-    await ctx.dbWrite.query(`update workflow_definitions set is_paused = true where workflow_id = $1`, [workflowId]);
+    await ctx.dbWrite.query(`update workflow_definitions set is_paused = true where workflow_id = $1 and tenant_id = $2`, [workflowId, tenantId]);
   }
 
   try {
     return await fn();
   } finally {
     if (!wasPaused) {
-      await ctx.dbWrite.query(`update workflow_definitions set is_paused = false where workflow_id = $1`, [workflowId]);
+      await ctx.dbWrite.query(`update workflow_definitions set is_paused = false where workflow_id = $1 and tenant_id = $2`, [workflowId, tenantId]);
     }
   }
 }

@@ -1204,7 +1204,7 @@ const auditWorkflowEvent = async (
 export const listWorkflowDefinitionsAction = withAuth(async (user, { tenant }) => {
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
-  const records = await WorkflowDefinitionModelV2.list(knex);
+  const records = await WorkflowDefinitionModelV2.list(knex, tenant);
   const workflowIds = records.map((record) => record.workflow_id);
   const publishedVersionMap = new Map<string, number | null>();
   const scheduleStateMap = await loadWorkflowScheduleStateMap(knex, workflowIds, tenant);
@@ -1249,7 +1249,13 @@ export const listWorkflowDefinitionsPagedAction = withAuth(async (user, { tenant
   const sortBy = parsed.sortBy ?? 'updated_at';
   const sortDirection = parsed.sortDirection ?? 'desc';
 
+  const tenantId = String(tenant ?? '').trim();
+  if (!tenantId) {
+    throwHttpError(400, 'Tenant is required');
+  }
+
   const applyVisibilityFilter = (qb: any) => {
+    qb.where('wd.tenant_id', tenantId);
     if (!canAdmin) {
       qb.whereRaw('coalesce(wd.is_visible, true) = true');
     }
@@ -1370,6 +1376,11 @@ export const listWorkflowDefinitionVersionsAction = withAuth(async (user, { tena
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
 
+  const workflow = await WorkflowDefinitionModelV2.getById(knex, tenant, parsed.workflowId);
+  if (!workflow) {
+    return throwHttpError(404, 'Not found');
+  }
+
   const rows = await knex('workflow_definition_versions')
     .select('version', 'published_at', 'created_at')
     .where({ workflow_id: parsed.workflowId })
@@ -1407,7 +1418,7 @@ export const createWorkflowDefinitionAction = withAuth(async (user, { tenant }, 
     tenant
   });
 
-  const record = await WorkflowDefinitionModelV2.create(knex, {
+  const record = await WorkflowDefinitionModelV2.create(knex, tenant, {
     workflow_id: workflowId,
     key: parsed.key?.trim() ?? null,
     name: definition.name,
@@ -1454,6 +1465,11 @@ export const getWorkflowDefinitionVersionAction = withAuth(async (user, { tenant
   const parsed = GetWorkflowDefinitionVersionInput.parse(input);
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
+  const workflow = await WorkflowDefinitionModelV2.getById(knex, tenant, parsed.workflowId);
+  if (!workflow) {
+    return throwHttpError(404, 'Not found');
+  }
+
   const record = await WorkflowDefinitionVersionModelV2.getByWorkflowAndVersion(
     knex,
     parsed.workflowId,
@@ -1471,10 +1487,7 @@ export const updateWorkflowDefinitionDraftAction = withAuth(async (user, { tenan
 
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'manage', knex);
-  const current = await WorkflowDefinitionModelV2.getById(knex, parsed.workflowId);
-  if (current?.is_system) {
-    await requireWorkflowPermission(user, 'admin', knex);
-  }
+  const current = await WorkflowDefinitionModelV2.getById(knex, tenant, parsed.workflowId);
   const normalizedDraft = normalizeTimeTriggerDraftContract({
     definition: { ...parsed.definition, id: parsed.workflowId },
     payloadSchemaMode: parsed.payloadSchemaMode ?? (typeof (current as any)?.payload_schema_mode === 'string' ? (current as any).payload_schema_mode : 'pinned'),
@@ -1497,7 +1510,7 @@ export const updateWorkflowDefinitionDraftAction = withAuth(async (user, { tenan
     tenant
   });
 
-  const updated = await WorkflowDefinitionModelV2.update(knex, parsed.workflowId, {
+  const updated = await WorkflowDefinitionModelV2.update(knex, tenant, parsed.workflowId, {
     draft_definition: definition,
     draft_version: definition.version,
     updated_by: user.user_id,
@@ -1543,17 +1556,13 @@ export const updateWorkflowDefinitionMetadataAction = withAuth(async (user, { te
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'manage', knex);
 
-  const current = await WorkflowDefinitionModelV2.getById(knex, parsed.workflowId);
+  const current = await WorkflowDefinitionModelV2.getById(knex, tenant, parsed.workflowId);
   if (!current) {
     return throwHttpError(404, 'Not found');
   }
-  if (current.is_system) {
-    await requireWorkflowPermission(user, 'admin', knex);
-  }
-
   const nextIsPaused = parsed.isPaused ?? current.is_paused ?? false;
 
-  const updated = await WorkflowDefinitionModelV2.update(knex, parsed.workflowId, {
+  const updated = await WorkflowDefinitionModelV2.update(knex, tenant, parsed.workflowId, {
     ...(parsed.key ? { key: parsed.key.trim() } : {}),
     is_visible: parsed.isVisible ?? current.is_visible ?? true,
     is_paused: nextIsPaused,
@@ -1601,19 +1610,15 @@ export const updateWorkflowDefinitionMetadataAction = withAuth(async (user, { te
 });
 
 export const preCheckWorkflowDefinitionDeletion = withAuth(async (
-  _user,
-  _ctx,
+  user,
+  { tenant },
   input: unknown
 ): Promise<DeletionValidationResult> => {
   const parsed = DeleteWorkflowDefinitionInput.parse(input);
   const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'read', knex);
 
-  const base = await preCheckDeletion('workflow', parsed.workflowId);
-  if (!base.canDelete) {
-    return base;
-  }
-
-  const current = await WorkflowDefinitionModelV2.getById(knex, parsed.workflowId);
+  const current = await WorkflowDefinitionModelV2.getById(knex, tenant, parsed.workflowId);
   if (!current) {
     return {
       canDelete: false,
@@ -1624,18 +1629,13 @@ export const preCheckWorkflowDefinitionDeletion = withAuth(async (
     };
   }
 
-  if (current.is_system) {
-    return {
-      ...base,
-      canDelete: false,
-      code: 'PERMISSION_DENIED',
-      message: 'System workflows cannot be deleted.',
-      dependencies: []
-    };
+  const base = await preCheckDeletion('workflow', parsed.workflowId);
+  if (!base.canDelete) {
+    return base;
   }
 
   const activeRuns = await knex('workflow_runs')
-    .where({ workflow_id: parsed.workflowId })
+    .where({ workflow_id: parsed.workflowId, tenant_id: tenant })
     .whereIn('status', ['RUNNING', 'WAITING'])
     .count('* as count')
     .first();
@@ -1667,13 +1667,9 @@ export const deleteWorkflowDefinitionAction = withAuth(async (
 ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
   const parsed = DeleteWorkflowDefinitionInput.parse(input);
   const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'manage', knex);
 
-  const base = await preCheckDeletion('workflow', parsed.workflowId);
-  if (!base.canDelete) {
-    return { ...base, success: false };
-  }
-
-  const current = await WorkflowDefinitionModelV2.getById(knex, parsed.workflowId);
+  const current = await WorkflowDefinitionModelV2.getById(knex, tenant, parsed.workflowId);
   if (!current) {
     return {
       success: false,
@@ -1684,19 +1680,14 @@ export const deleteWorkflowDefinitionAction = withAuth(async (
       alternatives: []
     };
   }
-  if (current.is_system) {
-    return {
-      success: false,
-      canDelete: false,
-      code: 'PERMISSION_DENIED',
-      message: 'System workflows cannot be deleted.',
-      dependencies: [],
-      alternatives: base.alternatives
-    };
+
+  const base = await preCheckDeletion('workflow', parsed.workflowId);
+  if (!base.canDelete) {
+    return { ...base, success: false };
   }
 
   const activeRuns = await knex('workflow_runs')
-    .where({ workflow_id: parsed.workflowId })
+    .where({ workflow_id: parsed.workflowId, tenant_id: tenant })
     .whereIn('status', ['RUNNING', 'WAITING'])
     .count('* as count')
     .first();
@@ -1728,7 +1719,7 @@ export const deleteWorkflowDefinitionAction = withAuth(async (
 
   const result = await deleteEntityWithValidation('workflow', parsed.workflowId, knex, tenant, async (trx) => {
     const runIds = await trx('workflow_runs')
-      .where({ workflow_id: parsed.workflowId })
+      .where({ workflow_id: parsed.workflowId, tenant_id: tenant })
       .pluck('run_id');
 
     if (runIds.length > 0) {
@@ -1745,11 +1736,11 @@ export const deleteWorkflowDefinitionAction = withAuth(async (
       .del();
 
     await trx('tenant_workflow_schedule')
-      .where({ workflow_id: parsed.workflowId })
+      .where({ workflow_id: parsed.workflowId, tenant_id: tenant })
       .del();
 
     await trx('workflow_definitions')
-      .where({ workflow_id: parsed.workflowId })
+      .where({ workflow_id: parsed.workflowId, tenant_id: tenant })
       .del();
   });
 
@@ -1783,14 +1774,10 @@ export const publishWorkflowDefinitionAction = withAuth(async (user, { tenant },
 
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'publish', knex);
-  const workflow = await WorkflowDefinitionModelV2.getById(knex, parsed.workflowId);
+  const workflow = await WorkflowDefinitionModelV2.getById(knex, tenant, parsed.workflowId);
   if (!workflow) {
     return throwHttpError(404, 'Not found');
   }
-  if (workflow.is_system) {
-    await requireWorkflowPermission(user, 'admin', knex);
-  }
-
   const maxVersionRow = await knex('workflow_definition_versions')
     .where({ workflow_id: parsed.workflowId })
     .max('version as max_version')
@@ -1876,7 +1863,7 @@ export const publishWorkflowDefinitionAction = withAuth(async (user, { tenant },
 
   const nextDraftVersion = versionToPublish + 1;
   const nextDraftDefinition = { ...definition, version: nextDraftVersion };
-  await WorkflowDefinitionModelV2.update(knex, parsed.workflowId, {
+  await WorkflowDefinitionModelV2.update(knex, tenant, parsed.workflowId, {
     status: 'published',
     draft_definition: nextDraftDefinition,
     draft_version: nextDraftVersion,
@@ -1974,15 +1961,9 @@ export const startWorkflowRunAction = withAuth(async (user, { tenant }, input: u
     return throwHttpError(413, 'Payload exceeds maximum size');
   }
 
-  const workflow = await WorkflowDefinitionModelV2.getById(knex, parsed.workflowId);
+  const workflow = await WorkflowDefinitionModelV2.getById(knex, tenant, parsed.workflowId);
   if (!workflow) {
     return throwHttpError(404, 'Workflow not found');
-  }
-  if (workflow.is_system) {
-    const canAdmin = await hasPermission(user, 'workflow', 'admin', knex);
-    if (!canAdmin) {
-      return throwHttpError(403, 'Forbidden');
-    }
   }
   if (workflow.is_paused) {
     return throwHttpError(409, 'Workflow is paused');
@@ -2196,7 +2177,7 @@ export const getWorkflowScheduleStateAction = withAuth(async (user, { tenant }, 
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
 
-  const workflow = await WorkflowDefinitionModelV2.getById(knex, parsed.workflowId);
+  const workflow = await WorkflowDefinitionModelV2.getById(knex, tenant, parsed.workflowId);
   if (!workflow) {
     return throwHttpError(404, 'Not found');
   }
@@ -2555,6 +2536,19 @@ export const listWorkflowAuditLogsAction = withAuth(async (user, { tenant }, inp
   const parsed = ListWorkflowAuditLogsInput.parse(input);
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'admin', knex);
+
+  if (parsed.tableName === 'workflow_definitions') {
+    const workflow = await WorkflowDefinitionModelV2.getById(knex, tenant, parsed.recordId);
+    if (!workflow) {
+      return throwHttpError(404, 'Not found');
+    }
+  }
+  if (parsed.tableName === 'workflow_runs') {
+    const run = await WorkflowRunModelV2.getById(knex, parsed.recordId);
+    if (!run || (tenant && run.tenant_id !== tenant)) {
+      return throwHttpError(404, 'Not found');
+    }
+  }
 
   const rows = await knex('audit_logs')
     .where({ table_name: parsed.tableName, record_id: parsed.recordId })
@@ -3287,7 +3281,7 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
     }
   }
 
-  const triggered = await WorkflowDefinitionModelV2.list(knex);
+  const triggered = await WorkflowDefinitionModelV2.list(knex, tenant);
   const matching = triggered.filter((workflow) => {
     const trigger = workflow.trigger as WorkflowTrigger | null | undefined;
     return isWorkflowEventTrigger(trigger) && trigger.eventName === parsed.eventName && workflow.status === 'published';

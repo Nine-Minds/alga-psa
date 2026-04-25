@@ -283,6 +283,7 @@ const resolvePayloadSchemaRef = (
 
 const validateSchedulableWorkflow = async (
   knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'],
+  tenant: string,
   workflowId: string,
   payload: Record<string, unknown>
 ): Promise<
@@ -293,7 +294,7 @@ const validateSchedulableWorkflow = async (
     }
 > => {
   ensureWorkflowPayloadSchemasRegistered();
-  const workflow = await WorkflowDefinitionModelV2.getById(knex, workflowId);
+  const workflow = await WorkflowDefinitionModelV2.getById(knex, tenant, workflowId);
   if (!workflow) {
     return throwHttpError(404, 'Workflow not found');
   }
@@ -343,7 +344,7 @@ const enrichScheduleRow = async (
   tenant: string,
   schedule: WorkflowScheduleStateRecord
 ) => {
-  const workflow = await WorkflowDefinitionModelV2.getById(knex, schedule.workflow_id);
+  const workflow = await WorkflowDefinitionModelV2.getById(knex, tenant, schedule.workflow_id);
   const dayTypeFilter = normalizeWorkflowDayTypeFilter(schedule.day_type_filter);
   const resolvedBusinessDaySettings = await resolveWorkflowBusinessDaySettings(knex, {
     tenantId: tenant,
@@ -468,7 +469,7 @@ async function mutateWorkflowSchedule(
     );
   }
 
-  const schedulable = await validateSchedulableWorkflow(knex, input.workflowId, input.payload);
+  const schedulable = await validateSchedulableWorkflow(knex, tenant, input.workflowId, input.payload);
   if (isValidationFailure(schedulable)) {
     return schedulable;
   }

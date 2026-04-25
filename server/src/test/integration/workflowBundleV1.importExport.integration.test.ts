@@ -139,7 +139,7 @@ afterAll(async () => {
 describe('workflow bundle v1 import/export', () => {
   it('rejects unsupported formatVersion with a clear error', async () => {
     await expect(
-      importWorkflowBundleV1(db, {
+      importWorkflowBundleV1(db, tenantId, {
         format: 'alga-psa.workflow-bundle',
         formatVersion: 999,
         exportedAt: new Date().toISOString(),
@@ -152,7 +152,7 @@ describe('workflow bundle v1 import/export', () => {
 
   it('rejects invalid bundle JSON that fails the v1 schema with a helpful error', async () => {
     await expect(
-      importWorkflowBundleV1(db, {
+      importWorkflowBundleV1(db, tenantId, {
         format: 'alga-psa.workflow-bundle',
         formatVersion: 1,
         exportedAt: new Date().toISOString(),
@@ -165,7 +165,7 @@ describe('workflow bundle v1 import/export', () => {
 
   it('fails with structured missing-dependency errors when required actions/node types/schemas are absent', async () => {
     await expect(
-      importWorkflowBundleV1(db, {
+      importWorkflowBundleV1(db, tenantId, {
         format: 'alga-psa.workflow-bundle',
         formatVersion: 1,
         exportedAt: new Date().toISOString(),
@@ -403,7 +403,7 @@ describe('workflow bundle v1 import/export', () => {
       ]
     };
 
-    const result = await importWorkflowBundleV1(db, bundle);
+    const result = await importWorkflowBundleV1(db, tenantId, bundle);
     expect(result.createdWorkflows).toHaveLength(1);
     expect(result.createdWorkflows[0].key).toBe('test.import-basic');
 
@@ -463,9 +463,9 @@ describe('workflow bundle v1 import/export', () => {
       ]
     };
 
-    await importWorkflowBundleV1(db, bundle);
+    await importWorkflowBundleV1(db, tenantId, bundle);
 
-    await expect(importWorkflowBundleV1(db, bundle)).rejects.toMatchObject({
+    await expect(importWorkflowBundleV1(db, tenantId, bundle)).rejects.toMatchObject({
       code: 'WORKFLOW_KEY_CONFLICT',
       status: 409
     });
@@ -530,10 +530,10 @@ describe('workflow bundle v1 import/export', () => {
       ]
     };
 
-    const first = await importWorkflowBundleV1(db, bundle);
+    const first = await importWorkflowBundleV1(db, tenantId, bundle);
     const firstId = first.createdWorkflows[0].workflowId;
 
-    const second = await importWorkflowBundleV1(db, bundle, { force: true });
+    const second = await importWorkflowBundleV1(db, tenantId, bundle, { force: true });
     const secondId = second.createdWorkflows[0].workflowId;
 
     expect(secondId).toBe(firstId);
@@ -616,7 +616,7 @@ describe('workflow bundle v1 import/export', () => {
       ]
     };
 
-    await expect(importWorkflowBundleV1(db, bundle)).rejects.toBeTruthy();
+    await expect(importWorkflowBundleV1(db, tenantId, bundle)).rejects.toBeTruthy();
 
     const rows = await db('workflow_definitions').where({ key: 'test.transactional' });
     expect(rows).toHaveLength(0);
@@ -634,13 +634,13 @@ describe('workflow bundle v1 import/export', () => {
     const created = await createWorkflowDefinitionAction({ key: 'test.roundtrip', definition });
     await publishWorkflowDefinitionAction({ workflowId: created.workflowId, version: 1 });
 
-    const exported1 = await exportWorkflowBundleV1ForWorkflowId(db, created.workflowId);
+    const exported1 = await exportWorkflowBundleV1ForWorkflowId(db, tenantId, created.workflowId);
 
     await resetWorkflowRuntimeTables(db);
 
-    const imported = await importWorkflowBundleV1(db, exported1);
+    const imported = await importWorkflowBundleV1(db, tenantId, exported1);
     const newId = imported.createdWorkflows[0].workflowId;
-    const exported2 = await exportWorkflowBundleV1ForWorkflowId(db, newId);
+    const exported2 = await exportWorkflowBundleV1ForWorkflowId(db, tenantId, newId);
 
     expect(normalizeBundleForComparison(exported2)).toEqual(normalizeBundleForComparison(exported1));
   });
@@ -744,8 +744,8 @@ describe('workflow bundle v1 import/export', () => {
       ],
     };
 
-    const imported = await importWorkflowBundleV1(db, bundle);
-    const exported1 = await exportWorkflowBundleV1ForWorkflowId(db, imported.createdWorkflows[0].workflowId);
+    const imported = await importWorkflowBundleV1(db, tenantId, bundle);
+    const exported1 = await exportWorkflowBundleV1ForWorkflowId(db, tenantId, imported.createdWorkflows[0].workflowId);
     const exportedWorkflow = exported1.workflows[0];
 
     expect(exportedWorkflow?.dependencies.actions).toEqual(
@@ -779,9 +779,9 @@ describe('workflow bundle v1 import/export', () => {
 
     await resetWorkflowRuntimeTables(db);
 
-    const reimported = await importWorkflowBundleV1(db, exported1);
+    const reimported = await importWorkflowBundleV1(db, tenantId, exported1);
     const importedWorkflowId = reimported.createdWorkflows[0].workflowId;
-    const exported2 = await exportWorkflowBundleV1ForWorkflowId(db, importedWorkflowId);
+    const exported2 = await exportWorkflowBundleV1ForWorkflowId(db, tenantId, importedWorkflowId);
 
     expect(normalizeBundleForComparison(exported2)).toEqual(normalizeBundleForComparison(exported1));
   });
@@ -842,7 +842,7 @@ describe('workflow bundle v1 import/export', () => {
       ]
     };
 
-    const imported = await importWorkflowBundleV1(db, bundle);
+    const imported = await importWorkflowBundleV1(db, tenantId, bundle);
     const workflowId = imported.createdWorkflows[0].workflowId;
 
     const started = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
