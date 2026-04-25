@@ -31,9 +31,11 @@ tags:
   - name: Financial
   - name: Integrations - QuickBooks
   - name: Invoices
+  - name: Meta & Utility v1
   - name: Products
   - name: Projects
   - name: QuickBooks v1
+  - name: Quotes & Contracts v1
   - name: Service Catalog
   - name: Service Categories
   - name: Service Types
@@ -47,13 +49,6 @@ tags:
   - name: Webhooks
   - name: Work Management v1
   - name: Workflows v1
-  - name: contracts
-  - name: feature-access
-  - name: feature-flags
-  - name: meta
-  - name: quotes
-  - name: test-auth
-  - name: user
 components:
   securitySchemes:
     ApiKeyAuth:
@@ -9581,6 +9576,261 @@ components:
       required:
         - data
         - pagination
+    QuoteIdParamV1:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Quote UUID from quotes.quote_id.
+      required:
+        - id
+    QuoteItemParamsV1:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Quote UUID from quotes.quote_id.
+        itemId:
+          type: string
+          format: uuid
+          description: Quote item UUID from quote_items.quote_item_id.
+      required:
+        - id
+        - itemId
+    ContractLineParamsV1:
+      type: object
+      properties:
+        contractId:
+          type: string
+          format: uuid
+          description: Contract UUID from contracts.contract_id.
+        contractLineId:
+          type: string
+          format: uuid
+          description: Contract line UUID from contract_lines.contract_line_id.
+      required:
+        - contractId
+        - contractLineId
+    ContractIdParamV1:
+      type: object
+      properties:
+        contractId:
+          type: string
+          format: uuid
+          description: Contract UUID from contracts.contract_id.
+      required:
+        - contractId
+    QuotesContractsListQueryV1:
+      type: object
+      properties:
+        page:
+          type: string
+        limit:
+          type: string
+        sort:
+          type: string
+        order:
+          type: string
+          enum: &a118
+            - asc
+            - desc
+        search:
+          type: string
+        status:
+          type: string
+        include_items:
+          type: string
+          enum: &a119
+            - "true"
+            - "false"
+        include_client:
+          type: string
+          enum: &a120
+            - "true"
+            - "false"
+    QuotesContractsGenericBodyV1:
+      type: object
+      additionalProperties: {}
+      description: Controller/service-specific payload; see quote/contract controller
+        schemas for exact required fields.
+    CreateQuoteBodyV1:
+      type: object
+      properties:
+        client_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        quote_number:
+          type: string
+        valid_until:
+          type: string
+        notes:
+          type: string
+        terms:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+      required:
+        - client_id
+    CreateContractBodyV1:
+      type: object
+      properties:
+        client_id:
+          type: string
+          format: uuid
+        contract_name:
+          type: string
+        start_date:
+          type: string
+        end_date:
+          type: string
+        billing_frequency:
+          type: string
+      required:
+        - client_id
+    QuotesContractsApiErrorV1:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details: {}
+          required:
+            - code
+            - message
+      required:
+        - error
+    QuotesContractsApiSuccessV1:
+      type: object
+      properties:
+        data: {}
+        meta:
+          type: object
+          additionalProperties: {}
+    QuotesContractsApiPaginatedV1:
+      type: object
+      properties:
+        data:
+          type: array
+          items: {}
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+            limit:
+              type: integer
+            total:
+              type: integer
+            totalPages:
+              type: integer
+          required:
+            - page
+            - limit
+            - total
+            - totalPages
+        meta:
+          type: object
+          additionalProperties: {}
+        _links:
+          type: object
+          additionalProperties: {}
+      required:
+        - data
+    FeatureFlagsPostBodyV1:
+      type: object
+      properties:
+        flags:
+          type: array
+          items:
+            type: string
+        context:
+          type: object
+          properties:
+            userRole:
+              type: string
+            companySize:
+              type: string
+              enum:
+                - small
+                - medium
+                - large
+                - enterprise
+            subscriptionPlan:
+              type: string
+            customProperties:
+              type: object
+              additionalProperties: {}
+    FeatureAccessBodyV1:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        feature_name:
+          type: string
+      required:
+        - feature_name
+    MetaUtilityApiErrorV1:
+      type: object
+      properties:
+        error: {}
+        message:
+          type: string
+        details: {}
+        success:
+          type: boolean
+    MetaUtilityApiSuccessV1:
+      type: object
+      properties:
+        data: {}
+        flags:
+          type: object
+          additionalProperties: {}
+        context:
+          type: object
+          additionalProperties: {}
+        enabled:
+          type: boolean
+        reason:
+          type: string
+        usageStatsEnabled:
+          type: boolean
+        controlledBy:
+          type: string
+        message:
+          type: string
+        success:
+          type: boolean
+    EeInventoryApiError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details: {}
+          required:
+            - code
+            - message
+      required:
+        - error
+    EeInventoryMissingRouteResponse:
+      type: string
+      description: Default Next.js not-found response body for missing route handlers.
     MiddlewareUnauthorizedResponse:
       type: object
       properties:
@@ -46427,6 +46677,2944 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkV1ApiError"
+  /api/v1/quotes:
+    get:
+      summary: List quotes
+      description: Lists quotes via ApiQuoteController.list() with authorization-aware
+        filtering.
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: quote
+        x-read-authorization-resource: billing
+      parameters:
+        - schema:
+            type: string
+          required: false
+          name: page
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: sort
+          in: query
+        - schema:
+            type: string
+            enum: *a118
+          required: false
+          name: order
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: search
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: status
+          in: query
+        - schema:
+            type: string
+            enum: *a119
+          required: false
+          name: include_items
+          in: query
+        - schema:
+            type: string
+            enum: *a120
+          required: false
+          name: include_client
+          in: query
+      responses:
+        "200":
+          description: Paginated quotes returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiPaginatedV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for quote resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+    post:
+      summary: Create quote
+      description: Creates quote via ApiQuoteController.create().
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: quote
+        x-read-authorization-resource: billing
+      parameters:
+        - schema:
+            type: string
+          required: false
+          name: page
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: sort
+          in: query
+        - schema:
+            type: string
+            enum: *a118
+          required: false
+          name: order
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: search
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: status
+          in: query
+        - schema:
+            type: string
+            enum: *a119
+          required: false
+          name: include_items
+          in: query
+        - schema:
+            type: string
+            enum: *a120
+          required: false
+          name: include_client
+          in: query
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateQuoteBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "201":
+          description: Create-like operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for quote resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+  /api/v1/quotes/{id}:
+    get:
+      summary: Get quote
+      description: Gets quote UUID via ApiQuoteController.getById().
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: quote
+        x-read-authorization-resource: billing
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Quote UUID from quotes.quote_id.
+          required: true
+          description: Quote UUID from quotes.quote_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for quote resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+    put:
+      summary: Update quote
+      description: Updates quote UUID via ApiQuoteController.update().
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: quote
+        x-read-authorization-resource: billing
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Quote UUID from quotes.quote_id.
+          required: true
+          description: Quote UUID from quotes.quote_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuotesContractsGenericBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for quote resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+    delete:
+      summary: Delete quote
+      description: Deletes quote UUID via ApiQuoteController.delete().
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: quote
+        x-read-authorization-resource: billing
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Quote UUID from quotes.quote_id.
+          required: true
+          description: Quote UUID from quotes.quote_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "204":
+          description: Delete-like operation can return no content.
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for quote resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+  /api/v1/quotes/{id}/activities:
+    get:
+      summary: List quote activities
+      description: Lists quote activity history via listActivities().
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: quote
+        x-read-authorization-resource: billing
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Quote UUID from quotes.quote_id.
+          required: true
+          description: Quote UUID from quotes.quote_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for quote resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+  /api/v1/quotes/{id}/approve:
+    post:
+      summary: Approve quote
+      description: Approves quote pending-approval state via approve(); includes
+        self-approval guard.
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: quote
+        x-read-authorization-resource: billing
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Quote UUID from quotes.quote_id.
+          required: true
+          description: Quote UUID from quotes.quote_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuotesContractsGenericBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "201":
+          description: Create-like operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for quote resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+  /api/v1/quotes/{id}/convert:
+    post:
+      summary: Convert quote
+      description: Converts quote to downstream entities via convert().
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: quote
+        x-read-authorization-resource: billing
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Quote UUID from quotes.quote_id.
+          required: true
+          description: Quote UUID from quotes.quote_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuotesContractsGenericBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "201":
+          description: Create-like operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for quote resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+  /api/v1/quotes/{id}/convert/preview:
+    get:
+      summary: Preview quote conversion
+      description: Returns conversion preview via conversionPreview().
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: quote
+        x-read-authorization-resource: billing
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Quote UUID from quotes.quote_id.
+          required: true
+          description: Quote UUID from quotes.quote_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for quote resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+  /api/v1/quotes/{id}/items:
+    get:
+      summary: List quote items
+      description: Lists quote items via listItems().
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: quote
+        x-read-authorization-resource: billing
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Quote UUID from quotes.quote_id.
+          required: true
+          description: Quote UUID from quotes.quote_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for quote resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+    post:
+      summary: Add quote item
+      description: Adds quote item via addItem().
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: quote
+        x-read-authorization-resource: billing
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Quote UUID from quotes.quote_id.
+          required: true
+          description: Quote UUID from quotes.quote_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuotesContractsGenericBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "201":
+          description: Create-like operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for quote resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+  /api/v1/quotes/{id}/items/{itemId}:
+    put:
+      summary: Update quote item
+      description: Updates quote item via updateItem().
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: quote
+        x-read-authorization-resource: billing
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Quote UUID from quotes.quote_id.
+          required: true
+          description: Quote UUID from quotes.quote_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuotesContractsGenericBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for quote resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+    delete:
+      summary: Delete quote item
+      description: Deletes quote item via deleteItem().
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: quote
+        x-read-authorization-resource: billing
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Quote UUID from quotes.quote_id.
+          required: true
+          description: Quote UUID from quotes.quote_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "204":
+          description: Delete-like operation can return no content.
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for quote resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+  /api/v1/quotes/{id}/items/reorder:
+    post:
+      summary: Reorder quote items
+      description: Reorders quote item sequence via reorderItems().
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: quote
+        x-read-authorization-resource: billing
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Quote UUID from quotes.quote_id.
+          required: true
+          description: Quote UUID from quotes.quote_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuotesContractsGenericBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "201":
+          description: Create-like operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for quote resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+  /api/v1/quotes/{id}/remind:
+    post:
+      summary: Send quote reminder
+      description: Sends reminder for quote via remind().
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: quote
+        x-read-authorization-resource: billing
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Quote UUID from quotes.quote_id.
+          required: true
+          description: Quote UUID from quotes.quote_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuotesContractsGenericBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "201":
+          description: Create-like operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for quote resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+  /api/v1/quotes/{id}/request-changes:
+    post:
+      summary: Request quote changes
+      description: Requests changes on pending-approval quote via requestChanges().
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: quote
+        x-read-authorization-resource: billing
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Quote UUID from quotes.quote_id.
+          required: true
+          description: Quote UUID from quotes.quote_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuotesContractsGenericBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "201":
+          description: Create-like operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for quote resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+  /api/v1/quotes/{id}/resend:
+    post:
+      summary: Resend quote
+      description: Resends quote via resend().
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: quote
+        x-read-authorization-resource: billing
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Quote UUID from quotes.quote_id.
+          required: true
+          description: Quote UUID from quotes.quote_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuotesContractsGenericBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "201":
+          description: Create-like operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for quote resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+  /api/v1/quotes/{id}/revisions:
+    get:
+      summary: List quote revisions
+      description: Lists quote versions via listVersions().
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: quote
+        x-read-authorization-resource: billing
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Quote UUID from quotes.quote_id.
+          required: true
+          description: Quote UUID from quotes.quote_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for quote resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+    post:
+      summary: Create quote revision
+      description: Creates quote revision via createRevision().
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: quote
+        x-read-authorization-resource: billing
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Quote UUID from quotes.quote_id.
+          required: true
+          description: Quote UUID from quotes.quote_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuotesContractsGenericBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "201":
+          description: Create-like operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for quote resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+  /api/v1/quotes/{id}/send:
+    post:
+      summary: Send quote
+      description: Sends quote to recipient workflow via send().
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: quote
+        x-read-authorization-resource: billing
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Quote UUID from quotes.quote_id.
+          required: true
+          description: Quote UUID from quotes.quote_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuotesContractsGenericBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "201":
+          description: Create-like operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for quote resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+  /api/v1/quotes/{id}/submit-for-approval:
+    post:
+      summary: Submit quote for approval
+      description: Moves quote to pending-approval state via submitForApproval().
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: quote
+        x-read-authorization-resource: billing
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Quote UUID from quotes.quote_id.
+          required: true
+          description: Quote UUID from quotes.quote_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuotesContractsGenericBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "201":
+          description: Create-like operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for quote resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+  /api/v1/contracts:
+    get:
+      summary: List contracts
+      description: Lists contracts via ApiContractLineController.listContracts() (v2
+        controller mounted under v1 route).
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: contract_line
+        x-controller-origin: ApiContractLineController (v2) mounted under v1 routes
+        x-request-context-wiring-gap: Controller requires req.context via
+          requireRequestContext(req); v1 route lacks explicit withApiKeyAuth
+          wrapper.
+      parameters:
+        - schema:
+            type: string
+          required: false
+          name: page
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: sort
+          in: query
+        - schema:
+            type: string
+            enum: *a118
+          required: false
+          name: order
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: search
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: status
+          in: query
+        - schema:
+            type: string
+            enum: *a119
+          required: false
+          name: include_items
+          in: query
+        - schema:
+            type: string
+            enum: *a120
+          required: false
+          name: include_client
+          in: query
+      responses:
+        "200":
+          description: Paginated contracts returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiPaginatedV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for contract resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+    post:
+      summary: Create contract
+      description: Creates contract via ApiContractLineController.createContract() (v2
+        controller mounted under v1 route).
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: contract_line
+        x-controller-origin: ApiContractLineController (v2) mounted under v1 routes
+        x-request-context-wiring-gap: Controller requires req.context via
+          requireRequestContext(req); v1 route lacks explicit withApiKeyAuth
+          wrapper.
+      parameters:
+        - schema:
+            type: string
+          required: false
+          name: page
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: sort
+          in: query
+        - schema:
+            type: string
+            enum: *a118
+          required: false
+          name: order
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: search
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: status
+          in: query
+        - schema:
+            type: string
+            enum: *a119
+          required: false
+          name: include_items
+          in: query
+        - schema:
+            type: string
+            enum: *a120
+          required: false
+          name: include_client
+          in: query
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateContractBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "201":
+          description: Create-like operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for contract resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+  /api/v1/contracts/{contractId}/contract-lines:
+    post:
+      summary: Attach contract line
+      description: Attaches contract line to contract via addContractLine() using body
+        contract_line_id/custom_rate.
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: contract_line
+        x-controller-origin: ApiContractLineController (v2) mounted under v1 routes
+        x-request-context-wiring-gap: Controller requires req.context via
+          requireRequestContext(req); v1 route lacks explicit withApiKeyAuth
+          wrapper.
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Contract UUID from contracts.contract_id.
+          required: true
+          description: Contract UUID from contracts.contract_id.
+          name: contractId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                contract_line_id:
+                  type: string
+                  format: uuid
+                custom_rate:
+                  type: number
+              required:
+                - contract_line_id
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "201":
+          description: Create-like operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for contract resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+  /api/v1/contracts/{contractId}/contract-lines/{contractLineId}:
+    delete:
+      summary: Detach contract line
+      description: Detaches contract line from contract via removeContractLine().
+      tags:
+        - Quotes & Contracts v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          route middleware before handler
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: contract_line
+        x-controller-origin: ApiContractLineController (v2) mounted under v1 routes
+        x-request-context-wiring-gap: Controller requires req.context via
+          requireRequestContext(req); v1 route lacks explicit withApiKeyAuth
+          wrapper.
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Contract UUID from contracts.contract_id.
+          required: true
+          description: Contract UUID from contracts.contract_id.
+          name: contractId
+          in: path
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiSuccessV1"
+        "204":
+          description: Delete-like operation can return no content.
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "403":
+          description: RBAC denied for contract resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "404":
+          description: Target record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotesContractsApiErrorV1"
+  /api/v1/feature-access:
+    post:
+      summary: Check feature access
+      description: Checks feature access via
+        ApiPermissionController.checkFeatureAccess() using API key auth and
+        permission read checks.
+      tags:
+        - Meta & Utility v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: permission
+        x-auth-mechanism: x-api-key validated by ApiPermissionController.authenticate()
+        x-tenant-header: x-tenant-id (optional)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeatureAccessBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiSuccessV1"
+        "400":
+          description: Invalid request payload/query.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "401":
+          description: Unauthorized (API key/session auth failure depending on route).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "403":
+          description: Permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "500":
+          description: Unexpected route/controller failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+  /api/v1/feature-flags:
+    get:
+      summary: Get feature flags
+      description: Returns feature flags for current session user; route uses
+        getSession() and featureFlags service.
+      tags:
+        - Meta & Utility v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: Session user required in handler; global /api middleware may
+          still require x-api-key presence
+        x-tenant-header: x-tenant-id (optional)
+        x-session-auth-required: true
+      parameters:
+        - schema:
+            type: string
+          required: false
+          name: format
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: flags
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: period
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: language
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: package_name
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: version
+          in: query
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiSuccessV1"
+        "400":
+          description: Invalid request payload/query.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "401":
+          description: Unauthorized (API key/session auth failure depending on route).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "403":
+          description: Permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "500":
+          description: Unexpected route/controller failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+    post:
+      summary: Evaluate feature flags with custom context
+      description: Evaluates requested/all flags with optional custom context payload;
+        requires session user.
+      tags:
+        - Meta & Utility v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: Session user required in handler; global /api middleware may
+          still require x-api-key presence
+        x-tenant-header: x-tenant-id (optional)
+        x-session-auth-required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeatureFlagsPostBodyV1"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiSuccessV1"
+        "400":
+          description: Invalid request payload/query.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "401":
+          description: Unauthorized (API key/session auth failure depending on route).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "403":
+          description: Permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "500":
+          description: Unexpected route/controller failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+  /api/v1/meta/docs:
+    get:
+      summary: Get API docs
+      description: Returns Swagger UI HTML or redirects to OpenAPI endpoint depending
+        on format query.
+      tags:
+        - Meta & Utility v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: metadata
+        x-auth-mechanism: ApiMetadataController.authenticate() + metadata read permission
+        x-tenant-header: x-tenant-id (optional)
+      parameters:
+        - schema:
+            type: string
+          required: false
+          name: format
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: flags
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: period
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: language
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: package_name
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: version
+          in: query
+      responses:
+        "200":
+          description: Swagger UI HTML or JSON redirect payload.
+          content:
+            text/html:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiSuccessV1"
+        "302":
+          description: Redirect to /api/v1/meta/openapi for non-html format.
+        "400":
+          description: Invalid request payload/query.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "401":
+          description: Unauthorized (API key/session auth failure depending on route).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "403":
+          description: Permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "500":
+          description: Unexpected route/controller failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+  /api/v1/meta/endpoints:
+    get:
+      summary: List API endpoints metadata
+      description: Returns endpoint inventory metadata via
+        ApiMetadataController.getEndpoints().
+      tags:
+        - Meta & Utility v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: metadata
+        x-auth-mechanism: ApiMetadataController.authenticate() + metadata read permission
+        x-tenant-header: x-tenant-id (optional)
+      parameters:
+        - schema:
+            type: string
+          required: false
+          name: format
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: flags
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: period
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: language
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: package_name
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: version
+          in: query
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiSuccessV1"
+        "400":
+          description: Invalid request payload/query.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "401":
+          description: Unauthorized (API key/session auth failure depending on route).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "403":
+          description: Permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "500":
+          description: Unexpected route/controller failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+  /api/v1/meta/health:
+    get:
+      summary: Get API health metadata
+      description: Returns API health metadata via ApiMetadataController.getHealth().
+      tags:
+        - Meta & Utility v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: metadata
+        x-auth-mechanism: ApiMetadataController.authenticate() + metadata read permission
+        x-tenant-header: x-tenant-id (optional)
+      parameters:
+        - schema:
+            type: string
+          required: false
+          name: format
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: flags
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: period
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: language
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: package_name
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: version
+          in: query
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiSuccessV1"
+        "400":
+          description: Invalid request payload/query.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "401":
+          description: Unauthorized (API key/session auth failure depending on route).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "403":
+          description: Permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "500":
+          description: Unexpected route/controller failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+  /api/v1/meta/openapi:
+    get:
+      summary: Get generated OpenAPI metadata
+      description: Returns generated OpenAPI document JSON/YAML based on query format.
+      tags:
+        - Meta & Utility v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: metadata
+        x-auth-mechanism: ApiMetadataController.authenticate() + metadata read permission
+        x-tenant-header: x-tenant-id (optional)
+      parameters:
+        - schema:
+            type: string
+          required: false
+          name: format
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: flags
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: period
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: language
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: package_name
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: version
+          in: query
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiSuccessV1"
+        "400":
+          description: Invalid request payload/query.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "401":
+          description: Unauthorized (API key/session auth failure depending on route).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "403":
+          description: Permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "500":
+          description: Unexpected route/controller failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+  /api/v1/meta/permissions:
+    get:
+      summary: List API permissions metadata
+      description: Returns permission metadata via ApiMetadataController.getPermissions().
+      tags:
+        - Meta & Utility v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: metadata
+        x-auth-mechanism: ApiMetadataController.authenticate() + metadata read permission
+        x-tenant-header: x-tenant-id (optional)
+      parameters:
+        - schema:
+            type: string
+          required: false
+          name: format
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: flags
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: period
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: language
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: package_name
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: version
+          in: query
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiSuccessV1"
+        "400":
+          description: Invalid request payload/query.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "401":
+          description: Unauthorized (API key/session auth failure depending on route).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "403":
+          description: Permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "500":
+          description: Unexpected route/controller failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+  /api/v1/meta/schemas:
+    get:
+      summary: List API schemas metadata
+      description: Returns schema metadata via ApiMetadataController.getSchemas().
+      tags:
+        - Meta & Utility v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: metadata
+        x-auth-mechanism: ApiMetadataController.authenticate() + metadata read permission
+        x-tenant-header: x-tenant-id (optional)
+      parameters:
+        - schema:
+            type: string
+          required: false
+          name: format
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: flags
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: period
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: language
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: package_name
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: version
+          in: query
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiSuccessV1"
+        "400":
+          description: Invalid request payload/query.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "401":
+          description: Unauthorized (API key/session auth failure depending on route).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "403":
+          description: Permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "500":
+          description: Unexpected route/controller failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+  /api/v1/meta/sdk:
+    get:
+      summary: Generate SDK metadata payload
+      description: Generates SDK structure payload for selected language/format via
+        generateSdk().
+      tags:
+        - Meta & Utility v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: metadata
+        x-auth-mechanism: ApiMetadataController.authenticate() + metadata read permission
+        x-tenant-header: x-tenant-id (optional)
+      parameters:
+        - schema:
+            type: string
+          required: false
+          name: format
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: flags
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: period
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: language
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: package_name
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: version
+          in: query
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiSuccessV1"
+        "400":
+          description: Invalid request payload/query.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "401":
+          description: Unauthorized (API key/session auth failure depending on route).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "403":
+          description: Permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "500":
+          description: Unexpected route/controller failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+  /api/v1/meta/stats:
+    get:
+      summary: Get API stats metadata
+      description: Returns API usage stats for requested period via getStats().
+      tags:
+        - Meta & Utility v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: metadata
+        x-auth-mechanism: ApiMetadataController.authenticate() + metadata read permission
+        x-tenant-header: x-tenant-id (optional)
+      parameters:
+        - schema:
+            type: string
+          required: false
+          name: format
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: flags
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: period
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: language
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: package_name
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: version
+          in: query
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiSuccessV1"
+        "400":
+          description: Invalid request payload/query.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "401":
+          description: Unauthorized (API key/session auth failure depending on route).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "403":
+          description: Permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "500":
+          description: Unexpected route/controller failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+  /api/v1/test-auth:
+    get:
+      summary: Test API key auth
+      description: Debug endpoint wrapping withApiKeyAuth middleware; returns
+        authenticated request context payload.
+      tags:
+        - Meta & Utility v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: auth
+        x-auth-mechanism: withApiKeyAuth from apiAuthMiddleware
+        x-tenant-header: x-tenant-id (optional)
+      parameters:
+        - schema:
+            type: string
+          required: false
+          name: format
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: flags
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: period
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: language
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: package_name
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: version
+          in: query
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiSuccessV1"
+        "400":
+          description: Invalid request payload/query.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "401":
+          description: Unauthorized (API key/session auth failure depending on route).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "403":
+          description: Permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "500":
+          description: Unexpected route/controller failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+  /api/v1/user/telemetry-decision:
+    get:
+      summary: Get telemetry decision
+      description: Returns telemetry enabled/disabled decision from environment for
+        current session user.
+      tags:
+        - Meta & Utility v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: Session user required in handler; global /api middleware may
+          still require x-api-key presence
+        x-tenant-header: x-tenant-id (optional)
+        x-session-auth-required: true
+      parameters:
+        - schema:
+            type: string
+          required: false
+          name: format
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: flags
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: period
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: language
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: package_name
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: version
+          in: query
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiSuccessV1"
+        "400":
+          description: Invalid request payload/query.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "401":
+          description: Unauthorized (API key/session auth failure depending on route).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "403":
+          description: Permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "500":
+          description: Unexpected route/controller failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+  /api/v1/user/telemetry-preferences:
+    get:
+      summary: Get telemetry preferences
+      description: Returns telemetry preference view controlled by environment
+        variable; requires session user.
+      tags:
+        - Meta & Utility v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: Session user required in handler; global /api middleware may
+          still require x-api-key presence
+        x-tenant-header: x-tenant-id (optional)
+        x-session-auth-required: true
+      parameters:
+        - schema:
+            type: string
+          required: false
+          name: format
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: flags
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: period
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: language
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: package_name
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: version
+          in: query
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiSuccessV1"
+        "400":
+          description: Invalid request payload/query.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "401":
+          description: Unauthorized (API key/session auth failure depending on route).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "403":
+          description: Permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "500":
+          description: Unexpected route/controller failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+    post:
+      summary: Set telemetry preferences (environment-controlled)
+      description: Endpoint acknowledges request but reports environment-controlled
+        behavior rather than persisting user preference.
+      tags:
+        - Meta & Utility v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: Session user required in handler; global /api middleware may
+          still require x-api-key presence
+        x-tenant-header: x-tenant-id (optional)
+        x-session-auth-required: true
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiSuccessV1"
+        "400":
+          description: Invalid request payload/query.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "401":
+          description: Unauthorized (API key/session auth failure depending on route).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "403":
+          description: Permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "500":
+          description: Unexpected route/controller failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+    delete:
+      summary: Delete telemetry preferences (environment-controlled)
+      description: Endpoint acknowledges request but reports environment-controlled
+        behavior rather than deleting stored preference.
+      tags:
+        - Meta & Utility v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: Session user required in handler; global /api middleware may
+          still require x-api-key presence
+        x-tenant-header: x-tenant-id (optional)
+        x-session-auth-required: true
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiSuccessV1"
+        "400":
+          description: Invalid request payload/query.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "401":
+          description: Unauthorized (API key/session auth failure depending on route).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "403":
+          description: Permission denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
+        "500":
+          description: Unexpected route/controller failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaUtilityApiErrorV1"
   /api/extensions/softwareone/agreements:
     get:
       summary: List SoftwareOne agreements
@@ -47095,1329 +50283,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SoftwareOneErrorResponse"
-  /api/v1/feature-access:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - feature-access
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/feature-flags:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - feature-flags
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - feature-flags
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/quotes:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - quotes
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - quotes
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/quotes/{id}:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - quotes
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    put:
-      summary: PUT v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - quotes
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    delete:
-      summary: DELETE v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - quotes
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "204":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/quotes/{id}/activities:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - quotes
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/quotes/{id}/approve:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - quotes
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/quotes/{id}/convert:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - quotes
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/quotes/{id}/convert/preview:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - quotes
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/quotes/{id}/items:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - quotes
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - quotes
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/quotes/{id}/items/{itemId}:
-    put:
-      summary: PUT v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - quotes
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    delete:
-      summary: DELETE v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - quotes
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "204":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/quotes/{id}/items/reorder:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - quotes
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/quotes/{id}/remind:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - quotes
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/quotes/{id}/request-changes:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - quotes
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/quotes/{id}/resend:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - quotes
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/quotes/{id}/revisions:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - quotes
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - quotes
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/quotes/{id}/send:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - quotes
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/quotes/{id}/submit-for-approval:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - quotes
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/meta/docs:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - meta
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/meta/endpoints:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - meta
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/meta/health:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - meta
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/meta/openapi:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - meta
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/meta/permissions:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - meta
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/meta/schemas:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - meta
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/meta/sdk:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - meta
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/meta/stats:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - meta
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/contracts:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - contracts
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - contracts
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/contracts/{contractId}/contract-lines:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - contracts
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/contracts/{contractId}/contract-lines/{contractLineId}:
-    delete:
-      summary: DELETE v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - contracts
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "204":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/test-auth:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - test-auth
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/user/telemetry-decision:
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - user
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/user/telemetry-preferences:
-    delete:
-      summary: DELETE v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - user
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "204":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    get:
-      summary: GET v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - user
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      responses:
-        "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - user
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/storage/namespaces/{namespace}/records:
     get:
       summary: List records in a namespace

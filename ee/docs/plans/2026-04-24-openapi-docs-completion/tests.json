@@ -44,7 +44,7 @@
   {
     "id": "T006",
     "description": "For representative API-key v1 controllers, inspect one read route and one mutation route per domain group to confirm OpenAPI auth/RBAC/tenant descriptions match source behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F002",
@@ -59,7 +59,7 @@
   {
     "id": "T007",
     "description": "For representative billing/financial and invoice routes, verify request body required fields and response envelopes against controller/service/Zod source before committing their registrar entries.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005",
       "F011",
@@ -90,7 +90,7 @@
   {
     "id": "T010",
     "description": "Before each commit, run git status --short and verify .env.localtest is not staged while registrar and generated spec files are staged intentionally.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
@@ -98,7 +98,7 @@
   {
     "id": "T011",
     "description": "At final completion, run full CE and EE placeholder scans and assert remaining count is zero in both specs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019",
       "F023"
@@ -107,7 +107,7 @@
   {
     "id": "T012",
     "description": "At final completion, review /tmp/alga-openapi-doc-progress.md, PRD.md, features.json, tests.json, and SCRATCHPAD.md for consistency with the final route/spec state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020",
       "F021",

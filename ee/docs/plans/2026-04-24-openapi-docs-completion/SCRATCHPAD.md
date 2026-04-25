@@ -571,3 +571,93 @@ python3 <CE and EE placeholder scans for F005 family + global counts>
 3. `POST /api/v1/feature-flags`
 4. `GET /api/v1/quotes`
 5. `POST /api/v1/quotes`
+
+## 2026-04-24 — Quotes/Contracts + Meta/Utility Families Completed (F011, F012)
+
+### Scope completed
+
+- Added registrar: `server/src/lib/api/openapi/routes/quotesContractsV1.ts`.
+- Added registrar: `server/src/lib/api/openapi/routes/metaUtilityV1.ts`.
+- Added registrar: `server/src/lib/api/openapi/routes/eeInventoryOnly.ts` (EE-only inventory placeholders).
+- Registered all three in `server/src/lib/api/openapi/index.ts` before inventory backfill.
+- Documented all previously-placeholder operations under:
+  - `/api/v1/quotes*`
+  - `/api/v1/contracts*`
+  - `/api/v1/feature-access`
+  - `/api/v1/feature-flags`
+  - `/api/v1/meta/*`
+  - `/api/v1/test-auth`
+  - `/api/v1/user/telemetry-*`
+  - EE-only inventory placeholders:
+    - `/api/ext-bundles/*`
+    - `/api/extensions/install-info`
+    - `/api/extensions/registry-db-check`
+    - `/api/extensions/reprovision`
+    - `/api/provisioning/tenants`
+    - `/api/v1/auth/verify`
+
+### Key source-grounded notes / gaps documented
+
+- Quote read authorization uses billing-resource authorization context in `ApiQuoteController.assertQuoteReadAllowed()` while controller CRUD permissions are checked on `quote` resource; documented this distinction.
+- Contract v1 routes currently mount `ApiContractLineController` (v2 controller) and call `requireRequestContext(req)`; documented request-context wiring dependency/gap on those paths.
+- Feature flag and telemetry routes are session-oriented (`getSession`/`getCurrentUser`) while global `/api/*` middleware can still require API key presence unless path is explicitly skipped; documented as mixed auth behavior.
+- EE-only placeholder paths that have no handler files in this worktree were converted to explicit inventory-only route docs instead of leaving generated placeholders.
+
+## 2026-04-24 — Final Validation and Closeout (F013–F024, T006–T012)
+
+### Final placeholder results
+
+- CE full scan: `0` placeholders.
+- EE full scan: `0` placeholders.
+
+### Representative auth/RBAC verification (T006)
+
+Reviewed representative read/mutation flows across major API-key v1 domains and confirmed docs align with source behavior:
+
+- User domain:
+  - Read: `ApiUserController.stats()` / `getPermissions()` enforce `hasPermission(..., 'user', 'read', ...)`.
+  - Mutation: `assignRoles()` / `changePassword()` enforce update checks and contextual constraints.
+- Team domain:
+  - Read: `ApiTeamController.getMembers()` enforces `team:read`.
+  - Mutation: `addMember()` enforces `team:update`.
+- Project domain:
+  - Read: `ApiProjectController.list()/search()/stats()` enforce read checks and authorization filtering.
+  - Mutation: `bulkUpdate()/createPhaseTask()` enforce update checks.
+- Ticket domain:
+  - Read: `ApiTicketController.list()/stats()` enforce read checks.
+  - Mutation: `updateStatus()/updateAssignment()` enforce update checks.
+
+### Representative billing/financial/invoice verification (T007)
+
+Re-validated representative endpoints in `server/src/lib/api/openapi/routes/financialInvoices.ts` against source-backed request/response behavior:
+
+- `POST /api/v1/financial/billing/calculate`: request body schema registered and required under `request.body.schema`; response envelope documented as API success/error.
+- Invoice lifecycle request schemas (`InvoiceSendBody`, `InvoiceFinalizeBody`, `InvoicePaymentBody`, bulk schemas) are registered and attached to route request bodies.
+- Financial/invoice responses retain documented envelope patterns (`ApiSuccess` / `ApiPaginated` / error structure) and known implementation-gap notes from earlier F005 work.
+
+### Commit/staging discipline verification (T010)
+
+- Before each commit in this pass, `git status --short` confirmed `.env.localtest` remained unstaged while intended plan/registrar/spec files were staged explicitly.
+
+### Plan consistency review (T012)
+
+Reviewed final alignment among:
+
+- `PRD.md`
+- `features.json`
+- `tests.json`
+- `SCRATCHPAD.md`
+- `/tmp/alga-openapi-doc-progress.md`
+
+Result: all tracked workstreams and acceptance checkpoints are synchronized with final generated OpenAPI state (CE/EE placeholder scans at zero).
+
+### Final summary of discovered implementation gaps (F024)
+
+Representative deferred runtime issues captured in OpenAPI docs instead of code fixes:
+
+- Route-to-controller mismatches on several v1 legacy paths (notably some user/team/time-period/time-sheet/schedule routes).
+- Session-vs-API-key mixed auth behavior on feature flag and telemetry endpoints.
+- Contract v1 routes using v2 controller assumptions (`requireRequestContext`).
+- Inventory-only EE paths with missing handlers documented as such.
+
+No runtime behavior changes were made as part of this documentation pass.
