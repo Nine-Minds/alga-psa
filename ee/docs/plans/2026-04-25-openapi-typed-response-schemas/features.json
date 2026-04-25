@@ -1,0 +1,162 @@
+[
+  {
+    "id": "F001",
+    "description": "Create a repeatable scan that finds generated OpenAPI response components or inline response schemas where object property data is an empty schema {} and reports affected operations.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Validation Requirements"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Add shared OpenAPI response-envelope helpers or conventions for typed success, array, and paginated responses to avoid future data: unknown schemas.",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Strategy"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Replace ClientContactApiSuccess with operation-specific typed response schemas for client CRUD, client stats, client contacts, client locations, contact CRUD/search/export/stats, and client-contract-line operations.",
+    "implemented": true,
+    "prdRefs": [
+      "Source-Grounded Example: Client Detail",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Ensure GET /api/v1/clients/{id} returns a typed Client response envelope in CE and EE generated specs, using source behavior from ApiBaseController.getById and ClientService.getById.",
+    "implemented": true,
+    "prdRefs": [
+      "Source-Grounded Example: Client Detail",
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Replace AccessApiSuccessV1 with typed response schemas for users, roles, permissions, RBAC, teams, and permission-check routes.",
+    "implemented": true,
+    "prdRefs": [
+      "Current Baseline",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Replace ContractLineApiSuccess with typed response schemas for contract-line CRUD, bulk, analytics, activation, fixed-config, services, usage metrics, and contract-line-template routes.",
+    "implemented": true,
+    "prdRefs": [
+      "Current Baseline",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Replace FinancialInvoiceApiSuccess and BillingOverviewResponse with typed response schemas for financial, invoice, billing, credit, transaction, report, payment-method, tax, and recurring invoice routes.",
+    "implemented": true,
+    "prdRefs": [
+      "Current Baseline",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Replace QuickBooksV1ApiSuccess with typed response schemas for /api/v1/integrations/quickbooks and /api/v1/quickbooks duplicate route families, including sync, mapping, catalog, OAuth, health, and diagnostics responses.",
+    "implemented": true,
+    "prdRefs": [
+      "Current Baseline",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Replace WebhookApiSuccessV1 with typed response schemas for webhook CRUD, analytics, events, deliveries, templates, subscriptions, validation, transformation, test, and retry routes.",
+    "implemented": true,
+    "prdRefs": [
+      "Current Baseline",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Replace WorkV1ApiSuccess with typed response schemas for project, ticket, tag, schedule, time-entry, time-sheet, and time-period route families.",
+    "implemented": true,
+    "prdRefs": [
+      "Current Baseline",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Replace QuotesContractsApiSuccessV1 with typed response schemas for quote and contract CRUD, quote item, approval, send, convert, revision, reminder, and contract-line association routes.",
+    "implemented": true,
+    "prdRefs": [
+      "Current Baseline",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Replace MetaUtilityApiSuccessV1 with typed or bounded schemas for feature-access, feature-flags, metadata, SDK/docs, telemetry preference, and test-auth utility routes.",
+    "implemented": true,
+    "prdRefs": [
+      "Current Baseline",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Where a route response is genuinely dynamic or currently a TODO/stub, model the known envelope and bounded fields explicitly instead of using bare zOpenApi.unknown for data.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Risks and Constraints"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Regenerate CE/legacy and EE OpenAPI JSON/YAML specs after each logical route-family batch.",
+    "implemented": true,
+    "prdRefs": [
+      "Implementation Strategy",
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Maintain zero-placeholder status in CE and EE specs while replacing generic success envelopes.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Run npm run guard:ext-v2 after source changes and avoid guarded /api/extensions/ literals in OpenAPI registrar source.",
+    "implemented": true,
+    "prdRefs": [
+      "Risks and Constraints",
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Update SCRATCHPAD.md with scan counts, route-family progress, allowlist decisions, command results, and final validation outcomes.",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Commit and push focused changes to the OpenAPI PR branch without staging the pre-existing .env.localtest modification.",
+    "implemented": true,
+    "prdRefs": [
+      "Risks and Constraints",
+      "Acceptance Criteria / Definition of Done"
+    ]
+  }
+]
