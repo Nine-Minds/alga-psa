@@ -17,8 +17,8 @@ import type { Knex } from 'knex';
 const normalizeBoolean = (value: unknown, defaultValue: boolean): boolean =>
   typeof value === 'boolean' ? value : defaultValue;
 
-export const exportWorkflowBundleV1ForWorkflowId = async (knex: Knex, workflowId: string): Promise<WorkflowBundleV1> => {
-  const record = await WorkflowDefinitionModelV2.getById(knex, workflowId);
+export const exportWorkflowBundleV1ForWorkflowId = async (knex: Knex, tenantId: string, workflowId: string): Promise<WorkflowBundleV1> => {
+  const record = await WorkflowDefinitionModelV2.getById(knex, tenantId, workflowId);
   if (!record) {
     const error = new Error('Not found') as Error & { status?: number };
     error.status = 404;
@@ -54,7 +54,7 @@ export const exportWorkflowBundleV1ForWorkflowId = async (knex: Knex, workflowId
       pinnedPayloadSchemaRef: record.pinned_payload_schema_ref ?? null,
       trigger: (record.trigger as any) ?? null,
 
-      isSystem: normalizeBoolean(record.is_system, false),
+      isSystem: false,
       isVisible: normalizeBoolean(record.is_visible, true),
       isPaused: normalizeBoolean(record.is_paused, false),
       concurrencyLimit: record.concurrency_limit ?? null,
@@ -80,7 +80,7 @@ export const exportWorkflowBundleV1ForWorkflowId = async (knex: Knex, workflowId
   };
 };
 
-export const exportWorkflowBundleV1ForWorkflowIds = async (knex: Knex, workflowIds: string[]): Promise<WorkflowBundleV1> => {
+export const exportWorkflowBundleV1ForWorkflowIds = async (knex: Knex, tenantId: string, workflowIds: string[]): Promise<WorkflowBundleV1> => {
   const uniqueIds = Array.from(new Set(workflowIds.filter(Boolean)));
   if (!uniqueIds.length) {
     throw new Error('exportWorkflowBundleV1ForWorkflowIds requires at least one workflowId.');
@@ -88,6 +88,7 @@ export const exportWorkflowBundleV1ForWorkflowIds = async (knex: Knex, workflowI
 
   const records = await knex('workflow_definitions')
     .select('*')
+    .where({ tenant_id: tenantId })
     .whereIn('workflow_id', uniqueIds);
 
   const foundIds = new Set(records.map((r: any) => r.workflow_id));
@@ -139,7 +140,7 @@ export const exportWorkflowBundleV1ForWorkflowIds = async (knex: Knex, workflowI
         pinnedPayloadSchemaRef: record.pinned_payload_schema_ref ?? null,
         trigger: record.trigger ?? null,
 
-        isSystem: normalizeBoolean(record.is_system, false),
+        isSystem: false,
         isVisible: normalizeBoolean(record.is_visible, true),
         isPaused: normalizeBoolean(record.is_paused, false),
         concurrencyLimit: record.concurrency_limit ?? null,

@@ -979,7 +979,7 @@ export class WorkflowRuntimeV2 {
   }
 
   private async maybeAutoPauseWorkflow(knex: Knex, run: WorkflowRunRecord): Promise<void> {
-    const definition = await WorkflowDefinitionModelV2.getById(knex, run.workflow_id);
+    const definition = await WorkflowDefinitionModelV2.getById(knex, run.tenant_id ?? '', run.workflow_id);
     if (!definition?.auto_pause_on_failure) return;
     const minRuns = Number(definition.failure_rate_min_runs ?? 10);
     const threshold = Number(definition.failure_rate_threshold ?? 0.5);
@@ -996,7 +996,7 @@ export class WorkflowRuntimeV2 {
     const failureRate = failedCount / recentRuns.length;
 
     if (failureRate >= threshold && !definition.is_paused) {
-      await WorkflowDefinitionModelV2.update(knex, run.workflow_id, {
+      await WorkflowDefinitionModelV2.update(knex, run.tenant_id ?? '', run.workflow_id, {
         is_paused: true
       });
       await this.logRunEvent(knex, run, {

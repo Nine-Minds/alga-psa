@@ -283,6 +283,7 @@ async function runDbProjectionScenario(context) {
 
     await insertWithExistingColumns(db, 'workflow_definitions', {
       workflow_id: workflowId,
+      tenant_id: tenantId,
       name: definition.name,
       description: definition.description,
       payload_schema_ref: definition.payloadSchemaRef,

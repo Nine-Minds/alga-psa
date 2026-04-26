@@ -5,7 +5,24 @@
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
+exports.config = { transaction: false };
+
+const ensureSequentialMode = async (knex) => {
+  await knex.raw(`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM pg_extension WHERE extname = 'citus'
+      ) THEN
+        EXECUTE 'SET citus.multi_shard_modify_mode TO ''sequential''';
+      END IF;
+    END $$;
+  `);
+};
+
 exports.up = async function (knex) {
+  await ensureSequentialMode(knex);
+
   const { upsertEmailTemplate } = require('./utils/templates/_shared/upsertEmailTemplates.cjs');
   const { getTemplate: getAppointmentRequestApproved } = require('./utils/templates/email/appointments/appointmentRequestApproved.cjs');
   const { getTemplate: getAppointmentAssignedTechnician } = require('./utils/templates/email/appointments/appointmentAssignedTechnician.cjs');

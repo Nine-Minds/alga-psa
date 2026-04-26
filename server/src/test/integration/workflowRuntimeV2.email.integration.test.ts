@@ -56,7 +56,7 @@ function stubAction(actionId: string, version: number, handler: any) {
 async function seedEmailWorkflow() {
   const filePath = path.resolve(__dirname, '../../../../shared/workflow/runtime/workflows/email-processing-workflow.v2.json');
   const definition = { ...JSON.parse(fs.readFileSync(filePath, 'utf8')), id: EMAIL_WORKFLOW_ID };
-  await WorkflowDefinitionModelV2.create(db, {
+  await WorkflowDefinitionModelV2.create(db, tenantId, {
     workflow_id: definition.id,
     name: definition.name,
     description: definition.description,
@@ -402,7 +402,7 @@ describe('workflow runtime v2 email workflow integration tests', () => {
           }
         ]
       };
-      const record = await WorkflowDefinitionModelV2.create(db, {
+      const record = await WorkflowDefinitionModelV2.create(db, tenantId, {
         workflow_id: definition.id,
         name: definition.name,
         payload_schema_ref: definition.payloadSchemaRef,

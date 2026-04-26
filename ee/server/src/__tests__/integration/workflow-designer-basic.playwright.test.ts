@@ -66,7 +66,7 @@ async function setupDesigner(page: Page): Promise<{
     permissions: ADMIN_PERMISSIONS,
   });
 
-  await ensureSystemEmailWorkflow(db);
+  await ensureSystemEmailWorkflow(db, tenantData.tenant.tenantId);
 
   const workflowPage = new WorkflowDesignerPage(page);
   await workflowPage.goto(TEST_CONFIG.baseUrl);
@@ -76,6 +76,8 @@ async function setupDesigner(page: Page): Promise<{
 async function seedWorkflowDefinitions(db: Knex, count: number): Promise<{ ids: string[]; names: string[] }> {
   const ids: string[] = [];
   const names: string[] = [];
+  const tenantId = (await db('tenants').select('tenant').first())?.tenant;
+  if (!tenantId) throw new Error('tenant_id is required to seed workflow definitions');
   const now = new Date().toISOString();
   const records = Array.from({ length: count }).map((_, index) => {
     const workflowId = uuidv4();
@@ -92,6 +94,7 @@ async function seedWorkflowDefinitions(db: Knex, count: number): Promise<{ ids: 
     names.push(name);
     return {
       workflow_id: workflowId,
+      tenant_id: tenantId,
       name,
       description: null,
       payload_schema_ref: definition.payloadSchemaRef,

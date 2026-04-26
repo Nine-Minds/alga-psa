@@ -82,7 +82,7 @@ describe('Workflow Payload Contract Inference - Migration Tests', () => {
     expect(result.workflowId).toBeDefined();
 
     // Verify the record was created with inferred mode
-    const record = await WorkflowDefinitionModelV2.getById(db, result.workflowId);
+    const record = await WorkflowDefinitionModelV2.getById(db, tenantId, result.workflowId);
     expect(record?.payload_schema_mode).toBe('inferred');
   });
 
@@ -95,7 +95,7 @@ describe('Workflow Payload Contract Inference - Migration Tests', () => {
     };
 
     const result = await createWorkflowDefinitionAction({ definition });
-    const record = await WorkflowDefinitionModelV2.getById(db, result.workflowId);
+    const record = await WorkflowDefinitionModelV2.getById(db, tenantId, result.workflowId);
 
     // Should have payload_schema_mode column
     expect(record).toHaveProperty('payload_schema_mode');
@@ -120,7 +120,7 @@ describe('Workflow Payload Contract Inference - Migration Tests', () => {
       pinnedPayloadSchemaRef: TEST_SCHEMA_REF
     });
 
-    const record = await WorkflowDefinitionModelV2.getById(db, result.workflowId);
+    const record = await WorkflowDefinitionModelV2.getById(db, tenantId, result.workflowId);
     expect(record?.payload_schema_mode).toBe('pinned');
     expect(record?.pinned_payload_schema_ref).toBe(TEST_SCHEMA_REF);
   });
@@ -141,7 +141,7 @@ describe('Workflow Payload Contract Inference - Persistence Tests', () => {
       pinnedPayloadSchemaRef: 'payload.Custom.v1'
     });
 
-    const record = await WorkflowDefinitionModelV2.getById(db, result.workflowId);
+    const record = await WorkflowDefinitionModelV2.getById(db, tenantId, result.workflowId);
     expect(record?.payload_schema_mode).toBe('pinned');
     expect(record?.pinned_payload_schema_ref).toBe('payload.Custom.v1');
   });
@@ -171,7 +171,7 @@ describe('Workflow Payload Contract Inference - Persistence Tests', () => {
       payloadSchemaMode: 'inferred'
     });
 
-    const record = await WorkflowDefinitionModelV2.getById(db, result.workflowId);
+    const record = await WorkflowDefinitionModelV2.getById(db, tenantId, result.workflowId);
     expect(record?.payload_schema_mode).toBe('inferred');
     // Pinned ref may be preserved for later toggle back, or cleared
   });
@@ -248,7 +248,7 @@ describe('Workflow Payload Contract Inference - Publish Tests', () => {
       version: 1
     });
 
-    const record = await WorkflowDefinitionModelV2.getById(db, createResult.workflowId);
+    const record = await WorkflowDefinitionModelV2.getById(db, tenantId, createResult.workflowId);
     expect(record?.payload_schema_mode).toBeDefined();
   });
 
@@ -377,7 +377,7 @@ describe('Workflow Payload Contract Inference - Publish Tests', () => {
       version: 1
     });
 
-    const record = await WorkflowDefinitionModelV2.getById(db, createResult.workflowId);
+    const record = await WorkflowDefinitionModelV2.getById(db, tenantId, createResult.workflowId);
     expect(record?.payload_schema_mode).toBe('inferred');
   });
 
@@ -400,7 +400,7 @@ describe('Workflow Payload Contract Inference - Publish Tests', () => {
       version: 1
     });
 
-    const record = await WorkflowDefinitionModelV2.getById(db, createResult.workflowId);
+    const record = await WorkflowDefinitionModelV2.getById(db, tenantId, createResult.workflowId);
     expect(record?.payload_schema_mode).toBe('pinned');
   });
 });
@@ -476,7 +476,7 @@ describe('Workflow Payload Contract Inference - API Tests', () => {
       pinnedPayloadSchemaRef: TEST_SCHEMA_REF
     });
 
-    const record = await WorkflowDefinitionModelV2.getById(db, createResult.workflowId);
+    const record = await WorkflowDefinitionModelV2.getById(db, tenantId, createResult.workflowId);
 
     expect(record?.payload_schema_mode).toBeDefined();
     expect(record?.pinned_payload_schema_ref).toBeDefined();
@@ -495,7 +495,7 @@ describe('Workflow Payload Contract Inference - API Tests', () => {
       payloadSchemaMode: 'inferred'
     });
 
-    const workflows = await WorkflowDefinitionModelV2.list(db);
+    const workflows = await WorkflowDefinitionModelV2.list(db, tenantId);
     const created = workflows.find((w) => (w.draft_definition as any)?.name === 'Test Workflow');
 
     expect(created?.payload_schema_mode).toBeDefined();
@@ -515,7 +515,7 @@ describe('Workflow Payload Contract Inference - API Tests', () => {
       pinnedPayloadSchemaRef: TEST_SCHEMA_REF
     });
 
-    const record = await WorkflowDefinitionModelV2.getById(db, createResult.workflowId);
+    const record = await WorkflowDefinitionModelV2.getById(db, tenantId, createResult.workflowId);
 
     expect(record).toHaveProperty('payload_schema_mode');
     expect(record).toHaveProperty('pinned_payload_schema_ref');
@@ -591,7 +591,7 @@ describe('Workflow Payload Contract Inference - Compatibility Tests', () => {
       pinnedPayloadSchemaRef: TEST_SCHEMA_REF
     });
 
-    const record = await WorkflowDefinitionModelV2.getById(db, createResult.workflowId);
+    const record = await WorkflowDefinitionModelV2.getById(db, tenantId, createResult.workflowId);
 
     // Should be in pinned mode with the explicit ref
     expect(record?.payload_schema_mode).toBe('pinned');
@@ -689,7 +689,7 @@ describe('Workflow Payload Contract Inference - Validation Persistence Tests', (
       version: 1
     });
 
-    const record = await WorkflowDefinitionModelV2.getById(db, createResult.workflowId);
+    const record = await WorkflowDefinitionModelV2.getById(db, tenantId, createResult.workflowId);
 
     // Validation context should be stored
     expect(record).toHaveProperty('validation_status');
@@ -710,7 +710,7 @@ describe('Workflow Payload Contract Inference - Validation Persistence Tests', (
       version: 1
     });
 
-    const record = await WorkflowDefinitionModelV2.getById(db, createResult.workflowId);
+    const record = await WorkflowDefinitionModelV2.getById(db, tenantId, createResult.workflowId);
 
     // Should have a payload schema hash for drift detection
     expect(record).toHaveProperty('validation_payload_schema_hash');

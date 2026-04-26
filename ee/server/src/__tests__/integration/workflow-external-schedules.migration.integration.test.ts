@@ -78,6 +78,7 @@ describe('Workflow external schedules migration – DB integration', () => {
     const workflowId = uuidv4();
     await db('workflow_definitions').insert({
       workflow_id: workflowId,
+      tenant_id: 'tenant-a',
       name: 'Legacy Workflow',
       description: null,
       payload_schema_ref: 'payload.Empty.v1',

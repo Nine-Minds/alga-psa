@@ -476,7 +476,7 @@ async function blocksFromEmailBody(params: {
 
   if (html) {
     try {
-      const blocks = await convertHtmlToBlockNote(html);
+      const blocks = await convertHtmlToBlockNote(html, { flattenTables: true });
       return blocks.length ? blocks : blocksFallbackFromText(text ?? '');
     } catch {
       return blocksFallbackFromText(text ?? '');
