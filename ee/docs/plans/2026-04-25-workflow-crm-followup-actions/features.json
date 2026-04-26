@@ -1,0 +1,370 @@
+[
+  {
+    "id": "F001",
+    "description": "Register crm.create_interaction_type version 1 with type_name, icon, display_order, if_exists, and idempotency inputs",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.create_interaction_type"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Implement idempotent tenant-scoped interaction type creation with next display_order fallback and created_by attribution",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.create_interaction_type"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Enforce settings:update permission for crm.create_interaction_type because activity types are tenant CRM taxonomy configuration",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.create_interaction_type",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Register crm.update_activity_status version 1 with activity_id, status_id/status_name, reason, and no-op inputs",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.update_activity_status"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Implement crm.update_activity_status target activity validation and interaction status resolution",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.update_activity_status"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Implement crm.update_activity_status mutation/no-op behavior with before/current status output and audit",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.update_activity_status",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Register crm.create_quote version 1 with constrained quote creation schema and optional idempotency key",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.create_quote"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Validate crm.create_quote client/contact/date/currency inputs using existing quote schema rules where safe",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.create_quote"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Scope crm.create_quote v1 to quote header creation only; quote items use crm.add_quote_item and template creation uses crm.create_quote_from_template",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.create_quote",
+      "Requirements > crm.add_quote_item",
+      "Requirements > crm.create_quote_from_template",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Implement shared-runtime-safe crm.create_quote header persistence, output summary, and audit without inline quote item creation",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.create_quote",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Enforce billing create/read authorization for crm.create_quote equivalent to existing quote actions",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Register crm.find_quotes version 1 with quote_id, quote_number, client_id, status, date, template, pagination, and on_empty filters",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.find_quotes"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Implement crm.find_quotes tenant-scoped quote lookup/search with pagination and safe bounded-query behavior",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.find_quotes"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Enforce billing read and quote authorization-kernel filtering for crm.find_quotes",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.find_quotes",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Register crm.submit_quote_for_approval version 1 with quote_id, optional comment/reason, and no-op input",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.submit_quote_for_approval"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Implement crm.submit_quote_for_approval draft-only status transition, template guard, no-op behavior, quote activity/audit, and output summary",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.submit_quote_for_approval"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Enforce billing update/read authorization for crm.submit_quote_for_approval equivalent to existing quote actions",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Register crm.convert_quote version 1 with quote_id, target, and no-op input",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.convert_quote"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Implement crm.convert_quote validation for quote existence, non-template status, conversion eligibility, and no-op behavior",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.convert_quote"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Call shared-safe quote conversion services for contract, invoice, and contract_and_invoice targets and return target IDs",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.convert_quote",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Enforce billing create/update/read authorization for crm.convert_quote equivalent to existing quote conversion actions",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Register crm.tag_activity version 1 with activity_id, tags, if_exists, and idempotency inputs",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.tag_activity"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Validate crm.tag_activity target interaction exists in tenant; v1 scope is interaction-only because clients/contacts use their own module tag actions",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.tag_activity"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Implement tag text validation, tag definition creation, and idempotent tag mapping insertion for crm.tag_activity",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.tag_activity"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Enforce interaction update and tag create permissions for crm.tag_activity",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.tag_activity",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Emit TAG_DEFINITION_CREATED and TAG_APPLIED for new crm.tag_activity changes through lazy event publication with deterministic keys",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.tag_activity",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Drop crm.create_client_note from follow-up implementation scope in favor of clients.add_note and a future contacts.add_note action",
+    "implemented": true,
+    "prdRefs": [
+      "Non-goals",
+      "Rollout / Migration",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Add workflow picker metadata to supported follow-up CRM action UUID fields",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Cross-cutting Requirements"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Expose selected follow-up CRM actions through registerCrmActions and designer catalog without new catalog seed changes",
+    "implemented": true,
+    "prdRefs": [
+      "Cross-cutting Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Use shared workflow action helpers for tenant transaction, permissions, audit, action errors, and standard error rethrowing",
+    "implemented": true,
+    "prdRefs": [
+      "Cross-cutting Requirements"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Preserve crm.create_activity_note and first-pass CRM action behavior while adding follow-up actions",
+    "implemented": true,
+    "prdRefs": [
+      "Cross-cutting Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Document resolved scope and package-boundary decisions in the scratchpad before implementation completion, including interaction-only crm.tag_activity scope and quote event stance",
+    "implemented": true,
+    "prdRefs": [
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Register crm.add_quote_item version 1 with quote_id, line item fields, and optional idempotency key",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.add_quote_item"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Validate crm.add_quote_item target quote exists, belongs to tenant, is editable, and is not a template unless explicitly allowed",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.add_quote_item"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Validate crm.add_quote_item line item fields using existing quote item schema rules for quantity, price, discounts, recurring billing, optional selection, and tax fields",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.add_quote_item",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Implement shared-runtime-safe crm.add_quote_item persistence, display_order assignment, financial recalculation, output summary, and audit",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.add_quote_item",
+      "Data / API / Integrations",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Enforce billing update/read authorization for crm.add_quote_item equivalent to existing quote item update/create behavior",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.add_quote_item",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Register crm.create_quote_from_template version 1 with template_id, client/contact/date override fields, and optional idempotency key",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.create_quote_from_template"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "Validate crm.create_quote_from_template template quote exists in tenant, is marked as template, and target client/contact overrides are valid",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.create_quote_from_template"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Implement shared-runtime-safe crm.create_quote_from_template behavior by extracting or reusing existing template creation logic without importing withAuth server actions",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.create_quote_from_template",
+      "Cross-cutting Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Copy template quote header and item data safely for crm.create_quote_from_template, recalculate totals, return created quote/item summaries, and write audit",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.create_quote_from_template",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Enforce billing create/read authorization for crm.create_quote_from_template equivalent to existing quote template creation behavior",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > crm.create_quote_from_template",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "For quote pipeline actions, emit existing quote workflow events only if schemas/builders already exist; otherwise rely on audit logs and quote activities without adding new event schemas",
+    "implemented": true,
+    "prdRefs": [
+      "Observability",
+      "Open Questions"
+    ]
+  }
+]

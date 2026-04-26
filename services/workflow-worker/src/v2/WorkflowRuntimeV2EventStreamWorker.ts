@@ -2,7 +2,7 @@ import logger from '@shared/core/logger.js';
 import {
   RedisStreamClient,
   WorkflowEventBaseSchema,
-} from '@alga-psa/workflow-streams';
+} from '@alga-psa/shared/workflow/streams/index.js';
 import {
   createSecretResolverFromProvider,
   getSchemaRegistry,

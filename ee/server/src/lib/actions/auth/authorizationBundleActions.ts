@@ -12,8 +12,8 @@ import {
   type RelationshipTemplateKey,
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
-  createAuthorizationKernel,
 } from '@alga-psa/authorization/kernel';
+import { createAuthorizationKernelWithDefaultRbac } from '@alga-psa/authorization/adapters/rbac';
 import {
   archiveBundle,
   cloneAuthorizationBundle,
@@ -1005,7 +1005,7 @@ export const runAuthorizationBundleSimulationAction = withAuth(
       : [];
 
     const createKernelWithRules = (rules: BundleNarrowingRule[]) =>
-      createAuthorizationKernel({
+      createAuthorizationKernelWithDefaultRbac({
         builtinProvider: new BuiltinAuthorizationKernelProvider({
           relationshipRules:
             input.resourceType === 'document' && principal.user_type === 'client' && input.action === 'read'

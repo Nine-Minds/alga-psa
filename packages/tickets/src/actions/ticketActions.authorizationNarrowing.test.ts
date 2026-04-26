@@ -437,6 +437,7 @@ describe('ticket authorization narrowing for migrated list/detail paths', () => 
       bundleProvider: new BundleAuthorizationKernelProvider({
         resolveRules: (input) => resolveBundleNarrowingRulesForEvaluation(trx as any, input),
       }),
+      rbacEvaluator: async () => true,
     });
 
     const uiAllowedIds = (await getTicketsForList({ boardFilterState: 'all' } as any)).map((ticket) => ticket.ticket_id).sort();

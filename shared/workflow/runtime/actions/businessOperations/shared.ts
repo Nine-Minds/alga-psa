@@ -28,6 +28,9 @@ export function throwActionError(
 export function rethrowAsStandardError(ctx: ActionContext, error: unknown): never {
   const message = error instanceof Error ? error.message : String(error);
 
+  if (error instanceof z.ZodError) {
+    throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message });
+  }
   if (/VALIDATION_ERROR:|validation failed|input validation failed/i.test(message)) {
     throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message });
   }
