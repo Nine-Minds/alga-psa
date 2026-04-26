@@ -356,19 +356,15 @@ export async function convertQuoteToDraftContract(
     }))
   );
 
-  const configRows = contractLineMappings.map(({ item, contractLineId, contractLineType }) => {
-    if (!item.service_id) {
-      throw new Error('Recurring quote items must be linked to a catalog service before converting to a contract');
-    }
-
-    return {
+  const configRows = contractLineMappings
+    .filter(({ item }) => Boolean(item.service_id))
+    .map(({ item, contractLineId, contractLineType }) => ({
       item,
       contractLineId,
       contractLineType,
       configId: uuidv4(),
-      serviceId: item.service_id,
-    };
-  });
+      serviceId: item.service_id as string,
+    }));
 
   await insertRowsUsingExistingColumns(
     knexOrTrx,
@@ -384,19 +380,21 @@ export async function convertQuoteToDraftContract(
     }))
   );
 
-  await knexOrTrx('contract_line_service_configuration').insert(
-    configRows.map(({ configId, contractLineId, contractLineType, serviceId, item }) => ({
-      tenant,
-      config_id: configId,
-      contract_line_id: contractLineId,
-      service_id: serviceId,
-      configuration_type: contractLineType,
-      custom_rate: item.unit_price,
-      quantity: item.quantity,
-      created_at: nowIso,
-      updated_at: nowIso,
-    }))
-  );
+  if (configRows.length > 0) {
+    await knexOrTrx('contract_line_service_configuration').insert(
+      configRows.map(({ configId, contractLineId, contractLineType, serviceId, item }) => ({
+        tenant,
+        config_id: configId,
+        contract_line_id: contractLineId,
+        service_id: serviceId,
+        configuration_type: contractLineType,
+        custom_rate: item.unit_price,
+        quantity: item.quantity,
+        created_at: nowIso,
+        updated_at: nowIso,
+      }))
+    );
+  }
 
   const fixedConfigRows = configRows.filter((row) => row.contractLineType === 'Fixed');
   if (fixedConfigRows.length > 0) {

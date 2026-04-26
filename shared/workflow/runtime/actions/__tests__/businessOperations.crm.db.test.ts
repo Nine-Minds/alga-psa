@@ -852,8 +852,18 @@ describe('crm workflow runtime DB-backed action handlers', () => {
       tags: ['Needs QBR', 'Upsell Candidate'],
     });
 
+    expect(tagged.tagged_entity).toEqual({ type: 'client', id: clientId });
     expect(tagged.added_count).toBe(2);
     expect(tagged.existing_count).toBe(0);
+
+    const unsupportedInteractionMappings = await db('tag_mappings')
+      .where({ tenant: runtimeState.tenantId, tagged_id: activityId, tagged_type: 'interaction' });
+    expect(unsupportedInteractionMappings).toHaveLength(0);
+
+    const clientMappings = await db('tag_mappings')
+      .where({ tenant: runtimeState.tenantId, tagged_id: clientId, tagged_type: 'client' });
+    expect(clientMappings).toHaveLength(2);
+
     expect(publishWorkflowEventMock).toHaveBeenCalled();
     const publishedTypes = publishWorkflowEventMock.mock.calls.map((call) => call[0]?.eventType);
     expect(publishedTypes).toContain('TAG_DEFINITION_CREATED');

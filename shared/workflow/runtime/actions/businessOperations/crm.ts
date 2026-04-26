@@ -4,18 +4,20 @@ import type { Knex } from 'knex';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { withWorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
 import { getWorkflowEmailProvider } from '../../registries/workflowEmailRegistry';
-import Quote from '../../../../../packages/billing/src/models/quote';
-import QuoteItem from '../../../../../packages/billing/src/models/quoteItem';
-import QuoteActivity from '../../../../../packages/billing/src/models/quoteActivity';
-import { getQuoteApprovalWorkflowSettings } from '../../../../../packages/billing/src/lib/quoteApprovalSettings';
-import { createQuoteItemSchema, createQuoteSchema, quoteStatusSchema } from '../../../../../packages/billing/src/schemas/quoteSchemas';
 import {
+  Quote,
+  QuoteActivity,
+  QuoteItem,
+  TagDefinition,
+  TagMapping,
   convertQuoteToDraftContract,
   convertQuoteToDraftContractAndInvoice,
   convertQuoteToDraftInvoice,
-} from '../../../../../packages/billing/src/services/quoteConversionService';
-import TagDefinition from '../../../../../packages/tags/src/models/tagDefinition';
-import TagMapping from '../../../../../packages/tags/src/models/tagMapping';
+  createQuoteItemSchema,
+  createQuoteSchema,
+  getQuoteApprovalWorkflowSettings,
+  quoteStatusSchema,
+} from './crmWorkerDal';
 import {
   uuidSchema,
   isoDateTimeSchema,
@@ -37,6 +39,7 @@ import {
   type AuthorizationSubject,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+import type { TaggedEntityType } from '@alga-psa/types';
 
 const WORKFLOW_PICKER_HINTS = {
   client: 'Search clients',
@@ -61,6 +64,8 @@ const withWorkflowPicker = <T extends z.ZodTypeAny>(
 const nullableUuidSchema = z.union([uuidSchema, z.null()]);
 const visibilitySchema = z.enum(['internal', 'client_visible']);
 const onEmptySchema = z.enum(['return_empty', 'error']);
+const supportedActivityTagTargetTypes = ['ticket', 'contact', 'client'] as const;
+type SupportedActivityTagTargetType = Extract<TaggedEntityType, typeof supportedActivityTagTargetTypes[number]>;
 
 const activitySummarySchema = z.object({
   activity_id: uuidSchema,
@@ -264,14 +269,6 @@ const createQuoteInputSchema = z.object({
   terms_and_conditions: z.string().optional().nullable(),
   currency_code: z.string().trim().length(3).default('USD'),
   idempotency_key: z.string().optional(),
-}).superRefine((value, refinementCtx) => {
-  if (value.valid_until.getTime() < value.quote_date.getTime()) {
-    refinementCtx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'valid_until must be on or after quote_date',
-      path: ['valid_until'],
-    });
-  }
 });
 
 const addQuoteItemInputSchema = z.object({
@@ -718,65 +715,15 @@ async function publishWorkflowDomainEvent(params: {
 }
 
 async function maybeStoreQuotePdfBestEffort(
-  trx: Knex.Transaction,
-  tenantId: string,
-  quote: Record<string, unknown>,
-  actorUserId: string
+  _trx: Knex.Transaction,
+  _tenantId: string,
+  _quote: Record<string, unknown>,
+  _actorUserId: string
 ): Promise<void> {
-  try {
-    const [{ createPDFGenerationService }, documentsModule] = await Promise.all([
-      import('../../../../../packages/billing/src/services'),
-      import('@alga-psa/documents/models'),
-    ]);
-
-    const fileRecord = await createPDFGenerationService(tenantId).generateAndStore({
-      quoteId: String(quote.quote_id),
-      quoteNumber: typeof quote.quote_number === 'string' ? quote.quote_number : undefined,
-      userId: actorUserId,
-    });
-
-    const documentModel = (documentsModule as unknown as {
-      Document: {
-        insert: (trx: Knex.Transaction, row: Record<string, unknown>) => Promise<unknown>;
-      };
-      DocumentAssociation: {
-        create: (trx: Knex.Transaction, row: Record<string, unknown>) => Promise<unknown>;
-      };
-    }).Document;
-
-    const documentAssociation = (documentsModule as unknown as {
-      DocumentAssociation: {
-        create: (trx: Knex.Transaction, row: Record<string, unknown>) => Promise<unknown>;
-      };
-    }).DocumentAssociation;
-
-    const documentId = uuidv4();
-
-    await documentModel.insert(trx, {
-      document_id: documentId,
-      document_name: `Quote_${String(quote.quote_number ?? quote.quote_id)}.pdf`,
-      type_id: null,
-      user_id: actorUserId,
-      created_by: actorUserId,
-      order_number: 0,
-      tenant: tenantId,
-      file_id: fileRecord.file_id,
-      storage_path: fileRecord.storage_path,
-      mime_type: 'application/pdf',
-      file_size: fileRecord.file_size,
-      folder_path: '/Quotes/Generated',
-      is_client_visible: true,
-    });
-
-    await documentAssociation.create(trx, {
-      document_id: documentId,
-      entity_id: String(quote.quote_id),
-      entity_type: 'quote',
-      tenant: tenantId,
-    });
-  } catch {
-    // Best-effort PDF storage.
-  }
+  // PDF rendering is a server/UI concern today: the generator imports billing
+  // service barrels, invoice template React renderers, and document models. Keep
+  // the Temporal workflow worker graph worker-safe and skip this optional side
+  // effect until a worker-safe quote PDF provider exists.
 }
 
 async function resolveQuoteRecipients(
@@ -922,7 +869,7 @@ function normalizeQuoteDates<T extends Record<string, unknown>>(value: T): T {
   const normalized = { ...value };
   for (const field of ['quote_date', 'valid_until'] as const) {
     if (normalized[field] instanceof Date) {
-      normalized[field] = (normalized[field] as Date).toISOString();
+      (normalized as Record<string, unknown>)[field] = (normalized[field] as Date).toISOString();
     }
   }
   return normalized;
@@ -965,17 +912,49 @@ type QuoteAuthorizationRecord = {
   created_by: string | null;
 };
 
-function createQuoteAuthorizationKernel(knexOrTrx: Knex | Knex.Transaction) {
+let authorizationSavepointCounter = 0;
+
+async function runAuthorizationLookupInSavepoint<T>(
+  trx: Knex.Transaction,
+  lookup: () => Promise<T>,
+  fallback: T
+): Promise<T> {
+  const savepointName = `workflow_auth_lookup_${authorizationSavepointCounter++}`;
+
+  try {
+    await trx.raw(`SAVEPOINT ${savepointName}`);
+    const result = await lookup();
+    await trx.raw(`RELEASE SAVEPOINT ${savepointName}`);
+    return result;
+  } catch {
+    try {
+      await trx.raw(`ROLLBACK TO SAVEPOINT ${savepointName}`);
+      await trx.raw(`RELEASE SAVEPOINT ${savepointName}`);
+    } catch {
+      // Best effort: the caller receives the fallback value, and any unrecoverable
+      // transaction failure will surface on the next required DB operation.
+    }
+    return fallback;
+  }
+}
+
+async function resolveBundleNarrowingRulesSafely(
+  trx: Knex.Transaction,
+  input: Parameters<typeof resolveBundleNarrowingRulesForEvaluation>[1]
+): ReturnType<typeof resolveBundleNarrowingRulesForEvaluation> {
+  return runAuthorizationLookupInSavepoint(
+    trx,
+    () => resolveBundleNarrowingRulesForEvaluation(trx, input),
+    []
+  );
+}
+
+
+function createQuoteAuthorizationKernel(trx: Knex.Transaction) {
   return createAuthorizationKernel({
     builtinProvider: new BuiltinAuthorizationKernelProvider({ mutationGuards: [] }),
     bundleProvider: new BundleAuthorizationKernelProvider({
-      resolveRules: async (input) => {
-        try {
-          return await resolveBundleNarrowingRulesForEvaluation(knexOrTrx, input);
-        } catch {
-          return [];
-        }
-      },
+      resolveRules: async (input) => resolveBundleNarrowingRulesSafely(trx, input),
     }),
     rbacEvaluator: async () => true,
   });
@@ -986,16 +965,29 @@ async function resolveQuoteAuthorizationSubject(
   tenantId: string,
   actorUserId: string
 ): Promise<AuthorizationSubject> {
-  const [roleRows, teamRows, managedRows, userRow] = await Promise.all([
-    trx('user_roles').where({ tenant: tenantId, user_id: actorUserId }).select<{ role_id: string }[]>('role_id').catch(() => []),
-    trx('team_members').where({ tenant: tenantId, user_id: actorUserId }).select<{ team_id: string }[]>('team_id').catch(() => []),
-    trx('users').where({ tenant: tenantId, reports_to: actorUserId }).select<{ user_id: string }[]>('user_id').catch(() => []),
-    trx('users')
+  const roleRows = await runAuthorizationLookupInSavepoint(
+    trx,
+    () => trx('user_roles').where({ tenant: tenantId, user_id: actorUserId }).select<{ role_id: string }[]>('role_id'),
+    []
+  );
+  const teamRows = await runAuthorizationLookupInSavepoint(
+    trx,
+    () => trx('team_members').where({ tenant: tenantId, user_id: actorUserId }).select<{ team_id: string }[]>('team_id'),
+    []
+  );
+  const managedRows = await runAuthorizationLookupInSavepoint(
+    trx,
+    () => trx('users').where({ tenant: tenantId, reports_to: actorUserId }).select<{ user_id: string }[]>('user_id'),
+    []
+  );
+  const userRow = await runAuthorizationLookupInSavepoint(
+    trx,
+    () => trx('users')
       .where({ tenant: tenantId, user_id: actorUserId })
       .select<{ user_type?: string | null; contact_id?: string | null; client_id?: string | null }>('user_type', 'contact_id', 'client_id')
-      .first()
-      .catch(() => null),
-  ]);
+      .first(),
+    null
+  );
 
   const clientId = userRow?.client_id ?? null;
   return {
@@ -1071,6 +1063,30 @@ async function getAuthorizedQuoteForMutation(
   }
 
   return quote;
+}
+
+function resolveSupportedActivityTagTarget(
+  ctx: any,
+  interaction: Record<string, unknown>
+): { type: SupportedActivityTagTargetType; id: string } {
+  if (interaction.ticket_id) {
+    return { type: 'ticket', id: String(interaction.ticket_id) };
+  }
+  if (interaction.contact_name_id) {
+    return { type: 'contact', id: String(interaction.contact_name_id) };
+  }
+  if (interaction.client_id) {
+    return { type: 'client', id: String(interaction.client_id) };
+  }
+
+  throwActionError(ctx, {
+    category: 'ValidationError',
+    code: 'VALIDATION_ERROR',
+    message: 'Activity cannot be tagged because it is not linked to a supported tag target',
+    details: {
+      supported_entity_types: supportedActivityTagTargetTypes,
+    },
+  });
 }
 
 async function resolveInteractionStatus(
@@ -1171,7 +1187,6 @@ export function registerCrmActions(): void {
           };
         }
 
-        const nowIso = new Date().toISOString();
         const typeId = uuidv4();
 
         const displayOrder = input.display_order ?? await (async () => {
@@ -1190,7 +1205,6 @@ export function registerCrmActions(): void {
             icon: input.icon?.trim() || null,
             display_order: displayOrder,
             created_by: tx.actorUserId,
-            created_at: nowIso,
           });
         } catch (error) {
           rethrowAsStandardError(ctx, error);
@@ -1700,28 +1714,49 @@ export function registerCrmActions(): void {
       withTenantTransaction(ctx, async (tx) => {
         await requirePermission(ctx, tx, { resource: 'billing', action: 'read' });
 
-        const query = tx.trx('quotes')
-          .where({ tenant: tx.tenantId, is_template: input.is_template });
+        const page = input.page ?? 1;
+        const pageSize = input.pageSize ?? 25;
+        const sortBy = input.sortBy ?? 'quote_date';
+        const sortOrder = input.sortOrder ?? 'desc';
 
-        if (input.quote_id) query.andWhere('quote_id', input.quote_id);
-        if (input.quote_number) query.andWhere('quote_number', input.quote_number);
-        if (input.client_id) query.andWhere('client_id', input.client_id);
-        if (input.status) query.andWhere('status', input.status);
-        if (input.date_from) query.andWhere('quote_date', '>=', input.date_from.toISOString());
-        if (input.date_to) query.andWhere('quote_date', '<=', input.date_to.toISOString());
+        const buildQuery = () => {
+          const query = tx.trx('quotes')
+            .where({ tenant: tx.tenantId, is_template: input.is_template ?? false });
 
-        query.orderBy(input.sortBy, input.sortOrder);
-        query.limit(input.pageSize).offset((input.page - 1) * input.pageSize);
+          if (input.quote_id) query.andWhere('quote_id', input.quote_id);
+          if (input.quote_number) query.andWhere('quote_number', input.quote_number);
+          if (input.client_id) query.andWhere('client_id', input.client_id);
+          if (input.status) query.andWhere('status', input.status);
+          if (input.date_from) query.andWhere('quote_date', '>=', input.date_from.toISOString());
+          if (input.date_to) query.andWhere('quote_date', '<=', input.date_to.toISOString());
 
-        const rows = await query;
+          return query.orderBy(sortBy, sortOrder).orderBy('quote_id', 'asc');
+        };
+
         const authorizedRows: Array<Record<string, unknown>> = [];
-        for (const row of rows) {
-          if (await authorizeQuoteRead(tx.trx, tx.tenantId, tx.actorUserId, row)) {
-            authorizedRows.push(row as Record<string, unknown>);
+        const targetAuthorizedCount = page * pageSize;
+        const sourceBatchSize = Math.max(pageSize, 100);
+        let sourceOffset = 0;
+
+        while (authorizedRows.length < targetAuthorizedCount) {
+          const rows = await buildQuery().limit(sourceBatchSize).offset(sourceOffset);
+          if (rows.length === 0) break;
+
+          sourceOffset += rows.length;
+          for (const row of rows) {
+            if (await authorizeQuoteRead(tx.trx, tx.tenantId, tx.actorUserId, row)) {
+              authorizedRows.push(row as Record<string, unknown>);
+              if (authorizedRows.length >= targetAuthorizedCount) break;
+            }
           }
+
+          if (rows.length < sourceBatchSize) break;
         }
 
-        if (authorizedRows.length === 0 && input.on_empty === 'error') {
+        const pageStart = (page - 1) * pageSize;
+        const pageRows = authorizedRows.slice(pageStart, targetAuthorizedCount);
+
+        if (pageRows.length === 0 && input.on_empty === 'error') {
           throwActionError(ctx, {
             category: 'ActionError',
             code: 'NOT_FOUND',
@@ -1729,14 +1764,14 @@ export function registerCrmActions(): void {
           });
         }
 
-        const summaries = authorizedRows.map((row) => toQuoteDetailSummary(row));
+        const summaries = pageRows.map((row) => toQuoteDetailSummary(row));
         return {
           quotes: summaries,
           first_quote: summaries[0] ?? null,
           count: summaries.length,
           pagination: {
-            page: input.page,
-            page_size: input.pageSize,
+            page,
+            page_size: pageSize,
           },
         };
       }),
@@ -1888,8 +1923,8 @@ export function registerCrmActions(): void {
         if (alreadyConverted && input.no_op_if_already_converted) {
           return {
             quote: toQuoteDetailSummary(quote),
-            contract_id: quote.converted_contract_id ?? null,
-            invoice_id: quote.converted_invoice_id ?? null,
+            contract_id: typeof quote.converted_contract_id === 'string' ? quote.converted_contract_id : null,
+            invoice_id: typeof quote.converted_invoice_id === 'string' ? quote.converted_invoice_id : null,
             no_op: true,
           };
         }
@@ -1977,6 +2012,10 @@ export function registerCrmActions(): void {
     inputSchema: tagActivityInputSchema,
     outputSchema: z.object({
       activity_id: uuidSchema,
+      tagged_entity: z.object({
+        type: z.enum(supportedActivityTagTargetTypes),
+        id: uuidSchema,
+      }),
       added_tags: z.array(z.object({ tag_id: uuidSchema, tag_text: z.string(), mapping_id: uuidSchema })),
       existing_tags: z.array(z.object({ tag_id: uuidSchema, tag_text: z.string(), mapping_id: uuidSchema })),
       added_count: z.number().int(),
@@ -1991,7 +2030,7 @@ export function registerCrmActions(): void {
     },
     handler: async (input, ctx) =>
       withTenantTransaction(ctx, async (tx) => {
-        await requirePermission(ctx, tx, { resource: 'client', action: 'update' });
+        await requirePermission(ctx, tx, { resource: 'interaction', action: 'update' });
 
         const interaction = await tx.trx('interactions')
           .where({ tenant: tx.tenantId, interaction_id: input.activity_id })
@@ -2005,6 +2044,9 @@ export function registerCrmActions(): void {
           });
         }
 
+        const tagTarget = resolveSupportedActivityTagTarget(ctx, interaction as Record<string, unknown>);
+        await requirePermission(ctx, tx, { resource: tagTarget.type, action: 'update' });
+
         const normalizedTags = Array.from(new Set(input.tags.map((tag) => validateTagText(tag))));
         const addedTags: Array<{ tag_id: string; tag_text: string; mapping_id: string }> = [];
         const existingTags: Array<{ tag_id: string; tag_text: string; mapping_id: string }> = [];
@@ -2012,7 +2054,7 @@ export function registerCrmActions(): void {
         const createdMappings: Array<{ tag_id: string; tagged_id: string; created_at?: Date }> = [];
 
         for (const tagText of normalizedTags) {
-          const maybeExistingDefinition = await TagDefinition.findByTextAndType(tx.trx, tx.tenantId, tagText, 'interaction');
+          const maybeExistingDefinition = await TagDefinition.findByTextAndType(tx.trx, tx.tenantId, tagText, tagTarget.type);
           if (!maybeExistingDefinition) {
             await requirePermission(ctx, tx, { resource: 'tag', action: 'create' });
           }
@@ -2021,7 +2063,7 @@ export function registerCrmActions(): void {
             tx.trx,
             tx.tenantId,
             tagText,
-            'interaction',
+            tagTarget.type,
             {}
           );
 
@@ -2029,8 +2071,8 @@ export function registerCrmActions(): void {
             .where({
               tenant: tx.tenantId,
               tag_id: definition.tag_id,
-              tagged_id: input.activity_id,
-              tagged_type: 'interaction',
+              tagged_id: tagTarget.id,
+              tagged_type: tagTarget.type,
             })
             .first();
 
@@ -2039,8 +2081,8 @@ export function registerCrmActions(): void {
               throwActionError(ctx, {
                 category: 'ActionError',
                 code: 'CONFLICT',
-                message: 'Tag is already applied to this activity',
-                details: { activity_id: input.activity_id, tag_text: tagText },
+                message: 'Tag is already applied to this activity target',
+                details: { activity_id: input.activity_id, tagged_entity: tagTarget, tag_text: tagText },
               });
             }
             existingTags.push({
@@ -2053,8 +2095,8 @@ export function registerCrmActions(): void {
 
           const mapping = await TagMapping.insert(tx.trx, tx.tenantId, {
             tag_id: definition.tag_id,
-            tagged_id: input.activity_id,
-            tagged_type: 'interaction',
+            tagged_id: tagTarget.id,
+            tagged_type: tagTarget.type,
             created_by: tx.actorUserId,
           }, tx.actorUserId);
 
@@ -2067,7 +2109,7 @@ export function registerCrmActions(): void {
           }
           createdMappings.push({
             tag_id: definition.tag_id,
-            tagged_id: input.activity_id,
+            tagged_id: tagTarget.id,
             created_at: mapping.created_at,
           });
           addedTags.push({
@@ -2099,7 +2141,7 @@ export function registerCrmActions(): void {
             eventType: 'TAG_APPLIED',
             payload: buildTagAppliedPayload({
               tagId: mapping.tag_id,
-              entityType: 'interaction',
+              entityType: tagTarget.type,
               entityId: mapping.tagged_id,
               appliedByUserId: tx.actorUserId,
               appliedAt: mapping.created_at ?? occurredAt,
@@ -2107,7 +2149,7 @@ export function registerCrmActions(): void {
             tenantId: tx.tenantId,
             occurredAt,
             actorUserId: tx.actorUserId,
-            idempotencyKey: `tag_applied:${mapping.tagged_id}:${mapping.tag_id}`,
+            idempotencyKey: `tag_applied:${tagTarget.type}:${mapping.tagged_id}:${mapping.tag_id}`,
           });
         }
 
@@ -2115,6 +2157,8 @@ export function registerCrmActions(): void {
           operation: 'workflow_action:crm.tag_activity',
           changedData: {
             activity_id: input.activity_id,
+            tagged_entity_type: tagTarget.type,
+            tagged_entity_id: tagTarget.id,
             tags: normalizedTags,
             added_count: addedTags.length,
             existing_count: existingTags.length,
@@ -2123,11 +2167,14 @@ export function registerCrmActions(): void {
             action_id: 'crm.tag_activity',
             action_version: 1,
             activity_id: input.activity_id,
+            tagged_entity_type: tagTarget.type,
+            tagged_entity_id: tagTarget.id,
           },
         });
 
         return {
           activity_id: input.activity_id,
+          tagged_entity: tagTarget,
           added_tags: addedTags,
           existing_tags: existingTags,
           added_count: addedTags.length,
@@ -2338,7 +2385,8 @@ export function registerCrmActions(): void {
         if (input.date_from) query.andWhere('i.interaction_date', '>=', input.date_from);
         if (input.date_to) query.andWhere('i.interaction_date', '<=', input.date_to);
 
-        query.orderBy('i.interaction_date', 'desc').limit(input.limit);
+        const limit = input.limit ?? 25;
+        query.orderBy('i.interaction_date', 'desc').limit(limit);
 
         let rows: Array<Record<string, unknown>>;
         try {
@@ -2368,7 +2416,7 @@ export function registerCrmActions(): void {
             status_id: input.status_id ?? null,
             date_from: input.date_from ?? null,
             date_to: input.date_to ?? null,
-            limit: input.limit,
+            limit,
           },
         };
       }),
@@ -2715,15 +2763,12 @@ export function registerCrmActions(): void {
         await requirePermission(ctx, tx, { resource: 'billing', action: 'read' });
         await requirePermission(ctx, tx, { resource: 'billing', action: 'update' });
 
-        const quote = await tx.trx('quotes').where({ tenant: tx.tenantId, quote_id: input.quote_id }).first();
-        if (!quote) {
-          throwActionError(ctx, {
-            category: 'ActionError',
-            code: 'NOT_FOUND',
-            message: 'Quote not found',
-            details: { quote_id: input.quote_id },
-          });
-        }
+        const quote = await getAuthorizedQuoteForMutation(
+          ctx,
+          tx,
+          input.quote_id,
+          'Permission denied: Cannot update quote'
+        );
 
         if (quote.is_template) {
           throwActionError(ctx, {

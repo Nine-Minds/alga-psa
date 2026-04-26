@@ -1,8 +1,6 @@
 import type { AuthorizationKernel } from '@alga-psa/authorization/kernel';
-import {
-  BuiltinAuthorizationKernelProvider,
-  createAuthorizationKernel,
-} from '@alga-psa/authorization/kernel';
+import { BuiltinAuthorizationKernelProvider } from '@alga-psa/authorization/kernel';
+import { createAuthorizationKernelWithDefaultRbac } from '@alga-psa/authorization/adapters/rbac';
 import { loadEnterpriseAuthorizationKernelFactory } from './enterpriseEntry';
 
 declare global {
@@ -11,7 +9,7 @@ declare global {
 }
 
 export function createBuiltinAuthorizationKernel(): AuthorizationKernel {
-  return createAuthorizationKernel({
+  return createAuthorizationKernelWithDefaultRbac({
     builtinProvider: new BuiltinAuthorizationKernelProvider(),
   });
 }
