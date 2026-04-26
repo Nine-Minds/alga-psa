@@ -5,6 +5,10 @@ import { deleteEntityWithValidation, isEnterprise } from '@alga-psa/core';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { withWorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
 import { ContactModel } from '../../../../models/contactModel';
+import type {
+  ContactEmailAddressInput as ContactModelEmailInput,
+  ContactPhoneNumberInput as ContactModelPhoneInput,
+} from '../../../../interfaces/contact.interfaces';
 import { buildContactArchivedPayload, buildContactCreatedPayload, buildContactUpdatedPayload } from '../../../streams/domainEventBuilders/contactEventBuilders';
 import { buildInteractionLoggedPayload, buildNoteCreatedPayload } from '../../../streams/domainEventBuilders/crmInteractionNoteEventBuilders';
 import {
@@ -56,14 +60,21 @@ const tagResultSchema = z.object({
 
 const nullableUuidSchema = z.union([uuidSchema, z.null()]);
 
+const CONTACT_PHONE_CANONICAL_TYPES = ['work', 'mobile', 'home', 'fax', 'other'] as const;
+
 const contactPhoneInputSchema = z.object({
   contact_phone_number_id: uuidSchema.optional(),
   phone_number: z.string().min(1),
-  canonical_type: z.enum(['work', 'mobile', 'home', 'fax', 'other']).nullable().optional(),
+  canonical_type: z.enum(CONTACT_PHONE_CANONICAL_TYPES).nullable().optional(),
   custom_type: z.string().nullable().optional(),
   is_default: z.boolean().optional(),
   display_order: z.number().int().min(0).optional(),
 });
+
+type ContactPhoneInput = z.infer<typeof contactPhoneInputSchema>;
+
+const isContactPhoneCanonicalType = (value: unknown): value is ContactPhoneInput['canonical_type'] =>
+  value === null || CONTACT_PHONE_CANONICAL_TYPES.includes(value as (typeof CONTACT_PHONE_CANONICAL_TYPES)[number]);
 
 const contactAdditionalEmailInputSchema = z.object({
   contact_additional_email_address_id: uuidSchema.optional(),
@@ -899,8 +910,8 @@ export function registerContactActions(): void {
               is_inactive: input.is_inactive,
               primary_email_canonical_type: input.primary_email_canonical_type ?? undefined,
               primary_email_custom_type: input.primary_email_custom_type ?? undefined,
-              phone_numbers: input.phone_numbers ?? undefined,
-              additional_email_addresses: input.additional_email_addresses ?? undefined,
+              phone_numbers: input.phone_numbers as ContactModelPhoneInput[] | undefined,
+              additional_email_addresses: input.additional_email_addresses as ContactModelEmailInput[] | undefined,
             },
             tx.tenantId,
             tx.trx
@@ -925,31 +936,29 @@ export function registerContactActions(): void {
           details: { action_id: 'contacts.create', action_version: 1, contact_id: after.contact_name_id },
         });
 
-        if (typeof after.client_id === 'string' && after.client_id) {
-          const occurredAt = (after.created_at as string | undefined) ?? new Date().toISOString();
-          await publishWorkflowDomainEvent({
-            eventType: 'CONTACT_CREATED',
-            payload: buildContactCreatedPayload({
-              contactId: after.contact_name_id,
-              clientId: after.client_id,
-              fullName: after.full_name,
-              email: after.email ?? undefined,
-              primaryEmailCanonicalType: after.primary_email_canonical_type ?? null,
-              primaryEmailCustomTypeId: after.primary_email_custom_type_id ?? null,
-              primaryEmailType: after.primary_email_type ?? null,
-              additionalEmailAddresses: after.additional_email_addresses ?? [],
-              phoneNumbers: after.phone_numbers ?? [],
-              defaultPhoneNumber: after.default_phone_number ?? undefined,
-              defaultPhoneType: after.default_phone_type ?? undefined,
-              createdByUserId: tx.actorUserId,
-              createdAt: occurredAt,
-            }),
-            tenantId: tx.tenantId,
-            occurredAt,
-            actorUserId: tx.actorUserId,
-            idempotencyKey: `contact_created:${after.contact_name_id}`,
-          });
-        }
+        const occurredAt = (after.created_at as string | undefined) ?? new Date().toISOString();
+        await publishWorkflowDomainEvent({
+          eventType: 'CONTACT_CREATED',
+          payload: buildContactCreatedPayload({
+            contactId: after.contact_name_id,
+            clientId: after.client_id ?? null,
+            fullName: after.full_name,
+            email: after.email ?? undefined,
+            primaryEmailCanonicalType: after.primary_email_canonical_type ?? null,
+            primaryEmailCustomTypeId: after.primary_email_custom_type_id ?? null,
+            primaryEmailType: after.primary_email_type ?? null,
+            additionalEmailAddresses: after.additional_email_addresses ?? [],
+            phoneNumbers: after.phone_numbers ?? [],
+            defaultPhoneNumber: after.default_phone_number ?? undefined,
+            defaultPhoneType: after.default_phone_type ?? undefined,
+            createdByUserId: tx.actorUserId,
+            createdAt: occurredAt,
+          }),
+          tenantId: tx.tenantId,
+          occurredAt,
+          actorUserId: tx.actorUserId,
+          idempotencyKey: `contact_created:${after.contact_name_id}`,
+        });
 
         return {
           created: true,
@@ -992,23 +1001,16 @@ export function registerContactActions(): void {
           await ensureClientExists(ctx, tx, patch.client_id);
         }
 
+        const updatePayload: Record<string, unknown> = {};
+        for (const key of changedFields) {
+          updatePayload[key] = (patch as Record<string, unknown>)[key];
+        }
+
         let after: Record<string, any>;
         try {
           after = await ContactModel.updateContact(
             input.contact_id,
-            {
-              full_name: patch.full_name,
-              email: patch.email ?? undefined,
-              client_id: patch.client_id === null ? null as unknown as string : patch.client_id ?? undefined,
-              role: patch.role ?? undefined,
-              notes: patch.notes ?? undefined,
-              is_inactive: patch.is_inactive,
-              primary_email_canonical_type: patch.primary_email_canonical_type ?? undefined,
-              primary_email_custom_type: patch.primary_email_custom_type ?? undefined,
-              primary_email_custom_type_id: patch.primary_email_custom_type_id ?? undefined,
-              phone_numbers: patch.phone_numbers ?? undefined,
-              additional_email_addresses: patch.additional_email_addresses ?? undefined,
-            } as any,
+            updatePayload as any,
             tx.tenantId,
             tx.trx
           ) as unknown as Record<string, any>;
@@ -1028,32 +1030,36 @@ export function registerContactActions(): void {
         const eventClientId = (after.client_id ?? before.client_id) as string | null;
         const occurredAt = (after.updated_at as string | undefined) ?? new Date().toISOString();
 
-        if (typeof eventClientId === 'string' && eventClientId) {
-          const updatedPayload = buildContactUpdatedPayload({
-            contactId: input.contact_id,
-            clientId: eventClientId,
-            before,
-            after,
-            updatedFieldKeys: changedFields,
-            updatedByUserId: tx.actorUserId,
-            updatedAt: occurredAt,
+        const updatedPayload = buildContactUpdatedPayload({
+          contactId: input.contact_id,
+          clientId: eventClientId,
+          before: {
+            ...before,
+            contact_name_id: String(before.contact_name_id ?? input.contact_id),
+          },
+          after: {
+            ...after,
+            contact_name_id: String(after.contact_name_id ?? input.contact_id),
+          },
+          updatedFieldKeys: changedFields,
+          updatedByUserId: tx.actorUserId,
+          updatedAt: occurredAt,
+        });
+        const updatedFields = (updatedPayload as { updatedFields?: string[] }).updatedFields ?? [];
+        if (updatedFields.length > 0) {
+          await publishWorkflowDomainEvent({
+            eventType: 'CONTACT_UPDATED',
+            payload: updatedPayload,
+            tenantId: tx.tenantId,
+            occurredAt,
+            actorUserId: tx.actorUserId,
+            idempotencyKey: `contact_updated:${input.contact_id}:${occurredAt}`,
           });
-          const updatedFields = (updatedPayload as { updatedFields?: string[] }).updatedFields ?? [];
-          if (updatedFields.length > 0) {
-            await publishWorkflowDomainEvent({
-              eventType: 'CONTACT_UPDATED',
-              payload: updatedPayload,
-              tenantId: tx.tenantId,
-              occurredAt,
-              actorUserId: tx.actorUserId,
-              idempotencyKey: `contact_updated:${input.contact_id}:${occurredAt}`,
-            });
-          }
         }
 
         const wasInactive = Boolean(before.is_inactive);
         const isInactive = Boolean(after.is_inactive);
-        if (!wasInactive && isInactive && typeof eventClientId === 'string' && eventClientId) {
+        if (!wasInactive && isInactive) {
           await publishWorkflowDomainEvent({
             eventType: 'CONTACT_ARCHIVED',
             payload: buildContactArchivedPayload({
@@ -1119,22 +1125,20 @@ export function registerContactActions(): void {
           after = await ensureContactExists(ctx, tx, input.contact_id);
           currentInactive = Boolean(after.is_inactive);
 
-          if (typeof after.client_id === 'string' && after.client_id) {
-            await publishWorkflowDomainEvent({
-              eventType: 'CONTACT_ARCHIVED',
-              payload: buildContactArchivedPayload({
-                contactId: input.contact_id,
-                clientId: after.client_id,
-                archivedByUserId: tx.actorUserId,
-                archivedAt: nowIso,
-                reason: input.reason,
-              }),
-              tenantId: tx.tenantId,
-              occurredAt: nowIso,
-              actorUserId: tx.actorUserId,
-              idempotencyKey: `contact_archived:${input.contact_id}:${nowIso}`,
-            });
-          }
+          await publishWorkflowDomainEvent({
+            eventType: 'CONTACT_ARCHIVED',
+            payload: buildContactArchivedPayload({
+              contactId: input.contact_id,
+              clientId: after.client_id ?? null,
+              archivedByUserId: tx.actorUserId,
+              archivedAt: nowIso,
+              reason: input.reason,
+            }),
+            tenantId: tx.tenantId,
+            occurredAt: nowIso,
+            actorUserId: tx.actorUserId,
+            idempotencyKey: `contact_archived:${input.contact_id}:${nowIso}`,
+          });
         }
 
         await writeRunAudit(ctx, tx, {
@@ -1276,10 +1280,10 @@ export function registerContactActions(): void {
         }
 
         let duplicate: Record<string, any>;
-        const sourcePhoneNumbers = Array.isArray(source.phone_numbers)
+        const sourcePhoneNumbers: ContactModelPhoneInput[] = Array.isArray(source.phone_numbers)
           ? source.phone_numbers.map((phone: Record<string, unknown>, index: number) => ({
               phone_number: phone.phone_number as string,
-              canonical_type: (phone.canonical_type as string | null | undefined) ?? undefined,
+              canonical_type: isContactPhoneCanonicalType(phone.canonical_type) ? phone.canonical_type : undefined,
               custom_type: (phone.custom_type as string | null | undefined) ?? undefined,
               is_default: Boolean(phone.is_default),
               display_order: typeof phone.display_order === 'number' ? phone.display_order : index,
@@ -1297,8 +1301,8 @@ export function registerContactActions(): void {
               primary_email_canonical_type:
                 input.primary_email_canonical_type ?? source.primary_email_canonical_type ?? undefined,
               primary_email_custom_type: input.primary_email_custom_type ?? undefined,
-              phone_numbers: input.phone_numbers ?? sourcePhoneNumbers,
-              additional_email_addresses: input.additional_email_addresses ?? [],
+              phone_numbers: (input.phone_numbers as ContactModelPhoneInput[] | undefined) ?? sourcePhoneNumbers,
+              additional_email_addresses: (input.additional_email_addresses as ContactModelEmailInput[] | undefined) ?? [],
             },
             tx.tenantId,
             tx.trx

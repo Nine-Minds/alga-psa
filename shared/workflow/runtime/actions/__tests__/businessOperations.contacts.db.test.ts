@@ -458,6 +458,7 @@ describe('contact workflow runtime DB-backed action handlers', () => {
       email: 'update.target@example.com',
       client_id: clientId,
       role: 'Initial',
+      notes: 'Initial Notes',
       phone_numbers: [{ phone_number: '555-0102', canonical_type: 'work', is_default: true }],
       additional_email_addresses: [{ email_address: 'update.target+alt@example.com', canonical_type: 'personal' }],
     }).then((result) => result.contact.contact_name_id as string);
@@ -476,6 +477,29 @@ describe('contact workflow runtime DB-backed action handlers', () => {
 
     const stored = await db('contacts').where({ tenant: runtimeState.tenantId, contact_name_id: contactId }).first();
     expect(stored.email).toBe('update.target@example.com');
+    expect(stored.notes).toBe('Initial Notes');
+
+    const cleared = await invokeAction('contacts.update', {
+      contact_id: contactId,
+      patch: {
+        role: null,
+        notes: null,
+      },
+    });
+    expect(cleared.changed_fields).toEqual(expect.arrayContaining(['role', 'notes']));
+
+    const clearedStored = await db('contacts').where({ tenant: runtimeState.tenantId, contact_name_id: contactId }).first();
+    expect(clearedStored.role).toBeNull();
+    expect(clearedStored.notes).toBeNull();
+
+    await expect(
+      invokeAction('contacts.update', {
+        contact_id: contactId,
+        patch: {
+          email: null,
+        },
+      })
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
 
     await expect(
       invokeAction('contacts.update', {
@@ -916,6 +940,34 @@ describe('contact workflow runtime DB-backed action handlers', () => {
     expect(eventTypes).toContain('CONTACT_CREATED');
     expect(eventTypes).toContain('CONTACT_UPDATED');
     expect(eventTypes).toContain('CONTACT_ARCHIVED');
+  });
+
+  it('T014b: contact create/update/deactivate events are published for unassigned contacts', async () => {
+    const created = await invokeAction('contacts.create', {
+      full_name: 'Unassigned Event Contact',
+      email: 'unassigned.event@example.com',
+    });
+
+    const contactId = created.contact.contact_name_id as string;
+    await invokeAction('contacts.update', {
+      contact_id: contactId,
+      patch: { full_name: 'Unassigned Event Contact Updated' },
+    });
+    await invokeAction('contacts.deactivate', { contact_id: contactId });
+
+    const contactEvents = runtimeState.publishedEvents.filter((event) =>
+      ['CONTACT_CREATED', 'CONTACT_UPDATED', 'CONTACT_ARCHIVED'].includes(event.eventType)
+    );
+
+    expect(contactEvents.map((event) => event.eventType)).toEqual([
+      'CONTACT_CREATED',
+      'CONTACT_UPDATED',
+      'CONTACT_ARCHIVED',
+    ]);
+    for (const event of contactEvents) {
+      expect(event.payload.contactId).toBe(contactId);
+      expect(event.payload).not.toHaveProperty('clientId');
+    }
   });
 
   it('T015: contacts.deactivate sets inactive and is idempotent on repeated calls', async () => {

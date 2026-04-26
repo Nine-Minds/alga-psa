@@ -13,6 +13,8 @@ import {
   resolveComposeTextOutputSchemaFromConfig,
 } from '@alga-psa/workflows/authoring';
 
+import { resolveLocalJsonSchemaRef } from './jsonSchemaRefs';
+
 export type ActionRegistryItem = {
   id: string;
   version: number;
@@ -112,11 +114,16 @@ const errorGlobalSchema: JsonSchema = {
   }
 };
 
-const resolveSchema = (schema: JsonSchema, root?: JsonSchema): JsonSchema => {
-  if (schema.$ref && root?.definitions) {
-    const refKey = schema.$ref.replace('#/definitions/', '');
-    const resolved = root.definitions?.[refKey];
-    if (resolved) return resolveSchema(resolved, root);
+const resolveSchema = (schema: JsonSchema, root?: JsonSchema, seenRefs = new Set<string>()): JsonSchema => {
+  const rootSchema = root ?? schema;
+
+  if (schema.$ref) {
+    const refKey = schema.$ref;
+    if (!seenRefs.has(refKey)) {
+      seenRefs.add(refKey);
+      const resolved = resolveLocalJsonSchemaRef(refKey, rootSchema);
+      if (resolved) return resolveSchema(resolved, rootSchema, seenRefs);
+    }
   }
 
   if (schema.anyOf?.length) {
@@ -124,7 +131,7 @@ const resolveSchema = (schema: JsonSchema, root?: JsonSchema): JsonSchema => {
       (variant) => variant.type !== 'null' && !(Array.isArray(variant.type) && variant.type.length === 1 && variant.type[0] === 'null')
     );
     if (nonNullVariant) {
-      const resolved = resolveSchema(nonNullVariant, root);
+      const resolved = resolveSchema(nonNullVariant, rootSchema, seenRefs);
       return {
         ...resolved,
         type: Array.isArray(resolved.type) ? resolved.type : resolved.type ? [resolved.type, 'null'] : ['null']
