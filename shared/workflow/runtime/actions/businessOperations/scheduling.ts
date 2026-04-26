@@ -503,7 +503,7 @@ export function registerSchedulingActions(): void {
           }
 
           const canSeePrivate = await canViewPrivateEntry(tx, entry);
-          if (input.include_private_details && canSeePrivate) {
+          if (canSeePrivate) {
             return { found: true, entry };
           }
 
@@ -570,9 +570,24 @@ export function registerSchedulingActions(): void {
           }
           if (input.query) {
             const escaped = input.query.replace(/[%_\\]/g, (match) => `\\${match}`);
+            const canSearchAllPrivateDetails = await hasPermissionByUserId(tx.trx, tx.tenantId, tx.actorUserId, 'user_schedule', 'update');
             queryBuilder.andWhere(function byText(this: Knex.QueryBuilder) {
-              this.whereRaw("se.title ILIKE ? ESCAPE '\\\\'", [`%${escaped}%`])
-                .orWhereRaw("coalesce(se.notes, '') ILIKE ? ESCAPE '\\\\'", [`%${escaped}%`]);
+              this.where(function visibleText(this: Knex.QueryBuilder) {
+                this.whereRaw("se.title ILIKE ? ESCAPE E'\\\\'", [`%${escaped}%`])
+                  .orWhereRaw("coalesce(se.notes, '') ILIKE ? ESCAPE E'\\\\'", [`%${escaped}%`]);
+              }).andWhere(function searchableDetails(this: Knex.QueryBuilder) {
+                this.whereRaw('coalesce(se.is_private, false) = false')
+                  .orWhereExists(function assignedToActor(this: Knex.QueryBuilder) {
+                    this.select(tx.trx.raw('1'))
+                      .from('schedule_entry_assignees as search_sea')
+                      .whereRaw('search_sea.tenant = se.tenant')
+                      .whereRaw('search_sea.entry_id = se.entry_id')
+                      .where('search_sea.user_id', tx.actorUserId);
+                  });
+                if (canSearchAllPrivateDetails) {
+                  this.orWhereRaw('true');
+                }
+              });
             });
           }
           if (input.assigned_user_ids && input.assigned_user_ids.length > 0) {

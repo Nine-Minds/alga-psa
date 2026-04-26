@@ -19,6 +19,22 @@ function verifyTestDatabase(dbName: string): void {
   }
 }
 
+function testWorkerSuffix(): string | null {
+  const workerId = process.env.VITEST_WORKER_ID || process.env.VITEST_POOL_ID;
+  return workerId ? workerId.replace(/[^a-zA-Z0-9_]/g, '_') : null;
+}
+
+function withTestWorkerSuffix(value: string): string {
+  const suffix = testWorkerSuffix();
+  return suffix ? `${value}_${suffix}`.slice(0, 63) : value;
+}
+
+function resolveTestDatabaseName(): string {
+  const baseName = process.env.DB_NAME_SERVER || TEST_DB_NAME;
+  verifyTestDatabase(baseName);
+  return withTestWorkerSuffix(baseName);
+}
+
 async function recreateDatabase(
   databaseName: string,
   dbHost: string,
@@ -65,14 +81,13 @@ async function recreateDatabase(
 }
 
 export async function createTestDbConnection(): Promise<Knex> {
-  const databaseName = process.env.DB_NAME_SERVER || TEST_DB_NAME;
-  verifyTestDatabase(databaseName);
+  const databaseName = resolveTestDatabaseName();
 
   const dbHost = process.env.DB_HOST || 'localhost';
   const dbPort = Number.parseInt(process.env.DB_PORT || '5432', 10);
   const adminUser = process.env.DB_USER_ADMIN || 'postgres';
   const adminPassword = await getSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'postpass123');
-  const appUser = process.env.DB_USER_SERVER || 'app_user';
+  const appUser = withTestWorkerSuffix(process.env.DB_USER_SERVER || 'app_user').replace(/[^a-zA-Z0-9_]/g, '_');
   const appPassword = await getSecret('db_password_server', 'DB_PASSWORD_SERVER', 'postpass123');
 
   await recreateDatabase(databaseName, dbHost, dbPort, adminUser, adminPassword, appUser, appPassword);

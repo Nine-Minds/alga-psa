@@ -13,10 +13,12 @@ describe('workflow shared helper actor resolution', () => {
   }, 120000);
 
   afterAll(async () => {
-    await db.destroy();
+    if (db) {
+      await db.destroy();
+    }
   });
 
-  it('T017: uses run tenant when joining workflow_definitions and does not resolve cross-tenant created_by', async () => {
+  it('T017: uses run tenant when resolving created_by/published_by actors', async () => {
     const tenantA = await createTenant(db, 'Tenant A');
     const tenantB = await createTenant(db, 'Tenant B');
 
@@ -36,6 +38,17 @@ describe('workflow shared helper actor resolution', () => {
       status: 'draft',
       created_by: actorB,
       updated_by: actorB,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+    await db('workflow_definition_versions').insert({
+      version_id: uuidv4(),
+      workflow_id: leakingWorkflowId,
+      version: 1,
+      definition_json: { id: leakingWorkflowId },
+      payload_schema_json: {},
+      published_by: actorB,
+      published_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });

@@ -182,7 +182,9 @@ describe('scheduling business operation db actions', () => {
 
   afterAll(async () => {
     runtimeState.db = null;
-    await db.destroy();
+    if (db) {
+      await db.destroy();
+    }
   });
 
   beforeEach(async () => {
@@ -219,6 +221,24 @@ describe('scheduling business operation db actions', () => {
     expect(findResult.entry.entry_id).toBe(entryA);
     expect(findResult.entry.title).toBe('Busy');
     expect(findResult.entry.assigned_user_ids).toEqual([assigneeA]);
+
+    const ownPrivateEntry = await createScheduleEntry(db, tenantA, {
+      title: 'Own Private Details',
+      scheduledStart: '2026-05-02T10:00:00.000Z',
+      scheduledEnd: '2026-05-02T11:00:00.000Z',
+      assignedUserIds: [runtimeState.actorUserId],
+      isPrivate: true,
+    });
+    const ownFindResult = await invokeAction('scheduling.find_entry', { entry_id: ownPrivateEntry, include_private_details: false });
+    expect(ownFindResult.found).toBe(true);
+    expect(ownFindResult.entry.title).toBe('Own Private Details');
+
+    const hiddenPrivateQuery = await invokeAction('scheduling.search_entries', { query: 'Tenant A Private' });
+    expect(hiddenPrivateQuery.entries).toHaveLength(0);
+
+    const ownPrivateQuery = await invokeAction('scheduling.search_entries', { query: 'Own Private Details' });
+    expect(ownPrivateQuery.entries).toHaveLength(1);
+    expect(ownPrivateQuery.entries[0].entry_id).toBe(ownPrivateEntry);
 
     const searchResult = await invokeAction('scheduling.search_entries', {
       window: {
@@ -456,6 +476,56 @@ describe('scheduling business operation db actions', () => {
     const dayThreeVirtualId = `${masterEntryId}_${dayThree.getTime()}`;
     expect(inRange.some((entry: { entry_id: string }) => entry.entry_id === dayThreeVirtualId)).toBe(true);
     expect(inRange.some((entry: { entry_id: string }) => entry.entry_id === result.updated_entry_id)).toBe(true);
+  });
+
+  it('T012: rescheduling a virtual recurrence extracts the original occurrence only', async () => {
+    const assigneeId = await createUser(db, runtimeState.tenantId, { email: 'recurrence-reschedule-tech@example.com' });
+
+    const start = new Date('2026-05-10T09:00:00.000Z');
+    const end = new Date('2026-05-10T10:00:00.000Z');
+
+    const masterEntryId = await createScheduleEntry(db, runtimeState.tenantId, {
+      title: 'Weekly Recurring Entry',
+      scheduledStart: start.toISOString(),
+      scheduledEnd: end.toISOString(),
+      assignedUserIds: [assigneeId],
+      isRecurring: true,
+      recurrencePattern: {
+        frequency: 'weekly',
+        interval: 1,
+        startDate: start.toISOString(),
+      },
+    });
+
+    const originalOccurrence = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const rescheduledStart = new Date(start.getTime() + 3 * 24 * 60 * 60 * 1000);
+    const rescheduledEnd = new Date(rescheduledStart.getTime() + 60 * 60 * 1000);
+    const nextOccurrence = new Date(start.getTime() + 14 * 24 * 60 * 60 * 1000);
+    const originalVirtualId = `${masterEntryId}_${originalOccurrence.getTime()}`;
+
+    const result = await invokeAction('scheduling.reschedule', {
+      entry_id: originalVirtualId,
+      window: {
+        start: rescheduledStart.toISOString(),
+        end: rescheduledEnd.toISOString(),
+      },
+      recurrence_scope: 'single',
+    });
+
+    expect(result.updated_entry_id).not.toBe(masterEntryId);
+    expect(result.new_start).toBe(rescheduledStart.toISOString());
+
+    const inRange = await ScheduleEntry.getAll(
+      db,
+      runtimeState.tenantId,
+      new Date(start.getTime() - 6 * 60 * 60 * 1000),
+      new Date(nextOccurrence.getTime() + 6 * 60 * 60 * 1000)
+    );
+
+    const entryIds = inRange.map((entry: { entry_id: string }) => entry.entry_id);
+    expect(entryIds).not.toContain(originalVirtualId);
+    expect(entryIds).toContain(result.updated_entry_id);
+    expect(entryIds).toContain(`${masterEntryId}_${nextOccurrence.getTime()}`);
   });
 
   it('T013: write actions reject missing user_schedule:update and do not mutate schedule data', async () => {

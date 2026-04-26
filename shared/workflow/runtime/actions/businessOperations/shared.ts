@@ -106,11 +106,13 @@ export async function resolveRunActorUserId(trx: Knex.Transaction, runId: string
       this.on('wr.workflow_id', 'wd.workflow_id').andOn('wr.tenant_id', 'wd.tenant_id');
     })
     .select(
+      'wd.workflow_id as matched_workflow_id',
       'wdv.published_by as published_by',
       'wd.created_by as created_by'
     )
     .where('wr.run_id', runId)
     .first();
+  if (!row?.matched_workflow_id) return null;
   return (row?.published_by as string | null) ?? (row?.created_by as string | null) ?? null;
 }
 

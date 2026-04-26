@@ -520,8 +520,14 @@ const ScheduleEntry = {
               entry.assigned_user_ids || assignedUserIds[masterEntryId] || []
             );
 
-            // Add exception date to master pattern
-            const exceptionDate = new Date(entry.scheduled_start || originalEntry.scheduled_start);
+            // Add exception for the occurrence being extracted, not necessarily the
+            // occurrence's new target date. Virtual recurring ids carry the
+            // original occurrence timestamp; using a rescheduled start here would
+            // leave the original generated occurrence visible alongside the
+            // standalone override.
+            const exceptionDate = virtualTimestamp
+              ? new Date(virtualTimestamp)
+              : new Date(entry.scheduled_start || originalEntry.scheduled_start);
             exceptionDate.setUTCHours(0, 0, 0, 0);
             const updatedPattern = {
               ...originalPattern,
