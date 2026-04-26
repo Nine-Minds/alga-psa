@@ -1,0 +1,338 @@
+[
+  {
+    "id": "F001",
+    "description": "Register `contacts.create` as a Contact-group workflow action with label, description, category, side-effect metadata, idempotency metadata, input schema, and output schema",
+    "implemented": true,
+    "prdRefs": [
+      "Create contact",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Implement `contacts.create` using existing contact validation for full name, primary email, client existence, phone numbers, primary email type, and additional email addresses",
+    "implemented": true,
+    "prdRefs": [
+      "Create contact",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Return a compact normalized created-contact output from `contacts.create` for downstream workflow mappings",
+    "implemented": true,
+    "prdRefs": [
+      "Shared contact output shape",
+      "Create contact"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Register `contacts.update` as a Contact-group workflow action with a typed patch schema for editable contact fields",
+    "implemented": true,
+    "prdRefs": [
+      "Edit contact",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Implement `contacts.update` patch semantics so omitted fields remain unchanged and existing primary-email promotion rules are preserved",
+    "implemented": true,
+    "prdRefs": [
+      "Edit contact"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Return before/after contact summaries and updated field names from `contacts.update`",
+    "implemented": true,
+    "prdRefs": [
+      "Edit contact",
+      "Shared contact output shape"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Register `contacts.delete` as a destructive Contact-group workflow action with guarded hard-delete label, `confirm: true`, `on_not_found`, schema, and output",
+    "implemented": true,
+    "prdRefs": [
+      "Delete contact"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Implement `contacts.delete` as tenant-scoped guarded hard delete with dependency blocking and owned-child cleanup consistent with existing contact delete behavior",
+    "implemented": true,
+    "prdRefs": [
+      "Delete contact",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Return deterministic hard-delete status output from `contacts.delete`, including dependency conflict details and return-false behavior for missing contacts when requested",
+    "implemented": true,
+    "prdRefs": [
+      "Delete contact"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Register `contacts.duplicate` as a Contact-group workflow action with source contact picker, required new unique email override, optional field overrides, copy-tags option, and action-provided idempotency key",
+    "implemented": true,
+    "prdRefs": [
+      "Duplicate contact",
+      "Resolved Decisions"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Implement `contacts.duplicate` by loading the source contact, applying overrides, validating uniqueness, excluding historical relationship copies, and creating a new contact in the target or source client",
+    "implemented": true,
+    "prdRefs": [
+      "Duplicate contact"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Implement optional tag-copy behavior for `contacts.duplicate` using the canonical contact tag mapping storage",
+    "implemented": true,
+    "prdRefs": [
+      "Duplicate contact",
+      "Add tag to contact",
+      "Known schema considerations"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Register `contacts.add_tag` as a Contact-group workflow action with contact picker, one-or-more tag text inputs, action-provided idempotency key, and added/existing tag output schema",
+    "implemented": true,
+    "prdRefs": [
+      "Add tag to contact"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Implement `contacts.add_tag` with idempotent tag definition resolution and tag mapping creation for `tagged_type = contact`, returning existing mappings without duplicate insert error control flow",
+    "implemented": true,
+    "prdRefs": [
+      "Add tag to contact",
+      "Known schema considerations"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Use the same tag permission policy as `clients.add_tag`: `contacts.add_tag` requires `contact:update` and may create missing contact tag definitions without a separate stricter tag-create gate",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Resolved Decisions"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Register `contacts.assign_to_ticket` as a Contact-group workflow action with contact and ticket picker-backed inputs",
+    "implemented": true,
+    "prdRefs": [
+      "Assign contact to ticket",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Implement `contacts.assign_to_ticket` as a direct ticket contact update that validates tenant-scoped ticket/contact existence, validates contact-client relationship, and returns previous/current contact IDs",
+    "implemented": true,
+    "prdRefs": [
+      "Assign contact to ticket"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Implement the resolved no-client-ticket policy for `contacts.assign_to_ticket`: only set `tickets.contact_name_id` unless the existing application action path is found to set `tickets.client_id` too",
+    "implemented": true,
+    "prdRefs": [
+      "Assign contact to ticket",
+      "Resolved Decisions"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Register `contacts.add_note` as a Contact-group workflow action for document-backed contact note appends with action-provided idempotency key",
+    "implemented": true,
+    "prdRefs": [
+      "Add note to contact"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Implement `contacts.add_note` by appending to the contact notes document (`contacts.notes_document_id`), creating and linking the document when missing, and returning document metadata",
+    "implemented": true,
+    "prdRefs": [
+      "Add note to contact",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Register `contacts.add_interaction` as a Contact-group workflow action with contact, optional ticket, interaction type/status, timing, title, notes, and action-provided idempotency fields",
+    "implemented": true,
+    "prdRefs": [
+      "Add interaction to contact",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Implement `contacts.add_interaction` using the contact-derived client ID, workflow actor as `user_id`, default interaction status fallback, and relationship validation consistent with `clients.add_interaction`",
+    "implemented": true,
+    "prdRefs": [
+      "Add interaction to contact",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Register `contacts.add_to_client` as a Contact-group workflow action with contact and client picker-backed inputs",
+    "implemented": true,
+    "prdRefs": [
+      "Add contact to client"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Implement `contacts.add_to_client` to assign only unassigned contacts, no-op when already assigned to the target client, and conflict when assigned elsewhere",
+    "implemented": true,
+    "prdRefs": [
+      "Add contact to client"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Register `contacts.move_to_client` as a Contact-group workflow action with target client picker and optional expected-current-client guard",
+    "implemented": true,
+    "prdRefs": [
+      "Move contact to different client"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Implement `contacts.move_to_client` to validate target client, move contact client_id, distinguish no-op/conflict/success, and return previous/current client IDs",
+    "implemented": true,
+    "prdRefs": [
+      "Move contact to different client"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Add or reuse workflow JSON schema metadata helpers so contact, client, ticket, and user-facing picker hints survive designer schema serialization; use UUID fields for interaction type/status until picker support exists",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Create shared contact action schemas/helpers for UUIDs, contact summary output, phone number input, additional email input, and standard action result fields",
+    "implemented": true,
+    "prdRefs": [
+      "Shared contact output shape",
+      "Technical design"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Create shared contact action helpers for loading tenant-scoped contacts/clients/tickets and throwing standard workflow not-found/validation/conflict errors",
+    "implemented": true,
+    "prdRefs": [
+      "Non-functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Ensure every new side-effectful contact action runs through `withTenantTransaction` and uses tenant filters on all selects, inserts, updates, and deletes",
+    "implemented": true,
+    "prdRefs": [
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Ensure every new side-effectful contact action checks the confirmed actor permissions using `requirePermission` before mutation",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Ensure every new side-effectful contact action writes a workflow run audit record with action id, version, affected entity IDs, and meaningful changed data",
+    "implemented": true,
+    "prdRefs": [
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Map model/database errors from new contact actions into standard workflow action error categories and codes",
+    "implemented": true,
+    "prdRefs": [
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Update workflow designer catalog expectations so the Contact group includes all new `contacts.*` actions without disturbing existing built-in group ordering",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Encode resolved product decisions for required duplicate email override, ticket contact-only assignment behavior, client-parity tag creation policy, and contact domain-event publication parity",
+    "implemented": true,
+    "prdRefs": [
+      "Resolved Decisions"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Register `contacts.deactivate` as a separate Contact-group workflow action with safe deactivation label, description, schema, and output",
+    "implemented": true,
+    "prdRefs": [
+      "Deactivate contact",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Implement `contacts.deactivate` to set `is_inactive = true`, require `contact:update`, preserve tenant scoping, no-op when already inactive, and use engine-provided idempotency",
+    "implemented": true,
+    "prdRefs": [
+      "Deactivate contact",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Return previous/current inactive state, `deactivated`, `noop`, and compact contact summary from `contacts.deactivate`",
+    "implemented": true,
+    "prdRefs": [
+      "Deactivate contact",
+      "Shared contact output shape"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Mirror the new client action runtime conventions for contact actions: action-provided idempotency for create/duplicate/add_tag/add_note/add_interaction, engine-provided idempotency for update/deactivate/delete/assignment, and best-effort lazy domain-event publication for contact create/update/deactivate plus existing note/interaction events",
+    "implemented": true,
+    "prdRefs": [
+      "Non-functional Requirements",
+      "Data / API / Integrations",
+      "Resolved Decisions"
+    ]
+  }
+]
