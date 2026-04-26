@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { buildDataContext } from '../workflowDataContext';
+import { buildWorkflowReferenceFieldOptions } from '../workflowReferenceOptions';
 import { applyCatalogActionChoiceToStep } from '../groupedActionSelection';
 import type { NodeStep, WorkflowDefinition } from '@alga-psa/workflows/runtime/client';
 import type { WorkflowDesignerCatalogAction } from '@alga-psa/workflows/runtime/designer/actionCatalog';
@@ -846,5 +847,83 @@ describe('workflow data context', () => {
         constraints: undefined,
       },
     ]);
+  });
+
+  it('T431: resolves local JSON Schema refs when browsing nested action output fields', () => {
+    const duplicateRegistry = [
+      ...actionRegistry,
+      {
+        id: 'contacts.duplicate',
+        version: 1,
+        ui: {
+          label: 'Duplicate Contact',
+          description: 'Duplicate a contact.',
+        },
+        inputSchema: {
+          type: 'object',
+          properties: {},
+        },
+        outputSchema: {
+          type: 'object',
+          properties: {
+            source_contact: {
+              type: 'object',
+              properties: {
+                contact_name_id: { type: 'string', format: 'uuid' },
+                full_name: { type: ['string', 'null'] },
+                email: { type: ['string', 'null'] },
+              },
+              required: ['contact_name_id', 'full_name', 'email'],
+              additionalProperties: false,
+            },
+            duplicate_contact: {
+              $ref: '#/properties/source_contact',
+            },
+            copied_tags: { type: 'integer' },
+          },
+          required: ['source_contact', 'duplicate_contact', 'copied_tags'],
+          additionalProperties: false,
+        },
+      },
+    ];
+
+    const definition: WorkflowDefinition = {
+      id: 'wf-ref-output',
+      name: 'Ref output workflow',
+      version: 1,
+      description: '',
+      steps: [
+        {
+          id: 'duplicate-step',
+          type: 'action.call',
+          config: {
+            actionId: 'contacts.duplicate',
+            version: 1,
+            saveAs: 'duplicatedContact',
+          },
+        },
+        {
+          id: 'delete-step',
+          type: 'action.call',
+          config: {
+            actionId: 'tickets.create',
+            version: 1,
+          },
+        },
+      ],
+    };
+
+    const context = buildDataContext(definition, 'delete-step', duplicateRegistry, null);
+    const duplicateContactField = context.steps[0]?.fields.find((field) => field.name === 'duplicate_contact');
+
+    expect(duplicateContactField?.children?.map((field) => field.name)).toEqual([
+      'contact_name_id',
+      'full_name',
+      'email',
+    ]);
+
+    const referenceOptions = buildWorkflowReferenceFieldOptions(null, context).map((option) => option.value);
+
+    expect(referenceOptions).toContain('vars.duplicatedContact.duplicate_contact.contact_name_id');
   });
 });

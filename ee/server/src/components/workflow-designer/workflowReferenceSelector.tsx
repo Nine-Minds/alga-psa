@@ -5,6 +5,7 @@ import { useWorkflowReferenceSectionOptions } from '@alga-psa/workflows/hooks/us
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 import type { JsonSchema } from './expression-editor';
+import { resolveLocalJsonSchemaRef } from './jsonSchemaRefs';
 import type { DataTreeContext } from './mapping/SourceDataTree';
 import {
   TypeCompatibility,
@@ -64,11 +65,16 @@ const flattenReferenceFields = (
   return flattened;
 };
 
-const resolveReferenceSchema = (schema: JsonSchema, root?: JsonSchema): JsonSchema => {
-  if (schema.$ref && root?.definitions) {
-    const refKey = schema.$ref.replace('#/definitions/', '');
-    const resolved = root.definitions?.[refKey];
-    if (resolved) return resolveReferenceSchema(resolved, root);
+const resolveReferenceSchema = (schema: JsonSchema, root?: JsonSchema, seenRefs = new Set<string>()): JsonSchema => {
+  const rootSchema = root ?? schema;
+
+  if (schema.$ref) {
+    const refKey = schema.$ref;
+    if (!seenRefs.has(refKey)) {
+      seenRefs.add(refKey);
+      const resolved = resolveLocalJsonSchemaRef(refKey, rootSchema);
+      if (resolved) return resolveReferenceSchema(resolved, rootSchema, seenRefs);
+    }
   }
 
   if (schema.anyOf?.length) {
@@ -78,7 +84,7 @@ const resolveReferenceSchema = (schema: JsonSchema, root?: JsonSchema): JsonSche
         !(Array.isArray(variant.type) && variant.type.length === 1 && variant.type[0] === 'null')
     );
     if (nonNullVariant) {
-      const resolved = resolveReferenceSchema(nonNullVariant, root);
+      const resolved = resolveReferenceSchema(nonNullVariant, rootSchema, seenRefs);
       return {
         ...resolved,
         type: Array.isArray(resolved.type)
