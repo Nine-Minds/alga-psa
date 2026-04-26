@@ -1,0 +1,289 @@
+[
+  {
+    "id": "F001",
+    "description": "Register crm.find_activities version 1 as a side-effect-free workflow action",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements — First Pass > crm.find_activities"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Define crm.find_activities input schema with client/contact/ticket/user/type/status/date/limit filters and on_empty behavior",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements — First Pass > crm.find_activities"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Reject unsafe unbounded crm.find_activities queries that lack meaningful filters or date range",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements — First Pass > crm.find_activities"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Implement tenant-scoped interaction query joins for crm.find_activities with normalized activity summaries",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements — First Pass > crm.find_activities",
+      "Data / API / Integrations > Existing CRM/client files and patterns"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Enforce documented read permission mapping for crm.find_activities",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Register crm.update_activity version 1 with editable patch schema and before/after output schema",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements — First Pass > crm.update_activity"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Reject empty crm.update_activity patches and prevent mutation of tenant, interaction_id, and system-managed fields",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements — First Pass > crm.update_activity",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Validate crm.update_activity target activity exists in the current tenant",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements — First Pass > crm.update_activity"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Validate interaction status IDs for crm.update_activity against tenant statuses with status_type interaction",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements — First Pass > crm.update_activity"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Validate interaction type IDs for crm.update_activity against tenant interaction_types or system_interaction_types",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements — First Pass > crm.update_activity"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Implement crm.update_activity mutation, changed-field calculation, before/after summaries, and run audit",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements — First Pass > crm.update_activity",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Enforce documented update permission mapping for crm.update_activity",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Register crm.schedule_activity version 1 with follow-up activity input schema and created activity output schema",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements — First Pass > crm.schedule_activity"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Require crm.schedule_activity to resolve a client from client_id or contact_id and validate contact belongs to client when both are provided",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements — First Pass > crm.schedule_activity"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Validate optional crm.schedule_activity ticket_id belongs to the resolved client/contact context where applicable",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements — First Pass > crm.schedule_activity"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Validate crm.schedule_activity type_id and default/explicit interaction status_id",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements — First Pass > crm.schedule_activity"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Validate crm.schedule_activity time inputs and derive duration from start/end when needed",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements — First Pass > crm.schedule_activity"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Insert crm.schedule_activity records into interactions as future-dated follow-up activities using workflow actor ownership by default",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements — First Pass > crm.schedule_activity",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Emit INTERACTION_LOGGED for crm.schedule_activity with existing payload builder, lazy publisher import, and deterministic idempotency key",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements — First Pass > crm.schedule_activity",
+      "Cross-cutting Requirements"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Write run audit for crm.schedule_activity with created activity, links, and schedule metadata",
+    "implemented": true,
+    "prdRefs": [
+      "Observability"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Register crm.send_quote version 1 with quote_id, recipient, subject, message, and no_op_if_already_sent schema",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements — First Pass > crm.send_quote"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Validate crm.send_quote quote exists in tenant, is not a template, and satisfies existing quote send status and approval rules",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements — First Pass > crm.send_quote"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Enforce crm.send_quote billing read/update authorization equivalent to existing quote send behavior",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements — First Pass > crm.send_quote",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Resolve or extract a shared-runtime-safe quote send helper instead of importing withAuth server action wrappers directly",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements — First Pass > crm.send_quote",
+      "Non-goals",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Implement crm.send_quote status transition to sent, sent_at update, quote activity recording, PDF store best-effort, and email send best-effort according to existing quote send semantics",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements — First Pass > crm.send_quote",
+      "Data / API / Integrations > Existing quote files and patterns"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Return crm.send_quote quote summary and send metadata including previous/new status, sent timestamp, recipients, email_sent, and message ID where available",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements — First Pass > crm.send_quote"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Write run audit for crm.send_quote with quote ID, status transition, and email metadata",
+    "implemented": true,
+    "prdRefs": [
+      "Observability"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Add workflow picker metadata to supported CRM action UUID fields using current x-workflow-picker-kind conventions",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Cross-cutting Requirements"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Expose new CRM actions through existing registerCrmActions and registerBusinessOperationsActionsV2 wiring without designer catalog seed changes",
+    "implemented": true,
+    "prdRefs": [
+      "Cross-cutting Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Confirm designer catalog serialization includes new CRM action labels, schemas, output schemas, and picker metadata under CRM group",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Use shared workflow action transaction, permission, audit, throwActionError, and rethrowAsStandardError helpers consistently across CRM handlers",
+    "implemented": true,
+    "prdRefs": [
+      "Cross-cutting Requirements"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Document resolved permission mapping, interaction update event decision, future interaction event semantics, quote helper boundary, already-sent quote behavior, and create_client_note roadmap decision in the scratchpad",
+    "implemented": true,
+    "prdRefs": [
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Preserve crm.create_activity_note registration and behavior while adding the new CRM actions",
+    "implemented": true,
+    "prdRefs": [
+      "Non-goals",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Keep follow-on CRM action roadmap documented for create_interaction_type, update_activity_status, quote create/find/convert/approval, tag_entity, and create_client_note",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements — Roadmap / Follow-on Scope"
+    ]
+  }
+]
