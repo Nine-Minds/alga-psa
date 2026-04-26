@@ -113,6 +113,7 @@ import { WorkflowStepNameField } from './WorkflowStepNameField';
 import { WorkflowStepSaveOutputSection } from './WorkflowStepSaveOutputSection';
 import { WorkflowActionInputSection } from './WorkflowActionInputSection';
 import { WorkflowActionInputFixedPicker } from './WorkflowActionInputFixedPicker';
+import { resolveLocalJsonSchemaRef } from './jsonSchemaRefs';
 import { buildWorkflowReferenceFieldOptions } from './workflowReferenceOptions';
 import { shouldRenderWorkflowAiSchemaSection } from './workflowAiStepUtils';
 import { applyWorkflowActionPresentationHintsToList } from './workflowActionPresentation';
@@ -410,12 +411,17 @@ const mergeSchemaMetadata = (wrapper: JsonSchema, resolved: JsonSchema): JsonSch
   'x-workflow-editor': (resolved as any)['x-workflow-editor'] ?? (wrapper as any)['x-workflow-editor'],
 });
 
-const resolveSchema = (schema: JsonSchema, root?: JsonSchema): JsonSchema => {
+const resolveSchema = (schema: JsonSchema, root?: JsonSchema, seenRefs = new Set<string>()): JsonSchema => {
+  const rootSchema = root ?? schema;
+
   // Handle $ref
-  if (schema.$ref && root?.definitions) {
-    const refKey = schema.$ref.replace('#/definitions/', '');
-    const resolved = root.definitions?.[refKey];
-    if (resolved) return resolveSchema(resolved, root);
+  if (schema.$ref) {
+    const refKey = schema.$ref;
+    if (!seenRefs.has(refKey)) {
+      seenRefs.add(refKey);
+      const resolved = resolveLocalJsonSchemaRef(refKey, rootSchema);
+      if (resolved) return resolveSchema(resolved, rootSchema, seenRefs);
+    }
   }
 
   // Handle anyOf (used for nullable types) - extract the non-null variant
@@ -425,7 +431,7 @@ const resolveSchema = (schema: JsonSchema, root?: JsonSchema): JsonSchema => {
     );
     if (nonNullVariant) {
       // Merge nullable info back into resolved schema
-      const resolved = resolveSchema(nonNullVariant, root);
+      const resolved = resolveSchema(nonNullVariant, rootSchema, seenRefs);
       const merged = mergeSchemaMetadata(schema, resolved);
       return {
         ...merged,

@@ -101,6 +101,45 @@ describe('contactEventBuilders', () => {
     });
   });
 
+  it('builds contact lifecycle payloads for unassigned contacts without clientId', () => {
+    const createdPayload = buildWorkflowPayload(
+      buildContactCreatedPayload({
+        contactId,
+        fullName: 'Unassigned Contact',
+        email: 'unassigned@example.com',
+        createdByUserId: actorUserId,
+        createdAt: occurredAt,
+      }),
+      ctx
+    );
+    const updatedPayload = buildWorkflowPayload(
+      buildContactUpdatedPayload({
+        contactId,
+        before: { contact_name_id: contactId, full_name: 'Before' },
+        after: { contact_name_id: contactId, full_name: 'After' },
+        updatedFieldKeys: ['full_name'],
+        updatedByUserId: actorUserId,
+        updatedAt: occurredAt,
+      }),
+      ctx
+    );
+    const archivedPayload = buildWorkflowPayload(
+      buildContactArchivedPayload({
+        contactId,
+        archivedByUserId: actorUserId,
+        archivedAt: occurredAt,
+      }),
+      ctx
+    );
+
+    expect(contactCreatedEventPayloadSchema.safeParse(createdPayload).success).toBe(true);
+    expect(contactUpdatedEventPayloadSchema.safeParse(updatedPayload).success).toBe(true);
+    expect(contactArchivedEventPayloadSchema.safeParse(archivedPayload).success).toBe(true);
+    expect(createdPayload).not.toHaveProperty('clientId');
+    expect(updatedPayload).not.toHaveProperty('clientId');
+    expect(archivedPayload).not.toHaveProperty('clientId');
+  });
+
   it('T017: builds CONTACT_UPDATED payloads with email metadata diffs compatible with schema', () => {
     const before = {
       contact_name_id: contactId,

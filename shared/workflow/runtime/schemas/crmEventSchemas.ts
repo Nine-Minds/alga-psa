@@ -95,7 +95,7 @@ export type ClientArchivedEventPayload = z.infer<typeof clientArchivedEventPaylo
 
 export const contactCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   contactId: contactIdSchema,
-  clientId: clientIdSchema,
+  clientId: clientIdSchema.optional(),
   fullName: z.string().min(1),
   email: z.string().email().optional(),
   primaryEmailCanonicalType: contactEmailCanonicalTypeSchema.nullable().optional(),
@@ -113,7 +113,7 @@ export type ContactCreatedEventPayload = z.infer<typeof contactCreatedEventPaylo
 
 export const contactUpdatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   contactId: contactIdSchema,
-  clientId: clientIdSchema,
+  clientId: clientIdSchema.optional(),
   updatedByUserId: userIdSchema.optional(),
   updatedAt: z.string().datetime().optional(),
   updatedFields: updatedFieldsSchema,
@@ -134,7 +134,7 @@ export type ContactPrimarySetEventPayload = z.infer<typeof contactPrimarySetEven
 
 export const contactArchivedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   contactId: contactIdSchema,
-  clientId: clientIdSchema,
+  clientId: clientIdSchema.optional(),
   archivedByUserId: userIdSchema.optional(),
   archivedAt: z.string().datetime().optional(),
   reason: z.string().optional(),

@@ -40,7 +40,7 @@ function areValuesEqual(a: unknown, b: unknown): boolean {
 
 export function buildContactCreatedPayload(params: {
   contactId: string;
-  clientId: string;
+  clientId?: string | null;
   fullName: string;
   email?: string;
   primaryEmailCanonicalType?: string | null;
@@ -55,7 +55,7 @@ export function buildContactCreatedPayload(params: {
 }): Record<string, unknown> {
   return {
     contactId: params.contactId,
-    clientId: params.clientId,
+    ...(params.clientId ? { clientId: params.clientId } : {}),
     fullName: params.fullName,
     ...(params.email ? { email: params.email } : {}),
     ...(params.primaryEmailCanonicalType !== undefined ? { primaryEmailCanonicalType: params.primaryEmailCanonicalType } : {}),
@@ -72,7 +72,7 @@ export function buildContactCreatedPayload(params: {
 
 export function buildContactUpdatedPayload(params: {
   contactId: string;
-  clientId: string;
+  clientId?: string | null;
   before: ContactLike;
   after: ContactLike;
   updatedFieldKeys: string[];
@@ -107,7 +107,7 @@ export function buildContactUpdatedPayload(params: {
 
   return {
     contactId: params.contactId,
-    clientId: params.clientId,
+    ...(params.clientId ? { clientId: params.clientId } : {}),
     ...(params.updatedByUserId ? { updatedByUserId: params.updatedByUserId } : {}),
     ...(params.updatedAt ? { updatedAt: normalizeChangeValue(params.updatedAt) } : {}),
     ...(updatedFields.length ? { updatedFields } : {}),
@@ -133,14 +133,14 @@ export function buildContactPrimarySetPayload(params: {
 
 export function buildContactArchivedPayload(params: {
   contactId: string;
-  clientId: string;
+  clientId?: string | null;
   archivedByUserId?: string;
   archivedAt?: Date | string;
   reason?: string;
 }): Record<string, unknown> {
   return {
     contactId: params.contactId,
-    clientId: params.clientId,
+    ...(params.clientId ? { clientId: params.clientId } : {}),
     ...(params.archivedByUserId ? { archivedByUserId: params.archivedByUserId } : {}),
     ...(params.archivedAt ? { archivedAt: normalizeChangeValue(params.archivedAt) } : {}),
     ...(params.reason ? { reason: params.reason } : {}),
