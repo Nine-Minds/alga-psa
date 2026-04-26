@@ -102,7 +102,9 @@ export async function resolveRunActorUserId(trx: Knex.Transaction, runId: string
     .leftJoin('workflow_definition_versions as wdv', function joinVersions() {
       this.on('wr.workflow_id', 'wdv.workflow_id').andOn('wr.workflow_version', 'wdv.version');
     })
-    .leftJoin('workflow_definitions as wd', 'wr.workflow_id', 'wd.workflow_id')
+    .leftJoin('workflow_definitions as wd', function joinDefinitions() {
+      this.on('wr.workflow_id', 'wd.workflow_id').andOn('wr.tenant_id', 'wd.tenant_id');
+    })
     .select(
       'wdv.published_by as published_by',
       'wd.created_by as created_by'
