@@ -25,6 +25,8 @@
     "start": "next start -p 3000",
     "start:next": "next start -p 3000",
     "start:express": "tsx index.ts",
+    "start:https": "tsx https-server.ts",
+    "dev:https": "tsx https-server.ts",
     "lint": "next lint",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest",
