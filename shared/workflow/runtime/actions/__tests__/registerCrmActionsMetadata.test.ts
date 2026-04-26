@@ -10,17 +10,26 @@ const EXPECTED_CRM_ACTION_IDS = [
   'crm.update_activity',
   'crm.schedule_activity',
   'crm.send_quote',
+  'crm.create_interaction_type',
+  'crm.update_activity_status',
+  'crm.create_quote',
+  'crm.add_quote_item',
+  'crm.create_quote_from_template',
+  'crm.find_quotes',
+  'crm.submit_quote_for_approval',
+  'crm.convert_quote',
+  'crm.tag_activity',
 ] as const;
 
 describe('crm workflow action registration metadata', () => {
   beforeAll(() => {
     const registry = getActionRegistryV2();
-    if (!registry.get('crm.send_quote', 1)) {
+    if (!registry.get('crm.tag_activity', 1)) {
       registerCrmActions();
     }
   });
 
-  it('T001: registers new crm.* actions at version 1 while preserving crm.create_activity_note', () => {
+  it('T001: registers follow-up crm.* actions at version 1 while preserving first-pass actions', () => {
     const registry = getActionRegistryV2();
 
     const actions = EXPECTED_CRM_ACTION_IDS.map((id) => {
@@ -37,35 +46,52 @@ describe('crm workflow action registration metadata', () => {
     expect(byId.get('crm.schedule_activity')?.ui?.label).toBe('Schedule CRM Activity');
     expect(byId.get('crm.send_quote')?.ui?.label).toBe('Send Quote');
 
-    expect(byId.get('crm.find_activities')?.sideEffectful).toBe(false);
-    expect(byId.get('crm.update_activity')?.sideEffectful).toBe(true);
-    expect(byId.get('crm.schedule_activity')?.sideEffectful).toBe(true);
-    expect(byId.get('crm.send_quote')?.sideEffectful).toBe(true);
+    expect(byId.get('crm.create_interaction_type')?.ui?.label).toBe('Create Activity Type');
+    expect(byId.get('crm.update_activity_status')?.ui?.label).toBe('Update Activity Status');
+    expect(byId.get('crm.create_quote')?.ui?.label).toBe('Create Quote');
+    expect(byId.get('crm.add_quote_item')?.ui?.label).toBe('Add Quote Item');
+    expect(byId.get('crm.create_quote_from_template')?.ui?.label).toBe('Create Quote from Template');
+    expect(byId.get('crm.find_quotes')?.ui?.label).toBe('Find Quotes');
+    expect(byId.get('crm.submit_quote_for_approval')?.ui?.label).toBe('Submit Quote for Approval');
+    expect(byId.get('crm.convert_quote')?.ui?.label).toBe('Convert Quote');
+    expect(byId.get('crm.tag_activity')?.ui?.label).toBe('Tag CRM Activity');
 
-    expect(byId.get('crm.find_activities')?.idempotency.mode).toBe('engineProvided');
-    expect(byId.get('crm.update_activity')?.idempotency.mode).toBe('engineProvided');
-    expect(byId.get('crm.schedule_activity')?.idempotency.mode).toBe('actionProvided');
-    expect(byId.get('crm.send_quote')?.idempotency.mode).toBe('engineProvided');
+    expect(byId.get('crm.find_activities')?.sideEffectful).toBe(false);
+    expect(byId.get('crm.find_quotes')?.sideEffectful).toBe(false);
+    expect(byId.get('crm.create_quote')?.sideEffectful).toBe(true);
+
+    expect(byId.get('crm.create_interaction_type')?.idempotency.mode).toBe('actionProvided');
+    expect(byId.get('crm.add_quote_item')?.idempotency.mode).toBe('actionProvided');
+    expect(byId.get('crm.create_quote_from_template')?.idempotency.mode).toBe('actionProvided');
+    expect(byId.get('crm.find_quotes')?.idempotency.mode).toBe('engineProvided');
   });
 
-  it('T003: crm action schemas expose picker metadata for supported uuid fields only', () => {
+  it('T002: follow-up crm action schemas expose picker metadata for supported uuid fields only', () => {
     const registry = getActionRegistryV2();
 
     const findActivities = registry.get('crm.find_activities', 1);
     const scheduleActivity = registry.get('crm.schedule_activity', 1);
+    const createQuote = registry.get('crm.create_quote', 1);
+    const createQuoteFromTemplate = registry.get('crm.create_quote_from_template', 1);
 
     expect(findActivities).toBeDefined();
     expect(scheduleActivity).toBeDefined();
+    expect(createQuote).toBeDefined();
+    expect(createQuoteFromTemplate).toBeDefined();
 
-    if (!findActivities || !scheduleActivity) {
+    if (!findActivities || !scheduleActivity || !createQuote || !createQuoteFromTemplate) {
       throw new Error('Missing expected CRM workflow actions');
     }
 
     const findSchema = zodToWorkflowJsonSchema(findActivities.inputSchema);
     const scheduleSchema = zodToWorkflowJsonSchema(scheduleActivity.inputSchema);
+    const createQuoteSchema = zodToWorkflowJsonSchema(createQuote.inputSchema);
+    const createQuoteFromTemplateSchema = zodToWorkflowJsonSchema(createQuoteFromTemplate.inputSchema);
 
     const findProps = findSchema.properties as Record<string, Record<string, unknown>>;
     const scheduleProps = scheduleSchema.properties as Record<string, Record<string, unknown>>;
+    const createQuoteProps = createQuoteSchema.properties as Record<string, Record<string, unknown>>;
+    const createQuoteFromTemplateProps = createQuoteFromTemplateSchema.properties as Record<string, Record<string, unknown>>;
 
     expect(findProps.client_id?.['x-workflow-picker-kind']).toBe('client');
     expect(findProps.contact_id?.['x-workflow-picker-kind']).toBe('contact');
@@ -80,6 +106,15 @@ describe('crm workflow action registration metadata', () => {
     expect(scheduleProps.assigned_user_id?.['x-workflow-picker-kind']).toBe('user');
     expect(scheduleProps.owner_user_id?.['x-workflow-picker-kind']).toBe('user');
 
+    expect(createQuoteProps.client_id?.['x-workflow-picker-kind']).toBe('client');
+    expect(createQuoteProps.contact_id?.['x-workflow-picker-kind']).toBe('contact');
+    expect(createQuoteProps.contact_id?.['x-workflow-picker-dependencies']).toEqual(['client_id']);
+
+    expect(createQuoteFromTemplateProps.client_id?.['x-workflow-picker-kind']).toBe('client');
+    expect(createQuoteFromTemplateProps.contact_id?.['x-workflow-picker-kind']).toBe('contact');
+    expect(createQuoteFromTemplateProps.contact_id?.['x-workflow-picker-dependencies']).toEqual(['client_id']);
+
+    expect(createQuoteProps.quote_id?.['x-workflow-picker-kind']).toBeUndefined();
     expect(scheduleProps.type_id?.['x-workflow-picker-kind']).toBeUndefined();
     expect(scheduleProps.status_id?.['x-workflow-picker-kind']).toBeUndefined();
   });

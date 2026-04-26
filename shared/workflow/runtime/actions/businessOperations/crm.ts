@@ -4,8 +4,18 @@ import type { Knex } from 'knex';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { withWorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
 import { getWorkflowEmailProvider } from '../../registries/workflowEmailRegistry';
+import Quote from '../../../../../packages/billing/src/models/quote';
+import QuoteItem from '../../../../../packages/billing/src/models/quoteItem';
 import QuoteActivity from '../../../../../packages/billing/src/models/quoteActivity';
 import { getQuoteApprovalWorkflowSettings } from '../../../../../packages/billing/src/lib/quoteApprovalSettings';
+import { createQuoteItemSchema, createQuoteSchema, quoteStatusSchema } from '../../../../../packages/billing/src/schemas/quoteSchemas';
+import {
+  convertQuoteToDraftContract,
+  convertQuoteToDraftContractAndInvoice,
+  convertQuoteToDraftInvoice,
+} from '../../../../../packages/billing/src/services/quoteConversionService';
+import TagDefinition from '../../../../../packages/tags/src/models/tagDefinition';
+import TagMapping from '../../../../../packages/tags/src/models/tagMapping';
 import {
   uuidSchema,
   isoDateTimeSchema,
@@ -18,6 +28,15 @@ import {
   type TenantTxContext,
 } from './shared';
 import { buildInteractionLoggedPayload } from '../../../streams/domainEventBuilders/crmInteractionNoteEventBuilders';
+import { buildTagAppliedPayload, buildTagDefinitionCreatedPayload } from '../../../streams/domainEventBuilders/tagEventBuilders';
+import {
+  BuiltinAuthorizationKernelProvider,
+  BundleAuthorizationKernelProvider,
+  RequestLocalAuthorizationCache,
+  createAuthorizationKernel,
+  type AuthorizationSubject,
+} from '@alga-psa/authorization/kernel';
+import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 
 const WORKFLOW_PICKER_HINTS = {
   client: 'Search clients',
@@ -190,6 +209,211 @@ const sendQuoteInputSchema = z.object({
   subject: z.string().optional(),
   message: z.string().optional(),
   no_op_if_already_sent: z.boolean().default(true),
+});
+
+const createInteractionTypeInputSchema = z.object({
+  type_name: z.string().trim().min(1).max(120),
+  icon: z.string().trim().max(120).optional(),
+  display_order: z.number().int().nonnegative().optional(),
+  if_exists: z.enum(['return_existing', 'error']).default('return_existing'),
+  idempotency_key: z.string().optional(),
+});
+
+const interactionTypeSummarySchema = z.object({
+  type_id: uuidSchema,
+  type_name: z.string(),
+  icon: z.string().nullable(),
+  display_order: z.number().int().nullable(),
+  created_by: nullableUuidSchema,
+  created: z.boolean(),
+});
+
+const updateActivityStatusInputSchema = z
+  .object({
+    activity_id: uuidSchema,
+    status_id: uuidSchema.optional(),
+    status_name: z.string().trim().min(1).max(255).optional(),
+    reason: z.string().optional(),
+    no_op_if_already_status: z.boolean().default(true),
+  })
+  .superRefine((value, refinementCtx) => {
+    if (!value.status_id && !value.status_name) {
+      refinementCtx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Either status_id or status_name is required',
+      });
+    }
+    if (value.status_id && value.status_name) {
+      refinementCtx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Provide either status_id or status_name, not both',
+      });
+    }
+  });
+
+const createQuoteInputSchema = z.object({
+  client_id: withWorkflowPicker(uuidSchema, 'Client id', 'client'),
+  contact_id: withWorkflowPicker(uuidSchema.optional(), 'Optional contact id linked to client', 'contact', ['client_id']),
+  title: z.string().trim().min(1),
+  description: z.string().optional().nullable(),
+  quote_date: z.coerce.date(),
+  valid_until: z.coerce.date(),
+  po_number: z.string().trim().max(255).optional().nullable(),
+  internal_notes: z.string().optional().nullable(),
+  client_notes: z.string().optional().nullable(),
+  terms_and_conditions: z.string().optional().nullable(),
+  currency_code: z.string().trim().length(3).default('USD'),
+  idempotency_key: z.string().optional(),
+}).superRefine((value, refinementCtx) => {
+  if (value.valid_until.getTime() < value.quote_date.getTime()) {
+    refinementCtx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'valid_until must be on or after quote_date',
+      path: ['valid_until'],
+    });
+  }
+});
+
+const addQuoteItemInputSchema = z.object({
+  quote_id: uuidSchema,
+  description: z.string().trim().min(1),
+  quantity: z.number().int().positive(),
+  unit_price: z.number().int().min(0).optional(),
+  unit_of_measure: z.string().trim().optional().nullable(),
+  display_order: z.number().int().nonnegative().optional(),
+  phase: z.string().trim().optional().nullable(),
+  is_optional: z.boolean().default(false),
+  is_selected: z.boolean().default(true),
+  is_recurring: z.boolean().default(false),
+  billing_frequency: z.string().trim().optional().nullable(),
+  billing_method: z.enum(['fixed', 'hourly', 'usage']).optional().nullable(),
+  is_discount: z.boolean().default(false),
+  discount_type: z.enum(['percentage', 'fixed']).optional().nullable(),
+  discount_percentage: z.number().int().min(0).max(100).optional().nullable(),
+  applies_to_item_id: uuidSchema.optional().nullable(),
+  applies_to_service_id: uuidSchema.optional().nullable(),
+  is_taxable: z.boolean().default(true),
+  tax_region: z.string().trim().optional().nullable(),
+  tax_rate: z.number().int().min(0).optional().nullable(),
+  location_id: uuidSchema.optional().nullable(),
+  cost: z.number().int().min(0).optional().nullable(),
+  cost_currency: z.string().trim().length(3).optional().nullable(),
+  idempotency_key: z.string().optional(),
+});
+
+const createQuoteFromTemplateInputSchema = z.object({
+  template_id: uuidSchema,
+  client_id: withWorkflowPicker(uuidSchema, 'Client id', 'client'),
+  contact_id: withWorkflowPicker(uuidSchema.optional(), 'Optional contact id linked to client', 'contact', ['client_id']),
+  title: z.string().trim().min(1).optional(),
+  quote_date: z.coerce.date().optional(),
+  valid_until: z.coerce.date().optional(),
+  po_number: z.string().trim().max(255).optional().nullable(),
+  internal_notes: z.string().optional().nullable(),
+  client_notes: z.string().optional().nullable(),
+  currency_code: z.string().trim().length(3).optional(),
+  idempotency_key: z.string().optional(),
+});
+
+const findQuotesInputSchema = z
+  .object({
+    quote_id: uuidSchema.optional(),
+    quote_number: z.string().trim().min(1).max(120).optional(),
+    client_id: withWorkflowPicker(uuidSchema.optional(), 'Optional client id filter', 'client'),
+    status: quoteStatusSchema.optional(),
+    date_from: z.coerce.date().optional(),
+    date_to: z.coerce.date().optional(),
+    is_template: z.boolean().default(false),
+    page: z.number().int().positive().default(1),
+    pageSize: z.number().int().positive().max(200).default(25),
+    sortBy: z.enum(['quote_date', 'total_amount', 'status', 'created_at']).default('quote_date'),
+    sortOrder: z.enum(['asc', 'desc']).default('desc'),
+    on_empty: onEmptySchema.default('return_empty'),
+  })
+  .superRefine((value, refinementCtx) => {
+    if (value.date_from && value.date_to && value.date_from.getTime() > value.date_to.getTime()) {
+      refinementCtx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'date_from must be less than or equal to date_to',
+      });
+      return;
+    }
+
+    const hasFilter = Boolean(
+      value.quote_id ||
+      value.quote_number ||
+      value.client_id ||
+      value.status ||
+      value.date_from ||
+      value.date_to
+    );
+    const hasBoundedDateRange = Boolean(value.date_from && value.date_to);
+    const smallPage = value.pageSize <= 25;
+
+    if (!hasFilter && !hasBoundedDateRange && !smallPage) {
+      refinementCtx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Provide at least one filter, a bounded date range, or use pageSize <= 25',
+      });
+    }
+  });
+
+const submitQuoteForApprovalInputSchema = z.object({
+  quote_id: uuidSchema,
+  comment: z.string().optional(),
+  reason: z.string().optional(),
+  no_op_if_already_pending: z.boolean().default(true),
+});
+
+const convertQuoteInputSchema = z.object({
+  quote_id: uuidSchema,
+  target: z.enum(['contract', 'invoice', 'contract_and_invoice']),
+  no_op_if_already_converted: z.boolean().default(true),
+});
+
+const tagActivityInputSchema = z.object({
+  activity_id: uuidSchema,
+  tags: z.array(z.string().trim().min(1)).min(1),
+  if_exists: z.enum(['no_op', 'error']).default('no_op'),
+  idempotency_key: z.string().optional(),
+});
+
+const quoteDetailSummarySchema = z.object({
+  quote_id: uuidSchema,
+  quote_number: z.string().nullable(),
+  status: z.string().nullable(),
+  client_id: nullableUuidSchema,
+  contact_id: nullableUuidSchema,
+  title: z.string(),
+  quote_date: isoDateTimeSchema.nullable(),
+  valid_until: isoDateTimeSchema.nullable(),
+  currency_code: z.string().nullable(),
+  subtotal: z.number().nullable(),
+  discount_total: z.number().nullable(),
+  tax: z.number().nullable(),
+  total_amount: z.number().nullable(),
+  sent_at: isoDateTimeSchema.nullable(),
+  converted_contract_id: nullableUuidSchema,
+  converted_invoice_id: nullableUuidSchema,
+  is_template: z.boolean(),
+});
+
+const quoteItemSummarySchema = z.object({
+  quote_item_id: uuidSchema,
+  quote_id: uuidSchema,
+  description: z.string(),
+  quantity: z.number().int(),
+  unit_price: z.number(),
+  total_price: z.number(),
+  display_order: z.number().int(),
+  is_optional: z.boolean(),
+  is_selected: z.boolean(),
+  is_recurring: z.boolean(),
+  is_discount: z.boolean(),
+  billing_frequency: z.string().nullable(),
+  discount_type: z.string().nullable(),
+  discount_percentage: z.number().nullable(),
+  created_at: isoDateTimeSchema.nullable(),
 });
 
 function asIsoString(value: unknown): string | null {
@@ -648,8 +872,1269 @@ function toQuoteSummary(quote: Record<string, unknown>) {
   });
 }
 
+function toQuoteDetailSummary(quote: Record<string, unknown>) {
+  return quoteDetailSummarySchema.parse({
+    quote_id: quote.quote_id,
+    quote_number: quote.quote_number == null ? null : String(quote.quote_number),
+    status: quote.status == null ? null : String(quote.status),
+    client_id: quote.client_id ?? null,
+    contact_id: quote.contact_id ?? null,
+    title: String(quote.title ?? ''),
+    quote_date: asIsoString(quote.quote_date),
+    valid_until: asIsoString(quote.valid_until),
+    currency_code: quote.currency_code == null ? null : String(quote.currency_code),
+    subtotal: quote.subtotal == null ? null : Number(quote.subtotal),
+    discount_total: quote.discount_total == null ? null : Number(quote.discount_total),
+    tax: quote.tax == null ? null : Number(quote.tax),
+    total_amount: quote.total_amount == null ? null : Number(quote.total_amount),
+    sent_at: asIsoString(quote.sent_at),
+    converted_contract_id: quote.converted_contract_id ?? null,
+    converted_invoice_id: quote.converted_invoice_id ?? null,
+    is_template: Boolean(quote.is_template),
+  });
+}
+
+function toQuoteItemSummary(item: Record<string, unknown>) {
+  return quoteItemSummarySchema.parse({
+    quote_item_id: item.quote_item_id,
+    quote_id: item.quote_id,
+    description: String(item.description ?? ''),
+    quantity: Number(item.quantity ?? 0),
+    unit_price: Number(item.unit_price ?? 0),
+    total_price: Number(item.total_price ?? 0),
+    display_order: Number(item.display_order ?? 0),
+    is_optional: Boolean(item.is_optional),
+    is_selected: Boolean(item.is_selected),
+    is_recurring: Boolean(item.is_recurring),
+    is_discount: Boolean(item.is_discount),
+    billing_frequency: item.billing_frequency == null ? null : String(item.billing_frequency),
+    discount_type: item.discount_type == null ? null : String(item.discount_type),
+    discount_percentage: item.discount_percentage == null ? null : Number(item.discount_percentage),
+    created_at: asIsoString(item.created_at),
+  });
+}
+
+function normalizeInteractionTypeName(typeName: string): string {
+  return typeName.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function normalizeQuoteDates<T extends Record<string, unknown>>(value: T): T {
+  const normalized = { ...value };
+  for (const field of ['quote_date', 'valid_until'] as const) {
+    if (normalized[field] instanceof Date) {
+      normalized[field] = (normalized[field] as Date).toISOString();
+    }
+  }
+  return normalized;
+}
+
+async function ensureQuoteContactBelongsToClient(
+  ctx: any,
+  tx: TenantTxContext,
+  clientId: string,
+  contactId: string | undefined
+): Promise<void> {
+  if (!contactId) return;
+
+  const contact = await tx.trx('contacts')
+    .where({ tenant: tx.tenantId, contact_name_id: contactId })
+    .first();
+
+  if (!contact) {
+    throwActionError(ctx, {
+      category: 'ActionError',
+      code: 'NOT_FOUND',
+      message: 'Contact not found',
+      details: { contact_id: contactId },
+    });
+  }
+
+  if (contact.client_id !== clientId) {
+    throwActionError(ctx, {
+      category: 'ValidationError',
+      code: 'VALIDATION_ERROR',
+      message: 'contact_id must belong to client_id',
+      details: { contact_id: contactId, client_id: clientId },
+    });
+  }
+}
+
+type QuoteAuthorizationRecord = {
+  quote_id: string | null;
+  client_id: string | null;
+  created_by: string | null;
+};
+
+function createQuoteAuthorizationKernel(knexOrTrx: Knex | Knex.Transaction) {
+  return createAuthorizationKernel({
+    builtinProvider: new BuiltinAuthorizationKernelProvider({ mutationGuards: [] }),
+    bundleProvider: new BundleAuthorizationKernelProvider({
+      resolveRules: async (input) => {
+        try {
+          return await resolveBundleNarrowingRulesForEvaluation(knexOrTrx, input);
+        } catch {
+          return [];
+        }
+      },
+    }),
+    rbacEvaluator: async () => true,
+  });
+}
+
+async function resolveQuoteAuthorizationSubject(
+  trx: Knex.Transaction,
+  tenantId: string,
+  actorUserId: string
+): Promise<AuthorizationSubject> {
+  const [roleRows, teamRows, managedRows, userRow] = await Promise.all([
+    trx('user_roles').where({ tenant: tenantId, user_id: actorUserId }).select<{ role_id: string }[]>('role_id').catch(() => []),
+    trx('team_members').where({ tenant: tenantId, user_id: actorUserId }).select<{ team_id: string }[]>('team_id').catch(() => []),
+    trx('users').where({ tenant: tenantId, reports_to: actorUserId }).select<{ user_id: string }[]>('user_id').catch(() => []),
+    trx('users')
+      .where({ tenant: tenantId, user_id: actorUserId })
+      .select<{ user_type?: string | null; contact_id?: string | null; client_id?: string | null }>('user_type', 'contact_id', 'client_id')
+      .first()
+      .catch(() => null),
+  ]);
+
+  const clientId = userRow?.client_id ?? null;
+  return {
+    tenant: tenantId,
+    userId: actorUserId,
+    userType: userRow?.user_type === 'client' ? 'client' : 'internal',
+    roleIds: roleRows.map((row) => row.role_id),
+    teamIds: teamRows.map((row) => row.team_id),
+    managedUserIds: managedRows.map((row) => row.user_id),
+    clientId,
+    portfolioClientIds: clientId ? [clientId] : [],
+  };
+}
+
+function toQuoteAuthorizationRecord(quote: Record<string, unknown>): QuoteAuthorizationRecord {
+  return {
+    quote_id: quote.quote_id == null ? null : String(quote.quote_id),
+    client_id: quote.client_id == null ? null : String(quote.client_id),
+    created_by: quote.created_by == null ? null : String(quote.created_by),
+  };
+}
+
+async function authorizeQuoteRead(
+  trx: Knex.Transaction,
+  tenantId: string,
+  actorUserId: string,
+  quote: Record<string, unknown>
+): Promise<boolean> {
+  const subject = await resolveQuoteAuthorizationSubject(trx, tenantId, actorUserId);
+  const kernel = createQuoteAuthorizationKernel(trx);
+  const decision = await kernel.authorizeResource({
+    subject,
+    resource: {
+      type: 'billing',
+      action: 'read',
+      id: quote.quote_id == null ? null : String(quote.quote_id),
+    },
+    record: {
+      id: toQuoteAuthorizationRecord(quote).quote_id,
+      ownerUserId: toQuoteAuthorizationRecord(quote).created_by,
+      clientId: toQuoteAuthorizationRecord(quote).client_id,
+    },
+    requestCache: new RequestLocalAuthorizationCache(),
+    knex: trx,
+  });
+  return decision.allowed;
+}
+
+async function getAuthorizedQuoteForMutation(
+  ctx: any,
+  tx: TenantTxContext,
+  quoteId: string,
+  deniedMessage: string
+): Promise<Record<string, unknown>> {
+  const quote = await tx.trx('quotes').where({ tenant: tx.tenantId, quote_id: quoteId }).first();
+  if (!quote) {
+    throwActionError(ctx, {
+      category: 'ActionError',
+      code: 'NOT_FOUND',
+      message: 'Quote not found',
+      details: { quote_id: quoteId },
+    });
+  }
+
+  const allowed = await authorizeQuoteRead(tx.trx, tx.tenantId, tx.actorUserId, quote);
+  if (!allowed) {
+    throwActionError(ctx, {
+      category: 'ActionError',
+      code: 'PERMISSION_DENIED',
+      message: deniedMessage,
+      details: { quote_id: quoteId },
+    });
+  }
+
+  return quote;
+}
+
+async function resolveInteractionStatus(
+  ctx: any,
+  tx: TenantTxContext,
+  params: { statusId?: string; statusName?: string }
+): Promise<{ status_id: string; status_name: string }> {
+  let statusRow: Record<string, unknown> | undefined;
+  if (params.statusId) {
+    statusRow = await tx.trx('statuses')
+      .where({ tenant: tx.tenantId, status_type: 'interaction', status_id: params.statusId })
+      .first();
+  } else if (params.statusName) {
+    statusRow = await tx.trx('statuses')
+      .where({ tenant: tx.tenantId, status_type: 'interaction' })
+      .whereRaw('lower(trim(name)) = lower(trim(?))', [params.statusName])
+      .first();
+  }
+
+  if (!statusRow?.status_id) {
+    throwActionError(ctx, {
+      category: 'ValidationError',
+      code: 'VALIDATION_ERROR',
+      message: 'Target interaction status was not found',
+      details: { status_id: params.statusId ?? null, status_name: params.statusName ?? null },
+    });
+  }
+
+  return {
+    status_id: String(statusRow.status_id),
+    status_name: String(statusRow.name ?? ''),
+  };
+}
+
+function validateTagText(value: string): string {
+  const tagText = value.trim();
+  if (!tagText) {
+    throw new Error('Tag text is required');
+  }
+  if (tagText.length > 50) {
+    throw new Error('Tag text too long (max 50 characters)');
+  }
+  if (!/^[a-zA-Z0-9\-_\s!@#$%^&*()+=\][{};':",./<>?]+$/.test(tagText)) {
+    throw new Error('Tag text contains invalid characters');
+  }
+  return tagText;
+}
+
 export function registerCrmActions(): void {
   const registry = getActionRegistryV2();
+
+  // ---------------------------------------------------------------------------
+  // crm.create_interaction_type
+  // ---------------------------------------------------------------------------
+  registry.register({
+    id: 'crm.create_interaction_type',
+    version: 1,
+    inputSchema: createInteractionTypeInputSchema,
+    outputSchema: z.object({
+      interaction_type: interactionTypeSummarySchema,
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'actionProvided', key: actionProvidedKey },
+    ui: {
+      label: 'Create Activity Type',
+      category: 'Business Operations',
+      description: 'Create a tenant CRM interaction type with idempotent duplicate handling',
+    },
+    handler: async (input, ctx) =>
+      withTenantTransaction(ctx, async (tx) => {
+        await requirePermission(ctx, tx, { resource: 'settings', action: 'update' });
+
+        const normalizedTypeName = normalizeInteractionTypeName(input.type_name);
+        const existing = await tx.trx('interaction_types')
+          .where({ tenant: tx.tenantId })
+          .whereRaw('lower(trim(type_name)) = ?', [normalizedTypeName])
+          .first();
+
+        if (existing) {
+          if (input.if_exists === 'error') {
+            throwActionError(ctx, {
+              category: 'ActionError',
+              code: 'CONFLICT',
+              message: 'Interaction type already exists',
+              details: { type_name: input.type_name },
+            });
+          }
+
+          return {
+            interaction_type: interactionTypeSummarySchema.parse({
+              type_id: existing.type_id,
+              type_name: String(existing.type_name),
+              icon: existing.icon == null ? null : String(existing.icon),
+              display_order: existing.display_order == null ? null : Number(existing.display_order),
+              created_by: existing.created_by ?? null,
+              created: false,
+            }),
+          };
+        }
+
+        const nowIso = new Date().toISOString();
+        const typeId = uuidv4();
+
+        const displayOrder = input.display_order ?? await (async () => {
+          const row = await tx.trx('interaction_types')
+            .where({ tenant: tx.tenantId })
+            .max<{ max?: number | string }>('display_order as max')
+            .first();
+          return Number(row?.max ?? -1) + 1;
+        })();
+
+        try {
+          await tx.trx('interaction_types').insert({
+            tenant: tx.tenantId,
+            type_id: typeId,
+            type_name: input.type_name.trim(),
+            icon: input.icon?.trim() || null,
+            display_order: displayOrder,
+            created_by: tx.actorUserId,
+            created_at: nowIso,
+          });
+        } catch (error) {
+          rethrowAsStandardError(ctx, error);
+        }
+
+        await writeRunAudit(ctx, tx, {
+          operation: 'workflow_action:crm.create_interaction_type',
+          changedData: {
+            type_id: typeId,
+            type_name: input.type_name.trim(),
+            display_order: displayOrder,
+            created: true,
+          },
+          details: {
+            action_id: 'crm.create_interaction_type',
+            action_version: 1,
+            type_id: typeId,
+          },
+        });
+
+        return {
+          interaction_type: interactionTypeSummarySchema.parse({
+            type_id: typeId,
+            type_name: input.type_name.trim(),
+            icon: input.icon?.trim() || null,
+            display_order: displayOrder,
+            created_by: tx.actorUserId,
+            created: true,
+          }),
+        };
+      }),
+  });
+
+  // ---------------------------------------------------------------------------
+  // crm.update_activity_status
+  // ---------------------------------------------------------------------------
+  registry.register({
+    id: 'crm.update_activity_status',
+    version: 1,
+    inputSchema: updateActivityStatusInputSchema,
+    outputSchema: z.object({
+      activity_id: uuidSchema,
+      previous_status_id: nullableUuidSchema,
+      previous_status_name: z.string().nullable(),
+      current_status_id: nullableUuidSchema,
+      current_status_name: z.string().nullable(),
+      no_op: z.boolean(),
+      activity: activitySummarySchema,
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Update Activity Status',
+      category: 'Business Operations',
+      description: 'Update only the status for an existing CRM activity',
+    },
+    handler: async (input, ctx) =>
+      withTenantTransaction(ctx, async (tx) => {
+        await requirePermission(ctx, tx, { resource: 'client', action: 'update' });
+
+        const before = await fetchActivitySummary(ctx, tx, input.activity_id);
+        const targetStatus = await resolveInteractionStatus(ctx, tx, {
+          statusId: input.status_id,
+          statusName: input.status_name,
+        });
+
+        if (before.status_id === targetStatus.status_id && input.no_op_if_already_status) {
+          return {
+            activity_id: input.activity_id,
+            previous_status_id: before.status_id,
+            previous_status_name: before.status_name,
+            current_status_id: before.status_id,
+            current_status_name: before.status_name,
+            no_op: true,
+            activity: before,
+          };
+        }
+
+        try {
+          const updatedCount = await tx.trx('interactions')
+            .where({ tenant: tx.tenantId, interaction_id: input.activity_id })
+            .update({ status_id: targetStatus.status_id });
+          if (!updatedCount) {
+            throwActionError(ctx, {
+              category: 'ActionError',
+              code: 'NOT_FOUND',
+              message: 'Activity not found',
+              details: { activity_id: input.activity_id },
+            });
+          }
+        } catch (error) {
+          rethrowAsStandardError(ctx, error);
+        }
+
+        const after = await fetchActivitySummary(ctx, tx, input.activity_id);
+
+        await writeRunAudit(ctx, tx, {
+          operation: 'workflow_action:crm.update_activity_status',
+          changedData: {
+            activity_id: input.activity_id,
+            previous_status_id: before.status_id,
+            current_status_id: after.status_id,
+            reason: input.reason ?? null,
+          },
+          details: {
+            action_id: 'crm.update_activity_status',
+            action_version: 1,
+            activity_id: input.activity_id,
+          },
+        });
+
+        return {
+          activity_id: input.activity_id,
+          previous_status_id: before.status_id,
+          previous_status_name: before.status_name,
+          current_status_id: after.status_id,
+          current_status_name: after.status_name,
+          no_op: false,
+          activity: after,
+        };
+      }),
+  });
+
+  // ---------------------------------------------------------------------------
+  // crm.create_quote
+  // ---------------------------------------------------------------------------
+  registry.register({
+    id: 'crm.create_quote',
+    version: 1,
+    inputSchema: createQuoteInputSchema,
+    outputSchema: z.object({
+      quote: quoteDetailSummarySchema,
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'actionProvided', key: actionProvidedKey },
+    ui: {
+      label: 'Create Quote',
+      category: 'Business Operations',
+      description: 'Create a draft quote header for a client/contact',
+    },
+    handler: async (input, ctx) =>
+      withTenantTransaction(ctx, async (tx) => {
+        await requirePermission(ctx, tx, { resource: 'billing', action: 'create' });
+        await requirePermission(ctx, tx, { resource: 'billing', action: 'read' });
+
+        const client = await tx.trx('clients').where({ tenant: tx.tenantId, client_id: input.client_id }).first();
+        if (!client) {
+          throwActionError(ctx, {
+            category: 'ActionError',
+            code: 'NOT_FOUND',
+            message: 'Client not found',
+            details: { client_id: input.client_id },
+          });
+        }
+
+        await ensureQuoteContactBelongsToClient(ctx, tx, input.client_id, input.contact_id);
+
+        let parsedInput: Record<string, unknown>;
+        try {
+          parsedInput = normalizeQuoteDates(createQuoteSchema.parse({
+            client_id: input.client_id,
+            contact_id: input.contact_id ?? null,
+            title: input.title,
+            description: input.description ?? null,
+            quote_date: input.quote_date,
+            valid_until: input.valid_until,
+            po_number: input.po_number ?? null,
+            internal_notes: input.internal_notes ?? null,
+            client_notes: input.client_notes ?? null,
+            terms_and_conditions: input.terms_and_conditions ?? null,
+            currency_code: input.currency_code,
+            tax_source: 'internal',
+            is_template: false,
+            created_by: tx.actorUserId,
+          }));
+        } catch (error) {
+          rethrowAsStandardError(ctx, error);
+        }
+
+        const createdQuote = await Quote.create(tx.trx, tx.tenantId, {
+          ...(parsedInput as any),
+          subtotal: 0,
+          discount_total: 0,
+          tax: 0,
+          total_amount: 0,
+        } as any);
+
+        const authorized = await authorizeQuoteRead(tx.trx, tx.tenantId, tx.actorUserId, createdQuote as any);
+        if (!authorized) {
+          throwActionError(ctx, {
+            category: 'ActionError',
+            code: 'PERMISSION_DENIED',
+            message: 'Permission denied: Cannot read created quote',
+          });
+        }
+
+        const fullQuote = await Quote.getById(tx.trx, tx.tenantId, createdQuote.quote_id);
+        if (!fullQuote) {
+          throwActionError(ctx, {
+            category: 'ActionError',
+            code: 'NOT_FOUND',
+            message: 'Quote not found after creation',
+            details: { quote_id: createdQuote.quote_id },
+          });
+        }
+
+        await writeRunAudit(ctx, tx, {
+          operation: 'workflow_action:crm.create_quote',
+          changedData: {
+            quote_id: createdQuote.quote_id,
+            client_id: input.client_id,
+            contact_id: input.contact_id ?? null,
+            status: createdQuote.status ?? null,
+          },
+          details: {
+            action_id: 'crm.create_quote',
+            action_version: 1,
+            quote_id: createdQuote.quote_id,
+          },
+        });
+
+        return { quote: toQuoteDetailSummary(fullQuote as any) };
+      }),
+  });
+
+  // ---------------------------------------------------------------------------
+  // crm.add_quote_item
+  // ---------------------------------------------------------------------------
+  registry.register({
+    id: 'crm.add_quote_item',
+    version: 1,
+    inputSchema: addQuoteItemInputSchema,
+    outputSchema: z.object({
+      quote_item: quoteItemSummarySchema,
+      quote: quoteDetailSummarySchema,
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'actionProvided', key: actionProvidedKey },
+    ui: {
+      label: 'Add Quote Item',
+      category: 'Business Operations',
+      description: 'Add an item to an editable quote and return refreshed totals',
+    },
+    handler: async (input, ctx) =>
+      withTenantTransaction(ctx, async (tx) => {
+        await requirePermission(ctx, tx, { resource: 'billing', action: 'update' });
+        await requirePermission(ctx, tx, { resource: 'billing', action: 'read' });
+
+        const quote = await getAuthorizedQuoteForMutation(
+          ctx,
+          tx,
+          input.quote_id,
+          'Permission denied: Cannot update quote'
+        );
+
+        if (quote.is_template) {
+          throwActionError(ctx, {
+            category: 'ValidationError',
+            code: 'VALIDATION_ERROR',
+            message: 'Cannot add items to quote templates',
+            details: { quote_id: input.quote_id },
+          });
+        }
+
+        if (String(quote.status ?? 'draft') !== 'draft') {
+          throwActionError(ctx, {
+            category: 'ValidationError',
+            code: 'VALIDATION_ERROR',
+            message: 'Only draft quotes are editable',
+            details: { quote_id: input.quote_id, status: quote.status ?? null },
+          });
+        }
+
+        let parsedInput: Record<string, unknown>;
+        try {
+          parsedInput = createQuoteItemSchema.parse({
+            ...input,
+            created_by: tx.actorUserId,
+          }) as Record<string, unknown>;
+        } catch (error) {
+          rethrowAsStandardError(ctx, error);
+        }
+
+        const createdItem = await QuoteItem.create(tx.trx, tx.tenantId, parsedInput as any);
+        const refreshedQuote = await Quote.getById(tx.trx, tx.tenantId, input.quote_id);
+        if (!refreshedQuote) {
+          throwActionError(ctx, {
+            category: 'ActionError',
+            code: 'NOT_FOUND',
+            message: 'Quote not found after item creation',
+            details: { quote_id: input.quote_id },
+          });
+        }
+
+        await writeRunAudit(ctx, tx, {
+          operation: 'workflow_action:crm.add_quote_item',
+          changedData: {
+            quote_id: input.quote_id,
+            quote_item_id: createdItem.quote_item_id,
+            display_order: createdItem.display_order,
+            total_price: createdItem.total_price,
+          },
+          details: {
+            action_id: 'crm.add_quote_item',
+            action_version: 1,
+            quote_id: input.quote_id,
+            quote_item_id: createdItem.quote_item_id,
+          },
+        });
+
+        return {
+          quote_item: toQuoteItemSummary(createdItem as any),
+          quote: toQuoteDetailSummary(refreshedQuote as any),
+        };
+      }),
+  });
+
+  // ---------------------------------------------------------------------------
+  // crm.create_quote_from_template
+  // ---------------------------------------------------------------------------
+  registry.register({
+    id: 'crm.create_quote_from_template',
+    version: 1,
+    inputSchema: createQuoteFromTemplateInputSchema,
+    outputSchema: z.object({
+      quote: quoteDetailSummarySchema,
+      quote_items: z.array(quoteItemSummarySchema),
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'actionProvided', key: actionProvidedKey },
+    ui: {
+      label: 'Create Quote from Template',
+      category: 'Business Operations',
+      description: 'Create a client quote from a quote template with optional overrides',
+    },
+    handler: async (input, ctx) =>
+      withTenantTransaction(ctx, async (tx) => {
+        await requirePermission(ctx, tx, { resource: 'billing', action: 'create' });
+        await requirePermission(ctx, tx, { resource: 'billing', action: 'read' });
+
+        const templateQuote = await getAuthorizedQuoteForMutation(
+          ctx,
+          tx,
+          input.template_id,
+          'Permission denied: Cannot read quote template'
+        );
+
+        if (!templateQuote.is_template) {
+          throwActionError(ctx, {
+            category: 'ValidationError',
+            code: 'VALIDATION_ERROR',
+            message: 'template_id must reference a quote template',
+            details: { template_id: input.template_id },
+          });
+        }
+
+        const templateWithItems = await Quote.getById(tx.trx, tx.tenantId, input.template_id);
+        if (!templateWithItems) {
+          throwActionError(ctx, {
+            category: 'ActionError',
+            code: 'NOT_FOUND',
+            message: 'Template quote not found',
+            details: { template_id: input.template_id },
+          });
+        }
+
+        const client = await tx.trx('clients').where({ tenant: tx.tenantId, client_id: input.client_id }).first();
+        if (!client) {
+          throwActionError(ctx, {
+            category: 'ActionError',
+            code: 'NOT_FOUND',
+            message: 'Client not found',
+            details: { client_id: input.client_id },
+          });
+        }
+        await ensureQuoteContactBelongsToClient(ctx, tx, input.client_id, input.contact_id);
+
+        const resolvedQuoteDate = input.quote_date ?? (templateWithItems.quote_date ? new Date(templateWithItems.quote_date) : undefined);
+        const resolvedValidUntil = input.valid_until ?? (templateWithItems.valid_until ? new Date(templateWithItems.valid_until) : undefined);
+
+        if (!resolvedQuoteDate || !resolvedValidUntil) {
+          throwActionError(ctx, {
+            category: 'ValidationError',
+            code: 'VALIDATION_ERROR',
+            message: 'quote_date and valid_until must be resolvable from input or template',
+          });
+        }
+
+        let parsedQuote: Record<string, unknown>;
+        try {
+          parsedQuote = normalizeQuoteDates(createQuoteSchema.parse({
+            client_id: input.client_id,
+            contact_id: input.contact_id ?? null,
+            title: input.title ?? templateWithItems.title,
+            description: templateWithItems.description ?? null,
+            quote_date: resolvedQuoteDate,
+            valid_until: resolvedValidUntil,
+            po_number: input.po_number ?? null,
+            internal_notes: input.internal_notes ?? templateWithItems.internal_notes ?? null,
+            client_notes: input.client_notes ?? templateWithItems.client_notes ?? null,
+            terms_and_conditions: templateWithItems.terms_and_conditions ?? null,
+            currency_code: input.currency_code ?? templateWithItems.currency_code,
+            tax_source: templateWithItems.tax_source ?? 'internal',
+            is_template: false,
+            created_by: tx.actorUserId,
+          }));
+        } catch (error) {
+          rethrowAsStandardError(ctx, error);
+        }
+
+        const createdQuote = await Quote.create(tx.trx, tx.tenantId, {
+          ...(parsedQuote as any),
+          subtotal: 0,
+          discount_total: 0,
+          tax: 0,
+          total_amount: 0,
+        } as any);
+
+        for (const item of templateWithItems.quote_items ?? []) {
+          await QuoteItem.create(tx.trx, tx.tenantId, {
+            quote_id: createdQuote.quote_id,
+            service_id: item.service_id ?? null,
+            service_item_kind: item.service_item_kind ?? null,
+            service_name: item.service_name ?? null,
+            service_sku: item.service_sku ?? null,
+            billing_method: item.billing_method ?? null,
+            description: item.description,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            unit_of_measure: item.unit_of_measure ?? null,
+            display_order: item.display_order,
+            phase: item.phase ?? null,
+            is_optional: item.is_optional,
+            is_selected: item.is_selected,
+            is_recurring: item.is_recurring,
+            billing_frequency: item.billing_frequency ?? null,
+            is_discount: item.is_discount ?? false,
+            discount_type: item.discount_type ?? null,
+            discount_percentage: item.discount_percentage ?? null,
+            applies_to_item_id: item.applies_to_item_id ?? null,
+            applies_to_service_id: item.applies_to_service_id ?? null,
+            is_taxable: item.is_taxable ?? true,
+            tax_region: item.tax_region ?? null,
+            tax_rate: item.tax_rate ?? null,
+            location_id: item.location_id ?? null,
+            cost: item.cost ?? null,
+            cost_currency: item.cost_currency ?? null,
+            created_by: tx.actorUserId,
+          } as any);
+        }
+
+        const createdQuoteWithItems = await Quote.getById(tx.trx, tx.tenantId, createdQuote.quote_id);
+        if (!createdQuoteWithItems) {
+          throwActionError(ctx, {
+            category: 'ActionError',
+            code: 'NOT_FOUND',
+            message: 'Created quote not found',
+            details: { quote_id: createdQuote.quote_id },
+          });
+        }
+
+        await writeRunAudit(ctx, tx, {
+          operation: 'workflow_action:crm.create_quote_from_template',
+          changedData: {
+            quote_id: createdQuote.quote_id,
+            template_id: input.template_id,
+            item_count: createdQuoteWithItems.quote_items?.length ?? 0,
+          },
+          details: {
+            action_id: 'crm.create_quote_from_template',
+            action_version: 1,
+            quote_id: createdQuote.quote_id,
+          },
+        });
+
+        return {
+          quote: toQuoteDetailSummary(createdQuoteWithItems as any),
+          quote_items: (createdQuoteWithItems.quote_items ?? []).map((item) => toQuoteItemSummary(item as any)),
+        };
+      }),
+  });
+
+  // ---------------------------------------------------------------------------
+  // crm.find_quotes
+  // ---------------------------------------------------------------------------
+  registry.register({
+    id: 'crm.find_quotes',
+    version: 1,
+    inputSchema: findQuotesInputSchema,
+    outputSchema: z.object({
+      quotes: z.array(quoteDetailSummarySchema),
+      first_quote: quoteDetailSummarySchema.nullable(),
+      count: z.number().int(),
+      pagination: z.object({
+        page: z.number().int(),
+        page_size: z.number().int(),
+      }),
+    }),
+    sideEffectful: false,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Find Quotes',
+      category: 'Business Operations',
+      description: 'Find tenant quotes with safe filters and pagination',
+    },
+    handler: async (input, ctx) =>
+      withTenantTransaction(ctx, async (tx) => {
+        await requirePermission(ctx, tx, { resource: 'billing', action: 'read' });
+
+        const query = tx.trx('quotes')
+          .where({ tenant: tx.tenantId, is_template: input.is_template });
+
+        if (input.quote_id) query.andWhere('quote_id', input.quote_id);
+        if (input.quote_number) query.andWhere('quote_number', input.quote_number);
+        if (input.client_id) query.andWhere('client_id', input.client_id);
+        if (input.status) query.andWhere('status', input.status);
+        if (input.date_from) query.andWhere('quote_date', '>=', input.date_from.toISOString());
+        if (input.date_to) query.andWhere('quote_date', '<=', input.date_to.toISOString());
+
+        query.orderBy(input.sortBy, input.sortOrder);
+        query.limit(input.pageSize).offset((input.page - 1) * input.pageSize);
+
+        const rows = await query;
+        const authorizedRows: Array<Record<string, unknown>> = [];
+        for (const row of rows) {
+          if (await authorizeQuoteRead(tx.trx, tx.tenantId, tx.actorUserId, row)) {
+            authorizedRows.push(row as Record<string, unknown>);
+          }
+        }
+
+        if (authorizedRows.length === 0 && input.on_empty === 'error') {
+          throwActionError(ctx, {
+            category: 'ActionError',
+            code: 'NOT_FOUND',
+            message: 'No quotes matched the supplied filters',
+          });
+        }
+
+        const summaries = authorizedRows.map((row) => toQuoteDetailSummary(row));
+        return {
+          quotes: summaries,
+          first_quote: summaries[0] ?? null,
+          count: summaries.length,
+          pagination: {
+            page: input.page,
+            page_size: input.pageSize,
+          },
+        };
+      }),
+  });
+
+  // ---------------------------------------------------------------------------
+  // crm.submit_quote_for_approval
+  // ---------------------------------------------------------------------------
+  registry.register({
+    id: 'crm.submit_quote_for_approval',
+    version: 1,
+    inputSchema: submitQuoteForApprovalInputSchema,
+    outputSchema: z.object({
+      quote: quoteDetailSummarySchema,
+      previous_status: z.string().nullable(),
+      new_status: z.string().nullable(),
+      no_op: z.boolean(),
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Submit Quote for Approval',
+      category: 'Business Operations',
+      description: 'Submit a draft quote to pending_approval',
+    },
+    handler: async (input, ctx) =>
+      withTenantTransaction(ctx, async (tx) => {
+        await requirePermission(ctx, tx, { resource: 'billing', action: 'read' });
+        await requirePermission(ctx, tx, { resource: 'billing', action: 'update' });
+
+        const quote = await getAuthorizedQuoteForMutation(
+          ctx,
+          tx,
+          input.quote_id,
+          'Permission denied: Cannot update quote'
+        );
+
+        if (quote.is_template) {
+          throwActionError(ctx, {
+            category: 'ValidationError',
+            code: 'VALIDATION_ERROR',
+            message: 'Quote templates cannot be submitted for approval',
+            details: { quote_id: input.quote_id },
+          });
+        }
+
+        const previousStatus = quote.status == null ? null : String(quote.status);
+        if (previousStatus === 'pending_approval' && input.no_op_if_already_pending) {
+          return {
+            quote: toQuoteDetailSummary(quote),
+            previous_status: previousStatus,
+            new_status: previousStatus,
+            no_op: true,
+          };
+        }
+
+        if (previousStatus !== 'draft') {
+          throwActionError(ctx, {
+            category: 'ValidationError',
+            code: 'VALIDATION_ERROR',
+            message: 'Only draft quotes can be submitted for approval',
+            details: { quote_id: input.quote_id, status: previousStatus },
+          });
+        }
+
+        const updatedQuote = await Quote.update(tx.trx, tx.tenantId, input.quote_id, {
+          status: 'pending_approval' as any,
+          updated_by: tx.actorUserId,
+        });
+
+        const comment = input.comment?.trim() || input.reason?.trim() || null;
+        if (comment) {
+          await QuoteActivity.create(tx.trx, tx.tenantId, {
+            quote_id: input.quote_id,
+            activity_type: 'approval_submitted',
+            description: `Quote submitted for approval: ${comment}`,
+            performed_by: tx.actorUserId,
+            metadata: { comment },
+          });
+        }
+
+        await writeRunAudit(ctx, tx, {
+          operation: 'workflow_action:crm.submit_quote_for_approval',
+          changedData: {
+            quote_id: input.quote_id,
+            previous_status: previousStatus,
+            new_status: updatedQuote.status ?? null,
+            comment,
+          },
+          details: {
+            action_id: 'crm.submit_quote_for_approval',
+            action_version: 1,
+            quote_id: input.quote_id,
+          },
+        });
+
+        return {
+          quote: toQuoteDetailSummary(updatedQuote as any),
+          previous_status: previousStatus,
+          new_status: updatedQuote.status == null ? null : String(updatedQuote.status),
+          no_op: false,
+        };
+      }),
+  });
+
+  // ---------------------------------------------------------------------------
+  // crm.convert_quote
+  // ---------------------------------------------------------------------------
+  registry.register({
+    id: 'crm.convert_quote',
+    version: 1,
+    inputSchema: convertQuoteInputSchema,
+    outputSchema: z.object({
+      quote: quoteDetailSummarySchema,
+      contract_id: nullableUuidSchema,
+      invoice_id: nullableUuidSchema,
+      no_op: z.boolean(),
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Convert Quote',
+      category: 'Business Operations',
+      description: 'Convert an accepted quote to draft contract/invoice targets',
+    },
+    handler: async (input, ctx) =>
+      withTenantTransaction(ctx, async (tx) => {
+        await requirePermission(ctx, tx, { resource: 'billing', action: 'read' });
+        await requirePermission(ctx, tx, { resource: 'billing', action: 'create' });
+        await requirePermission(ctx, tx, { resource: 'billing', action: 'update' });
+
+        const quote = await getAuthorizedQuoteForMutation(
+          ctx,
+          tx,
+          input.quote_id,
+          'Permission denied: Cannot convert quote'
+        );
+
+        if (quote.is_template) {
+          throwActionError(ctx, {
+            category: 'ValidationError',
+            code: 'VALIDATION_ERROR',
+            message: 'Quote templates cannot be converted',
+            details: { quote_id: input.quote_id },
+          });
+        }
+
+        const alreadyConverted = Boolean(quote.converted_contract_id || quote.converted_invoice_id || quote.status === 'converted');
+        if (alreadyConverted && input.no_op_if_already_converted) {
+          return {
+            quote: toQuoteDetailSummary(quote),
+            contract_id: quote.converted_contract_id ?? null,
+            invoice_id: quote.converted_invoice_id ?? null,
+            no_op: true,
+          };
+        }
+
+        try {
+          if (input.target === 'contract') {
+            const result = await convertQuoteToDraftContract(tx.trx, tx.tenantId, input.quote_id, tx.actorUserId);
+            await writeRunAudit(ctx, tx, {
+              operation: 'workflow_action:crm.convert_quote',
+              changedData: {
+                quote_id: input.quote_id,
+                target: input.target,
+                contract_id: result.contract.contract_id,
+              },
+              details: {
+                action_id: 'crm.convert_quote',
+                action_version: 1,
+                quote_id: input.quote_id,
+              },
+            });
+            return {
+              quote: toQuoteDetailSummary(result.quote as any),
+              contract_id: result.contract.contract_id,
+              invoice_id: result.quote.converted_invoice_id ?? null,
+              no_op: false,
+            };
+          }
+
+          if (input.target === 'invoice') {
+            const result = await convertQuoteToDraftInvoice(tx.trx, tx.tenantId, input.quote_id, tx.actorUserId);
+            await writeRunAudit(ctx, tx, {
+              operation: 'workflow_action:crm.convert_quote',
+              changedData: {
+                quote_id: input.quote_id,
+                target: input.target,
+                invoice_id: result.invoice.invoice_id,
+              },
+              details: {
+                action_id: 'crm.convert_quote',
+                action_version: 1,
+                quote_id: input.quote_id,
+              },
+            });
+            return {
+              quote: toQuoteDetailSummary(result.quote as any),
+              contract_id: result.quote.converted_contract_id ?? null,
+              invoice_id: result.invoice.invoice_id,
+              no_op: false,
+            };
+          }
+
+          const result = await convertQuoteToDraftContractAndInvoice(tx.trx, tx.tenantId, input.quote_id, tx.actorUserId);
+          await writeRunAudit(ctx, tx, {
+            operation: 'workflow_action:crm.convert_quote',
+            changedData: {
+              quote_id: input.quote_id,
+              target: input.target,
+              contract_id: result.contract.contract_id,
+              invoice_id: result.invoice.invoice_id,
+            },
+            details: {
+              action_id: 'crm.convert_quote',
+              action_version: 1,
+              quote_id: input.quote_id,
+            },
+          });
+          return {
+            quote: toQuoteDetailSummary(result.quote as any),
+            contract_id: result.contract.contract_id,
+            invoice_id: result.invoice.invoice_id,
+            no_op: false,
+          };
+        } catch (error) {
+          rethrowAsStandardError(ctx, error);
+        }
+      }),
+  });
+
+  // ---------------------------------------------------------------------------
+  // crm.tag_activity
+  // ---------------------------------------------------------------------------
+  registry.register({
+    id: 'crm.tag_activity',
+    version: 1,
+    inputSchema: tagActivityInputSchema,
+    outputSchema: z.object({
+      activity_id: uuidSchema,
+      added_tags: z.array(z.object({ tag_id: uuidSchema, tag_text: z.string(), mapping_id: uuidSchema })),
+      existing_tags: z.array(z.object({ tag_id: uuidSchema, tag_text: z.string(), mapping_id: uuidSchema })),
+      added_count: z.number().int(),
+      existing_count: z.number().int(),
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'actionProvided', key: actionProvidedKey },
+    ui: {
+      label: 'Tag CRM Activity',
+      category: 'Business Operations',
+      description: 'Apply existing/new tags to a CRM interaction activity',
+    },
+    handler: async (input, ctx) =>
+      withTenantTransaction(ctx, async (tx) => {
+        await requirePermission(ctx, tx, { resource: 'client', action: 'update' });
+
+        const interaction = await tx.trx('interactions')
+          .where({ tenant: tx.tenantId, interaction_id: input.activity_id })
+          .first();
+        if (!interaction) {
+          throwActionError(ctx, {
+            category: 'ActionError',
+            code: 'NOT_FOUND',
+            message: 'Activity not found',
+            details: { activity_id: input.activity_id },
+          });
+        }
+
+        const normalizedTags = Array.from(new Set(input.tags.map((tag) => validateTagText(tag))));
+        const addedTags: Array<{ tag_id: string; tag_text: string; mapping_id: string }> = [];
+        const existingTags: Array<{ tag_id: string; tag_text: string; mapping_id: string }> = [];
+        const createdDefinitions: Array<{ tag_id: string; tag_text: string; created_at?: Date }> = [];
+        const createdMappings: Array<{ tag_id: string; tagged_id: string; created_at?: Date }> = [];
+
+        for (const tagText of normalizedTags) {
+          const maybeExistingDefinition = await TagDefinition.findByTextAndType(tx.trx, tx.tenantId, tagText, 'interaction');
+          if (!maybeExistingDefinition) {
+            await requirePermission(ctx, tx, { resource: 'tag', action: 'create' });
+          }
+
+          const { definition, created } = await TagDefinition.getOrCreateWithStatus(
+            tx.trx,
+            tx.tenantId,
+            tagText,
+            'interaction',
+            {}
+          );
+
+          const existingMapping = await tx.trx('tag_mappings')
+            .where({
+              tenant: tx.tenantId,
+              tag_id: definition.tag_id,
+              tagged_id: input.activity_id,
+              tagged_type: 'interaction',
+            })
+            .first();
+
+          if (existingMapping) {
+            if (input.if_exists === 'error') {
+              throwActionError(ctx, {
+                category: 'ActionError',
+                code: 'CONFLICT',
+                message: 'Tag is already applied to this activity',
+                details: { activity_id: input.activity_id, tag_text: tagText },
+              });
+            }
+            existingTags.push({
+              tag_id: definition.tag_id,
+              tag_text: definition.tag_text,
+              mapping_id: String(existingMapping.mapping_id),
+            });
+            continue;
+          }
+
+          const mapping = await TagMapping.insert(tx.trx, tx.tenantId, {
+            tag_id: definition.tag_id,
+            tagged_id: input.activity_id,
+            tagged_type: 'interaction',
+            created_by: tx.actorUserId,
+          }, tx.actorUserId);
+
+          if (created) {
+            createdDefinitions.push({
+              tag_id: definition.tag_id,
+              tag_text: definition.tag_text,
+              created_at: definition.created_at,
+            });
+          }
+          createdMappings.push({
+            tag_id: definition.tag_id,
+            tagged_id: input.activity_id,
+            created_at: mapping.created_at,
+          });
+          addedTags.push({
+            tag_id: definition.tag_id,
+            tag_text: definition.tag_text,
+            mapping_id: mapping.mapping_id,
+          });
+        }
+
+        const occurredAt = new Date().toISOString();
+        for (const definition of createdDefinitions) {
+          await publishWorkflowDomainEvent({
+            eventType: 'TAG_DEFINITION_CREATED',
+            payload: buildTagDefinitionCreatedPayload({
+              tagId: definition.tag_id,
+              tagName: definition.tag_text,
+              createdByUserId: tx.actorUserId,
+              createdAt: definition.created_at ?? occurredAt,
+            }),
+            tenantId: tx.tenantId,
+            occurredAt,
+            actorUserId: tx.actorUserId,
+            idempotencyKey: `tag_definition_created:${definition.tag_id}`,
+          });
+        }
+
+        for (const mapping of createdMappings) {
+          await publishWorkflowDomainEvent({
+            eventType: 'TAG_APPLIED',
+            payload: buildTagAppliedPayload({
+              tagId: mapping.tag_id,
+              entityType: 'interaction',
+              entityId: mapping.tagged_id,
+              appliedByUserId: tx.actorUserId,
+              appliedAt: mapping.created_at ?? occurredAt,
+            }),
+            tenantId: tx.tenantId,
+            occurredAt,
+            actorUserId: tx.actorUserId,
+            idempotencyKey: `tag_applied:${mapping.tagged_id}:${mapping.tag_id}`,
+          });
+        }
+
+        await writeRunAudit(ctx, tx, {
+          operation: 'workflow_action:crm.tag_activity',
+          changedData: {
+            activity_id: input.activity_id,
+            tags: normalizedTags,
+            added_count: addedTags.length,
+            existing_count: existingTags.length,
+          },
+          details: {
+            action_id: 'crm.tag_activity',
+            action_version: 1,
+            activity_id: input.activity_id,
+          },
+        });
+
+        return {
+          activity_id: input.activity_id,
+          added_tags: addedTags,
+          existing_tags: existingTags,
+          added_count: addedTags.length,
+          existing_count: existingTags.length,
+        };
+      }),
+  });
 
   // ---------------------------------------------------------------------------
   // A18 — crm.create_activity_note

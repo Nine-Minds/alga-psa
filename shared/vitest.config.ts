@@ -37,6 +37,10 @@ export default defineConfig({
         find: /^@alga-psa\/db\/connection$/,
         replacement: path.resolve(__dirname, '../packages/db/src/lib/connection.ts'),
       },
+      {
+        find: /^@alga-psa\/db\/(.*)$/,
+        replacement: path.resolve(__dirname, '../packages/db/src/$1'),
+      },
       { find: /^@alga-psa\/core$/, replacement: path.resolve(__dirname, '../packages/core/src/index.ts') },
       {
         find: /^@alga-psa\/core\/logger$/,
@@ -45,6 +49,10 @@ export default defineConfig({
       {
         find: /^@alga-psa\/core\/secrets$/,
         replacement: path.resolve(__dirname, '../packages/core/src/lib/secrets/index.ts'),
+      },
+      {
+        find: /^@alga-psa\/core\/(.*)$/,
+        replacement: path.resolve(__dirname, '../packages/core/src/$1'),
       },
       {
         find: /^@shared\/workflow\/secrets$/,
@@ -61,6 +69,10 @@ export default defineConfig({
       {
         find: /^@shared\/workflow\/streams\/(.*)$/,
         replacement: path.resolve(__dirname, './workflow/streams/$1'),
+      },
+      {
+        find: /^@shared\/(.*)$/,
+        replacement: path.resolve(__dirname, './$1'),
       },
     ],
   },

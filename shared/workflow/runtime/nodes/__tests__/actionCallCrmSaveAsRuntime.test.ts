@@ -14,57 +14,72 @@ describe('workflow runtime node smoke for crm actions', () => {
     }
 
     const actionRegistry = getActionRegistryV2();
-    if (!actionRegistry.get('crm.find_activities', 1)) {
+    if (!actionRegistry.get('crm.find_quotes', 1)) {
       registerCrmActions();
     }
   });
 
-  it('T013: action.call can execute crm.find_activities, saveAs output, and use it in a downstream expression', async () => {
+  it('T013: action.call can execute a follow-up crm action, saveAs output, and use it in a downstream expression', async () => {
     const nodeRegistry = getNodeTypeRegistry();
     const actionRegistry = getActionRegistryV2();
 
     const actionCallNode = nodeRegistry.get('action.call');
     const assignNode = nodeRegistry.get('transform.assign');
-    const findActivities = actionRegistry.get('crm.find_activities', 1);
+    const findQuotes = actionRegistry.get('crm.find_quotes', 1);
 
-    if (!actionCallNode || !assignNode || !findActivities) {
+    if (!actionCallNode || !assignNode || !findQuotes) {
       throw new Error('Required runtime registrations are missing');
     }
 
-    const originalHandler = findActivities.handler;
+    const originalHandler = findQuotes.handler;
 
     try {
-      findActivities.handler = async () => ({
-        activities: [
+      findQuotes.handler = async () => ({
+        quotes: [
           {
             activity_id: '00000000-0000-0000-0000-000000000001',
-            type_id: '00000000-0000-0000-0000-000000000011',
-            type_name: 'Call',
-            status_id: null,
-            status_name: null,
+            quote_id: '00000000-0000-0000-0000-000000000001',
+            quote_number: 'Q-1001',
+            status: 'draft',
             client_id: '00000000-0000-0000-0000-000000000111',
-            client_name: 'Acme Corp',
             contact_id: null,
-            contact_name: null,
-            ticket_id: null,
-            ticket_number: null,
-            title: 'Follow-up',
-            notes_preview: null,
-            interaction_date: '2026-04-26T12:00:00.000Z',
-            start_time: '2026-04-26T12:00:00.000Z',
-            end_time: '2026-04-26T12:30:00.000Z',
-            duration: 30,
-            user_id: '00000000-0000-0000-0000-000000000021',
-            user_name: 'Workflow Actor',
-            visibility: 'internal',
-            category: 'follow-up',
-            tags: ['qbr'],
+            title: 'Follow-up Quote',
+            quote_date: '2026-04-26T12:00:00.000Z',
+            valid_until: '2026-05-26T12:00:00.000Z',
+            currency_code: 'USD',
+            subtotal: 5000,
+            discount_total: 0,
+            tax: 0,
+            total_amount: 5000,
+            sent_at: null,
+            converted_contract_id: null,
+            converted_invoice_id: null,
+            is_template: false,
           },
         ],
-        count: 1,
-        matched_filters: {
+        first_quote: {
+          quote_id: '00000000-0000-0000-0000-000000000001',
+          quote_number: 'Q-1001',
+          status: 'draft',
           client_id: '00000000-0000-0000-0000-000000000111',
-          limit: 10,
+          contact_id: null,
+          title: 'Follow-up Quote',
+          quote_date: '2026-04-26T12:00:00.000Z',
+          valid_until: '2026-05-26T12:00:00.000Z',
+          currency_code: 'USD',
+          subtotal: 5000,
+          discount_total: 0,
+          tax: 0,
+          total_amount: 5000,
+          sent_at: null,
+          converted_contract_id: null,
+          converted_invoice_id: null,
+          is_template: false,
+        },
+        count: 1,
+        pagination: {
+          page: 1,
+          page_size: 10,
         },
       });
 
@@ -111,22 +126,22 @@ describe('workflow runtime node smoke for crm actions', () => {
       };
 
       const actionConfig = actionCallNode.configSchema.parse({
-        actionId: 'crm.find_activities',
+        actionId: 'crm.find_quotes',
         version: 1,
         inputMapping: {
           client_id: '00000000-0000-0000-0000-000000000111',
-          limit: 10,
+          pageSize: 10,
           on_empty: 'return_empty',
         },
-        saveAs: 'crmActivities',
+        saveAs: 'crmQuotes',
       });
 
       env = await actionCallNode.handler(env, actionConfig, nodeCtx as any) as Envelope;
 
       const assignConfig = assignNode.configSchema.parse({
         assign: {
-          'payload.crmActivityCount': { $expr: 'vars.crmActivities.count' },
-          'payload.crmFirstTitle': { $expr: 'vars.crmActivities.activities[0].title' },
+          'payload.crmQuoteCount': { $expr: 'vars.crmQuotes.count' },
+          'payload.crmFirstQuoteTitle': { $expr: 'vars.crmQuotes.quotes[0].title' },
         },
       });
 
@@ -135,10 +150,10 @@ describe('workflow runtime node smoke for crm actions', () => {
         stepPath: 'steps.assign-output',
       } as any) as Envelope;
 
-      expect((env.payload as any).crmActivityCount).toBe(1);
-      expect((env.payload as any).crmFirstTitle).toBe('Follow-up');
+      expect((env.payload as any).crmQuoteCount).toBe(1);
+      expect((env.payload as any).crmFirstQuoteTitle).toBe('Follow-up Quote');
     } finally {
-      findActivities.handler = originalHandler;
+      findQuotes.handler = originalHandler;
     }
   });
 });

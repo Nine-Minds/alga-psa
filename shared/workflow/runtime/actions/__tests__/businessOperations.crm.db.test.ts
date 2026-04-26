@@ -375,6 +375,50 @@ async function createQuote(
   return quoteId;
 }
 
+async function createQuoteItemRecord(
+  db: Knex,
+  params: {
+    tenantId: string;
+    actorUserId: string;
+    quoteId: string;
+    description: string;
+    quantity?: number;
+    unitPrice?: number;
+    isRecurring?: boolean;
+    billingFrequency?: string | null;
+    isOptional?: boolean;
+    isSelected?: boolean;
+    displayOrder?: number;
+  }
+): Promise<string> {
+  const quoteItemId = uuidv4();
+  const quantity = params.quantity ?? 1;
+  const unitPrice = params.unitPrice ?? 1000;
+  const displayOrder = params.displayOrder ?? 0;
+  const total = quantity * unitPrice;
+  await db('quote_items').insert({
+    tenant: params.tenantId,
+    quote_item_id: quoteItemId,
+    quote_id: params.quoteId,
+    description: params.description,
+    quantity,
+    unit_price: unitPrice,
+    total_price: total,
+    net_amount: total,
+    tax_amount: 0,
+    display_order: displayOrder,
+    is_optional: params.isOptional ?? false,
+    is_selected: params.isSelected ?? true,
+    is_recurring: params.isRecurring ?? false,
+    billing_frequency: params.billingFrequency ?? null,
+    created_by: params.actorUserId,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  });
+
+  return quoteItemId;
+}
+
 const runtimeState = vi.hoisted(() => ({
   db: null as Knex | null,
   tenantId: '',
@@ -504,6 +548,346 @@ describe('crm workflow runtime DB-backed action handlers', () => {
     resetWorkflowEmailProvider();
     await db?.destroy();
     runtimeState.db = null;
+  });
+
+  it('T003: crm.create_interaction_type creates tenant type, handles duplicates, audits, and requires settings:update', async () => {
+    const created = await invokeAction('crm.create_interaction_type', {
+      type_name: 'QBR Follow-up',
+      icon: 'phone',
+    });
+
+    expect(created.interaction_type.created).toBe(true);
+    expect(created.interaction_type.type_name).toBe('QBR Follow-up');
+    expect(created.interaction_type.display_order).toBeGreaterThanOrEqual(0);
+
+    const duplicate = await invokeAction('crm.create_interaction_type', {
+      type_name: '  qbr follow-up  ',
+      if_exists: 'return_existing',
+    });
+    expect(duplicate.interaction_type.created).toBe(false);
+    expect(duplicate.interaction_type.type_id).toBe(created.interaction_type.type_id);
+
+    await expect(
+      invokeAction('crm.create_interaction_type', {
+        type_name: 'QBR Follow-up',
+        if_exists: 'error',
+      })
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+
+    const audit = await db('audit_logs')
+      .where({ tenant: runtimeState.tenantId, operation: 'workflow_action:crm.create_interaction_type' })
+      .first();
+    expect(audit).toBeTruthy();
+
+    runtimeState.deniedPermissions.add('settings:update');
+    await expect(
+      invokeAction('crm.create_interaction_type', { type_name: 'Blocked Type' })
+    ).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+    runtimeState.deniedPermissions.clear();
+  });
+
+  it('T004: crm.update_activity_status transitions statuses, no-ops, audits, and rejects invalid status/activity', async () => {
+    const clientId = await createClient(db, runtimeState.tenantId, 'Status Client');
+    const typeId = await getAnyInteractionTypeId(db, runtimeState.tenantId);
+    const initialStatusId = await getDefaultInteractionStatusId(db, runtimeState.tenantId, runtimeState.actorUserId);
+    const nextStatusId = await createInteractionStatus(db, runtimeState.tenantId, runtimeState.actorUserId, 'Completed');
+
+    const activityId = await createInteraction(db, {
+      tenantId: runtimeState.tenantId,
+      actorUserId: runtimeState.actorUserId,
+      clientId,
+      typeId,
+      statusId: initialStatusId,
+    });
+
+    const changed = await invokeAction('crm.update_activity_status', {
+      activity_id: activityId,
+      status_id: nextStatusId,
+    });
+    expect(changed.no_op).toBe(false);
+    expect(changed.previous_status_id).toBe(initialStatusId);
+    expect(changed.current_status_id).toBe(nextStatusId);
+
+    const noOp = await invokeAction('crm.update_activity_status', {
+      activity_id: activityId,
+      status_name: 'completed',
+      no_op_if_already_status: true,
+    });
+    expect(noOp.no_op).toBe(true);
+    expect(noOp.current_status_id).toBe(nextStatusId);
+
+    await expect(
+      invokeAction('crm.update_activity_status', {
+        activity_id: activityId,
+        status_name: 'not-a-real-status',
+      })
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+
+    const otherTenantId = await createTenant(db, 'Other Activity Tenant');
+    const otherUserId = await createUser(db, otherTenantId);
+    const otherClientId = await createClient(db, otherTenantId, 'Other Activity Client');
+    const otherTypeId = await getAnyInteractionTypeId(db, otherTenantId);
+    const otherActivityId = await createInteraction(db, {
+      tenantId: otherTenantId,
+      actorUserId: otherUserId,
+      clientId: otherClientId,
+      typeId: otherTypeId,
+    });
+
+    await expect(
+      invokeAction('crm.update_activity_status', {
+        activity_id: otherActivityId,
+        status_id: nextStatusId,
+      })
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+
+  it('T005/T006/T007/T016/T017: quote creation/find/approval/item/template follow-up actions enforce tenant guards and audit', async () => {
+    const clientId = await createClient(db, runtimeState.tenantId, 'Quote Flow Client');
+    const contactId = await createContact(db, runtimeState.tenantId, clientId, 'Quote Flow Contact');
+    const templateId = await createQuote(db, {
+      tenantId: runtimeState.tenantId,
+      actorUserId: runtimeState.actorUserId,
+      clientId,
+      contactId,
+      title: 'Template Quote',
+      status: null as any,
+      isTemplate: true,
+    });
+
+    await createQuoteItemRecord(db, {
+      tenantId: runtimeState.tenantId,
+      actorUserId: runtimeState.actorUserId,
+      quoteId: templateId,
+      description: 'Template Item',
+      unitPrice: 1500,
+      displayOrder: 0,
+    });
+
+    const createdQuote = await invokeAction('crm.create_quote', {
+      client_id: clientId,
+      contact_id: contactId,
+      title: 'Workflow Created Quote',
+      quote_date: new Date('2026-01-01').toISOString(),
+      valid_until: new Date('2026-02-01').toISOString(),
+      currency_code: 'USD',
+    });
+    expect(createdQuote.quote.quote_id).toBeTruthy();
+
+    const addItem = await invokeAction('crm.add_quote_item', {
+      quote_id: createdQuote.quote.quote_id,
+      description: 'Managed Service',
+      quantity: 2,
+      unit_price: 2000,
+      display_order: 0,
+    });
+    expect(addItem.quote_item.quote_id).toBe(createdQuote.quote.quote_id);
+    expect(addItem.quote.quote_id).toBe(createdQuote.quote.quote_id);
+
+    const foundQuotes = await invokeAction('crm.find_quotes', {
+      quote_id: createdQuote.quote.quote_id,
+      on_empty: 'error',
+      pageSize: 25,
+    });
+    expect(foundQuotes.count).toBe(1);
+    expect(foundQuotes.first_quote?.quote_id).toBe(createdQuote.quote.quote_id);
+
+    const submitted = await invokeAction('crm.submit_quote_for_approval', {
+      quote_id: createdQuote.quote.quote_id,
+      reason: 'auto-submit',
+    });
+    expect(submitted.previous_status).toBe('draft');
+    expect(submitted.new_status).toBe('pending_approval');
+
+    const noOpPending = await invokeAction('crm.submit_quote_for_approval', {
+      quote_id: createdQuote.quote.quote_id,
+      no_op_if_already_pending: true,
+    });
+    expect(noOpPending.no_op).toBe(true);
+
+    const fromTemplate = await invokeAction('crm.create_quote_from_template', {
+      template_id: templateId,
+      client_id: clientId,
+      contact_id: contactId,
+      title: 'Templated Quote',
+      quote_date: new Date('2026-03-01').toISOString(),
+      valid_until: new Date('2026-03-30').toISOString(),
+    });
+    expect(fromTemplate.quote.quote_id).toBeTruthy();
+    expect(fromTemplate.quote_items.length).toBeGreaterThan(0);
+
+    await expect(
+      invokeAction('crm.create_quote', {
+        client_id: clientId,
+        contact_id: contactId,
+        title: 'Bad Dates',
+        quote_date: new Date('2026-04-02').toISOString(),
+        valid_until: new Date('2026-04-01').toISOString(),
+      })
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+
+    await expect(
+      invokeAction('crm.find_quotes', {
+        on_empty: 'return_empty',
+        pageSize: 100,
+      })
+    ).rejects.toThrow();
+
+    const quoteAudit = await db('audit_logs')
+      .where({ tenant: runtimeState.tenantId, operation: 'workflow_action:crm.create_quote' })
+      .first();
+    expect(quoteAudit).toBeTruthy();
+  });
+
+  it('T008/T009: crm.convert_quote converts accepted quotes and rejects ineligible/template/cross-tenant/permission cases', async () => {
+    const clientId = await createClient(db, runtimeState.tenantId, 'Convert Client');
+    const quoteId = await createQuote(db, {
+      tenantId: runtimeState.tenantId,
+      actorUserId: runtimeState.actorUserId,
+      clientId,
+      title: 'Convert Me',
+      status: 'accepted',
+    });
+
+    await createQuoteItemRecord(db, {
+      tenantId: runtimeState.tenantId,
+      actorUserId: runtimeState.actorUserId,
+      quoteId,
+      description: 'Recurring Contract Line',
+      unitPrice: 5000,
+      isRecurring: true,
+      billingFrequency: 'monthly',
+      displayOrder: 0,
+    });
+    await createQuoteItemRecord(db, {
+      tenantId: runtimeState.tenantId,
+      actorUserId: runtimeState.actorUserId,
+      quoteId,
+      description: 'One-time Setup',
+      unitPrice: 2000,
+      isRecurring: false,
+      displayOrder: 1,
+    });
+
+    const converted = await invokeAction('crm.convert_quote', {
+      quote_id: quoteId,
+      target: 'contract_and_invoice',
+    });
+    expect(converted.no_op).toBe(false);
+    expect(converted.contract_id).toBeTruthy();
+    expect(converted.invoice_id).toBeTruthy();
+
+    const noOp = await invokeAction('crm.convert_quote', {
+      quote_id: quoteId,
+      target: 'contract',
+      no_op_if_already_converted: true,
+    });
+    expect(noOp.no_op).toBe(true);
+
+    const draftQuoteId = await createQuote(db, {
+      tenantId: runtimeState.tenantId,
+      actorUserId: runtimeState.actorUserId,
+      clientId,
+      status: 'draft',
+    });
+    await expect(
+      invokeAction('crm.convert_quote', {
+        quote_id: draftQuoteId,
+        target: 'contract',
+      })
+    ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+
+    const templateQuoteId = await createQuote(db, {
+      tenantId: runtimeState.tenantId,
+      actorUserId: runtimeState.actorUserId,
+      clientId,
+      status: null as any,
+      isTemplate: true,
+    });
+    await expect(
+      invokeAction('crm.convert_quote', {
+        quote_id: templateQuoteId,
+        target: 'invoice',
+      })
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+
+    const otherTenant = await createTenant(db, 'Other Convert Tenant');
+    const otherUser = await createUser(db, otherTenant);
+    const otherClient = await createClient(db, otherTenant, 'Other Convert Client');
+    const otherQuote = await createQuote(db, {
+      tenantId: otherTenant,
+      actorUserId: otherUser,
+      clientId: otherClient,
+      status: 'accepted',
+    });
+    await expect(
+      invokeAction('crm.convert_quote', {
+        quote_id: otherQuote,
+        target: 'contract',
+      })
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+
+    runtimeState.deniedPermissions.add('billing:create');
+    await expect(
+      invokeAction('crm.convert_quote', {
+        quote_id: quoteId,
+        target: 'contract',
+      })
+    ).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+    runtimeState.deniedPermissions.clear();
+  });
+
+  it('T010/T011: crm.tag_activity validates interactions, applies tags idempotently, enforces tag:create, audits, and emits tag events', async () => {
+    const clientId = await createClient(db, runtimeState.tenantId, 'Tag Client');
+    const typeId = await getAnyInteractionTypeId(db, runtimeState.tenantId);
+    const activityId = await createInteraction(db, {
+      tenantId: runtimeState.tenantId,
+      actorUserId: runtimeState.actorUserId,
+      clientId,
+      typeId,
+    });
+
+    const tagged = await invokeAction('crm.tag_activity', {
+      activity_id: activityId,
+      tags: ['Needs QBR', 'Upsell Candidate'],
+    });
+
+    expect(tagged.added_count).toBe(2);
+    expect(tagged.existing_count).toBe(0);
+    expect(publishWorkflowEventMock).toHaveBeenCalled();
+    const publishedTypes = publishWorkflowEventMock.mock.calls.map((call) => call[0]?.eventType);
+    expect(publishedTypes).toContain('TAG_DEFINITION_CREATED');
+    expect(publishedTypes).toContain('TAG_APPLIED');
+
+    const idempotent = await invokeAction('crm.tag_activity', {
+      activity_id: activityId,
+      tags: ['Needs QBR'],
+      if_exists: 'no_op',
+    });
+    expect(idempotent.added_count).toBe(0);
+    expect(idempotent.existing_count).toBe(1);
+
+    await expect(
+      invokeAction('crm.tag_activity', {
+        activity_id: activityId,
+        tags: ['Needs QBR'],
+        if_exists: 'error',
+      })
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+
+    runtimeState.deniedPermissions.add('tag:create');
+    await expect(
+      invokeAction('crm.tag_activity', {
+        activity_id: activityId,
+        tags: ['Brand New Tag'],
+      })
+    ).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+    runtimeState.deniedPermissions.clear();
+
+    const audit = await db('audit_logs')
+      .where({ tenant: runtimeState.tenantId, operation: 'workflow_action:crm.tag_activity' })
+      .first();
+    expect(audit).toBeTruthy();
   });
 
   it('T004: crm.find_activities returns tenant-scoped filtered summaries and rejects unbounded searches', async () => {
