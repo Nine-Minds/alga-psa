@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
@@ -25,24 +26,36 @@ type SystemWorkflowDefinition = {
   steps: Array<Record<string, unknown>>;
 };
 
-const loadSystemWorkflowDefinition = (): SystemWorkflowDefinition => {
-  const raw = fs.readFileSync(SYSTEM_WORKFLOW_PATH, 'utf8');
-  const parsed = JSON.parse(raw) as SystemWorkflowDefinition;
-  return { ...parsed, id: SYSTEM_WORKFLOW_ID };
+const tenantWorkflowId = (tenantId: string): string => {
+  const hex = createHash('sha256').update(`${SYSTEM_WORKFLOW_ID}:${tenantId}`).digest('hex').slice(0, 32);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 };
 
-export async function ensureSystemEmailWorkflow(db: Knex): Promise<void> {
+const loadSystemWorkflowDefinition = (workflowId: string): SystemWorkflowDefinition => {
+  const raw = fs.readFileSync(SYSTEM_WORKFLOW_PATH, 'utf8');
+  const parsed = JSON.parse(raw) as SystemWorkflowDefinition;
+  return { ...parsed, id: workflowId };
+};
+
+export async function ensureSystemEmailWorkflow(db: Knex, tenantId?: string): Promise<void> {
+  const resolvedTenantId = tenantId ?? (await db('tenants').select('tenant').first())?.tenant;
+  if (!resolvedTenantId) {
+    throw new Error('tenant_id is required to seed the legacy email workflow fixture');
+  }
+
+  const workflowId = tenantWorkflowId(resolvedTenantId);
   const existing = await db('workflow_definitions')
-    .where({ workflow_id: SYSTEM_WORKFLOW_ID })
+    .where({ workflow_id: workflowId, tenant_id: resolvedTenantId })
     .first();
   if (existing) {
     return;
   }
 
-  const definition = loadSystemWorkflowDefinition();
+  const definition = loadSystemWorkflowDefinition(workflowId);
   const now = new Date().toISOString();
   const record: Record<string, any> = {
-    workflow_id: SYSTEM_WORKFLOW_ID,
+    workflow_id: workflowId,
+    tenant_id: resolvedTenantId,
     name: definition.name,
     description: definition.description ?? null,
     payload_schema_ref: definition.payloadSchemaRef,
@@ -55,7 +68,7 @@ export async function ensureSystemEmailWorkflow(db: Knex): Promise<void> {
   };
 
   if (await db.schema.hasColumn('workflow_definitions', 'is_system')) {
-    record.is_system = true;
+    record.is_system = false;
   }
   if (await db.schema.hasColumn('workflow_definitions', 'is_visible')) {
     record.is_visible = true;
@@ -69,12 +82,12 @@ export async function ensureSystemEmailWorkflow(db: Knex): Promise<void> {
   }
 
   const versionExists = await db('workflow_definition_versions')
-    .where({ workflow_id: SYSTEM_WORKFLOW_ID, version: definition.version })
+    .where({ workflow_id: workflowId, version: definition.version })
     .first();
   if (!versionExists) {
     await db('workflow_definition_versions').insert({
       version_id: uuidv4(),
-      workflow_id: SYSTEM_WORKFLOW_ID,
+      workflow_id: workflowId,
       version: definition.version,
       definition_json: definition,
       payload_schema_json: null,

@@ -44,7 +44,7 @@ async function setupDesigner(page: Page): Promise<{
     permissions: ADMIN_PERMISSIONS
   });
 
-  await ensureSystemEmailWorkflow(db);
+  await ensureSystemEmailWorkflow(db, tenantData.tenant.tenantId);
   await page.goto(`${TEST_CONFIG.baseUrl}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
   await page.waitForLoadState('networkidle', { timeout: 30_000 });
 

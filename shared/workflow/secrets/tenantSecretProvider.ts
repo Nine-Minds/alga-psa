@@ -304,14 +304,11 @@ export class TenantSecretProvider {
    * Returns a map of secret names to the workflow IDs that reference them.
    */
   async getSecretUsage(): Promise<Map<string, string[]>> {
-    // workflow_definitions / workflow_definition_versions have no tenant column,
-    // so we scope via tenant_workflow_schedule (the same linking table used elsewhere,
-    // e.g. workflow-runtime-v2-actions.ts:loadWorkflowScheduleStateMap).
-    const scheduled = await this.knex('tenant_workflow_schedule')
+    const definitions = await this.knex('workflow_definitions')
       .where({ tenant_id: this.tenantId })
       .select<{ workflow_id: string }[]>('workflow_id');
 
-    const workflowIds = scheduled.map((row) => row.workflow_id);
+    const workflowIds = definitions.map((row) => row.workflow_id);
     if (workflowIds.length === 0) {
       return new Map();
     }
@@ -322,6 +319,7 @@ export class TenantSecretProvider {
         .whereRaw("definition_json::text LIKE '%$secret%'")
         .select<{ workflow_id: string; definition_json: unknown }[]>('workflow_id', 'definition_json'),
       this.knex('workflow_definitions')
+        .where({ tenant_id: this.tenantId })
         .whereIn('workflow_id', workflowIds)
         .whereRaw("draft_definition::text LIKE '%$secret%'")
         .select<{ workflow_id: string; draft_definition: unknown }[]>('workflow_id', 'draft_definition'),
