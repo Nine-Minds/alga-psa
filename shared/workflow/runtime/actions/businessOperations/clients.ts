@@ -1,6 +1,7 @@
 import { z } from 'zod';
+import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityWithValidation, isEnterprise } from '@alga-psa/core';
 import { ensureDefaultContractForClientIfBillingConfigured } from '../../../../billingClients/defaultContract';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { withWorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
@@ -109,6 +110,11 @@ const tagResultSchema = z.object({
 });
 
 const nullableUuidSchema = z.union([uuidSchema, z.null()]);
+
+type ClientRow = Record<string, any> & { client_id: string };
+
+type ContractRow = { contract_id: string };
+type ClientContractAssignmentRow = { client_contract_id: string; contract_id: string };
 
 const clientCreateInputSchema = z.object({
   client_name: z.string().min(1),
@@ -246,7 +252,7 @@ const clientToSummary = (row: Record<string, unknown>) =>
           : undefined,
   });
 
-async function ensureClientExists(ctx: any, tx: TenantTxContext, clientId: string): Promise<Record<string, any>> {
+async function ensureClientExists(ctx: any, tx: TenantTxContext, clientId: string): Promise<ClientRow> {
   const client = await tx.trx('clients').where({ tenant: tx.tenantId, client_id: clientId }).first();
   if (!client) {
     throwActionError(ctx, {
@@ -256,7 +262,7 @@ async function ensureClientExists(ctx: any, tx: TenantTxContext, clientId: strin
       details: { client_id: clientId },
     });
   }
-  return client;
+  return client as ClientRow;
 }
 
 async function ensureTicketExists(ctx: any, tx: TenantTxContext, ticketId: string): Promise<Record<string, any>> {
@@ -434,7 +440,34 @@ async function ensureClientTagMappings(
   for (const tagText of normalizedTags) {
     const { backgroundColor, textColor } = generateTagColors(tagText);
 
-    let definition = await tx.trx('tag_definitions')
+    const definitionRow = pickExistingFields(
+      {
+        tenant: tx.tenantId,
+        tag_id: uuidv4(),
+        tag_text: tagText,
+        tagged_type: 'client',
+        background_color: backgroundColor,
+        text_color: textColor,
+        created_at: new Date().toISOString(),
+      },
+      tagDefinitionColumns,
+      new Set([
+        'tenant',
+        'tag_id',
+        'tag_text',
+        'tagged_type',
+        'background_color',
+        'text_color',
+        'created_at',
+      ])
+    );
+
+    await tx.trx('tag_definitions')
+      .insert(definitionRow)
+      .onConflict(['tenant', 'tag_text', 'tagged_type'])
+      .ignore();
+
+    const definition = await tx.trx('tag_definitions')
       .where({
         tenant: tx.tenantId,
         tag_text: tagText,
@@ -442,55 +475,8 @@ async function ensureClientTagMappings(
       })
       .first();
 
-    if (!definition) {
-      const definitionRow = pickExistingFields(
-        {
-          tenant: tx.tenantId,
-          tag_id: uuidv4(),
-          tag_text: tagText,
-          tagged_type: 'client',
-          background_color: backgroundColor,
-          text_color: textColor,
-          created_at: new Date().toISOString(),
-        },
-        tagDefinitionColumns,
-        new Set([
-          'tenant',
-          'tag_id',
-          'tag_text',
-          'tagged_type',
-          'background_color',
-          'text_color',
-          'created_at',
-        ])
-      );
-
-      await tx.trx('tag_definitions').insert(definitionRow);
-      definition = await tx.trx('tag_definitions')
-        .where({
-          tenant: tx.tenantId,
-          tag_text: tagText,
-          tagged_type: 'client',
-        })
-        .first();
-    }
-
     if (!definition?.tag_id) {
       throw new Error(`Failed to resolve tag definition for \"${tagText}\"`);
-    }
-
-    const mapping = await tx.trx('tag_mappings')
-      .where({
-        tenant: tx.tenantId,
-        tag_id: definition.tag_id,
-        tagged_id: clientId,
-        tagged_type: 'client',
-      })
-      .first();
-
-    if (mapping) {
-      existing.push(tagResultSchema.parse({ tag_id: definition.tag_id, tag_text: definition.tag_text }));
-      continue;
     }
 
     const mappingId = uuidv4();
@@ -508,12 +494,37 @@ async function ensureClientTagMappings(
       new Set(['tenant', 'mapping_id', 'tag_id', 'tagged_id', 'tagged_type', 'created_by', 'created_at'])
     );
 
-    await tx.trx('tag_mappings').insert(mappingRow);
-    added.push(
+    const insertedMappings = await tx.trx('tag_mappings')
+      .insert(mappingRow)
+      .onConflict(['tenant', 'tag_id', 'tagged_id'])
+      .ignore()
+      .returning('mapping_id');
+
+    if (insertedMappings.length > 0) {
+      added.push(
+        tagResultSchema.parse({
+          tag_id: definition.tag_id,
+          tag_text: definition.tag_text,
+          mapping_id: typeof mappingRow.mapping_id === 'string' ? mappingRow.mapping_id : undefined,
+        })
+      );
+      continue;
+    }
+
+    const mapping = await tx.trx('tag_mappings')
+      .where({
+        tenant: tx.tenantId,
+        tag_id: definition.tag_id,
+        tagged_id: clientId,
+        tagged_type: 'client',
+      })
+      .first();
+
+    existing.push(
       tagResultSchema.parse({
         tag_id: definition.tag_id,
         tag_text: definition.tag_text,
-        mapping_id: typeof mappingRow.mapping_id === 'string' ? mappingRow.mapping_id : undefined,
+        mapping_id: typeof mapping?.mapping_id === 'string' ? mapping.mapping_id : undefined,
       })
     );
   }
@@ -522,13 +533,226 @@ async function ensureClientTagMappings(
 }
 
 async function deleteFromTableIfExists(
-  tx: TenantTxContext,
+  trx: Knex.Transaction,
   tableName: string,
   where: Record<string, unknown>
 ): Promise<void> {
-  const exists = await tx.trx.schema.hasTable(tableName);
+  const exists = await trx.schema.hasTable(tableName);
   if (!exists) return;
-  await tx.trx(tableName).where(where).delete();
+  await trx(tableName).where(where).delete();
+}
+
+async function getExistingPublicTables(
+  trx: Knex.Transaction,
+  tableNames: string[]
+): Promise<Set<string>> {
+  const rows = await trx('information_schema.tables')
+    .select('table_name')
+    .where({ table_schema: 'public' })
+    .whereIn('table_name', tableNames);
+
+  return new Set((rows as Array<{ table_name: string }>).map((row) => row.table_name));
+}
+
+async function cleanupDefaultContractsForDeletedClient(
+  trx: Knex.Transaction,
+  tenant: string,
+  clientId: string
+): Promise<void> {
+  const existingTables = await getExistingPublicTables(trx, ['contracts', 'client_contracts', 'invoice_charges']);
+  if (!existingTables.has('contracts') || !existingTables.has('client_contracts')) {
+    return;
+  }
+
+  const defaultContracts = await trx('contracts')
+    .where({
+      tenant,
+      owner_client_id: clientId,
+      is_system_managed_default: true,
+    })
+    .select('contract_id') as ContractRow[];
+
+  const assignmentsForClient = await trx('client_contracts')
+    .where({ tenant, client_id: clientId })
+    .select('client_contract_id', 'contract_id') as ClientContractAssignmentRow[];
+
+  const assignmentsById = new Map<string, string>();
+  for (const assignment of assignmentsForClient) {
+    assignmentsById.set(assignment.client_contract_id, assignment.contract_id);
+  }
+
+  const invoicedDefaultContractIds = new Set<string>();
+  if (assignmentsById.size > 0 && existingTables.has('invoice_charges')) {
+    const invoiceRows = await trx('invoice_charges')
+      .where({ tenant })
+      .whereIn('client_contract_id', [...assignmentsById.keys()])
+      .distinct('client_contract_id') as Array<{ client_contract_id: string }>;
+    for (const row of invoiceRows) {
+      const contractId = assignmentsById.get(row.client_contract_id);
+      if (contractId) {
+        invoicedDefaultContractIds.add(contractId);
+      }
+    }
+  }
+
+  await trx('client_contracts')
+    .where({ tenant, client_id: clientId })
+    .delete();
+
+  for (const contract of defaultContracts) {
+    const countRow = await trx('client_contracts')
+      .where({ tenant, contract_id: contract.contract_id })
+      .count<{ count?: string }>('client_contract_id as count')
+      .first();
+    const assignmentCount = Number(countRow?.count ?? 0);
+    if (assignmentCount > 0) {
+      continue;
+    }
+
+    if (invoicedDefaultContractIds.has(contract.contract_id)) {
+      await trx('contracts')
+        .where({ tenant, contract_id: contract.contract_id })
+        .update({
+          status: 'archived',
+          is_active: false,
+          updated_at: trx.fn.now(),
+        });
+    } else {
+      await trx('contracts')
+        .where({ tenant, contract_id: contract.contract_id })
+        .delete();
+    }
+  }
+}
+
+async function cleanupClientDeleteArtifacts(
+  trx: Knex.Transaction,
+  tenant: string,
+  clientId: string
+): Promise<void> {
+  await cleanupDefaultContractsForDeletedClient(trx, tenant, clientId);
+  await deleteFromTableIfExists(trx, 'client_billing_settings', { tenant, client_id: clientId });
+  await deleteFromTableIfExists(trx, 'client_billing_cycles', { tenant, client_id: clientId });
+  await deleteFromTableIfExists(trx, 'client_tax_settings', { tenant, client_id: clientId });
+  await deleteFromTableIfExists(trx, 'client_tax_rates', { tenant, client_id: clientId });
+  await deleteFromTableIfExists(trx, 'client_locations', { tenant, client_id: clientId });
+  await deleteFromTableIfExists(trx, 'client_payment_customers', { tenant, client_id: clientId });
+  await deleteFromTableIfExists(trx, 'tag_mappings', {
+    tenant,
+    tagged_type: 'client',
+    tagged_id: clientId,
+  });
+}
+
+async function cleanupClientNotesDocument(
+  trx: Knex.Transaction,
+  tenant: string,
+  clientId: string
+): Promise<void> {
+  const clientRecord = await trx('clients')
+    .where({ client_id: clientId, tenant })
+    .select('notes_document_id')
+    .first();
+
+  if (!clientRecord?.notes_document_id) {
+    return;
+  }
+
+  await deleteFromTableIfExists(trx, 'document_block_content', {
+    tenant,
+    document_id: clientRecord.notes_document_id,
+  });
+  await deleteFromTableIfExists(trx, 'document_associations', {
+    tenant,
+    document_id: clientRecord.notes_document_id,
+  });
+  await deleteFromTableIfExists(trx, 'documents', {
+    tenant,
+    document_id: clientRecord.notes_document_id,
+  });
+}
+
+async function cleanupEntraReferencesBeforeClientDelete(
+  trx: Knex.Transaction,
+  tenantId: string,
+  clientId: string
+): Promise<void> {
+  if (!isEnterprise) {
+    return;
+  }
+
+  const tableNames = [
+    'entra_sync_run_tenants',
+    'entra_contact_links',
+    'entra_contact_reconciliation_queue',
+    'entra_client_tenant_mappings',
+  ];
+  const existingTables = await getExistingPublicTables(trx, tableNames);
+  if (existingTables.size === 0) {
+    return;
+  }
+
+  const now = trx.fn.now();
+
+  if (existingTables.has('entra_sync_run_tenants')) {
+    await trx('entra_sync_run_tenants')
+      .where({ tenant: tenantId, client_id: clientId })
+      .update({ client_id: null, updated_at: now });
+  }
+
+  if (existingTables.has('entra_contact_links')) {
+    await trx('entra_contact_links')
+      .where({ tenant: tenantId, client_id: clientId })
+      .update({ client_id: null, updated_at: now });
+  }
+
+  if (existingTables.has('entra_contact_reconciliation_queue')) {
+    await trx('entra_contact_reconciliation_queue')
+      .where({ tenant: tenantId, client_id: clientId })
+      .update({ client_id: null, updated_at: now });
+  }
+
+  if (existingTables.has('entra_client_tenant_mappings')) {
+    const activeMappings = await trx('entra_client_tenant_mappings')
+      .where({
+        tenant: tenantId,
+        client_id: clientId,
+        is_active: true,
+      })
+      .select('managed_tenant_id') as Array<{ managed_tenant_id: string }>;
+
+    if (activeMappings.length > 0) {
+      await trx('entra_client_tenant_mappings')
+        .where({
+          tenant: tenantId,
+          client_id: clientId,
+          is_active: true,
+        })
+        .update({
+          is_active: false,
+          updated_at: now,
+        });
+
+      const unmappedRows = activeMappings.map((mapping) => ({
+        tenant: tenantId,
+        managed_tenant_id: mapping.managed_tenant_id,
+        client_id: null,
+        mapping_state: 'unmapped',
+        confidence_score: null,
+        is_active: true,
+        decided_by: null,
+        decided_at: now,
+        created_at: now,
+        updated_at: now,
+      }));
+
+      await trx('entra_client_tenant_mappings').insert(unmappedRows);
+    }
+
+    await trx('entra_client_tenant_mappings')
+      .where({ tenant: tenantId, client_id: clientId })
+      .update({ client_id: null, updated_at: now });
+  }
 }
 
 async function getDefaultInteractionStatusId(ctx: any, tx: TenantTxContext): Promise<string> {
@@ -677,8 +901,17 @@ async function publishWorkflowDomainEvent(params: {
   idempotencyKey: string;
 }): Promise<void> {
   try {
-    const publishers = (await import('@alga-psa/event-bus/publishers')) as {
-      publishWorkflowEvent?: (value: Record<string, unknown>) => Promise<void>;
+    const publishers = (await import('@alga-psa/event-bus/publishers')) as unknown as {
+      publishWorkflowEvent?: (value: {
+        eventType: string;
+        payload: Record<string, unknown>;
+        ctx: {
+          tenantId: string;
+          occurredAt: string;
+          actor: { actorType: 'USER'; actorUserId: string };
+        };
+        idempotencyKey: string;
+      }) => Promise<unknown>;
     };
     if (!publishers.publishWorkflowEvent) return;
 
@@ -1059,28 +1292,31 @@ export function registerClientActions(): void {
         const patch = input.patch;
         const changedFields: string[] = [];
 
-        const nextProperties = patch.properties === undefined
-          ? before.properties
-          : patch.properties === null
+        const hasPropertiesPatch = Object.prototype.hasOwnProperty.call(patch, 'properties');
+        const clientPatchSource: Record<string, unknown> = {
+          client_name: patch.client_name,
+          client_type: patch.client_type,
+          url: patch.url,
+          billing_email: patch.email,
+          notes: patch.notes,
+          default_currency_code: patch.default_currency_code,
+          parent_client_id: patch.parent_client_id,
+          contract_line_id: patch.contract_line_id,
+          is_default: patch.is_default,
+          is_inactive: patch.is_inactive,
+          updated_at: new Date().toISOString(),
+        };
+
+        if (hasPropertiesPatch) {
+          const nextProperties = patch.properties === null
             ? null
             : { ...(parseClientProperties(before.properties) ?? {}), ...(patch.properties as Record<string, unknown>) };
+          clientPatchSource.properties = nextProperties ? JSON.stringify(nextProperties) : null;
+        }
 
         const clientColumns = await getTableColumns(tx, 'clients');
         const clientPatch = pickExistingFields(
-          {
-            client_name: patch.client_name,
-            client_type: patch.client_type,
-            url: patch.url,
-            billing_email: patch.email,
-            notes: patch.notes,
-            properties: nextProperties ? JSON.stringify(nextProperties) : null,
-            default_currency_code: patch.default_currency_code,
-            parent_client_id: patch.parent_client_id,
-            contract_line_id: patch.contract_line_id,
-            is_default: patch.is_default,
-            is_inactive: patch.is_inactive,
-            updated_at: new Date().toISOString(),
-          },
+          clientPatchSource,
           clientColumns,
           new Set([...CLIENT_TABLE_ALLOWED_FIELDS, 'updated_at'])
         );
@@ -1294,38 +1530,10 @@ export function registerClientActions(): void {
           input.client_id,
           tx.trx,
           tx.tenantId,
-          async (trx: any, tenantId: string) => {
-            await deleteFromTableIfExists(tx, 'tag_mappings', {
-              tenant: tenantId,
-              tagged_type: 'client',
-              tagged_id: input.client_id,
-            });
-            await deleteFromTableIfExists(tx, 'client_billing_settings', { tenant: tenantId, client_id: input.client_id });
-            await deleteFromTableIfExists(tx, 'client_billing_cycles', { tenant: tenantId, client_id: input.client_id });
-            await deleteFromTableIfExists(tx, 'client_tax_settings', { tenant: tenantId, client_id: input.client_id });
-            await deleteFromTableIfExists(tx, 'client_tax_rates', { tenant: tenantId, client_id: input.client_id });
-            await deleteFromTableIfExists(tx, 'client_locations', { tenant: tenantId, client_id: input.client_id });
-            await deleteFromTableIfExists(tx, 'client_payment_customers', { tenant: tenantId, client_id: input.client_id });
-
-            const clientRecord = await trx('clients')
-              .where({ tenant: tenantId, client_id: input.client_id })
-              .select('notes_document_id')
-              .first();
-
-            if (clientRecord?.notes_document_id) {
-              await deleteFromTableIfExists(tx, 'document_block_content', {
-                tenant: tenantId,
-                document_id: clientRecord.notes_document_id,
-              });
-              await deleteFromTableIfExists(tx, 'document_associations', {
-                tenant: tenantId,
-                document_id: clientRecord.notes_document_id,
-              });
-              await deleteFromTableIfExists(tx, 'documents', {
-                tenant: tenantId,
-                document_id: clientRecord.notes_document_id,
-              });
-            }
+          async (trx: Knex.Transaction, tenantId: string) => {
+            await cleanupClientDeleteArtifacts(trx, tenantId, input.client_id);
+            await cleanupClientNotesDocument(trx, tenantId, input.client_id);
+            await cleanupEntraReferencesBeforeClientDelete(trx, tenantId, input.client_id);
 
             await trx('clients').where({ tenant: tenantId, client_id: input.client_id }).delete();
           }
@@ -1402,7 +1610,6 @@ export function registerClientActions(): void {
             properties: source.properties ?? null,
             default_currency_code: source.default_currency_code ?? null,
             parent_client_id: source.parent_client_id ?? null,
-            contract_line_id: source.contract_line_id ?? null,
             is_default: false,
             is_inactive: false,
             region_code: source.region_code ?? null,

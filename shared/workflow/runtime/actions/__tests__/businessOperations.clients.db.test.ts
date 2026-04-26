@@ -249,6 +249,7 @@ describe('client workflow runtime DB-backed action handlers', () => {
 
     expect(updated.client_after.client_name).toBe('Own Client Updated');
     expect(updated.changed_fields).toEqual(expect.arrayContaining(['client_name', 'notes']));
+    expect(updated.changed_fields).not.toContain('properties');
 
     const otherTenantId = await createTenant(db, `Other Tenant ${Date.now()}`);
     const otherClientId = await createClient(db, otherTenantId, 'Other Client');
