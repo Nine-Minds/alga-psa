@@ -1,9 +1,246 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Knex } from 'knex';
+import { knex, type Knex } from 'knex';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import dotenv from 'dotenv';
+import { getSecret } from '@alga-psa/core/secrets';
 import { v4 as uuidv4 } from 'uuid';
 
-import { createTestDbConnection } from '../../../../../server/test-utils/dbConfig';
-import { createTenant, createUser, createClient, createClientLocation } from '../../../../../server/test-utils/testDataFactory';
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const repoRoot = path.resolve(__dirname, '../../../../..');
+const TEST_DB_NAME = 'test_database';
+const PRODUCTION_DB_NAMES = new Set(['sebastian_prod', 'production', 'prod', 'server']);
+
+function verifyTestDatabase(dbName: string): void {
+  if (PRODUCTION_DB_NAMES.has(dbName.toLowerCase())) {
+    throw new Error(`Attempting to use production database (${dbName}) for testing`);
+  }
+}
+
+async function recreateDatabase(
+  databaseName: string,
+  dbHost: string,
+  dbPort: number,
+  adminUser: string,
+  adminPassword: string,
+  appUser: string,
+  appPassword: string
+): Promise<void> {
+  const adminConnection = knex({
+    client: 'pg',
+    connection: {
+      host: dbHost,
+      port: dbPort,
+      user: adminUser,
+      password: adminPassword,
+      database: 'postgres',
+    },
+    pool: { min: 1, max: 2 },
+  });
+
+  try {
+    const safeDbName = databaseName.replace(/"/g, '""');
+    await adminConnection.raw(
+      'SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = ? AND pid <> pg_backend_pid()',
+      [databaseName]
+    );
+    await adminConnection.raw(`DROP DATABASE IF EXISTS "${safeDbName}"`);
+    await adminConnection.raw(`CREATE DATABASE "${safeDbName}"`);
+    await adminConnection.raw(`DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${appUser}') THEN
+          CREATE ROLE ${appUser} WITH LOGIN PASSWORD '${appPassword}';
+        ELSE
+          ALTER ROLE ${appUser} WITH LOGIN PASSWORD '${appPassword}';
+        END IF;
+      END;
+    $$;`);
+    await adminConnection.raw(`ALTER DATABASE "${safeDbName}" OWNER TO ${appUser}`);
+    await adminConnection.raw(`GRANT ALL PRIVILEGES ON DATABASE "${safeDbName}" TO ${appUser}`);
+  } finally {
+    await adminConnection.destroy().catch(() => undefined);
+  }
+}
+
+async function createTestDbConnection(): Promise<Knex> {
+  const databaseName = process.env.DB_NAME_SERVER || TEST_DB_NAME;
+  verifyTestDatabase(databaseName);
+
+  const dbHost = process.env.DB_HOST || 'localhost';
+  const dbPort = Number.parseInt(process.env.DB_PORT || '5432', 10);
+  const adminUser = process.env.DB_USER_ADMIN || 'postgres';
+  const adminPassword = await getSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'postpass123');
+  const appUser = process.env.DB_USER_SERVER || 'app_user';
+  const appPassword = await getSecret('db_password_server', 'DB_PASSWORD_SERVER', 'postpass123');
+
+  await recreateDatabase(databaseName, dbHost, dbPort, adminUser, adminPassword, appUser, appPassword);
+
+  process.env.DB_HOST = dbHost;
+  process.env.DB_PORT = String(dbPort);
+  process.env.DB_NAME_SERVER = databaseName;
+  process.env.DB_USER_SERVER = appUser;
+  process.env.DB_USER_ADMIN = adminUser;
+
+  const adminKnex = knex({
+    client: 'pg',
+    connection: {
+      host: dbHost,
+      port: dbPort,
+      user: adminUser,
+      password: adminPassword,
+      database: databaseName,
+    },
+    migrations: { directory: path.join(repoRoot, 'server', 'migrations') },
+    seeds: { directory: path.join(repoRoot, 'server', 'seeds', 'dev') },
+  });
+
+  await adminKnex.migrate.latest();
+  await adminKnex.seed.run();
+  await adminKnex.destroy();
+
+  return knex({
+    client: 'pg',
+    connection: {
+      host: dbHost,
+      port: dbPort,
+      user: appUser,
+      password: appPassword,
+      database: databaseName,
+    },
+    asyncStackTraces: true,
+    pool: { min: 2, max: 20 },
+  });
+}
+
+async function createTenant(db: Knex, name = 'Test Tenant'): Promise<string> {
+  const tenantId = uuidv4();
+  const now = new Date().toISOString();
+
+  await db('tenants').insert({
+    tenant: tenantId,
+    client_name: name,
+    phone_number: '555-0100',
+    email: `test-${tenantId.substring(0, 8)}@example.com`,
+    created_at: now,
+    updated_at: now,
+    payment_platform_id: `test-platform-${tenantId.substring(0, 8)}`,
+    payment_method_id: `test-method-${tenantId.substring(0, 8)}`,
+    auth_service_id: `test-auth-${tenantId.substring(0, 8)}`,
+    plan: 'pro',
+  });
+
+  return tenantId;
+}
+
+async function createUser(
+  db: Knex,
+  tenantId: string,
+  options: {
+    email?: string;
+    username?: string;
+    first_name?: string;
+    last_name?: string;
+    user_type?: 'client' | 'internal';
+    is_inactive?: boolean;
+    contact_id?: string;
+    phone?: string;
+    timezone?: string;
+  } = {}
+): Promise<string> {
+  const userId = uuidv4();
+
+  await db('users').insert({
+    user_id: userId,
+    tenant: tenantId,
+    username: options.username || `test.user.${userId}`,
+    first_name: options.first_name || 'Test',
+    last_name: options.last_name || 'User',
+    email: options.email || `test.user.${userId}@example.com`,
+    hashed_password: 'hashed_password_here',
+    created_at: new Date(),
+    two_factor_enabled: false,
+    is_google_user: false,
+    is_inactive: options.is_inactive ?? false,
+    user_type: options.user_type || 'internal',
+    contact_id: options.contact_id,
+    phone: options.phone,
+    timezone: options.timezone,
+  });
+
+  return userId;
+}
+
+async function createClient(
+  db: Knex,
+  tenantId: string,
+  name = 'Test Client',
+  options: Record<string, unknown> = {}
+): Promise<string> {
+  const clientId = uuidv4();
+  const now = new Date().toISOString();
+
+  await db('clients').insert({
+    client_id: clientId,
+    client_name: name,
+    tenant: tenantId,
+    billing_cycle: options.billing_cycle || 'monthly',
+    is_tax_exempt: options.is_tax_exempt ?? false,
+    url: options.url || '',
+    created_at: now,
+    updated_at: now,
+    is_inactive: options.is_inactive ?? false,
+    credit_balance: options.credit_balance ?? 0,
+    client_type: options.client_type,
+    tax_id_number: options.tax_id_number,
+    notes: options.notes,
+    notes_document_id: options.notes_document_id,
+    properties: options.properties || {},
+    payment_terms: options.payment_terms,
+    credit_limit: options.credit_limit,
+    preferred_payment_method: options.preferred_payment_method,
+    auto_invoice: options.auto_invoice,
+    invoice_delivery_method: options.invoice_delivery_method,
+    region_code: options.region_code,
+    tax_exemption_certificate: options.tax_exemption_certificate,
+    timezone: options.timezone,
+    invoice_template_id: options.invoice_template_id,
+    billing_contact_id: options.billing_contact_id,
+    billing_email: options.billing_email,
+  });
+
+  return clientId;
+}
+
+async function createClientLocation(
+  db: Knex,
+  clientId: string,
+  tenantId: string,
+  options: Record<string, unknown> = {}
+): Promise<string> {
+  const locationId = uuidv4();
+  const now = new Date().toISOString();
+
+  await db('client_locations').insert({
+    location_id: locationId,
+    client_id: clientId,
+    tenant: tenantId,
+    address_line1: options.address_line1 || '123 Test St',
+    address_line2: options.address_line2,
+    city: options.city || 'Test City',
+    state_province: options.state_province,
+    postal_code: options.postal_code,
+    country_code: options.country_code || 'US',
+    country_name: options.country_name || 'United States',
+    region_code: options.region_code || 'US-NY',
+    created_at: now,
+    updated_at: now,
+  });
+
+  return locationId;
+}
 
 const runtimeState = vi.hoisted(() => ({
   db: null as Knex | null,
@@ -195,7 +432,7 @@ describe('client workflow runtime DB-backed action handlers', () => {
   });
 
   afterAll(async () => {
-    await db.destroy();
+    await db?.destroy();
     runtimeState.db = null;
   });
 
