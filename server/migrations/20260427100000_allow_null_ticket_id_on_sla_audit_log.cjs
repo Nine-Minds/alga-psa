@@ -85,11 +85,24 @@ exports.down = async function (knex) {
   // Detached rows (ticket_id IS NULL) would block the NOT NULL re-add.
   // Drop them — they're an artifact of the detach-on-delete code path
   // that this migration enables; rolling back implies abandoning that
-  // approach.
-  const detachedCount = await knex('sla_audit_log').whereNull('ticket_id').count('* as count').first();
-  if (detachedCount && parseInt(detachedCount.count, 10) > 0) {
-    console.log(`  Removing ${detachedCount.count} detached audit rows before re-enabling NOT NULL...`);
-    await knex.raw(`DELETE FROM sla_audit_log WHERE ticket_id IS NULL`);
+  // approach. Iterate per-tenant to keep every DELETE tenant-scoped (the
+  // project's CitusDB convention requires `tenant` in every WHERE clause
+  // on distributed tables).
+  const tenantsWithDetached = await knex('sla_audit_log')
+    .whereNull('ticket_id')
+    .distinct('tenant')
+    .pluck('tenant');
+
+  if (tenantsWithDetached.length > 0) {
+    console.log(
+      `  Removing detached audit rows across ${tenantsWithDetached.length} tenant(s) before re-enabling NOT NULL...`
+    );
+    for (const tenant of tenantsWithDetached) {
+      await knex('sla_audit_log')
+        .where({ tenant })
+        .whereNull('ticket_id')
+        .delete();
+    }
   }
 
   // Drop FK, set NOT NULL, recreate FK.

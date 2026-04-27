@@ -260,32 +260,41 @@ export async function completeIfTicketClosed(input: {
       await trx('tickets')
         .where({ tenant: input.tenantId, ticket_id: input.ticketId })
         .update(updates);
-    }
 
-    await trx('sla_audit_log').insert({
-      tenant: input.tenantId,
-      ticket_id: input.ticketId,
-      event_type: 'self_healed_on_closed',
-      event_data: JSON.stringify({
-        closed_at: closedAt.toISOString(),
-        response_met: responseMet,
-        resolution_met: resolutionMet,
-        backfilled_fields: Object.keys(updates),
-      }),
-      triggered_by: null,
-    });
+      // Only record an audit row when self-heal actually changed something.
+      // Avoids duplicate audit noise if this activity runs again (e.g. a
+      // restarted workflow with the same workflowId) and finds nothing to do.
+      await trx('sla_audit_log').insert({
+        tenant: input.tenantId,
+        ticket_id: input.ticketId,
+        event_type: 'self_healed_on_closed',
+        event_data: JSON.stringify({
+          closed_at: closedAt.toISOString(),
+          response_met: responseMet,
+          resolution_met: resolutionMet,
+          backfilled_fields: Object.keys(updates),
+        }),
+        triggered_by: null,
+      });
+
+      log.info('SLA workflow self-healed: ticket already closed, backfilled fields', {
+        ticketId: input.ticketId,
+        closedAt: closedAt.toISOString(),
+        backfilledFields: Object.keys(updates),
+      });
+    } else {
+      log.info('SLA workflow self-healed: ticket closed, all SLA fields already set', {
+        ticketId: input.ticketId,
+        closedAt: closedAt.toISOString(),
+      });
+    }
 
     result = {
       closed: true,
       responseMet,
       resolutionMet,
+      reason: 'closed',
     };
-
-    log.info('SLA workflow self-healed: ticket already closed', {
-      ticketId: input.ticketId,
-      closedAt: closedAt.toISOString(),
-      backfilledFields: Object.keys(updates),
-    });
   });
 
   return result;

@@ -252,25 +252,36 @@ export async function slaTicketWorkflow(
   // completeResolution signal was missed because of a transient failure
   // upstream), backfill the SLA fields and exit. We never want to keep
   // escalating a closed ticket just because the signal got dropped.
+  // Closed-but-still-present tickets exit as 'completed'; tickets whose
+  // row has been deleted exit as 'cancelled' so the two cases are
+  // distinguishable in workflow state and downstream metrics.
   const checkClosedAndComplete = async (
-    reason: 'startup' | 'wake'
+    triggeredBy: 'startup' | 'wake'
   ): Promise<boolean> => {
     const result = await activities.completeIfTicketClosed({
       tenantId,
       ticketId,
     });
-    if (result.closed) {
+    if (!result.closed) {
+      return false;
+    }
+
+    if (result.reason === 'deleted') {
+      cancelled = true;
+      state.currentStatus = 'cancelled';
+    } else {
       resolutionCompleted = true;
       state.currentStatus = 'completed';
-      log.info('SLA workflow self-completed because ticket is closed', {
-        ticketId,
-        reason,
-        responseMet: result.responseMet,
-        resolutionMet: result.resolutionMet,
-      });
-      return true;
     }
-    return false;
+
+    log.info('SLA workflow self-healed', {
+      ticketId,
+      triggeredBy,
+      exitReason: result.reason ?? 'closed',
+      responseMet: result.responseMet,
+      resolutionMet: result.resolutionMet,
+    });
+    return true;
   };
 
   if (await checkClosedAndComplete('startup')) {
