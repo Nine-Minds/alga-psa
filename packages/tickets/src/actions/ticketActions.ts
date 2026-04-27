@@ -677,6 +677,20 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
       // Build structured changes object with old/new values
       const structuredChanges: Record<string, any> = {};
 
+      if (updateData.title !== undefined && updateData.title !== currentTicket.title) {
+        structuredChanges.title = {
+          old: currentTicket.title,
+          new: updateData.title
+        };
+      }
+
+      if (updateData.url !== undefined && updateData.url !== currentTicket.url) {
+        structuredChanges.url = {
+          old: currentTicket.url,
+          new: updateData.url
+        };
+      }
+
       if (updateData.status_id !== undefined && updateData.status_id !== currentTicket.status_id) {
         structuredChanges.status_id = {
           old: currentTicket.status_id,
