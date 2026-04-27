@@ -263,6 +263,17 @@ async function handleTicketClosedEvent(event: unknown): Promise<void> {
             met: result.met,
             resolvedAt: result.recorded_at.toISOString()
           });
+        } else if (result.success && result.met === null) {
+          logger.info('[SlaSubscriber] TICKET_CLOSED handled but no SLA tracked', {
+            tenantId,
+            ticketId
+          });
+        } else {
+          logger.error('[SlaSubscriber] recordResolution returned failure', {
+            tenantId,
+            ticketId,
+            error: result.error
+          });
         }
       });
     });

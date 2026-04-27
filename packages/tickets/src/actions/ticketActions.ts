@@ -1425,6 +1425,30 @@ async function performTicketDelete(
     })
     .delete();
 
+  // Detach SLA audit log rows from the ticket rather than deleting them.
+  // The audit log is the system of record for SLA compliance reporting
+  // and forensics; we preserve the rows by NULL-ing ticket_id (FK is
+  // MATCH SIMPLE so a NULL satisfies the constraint) and stashing the
+  // original ticket id + number into event_data so the audit trail still
+  // answers "what ticket was this about?".
+  const detachMetadata = JSON.stringify({
+    _detached_from_ticket_id: ticketId,
+    _detached_from_ticket_number: ticket.ticket_number ?? null,
+    _detached_at: new Date().toISOString(),
+  });
+  await trx('sla_audit_log')
+    .where({
+      ticket_id: ticketId,
+      tenant: tenant,
+    })
+    .update({
+      ticket_id: null,
+      event_data: trx.raw(
+        `COALESCE(event_data, '{}'::jsonb) || ?::jsonb`,
+        [detachMetadata]
+      ),
+    });
+
   await trx('tickets')
     .where({ ticket_id: ticketId, tenant })
     .delete();
