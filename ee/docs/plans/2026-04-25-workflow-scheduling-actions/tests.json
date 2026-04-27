@@ -1,0 +1,185 @@
+[
+  {
+    "id": "T001",
+    "description": "Registry/catalog unit test: after registering scheduling actions, find_entry, search_entries, reschedule, reassign, cancel, complete, and existing assign_user are present and grouped under Scheduling.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F004",
+      "F007",
+      "F015",
+      "F021",
+      "F024",
+      "F029"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Schema unit test: each new scheduling action validates representative valid input and rejects blank entry references, invalid ISO dates, invalid recurrence scope, invalid user UUIDs, and empty required arrays while allowing virtual recurring entry references.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F004",
+      "F008",
+      "F015",
+      "F021",
+      "F024",
+      "F028",
+      "F032"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "DB-backed read integration: find_entry and search_entries return tenant-scoped entries with assigned_user_ids and do not leak entries from another tenant.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F005",
+      "F006"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "DB-backed read guard: actor without user_schedule:read receives PERMISSION_DENIED for find_entry/search_entries.",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F028"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "DB-backed reschedule happy path: action updates scheduled_start/scheduled_end, writes audit, returns previous/new times, and publishes APPOINTMENT_RESCHEDULED for a ticket-linked appointment.",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F008",
+      "F013",
+      "F014",
+      "F027"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "DB-backed reschedule conflict guard: overlapping assignment with conflict_mode=fail rejects with CONFLICT and leaves the target entry unchanged.",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F010",
+      "F028"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "DB-backed reschedule conflict modes: shift moves the appointment after the latest conflict, while override preserves requested time and creates schedule_conflicts rows.",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F011",
+      "F012"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "DB-backed reassign happy path: action replaces assignees, validates Technician eligibility, writes audit, returns previous/new assignees, and publishes APPOINTMENT_ASSIGNED according to final event policy.",
+    "implemented": true,
+    "featureIds": [
+      "F015",
+      "F016",
+      "F017",
+      "F020",
+      "F027"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "DB-backed reassign no-op and guard cases: unchanged assignments return changed=false without event emission, and ineligible/missing users return a standard workflow action error.",
+    "implemented": true,
+    "featureIds": [
+      "F016",
+      "F018",
+      "F020",
+      "F028"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "DB-backed cancel happy path: action marks the entry canceled without deleting it, stores reason/note in the chosen place, writes audit, and publishes APPOINTMENT_CANCELED.",
+    "implemented": true,
+    "featureIds": [
+      "F021",
+      "F022",
+      "F023",
+      "F027"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "DB-backed complete happy path: action marks the entry completed, records optional outcome/note, writes audit, and publishes APPOINTMENT_COMPLETED.",
+    "implemented": true,
+    "featureIds": [
+      "F024",
+      "F025",
+      "F026",
+      "F027"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "DB-backed recurrence sanity: reschedule/cancel/reassign on a virtual recurring occurrence with recurrence_scope=single affects only that occurrence and leaves other generated occurrences available.",
+    "implemented": true,
+    "featureIds": [
+      "F013",
+      "F019",
+      "F022"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Permission integration: write actions reject actors without the confirmed user_schedule write permission and do not mutate schedule_entries or schedule_entry_assignees.",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F015",
+      "F021",
+      "F024",
+      "F028"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Existing recurrence regression: targeted scheduling recurrence integration tests still pass after workflow actions use recurrence update semantics.",
+    "implemented": true,
+    "featureIds": [
+      "F013",
+      "F019",
+      "F022",
+      "F025"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Plan maintenance check: final implementation updates SCRATCHPAD.md with decisions for all open questions and flips completed features/tests to implemented=true.",
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Runtime node smoke: action.call can execute a representative scheduling action, saveAs its output into vars, and use it in a downstream expression assignment.",
+    "implemented": true,
+    "featureIds": [
+      "F029",
+      "F032"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Shared helper guard: workflow action actor resolution uses the run tenant when joining tenant-owned workflow_definitions and does not resolve an actor from another tenant.",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
+  }
+]
