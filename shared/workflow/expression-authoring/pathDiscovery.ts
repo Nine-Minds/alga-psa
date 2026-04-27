@@ -27,33 +27,58 @@ const normalizeSchemaType = (schema: SharedExpressionSchemaNode | undefined): Sh
   return 'unknown';
 };
 
+const decodeJsonPointerSegment = (segment: string): string =>
+  segment.replace(/~1/g, '/').replace(/~0/g, '~');
+
+const resolveLocalSchemaRef = (
+  ref: string | undefined,
+  rootSchema: SharedExpressionSchemaNode | undefined
+): SharedExpressionSchemaNode | undefined => {
+  if (!ref || !rootSchema) return undefined;
+  if (ref === '#') return rootSchema;
+  if (!ref.startsWith('#/')) return undefined;
+
+  const parts = ref.slice(2).split('/').map(decodeJsonPointerSegment);
+  let current: unknown = rootSchema;
+  for (const part of parts) {
+    if (!current || typeof current !== 'object') return undefined;
+    current = (current as Record<string, unknown>)[part];
+  }
+
+  return current && typeof current === 'object'
+    ? (current as SharedExpressionSchemaNode)
+    : undefined;
+};
+
 const resolveSchema = (
   schema: SharedExpressionSchemaNode | undefined,
-  rootSchema?: SharedExpressionSchemaNode
+  rootSchema?: SharedExpressionSchemaNode,
+  seenRefs = new Set<string>()
 ): SharedExpressionSchemaNode | undefined => {
   if (!schema) return undefined;
+  const root = rootSchema ?? schema;
 
-  if (schema.$ref && rootSchema?.definitions) {
-    const refKey = schema.$ref.replace('#/definitions/', '');
-    const referenced = rootSchema.definitions[refKey];
+  if (schema.$ref && !seenRefs.has(schema.$ref)) {
+    seenRefs.add(schema.$ref);
+    const referenced = resolveLocalSchemaRef(schema.$ref, root);
     if (referenced) {
-      return resolveSchema(referenced, rootSchema);
+      return resolveSchema(referenced, root, seenRefs);
     }
   }
 
   if (schema.anyOf?.length) {
     const nonNull = schema.anyOf.find((variant) => normalizeSchemaType(variant) !== 'null');
     if (nonNull) {
-      return resolveSchema(nonNull, rootSchema);
+      return resolveSchema(nonNull, root, seenRefs);
     }
   }
 
   if (schema.oneOf?.length) {
-    return resolveSchema(schema.oneOf[0], rootSchema);
+    return resolveSchema(schema.oneOf[0], root, seenRefs);
   }
 
   if (schema.allOf?.length) {
-    return resolveSchema(schema.allOf[0], rootSchema);
+    return resolveSchema(schema.allOf[0], root, seenRefs);
   }
 
   return schema;
@@ -75,10 +100,11 @@ const hasChildNodes = (schema: SharedExpressionSchemaNode | undefined): boolean 
 const createOption = (
   root: SharedExpressionContextRoot,
   segments: string[],
-  schema: SharedExpressionSchemaNode | undefined
+  schema: SharedExpressionSchemaNode | undefined,
+  rootSchema: SharedExpressionSchemaNode | undefined = root.schema
 ): SharedExpressionPathOption => {
   const path = joinPath(root.key, segments);
-  const resolvedSchema = resolveSchema(schema, root.schema);
+  const resolvedSchema = resolveSchema(schema, rootSchema);
 
   return {
     root: root.key,
@@ -102,8 +128,12 @@ const pushObjectPropertyOptions = (
   const propertyEntries = Object.entries(schema.properties ?? {}).sort(([a], [b]) => a.localeCompare(b));
   for (const [propertyName, propertySchema] of propertyEntries) {
     const nextSegments = [...parentSegments, propertyName];
-    options.push(createOption(root, nextSegments, propertySchema));
-    pushNestedOptions(options, root, nextSegments, propertySchema, rootSchema);
+    const nextRootSchema =
+      root.key === 'vars' && parentSegments.length === 0 && propertySchema && typeof propertySchema === 'object'
+        ? propertySchema
+        : rootSchema;
+    options.push(createOption(root, nextSegments, propertySchema, nextRootSchema));
+    pushNestedOptions(options, root, nextSegments, propertySchema, nextRootSchema);
   }
 };
 

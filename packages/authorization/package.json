@@ -7,35 +7,39 @@
   "types": "./src/index.ts",
   "exports": {
     ".": {
-      "import": "./src/index.ts",
+      "import": "./dist/index.js",
       "types": "./src/index.ts"
     },
     "./kernel": {
-      "import": "./src/kernel/index.ts",
+      "import": "./dist/kernel/index.js",
       "types": "./src/kernel/index.ts"
     },
     "./kernel/*": {
-      "import": "./src/kernel/*",
+      "import": "./dist/kernel/*.js",
       "types": "./src/kernel/*"
     },
     "./bundles/catalog": {
-      "import": "./src/bundles/catalog.ts",
+      "import": "./dist/bundles/catalog.js",
       "types": "./src/bundles/catalog.ts"
     },
     "./bundles/service": {
-      "import": "./src/bundles/service.ts",
+      "import": "./dist/bundles/service.js",
       "types": "./src/bundles/service.ts"
     },
     "./bundles/starterBundles": {
-      "import": "./src/bundles/starterBundles.ts",
+      "import": "./dist/bundles/starterBundles.js",
       "types": "./src/bundles/starterBundles.ts"
     },
+    "./adapters/rbac": {
+      "import": "./dist/adapters/rbacAdapter.js",
+      "types": "./src/adapters/rbacAdapter.ts"
+    },
     "./pagination": {
-      "import": "./src/pagination/index.ts",
+      "import": "./dist/pagination/index.js",
       "types": "./src/pagination/index.ts"
     },
     "./pagination/authorizationAwarePagination": {
-      "import": "./src/pagination/authorizationAwarePagination.ts",
+      "import": "./dist/pagination/authorizationAwarePagination.js",
       "types": "./src/pagination/authorizationAwarePagination.ts"
     }
   },

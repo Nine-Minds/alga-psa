@@ -1,0 +1,233 @@
+[
+  {
+    "id": "F001",
+    "description": "Register `clients.create` in `registerClientActions()` with versioned schema, UI metadata, side-effect metadata, idempotency metadata, and output summary",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Implement `clients.create` tenant-scoped client creation with validation, permissions, optional initial tags, and retry-safe idempotency",
+    "implemented": true,
+    "prdRefs": [
+      "clients.create",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Register `clients.update` with an Edit Client UI label and a non-empty patch schema for editable client fields",
+    "implemented": true,
+    "prdRefs": [
+      "clients.update",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Implement `clients.update` with tenant-scoped lookup, permission enforcement, field patching, inactive-client side effects, and changed-field output",
+    "implemented": true,
+    "prdRefs": [
+      "clients.update",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Register and implement `clients.delete` using explicit `confirm: true` plus existing client deletion guardrails for default-client and dependency validation",
+    "implemented": true,
+    "prdRefs": [
+      "clients.delete",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Implement `clients.delete` missing-client behavior via explicit `on_not_found` handling",
+    "implemented": true,
+    "prdRefs": [
+      "clients.delete"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Register `clients.duplicate` with source client, duplicate name, copy option inputs, and source/duplicate output summaries",
+    "implemented": true,
+    "prdRefs": [
+      "clients.duplicate",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Implement safe `clients.duplicate` behavior that copies core profile fields and default tag copy while excluding billing, tickets, projects, interactions, portal users, and external mappings",
+    "implemented": true,
+    "prdRefs": [
+      "clients.duplicate"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Implement opt-in `copy_locations` behavior for `clients.duplicate` while leaving contacts and notes out of v1 scope",
+    "implemented": true,
+    "prdRefs": [
+      "clients.duplicate",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Register and implement `clients.add_tag` for one or more client tags using `tag_definitions` and `tag_mappings` with idempotent existing-mapping handling",
+    "implemented": true,
+    "prdRefs": [
+      "clients.add_tag"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Return tag summaries and added/existing counts from `clients.add_tag` for downstream workflow use",
+    "implemented": true,
+    "prdRefs": [
+      "clients.add_tag"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Register `clients.assign_to_ticket` with client and ticket inputs plus optional contact/location/reason fields",
+    "implemented": true,
+    "prdRefs": [
+      "clients.assign_to_ticket",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Implement `clients.assign_to_ticket` by validating tenant-scoped ticket/client existence, updating ticket client, preserving omitted contact/location fields, and allowing explicit null clears",
+    "implemented": true,
+    "prdRefs": [
+      "clients.assign_to_ticket"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Validate non-null optional `contact_id` and `location_id` in `clients.assign_to_ticket` belong to the selected client before updating the ticket",
+    "implemented": true,
+    "prdRefs": [
+      "clients.assign_to_ticket",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Register `clients.add_note` with client picker metadata and note body/content schema",
+    "implemented": true,
+    "prdRefs": [
+      "clients.add_note",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Implement `clients.add_note` using the existing client notes document pattern, including create-if-missing and append-only workflow note semantics confirmed by the PRD",
+    "implemented": true,
+    "prdRefs": [
+      "clients.add_note",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Register `clients.add_interaction` with client, optional contact/ticket, interaction type/status, title, notes, and timing schemas",
+    "implemented": true,
+    "prdRefs": [
+      "clients.add_interaction"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Implement `clients.add_interaction` with tenant-scoped relationship validation, default interaction status resolution, workflow actor ownership, and interaction summary output",
+    "implemented": true,
+    "prdRefs": [
+      "clients.add_interaction",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Apply workflow picker metadata to new client/ticket/contact/location fields wherever the existing picker registry supports those resources",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Write action audit rows for mutating client actions using the existing `writeRunAudit` workflow action pattern",
+    "implemented": true,
+    "prdRefs": [
+      "Non-functional Requirements",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Use `throwActionError`/`rethrowAsStandardError` consistently for validation, not-found, conflict, permission, and transient failures",
+    "implemented": true,
+    "prdRefs": [
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Preserve or explicitly mirror existing workflow event publication for client create/update/archive, note created, and interaction logged where feasible from shared runtime code",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Update workflow designer catalog/action registration tests to assert the Client group exposes the new `clients.*` actions",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Add DB-backed workflow action tests for representative successful client mutations and high-risk guard failures",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Update SCRATCHPAD and PRD decisions as open questions are resolved before implementation starts",
+    "implemented": true,
+    "prdRefs": [
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Register `clients.archive` with Archive Client UI metadata, client picker input, idempotent archive semantics, and archive output summary",
+    "implemented": true,
+    "prdRefs": [
+      "clients.archive",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Implement `clients.archive` by setting the client inactive through existing client update semantics, including associated contact/client-user deactivation where applicable",
+    "implemented": true,
+    "prdRefs": [
+      "clients.archive",
+      "Security / Permissions"
+    ]
+  }
+]

@@ -232,6 +232,62 @@ describe('action input editor state', () => {
     });
   });
 
+  it('promotes user picker metadata from primitive array items to the array field editor', () => {
+    const arrayItemPickerRegistry: WorkflowDesignerActionRegistryItem[] = [
+      {
+        id: 'scheduling.reassign',
+        version: 1,
+        inputSchema: {
+          type: 'object',
+          properties: {
+            assigned_user_ids: {
+              type: 'array',
+              items: {
+                type: 'string',
+                format: 'uuid',
+                'x-workflow-picker-kind': 'user',
+                'x-workflow-picker-fixed-value-hint': 'Search users',
+                'x-workflow-picker-allow-dynamic-reference': true,
+              },
+            },
+          },
+          required: ['assigned_user_ids'],
+        },
+        outputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
+    ];
+
+    const step: NodeStep = {
+      id: 'step-reassign-picker-array',
+      type: 'action.call',
+      name: 'Reassign Entry',
+      config: {
+        actionId: 'scheduling.reassign',
+        version: 1,
+      },
+    };
+
+    const state = buildActionInputEditorState(step, arrayItemPickerRegistry);
+    expect(state.actionInputFields.find((field) => field.name === 'assigned_user_ids')).toMatchObject({
+      type: 'array',
+      constraints: {
+        itemType: 'string',
+      },
+      editor: {
+        kind: 'picker',
+        inline: { mode: 'picker-summary' },
+        fixedValueHint: 'Search users',
+        allowsDynamicReference: true,
+        picker: {
+          resource: 'user',
+        },
+      },
+    });
+  });
+
   it('T091/T092: choosing an action updates picker metadata and field types used by the grouped editor', () => {
     const step: NodeStep = {
       id: 'step-3',

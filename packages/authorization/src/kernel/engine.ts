@@ -1,4 +1,3 @@
-import { hasPermission } from '../rbac';
 import type {
   AuthorizationDecision,
   AuthorizationEvaluationInput,
@@ -11,19 +10,6 @@ import type {
 } from './contracts';
 import { getRequestCache } from './requestCache';
 import { intersectAuthorizationScopes } from './scope';
-
-async function defaultRbacEvaluator(input: AuthorizationEvaluationInput): Promise<boolean> {
-  return hasPermission(
-    {
-      tenant: input.subject.tenant,
-      user_id: input.subject.userId,
-      user_type: input.subject.userType,
-    },
-    input.resource.type,
-    input.resource.action,
-    input.knex
-  );
-}
 
 function createRbacDeniedReasons(input: AuthorizationEvaluationInput): AuthorizationReason[] {
   return [
@@ -176,10 +162,6 @@ class DefaultAuthorizationKernel implements AuthorizationKernel {
   }
 }
 
-export function createAuthorizationKernel(input: Partial<AuthorizationKernelFactoryInput> & Pick<AuthorizationKernelFactoryInput, 'builtinProvider'>): AuthorizationKernel {
-  return new DefaultAuthorizationKernel({
-    builtinProvider: input.builtinProvider,
-    bundleProvider: input.bundleProvider,
-    rbacEvaluator: input.rbacEvaluator ?? defaultRbacEvaluator,
-  });
+export function createAuthorizationKernel(input: AuthorizationKernelFactoryInput): AuthorizationKernel {
+  return new DefaultAuthorizationKernel(input);
 }

@@ -203,6 +203,34 @@ describe('expression authoring contracts', () => {
     expect(optionPaths.has('vars.previous.account.id')).toBe(true);
   });
 
+  it('resolves local JSON Schema refs when discovering nested workflow vars paths', () => {
+    const options = buildWorkflowExpressionPathOptions({
+      varsByName: {
+        duplicatedContact: {
+          type: 'object',
+          properties: {
+            source_contact: {
+              type: 'object',
+              properties: {
+                contact_name_id: { type: 'string' },
+                email: { type: ['string', 'null'] },
+              },
+            },
+            duplicate_contact: { $ref: '#/properties/source_contact' },
+          },
+        },
+      },
+    });
+
+    const optionByPath = new Map(options.map((option) => [option.path, option]));
+
+    expect(optionByPath.get('vars.duplicatedContact.duplicate_contact')?.isLeaf).toBe(false);
+    expect(optionByPath.get('vars.duplicatedContact.duplicate_contact.contact_name_id')).toMatchObject({
+      valueType: 'string',
+      isLeaf: true,
+    });
+  });
+
   it('returns informational diagnostics for unresolved schema-aware paths', () => {
     const options = buildWorkflowExpressionPathOptions({
       payloadSchema: {

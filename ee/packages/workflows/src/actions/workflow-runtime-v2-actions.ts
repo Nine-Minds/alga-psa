@@ -614,28 +614,51 @@ const computeValidation = async (params: {
     return base;
   };
 
+  const decodeJsonPointerSegment = (segment: string): string =>
+    segment.replace(/~1/g, '/').replace(/~0/g, '~');
+
+  const resolveLocalSchemaRef = (ref: string | undefined, rootSchema: any): any | null => {
+    if (!ref || !rootSchema || typeof rootSchema !== 'object') return null;
+    if (ref === '#') return rootSchema;
+    if (!ref.startsWith('#/')) return null;
+
+    const parts = ref.slice(2).split('/').map(decodeJsonPointerSegment);
+    let current: any = rootSchema;
+    for (const part of parts) {
+      if (!current || typeof current !== 'object') return null;
+      current = current[part];
+    }
+    return current && typeof current === 'object' ? current : null;
+  };
+
+  const resolveSchemaNode = (node: any, rootSchema: any, seenRefs = new Set<string>()): any => {
+    if (!node || typeof node !== 'object') return node;
+    if (node.anyOf && Array.isArray(node.anyOf)) {
+      const nonNull = node.anyOf.find((s: any) => s && s.type !== 'null') ?? node.anyOf[0];
+      return resolveSchemaNode(nonNull, rootSchema, seenRefs);
+    }
+    if (node.$ref && typeof node.$ref === 'string' && !seenRefs.has(node.$ref)) {
+      seenRefs.add(node.$ref);
+      const resolved = resolveLocalSchemaRef(node.$ref, rootSchema);
+      if (resolved) return resolveSchemaNode(resolved, rootSchema, seenRefs);
+    }
+    return node;
+  };
+
   const resolveSchemaAtPath = (schema: any, path: string[]): any | null => {
     if (!schema || typeof schema !== 'object') return null;
-    let current: any = schema;
+    let current: any = resolveSchemaNode(schema, schema);
     for (const seg of path) {
       if (!current) return null;
-      // Handle anyOf (nullable)
-      if (current.anyOf && Array.isArray(current.anyOf)) {
-        const nonNull = current.anyOf.find((s: any) => s && s.type !== 'null') ?? current.anyOf[0];
-        current = nonNull;
-      }
-      if (current.$ref && schema.definitions && typeof current.$ref === 'string') {
-        const key = current.$ref.replace('#/definitions/', '');
-        current = schema.definitions[key] ?? current;
-      }
+      current = resolveSchemaNode(current, schema);
       if (current.type === 'object' && current.properties && typeof current.properties === 'object') {
-        current = (current.properties as any)[seg] ?? null;
+        current = resolveSchemaNode((current.properties as any)[seg] ?? null, schema);
         continue;
       }
       if (current.type === 'array' && current.items) {
         // Only support `.items.<prop>` lookup if seg is 'items'
         if (seg === 'items') {
-          current = current.items;
+          current = resolveSchemaNode(current.items, schema);
           continue;
         }
         // Unknown array access
@@ -643,7 +666,7 @@ const computeValidation = async (params: {
       }
       return null;
     }
-    return current;
+    return resolveSchemaNode(current, schema);
   };
 
   const literalTypes = (value: unknown): Set<string> => {

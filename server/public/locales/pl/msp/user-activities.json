@@ -396,7 +396,8 @@
       "tasks": "Zadania:",
       "priority": "Priorytet",
       "dueDate": "Termin",
-      "showClosed": "Pokaż zamknięte"
+      "showClosed": "Pokaż zamknięte",
+      "search": "Szukaj"
     },
     "activityTypeOptions": {
       "schedule": "Harmonogram",
@@ -409,7 +410,8 @@
       "allStatuses": "Wszystkie statusy",
       "allProjects": "Wszystkie projekty",
       "allPriorities": "Wszystkie priorytety",
-      "selectPriority": "Wybierz priorytet..."
+      "selectPriority": "Wybierz priorytet...",
+      "search": "Szukaj aktywności..."
     },
     "actions": {
       "reset": "Resetuj"
