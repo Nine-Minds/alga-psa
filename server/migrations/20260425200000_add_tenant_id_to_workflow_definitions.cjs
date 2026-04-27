@@ -94,6 +94,43 @@ const ensureWorkflowDefinitionsCitusDistribution = async (knex) => {
   `);
 };
 
+const stringifyJsonValueForPg = (value) => {
+  if (value == null || typeof value !== 'object') {
+    return value;
+  }
+
+  // node-postgres serializes JavaScript arrays as PostgreSQL array literals, not
+  // JSON. Explicitly stringify JSON column values before cloning rows so arrays
+  // such as validation_errors/validation_warnings remain valid jsonb input.
+  return JSON.stringify(value);
+};
+
+const serializeJsonColumnsForPg = (record, columns) => {
+  const out = { ...record };
+  for (const column of columns) {
+    if (column in out) {
+      out[column] = stringifyJsonValueForPg(out[column]);
+    }
+  }
+  return out;
+};
+
+const WORKFLOW_DEFINITION_JSON_COLUMNS = [
+  'trigger',
+  'draft_definition',
+  'retention_policy_override',
+  'validation_errors',
+  'validation_warnings',
+  'validation_context_json',
+];
+
+const WORKFLOW_DEFINITION_VERSION_JSON_COLUMNS = [
+  'definition_json',
+  'payload_schema_json',
+  'validation_errors',
+  'validation_warnings',
+];
+
 const rewriteDefinitionId = (value, workflowId) => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return value;
@@ -180,7 +217,7 @@ const cloneWorkflowForTenant = async (knex, workflow, tenantId, options = {}) =>
     };
 
     await knex('workflow_definitions')
-      .insert(clonedWorkflow)
+      .insert(serializeJsonColumnsForPg(clonedWorkflow, WORKFLOW_DEFINITION_JSON_COLUMNS))
       .onConflict('workflow_id')
       .ignore();
   }
@@ -191,14 +228,14 @@ const cloneWorkflowForTenant = async (knex, workflow, tenantId, options = {}) =>
 
   for (const version of versionRows) {
     await knex('workflow_definition_versions')
-      .insert({
+      .insert(serializeJsonColumnsForPg({
         ...version,
         version_id: randomUUID(),
         workflow_id: newWorkflowId,
         definition_json: rewriteDefinitionId(version.definition_json, newWorkflowId),
         created_at: version.created_at ?? now,
         updated_at: now,
-      })
+      }, WORKFLOW_DEFINITION_VERSION_JSON_COLUMNS))
       .onConflict(['workflow_id', 'version'])
       .ignore();
   }
