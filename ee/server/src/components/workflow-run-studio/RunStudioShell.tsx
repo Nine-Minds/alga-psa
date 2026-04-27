@@ -931,8 +931,8 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
 	        </div>
 	      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1 min-h-0">
-        <Card className="lg:col-span-2 p-4 flex flex-col min-h-[420px]">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1 min-h-0 min-w-0">
+        <Card className="lg:col-span-2 p-4 flex flex-col min-h-[420px] min-w-0 overflow-hidden">
           {run?.status === 'FAILED' && (
             <div className="mb-3 rounded border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               <div className="font-semibold">
@@ -1013,7 +1013,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
             </div>
           )}
         </Card>
-        <Card className="p-4 flex flex-col min-h-[420px]">
+        <Card className="p-4 flex flex-col min-h-[420px] min-w-0 overflow-x-hidden overflow-y-auto">
           <div className="text-sm font-semibold text-gray-800 mb-2">
             {t('runStudio.details.title', { defaultValue: 'Run Details' })}
           </div>
@@ -1022,7 +1022,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
               <div className="text-[11px] uppercase text-gray-400">
                 {t('runStudio.details.fields.runId', { defaultValue: 'Run Id' })}
               </div>
-              <div className="font-mono text-gray-700">{runId}</div>
+              <div className="font-mono text-gray-700 break-all">{runId}</div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -1041,7 +1041,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
                 <div className="text-[11px] uppercase text-gray-400">
                   {t('runStudio.details.fields.tenant', { defaultValue: 'Tenant' })}
                 </div>
-                <div className="font-mono">{run?.tenant_id ?? '-'}</div>
+                <div className="font-mono break-all">{run?.tenant_id ?? '-'}</div>
               </div>
               <div>
                 <div className="text-[11px] uppercase text-gray-400">
@@ -1054,7 +1054,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
                   <div className="text-[11px] uppercase text-gray-400">
                     {t('runStudio.details.fields.eventType', { defaultValue: 'Event Type' })}
                   </div>
-                  <div className="font-mono">{run.event_type}</div>
+                  <div className="font-mono break-all">{run.event_type}</div>
                 </div>
               )}
               {isTimeTriggeredRun(run?.trigger_type) && (
@@ -1080,7 +1080,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
                   <div className="text-[11px] uppercase text-gray-400">
                     {t('runStudio.details.fields.cron', { defaultValue: 'Cron' })}
                   </div>
-                  <div className="font-mono">{String(triggerMetadata.cron)}</div>
+                  <div className="font-mono break-all">{String(triggerMetadata.cron)}</div>
                 </div>
               )}
               {run?.status === 'WAITING' && (
@@ -1309,23 +1309,23 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
 	              )}
             </div>
           </div>
-          <div className="flex-1 overflow-auto rounded border border-gray-200 bg-white">
+          <div className="flex-1 min-w-0 overflow-auto rounded border border-gray-200 bg-white">
             {filteredLogs.length === 0 && (
               <div className="p-4 text-sm text-gray-500">
                 {t('runStudio.logs.empty', { defaultValue: 'No logs yet.' })}
               </div>
             )}
             {filteredLogs.map((log) => (
-              <div key={log.log_id} className="border-b border-gray-100 px-3 py-2 text-xs text-gray-700">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-gray-500">{formatTimeOnly(log.created_at)}</span>
-                  <span className={`text-[10px] uppercase tracking-wide border px-2 py-0.5 rounded ${logLevelStyles[(log.level || '').toUpperCase()] ?? 'text-gray-400 border-gray-200'}`}>
+              <div key={log.log_id} className="min-w-0 border-b border-gray-100 px-3 py-2 text-xs text-gray-700">
+                <div className="flex min-w-0 items-center justify-between gap-2">
+                  <span className="shrink-0 font-mono text-gray-500">{formatTimeOnly(log.created_at)}</span>
+                  <span className={`shrink-0 text-[10px] uppercase tracking-wide border px-2 py-0.5 rounded ${logLevelStyles[(log.level || '').toUpperCase()] ?? 'text-gray-400 border-gray-200'}`}>
                     {log.level}
                   </span>
                 </div>
-                <div className="mt-1">{log.message}</div>
+                <div className="mt-1 break-words">{log.message}</div>
                 {log.step_path && (
-                  <div className="mt-1 font-mono text-[10px] text-gray-400">{log.step_path}</div>
+                  <div className="mt-1 break-all font-mono text-[10px] text-gray-400">{log.step_path}</div>
                 )}
               </div>
             ))}
@@ -1447,7 +1447,7 @@ const RunJsonPanel: React.FC<{ title: string; value: unknown }> = ({ title, valu
       <div className="border-b border-gray-100 px-3 py-2 text-[11px] uppercase text-gray-500">{title}</div>
       {summary && <div className="px-3 pt-2 text-[11px] text-gray-600">{summary}</div>}
       {extracted?.message && <div className="px-3 text-[11px] text-gray-600">{extracted.message}</div>}
-      <pre className="max-h-60 overflow-auto p-3 text-[11px] text-gray-700 whitespace-pre-wrap">{content}</pre>
+      <pre className="max-h-60 max-w-full overflow-auto whitespace-pre-wrap break-words p-3 text-[11px] text-gray-700">{content}</pre>
     </div>
   );
 };
