@@ -1,6 +1,17 @@
 import { z } from 'zod';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { generateKeyBetween } from 'fractional-indexing';
+import { getDeletionConfig, validateDeletion } from '@alga-psa/core';
+import {
+  BuiltinAuthorizationKernelProvider,
+  BundleAuthorizationKernelProvider,
+  RequestLocalAuthorizationCache,
+  createAuthorizationKernel,
+  type AuthorizationRecord,
+  type AuthorizationSubject,
+} from '@alga-psa/authorization/kernel';
+import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { withWorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import {
@@ -213,6 +224,8 @@ const moveTaskResultSchema = z.object({
 });
 
 const assignTaskInputSchema = z.object({
+  project_id: withWorkflowPicker(uuidSchema.optional(), 'Optional project id for task picker scope', 'project'),
+  phase_id: withWorkflowPicker(uuidSchema.optional(), 'Optional phase id for task picker scope', 'project-phase', ['project_id']),
   task_id: withWorkflowPicker(uuidSchema, 'Project task id', 'project-task', ['project_id', 'phase_id']),
   primary_user_id: withWorkflowPicker(uuidSchema, 'Primary assigned user id', 'user'),
   additional_user_ids: withWorkflowPicker(z.array(uuidSchema).default([]), 'Additional assigned user ids', 'user'),
@@ -259,6 +272,8 @@ const duplicateTaskResultSchema = z.object({
 });
 
 const deleteTaskInputSchema = z.object({
+  project_id: withWorkflowPicker(uuidSchema.optional(), 'Optional project id for task picker scope', 'project'),
+  phase_id: withWorkflowPicker(uuidSchema.optional(), 'Optional phase id for task picker scope', 'project-phase', ['project_id']),
   task_id: withWorkflowPicker(uuidSchema, 'Project task id', 'project-task', ['project_id', 'phase_id']),
 });
 
@@ -270,6 +285,7 @@ const deleteTaskResultSchema = z.object({
 });
 
 const deletePhaseInputSchema = z.object({
+  project_id: withWorkflowPicker(uuidSchema.optional(), 'Optional project id for phase picker scope', 'project'),
   phase_id: withWorkflowPicker(uuidSchema, 'Project phase id', 'project-phase', ['project_id']),
 });
 
@@ -317,6 +333,8 @@ const addTagInputSchema = z.object({
 });
 
 const addTaskTagInputSchema = z.object({
+  project_id: withWorkflowPicker(uuidSchema.optional(), 'Optional project id for task picker scope', 'project'),
+  phase_id: withWorkflowPicker(uuidSchema.optional(), 'Optional phase id for task picker scope', 'project-phase', ['project_id']),
   task_id: withWorkflowPicker(uuidSchema, 'Project task id', 'project-task', ['project_id', 'phase_id']),
   tags: z.array(z.string().min(1)).min(1).describe('One or more tags to attach to the project task'),
   idempotency_key: z.string().optional().describe('Optional external idempotency key'),
@@ -453,6 +471,29 @@ async function ensureTaskContext(ctx: any, tx: TenantTxContext, taskId: string):
   return task;
 }
 
+function validateOptionalTaskScope(
+  ctx: any,
+  task: Record<string, unknown>,
+  scope: { project_id?: string; phase_id?: string }
+): void {
+  if (scope.project_id && scope.project_id !== String(task.project_id)) {
+    throwActionError(ctx, {
+      category: 'ValidationError',
+      code: 'VALIDATION_ERROR',
+      message: 'project_id does not match task project',
+      details: { project_id: scope.project_id, task_project_id: task.project_id },
+    });
+  }
+  if (scope.phase_id && scope.phase_id !== String(task.phase_id)) {
+    throwActionError(ctx, {
+      category: 'ValidationError',
+      code: 'VALIDATION_ERROR',
+      message: 'phase_id does not match task phase',
+      details: { phase_id: scope.phase_id, task_phase_id: task.phase_id },
+    });
+  }
+}
+
 async function ensureTicketExists(ctx: any, tx: TenantTxContext, ticketId: string): Promise<Record<string, unknown>> {
   const ticket = await tx.trx('tickets').where({ tenant: tx.tenantId, ticket_id: ticketId }).first();
   if (!ticket) {
@@ -509,6 +550,148 @@ async function requireProjectDeletePermission(ctx: any, tx: TenantTxContext): Pr
   await requirePermission(ctx, tx, { resource: 'project', action: 'delete' });
 }
 
+type ProjectStatusMappingDetails = {
+  project_status_mapping_id: string;
+  project_id: string;
+  phase_id: string | null;
+  status_id: string | null;
+  standard_status_id: string | null;
+  custom_name: string | null;
+  status_name: string;
+  display_order: number | null;
+  is_closed: boolean;
+  is_standard: boolean | null;
+};
+
+async function getProjectStatusMappingDetails(
+  tx: TenantTxContext,
+  projectStatusMappingId: string
+): Promise<ProjectStatusMappingDetails | null> {
+  const row = await tx.trx('project_status_mappings as psm')
+    .leftJoin('statuses as s', function joinStatuses(this: Knex.JoinClause) {
+      this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
+    })
+    .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
+      this.on('psm.standard_status_id', '=', 'ss.standard_status_id').andOn('psm.tenant', '=', 'ss.tenant');
+    })
+    .where({ 'psm.tenant': tx.tenantId, 'psm.project_status_mapping_id': projectStatusMappingId })
+    .select(
+      'psm.*',
+      tx.trx.raw('COALESCE(psm.custom_name, s.name, ss.name, psm.project_status_mapping_id::text) as status_name'),
+      tx.trx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
+    )
+    .first();
+
+  if (!row) return null;
+  return {
+    project_status_mapping_id: row.project_status_mapping_id,
+    project_id: row.project_id,
+    phase_id: row.phase_id ?? null,
+    status_id: row.status_id ?? null,
+    standard_status_id: row.standard_status_id ?? null,
+    custom_name: row.custom_name ?? null,
+    status_name: row.status_name,
+    display_order: row.display_order == null ? null : Number(row.display_order),
+    is_closed: Boolean(row.is_closed),
+    is_standard: row.is_standard == null ? null : Boolean(row.is_standard),
+  };
+}
+
+async function getScopedProjectStatusMappings(
+  tx: TenantTxContext,
+  projectId: string,
+  phaseId?: string | null
+): Promise<ProjectStatusMappingDetails[]> {
+  let query = tx.trx('project_status_mappings as psm')
+    .leftJoin('statuses as s', function joinStatuses(this: Knex.JoinClause) {
+      this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
+    })
+    .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
+      this.on('psm.standard_status_id', '=', 'ss.standard_status_id').andOn('psm.tenant', '=', 'ss.tenant');
+    })
+    .where({ 'psm.tenant': tx.tenantId, 'psm.project_id': projectId });
+
+  query = phaseId ? query.andWhere('psm.phase_id', phaseId) : query.whereNull('psm.phase_id');
+
+  const rows = await query
+    .select(
+      'psm.*',
+      tx.trx.raw('COALESCE(psm.custom_name, s.name, ss.name, psm.project_status_mapping_id::text) as status_name'),
+      tx.trx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
+    )
+    .orderBy('psm.display_order', 'asc')
+    .orderBy('psm.project_status_mapping_id', 'asc');
+
+  return rows.map((row: Record<string, any>) => ({
+    project_status_mapping_id: row.project_status_mapping_id,
+    project_id: row.project_id,
+    phase_id: row.phase_id ?? null,
+    status_id: row.status_id ?? null,
+    standard_status_id: row.standard_status_id ?? null,
+    custom_name: row.custom_name ?? null,
+    status_name: row.status_name,
+    display_order: row.display_order == null ? null : Number(row.display_order),
+    is_closed: Boolean(row.is_closed),
+    is_standard: row.is_standard == null ? null : Boolean(row.is_standard),
+  }));
+}
+
+async function ensureProjectDefaultStatusMappings(
+  tx: TenantTxContext,
+  projectId: string
+): Promise<ProjectStatusMappingDetails[]> {
+  const existing = await getScopedProjectStatusMappings(tx, projectId);
+  if (existing.length > 0) return existing;
+
+  const standardStatuses = await tx.trx('standard_statuses')
+    .where({ tenant: tx.tenantId, item_type: 'project_task' })
+    .orderBy('display_order', 'asc');
+
+  for (const status of standardStatuses) {
+    await tx.trx('project_status_mappings').insert({
+      tenant: tx.tenantId,
+      project_status_mapping_id: uuidv4(),
+      project_id: projectId,
+      standard_status_id: status.standard_status_id,
+      is_standard: true,
+      custom_name: null,
+      display_order: status.display_order,
+      is_visible: true,
+    });
+  }
+
+  return getScopedProjectStatusMappings(tx, projectId);
+}
+
+async function getEffectiveProjectStatusMappings(
+  tx: TenantTxContext,
+  projectId: string,
+  phaseId?: string | null
+): Promise<ProjectStatusMappingDetails[]> {
+  if (phaseId) {
+    const phaseMappings = await getScopedProjectStatusMappings(tx, projectId, phaseId);
+    if (phaseMappings.length > 0) return phaseMappings;
+  }
+
+  return ensureProjectDefaultStatusMappings(tx, projectId);
+}
+
+function resolveSameProjectTargetStatusMapping(
+  sourceMapping: ProjectStatusMappingDetails,
+  targetMappings: ProjectStatusMappingDetails[]
+): ProjectStatusMappingDetails | null {
+  const sameId = targetMappings.find((mapping) => mapping.project_status_mapping_id === sourceMapping.project_status_mapping_id);
+  if (sameId) return sameId;
+
+  const sameName = targetMappings.find((mapping) => mapping.status_name === sourceMapping.status_name);
+  if (sameName) return sameName;
+
+  const sameClosedState = targetMappings.find((mapping) => mapping.is_closed === sourceMapping.is_closed);
+  if (sameClosedState) return sameClosedState;
+
+  return targetMappings[0] ?? null;
+}
+
 async function resolveTargetProjectStatusMappingId(
   tx: TenantTxContext,
   params: {
@@ -521,40 +704,26 @@ async function resolveTargetProjectStatusMappingId(
   const taskColumns = await getTableColumns(tx, 'project_tasks');
   if (!taskColumns.has('project_status_mapping_id')) return null;
 
+  const targetMappings = await getEffectiveProjectStatusMappings(tx, params.targetProjectId, params.targetPhaseId);
+
   if (params.explicitTargetProjectStatusMappingId) {
-    const explicit = await tx.trx('project_status_mappings')
-      .where({ tenant: tx.tenantId, project_status_mapping_id: params.explicitTargetProjectStatusMappingId, project_id: params.targetProjectId })
-      .first();
+    const explicit = targetMappings.find((mapping) => mapping.project_status_mapping_id === params.explicitTargetProjectStatusMappingId);
     return explicit?.project_status_mapping_id ?? null;
   }
 
   const sourceMappingId = parseNullableUuid(params.sourceTask.project_status_mapping_id);
+  const sourceMapping = sourceMappingId ? await getProjectStatusMappingDetails(tx, sourceMappingId) : null;
+  if (sourceMapping) {
+    return resolveSameProjectTargetStatusMapping(sourceMapping, targetMappings)?.project_status_mapping_id ?? null;
+  }
+
   const sourceStatusId = parseNullableUuid(params.sourceTask.status_id);
-
-  if (sourceMappingId && String(params.sourceTask.project_id) === params.targetProjectId) {
-    const same = await tx.trx('project_status_mappings')
-      .where({ tenant: tx.tenantId, project_status_mapping_id: sourceMappingId, project_id: params.targetProjectId })
-      .first();
-    if (same?.project_status_mapping_id) return same.project_status_mapping_id;
-  }
-
   if (sourceStatusId) {
-    const sameStatus = await tx.trx('project_status_mappings')
-      .where({ tenant: tx.tenantId, project_id: params.targetProjectId, status_id: sourceStatusId })
-      .orderBy('display_order', 'asc')
-      .first();
-    if (sameStatus?.project_status_mapping_id) return sameStatus.project_status_mapping_id;
+    const sameStatus = targetMappings.find((mapping) => mapping.status_id === sourceStatusId);
+    if (sameStatus) return sameStatus.project_status_mapping_id;
   }
 
-  const firstVisible = await tx.trx('project_status_mappings')
-    .where({ tenant: tx.tenantId, project_id: params.targetProjectId })
-    .where(function visibleFilter() {
-      this.where('is_visible', true).orWhereNull('is_visible');
-    })
-    .orderBy('display_order', 'asc')
-    .first();
-
-  return firstVisible?.project_status_mapping_id ?? null;
+  return targetMappings[0]?.project_status_mapping_id ?? null;
 }
 
 async function resolveTargetStatusId(
@@ -568,9 +737,7 @@ async function resolveTargetStatusId(
   if (!taskColumns.has('status_id')) return null;
 
   if (params.targetProjectStatusMappingId) {
-    const mapping = await tx.trx('project_status_mappings')
-      .where({ tenant: tx.tenantId, project_status_mapping_id: params.targetProjectStatusMappingId })
-      .first();
+    const mapping = await getProjectStatusMappingDetails(tx, params.targetProjectStatusMappingId);
     return parseNullableUuid(mapping?.status_id) ?? parseNullableUuid(params.sourceTask.status_id);
   }
 
@@ -874,21 +1041,131 @@ async function ensureTagMappings(
   return { added, existing };
 }
 
-async function canReadProject(tx: TenantTxContext, project: Record<string, unknown>): Promise<boolean> {
-  const projectId = String(project.project_id ?? '');
-  if (!projectId) return false;
+function toProjectAuthorizationRecord(project: Record<string, unknown>): AuthorizationRecord {
+  const assignedTo = parseNullableUuid(project.assigned_to);
+  return {
+    id: parseNullableUuid(project.project_id),
+    ownerUserId: assignedTo,
+    assignedUserIds: assignedTo ? [assignedTo] : [],
+    clientId: parseNullableUuid(project.client_id ?? project.company_id),
+  };
+}
+
+function toTicketAuthorizationRecord(ticket: Record<string, unknown>): AuthorizationRecord {
+  const assignedTo = parseNullableUuid(ticket.assigned_to);
+  return {
+    id: parseNullableUuid(ticket.ticket_id),
+    ownerUserId: assignedTo,
+    assignedUserIds: assignedTo ? [assignedTo] : [],
+    clientId: parseNullableUuid(ticket.company_id ?? ticket.client_id),
+    boardId: parseNullableUuid(ticket.board_id),
+    teamIds: parseNullableUuid(ticket.team_id) ? [parseNullableUuid(ticket.team_id)!] : [],
+  };
+}
+
+async function resolveActorAuthorizationSubject(tx: TenantTxContext): Promise<AuthorizationSubject> {
   const userColumns = await getTableColumns(tx, 'users');
-  const hasClientId = userColumns.has('client_id');
   const actor = await tx.trx('users')
     .where({ tenant: tx.tenantId, user_id: tx.actorUserId })
-    .select(hasClientId ? ['user_type', 'client_id'] : ['user_type'])
-    .first<{ user_type?: string | null; client_id?: string | null }>();
-  if (!actor) return false;
-  if (!hasClientId) return true;
-  if (actor.user_type !== 'client') return true;
-  if (!actor.client_id) return false;
-  const projectClientId = parseNullableUuid(project.client_id ?? project.company_id);
-  return Boolean(projectClientId && projectClientId === actor.client_id);
+    .select('*')
+    .first<Record<string, unknown>>();
+
+  const roleRows = await tx.trx('user_roles')
+    .where({ tenant: tx.tenantId, user_id: tx.actorUserId })
+    .select<{ role_id: string }[]>('role_id')
+    .catch(() => []);
+  const teamRows = await tx.trx('team_members')
+    .where({ tenant: tx.tenantId, user_id: tx.actorUserId })
+    .select<{ team_id: string }[]>('team_id')
+    .catch(() => []);
+  const managedRows = userColumns.has('reports_to')
+    ? await tx.trx('users')
+        .where({ tenant: tx.tenantId, reports_to: tx.actorUserId })
+        .select<{ user_id: string }[]>('user_id')
+        .catch(() => [])
+    : [];
+
+  const clientId = parseNullableUuid(actor?.client_id ?? actor?.clientId);
+  const userType = actor?.user_type === 'internal' || actor?.user_type === 'client' ? actor.user_type : 'internal';
+  return {
+    tenant: tx.tenantId,
+    userId: tx.actorUserId,
+    userType,
+    roleIds: roleRows.map((row) => row.role_id),
+    teamIds: teamRows.map((row) => row.team_id),
+    managedUserIds: managedRows.map((row) => row.user_id),
+    clientId,
+    portfolioClientIds: clientId ? [clientId] : [],
+  };
+}
+
+async function createProjectReadAuthorizer(tx: TenantTxContext): Promise<(project: Record<string, unknown>) => Promise<boolean>> {
+  const subject = await resolveActorAuthorizationSubject(tx);
+  const authorizationKernel = createAuthorizationKernel({
+    builtinProvider: new BuiltinAuthorizationKernelProvider(),
+    bundleProvider: new BundleAuthorizationKernelProvider({
+      resolveRules: async (input) => {
+        try {
+          return await resolveBundleNarrowingRulesForEvaluation(tx.trx, input);
+        } catch {
+          return [];
+        }
+      },
+    }),
+    rbacEvaluator: async () => true,
+  });
+  const requestCache = new RequestLocalAuthorizationCache();
+
+  return async (project: Record<string, unknown>): Promise<boolean> => {
+    const projectId = parseNullableUuid(project.project_id);
+    if (!projectId) return false;
+
+    const decision = await authorizationKernel.authorizeResource({
+      subject,
+      resource: { type: 'project', action: 'read', id: projectId },
+      record: toProjectAuthorizationRecord(project),
+      requestCache,
+      knex: tx.trx,
+    });
+    return decision.allowed;
+  };
+}
+
+async function createTicketReadAuthorizer(tx: TenantTxContext): Promise<(ticket: Record<string, unknown>) => Promise<boolean>> {
+  const subject = await resolveActorAuthorizationSubject(tx);
+  const authorizationKernel = createAuthorizationKernel({
+    builtinProvider: new BuiltinAuthorizationKernelProvider(),
+    bundleProvider: new BundleAuthorizationKernelProvider({
+      resolveRules: async (input) => {
+        try {
+          return await resolveBundleNarrowingRulesForEvaluation(tx.trx, input);
+        } catch {
+          return [];
+        }
+      },
+    }),
+    rbacEvaluator: async () => true,
+  });
+  const requestCache = new RequestLocalAuthorizationCache();
+
+  return async (ticket: Record<string, unknown>): Promise<boolean> => {
+    const ticketId = parseNullableUuid(ticket.ticket_id);
+    if (!ticketId) return false;
+
+    const decision = await authorizationKernel.authorizeResource({
+      subject,
+      resource: { type: 'ticket', action: 'read', id: ticketId },
+      record: toTicketAuthorizationRecord(ticket),
+      requestCache,
+      knex: tx.trx,
+    });
+    return decision.allowed;
+  };
+}
+
+async function canReadProject(tx: TenantTxContext, project: Record<string, unknown>): Promise<boolean> {
+  const authorize = await createProjectReadAuthorizer(tx);
+  return authorize(project);
 }
 
 async function assertProjectReadable(
@@ -907,9 +1184,27 @@ async function assertProjectReadable(
   }
 }
 
+async function assertTicketReadable(
+  ctx: any,
+  tx: TenantTxContext,
+  ticket: Record<string, unknown>
+): Promise<void> {
+  const authorize = await createTicketReadAuthorizer(tx);
+  const allowed = await authorize(ticket);
+  if (!allowed) {
+    throwActionError(ctx, {
+      category: 'ActionError',
+      code: 'PERMISSION_DENIED',
+      message: 'Permission denied: ticket:read',
+      details: { ticket_id: ticket.ticket_id },
+    });
+  }
+}
+
 async function filterAuthorizedProjects(tx: TenantTxContext, projects: Record<string, unknown>[]) {
   if (projects.length === 0) return [];
-  const allowed = await Promise.all(projects.map((project) => canReadProject(tx, project)));
+  const authorize = await createProjectReadAuthorizer(tx);
+  const allowed = await Promise.all(projects.map((project) => authorize(project)));
   return projects.filter((_, idx) => allowed[idx]);
 }
 
@@ -934,7 +1229,7 @@ export function registerProjectActions(): void {
         type: z.enum(['user', 'team']).describe('Assignee type'),
         id: uuidSchema.describe('User id or team id')
       }).optional().describe('Optional assignee'),
-      link_ticket_id: withWorkflowPicker(uuidSchema.optional(), 'Optional ticket id to link', 'project-task')
+      link_ticket_id: withWorkflowPicker(uuidSchema.optional(), 'Optional ticket id to link', 'ticket')
     }),
     outputSchema: z.object({
       task_id: uuidSchema,
@@ -957,6 +1252,10 @@ export function registerProjectActions(): void {
         .orderBy('order_number', 'asc')
         .first())?.phase_id;
       if (!phaseId) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Project phase not found' });
+      const phase = await tx.trx('project_phases').where({ tenant: tx.tenantId, phase_id: phaseId }).first();
+      if (!phase || phase.project_id !== input.project_id) {
+        throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Project phase does not belong to project' });
+      }
 
       const assignedTo = input.assignee
         ? (input.assignee.type === 'user'
@@ -971,13 +1270,26 @@ export function registerProjectActions(): void {
         if (!user) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Assignee user not found' });
       }
 
+      const taskColumns = await getTableColumns(tx, 'project_tasks');
       let statusId: string | null = input.status_id ?? null;
-      if (statusId) {
-        const hasStatusMappingColumn = (await getTableColumns(tx, 'project_tasks')).has('project_status_mapping_id');
-        const status = hasStatusMappingColumn
-          ? await tx.trx('project_status_mappings').where({ tenant: tx.tenantId, project_status_mapping_id: statusId }).first()
-          : await tx.trx('statuses').where({ tenant: tx.tenantId, status_id: statusId, status_type: 'project_task' }).first();
-
+      let projectStatusMappingId: string | null = null;
+      if (taskColumns.has('project_status_mapping_id')) {
+        if (statusId) {
+          const mapping = await getProjectStatusMappingDetails(tx, statusId);
+          const effectiveMappings = await getEffectiveProjectStatusMappings(tx, input.project_id, phaseId);
+          const isEffective = effectiveMappings.some((candidate) => candidate.project_status_mapping_id === statusId);
+          if (!mapping || mapping.project_id !== input.project_id || !isEffective) {
+            throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Invalid project task status_id' });
+          }
+          projectStatusMappingId = mapping.project_status_mapping_id;
+          statusId = taskColumns.has('status_id') ? mapping.status_id : mapping.project_status_mapping_id;
+        } else {
+          const defaultMapping = (await getEffectiveProjectStatusMappings(tx, input.project_id, phaseId))[0];
+          projectStatusMappingId = defaultMapping?.project_status_mapping_id ?? null;
+          statusId = taskColumns.has('status_id') ? (defaultMapping?.status_id ?? null) : projectStatusMappingId;
+        }
+      } else if (statusId) {
+        const status = await tx.trx('statuses').where({ tenant: tx.tenantId, status_id: statusId, status_type: 'project_task' }).first();
         if (!status) throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Invalid project task status_id' });
       } else {
         const defaultStatus = await tx.trx('statuses')
@@ -988,7 +1300,6 @@ export function registerProjectActions(): void {
         statusId = (defaultStatus?.status_id as string | undefined) ?? null;
       }
 
-      const phase = await tx.trx('project_phases').where({ tenant: tx.tenantId, phase_id: phaseId }).first();
       const baseWbs = (phase?.wbs_code as string) ?? '1';
       const countRow = await tx.trx('project_tasks')
         .where({ tenant: tx.tenantId, phase_id: phaseId })
@@ -999,7 +1310,6 @@ export function registerProjectActions(): void {
 
       const taskId = uuidv4();
       const nowIso = new Date().toISOString();
-      const taskColumns = await getTableColumns(tx, 'project_tasks');
       const taskPayload: Record<string, unknown> = {
         tenant: tx.tenantId,
         task_id: taskId,
@@ -1014,7 +1324,7 @@ export function registerProjectActions(): void {
       };
       if (taskColumns.has('description_rich_text')) taskPayload.description_rich_text = null;
       if (taskColumns.has('status_id')) taskPayload.status_id = statusId;
-      if (taskColumns.has('project_status_mapping_id')) taskPayload.project_status_mapping_id = statusId;
+      if (taskColumns.has('project_status_mapping_id')) taskPayload.project_status_mapping_id = projectStatusMappingId;
       if (taskColumns.has('priority_id')) taskPayload.priority_id = input.priority_id ?? null;
 
       await tx.trx('project_tasks').insert(taskPayload);
@@ -1881,9 +2191,39 @@ export function registerProjectActions(): void {
 
         const nextWbsCode = await generateTaskWbsCode(tx, targetPhase);
         const nowIso = new Date().toISOString();
-        const orderKey = taskColumns.has('order_key')
-          ? `${Date.now().toString(36)}-${uuidv4().slice(0, 8)}`
-          : null;
+        let beforeKey: string | null = null;
+        let afterKey: string | null = null;
+        if (taskColumns.has('order_key')) {
+          if (input.before_task_id) {
+            const beforeTask = await tx.trx('project_tasks')
+              .where({ tenant: tx.tenantId, task_id: input.before_task_id, phase_id: input.target_phase_id })
+              .first('order_key');
+            if (!beforeTask) {
+              throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'before_task_id must be in the target phase' });
+            }
+            afterKey = beforeTask.order_key ?? null;
+          } else if (input.after_task_id) {
+            const afterTask = await tx.trx('project_tasks')
+              .where({ tenant: tx.tenantId, task_id: input.after_task_id, phase_id: input.target_phase_id })
+              .first('order_key');
+            if (!afterTask) {
+              throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'after_task_id must be in the target phase' });
+            }
+            beforeKey = afterTask.order_key ?? null;
+          } else {
+            const lastTask = await tx.trx('project_tasks')
+              .where({ tenant: tx.tenantId, phase_id: input.target_phase_id })
+              .modify((query) => {
+                if (targetProjectStatusMappingId && taskColumns.has('project_status_mapping_id')) {
+                  query.andWhere('project_status_mapping_id', targetProjectStatusMappingId);
+                }
+              })
+              .orderBy('order_key', 'desc')
+              .first('order_key');
+            beforeKey = lastTask?.order_key ?? null;
+          }
+        }
+        const orderKey = taskColumns.has('order_key') ? generateKeyBetween(beforeKey, afterKey) : null;
 
         const updatePayload: Record<string, unknown> = {
           phase_id: input.target_phase_id,
@@ -1953,6 +2293,7 @@ export function registerProjectActions(): void {
         await requireProjectUpdatePermission(ctx, tx);
         const taskColumns = await getTableColumns(tx, 'project_tasks');
         const task = await ensureTaskContext(ctx, tx, input.task_id);
+        validateOptionalTaskScope(ctx, task, { project_id: input.project_id, phase_id: input.phase_id });
         const project = await ensureProjectExists(ctx, tx, String(task.project_id));
         await assertProjectReadable(ctx, tx, project);
 
@@ -2190,13 +2531,21 @@ export function registerProjectActions(): void {
             .select('*');
           if (sourceLinks.length > 0) {
             const canReadTicketLinks = await canReadTickets(ctx, tx);
-            const allowedTicketIds = canReadTicketLinks
-              ? sourceLinks.map((link: Record<string, unknown>) => String(link.ticket_id))
+            const sourceTicketIds = sourceLinks.map((link: Record<string, unknown>) => String(link.ticket_id));
+            const tickets = canReadTicketLinks
+              ? await tx.trx('tickets').where({ tenant: tx.tenantId }).whereIn('ticket_id', sourceTicketIds).select('*')
               : [];
+            const authorizeTicket = await createTicketReadAuthorizer(tx);
+            const ticketAuthorization = await Promise.all(tickets.map((ticket: Record<string, unknown>) => authorizeTicket(ticket)));
+            const allowedTicketIds = new Set(
+              tickets
+                .filter((_, idx) => ticketAuthorization[idx])
+                .map((ticket: Record<string, unknown>) => String(ticket.ticket_id))
+            );
 
-            if (allowedTicketIds.length > 0) {
+            if (allowedTicketIds.size > 0) {
               const inserts = sourceLinks
-                .filter((link: Record<string, unknown>) => allowedTicketIds.includes(String(link.ticket_id)))
+                .filter((link: Record<string, unknown>) => allowedTicketIds.has(String(link.ticket_id)))
                 .map((link: Record<string, unknown>) => ({
                   ...link,
                   link_id: uuidv4(),
@@ -2206,11 +2555,12 @@ export function registerProjectActions(): void {
                   created_at: nowIso,
                 }));
               for (const link of inserts) {
+                const ticketId = String((link as Record<string, unknown>).ticket_id);
                 await tx.trx('project_ticket_links').insert(link).catch(() => undefined);
                 await tx.trx('ticket_entity_links').insert({
                   tenant: tx.tenantId,
                   link_id: uuidv4(),
-                  ticket_id: link.ticket_id,
+                  ticket_id: ticketId,
                   entity_type: 'project_task',
                   entity_id: copiedTaskId,
                   link_type: 'project_task',
@@ -2272,6 +2622,7 @@ export function registerProjectActions(): void {
       try {
         await requireProjectDeletePermission(ctx, tx);
         const task = await ensureTaskContext(ctx, tx, input.task_id);
+        validateOptionalTaskScope(ctx, task, { project_id: input.project_id, phase_id: input.phase_id });
         const project = await ensureProjectExists(ctx, tx, String(task.project_id));
         await assertProjectReadable(ctx, tx, project);
 
@@ -2291,6 +2642,25 @@ export function registerProjectActions(): void {
             });
           }
         }
+
+        await deleteFromTableIfExists(tx, 'project_task_dependencies', (query) =>
+          query.where({ tenant: tx.tenantId }).andWhere(function dependenciesForTask(this: Knex.QueryBuilder) {
+            this.where('predecessor_task_id', input.task_id).orWhere('successor_task_id', input.task_id);
+          })
+        );
+        const taskCommentIds = await tx.trx.schema.hasTable('project_task_comments')
+          ? await tx.trx('project_task_comments')
+              .where({ tenant: tx.tenantId, task_id: input.task_id })
+              .pluck<string[]>('task_comment_id')
+          : [];
+        if (taskCommentIds.length > 0) {
+          await deleteFromTableIfExists(tx, 'project_task_comment_reactions', (query) =>
+            query.where({ tenant: tx.tenantId }).whereIn('task_comment_id', taskCommentIds)
+          );
+        }
+        await deleteFromTableIfExists(tx, 'project_task_comments', (query) =>
+          query.where({ tenant: tx.tenantId, task_id: input.task_id })
+        );
 
         const deletedTicketLinks = await deleteFromTableIfExists(tx, 'project_ticket_links', (query) =>
           query.where({ tenant: tx.tenantId, task_id: input.task_id })
@@ -2351,6 +2721,66 @@ export function registerProjectActions(): void {
         const project = await ensureProjectExists(ctx, tx, String(phase.project_id));
         await assertProjectReadable(ctx, tx, project);
 
+        const taskIds = await tx.trx('project_tasks')
+          .where({ tenant: tx.tenantId, phase_id: input.phase_id })
+          .pluck<string[]>('task_id');
+
+        if (taskIds.length > 0) {
+          const timeEntriesExist = await tx.trx.schema.hasTable('time_entries');
+          if (timeEntriesExist) {
+            const timeEntryCountRow = await tx.trx('time_entries')
+              .where({ tenant: tx.tenantId, work_item_type: 'project_task' })
+              .whereIn('work_item_id', taskIds)
+              .count('* as count')
+              .first();
+            const timeEntryCount = Number((timeEntryCountRow as { count?: string | number } | undefined)?.count ?? 0);
+            if (timeEntryCount > 0) {
+              throwActionError(ctx, {
+                category: 'ValidationError',
+                code: 'VALIDATION_ERROR',
+                message: `Cannot delete phase: ${timeEntryCount} associated task time entries exist.`,
+                details: { phase_id: input.phase_id, time_entry_count: timeEntryCount },
+              });
+            }
+          }
+
+          await deleteFromTableIfExists(tx, 'project_task_dependencies', (query) =>
+            query.where({ tenant: tx.tenantId }).andWhere(function dependenciesForPhaseTasks(this: Knex.QueryBuilder) {
+              this.whereIn('predecessor_task_id', taskIds).orWhereIn('successor_task_id', taskIds);
+            })
+          );
+          const taskCommentIds = await tx.trx.schema.hasTable('project_task_comments')
+            ? await tx.trx('project_task_comments')
+                .where({ tenant: tx.tenantId })
+                .whereIn('task_id', taskIds)
+                .pluck<string[]>('task_comment_id')
+            : [];
+          if (taskCommentIds.length > 0) {
+            await deleteFromTableIfExists(tx, 'project_task_comment_reactions', (query) =>
+              query.where({ tenant: tx.tenantId }).whereIn('task_comment_id', taskCommentIds)
+            );
+          }
+          await deleteFromTableIfExists(tx, 'project_task_comments', (query) =>
+            query.where({ tenant: tx.tenantId }).whereIn('task_id', taskIds)
+          );
+          await deleteFromTableIfExists(tx, 'task_resources', (query) =>
+            query.where({ tenant: tx.tenantId }).whereIn('task_id', taskIds)
+          );
+          await deleteFromTableIfExists(tx, 'task_checklist_items', (query) =>
+            query.where({ tenant: tx.tenantId }).whereIn('task_id', taskIds)
+          );
+          await deleteFromTableIfExists(tx, 'project_ticket_links', (query) =>
+            query.where({ tenant: tx.tenantId }).whereIn('task_id', taskIds)
+          );
+          await deleteFromTableIfExists(tx, 'ticket_entity_links', (query) =>
+            query.where({ tenant: tx.tenantId, entity_type: 'project_task' }).whereIn('entity_id', taskIds)
+          );
+          await tx.trx('project_tasks')
+            .where({ tenant: tx.tenantId })
+            .whereIn('task_id', taskIds)
+            .delete();
+        }
+
         const deleted = await tx.trx('project_phases')
           .where({ tenant: tx.tenantId, phase_id: input.phase_id })
           .delete();
@@ -2393,6 +2823,32 @@ export function registerProjectActions(): void {
         const project = await ensureProjectExists(ctx, tx, input.project_id);
         await assertProjectReadable(ctx, tx, project);
 
+        const deletionConfig = getDeletionConfig('project');
+        if (!deletionConfig) {
+          return deleteProjectResultSchema.parse({
+            success: false,
+            can_delete: false,
+            deleted: false,
+            code: 'UNKNOWN_ENTITY',
+            message: 'Unknown entity type: project',
+            dependencies: [],
+            alternatives: [],
+          });
+        }
+
+        const validation = await validateDeletion(tx.trx, deletionConfig, input.project_id, tx.tenantId);
+        if (!validation.canDelete) {
+          return deleteProjectResultSchema.parse({
+            success: false,
+            can_delete: false,
+            deleted: false,
+            code: validation.code ?? 'VALIDATION_FAILED',
+            message: validation.message ?? 'Project cannot be deleted',
+            dependencies: validation.dependencies ?? [],
+            alternatives: validation.alternatives ?? [],
+          });
+        }
+
         const phaseIds = await tx.trx('project_phases')
           .where({ tenant: tx.tenantId, project_id: input.project_id })
           .pluck<string[]>('phase_id');
@@ -2431,6 +2887,25 @@ export function registerProjectActions(): void {
           await deleteFromTableIfExists(tx, 'tag_mappings', (query) =>
             query.where({ tenant: tx.tenantId, tagged_type: 'project_task' }).whereIn('tagged_id', taskIds)
           );
+          await deleteFromTableIfExists(tx, 'project_task_dependencies', (query) =>
+            query.where({ tenant: tx.tenantId }).andWhere(function dependenciesForProjectTasks(this: Knex.QueryBuilder) {
+              this.whereIn('predecessor_task_id', taskIds).orWhereIn('successor_task_id', taskIds);
+            })
+          );
+          const taskCommentIds = await tx.trx.schema.hasTable('project_task_comments')
+            ? await tx.trx('project_task_comments')
+                .where({ tenant: tx.tenantId })
+                .whereIn('task_id', taskIds)
+                .pluck<string[]>('task_comment_id')
+            : [];
+          if (taskCommentIds.length > 0) {
+            await deleteFromTableIfExists(tx, 'project_task_comment_reactions', (query) =>
+              query.where({ tenant: tx.tenantId }).whereIn('task_comment_id', taskCommentIds)
+            );
+          }
+          await deleteFromTableIfExists(tx, 'project_task_comments', (query) =>
+            query.where({ tenant: tx.tenantId }).whereIn('task_id', taskIds)
+          );
           await deleteFromTableIfExists(tx, 'ticket_entity_links', (query) =>
             query.where({ tenant: tx.tenantId, entity_type: 'project_task' }).whereIn('entity_id', taskIds)
           );
@@ -2460,6 +2935,9 @@ export function registerProjectActions(): void {
             .whereIn('phase_id', phaseIds)
             .delete();
         }
+        await deleteFromTableIfExists(tx, 'project_status_mappings', (query) =>
+          query.where({ tenant: tx.tenantId, project_id: input.project_id })
+        );
         const deleted = await tx.trx('projects')
           .where({ tenant: tx.tenantId, project_id: input.project_id })
           .delete();
@@ -2503,10 +2981,12 @@ export function registerProjectActions(): void {
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       try {
         await requireProjectUpdatePermission(ctx, tx);
+        await requirePermission(ctx, tx, { resource: 'ticket', action: 'read' });
         const task = await ensureTaskContext(ctx, tx, input.task_id);
         const project = await ensureProjectExists(ctx, tx, String(task.project_id));
         await assertProjectReadable(ctx, tx, project);
-        await ensureTicketExists(ctx, tx, input.ticket_id);
+        const ticket = await ensureTicketExists(ctx, tx, input.ticket_id);
+        await assertTicketReadable(ctx, tx, ticket);
 
         if (input.project_id && input.project_id !== String(task.project_id)) {
           throwActionError(ctx, {
@@ -2701,6 +3181,7 @@ export function registerProjectActions(): void {
       try {
         await requireProjectUpdatePermission(ctx, tx);
         const task = await ensureTaskContext(ctx, tx, input.task_id);
+        validateOptionalTaskScope(ctx, task, { project_id: input.project_id, phase_id: input.phase_id });
         const project = await ensureProjectExists(ctx, tx, String(task.project_id));
         await assertProjectReadable(ctx, tx, project);
 

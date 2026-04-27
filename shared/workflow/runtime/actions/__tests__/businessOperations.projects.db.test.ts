@@ -853,7 +853,13 @@ describe('project business operation db actions', () => {
     expect(moved.current_project_status_mapping_id).toBeTruthy();
     expect(moved.current_status_id).toBeTruthy();
     expect(moved.wbs_code).not.toBe(beforeTask?.wbs_code ?? null);
-    expect(moved.order_key).not.toBe(beforeTask?.order_key ?? null);
+    expect(moved.order_key).toBeTruthy();
+
+    const persistedMoved = await db('project_tasks')
+      .where({ tenant: runtimeState.tenantId, task_id: taskId })
+      .first('order_key', 'phase_id');
+    expect(persistedMoved?.order_key).toBe(moved.order_key);
+    expect(persistedMoved?.phase_id).toBe(phaseTarget);
 
     const audit = await db('audit_logs')
       .where({ tenant: runtimeState.tenantId, operation: 'workflow_action:projects.move_task' })

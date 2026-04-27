@@ -53,6 +53,8 @@ type WorkflowPickerOption = SelectOption & {
   boardId?: string | null;
   clientId?: string | null;
   parentId?: string | null;
+  projectId?: string | null;
+  phaseId?: string | null;
   assigneeType?: 'user' | 'team';
 };
 
@@ -63,12 +65,38 @@ type WorkflowTicketSearchResult = {
   status_name?: string | null;
 };
 
+type WorkflowProjectPickerProject = {
+  project_id: string;
+  project_name: string;
+  phases?: Array<{
+    phase_id: string;
+    phase_name: string;
+    statuses?: Array<{ mapping_id: string; name: string }>;
+  }>;
+};
+
+type WorkflowProjectTaskPickerTask = {
+  task_id: string;
+  task_name: string;
+  phase_id?: string | null;
+};
+
+type WorkflowProjectStatusPickerStatus = {
+  mapping_id: string;
+  name: string;
+  project_id: string;
+  phase_id?: string | null;
+};
+
 type WorkflowPickerData = {
   ticketOptions: TicketFieldOptions | null;
   contacts: IContact[];
   users: IUser[];
   teams: ITeam[];
   tickets: WorkflowTicketSearchResult[];
+  projects: WorkflowProjectPickerProject[];
+  projectTasks: WorkflowProjectTaskPickerTask[];
+  projectStatuses: WorkflowProjectStatusPickerStatus[];
 };
 
 const EMPTY_PICKER_DATA: WorkflowPickerData = {
@@ -77,6 +105,9 @@ const EMPTY_PICKER_DATA: WorkflowPickerData = {
   users: [],
   teams: [],
   tickets: [],
+  projects: [],
+  projectTasks: [],
+  projectStatuses: [],
 };
 
 const EMPTY_TICKET_FIELD_OPTIONS: TicketFieldOptions = {
@@ -104,6 +135,8 @@ export type WorkflowPickerActions = {
     boardFilterState: 'active' | 'inactive' | 'all';
     searchQuery: string;
   }) => Promise<{ tickets?: WorkflowTicketSearchResult[] } | null>;
+  getProjectsWithPhases: () => Promise<WorkflowProjectPickerProject[] | { permissionError: string }>;
+  getProjectTaskData: (projectId: string) => Promise<{ tasks: WorkflowProjectTaskPickerTask[] } | { permissionError: string }>;
 };
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
@@ -334,6 +367,32 @@ const mapWorkflowPickerOptions = (
   data: WorkflowPickerData
 ): WorkflowPickerOption[] => {
   switch (kind) {
+    case 'project':
+      return data.projects.map((project) => ({
+        value: project.project_id,
+        label: project.project_name,
+      }));
+    case 'project-phase':
+      return data.projects.flatMap((project) =>
+        (project.phases ?? []).map((phase) => ({
+          value: phase.phase_id,
+          label: `${project.project_name} · ${phase.phase_name}`,
+          projectId: project.project_id,
+        }))
+      );
+    case 'project-task':
+      return data.projectTasks.map((task) => ({
+        value: task.task_id,
+        label: task.task_name,
+        phaseId: task.phase_id ?? null,
+      }));
+    case 'project-task-status':
+      return data.projectStatuses.map((status) => ({
+        value: status.mapping_id,
+        label: status.name,
+        projectId: status.project_id,
+        phaseId: status.phase_id ?? null,
+      }));
     case 'contact':
       return data.contacts.map((contact) => ({
         value: contact.contact_name_id,
@@ -410,6 +469,22 @@ const filterWorkflowPickerOptions = (
           (categoryId ? option.parentId === categoryId : true)
       );
     }
+    case 'project-phase': {
+      const projectId = dependencyValues.get('project_id') ?? dependencyValues.get('target_project_id') ?? dependencyValues.get('filters.project_id');
+      return projectId ? options.filter((option) => option.projectId === projectId) : options;
+    }
+    case 'project-task': {
+      const phaseId = dependencyValues.get('phase_id') ?? dependencyValues.get('target_phase_id') ?? dependencyValues.get('filters.phase_id');
+      return phaseId ? options.filter((option) => option.phaseId === phaseId) : options;
+    }
+    case 'project-task-status': {
+      const projectId = dependencyValues.get('project_id') ?? dependencyValues.get('target_project_id') ?? dependencyValues.get('filters.project_id');
+      const phaseId = dependencyValues.get('phase_id') ?? dependencyValues.get('target_phase_id') ?? dependencyValues.get('filters.phase_id');
+      return options.filter((option) =>
+        (!projectId || option.projectId === projectId) &&
+        (!phaseId || option.phaseId === phaseId || option.phaseId === null)
+      );
+    }
     case 'user-or-team': {
       const assigneeType = dependencyValues.get('assignee.type');
       return assigneeType === 'user' || assigneeType === 'team'
@@ -438,12 +513,67 @@ const appendCurrentValueOption = (
   ];
 };
 
+const getResolvedDependencyValueFromAny = (
+  dependencies: DependencyResolution[],
+  paths: string[]
+): string | undefined => {
+  for (const path of paths) {
+    const value = getResolvedDependencyValue(dependencies, path);
+    if (value) return value;
+  }
+  return undefined;
+};
+
+const isActionPermissionErrorLike = (value: unknown): value is { permissionError: string } =>
+  Boolean(value && typeof value === 'object' && 'permissionError' in value);
+
 const loadWorkflowPickerData = async (
   kind: string,
   dependencies: DependencyResolution[],
   actions: WorkflowPickerActions
 ): Promise<WorkflowPickerData> => {
   switch (kind) {
+    case 'project': {
+      const projects = await actions.getProjectsWithPhases();
+      return {
+        ...EMPTY_PICKER_DATA,
+        projects: isActionPermissionErrorLike(projects) ? [] : projects,
+      };
+    }
+    case 'project-phase': {
+      const projects = await actions.getProjectsWithPhases();
+      return {
+        ...EMPTY_PICKER_DATA,
+        projects: isActionPermissionErrorLike(projects) ? [] : projects,
+      };
+    }
+    case 'project-task-status': {
+      const projects = await actions.getProjectsWithPhases();
+      const safeProjects = isActionPermissionErrorLike(projects) ? [] : projects;
+      return {
+        ...EMPTY_PICKER_DATA,
+        projects: safeProjects,
+        projectStatuses: safeProjects.flatMap((project) =>
+          (project.phases ?? []).flatMap((phase) =>
+            (phase.statuses ?? []).map((status) => ({
+              mapping_id: status.mapping_id,
+              name: status.name,
+              project_id: project.project_id,
+              phase_id: phase.phase_id,
+            }))
+          )
+        ),
+      };
+    }
+    case 'project-task': {
+      const projectId = getResolvedDependencyValueFromAny(dependencies, ['project_id', 'target_project_id', 'filters.project_id']);
+      if (!projectId) return EMPTY_PICKER_DATA;
+      const taskData = await actions.getProjectTaskData(projectId);
+      return {
+        ...EMPTY_PICKER_DATA,
+        projectTasks: isActionPermissionErrorLike(taskData) ? [] : taskData.tasks,
+      };
+    }
     case 'ticket-status': {
       const fixedBoard = dependencies.find((dependency) => dependency.path === 'board_id');
       const fixedTicket = dependencies.find((dependency) => dependency.path === 'ticket_id');

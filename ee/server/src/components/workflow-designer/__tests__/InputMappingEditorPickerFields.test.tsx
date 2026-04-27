@@ -403,6 +403,28 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
   getUserAvatarUrlsBatchAction: vi.fn().mockResolvedValue({}),
 }));
 
+vi.mock('@alga-psa/projects/actions/projectActions', () => ({
+  getProjectsWithPhases: vi.fn().mockResolvedValue([
+    {
+      project_id: 'project-1',
+      project_name: 'Implementation',
+      phases: [
+        {
+          phase_id: 'phase-1',
+          phase_name: 'Plan',
+          statuses: [{ mapping_id: 'status-map-1', name: 'Open' }],
+        },
+      ],
+    },
+  ]),
+}));
+
+vi.mock('@alga-psa/projects/actions/projectTaskActions', () => ({
+  getProjectTaskData: vi.fn().mockResolvedValue({
+    tasks: [{ task_id: 'task-1', task_name: 'Kickoff', phase_id: 'phase-1' }],
+  }),
+}));
+
 vi.mock('@alga-psa/tickets/actions', () => ({
   getTicketById: vi.fn().mockImplementation(async (ticketId: string) => {
     if (ticketId === 'ticket-1') {
