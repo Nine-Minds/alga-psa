@@ -396,7 +396,8 @@
       "tasks": "11111",
       "priority": "11111",
       "dueDate": "11111",
-      "showClosed": "11111"
+      "showClosed": "11111",
+      "search": "11111"
     },
     "activityTypeOptions": {
       "schedule": "11111",
@@ -409,7 +410,8 @@
       "allStatuses": "11111",
       "allProjects": "11111",
       "allPriorities": "11111",
-      "selectPriority": "11111"
+      "selectPriority": "11111",
+      "search": "11111"
     },
     "actions": {
       "reset": "11111"

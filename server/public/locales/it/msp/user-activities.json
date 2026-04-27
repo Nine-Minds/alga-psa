@@ -396,7 +396,8 @@
       "tasks": "Attività:",
       "priority": "Priorità",
       "dueDate": "Data di scadenza",
-      "showClosed": "Mostra chiuse"
+      "showClosed": "Mostra chiuse",
+      "search": "Cerca"
     },
     "activityTypeOptions": {
       "schedule": "Pianificazione",
@@ -409,7 +410,8 @@
       "allStatuses": "Tutti gli stati",
       "allProjects": "Tutti i progetti",
       "allPriorities": "Tutte le priorità",
-      "selectPriority": "Selezioni la priorità..."
+      "selectPriority": "Selezioni la priorità...",
+      "search": "Cerca attività..."
     },
     "actions": {
       "reset": "Reimposta"
