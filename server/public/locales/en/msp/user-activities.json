@@ -395,6 +395,7 @@
       "tickets": "Tickets:",
       "tasks": "Tasks:",
       "priority": "Priority",
+      "search": "Search",
       "dueDate": "Due Date",
       "showClosed": "Show closed"
     },
@@ -409,7 +410,8 @@
       "allStatuses": "All Statuses",
       "allProjects": "All Projects",
       "allPriorities": "All Priorities",
-      "selectPriority": "Select Priority..."
+      "selectPriority": "Select Priority...",
+      "search": "Search activities..."
     },
     "actions": {
       "reset": "Reset"
