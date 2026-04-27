@@ -70,7 +70,7 @@
   {
     "id": "F009",
     "description": "Implement `time.get_entry` to load a tenant-scoped time entry by ID with normalized workflow output.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Time entry actions"
     ]
@@ -78,7 +78,7 @@
   {
     "id": "F010",
     "description": "Implement `time.find_entries` with bounded filters for user, work item, client, time sheet, service, contract line, approval status, billable flag, work date/date range, start/end range, invoiced flag, and limit.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Time entry actions"
     ]

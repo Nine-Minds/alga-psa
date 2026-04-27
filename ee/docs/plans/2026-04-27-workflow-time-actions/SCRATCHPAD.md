@@ -78,6 +78,14 @@ Rolling notes for adding workflow-safe time-entry, time-sheet, and billing-readi
 - (2026-04-27) Added DB-backed runtime test case for `T003` in `shared/workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts`.
   - Creates a project-task-linked entry, updates duration via workflow action, and deletes via workflow action.
   - Asserts `project_tasks.actual_hours` transitions `30 -> 90 -> 0`.
+- (2026-04-27) Implemented `time.get_entry` (`F009`) and `time.find_entries` (`F010`) in workflow runtime.
+  - Added domain helpers `getWorkflowTimeEntry(...)` and `findWorkflowTimeEntries(...)`.
+  - `find_entries` supports bounded filters across user/work-item/client/service/contract/status/date/time/invoiced scopes and returns aggregate summary totals.
+  - Registered new actions in `shared/workflow/runtime/actions/businessOperations/time.ts` with read permissions and normalized output schemas.
+- (2026-04-27) Added DB-backed runtime test case for `T005` in `shared/workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts`.
+  - Verifies `time.get_entry` normalized response shape.
+  - Verifies `time.find_entries` filtered list + aggregate totals.
+  - Verifies tenant-scoped isolation by asserting cross-tenant entry lookup returns `NOT_FOUND`.
 
 ## Commands / Verification (This Pass)
 
@@ -89,8 +97,11 @@ Rolling notes for adding workflow-safe time-entry, time-sheet, and billing-readi
   - Still blocked locally by the same test DB connection refusal (`127.0.0.1:57432`).
 - Attempted after update/delete action + T003 changes: `npx vitest run --config shared/vitest.config.ts workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts`
   - Compile/import succeeds, but DB-backed execution remains blocked by local connection refusal (`127.0.0.1:57432`).
+- Attempted after get/find actions + T005 changes: `npx vitest run --config shared/vitest.config.ts workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts`
+  - Compile/import succeeds, but DB-backed execution remains blocked by the same local connection refusal (`127.0.0.1:57432`).
 - Attempted: `npx tsc -p shared/tsconfig.json --noEmit`
   - Fails due pre-existing workspace TS config/module issues outside this feature area (`@alga-psa/sla/types`, alias `@/lib/*`, and existing `server/test-utils/dbReset.ts` declaration-order error).
+- Ran: `npx vitest run --config shared/vitest.config.ts workflow/runtime/__tests__/workflowDesignerActionCatalog.test.ts` (pass after each action-registration expansion).
 
 ## Gotchas
 

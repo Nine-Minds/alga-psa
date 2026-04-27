@@ -13,9 +13,12 @@ import {
   createWorkflowTimeEntry,
   updateWorkflowTimeEntry,
   deleteWorkflowTimeEntry,
+  getWorkflowTimeEntry,
+  findWorkflowTimeEntries,
   WorkflowTimeDomainError,
   type WorkflowTimeCreateEntryInput,
   type WorkflowTimeUpdateEntryInput,
+  type WorkflowTimeFindEntriesInput,
 } from './timeDomain';
 
 const timeEntryLinkSchema = z.object({
@@ -148,6 +151,143 @@ export function registerTimeActions(): void {
         rethrowAsStandardError(ctx, error);
       }
     })
+  });
+
+  registry.register({
+    id: 'time.get_entry',
+    version: 1,
+    inputSchema: z.object({
+      entry_id: uuidSchema.describe('Time entry id to fetch'),
+    }),
+    outputSchema: z.object({
+      time_entry: z.object({
+        entry_id: uuidSchema,
+        user_id: uuidSchema,
+        work_item_id: uuidSchema.nullable(),
+        work_item_type: z.string().nullable(),
+        service_id: uuidSchema,
+        contract_line_id: uuidSchema.nullable(),
+        time_sheet_id: uuidSchema.nullable(),
+        start_time: isoDateTimeSchema,
+        end_time: isoDateTimeSchema,
+        total_minutes: z.number().int(),
+        billable_minutes: z.number().int(),
+        work_date: z.string(),
+        work_timezone: z.string(),
+        approval_status: z.string(),
+        invoiced: z.boolean(),
+        notes: z.string().nullable(),
+      })
+    }),
+    sideEffectful: false,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Get Time Entry',
+      category: 'Business Operations',
+      description: 'Load a single tenant-scoped time entry',
+    },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      await requirePermission(ctx, tx, { resource: 'timeentry', action: 'read' });
+
+      try {
+        const entry = await getWorkflowTimeEntry({
+          trx: tx.trx,
+          tenantId: tx.tenantId,
+          entryId: input.entry_id,
+        });
+        return { time_entry: entry };
+      } catch (error) {
+        if (error instanceof WorkflowTimeDomainError) {
+          throwActionError(ctx, {
+            category: error.category,
+            code: error.code,
+            message: error.message,
+            details: error.details ?? undefined,
+          });
+        }
+        rethrowAsStandardError(ctx, error);
+      }
+    }),
+  });
+
+  registry.register({
+    id: 'time.find_entries',
+    version: 1,
+    inputSchema: z.object({
+      user_id: uuidSchema.optional().describe('Filter by entry owner user id'),
+      work_item_id: uuidSchema.optional().describe('Filter by work item id'),
+      work_item_type: z.enum(['ticket', 'project', 'project_task', 'interaction', 'ad_hoc', 'non_billable_category']).optional()
+        .describe('Filter by work item type'),
+      client_id: uuidSchema.optional().describe('Filter by client id inferred from linked work items'),
+      ticket_id: uuidSchema.optional().describe('Filter by ticket id'),
+      project_task_id: uuidSchema.optional().describe('Filter by project task id'),
+      time_sheet_id: uuidSchema.optional().describe('Filter by time sheet id'),
+      service_id: uuidSchema.optional().describe('Filter by service id'),
+      contract_line_id: uuidSchema.optional().describe('Filter by contract line id'),
+      approval_status: z.enum(['DRAFT', 'SUBMITTED', 'APPROVED', 'CHANGES_REQUESTED']).optional()
+        .describe('Filter by approval status'),
+      billable: z.boolean().optional().describe('Filter billable vs non-billable entries'),
+      work_date_from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe('Inclusive lower work date bound (YYYY-MM-DD)'),
+      work_date_to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe('Inclusive upper work date bound (YYYY-MM-DD)'),
+      start_from: isoDateTimeSchema.optional().describe('Inclusive lower start timestamp bound'),
+      start_to: isoDateTimeSchema.optional().describe('Inclusive upper start timestamp bound'),
+      invoiced: z.boolean().optional().describe('Filter invoiced state'),
+      limit: z.number().int().min(1).max(200).default(50).describe('Maximum returned rows (1-200)'),
+    }),
+    outputSchema: z.object({
+      entries: z.array(z.object({
+        entry_id: uuidSchema,
+        user_id: uuidSchema,
+        work_item_id: uuidSchema.nullable(),
+        work_item_type: z.string().nullable(),
+        service_id: uuidSchema,
+        contract_line_id: uuidSchema.nullable(),
+        time_sheet_id: uuidSchema.nullable(),
+        start_time: isoDateTimeSchema,
+        end_time: isoDateTimeSchema,
+        total_minutes: z.number().int(),
+        billable_minutes: z.number().int(),
+        work_date: z.string(),
+        work_timezone: z.string(),
+        approval_status: z.string(),
+        invoiced: z.boolean(),
+        notes: z.string().nullable(),
+      })),
+      summary: z.object({
+        total_count: z.number().int(),
+        total_minutes: z.number(),
+        billable_minutes: z.number(),
+      }),
+    }),
+    sideEffectful: false,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Find Time Entries',
+      category: 'Business Operations',
+      description: 'Find tenant-scoped time entries with bounded filters and aggregate summary',
+    },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      await requirePermission(ctx, tx, { resource: 'timeentry', action: 'read' });
+
+      try {
+        const result = await findWorkflowTimeEntries({
+          trx: tx.trx,
+          tenantId: tx.tenantId,
+          input: input as WorkflowTimeFindEntriesInput,
+        });
+        return result;
+      } catch (error) {
+        if (error instanceof WorkflowTimeDomainError) {
+          throwActionError(ctx, {
+            category: error.category,
+            code: error.code,
+            message: error.message,
+            details: error.details ?? undefined,
+          });
+        }
+        rethrowAsStandardError(ctx, error);
+      }
+    }),
   });
 
   registry.register({

@@ -517,4 +517,99 @@ describe('time workflow runtime DB-backed action handlers', () => {
       .first('actual_hours');
     expect(Number(afterDelete.actual_hours ?? 0)).toBe(0);
   });
+
+  it('T005: find/get time entry actions return tenant-scoped normalized data and bounded aggregate counts for representative filters', async () => {
+    const entryUserId = await createUser(db, runtimeState.tenantId, {
+      user_type: 'internal',
+      first_name: 'Read',
+      last_name: 'Scope',
+      timezone: 'America/New_York',
+    });
+
+    const clientId = await createClient(db, runtimeState.tenantId, 'Find/Get Client');
+    const ticketId = await createTicket(db, {
+      tenantId: runtimeState.tenantId,
+      actorUserId: runtimeState.actorUserId,
+      clientId,
+    });
+    const serviceId = await createService(db, runtimeState.tenantId);
+    await createTimePeriod(db, runtimeState.tenantId, '2026-04-01', '2026-04-08');
+
+    const first = await invokeAction('time.create_entry', {
+      user_id: entryUserId,
+      start: '2026-04-04T14:00:00.000Z',
+      duration_minutes: 45,
+      billable: true,
+      service_id: serviceId,
+      link: { type: 'ticket', id: ticketId },
+      notes: 'Find test billable',
+    });
+
+    await invokeAction('time.create_entry', {
+      user_id: entryUserId,
+      start: '2026-04-04T15:00:00.000Z',
+      duration_minutes: 30,
+      billable: false,
+      service_id: serviceId,
+      link: { type: 'ticket', id: ticketId },
+      notes: 'Find test non billable',
+    });
+
+    const fetched = await invokeAction('time.get_entry', {
+      entry_id: first.time_entry.entry_id,
+    });
+    expect(fetched.time_entry.entry_id).toBe(first.time_entry.entry_id);
+    expect(fetched.time_entry.total_minutes).toBe(45);
+    expect(fetched.time_entry.billable_minutes).toBe(45);
+
+    const found = await invokeAction('time.find_entries', {
+      user_id: entryUserId,
+      client_id: clientId,
+      work_date_from: '2026-04-04',
+      work_date_to: '2026-04-04',
+      limit: 20,
+    });
+
+    expect(found.entries).toHaveLength(2);
+    expect(found.summary.total_count).toBe(2);
+    expect(found.summary.total_minutes).toBe(75);
+    expect(found.summary.billable_minutes).toBe(45);
+
+    const otherTenantId = await createTenant(db, `Workflow Time Other Tenant ${Date.now()}`);
+    const otherUserId = await createUser(db, otherTenantId, {
+      user_type: 'internal',
+      first_name: 'Other',
+      last_name: 'Tenant',
+      timezone: 'America/New_York',
+    });
+    const otherServiceId = await createService(db, otherTenantId);
+    const otherEntryId = uuidv4();
+
+    await db('time_entries').insert({
+      tenant: otherTenantId,
+      entry_id: otherEntryId,
+      user_id: otherUserId,
+      work_item_id: null,
+      work_item_type: null,
+      service_id: otherServiceId,
+      contract_line_id: null,
+      start_time: '2026-04-04T12:00:00.000Z',
+      end_time: '2026-04-04T12:30:00.000Z',
+      work_date: '2026-04-04',
+      work_timezone: 'America/New_York',
+      billable_duration: 30,
+      notes: 'Other tenant entry',
+      approval_status: 'DRAFT',
+      time_sheet_id: null,
+      invoiced: false,
+      created_by: otherUserId,
+      updated_by: otherUserId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+
+    await expect(invokeAction('time.get_entry', { entry_id: otherEntryId })).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
+  });
 });

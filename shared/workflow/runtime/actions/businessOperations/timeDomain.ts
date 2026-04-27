@@ -105,6 +105,35 @@ export type WorkflowTimeDeletedEntrySummary = {
   deleted: true;
 };
 
+export type WorkflowTimeFindEntriesInput = {
+  user_id?: string;
+  work_item_id?: string;
+  work_item_type?: 'ticket' | 'project' | 'project_task' | 'interaction' | 'ad_hoc' | 'non_billable_category';
+  client_id?: string;
+  ticket_id?: string;
+  project_task_id?: string;
+  time_sheet_id?: string;
+  service_id?: string;
+  contract_line_id?: string;
+  approval_status?: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'CHANGES_REQUESTED';
+  billable?: boolean;
+  work_date_from?: string;
+  work_date_to?: string;
+  start_from?: string;
+  start_to?: string;
+  invoiced?: boolean;
+  limit?: number;
+};
+
+export type WorkflowTimeFindEntriesResult = {
+  entries: WorkflowTimeCreatedEntrySummary[];
+  summary: {
+    total_count: number;
+    total_minutes: number;
+    billable_minutes: number;
+  };
+};
+
 function toIsoString(value: string | Date): string {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }
@@ -1394,5 +1423,234 @@ export async function deleteWorkflowTimeEntry(params: {
     contract_line_id: (existing.contract_line_id as string | null) ?? null,
     billable_minutes: Number(existing.billable_duration ?? 0),
     deleted: true,
+  };
+}
+
+export async function getWorkflowTimeEntry(params: {
+  trx: Knex.Transaction;
+  tenantId: string;
+  entryId: string;
+}): Promise<WorkflowTimeCreatedEntrySummary> {
+  const { trx, tenantId, entryId } = params;
+
+  const entry = await trx('time_entries')
+    .where({ tenant: tenantId, entry_id: entryId })
+    .select(
+      'entry_id',
+      'user_id',
+      'work_item_id',
+      'work_item_type',
+      'service_id',
+      'contract_line_id',
+      'time_sheet_id',
+      'start_time',
+      'end_time',
+      'billable_duration',
+      'work_date',
+      'work_timezone',
+      'approval_status',
+      'invoiced',
+      'notes'
+    )
+    .first();
+
+  if (!entry) {
+    throw new WorkflowTimeDomainError({
+      category: 'ActionError',
+      code: 'NOT_FOUND',
+      message: 'Time entry not found',
+      details: { entry_id: entryId },
+    });
+  }
+
+  return normalizeEntrySummary({
+    entry_id: String(entry.entry_id),
+    user_id: String(entry.user_id),
+    work_item_id: (entry.work_item_id as string | null) ?? null,
+    work_item_type: (entry.work_item_type as string | null) ?? null,
+    service_id: String(entry.service_id),
+    contract_line_id: (entry.contract_line_id as string | null) ?? null,
+    time_sheet_id: (entry.time_sheet_id as string | null) ?? null,
+    start_time: entry.start_time as string | Date,
+    end_time: entry.end_time as string | Date,
+    billable_duration: Number(entry.billable_duration ?? 0),
+    work_date: entry.work_date as string | Date,
+    work_timezone: (entry.work_timezone as string | null) ?? null,
+    approval_status: (entry.approval_status as string | null) ?? null,
+    invoiced: Boolean(entry.invoiced),
+    notes: (entry.notes as string | null) ?? null,
+  });
+}
+
+function applyFindEntriesFilters(
+  query: Knex.QueryBuilder,
+  tenantId: string,
+  filters: WorkflowTimeFindEntriesInput
+): void {
+  query.where('te.tenant', tenantId);
+
+  if (filters.user_id) {
+    query.andWhere('te.user_id', filters.user_id);
+  }
+  if (filters.work_item_id) {
+    query.andWhere('te.work_item_id', filters.work_item_id);
+  }
+  if (filters.work_item_type) {
+    query.andWhere('te.work_item_type', filters.work_item_type);
+  }
+  if (filters.ticket_id) {
+    query.andWhere('te.work_item_type', 'ticket').andWhere('te.work_item_id', filters.ticket_id);
+  }
+  if (filters.project_task_id) {
+    query.andWhere('te.work_item_type', 'project_task').andWhere('te.work_item_id', filters.project_task_id);
+  }
+  if (filters.time_sheet_id) {
+    query.andWhere('te.time_sheet_id', filters.time_sheet_id);
+  }
+  if (filters.service_id) {
+    query.andWhere('te.service_id', filters.service_id);
+  }
+  if (filters.contract_line_id) {
+    query.andWhere('te.contract_line_id', filters.contract_line_id);
+  }
+  if (filters.approval_status) {
+    query.andWhere('te.approval_status', filters.approval_status);
+  }
+  if (filters.billable === true) {
+    query.andWhere('te.billable_duration', '>', 0);
+  }
+  if (filters.billable === false) {
+    query.andWhere('te.billable_duration', '=', 0);
+  }
+  if (filters.work_date_from) {
+    query.andWhere('te.work_date', '>=', filters.work_date_from);
+  }
+  if (filters.work_date_to) {
+    query.andWhere('te.work_date', '<=', filters.work_date_to);
+  }
+  if (filters.start_from) {
+    query.andWhere('te.start_time', '>=', filters.start_from);
+  }
+  if (filters.start_to) {
+    query.andWhere('te.start_time', '<=', filters.start_to);
+  }
+  if (filters.invoiced !== undefined) {
+    query.andWhere('te.invoiced', filters.invoiced);
+  }
+
+  if (filters.client_id) {
+    query.andWhere((builder) => {
+      builder
+        .whereExists(function ticketClientFilter() {
+          this.select(1)
+            .from('tickets as t')
+            .whereRaw('t.tenant = te.tenant')
+            .whereRaw('t.ticket_id = te.work_item_id')
+            .where('te.work_item_type', 'ticket')
+            .andWhere('t.client_id', filters.client_id as string);
+        })
+        .orWhereExists(function taskClientFilter() {
+          this.select(1)
+            .from('project_tasks as pt')
+            .join('project_phases as pp', function joinPhases() {
+              this.on('pt.phase_id', '=', 'pp.phase_id').andOn('pt.tenant', '=', 'pp.tenant');
+            })
+            .join('projects as p', function joinProjects() {
+              this.on('pp.project_id', '=', 'p.project_id').andOn('pp.tenant', '=', 'p.tenant');
+            })
+            .whereRaw('pt.tenant = te.tenant')
+            .whereRaw('pt.task_id = te.work_item_id')
+            .where('te.work_item_type', 'project_task')
+            .andWhere('p.client_id', filters.client_id as string);
+        })
+        .orWhereExists(function projectClientFilter() {
+          this.select(1)
+            .from('projects as p')
+            .whereRaw('p.tenant = te.tenant')
+            .whereRaw('p.project_id = te.work_item_id')
+            .where('te.work_item_type', 'project')
+            .andWhere('p.client_id', filters.client_id as string);
+        })
+        .orWhereExists(function interactionClientFilter() {
+          this.select(1)
+            .from('interactions as i')
+            .whereRaw('i.tenant = te.tenant')
+            .whereRaw('i.interaction_id = te.work_item_id')
+            .where('te.work_item_type', 'interaction')
+            .andWhere('i.client_id', filters.client_id as string);
+        });
+    });
+  }
+}
+
+export async function findWorkflowTimeEntries(params: {
+  trx: Knex.Transaction;
+  tenantId: string;
+  input: WorkflowTimeFindEntriesInput;
+}): Promise<WorkflowTimeFindEntriesResult> {
+  const { trx, tenantId, input } = params;
+
+  const limit = Math.min(Math.max(input.limit ?? 50, 1), 200);
+
+  const listQuery = trx('time_entries as te')
+    .select(
+      'te.entry_id',
+      'te.user_id',
+      'te.work_item_id',
+      'te.work_item_type',
+      'te.service_id',
+      'te.contract_line_id',
+      'te.time_sheet_id',
+      'te.start_time',
+      'te.end_time',
+      'te.billable_duration',
+      'te.work_date',
+      'te.work_timezone',
+      'te.approval_status',
+      'te.invoiced',
+      'te.notes'
+    )
+    .orderBy('te.start_time', 'desc')
+    .limit(limit);
+
+  applyFindEntriesFilters(listQuery, tenantId, input);
+
+  const aggregateQuery = trx('time_entries as te')
+    .count<{ count: string }[]>('* as count')
+    .sum<{ total_minutes: string | null }[]>({
+      total_minutes: trx.raw('EXTRACT(EPOCH FROM (te.end_time - te.start_time)) / 60'),
+    })
+    .sum<{ billable_minutes: string | null }[]>('te.billable_duration as billable_minutes');
+
+  applyFindEntriesFilters(aggregateQuery, tenantId, input);
+
+  const [rows, aggregateRows] = await Promise.all([listQuery, aggregateQuery]);
+  const aggregate = Array.isArray(aggregateRows) ? aggregateRows[0] : (aggregateRows as unknown as { count: string; total_minutes: string | null; billable_minutes: string | null });
+
+  const entries = rows.map((row) => normalizeEntrySummary({
+    entry_id: String(row.entry_id),
+    user_id: String(row.user_id),
+    work_item_id: (row.work_item_id as string | null) ?? null,
+    work_item_type: (row.work_item_type as string | null) ?? null,
+    service_id: String(row.service_id),
+    contract_line_id: (row.contract_line_id as string | null) ?? null,
+    time_sheet_id: (row.time_sheet_id as string | null) ?? null,
+    start_time: row.start_time as string | Date,
+    end_time: row.end_time as string | Date,
+    billable_duration: Number(row.billable_duration ?? 0),
+    work_date: row.work_date as string | Date,
+    work_timezone: (row.work_timezone as string | null) ?? null,
+    approval_status: (row.approval_status as string | null) ?? null,
+    invoiced: Boolean(row.invoiced),
+    notes: (row.notes as string | null) ?? null,
+  }));
+
+  return {
+    entries,
+    summary: {
+      total_count: Number(aggregate?.count ?? 0),
+      total_minutes: Number(aggregate?.total_minutes ?? 0),
+      billable_minutes: Number(aggregate?.billable_minutes ?? 0),
+    },
   };
 }

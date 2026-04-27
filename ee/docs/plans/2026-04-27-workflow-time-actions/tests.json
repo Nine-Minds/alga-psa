@@ -43,7 +43,7 @@
   {
     "id": "T005",
     "description": "DB integration: find/get time entry actions return tenant-scoped normalized data and bounded aggregate counts for representative filters.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009",
       "F010"
