@@ -171,6 +171,107 @@ export async function recordSlaAuditLog(input: {
   });
 }
 
+export interface CompleteIfTicketClosedResult {
+  closed: boolean;
+  responseMet: boolean | null;
+  resolutionMet: boolean | null;
+}
+
+/**
+ * Self-heal: if the ticket has been closed but the workflow never received a
+ * completeResolution signal, backfill the SLA timestamps and report back so
+ * the workflow can exit gracefully. Returns { closed: false } when the ticket
+ * is still open or doesn't exist (e.g. deleted).
+ */
+export async function completeIfTicketClosed(input: {
+  tenantId: string;
+  ticketId: string;
+}): Promise<CompleteIfTicketClosedResult> {
+  const log = logger();
+  let result: CompleteIfTicketClosedResult = {
+    closed: false,
+    responseMet: null,
+    resolutionMet: null,
+  };
+
+  await withTenantTransaction(input.tenantId, async (trx) => {
+    const ticket = await trx('tickets')
+      .where({ tenant: input.tenantId, ticket_id: input.ticketId })
+      .select(
+        'closed_at',
+        'sla_response_due_at',
+        'sla_resolution_due_at',
+        'sla_response_at',
+        'sla_response_met',
+        'sla_resolution_at',
+        'sla_resolution_met'
+      )
+      .first();
+
+    if (!ticket || !ticket.closed_at) {
+      return;
+    }
+
+    const closedAt = new Date(ticket.closed_at);
+    const responseDue = ticket.sla_response_due_at
+      ? new Date(ticket.sla_response_due_at)
+      : null;
+    const resolutionDue = ticket.sla_resolution_due_at
+      ? new Date(ticket.sla_resolution_due_at)
+      : null;
+
+    const responseMet = responseDue ? closedAt <= responseDue : null;
+    const resolutionMet = resolutionDue ? closedAt <= resolutionDue : null;
+
+    const updates: Record<string, unknown> = {};
+    if (!ticket.sla_response_at) {
+      updates.sla_response_at = closedAt;
+    }
+    if (ticket.sla_response_met === null && responseMet !== null) {
+      updates.sla_response_met = responseMet;
+    }
+    if (!ticket.sla_resolution_at) {
+      updates.sla_resolution_at = closedAt;
+    }
+    if (ticket.sla_resolution_met === null && resolutionMet !== null) {
+      updates.sla_resolution_met = resolutionMet;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await trx('tickets')
+        .where({ tenant: input.tenantId, ticket_id: input.ticketId })
+        .update(updates);
+    }
+
+    await trx('sla_audit_log').insert({
+      tenant: input.tenantId,
+      ticket_id: input.ticketId,
+      event_type: 'self_healed_on_closed',
+      event_data: JSON.stringify({
+        closed_at: closedAt.toISOString(),
+        response_met: responseMet,
+        resolution_met: resolutionMet,
+        backfilled_fields: Object.keys(updates),
+      }),
+      triggered_by: null,
+    });
+
+    result = {
+      closed: true,
+      responseMet,
+      resolutionMet,
+    };
+
+    log.info('SLA workflow self-healed: ticket already closed', {
+      ticketId: input.ticketId,
+      closedAt: closedAt.toISOString(),
+      backfilledFields: Object.keys(updates),
+    });
+  });
+
+  return result;
+}
+
 async function withTenantTransaction(
   tenantId: string,
   fn: (trx: Knex.Transaction) => Promise<void>

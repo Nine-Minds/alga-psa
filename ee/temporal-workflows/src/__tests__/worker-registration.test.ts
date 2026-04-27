@@ -16,6 +16,7 @@ describe('temporal worker registration', () => {
     expect(activities.sendSlaNotification).toBeDefined();
     expect(activities.checkAndEscalate).toBeDefined();
     expect(activities.updateSlaStatus).toBeDefined();
+    expect(activities.completeIfTicketClosed).toBeDefined();
   });
 
   it('exports proactive NinjaOne token refresh activity from activities index', () => {

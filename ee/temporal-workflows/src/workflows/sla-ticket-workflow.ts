@@ -84,6 +84,14 @@ const activities = proxyActivities<{
     eventType: string;
     eventData: Record<string, unknown>;
   }): Promise<void>;
+  completeIfTicketClosed(input: {
+    tenantId: string;
+    ticketId: string;
+  }): Promise<{
+    closed: boolean;
+    responseMet: boolean | null;
+    resolutionMet: boolean | null;
+  }>;
 }>({
   startToCloseTimeout: '5m',
   retry: {
@@ -239,6 +247,35 @@ export async function slaTicketWorkflow(
     },
   ];
 
+  // Self-heal: if the ticket has already been closed (e.g. the
+  // completeResolution signal was missed because of a transient failure
+  // upstream), backfill the SLA fields and exit. We never want to keep
+  // escalating a closed ticket just because the signal got dropped.
+  const checkClosedAndComplete = async (
+    reason: 'startup' | 'wake'
+  ): Promise<boolean> => {
+    const result = await activities.completeIfTicketClosed({
+      tenantId,
+      ticketId,
+    });
+    if (result.closed) {
+      resolutionCompleted = true;
+      state.currentStatus = 'completed';
+      log.info('SLA workflow self-completed because ticket is closed', {
+        ticketId,
+        reason,
+        responseMet: result.responseMet,
+        resolutionMet: result.resolutionMet,
+      });
+      return true;
+    }
+    return false;
+  };
+
+  if (await checkClosedAndComplete('startup')) {
+    return;
+  }
+
   for (const phase of phases) {
     if (cancelled || resolutionCompleted) {
       break;
@@ -323,6 +360,10 @@ export async function slaTicketWorkflow(
       }
 
       if (phase.phase === 'response' && responseCompleted) {
+        break;
+      }
+
+      if (await checkClosedAndComplete('wake')) {
         break;
       }
 
