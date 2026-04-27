@@ -1,0 +1,575 @@
+[
+  {
+    "id": "F001",
+    "description": "Define shared project workflow summary schemas for project, phase, task, status mapping, tag result, assignment result, and link result outputs.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Add reusable project workflow helper functions for loading tenant-scoped projects, phases, tasks, tickets, status mappings, and task project context with standardized NOT_FOUND errors.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Add reusable project workflow helper functions for project read/update/delete permission checks that preserve existing project authorization narrowing where applicable.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Add project workflow picker metadata helpers for project, project phase, project task, and project task status/status mapping fields.",
+    "implemented": true,
+    "prdRefs": [
+      "Workflow designer picker support",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Implement `projects.find` input schema with project ID, exact project name, optional external reference when supported, and `on_not_found` behavior matching existing find actions.",
+    "implemented": true,
+    "prdRefs": [
+      "Find and search actions"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Implement `projects.find` handler with tenant-scoped lookup, project read permission enforcement, nullable/error not-found behavior, and project summary output.",
+    "implemented": true,
+    "prdRefs": [
+      "Find and search actions",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Implement `projects.search` input schema with query, filters, page, and page_size following `clients.search` conventions.",
+    "implemented": true,
+    "prdRefs": [
+      "Find and search actions"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Implement `projects.search` handler with tenant-scoped search, authorization filtering, deterministic sorting, total count, first_project, and pagination metadata.",
+    "implemented": true,
+    "prdRefs": [
+      "Find and search actions",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Implement `projects.find_phase` input schema with phase_id, optional project-scoped exact phase name, and `on_not_found` behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Find and search actions"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Implement `projects.find_phase` handler with project context validation, project read authorization, nullable/error not-found behavior, and phase summary output.",
+    "implemented": true,
+    "prdRefs": [
+      "Find and search actions",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Implement `projects.search_phases` input schema with project scope, optional query/filter fields, page, and page_size.",
+    "implemented": true,
+    "prdRefs": [
+      "Find and search actions"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Implement `projects.search_phases` handler with tenant-scoped phase listing/search, project read authorization, deterministic ordering, first_phase, total, and pagination metadata.",
+    "implemented": true,
+    "prdRefs": [
+      "Find and search actions",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Implement `projects.find_task` input schema with task_id, optional project/phase-scoped exact task name, and `on_not_found` behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Find and search actions"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Implement `projects.find_task` handler with task context loading, project read authorization, nullable/error not-found behavior, and task summary output.",
+    "implemented": true,
+    "prdRefs": [
+      "Find and search actions",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Implement `projects.search_tasks` input schema with query, project, phase, status/status mapping, assignee, tags, page, and page_size filters where supported by existing data model.",
+    "implemented": true,
+    "prdRefs": [
+      "Find and search actions"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Implement `projects.search_tasks` handler with tenant-scoped task search, joins to phases/projects/status/tag data, project authorization filtering, first_task, total, and pagination metadata.",
+    "implemented": true,
+    "prdRefs": [
+      "Find and search actions",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Implement `projects.update` input schema with project_id and a non-empty patch covering project name and description fields included in this plan.",
+    "implemented": false,
+    "prdRefs": [
+      "Generic update actions"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Implement `projects.update` handler using existing project domain behavior where practical, with permission checks, changed-field output, updated_at output, and run audit logging.",
+    "implemented": false,
+    "prdRefs": [
+      "Generic update actions",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Implement `projects.update_phase` input schema with phase_id and a non-empty patch covering phase name and description fields included in this plan.",
+    "implemented": false,
+    "prdRefs": [
+      "Generic update actions"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Implement `projects.update_phase` handler with phase/project context validation, project update permission checks, changed-field output, updated_at output, and run audit logging.",
+    "implemented": false,
+    "prdRefs": [
+      "Generic update actions",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Implement `projects.update_task` input schema with task_id and a non-empty patch covering task name/title and description fields, excluding phase/project/status relocation fields.",
+    "implemented": false,
+    "prdRefs": [
+      "Generic update actions",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Implement `projects.update_task` handler with task/project context validation, project update permission checks, changed-field output, updated_at output, and run audit logging.",
+    "implemented": false,
+    "prdRefs": [
+      "Generic update actions",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Implement `projects.move_task` input schema with task_id, target phase_id, optional target project_status_mapping_id, optional target_project_id, and optional before/after task positioning fields.",
+    "implemented": false,
+    "prdRefs": [
+      "Task move action"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Implement `projects.move_task` same-project phase move behavior using existing status mapping remap rules when no explicit target status is provided.",
+    "implemented": false,
+    "prdRefs": [
+      "Task move action"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Implement `projects.move_task` cross-project move behavior using existing status mapping remap/default creation rules when no explicit target status is provided.",
+    "implemented": false,
+    "prdRefs": [
+      "Task move action"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Implement `projects.move_task` WBS and order_key regeneration consistent with existing project task move behavior.",
+    "implemented": false,
+    "prdRefs": [
+      "Task move action"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Implement `projects.move_task` ticket link project/phase update behavior for all project_ticket_links tied to the moved task.",
+    "implemented": false,
+    "prdRefs": [
+      "Task move action"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Implement `projects.move_task` output schema with task_id, previous and current phase/project/status identifiers, updated WBS/order metadata, and updated_at.",
+    "implemented": false,
+    "prdRefs": [
+      "Task move action"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Implement `projects.move_task` permission checks, validation errors, and run audit logging.",
+    "implemented": false,
+    "prdRefs": [
+      "Task move action",
+      "Security / Permissions",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Implement `projects.assign_task` input schema with primary user, additional user IDs, optional reason/comment if supported, `no_op_if_already_assigned`, and optional idempotency key if needed.",
+    "implemented": false,
+    "prdRefs": [
+      "Task assignment action"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Implement `projects.assign_task` helper to resolve and validate active primary and additional users for the tenant.",
+    "implemented": false,
+    "prdRefs": [
+      "Task assignment action",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Implement `projects.assign_task` no-op comparison covering both primary assignee and additional users.",
+    "implemented": false,
+    "prdRefs": [
+      "Task assignment action"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Implement `projects.assign_task` mutation to update `project_tasks.assigned_to` and reconcile existing additional task resource records.",
+    "implemented": false,
+    "prdRefs": [
+      "Task assignment action"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Implement `projects.assign_task` output schema with task_id, primary assigned user, additional user IDs, no-op state, and updated_at.",
+    "implemented": false,
+    "prdRefs": [
+      "Task assignment action"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Implement `projects.assign_task` permission checks and run audit logging aligned with `tickets.assign` conventions.",
+    "implemented": false,
+    "prdRefs": [
+      "Task assignment action",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Implement `projects.duplicate_task` input schema with source task_id, target phase_id, optional target status mapping, and copy options for primary assignee, additional assignees, checklist, and ticket links.",
+    "implemented": false,
+    "prdRefs": [
+      "Task duplicate action"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Implement `projects.duplicate_task` core copy behavior matching existing duplicateTaskToPhase behavior, including copy suffix, estimated hours preservation, and actual hours reset.",
+    "implemented": false,
+    "prdRefs": [
+      "Task duplicate action"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Implement `projects.duplicate_task` optional checklist copy behavior using existing checklist item model semantics.",
+    "implemented": false,
+    "prdRefs": [
+      "Task duplicate action"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Implement `projects.duplicate_task` optional primary and additional assignee copy behavior using existing task assignment/resource semantics.",
+    "implemented": false,
+    "prdRefs": [
+      "Task duplicate action"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Implement `projects.duplicate_task` optional ticket link copy behavior with ticket authorization filtering.",
+    "implemented": false,
+    "prdRefs": [
+      "Task duplicate action",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Implement `projects.duplicate_task` output schema with source task ID, new task ID, target phase/project/status identifiers, copied relation counts, and created_at.",
+    "implemented": false,
+    "prdRefs": [
+      "Task duplicate action"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "Implement `projects.duplicate_task` permission checks and run audit logging.",
+    "implemented": false,
+    "prdRefs": [
+      "Task duplicate action",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Implement `projects.delete_task` input and output schemas with task_id, deleted flag, and cleanup count/guard details where practical.",
+    "implemented": false,
+    "prdRefs": [
+      "Delete actions"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Implement `projects.delete_task` guard that refuses deletion when associated project_task time entries exist, matching existing UI behavior.",
+    "implemented": false,
+    "prdRefs": [
+      "Delete actions"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Implement `projects.delete_task` cleanup for task ticket links and checklist items before deleting the task, matching existing UI behavior.",
+    "implemented": false,
+    "prdRefs": [
+      "Delete actions"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "Implement `projects.delete_task` permission checks, standardized errors, and run audit logging.",
+    "implemented": false,
+    "prdRefs": [
+      "Delete actions",
+      "Security / Permissions",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "Implement `projects.delete_phase` input/output schemas and handler that mirrors existing phase delete UI/domain behavior.",
+    "implemented": false,
+    "prdRefs": [
+      "Delete actions"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "Implement `projects.delete_phase` project context validation, project delete permission checks, standardized errors, and run audit logging.",
+    "implemented": false,
+    "prdRefs": [
+      "Delete actions",
+      "Security / Permissions",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "Implement `projects.delete` input/output schemas that expose existing project deletion validation result fields plus success/deleted state.",
+    "implemented": false,
+    "prdRefs": [
+      "Delete actions"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "Implement `projects.delete` handler by reusing existing project deletion validation/cleanup behavior where possible, including project tags, task tags, project ticket links, and email reply tokens.",
+    "implemented": false,
+    "prdRefs": [
+      "Delete actions"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "Implement `projects.delete` permission checks, standardized failure output, and run audit logging.",
+    "implemented": false,
+    "prdRefs": [
+      "Delete actions",
+      "Security / Permissions",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "Implement `projects.link_ticket_to_task` input schema with task_id, ticket_id, optional idempotency key, and project/phase picker dependencies where helpful.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket-to-task link action"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "Implement `projects.link_ticket_to_task` validation for task, task phase/project context, and ticket existence.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket-to-task link action"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "Implement `projects.link_ticket_to_task` insertion/ensure behavior for `project_ticket_links`.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket-to-task link action"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "Implement `projects.link_ticket_to_task` insertion/ensure behavior for `ticket_entity_links` with project_task metadata matching `projects.create_task` precedent.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket-to-task link action"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "Implement `projects.link_ticket_to_task` output schema with link IDs or created/existing indicators for both link tables.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket-to-task link action"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "Implement `projects.link_ticket_to_task` permission checks and run audit logging.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket-to-task link action",
+      "Security / Permissions",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "Add shared project/task tag helper behavior mirroring `contacts.add_tag`, including tag normalization, generated colors, tag definition upsert, and mapping conflict-ignore behavior.",
+    "implemented": false,
+    "prdRefs": [
+      "Tag actions"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "Implement `projects.add_tag` schema, action-provided idempotency, project existence validation, project update permission, tag mapping mutation, output counts, and audit logging.",
+    "implemented": false,
+    "prdRefs": [
+      "Tag actions"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "Implement `projects.add_task_tag` schema, action-provided idempotency, task/project context validation, project update permission, tag mapping mutation, output counts, and audit logging.",
+    "implemented": false,
+    "prdRefs": [
+      "Tag actions"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "Register new project picker resource support in the workflow fixed picker resource list and route it to a project picker UI or equivalent search/select control.",
+    "implemented": false,
+    "prdRefs": [
+      "Workflow designer picker support"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "Register new project phase picker resource support with dependency handling for selected project fixed values.",
+    "implemented": false,
+    "prdRefs": [
+      "Workflow designer picker support"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "Register new project task picker resource support with dependency handling for selected project and/or phase fixed values.",
+    "implemented": false,
+    "prdRefs": [
+      "Workflow designer picker support"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "Register new project task status/status-mapping picker resource support with dependency handling for selected project and/or phase fixed values.",
+    "implemented": false,
+    "prdRefs": [
+      "Workflow designer picker support"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "Annotate all new action ID fields with workflow editor picker metadata and dependency paths so fixed-value mode is dependency-aware.",
+    "implemented": false,
+    "prdRefs": [
+      "Workflow designer picker support",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F066",
+    "description": "Ensure all new actions appear in the workflow registry API with labels, descriptions, categories, input schemas, output schemas, and side-effect/idempotency metadata.",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F067",
+    "description": "Ensure all side-effectful actions use tenant-scoped transactions, standardized workflow action errors, and workflow run audit records.",
+    "implemented": false,
+    "prdRefs": [
+      "Non-functional Requirements",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F068",
+    "description": "Keep `projects.create_task` behavior compatible while adding shared helper code or picker metadata needed by the new project actions.",
+    "implemented": false,
+    "prdRefs": [
+      "Rollout / Migration"
+    ]
+  }
+]
