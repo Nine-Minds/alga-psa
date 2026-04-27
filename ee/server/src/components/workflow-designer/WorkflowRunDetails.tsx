@@ -805,7 +805,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
   const stepColumnCount = 9;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 min-w-0 max-w-full">
       <Card className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -1360,7 +1360,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
             })}
           </div>
 
-          <div>
+          <div className="min-w-0 max-w-full">
             <div className="text-sm font-medium text-gray-700">
               {t('runDetails.logs.title', { defaultValue: 'Run Logs' })}
             </div>
@@ -1407,8 +1407,8 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
                 </Button>
               </div>
             </div>
-            <div className="mt-4">
-              <Table>
+            <div className="mt-4 max-w-full overflow-x-auto">
+              <Table className="min-w-[960px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>{t('runDetails.logs.columns.timestamp', { defaultValue: 'Timestamp' })}</TableHead>
@@ -1422,23 +1422,23 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
                 <TableBody>
                   {logs.map((log) => (
                     <TableRow key={log.log_id}>
-                      <TableCell className="text-xs text-gray-500">{formatDateTime(log.created_at)}</TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap text-xs text-gray-500">{formatDateTime(log.created_at)}</TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <Badge className={STATUS_STYLES[log.level] ?? 'bg-gray-100 text-gray-600'}>
                           {formatWorkflowLogLevel(log.level)}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <div className="text-sm text-gray-800">{log.message}</div>
+                      <TableCell className="max-w-[28rem] min-w-[18rem]">
+                        <div className="text-sm text-gray-800 break-words">{log.message}</div>
                         {log.context_json && (
-                          <pre className="mt-1 max-h-24 overflow-auto rounded bg-gray-900 text-gray-100 text-xs p-2">
+                          <pre className="mt-1 max-h-24 max-w-full overflow-auto whitespace-pre-wrap break-words rounded bg-gray-900 text-gray-100 text-xs p-2">
                             {truncateJsonPreview(log.context_json, 2000).preview}
                           </pre>
                         )}
                       </TableCell>
-                      <TableCell className="text-xs text-gray-500">{log.step_path ?? emptyValueLabel}</TableCell>
-                      <TableCell className="text-xs text-gray-500">{log.event_name ?? emptyValueLabel}</TableCell>
-                      <TableCell className="text-xs text-gray-500">{log.correlation_key ?? emptyValueLabel}</TableCell>
+                      <TableCell className="max-w-[12rem] break-all text-xs text-gray-500">{log.step_path ?? emptyValueLabel}</TableCell>
+                      <TableCell className="max-w-[12rem] break-all text-xs text-gray-500">{log.event_name ?? emptyValueLabel}</TableCell>
+                      <TableCell className="max-w-[12rem] break-all text-xs text-gray-500">{log.correlation_key ?? emptyValueLabel}</TableCell>
                     </TableRow>
                   ))}
                   {!logLoading && logs.length === 0 && (
