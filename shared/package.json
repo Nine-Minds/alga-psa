@@ -41,6 +41,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@alga-psa/authorization": "file:../packages/authorization",
     "@alga-psa/core": "file:../packages/core",
     "@alga-psa/db": "file:../packages/db",
     "@alga-psa/event-bus": "file:../packages/event-bus",
