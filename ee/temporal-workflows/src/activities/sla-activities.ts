@@ -175,13 +175,15 @@ export interface CompleteIfTicketClosedResult {
   closed: boolean;
   responseMet: boolean | null;
   resolutionMet: boolean | null;
+  reason?: 'closed' | 'deleted';
 }
 
 /**
- * Self-heal: if the ticket has been closed but the workflow never received a
- * completeResolution signal, backfill the SLA timestamps and report back so
- * the workflow can exit gracefully. Returns { closed: false } when the ticket
- * is still open or doesn't exist (e.g. deleted).
+ * Self-heal: if the ticket has been closed (or deleted) but the workflow
+ * never received a completeResolution/cancel signal, backfill the SLA
+ * timestamps where applicable and report back so the workflow can exit
+ * gracefully. Returns { closed: false } when the ticket is still open and
+ * present.
  */
 export async function completeIfTicketClosed(input: {
   tenantId: string;
@@ -208,7 +210,24 @@ export async function completeIfTicketClosed(input: {
       )
       .first();
 
-    if (!ticket || !ticket.closed_at) {
+    if (!ticket) {
+      // Ticket was deleted out from under the workflow — exit cleanly so we
+      // don't keep firing breach activities against a row that no longer
+      // exists. Don't try to write to sla_audit_log either: the FK to tickets
+      // would fail.
+      result = {
+        closed: true,
+        responseMet: null,
+        resolutionMet: null,
+        reason: 'deleted',
+      };
+      log.info('SLA workflow self-healed: ticket no longer exists', {
+        ticketId: input.ticketId,
+      });
+      return;
+    }
+
+    if (!ticket.closed_at) {
       return;
     }
 

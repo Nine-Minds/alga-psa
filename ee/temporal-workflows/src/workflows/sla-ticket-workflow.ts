@@ -91,6 +91,7 @@ const activities = proxyActivities<{
     closed: boolean;
     responseMet: boolean | null;
     resolutionMet: boolean | null;
+    reason?: 'closed' | 'deleted';
   }>;
 }>({
   startToCloseTimeout: '5m',
