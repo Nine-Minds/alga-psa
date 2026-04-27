@@ -42,6 +42,13 @@ export type WorkflowTimeCreateEntryInput = {
   attach_to_timesheet?: boolean;
 };
 
+type ContractLineCandidate = {
+  client_contract_line_id: string;
+  bucket_overlay?: {
+    config_id: string;
+  } | null;
+};
+
 export type WorkflowTimeCreatedEntrySummary = {
   entry_id: string;
   user_id: string;
@@ -210,6 +217,84 @@ async function getWorkItemClientContext(
         details: { work_item_type: (link as { type?: string }).type ?? null },
       });
   }
+}
+
+function resolveDeterministicContractLineSelection(
+  eligibleContractLines: ContractLineCandidate[]
+): string | null {
+  if (eligibleContractLines.length === 0) {
+    return null;
+  }
+
+  if (eligibleContractLines.length === 1) {
+    return eligibleContractLines[0].client_contract_line_id;
+  }
+
+  const overlayContractLines = eligibleContractLines.filter((contractLine) => contractLine.bucket_overlay?.config_id);
+  if (overlayContractLines.length === 1) {
+    return overlayContractLines[0].client_contract_line_id;
+  }
+
+  return null;
+}
+
+async function determineDefaultContractLineForWorkflow(params: {
+  trx: Knex.Transaction;
+  tenantId: string;
+  clientId: string;
+  serviceId: string;
+  effectiveDate: string;
+}): Promise<string | null> {
+  const { trx, tenantId, clientId, serviceId, effectiveDate } = params;
+
+  const rangeStart = `${effectiveDate}T00:00:00.000Z`;
+  const rangeEnd = `${effectiveDate}T23:59:59.999Z`;
+
+  const rows = await trx('client_contracts')
+    .join('contracts', function joinContracts() {
+      this.on('client_contracts.contract_id', '=', 'contracts.contract_id')
+        .andOn('contracts.tenant', '=', 'client_contracts.tenant');
+    })
+    .join('contract_lines', function joinContractLines() {
+      this.on('contracts.contract_id', '=', 'contract_lines.contract_id')
+        .andOn('contract_lines.tenant', '=', 'contracts.tenant');
+    })
+    .join('contract_line_services', function joinContractLineServices() {
+      this.on('contract_lines.contract_line_id', '=', 'contract_line_services.contract_line_id')
+        .andOn('contract_line_services.tenant', '=', 'contract_lines.tenant');
+    })
+    .leftJoin('contract_line_service_configuration as bucket_config', function joinBucketConfig() {
+      this.on('bucket_config.contract_line_id', '=', 'contract_lines.contract_line_id')
+        .andOn('bucket_config.tenant', '=', 'contract_lines.tenant')
+        .andOn('bucket_config.service_id', '=', 'contract_line_services.service_id')
+        .andOnVal('bucket_config.configuration_type', 'Bucket');
+    })
+    .where({
+      'client_contracts.client_id': clientId,
+      'client_contracts.is_active': true,
+      'client_contracts.tenant': tenantId,
+      'contract_line_services.service_id': serviceId,
+    })
+    .where(function withinRange(this: Knex.QueryBuilder) {
+      this.where('client_contracts.start_date', '<=', rangeEnd);
+    })
+    .where(function notExpired(this: Knex.QueryBuilder) {
+      this.whereNull('client_contracts.end_date').orWhere('client_contracts.end_date', '>=', rangeStart);
+    })
+    .where(function notSystemManaged(this: Knex.QueryBuilder) {
+      this.whereNull('contracts.is_system_managed_default').orWhere('contracts.is_system_managed_default', false);
+    })
+    .select(
+      'contract_lines.contract_line_id as client_contract_line_id',
+      'bucket_config.config_id as bucket_config_id'
+    );
+
+  const candidates: ContractLineCandidate[] = rows.map((row) => ({
+    client_contract_line_id: String(row.client_contract_line_id),
+    bucket_overlay: row.bucket_config_id ? { config_id: String(row.bucket_config_id) } : null,
+  }));
+
+  return resolveDeterministicContractLineSelection(candidates);
 }
 
 async function resolveOrCreateTimeSheet(params: {
@@ -514,9 +599,18 @@ export async function createWorkflowTimeEntry(params: {
   const { work_date, work_timezone } = computeWorkDateFields(startDate.toISOString(), userTimeZone);
   const { work_date: end_work_date } = computeWorkDateFields(computedEndDate.toISOString(), userTimeZone);
 
-  await getWorkItemClientContext(trx, tenantId, input.link);
+  const workItem = await getWorkItemClientContext(trx, tenantId, input.link);
 
-  const contractLineId = input.contract_line_id ?? null;
+  let contractLineId = input.contract_line_id ?? null;
+  if (!contractLineId && workItem.clientId) {
+    contractLineId = await determineDefaultContractLineForWorkflow({
+      trx,
+      tenantId,
+      clientId: workItem.clientId,
+      serviceId: input.service_id,
+      effectiveDate: work_date,
+    });
+  }
 
   const timeSheetId = await resolveOrCreateTimeSheet({
     trx,

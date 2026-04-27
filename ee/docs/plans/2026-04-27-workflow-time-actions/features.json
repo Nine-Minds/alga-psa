@@ -36,7 +36,7 @@
   {
     "id": "F005",
     "description": "Ensure workflow-created time entries resolve default contract line when omitted and canonical contract-line resolution can determine one.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Time entry actions",
       "Data / API / Integrations"

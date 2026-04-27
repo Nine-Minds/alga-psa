@@ -74,3 +74,6 @@ Rolling notes for adding workflow-safe time-entry, time-sheet, and billing-readi
 ## Gotchas
 
 - `@alga-psa/billing` subpath imports used in server packages are not exported for this shared Vite test runtime. To keep workflow-runtime tests executable, contract-line defaulting and bucket-usage linkage were intentionally deferred to subsequent features (`F005`/`F006`) rather than forcing brittle deep imports.
+- (2026-04-27) Implemented default contract-line resolution in workflow helper (`F005`) without depending on non-exported billing package subpaths.
+  - Added tenant-scoped eligible-contract query with effective-date filtering and deterministic selection fallback (single eligible line, or single bucket-overlay candidate).
+  - `time.create_entry` now assigns `contract_line_id` automatically when omitted and client/service context can resolve a default.
