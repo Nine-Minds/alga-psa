@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import ScheduleEntry from '../src/models/scheduleEntry';
+import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 
 // Mock Knex to test validation logic without database
 const createMockKnex = () => {

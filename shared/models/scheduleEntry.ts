@@ -1,7 +1,5 @@
-// @ts-nocheck
-// TODO: CreateScheduleEntryOptions not exported from @alga-psa/types
 /**
- * @alga-psa/scheduling - Schedule Entry Model
+ * Schedule Entry Model
  *
  * Data access layer for schedule entry entities.
  * Migrated from server/src/lib/models/scheduleEntry.ts
@@ -637,7 +635,7 @@ const ScheduleEntry = {
               ...newMasterEntry,
               assigned_user_ids:
                 entry.assigned_user_ids || masterAssignees[masterEntryId] || [],
-            } as IScheduleEntry;
+            } as unknown as IScheduleEntry;
           }
 
           case 'all': {
