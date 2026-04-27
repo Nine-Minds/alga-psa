@@ -182,7 +182,7 @@
   {
     "id": "F023",
     "description": "Implement `time.summarize_entries` to return counts and minutes grouped by common workflow dimensions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Readiness helper actions"
     ]
@@ -190,7 +190,7 @@
   {
     "id": "F024",
     "description": "Implement `time.find_billing_blockers` to detect unapproved, unsubmitted, change-requested, missing-service, missing-contract-line, invalid-duration, missing-work-item, and time-sheet attachment blockers over a bounded scope.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Readiness helper actions"
     ]
@@ -198,7 +198,7 @@
   {
     "id": "F025",
     "description": "Implement `time.validate_entries` to return pass/fail readiness validation details for a bounded entry set or query.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Readiness helper actions"
     ]

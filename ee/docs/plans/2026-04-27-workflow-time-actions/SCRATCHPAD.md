@@ -113,6 +113,14 @@ Rolling notes for adding workflow-safe time-entry, time-sheet, and billing-readi
 - (2026-04-27) Added DB-backed runtime tests for `T008` and `T009` in `shared/workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts`.
   - `T008`: submit propagates `SUBMITTED` to sheet + entries.
   - `T009`: approve/request-changes/add-comment/reverse flow behavior with invoiced-entry reopen guard.
+- (2026-04-27) Implemented readiness helpers (`F023`/`F024`/`F025`) in workflow runtime:
+  - `time.summarize_entries`
+  - `time.find_billing_blockers`
+  - `time.validate_entries`
+  - Added grouping support, blocker categorization/explanations, and validation pass/fail summaries.
+- (2026-04-27) Added DB-backed runtime tests for `T010` and `T011` in `shared/workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts`.
+  - `T010`: blocker category detection and validation failure summary.
+  - `T011`: summary totals and grouped output verification.
 
 ## Commands / Verification (This Pass)
 
@@ -133,6 +141,8 @@ Rolling notes for adding workflow-safe time-entry, time-sheet, and billing-readi
 - Attempted after timesheet lookup actions + T007 additions: `npx vitest run --config shared/vitest.config.ts workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts`
   - Compile/import succeeds, but DB-backed execution remains blocked by the same local connection refusal (`127.0.0.1:57432`).
 - Attempted after timesheet mutation actions + T008/T009 additions: `npx vitest run --config shared/vitest.config.ts workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts`
+  - Compile/import succeeds, but DB-backed execution remains blocked by the same local connection refusal (`127.0.0.1:57432`).
+- Attempted after readiness helper + T010/T011 additions: `npx vitest run --config shared/vitest.config.ts workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts`
   - Compile/import succeeds, but DB-backed execution remains blocked by the same local connection refusal (`127.0.0.1:57432`).
 - Attempted: `npx tsc -p shared/tsconfig.json --noEmit`
   - Fails due pre-existing workspace TS config/module issues outside this feature area (`@alga-psa/sla/types`, alias `@/lib/*`, and existing `server/test-utils/dbReset.ts` declaration-order error).

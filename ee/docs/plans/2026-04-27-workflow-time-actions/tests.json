@@ -92,7 +92,7 @@
   {
     "id": "T010",
     "description": "DB integration: readiness helper detects representative billing blockers and returns categories, counts, matching entry IDs, and human-readable explanations without mutating invoices.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024",
       "F025"
@@ -101,7 +101,7 @@
   {
     "id": "T011",
     "description": "DB integration: summarize entries returns correct totals and grouped minutes for representative user/client/service/status/date filters.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]

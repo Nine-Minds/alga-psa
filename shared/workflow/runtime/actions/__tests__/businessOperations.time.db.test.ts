@@ -970,4 +970,124 @@ describe('time workflow runtime DB-backed action handlers', () => {
       code: 'VALIDATION_ERROR',
     });
   });
+
+  it('T010: readiness helper detects representative billing blockers and returns categories, counts, matching entry IDs, and human-readable explanations without mutating invoices', async () => {
+    const entryUserId = await createUser(db, runtimeState.tenantId, {
+      user_type: 'internal',
+      first_name: 'Blocker',
+      last_name: 'User',
+      timezone: 'America/New_York',
+    });
+    const clientId = await createClient(db, runtimeState.tenantId, 'Blocker Client');
+    const ticketId = await createTicket(db, {
+      tenantId: runtimeState.tenantId,
+      actorUserId: runtimeState.actorUserId,
+      clientId,
+    });
+    const serviceId = await createService(db, runtimeState.tenantId);
+    await createTimePeriod(db, runtimeState.tenantId, '2026-04-01', '2026-04-08');
+
+    const entryA = await invokeAction('time.create_entry', {
+      user_id: entryUserId,
+      start: '2026-04-07T12:00:00.000Z',
+      duration_minutes: 30,
+      billable: true,
+      service_id: serviceId,
+      link: { type: 'ticket', id: ticketId },
+    });
+
+    const entryB = uuidv4();
+    await db('time_entries').insert({
+      tenant: runtimeState.tenantId,
+      entry_id: entryB,
+      user_id: entryUserId,
+      work_item_id: null,
+      work_item_type: null,
+      service_id: serviceId,
+      contract_line_id: null,
+      start_time: '2026-04-07T14:00:00.000Z',
+      end_time: '2026-04-07T14:00:00.000Z',
+      work_date: '2026-04-07',
+      work_timezone: 'America/New_York',
+      billable_duration: 0,
+      notes: 'Invalid duration entry',
+      approval_status: 'DRAFT',
+      time_sheet_id: null,
+      invoiced: false,
+      created_by: runtimeState.actorUserId,
+      updated_by: runtimeState.actorUserId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+
+    const blockers = await invokeAction('time.find_billing_blockers', {
+      entry_ids: [entryA.time_entry.entry_id, entryB],
+      require_timesheet: true,
+      limit: 100,
+    });
+
+    const categories = blockers.blockers.map((blocker: any) => blocker.category);
+    expect(categories).toContain('status_draft');
+    expect(categories).toContain('missing_contract_line');
+    expect(categories).toContain('invalid_duration');
+    expect(categories).toContain('missing_work_item');
+    expect(categories).toContain('missing_timesheet');
+
+    const validation = await invokeAction('time.validate_entries', {
+      entry_ids: [entryA.time_entry.entry_id, entryB],
+      require_timesheet: true,
+      limit: 100,
+    });
+    expect(validation.valid).toBe(false);
+    expect(validation.blocker_count).toBeGreaterThan(0);
+  });
+
+  it('T011: summarize entries returns correct totals and grouped minutes for representative user/client/service/status/date filters', async () => {
+    const entryUserId = await createUser(db, runtimeState.tenantId, {
+      user_type: 'internal',
+      first_name: 'Summary',
+      last_name: 'User',
+      timezone: 'America/New_York',
+    });
+    const clientId = await createClient(db, runtimeState.tenantId, 'Summary Client');
+    const ticketId = await createTicket(db, {
+      tenantId: runtimeState.tenantId,
+      actorUserId: runtimeState.actorUserId,
+      clientId,
+    });
+    const serviceId = await createService(db, runtimeState.tenantId);
+    await createTimePeriod(db, runtimeState.tenantId, '2026-04-01', '2026-04-08');
+
+    await invokeAction('time.create_entry', {
+      user_id: entryUserId,
+      start: '2026-04-07T09:00:00.000Z',
+      duration_minutes: 40,
+      billable: true,
+      service_id: serviceId,
+      link: { type: 'ticket', id: ticketId },
+    });
+    await invokeAction('time.create_entry', {
+      user_id: entryUserId,
+      start: '2026-04-07T10:00:00.000Z',
+      duration_minutes: 20,
+      billable: false,
+      service_id: serviceId,
+      link: { type: 'ticket', id: ticketId },
+    });
+
+    const summary = await invokeAction('time.summarize_entries', {
+      user_id: entryUserId,
+      client_id: clientId,
+      work_date_from: '2026-04-07',
+      work_date_to: '2026-04-07',
+      group_by: ['user_id', 'billable'],
+      limit: 100,
+    });
+
+    expect(summary.totals.entry_count).toBe(2);
+    expect(summary.totals.total_minutes).toBe(60);
+    expect(summary.totals.billable_minutes).toBe(40);
+    expect(summary.totals.non_billable_minutes).toBe(20);
+    expect(summary.groups).toHaveLength(2);
+  });
 });

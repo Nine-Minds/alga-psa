@@ -171,6 +171,17 @@ export type WorkflowTimeSheetMutationResult = {
   time_sheet: WorkflowTimeSheetSummary;
 };
 
+export type WorkflowTimeSummaryGroupBy =
+  | 'user_id'
+  | 'client_id'
+  | 'work_item_type'
+  | 'work_item_id'
+  | 'service_id'
+  | 'contract_line_id'
+  | 'approval_status'
+  | 'billable'
+  | 'work_date';
+
 function toIsoString(value: string | Date): string {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }
@@ -2321,5 +2332,294 @@ export async function addWorkflowTimeSheetComment(params: {
       created_at: toIsoString(inserted.created_at as string | Date),
     },
     time_sheet: await summarizeTimeSheet(trx, tenantId, timeSheetId),
+  };
+}
+
+async function resolveClientIdForEntryRow(
+  trx: Knex.Transaction,
+  tenantId: string,
+  row: { work_item_type: string | null; work_item_id: string | null }
+): Promise<string | null> {
+  const link = getLinkFromStoredEntry({
+    work_item_type: row.work_item_type,
+    work_item_id: row.work_item_id,
+  });
+  const context = await getWorkItemClientContext(trx, tenantId, link);
+  return context.clientId;
+}
+
+export async function summarizeWorkflowTimeEntries(params: {
+  trx: Knex.Transaction;
+  tenantId: string;
+  input: WorkflowTimeFindEntriesInput & {
+    group_by?: WorkflowTimeSummaryGroupBy[];
+  };
+}): Promise<{
+  totals: {
+    entry_count: number;
+    total_minutes: number;
+    billable_minutes: number;
+    non_billable_minutes: number;
+    approved_count: number;
+    submitted_count: number;
+    draft_count: number;
+    changes_requested_count: number;
+    invoiced_count: number;
+  };
+  groups: Array<{
+    key: Record<string, string | boolean | null>;
+    entry_count: number;
+    total_minutes: number;
+    billable_minutes: number;
+  }>;
+}> {
+  const { trx, tenantId, input } = params;
+  const limit = Math.min(Math.max(input.limit ?? 200, 1), 500);
+  const groupBy = input.group_by ?? [];
+
+  const query = trx('time_entries as te')
+    .select(
+      'te.entry_id',
+      'te.user_id',
+      'te.work_item_id',
+      'te.work_item_type',
+      'te.service_id',
+      'te.contract_line_id',
+      'te.approval_status',
+      'te.invoiced',
+      'te.billable_duration',
+      'te.work_date',
+      'te.start_time',
+      'te.end_time'
+    )
+    .orderBy('te.start_time', 'desc')
+    .limit(limit);
+
+  applyFindEntriesFilters(query, tenantId, input);
+
+  const rows = await query;
+  const cache = new Map<string, string | null>();
+  let totalMinutes = 0;
+  let billableMinutes = 0;
+  let approvedCount = 0;
+  let submittedCount = 0;
+  let draftCount = 0;
+  let changesRequestedCount = 0;
+  let invoicedCount = 0;
+
+  const groups = new Map<string, {
+    key: Record<string, string | boolean | null>;
+    entry_count: number;
+    total_minutes: number;
+    billable_minutes: number;
+  }>();
+
+  for (const row of rows) {
+    const startIso = toIsoString(row.start_time as string | Date);
+    const endIso = toIsoString(row.end_time as string | Date);
+    const entryMinutes = Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 60000);
+    const entryBillable = Number(row.billable_duration ?? 0);
+
+    totalMinutes += entryMinutes;
+    billableMinutes += entryBillable;
+
+    const approval = String(row.approval_status ?? 'DRAFT');
+    if (approval === 'APPROVED') approvedCount += 1;
+    if (approval === 'SUBMITTED') submittedCount += 1;
+    if (approval === 'DRAFT') draftCount += 1;
+    if (approval === 'CHANGES_REQUESTED') changesRequestedCount += 1;
+    if (Boolean(row.invoiced)) invoicedCount += 1;
+
+    if (groupBy.length > 0) {
+      const key: Record<string, string | boolean | null> = {};
+      for (const field of groupBy) {
+        if (field === 'billable') {
+          key[field] = entryBillable > 0;
+          continue;
+        }
+        if (field === 'client_id') {
+          const cacheKey = `${row.work_item_type ?? 'null'}:${row.work_item_id ?? 'null'}`;
+          if (!cache.has(cacheKey)) {
+            cache.set(cacheKey, await resolveClientIdForEntryRow(trx, tenantId, {
+              work_item_type: (row.work_item_type as string | null) ?? null,
+              work_item_id: (row.work_item_id as string | null) ?? null,
+            }));
+          }
+          key[field] = cache.get(cacheKey) ?? null;
+          continue;
+        }
+        key[field] = (row as Record<string, unknown>)[field] as string | boolean | null;
+      }
+      const serialized = JSON.stringify(key);
+      const existing = groups.get(serialized) ?? {
+        key,
+        entry_count: 0,
+        total_minutes: 0,
+        billable_minutes: 0,
+      };
+      existing.entry_count += 1;
+      existing.total_minutes += entryMinutes;
+      existing.billable_minutes += entryBillable;
+      groups.set(serialized, existing);
+    }
+  }
+
+  return {
+    totals: {
+      entry_count: rows.length,
+      total_minutes: totalMinutes,
+      billable_minutes: billableMinutes,
+      non_billable_minutes: Math.max(0, totalMinutes - billableMinutes),
+      approved_count: approvedCount,
+      submitted_count: submittedCount,
+      draft_count: draftCount,
+      changes_requested_count: changesRequestedCount,
+      invoiced_count: invoicedCount,
+    },
+    groups: Array.from(groups.values()),
+  };
+}
+
+type WorkflowBillingBlocker = {
+  category: string;
+  count: number;
+  entry_ids: string[];
+  explanation: string;
+};
+
+async function findBillingBlockersInternal(params: {
+  trx: Knex.Transaction;
+  tenantId: string;
+  filters: WorkflowTimeFindEntriesInput;
+  entryIds?: string[];
+  requireTimesheet?: boolean;
+  limit: number;
+}): Promise<WorkflowBillingBlocker[]> {
+  const { trx, tenantId, filters, entryIds, requireTimesheet, limit } = params;
+
+  const query = trx('time_entries as te')
+    .select(
+      'te.entry_id',
+      'te.approval_status',
+      'te.service_id',
+      'te.contract_line_id',
+      'te.billable_duration',
+      'te.work_item_id',
+      'te.work_item_type',
+      'te.time_sheet_id',
+      'te.start_time',
+      'te.end_time'
+    )
+    .limit(limit);
+
+  applyFindEntriesFilters(query, tenantId, filters);
+  if (entryIds?.length) {
+    query.whereIn('te.entry_id', entryIds);
+  }
+
+  const rows = await query;
+  const buckets = new Map<string, Set<string>>();
+
+  const push = (category: string, entryId: string) => {
+    const set = buckets.get(category) ?? new Set<string>();
+    set.add(entryId);
+    buckets.set(category, set);
+  };
+
+  for (const row of rows) {
+    const entryId = String(row.entry_id);
+    const approval = String(row.approval_status ?? 'DRAFT');
+    if (approval !== 'APPROVED') {
+      push(`status_${approval.toLowerCase()}`, entryId);
+    }
+    if (!row.service_id) {
+      push('missing_service', entryId);
+    }
+    if (Number(row.billable_duration ?? 0) > 0 && !row.contract_line_id) {
+      push('missing_contract_line', entryId);
+    }
+    const durationMinutes = Math.round(
+      (new Date(toIsoString(row.end_time as string | Date)).getTime() - new Date(toIsoString(row.start_time as string | Date)).getTime()) / 60000
+    );
+    if (durationMinutes <= 0 || Number(row.billable_duration ?? 0) < 0) {
+      push('invalid_duration', entryId);
+    }
+    if (Number(row.billable_duration ?? 0) > 0 && (!row.work_item_id || !row.work_item_type)) {
+      push('missing_work_item', entryId);
+    }
+    if (requireTimesheet && !row.time_sheet_id) {
+      push('missing_timesheet', entryId);
+    }
+  }
+
+  const explanations: Record<string, string> = {
+    status_draft: 'Entries are still in DRAFT and require submission/approval.',
+    status_submitted: 'Entries are SUBMITTED and still pending approval.',
+    status_changes_requested: 'Entries are marked CHANGES_REQUESTED and require technician updates.',
+    missing_service: 'Entries do not have a service assignment.',
+    missing_contract_line: 'Billable entries are missing a contract line.',
+    invalid_duration: 'Entries have invalid or zero duration values.',
+    missing_work_item: 'Billable entries are missing required linked work items.',
+    missing_timesheet: 'Entries are not attached to an expected time sheet.',
+  };
+
+  return Array.from(buckets.entries()).map(([category, ids]) => ({
+    category,
+    count: ids.size,
+    entry_ids: Array.from(ids),
+    explanation: explanations[category] ?? 'Entries match this blocker category.',
+  }));
+}
+
+export async function findWorkflowTimeBillingBlockers(params: {
+  trx: Knex.Transaction;
+  tenantId: string;
+  input: WorkflowTimeFindEntriesInput & {
+    entry_ids?: string[];
+    require_timesheet?: boolean;
+    limit?: number;
+  };
+}): Promise<{
+  blockers: WorkflowBillingBlocker[];
+}> {
+  const { trx, tenantId, input } = params;
+  return {
+    blockers: await findBillingBlockersInternal({
+      trx,
+      tenantId,
+      filters: input,
+      entryIds: input.entry_ids,
+      requireTimesheet: input.require_timesheet,
+      limit: Math.min(Math.max(input.limit ?? 200, 1), 500),
+    }),
+  };
+}
+
+export async function validateWorkflowTimeEntries(params: {
+  trx: Knex.Transaction;
+  tenantId: string;
+  input: WorkflowTimeFindEntriesInput & {
+    entry_ids?: string[];
+    require_timesheet?: boolean;
+    limit?: number;
+  };
+}): Promise<{
+  valid: boolean;
+  blocker_count: number;
+  blockers: WorkflowBillingBlocker[];
+}> {
+  const blockers = await findBillingBlockersInternal({
+    trx: params.trx,
+    tenantId: params.tenantId,
+    filters: params.input,
+    entryIds: params.input.entry_ids,
+    requireTimesheet: params.input.require_timesheet,
+    limit: Math.min(Math.max(params.input.limit ?? 200, 1), 500),
+  });
+
+  return {
+    valid: blockers.length === 0,
+    blocker_count: blockers.reduce((sum, blocker) => sum + blocker.count, 0),
+    blockers,
   };
 }

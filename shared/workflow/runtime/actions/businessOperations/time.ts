@@ -25,11 +25,15 @@ import {
   requestWorkflowTimeSheetChanges,
   reverseWorkflowTimeSheetApproval,
   addWorkflowTimeSheetComment,
+  summarizeWorkflowTimeEntries,
+  findWorkflowTimeBillingBlockers,
+  validateWorkflowTimeEntries,
   WorkflowTimeDomainError,
   type WorkflowTimeCreateEntryInput,
   type WorkflowTimeUpdateEntryInput,
   type WorkflowTimeFindEntriesInput,
   type WorkflowTimeApprovalStatus,
+  type WorkflowTimeSummaryGroupBy,
 } from './timeDomain';
 
 const timeEntryLinkSchema = z.object({
@@ -162,6 +166,211 @@ export function registerTimeActions(): void {
         rethrowAsStandardError(ctx, error);
       }
     })
+  });
+
+  registry.register({
+    id: 'time.summarize_entries',
+    version: 1,
+    inputSchema: z.object({
+      group_by: z.array(z.enum([
+        'user_id',
+        'client_id',
+        'work_item_type',
+        'work_item_id',
+        'service_id',
+        'contract_line_id',
+        'approval_status',
+        'billable',
+        'work_date',
+      ])).max(5).optional(),
+      user_id: uuidSchema.optional(),
+      work_item_id: uuidSchema.optional(),
+      work_item_type: z.enum(['ticket', 'project', 'project_task', 'interaction', 'ad_hoc', 'non_billable_category']).optional(),
+      client_id: uuidSchema.optional(),
+      ticket_id: uuidSchema.optional(),
+      project_task_id: uuidSchema.optional(),
+      time_sheet_id: uuidSchema.optional(),
+      service_id: uuidSchema.optional(),
+      contract_line_id: uuidSchema.optional(),
+      approval_status: z.enum(['DRAFT', 'SUBMITTED', 'APPROVED', 'CHANGES_REQUESTED']).optional(),
+      billable: z.boolean().optional(),
+      work_date_from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      work_date_to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      start_from: isoDateTimeSchema.optional(),
+      start_to: isoDateTimeSchema.optional(),
+      invoiced: z.boolean().optional(),
+      limit: z.number().int().min(1).max(500).default(200),
+    }),
+    outputSchema: z.object({
+      totals: z.object({
+        entry_count: z.number().int(),
+        total_minutes: z.number(),
+        billable_minutes: z.number(),
+        non_billable_minutes: z.number(),
+        approved_count: z.number().int(),
+        submitted_count: z.number().int(),
+        draft_count: z.number().int(),
+        changes_requested_count: z.number().int(),
+        invoiced_count: z.number().int(),
+      }),
+      groups: z.array(z.object({
+        key: z.record(z.union([z.string(), z.boolean(), z.null()])),
+        entry_count: z.number().int(),
+        total_minutes: z.number(),
+        billable_minutes: z.number(),
+      })),
+    }),
+    sideEffectful: false,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Summarize Time Entries',
+      category: 'Business Operations',
+      description: 'Summarize filtered time entries with optional grouping dimensions',
+    },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      await requirePermission(ctx, tx, { resource: 'timeentry', action: 'read' });
+      try {
+        return await summarizeWorkflowTimeEntries({
+          trx: tx.trx,
+          tenantId: tx.tenantId,
+          input: input as WorkflowTimeFindEntriesInput & { group_by?: WorkflowTimeSummaryGroupBy[] },
+        });
+      } catch (error) {
+        if (error instanceof WorkflowTimeDomainError) {
+          throwActionError(ctx, {
+            category: error.category,
+            code: error.code,
+            message: error.message,
+            details: error.details ?? undefined,
+          });
+        }
+        rethrowAsStandardError(ctx, error);
+      }
+    }),
+  });
+
+  registry.register({
+    id: 'time.find_billing_blockers',
+    version: 1,
+    inputSchema: z.object({
+      entry_ids: z.array(uuidSchema).max(500).optional(),
+      require_timesheet: z.boolean().default(false),
+      user_id: uuidSchema.optional(),
+      work_item_id: uuidSchema.optional(),
+      work_item_type: z.enum(['ticket', 'project', 'project_task', 'interaction', 'ad_hoc', 'non_billable_category']).optional(),
+      client_id: uuidSchema.optional(),
+      ticket_id: uuidSchema.optional(),
+      project_task_id: uuidSchema.optional(),
+      time_sheet_id: uuidSchema.optional(),
+      service_id: uuidSchema.optional(),
+      contract_line_id: uuidSchema.optional(),
+      approval_status: z.enum(['DRAFT', 'SUBMITTED', 'APPROVED', 'CHANGES_REQUESTED']).optional(),
+      billable: z.boolean().optional(),
+      work_date_from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      work_date_to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      start_from: isoDateTimeSchema.optional(),
+      start_to: isoDateTimeSchema.optional(),
+      invoiced: z.boolean().optional(),
+      limit: z.number().int().min(1).max(500).default(200),
+    }),
+    outputSchema: z.object({
+      blockers: z.array(z.object({
+        category: z.string(),
+        count: z.number().int(),
+        entry_ids: z.array(uuidSchema),
+        explanation: z.string(),
+      })),
+    }),
+    sideEffectful: false,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Find Time Billing Blockers',
+      category: 'Business Operations',
+      description: 'Find billing-readiness blockers across a bounded time-entry scope',
+    },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      await requirePermission(ctx, tx, { resource: 'timeentry', action: 'read' });
+      try {
+        return await findWorkflowTimeBillingBlockers({
+          trx: tx.trx,
+          tenantId: tx.tenantId,
+          input,
+        });
+      } catch (error) {
+        if (error instanceof WorkflowTimeDomainError) {
+          throwActionError(ctx, {
+            category: error.category,
+            code: error.code,
+            message: error.message,
+            details: error.details ?? undefined,
+          });
+        }
+        rethrowAsStandardError(ctx, error);
+      }
+    }),
+  });
+
+  registry.register({
+    id: 'time.validate_entries',
+    version: 1,
+    inputSchema: z.object({
+      entry_ids: z.array(uuidSchema).max(500).optional(),
+      require_timesheet: z.boolean().default(false),
+      user_id: uuidSchema.optional(),
+      work_item_id: uuidSchema.optional(),
+      work_item_type: z.enum(['ticket', 'project', 'project_task', 'interaction', 'ad_hoc', 'non_billable_category']).optional(),
+      client_id: uuidSchema.optional(),
+      ticket_id: uuidSchema.optional(),
+      project_task_id: uuidSchema.optional(),
+      time_sheet_id: uuidSchema.optional(),
+      service_id: uuidSchema.optional(),
+      contract_line_id: uuidSchema.optional(),
+      approval_status: z.enum(['DRAFT', 'SUBMITTED', 'APPROVED', 'CHANGES_REQUESTED']).optional(),
+      billable: z.boolean().optional(),
+      work_date_from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      work_date_to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      start_from: isoDateTimeSchema.optional(),
+      start_to: isoDateTimeSchema.optional(),
+      invoiced: z.boolean().optional(),
+      limit: z.number().int().min(1).max(500).default(200),
+    }),
+    outputSchema: z.object({
+      valid: z.boolean(),
+      blocker_count: z.number().int(),
+      blockers: z.array(z.object({
+        category: z.string(),
+        count: z.number().int(),
+        entry_ids: z.array(uuidSchema),
+        explanation: z.string(),
+      })),
+    }),
+    sideEffectful: false,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Validate Time Entries',
+      category: 'Business Operations',
+      description: 'Validate entry readiness and return pass/fail with blocker details',
+    },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      await requirePermission(ctx, tx, { resource: 'timeentry', action: 'read' });
+      try {
+        return await validateWorkflowTimeEntries({
+          trx: tx.trx,
+          tenantId: tx.tenantId,
+          input,
+        });
+      } catch (error) {
+        if (error instanceof WorkflowTimeDomainError) {
+          throwActionError(ctx, {
+            category: error.category,
+            code: error.code,
+            message: error.message,
+            details: error.details ?? undefined,
+          });
+        }
+        rethrowAsStandardError(ctx, error);
+      }
+    }),
   });
 
   registry.register({
