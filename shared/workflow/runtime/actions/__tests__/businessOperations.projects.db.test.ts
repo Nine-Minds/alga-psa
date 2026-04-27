@@ -495,4 +495,117 @@ describe('project business operation db actions', () => {
     expect(byFilters.first_task.task_id).toBe(taskA);
     expect(byFilters.tasks[0].assigned_to).toBe(assigneeA);
   });
+
+  it('T006: projects.update/update_phase/update_task apply name+description changes and write workflow audits', async () => {
+    const entity = await createClientOrCompany(db, runtimeState.tenantId);
+    const projectId = await createProject(db, runtimeState.tenantId, {
+      name: 'Initial Project Name',
+      clientOrCompanyId: entity.clientId,
+      description: 'Initial description',
+      wbsCode: '20',
+    });
+    const phaseId = await createPhase(db, runtimeState.tenantId, projectId, {
+      name: 'Initial Phase Name',
+      orderNumber: 1,
+      orderKey: 'a0',
+    });
+    const taskId = await createTask(db, runtimeState.tenantId, phaseId, projectId, {
+      taskName: 'Initial Task Name',
+    });
+
+    const updatedProject = await invokeAction('projects.update', {
+      project_id: projectId,
+      patch: { project_name: 'Updated Project Name', description: 'Updated project description' },
+    });
+    expect(updatedProject.no_op).toBe(false);
+    expect(updatedProject.changed_fields).toEqual(expect.arrayContaining(['project_name', 'description']));
+    expect(updatedProject.project.project_name).toBe('Updated Project Name');
+    expect(updatedProject.project.description).toBe('Updated project description');
+
+    const updatedPhase = await invokeAction('projects.update_phase', {
+      phase_id: phaseId,
+      patch: { phase_name: 'Updated Phase Name', description: 'Updated phase description' },
+    });
+    expect(updatedPhase.no_op).toBe(false);
+    expect(updatedPhase.changed_fields).toEqual(expect.arrayContaining(['phase_name', 'description']));
+    expect(updatedPhase.phase.phase_name).toBe('Updated Phase Name');
+
+    const updatedTask = await invokeAction('projects.update_task', {
+      task_id: taskId,
+      patch: { task_name: 'Updated Task Name', description: 'Updated task description' },
+    });
+    expect(updatedTask.no_op).toBe(false);
+    expect(updatedTask.changed_fields).toEqual(expect.arrayContaining(['task_name', 'description']));
+    expect(updatedTask.task.task_name).toBe('Updated Task Name');
+    expect(updatedTask.task.description).toBe('Updated task description');
+
+    const audits = await db('audit_logs')
+      .where({ tenant: runtimeState.tenantId, user_id: runtimeState.actorUserId, table_name: 'workflow_runs' })
+      .whereIn('operation', [
+        'workflow_action:projects.update',
+        'workflow_action:projects.update_phase',
+        'workflow_action:projects.update_task',
+      ])
+      .select('operation');
+
+    const operations = audits.map((audit: { operation: string }) => audit.operation);
+    expect(operations).toEqual(expect.arrayContaining([
+      'workflow_action:projects.update',
+      'workflow_action:projects.update_phase',
+      'workflow_action:projects.update_task',
+    ]));
+  });
+
+  it('T007: update actions reject empty patches, missing targets, and permission-denied updates without mutation', async () => {
+    const entity = await createClientOrCompany(db, runtimeState.tenantId);
+    const projectId = await createProject(db, runtimeState.tenantId, {
+      name: 'Validation Project',
+      clientOrCompanyId: entity.clientId,
+      description: 'Validation project description',
+      wbsCode: '21',
+    });
+    const phaseId = await createPhase(db, runtimeState.tenantId, projectId, {
+      name: 'Validation Phase',
+      orderNumber: 1,
+      orderKey: 'a0',
+    });
+    const taskId = await createTask(db, runtimeState.tenantId, phaseId, projectId, {
+      taskName: 'Validation Task',
+    });
+
+    const updateProjectAction = getAction('projects.update');
+    const updatePhaseAction = getAction('projects.update_phase');
+    const updateTaskAction = getAction('projects.update_task');
+
+    expect(() => updateProjectAction.inputSchema.parse({ project_id: projectId, patch: {} })).toThrow();
+    expect(() => updatePhaseAction.inputSchema.parse({ phase_id: phaseId, patch: {} })).toThrow();
+    expect(() => updateTaskAction.inputSchema.parse({ task_id: taskId, patch: {} })).toThrow();
+
+    await expect(invokeAction('projects.update', {
+      project_id: uuidv4(),
+      patch: { project_name: 'Nope' },
+    })).rejects.toMatchObject({ code: 'NOT_FOUND' });
+
+    await expect(invokeAction('projects.update_phase', {
+      phase_id: uuidv4(),
+      patch: { phase_name: 'Nope' },
+    })).rejects.toMatchObject({ code: 'NOT_FOUND' });
+
+    await expect(invokeAction('projects.update_task', {
+      task_id: uuidv4(),
+      patch: { task_name: 'Nope' },
+    })).rejects.toMatchObject({ code: 'NOT_FOUND' });
+
+    runtimeState.deniedPermissions.add('project:update');
+    await expect(invokeAction('projects.update', {
+      project_id: projectId,
+      patch: { project_name: 'Denied Name' },
+    })).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+    runtimeState.deniedPermissions.clear();
+
+    const projectAfterDenied = await db('projects')
+      .where({ tenant: runtimeState.tenantId, project_id: projectId })
+      .first('project_name');
+    expect(projectAfterDenied?.project_name).toBe('Validation Project');
+  });
 });

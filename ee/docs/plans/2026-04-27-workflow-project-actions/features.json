@@ -139,7 +139,7 @@
   {
     "id": "F017",
     "description": "Implement `projects.update` input schema with project_id and a non-empty patch covering project name and description fields included in this plan.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Generic update actions"
     ]
@@ -147,7 +147,7 @@
   {
     "id": "F018",
     "description": "Implement `projects.update` handler using existing project domain behavior where practical, with permission checks, changed-field output, updated_at output, and run audit logging.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Generic update actions",
       "Observability"
@@ -156,7 +156,7 @@
   {
     "id": "F019",
     "description": "Implement `projects.update_phase` input schema with phase_id and a non-empty patch covering phase name and description fields included in this plan.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Generic update actions"
     ]
@@ -164,7 +164,7 @@
   {
     "id": "F020",
     "description": "Implement `projects.update_phase` handler with phase/project context validation, project update permission checks, changed-field output, updated_at output, and run audit logging.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Generic update actions",
       "Observability"
@@ -173,7 +173,7 @@
   {
     "id": "F021",
     "description": "Implement `projects.update_task` input schema with task_id and a non-empty patch covering task name/title and description fields, excluding phase/project/status relocation fields.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Generic update actions",
       "Open Questions"
@@ -182,7 +182,7 @@
   {
     "id": "F022",
     "description": "Implement `projects.update_task` handler with task/project context validation, project update permission checks, changed-field output, updated_at output, and run audit logging.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Generic update actions",
       "Observability"

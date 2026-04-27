@@ -114,6 +114,51 @@ const statusMappingOrStatusPicker = withWorkflowPicker(
   ['project_id', 'phase_id']
 );
 
+const projectUpdatePatchSchema = z.object({
+  project_name: z.string().min(1).optional(),
+  description: z.string().nullable().optional(),
+}).superRefine((value, refinementCtx) => {
+  const keys = Object.keys(value);
+  if (keys.length === 0) {
+    refinementCtx.addIssue({ code: z.ZodIssueCode.custom, message: 'patch must include at least one editable field' });
+    return;
+  }
+  const hasDefined = keys.some((key) => (value as Record<string, unknown>)[key] !== undefined);
+  if (!hasDefined) {
+    refinementCtx.addIssue({ code: z.ZodIssueCode.custom, message: 'patch must include at least one defined value' });
+  }
+});
+
+const phaseUpdatePatchSchema = z.object({
+  phase_name: z.string().min(1).optional(),
+  description: z.string().nullable().optional(),
+}).superRefine((value, refinementCtx) => {
+  const keys = Object.keys(value);
+  if (keys.length === 0) {
+    refinementCtx.addIssue({ code: z.ZodIssueCode.custom, message: 'patch must include at least one editable field' });
+    return;
+  }
+  const hasDefined = keys.some((key) => (value as Record<string, unknown>)[key] !== undefined);
+  if (!hasDefined) {
+    refinementCtx.addIssue({ code: z.ZodIssueCode.custom, message: 'patch must include at least one defined value' });
+  }
+});
+
+const taskUpdatePatchSchema = z.object({
+  task_name: z.string().min(1).optional(),
+  description: z.string().nullable().optional(),
+}).superRefine((value, refinementCtx) => {
+  const keys = Object.keys(value);
+  if (keys.length === 0) {
+    refinementCtx.addIssue({ code: z.ZodIssueCode.custom, message: 'patch must include at least one editable field' });
+    return;
+  }
+  const hasDefined = keys.some((key) => (value as Record<string, unknown>)[key] !== undefined);
+  if (!hasDefined) {
+    refinementCtx.addIssue({ code: z.ZodIssueCode.custom, message: 'patch must include at least one defined value' });
+  }
+});
+
 const PROJECT_TABLE_AUTH_COLUMNS = ['project_id', 'client_id', 'assigned_to'] as const;
 
 type ProjectAuthRecord = {
@@ -121,6 +166,12 @@ type ProjectAuthRecord = {
   client_id: string | null;
   assigned_to: string | null;
 };
+
+const updateResultSchema = z.object({
+  changed_fields: z.array(z.string()),
+  no_op: z.boolean(),
+  updated_at: isoDateTimeSchema,
+});
 
 function asIsoString(value: unknown): string | undefined {
   if (typeof value === 'string') return value;
@@ -1065,6 +1116,191 @@ export function registerProjectActions(): void {
           page,
           page_size: pageSize,
           total,
+        };
+      } catch (error) {
+        handleActionError(ctx, error);
+      }
+    }),
+  });
+
+  registry.register({
+    id: 'projects.update',
+    version: 1,
+    inputSchema: z.object({
+      project_id: withWorkflowPicker(uuidSchema, 'Project id', 'project'),
+      patch: projectUpdatePatchSchema,
+    }),
+    outputSchema: z.object({
+      project: projectSummarySchema,
+      changed_fields: updateResultSchema.shape.changed_fields,
+      no_op: updateResultSchema.shape.no_op,
+      updated_at: updateResultSchema.shape.updated_at,
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: { label: 'Update Project', category: 'Business Operations', description: 'Update project name and description' },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      try {
+        await requireProjectUpdatePermission(ctx, tx);
+        const projectColumns = await getTableColumns(tx, 'projects');
+        const project = await ensureProjectExists(ctx, tx, input.project_id);
+        await assertProjectReadable(ctx, tx, project);
+
+        const patch: Record<string, unknown> = {};
+        if (input.patch.project_name !== undefined && projectColumns.has('project_name')) patch.project_name = input.patch.project_name;
+        if (input.patch.description !== undefined && projectColumns.has('description')) patch.description = input.patch.description;
+
+        const changedFields = Object.keys(patch).filter((key) => String(project[key] ?? null) !== String(patch[key] ?? null));
+        const nowIso = new Date().toISOString();
+
+        if (changedFields.length > 0) {
+          await tx.trx('projects')
+            .where({ tenant: tx.tenantId, project_id: input.project_id })
+            .update({ ...patch, updated_at: nowIso });
+
+          await writeRunAudit(ctx, tx, {
+            operation: 'workflow_action:projects.update',
+            changedData: { project_id: input.project_id, changed_fields: changedFields },
+            details: { action_id: 'projects.update', action_version: 1, changed_fields: changedFields, no_op: false },
+          });
+        } else {
+          await writeRunAudit(ctx, tx, {
+            operation: 'workflow_action:projects.update',
+            changedData: { project_id: input.project_id, changed_fields: [] },
+            details: { action_id: 'projects.update', action_version: 1, changed_fields: [], no_op: true },
+          });
+        }
+
+        const updated = await ensureProjectExists(ctx, tx, input.project_id);
+        return {
+          project: toProjectSummary(updated),
+          changed_fields: changedFields,
+          no_op: changedFields.length === 0,
+          updated_at: asIsoString(updated.updated_at) ?? nowIso,
+        };
+      } catch (error) {
+        handleActionError(ctx, error);
+      }
+    }),
+  });
+
+  registry.register({
+    id: 'projects.update_phase',
+    version: 1,
+    inputSchema: z.object({
+      phase_id: withWorkflowPicker(uuidSchema, 'Project phase id', 'project-phase', ['project_id']),
+      patch: phaseUpdatePatchSchema,
+    }),
+    outputSchema: z.object({
+      phase: phaseSummarySchema,
+      changed_fields: updateResultSchema.shape.changed_fields,
+      no_op: updateResultSchema.shape.no_op,
+      updated_at: updateResultSchema.shape.updated_at,
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: { label: 'Update Project Phase', category: 'Business Operations', description: 'Update project phase name and description' },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      try {
+        await requireProjectUpdatePermission(ctx, tx);
+        const phaseColumns = await getTableColumns(tx, 'project_phases');
+        const phase = await ensurePhaseExists(ctx, tx, input.phase_id);
+        const project = await ensureProjectExists(ctx, tx, String(phase.project_id));
+        await assertProjectReadable(ctx, tx, project);
+
+        const patch: Record<string, unknown> = {};
+        if (input.patch.phase_name !== undefined && phaseColumns.has('phase_name')) patch.phase_name = input.patch.phase_name;
+        if (input.patch.description !== undefined && phaseColumns.has('description')) patch.description = input.patch.description;
+
+        const changedFields = Object.keys(patch).filter((key) => String(phase[key] ?? null) !== String(patch[key] ?? null));
+        const nowIso = new Date().toISOString();
+
+        if (changedFields.length > 0) {
+          await tx.trx('project_phases')
+            .where({ tenant: tx.tenantId, phase_id: input.phase_id })
+            .update({ ...patch, updated_at: nowIso });
+
+          await writeRunAudit(ctx, tx, {
+            operation: 'workflow_action:projects.update_phase',
+            changedData: { phase_id: input.phase_id, project_id: phase.project_id, changed_fields: changedFields },
+            details: { action_id: 'projects.update_phase', action_version: 1, changed_fields: changedFields, no_op: false },
+          });
+        } else {
+          await writeRunAudit(ctx, tx, {
+            operation: 'workflow_action:projects.update_phase',
+            changedData: { phase_id: input.phase_id, project_id: phase.project_id, changed_fields: [] },
+            details: { action_id: 'projects.update_phase', action_version: 1, changed_fields: [], no_op: true },
+          });
+        }
+
+        const updated = await ensurePhaseExists(ctx, tx, input.phase_id);
+        return {
+          phase: toPhaseSummary(updated),
+          changed_fields: changedFields,
+          no_op: changedFields.length === 0,
+          updated_at: asIsoString(updated.updated_at) ?? nowIso,
+        };
+      } catch (error) {
+        handleActionError(ctx, error);
+      }
+    }),
+  });
+
+  registry.register({
+    id: 'projects.update_task',
+    version: 1,
+    inputSchema: z.object({
+      task_id: withWorkflowPicker(uuidSchema, 'Project task id', 'project-task', ['project_id', 'phase_id']),
+      patch: taskUpdatePatchSchema,
+    }),
+    outputSchema: z.object({
+      task: taskSummarySchema,
+      changed_fields: updateResultSchema.shape.changed_fields,
+      no_op: updateResultSchema.shape.no_op,
+      updated_at: updateResultSchema.shape.updated_at,
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: { label: 'Update Project Task', category: 'Business Operations', description: 'Update project task title and description' },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      try {
+        await requireProjectUpdatePermission(ctx, tx);
+        const taskColumns = await getTableColumns(tx, 'project_tasks');
+        const task = await ensureTaskContext(ctx, tx, input.task_id);
+        const project = await ensureProjectExists(ctx, tx, String(task.project_id));
+        await assertProjectReadable(ctx, tx, project);
+
+        const patch: Record<string, unknown> = {};
+        if (input.patch.task_name !== undefined && taskColumns.has('task_name')) patch.task_name = input.patch.task_name;
+        if (input.patch.description !== undefined && taskColumns.has('description')) patch.description = input.patch.description;
+
+        const changedFields = Object.keys(patch).filter((key) => String(task[key] ?? null) !== String(patch[key] ?? null));
+        const nowIso = new Date().toISOString();
+
+        if (changedFields.length > 0) {
+          await tx.trx('project_tasks')
+            .where({ tenant: tx.tenantId, task_id: input.task_id })
+            .update({ ...patch, updated_at: nowIso });
+
+          await writeRunAudit(ctx, tx, {
+            operation: 'workflow_action:projects.update_task',
+            changedData: { task_id: input.task_id, project_id: task.project_id, phase_id: task.phase_id, changed_fields: changedFields },
+            details: { action_id: 'projects.update_task', action_version: 1, changed_fields: changedFields, no_op: false },
+          });
+        } else {
+          await writeRunAudit(ctx, tx, {
+            operation: 'workflow_action:projects.update_task',
+            changedData: { task_id: input.task_id, project_id: task.project_id, phase_id: task.phase_id, changed_fields: [] },
+            details: { action_id: 'projects.update_task', action_version: 1, changed_fields: [], no_op: true },
+          });
+        }
+
+        const updated = await ensureTaskContext(ctx, tx, input.task_id);
+        return {
+          task: toTaskSummary(updated),
+          changed_fields: changedFields,
+          no_op: changedFields.length === 0,
+          updated_at: asIsoString(updated.updated_at) ?? nowIso,
         };
       } catch (error) {
         handleActionError(ctx, error);

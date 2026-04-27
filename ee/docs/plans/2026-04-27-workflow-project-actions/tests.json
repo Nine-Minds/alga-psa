@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "DB-backed registry/API test verifies all new project actions are registered with expected ids, labels, sideEffectful flags, idempotency metadata, and JSON Schema input/output schemas.",
-    "implemented": true,
+    "implemented": false,
     "featureIds": [
       "F005",
       "F007",
@@ -75,7 +75,7 @@
   {
     "id": "T006",
     "description": "DB-backed action handler test covers `projects.update`, `projects.update_phase`, and `projects.update_task` happy paths for name/title and description changes, including changed output and audit records.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017",
       "F018",
@@ -89,7 +89,7 @@
   {
     "id": "T007",
     "description": "DB-backed validation test verifies generic update actions reject empty patches, missing targets, and unauthorized updates without mutating data.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017",
       "F018",

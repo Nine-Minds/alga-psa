@@ -238,3 +238,44 @@ Action schemas are Zod schemas converted to JSON Schema and consumed by the work
 - Shared runtime package does not resolve `@alga-psa/authorization/kernel` in this test runtime; switched to local schema-aware read narrowing helper.
 - Test DB schema differs from legacy assumptions (`project_number` required; status column variants; user/client columns vary); test fixtures were made column-aware via `information_schema` checks.
 - Throwing standardized action objects inside try/catch requires pass-through handling; otherwise generic rethrow path can incorrectly map to `INTERNAL_ERROR`.
+
+## Implementation checkpoint — 2026-04-27 (Generic update actions)
+
+### Completed features
+
+- `F017` + `F018`: Implemented `projects.update` schema+handler:
+  - non-empty patch validation (`project_name`, `description`)
+  - project update permission + project read auth check
+  - changed-field diffing + `no_op` support
+  - output includes updated project summary + changed metadata
+  - workflow run audit writes include `changed_fields` and `no_op`
+
+- `F019` + `F020`: Implemented `projects.update_phase` schema+handler:
+  - non-empty patch validation (`phase_name`, `description`)
+  - phase->project context validation
+  - project update permission + read auth check
+  - changed-field output + `no_op` + run audit
+
+- `F021` + `F022`: Implemented `projects.update_task` schema+handler:
+  - non-empty patch validation for task `task_name` and `description`
+  - excludes move/status relocation fields by schema design
+  - task->phase->project context validation
+  - project update permission + read auth check
+  - changed-field output + `no_op` + run audit
+
+### Completed tests
+
+- `T006`: Added DB-backed coverage for update happy paths and audit writes:
+  - validates name/description updates for project, phase, and task
+  - checks returned changed fields/no-op flags
+  - asserts audit log operation records exist for all three update actions
+
+- `T007`: Added DB-backed validation/permission guard coverage:
+  - empty patch rejects at schema parse time
+  - missing project/phase/task returns `NOT_FOUND`
+  - denied `project:update` returns `PERMISSION_DENIED`
+  - verifies denied update does not mutate persisted project data
+
+### Checklist correction
+
+- `T001` was initially marked complete during the first checkpoint but that was premature because it requires registration coverage for the full final project action surface. Reset to `implemented:false` until the full action set is present.
