@@ -45,7 +45,7 @@
   {
     "id": "F006",
     "description": "Ensure workflow-created and workflow-updated billable entries preserve bucket usage side effects for bucket-backed contract lines.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Time entry actions",
       "Data / API / Integrations"

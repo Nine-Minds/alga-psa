@@ -14,7 +14,7 @@
   {
     "id": "T002",
     "description": "DB integration: create-entry resolves default contract line and updates bucket usage for a representative billable bucket-backed service.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005",
       "F006"

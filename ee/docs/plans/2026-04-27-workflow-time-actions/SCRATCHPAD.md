@@ -22,6 +22,7 @@ Rolling notes for adding workflow-safe time-entry, time-sheet, and billing-readi
 - (2026-04-27) API time-entry service exists at `server/src/lib/api/services/TimeEntryService.ts`, but it has its own behavior and should not be blindly treated as the canonical source without reconciliation.
 - (2026-04-27) Workflow fixed pickers currently support board, client, contact, user, user-or-team, ticket, ticket-status, ticket-priority, ticket-category, ticket-subcategory, and client-location. They do not currently support service catalog, contract line, time entry, time sheet, time period, project task, interaction, or non-billable category resources.
 - (2026-04-27) Event schemas for `TIME_ENTRY_SUBMITTED` and `TIME_ENTRY_APPROVED` exist in `shared/workflow/runtime/schemas/timeEventSchemas.ts`, but current workflow-trigger publication appears limited; ticket time entry added publication is handled by `server/src/lib/api/services/timeEntryWorkflowEvents.ts`.
+- (2026-04-27) `packages/scheduling/src/services/bucketUsageService.ts` requires tenant inference via `createTenantKnex()` when transaction config does not carry tenant metadata; workflow runtime already has explicit tenant context, so directly calling that service from workflow helper would be fragile in shared Vitest DB tests.
 
 ## Commands / Runbooks
 
@@ -63,6 +64,13 @@ Rolling notes for adding workflow-safe time-entry, time-sheet, and billing-readi
   - Added normalized output schema: `time_entry` object with ids, duration/billable minutes, work date/timezone, sheet/service/contract references, and status fields.
 - (2026-04-27) Added DB-backed runtime action test: `shared/workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts` covering T001 scenario.
   - Test validates service requirement, user timezone work-date calculation (`America/Los_Angeles`), automatic time-sheet association, and normalized output/row persistence.
+- (2026-04-27) Implemented `F006` bucket usage side effects in workflow create-entry path in `shared/workflow/runtime/actions/businessOperations/timeDomain.ts`.
+  - Added explicit-tenant bucket period resolution (`client_billing_cycles` first, then contract-line anchored frequency period).
+  - Added bucket usage record upsert for `(tenant, client, contract_line, service, period)` and minutes/overage delta updates gated by `Bucket` overlay configuration.
+  - Hooked create-entry to apply delta from `billable_duration` after entry insert.
+- (2026-04-27) Added DB-backed runtime test case for `T002` in `shared/workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts`.
+  - Uses billing fixtures (`createFixedPlanAssignment`, `createBucketOverlayForPlan`) to seed a bucket-backed contract line.
+  - Verifies default contract-line selection and `bucket_usage.minutes_used` increment from workflow `time.create_entry`.
 
 ## Commands / Verification (This Pass)
 
@@ -70,6 +78,8 @@ Rolling notes for adding workflow-safe time-entry, time-sheet, and billing-readi
 - Attempted: `npx vitest run --config shared/vitest.config.ts workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts`
   - Blocked locally due DB connection refusal at `127.0.0.1:57432` / `::1:57432`.
   - Test file compiles/loads, but DB-backed execution requires local test Postgres availability.
+- Attempted after F006/T002 changes: `npx vitest run --config shared/vitest.config.ts workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts`
+  - Still blocked locally by the same test DB connection refusal (`127.0.0.1:57432`).
 
 ## Gotchas
 
@@ -77,3 +87,4 @@ Rolling notes for adding workflow-safe time-entry, time-sheet, and billing-readi
 - (2026-04-27) Implemented default contract-line resolution in workflow helper (`F005`) without depending on non-exported billing package subpaths.
   - Added tenant-scoped eligible-contract query with effective-date filtering and deterministic selection fallback (single eligible line, or single bucket-overlay candidate).
   - `time.create_entry` now assigns `contract_line_id` automatically when omitted and client/service context can resolve a default.
+- (2026-04-27) Bucket usage side-effect implementation in workflow helper intentionally keeps explicit tenant-scoped SQL in `timeDomain.ts` instead of importing `@alga-psa/billing`/`@alga-psa/scheduling` internals to avoid export-boundary and tenant-resolution brittleness in shared runtime tests.

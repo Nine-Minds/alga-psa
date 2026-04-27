@@ -3,6 +3,10 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
 import { createTestDbConnection, createTenant, createUser } from './_dbTestUtils';
+import {
+  createBucketOverlayForPlan,
+  createFixedPlanAssignment,
+} from '../../../../../server/test-utils/billingTestHelpers';
 
 const runtimeState = vi.hoisted(() => ({
   db: null as Knex | null,
@@ -283,5 +287,72 @@ describe('time workflow runtime DB-backed action handlers', () => {
 
     expect(sheet).toBeTruthy();
     expect(sheet.user_id).toBe(entryUserId);
+  });
+
+  it('T002: create-entry resolves default contract line and updates bucket usage for a representative billable bucket-backed service', async () => {
+    const entryUserId = await createUser(db, runtimeState.tenantId, {
+      user_type: 'internal',
+      first_name: 'Bucket',
+      last_name: 'User',
+      timezone: 'America/New_York',
+    });
+
+    const clientId = await createClient(db, runtimeState.tenantId, 'Bucket Usage Client');
+    const ticketId = await createTicket(db, {
+      tenantId: runtimeState.tenantId,
+      actorUserId: runtimeState.actorUserId,
+      clientId,
+    });
+    const serviceId = await createService(db, runtimeState.tenantId);
+    await createTimePeriod(db, runtimeState.tenantId, '2026-04-01', '2026-04-08');
+
+    const billingContext = {
+      db,
+      tenantId: runtimeState.tenantId,
+      clientId,
+      userId: runtimeState.actorUserId,
+    } as any;
+
+    const assignment = await createFixedPlanAssignment(billingContext, serviceId, {
+      clientId,
+      startDate: '2025-01-01',
+      billingFrequency: 'monthly',
+    });
+
+    await createBucketOverlayForPlan(billingContext, assignment.contractLineId, {
+      serviceId,
+      totalMinutes: 120,
+      allowRollover: false,
+      billingPeriod: 'monthly',
+    });
+
+    const result = await invokeAction('time.create_entry', {
+      user_id: entryUserId,
+      start: '2026-04-02T14:00:00.000Z',
+      duration_minutes: 30,
+      billable: true,
+      service_id: serviceId,
+      link: {
+        type: 'ticket',
+        id: ticketId,
+      },
+      notes: 'Bucket-backed workflow entry',
+    });
+
+    expect(result.time_entry.contract_line_id).toBe(assignment.contractLineId);
+    expect(result.time_entry.billable_minutes).toBe(30);
+
+    const usageRecord = await db('bucket_usage')
+      .where({
+        tenant: runtimeState.tenantId,
+        client_id: clientId,
+        contract_line_id: assignment.contractLineId,
+        service_catalog_id: serviceId,
+      })
+      .first();
+
+    expect(usageRecord).toBeTruthy();
+    expect(Number(usageRecord.minutes_used ?? 0)).toBe(30);
+    expect(Number(usageRecord.overage_minutes ?? 0)).toBe(0);
   });
 });
