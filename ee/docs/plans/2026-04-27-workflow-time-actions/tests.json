@@ -109,7 +109,7 @@
   {
     "id": "T012",
     "description": "Permission/authorization tests: workflow actor without required timeentry/timesheet permissions receives structured permission-denied action errors for read and mutation actions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002",
       "F030"
@@ -118,7 +118,7 @@
   {
     "id": "T013",
     "description": "Workflow registry/schema test: all time actions register with stable IDs, versions, side-effect/idempotency metadata, input/output schemas, and Time catalog grouping.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026",
       "F029"
@@ -127,7 +127,7 @@
   {
     "id": "T014",
     "description": "Workflow designer metadata test: user/ticket/textarea and any phase-1 service/contract/time pickers survive Zod-to-JSON-schema conversion and resolve to expected editor metadata.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027",
       "F028"
@@ -136,7 +136,7 @@
   {
     "id": "T015",
     "description": "Workflow runtime action test: mutating time actions write workflow run audit rows with action metadata and key changed entity IDs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]
@@ -144,7 +144,7 @@
   {
     "id": "T016",
     "description": "Compatibility test: existing or migrated `time.create_entry` input shape follows the chosen versioning decision and no longer bypasses canonical service/time-sheet/work-date behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F032"

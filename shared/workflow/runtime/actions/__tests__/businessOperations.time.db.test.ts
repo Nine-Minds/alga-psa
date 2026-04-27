@@ -1090,4 +1090,162 @@ describe('time workflow runtime DB-backed action handlers', () => {
     expect(summary.totals.non_billable_minutes).toBe(20);
     expect(summary.groups).toHaveLength(2);
   });
+
+  it('T012: workflow actor without required timeentry/timesheet permissions receives structured permission-denied action errors for read and mutation actions', async () => {
+    const entryUserId = await createUser(db, runtimeState.tenantId, {
+      user_type: 'internal',
+      first_name: 'Permission',
+      last_name: 'Denied',
+      timezone: 'America/New_York',
+    });
+    const clientId = await createClient(db, runtimeState.tenantId, 'Permission Client');
+    const ticketId = await createTicket(db, {
+      tenantId: runtimeState.tenantId,
+      actorUserId: runtimeState.actorUserId,
+      clientId,
+    });
+    const serviceId = await createService(db, runtimeState.tenantId);
+    await createTimePeriod(db, runtimeState.tenantId, '2026-04-01', '2026-04-08');
+
+    runtimeState.deniedPermissions.add('timeentry:create');
+    await expect(invokeAction('time.create_entry', {
+      user_id: entryUserId,
+      start: '2026-04-08T09:00:00.000Z',
+      duration_minutes: 15,
+      billable: true,
+      service_id: serviceId,
+      link: { type: 'ticket', id: ticketId },
+    })).rejects.toMatchObject({
+      code: 'PERMISSION_DENIED',
+    });
+    runtimeState.deniedPermissions.delete('timeentry:create');
+
+    const created = await invokeAction('time.create_entry', {
+      user_id: entryUserId,
+      start: '2026-04-08T10:00:00.000Z',
+      duration_minutes: 15,
+      billable: true,
+      service_id: serviceId,
+      link: { type: 'ticket', id: ticketId },
+    });
+
+    runtimeState.deniedPermissions.add('timeentry:read');
+    await expect(invokeAction('time.get_entry', {
+      entry_id: created.time_entry.entry_id,
+    })).rejects.toMatchObject({
+      code: 'PERMISSION_DENIED',
+    });
+    runtimeState.deniedPermissions.delete('timeentry:read');
+
+    runtimeState.deniedPermissions.add('timesheet:approve');
+    await expect(invokeAction('time.set_entry_approval_status', {
+      entry_id: created.time_entry.entry_id,
+      approval_status: 'SUBMITTED',
+    })).rejects.toMatchObject({
+      code: 'PERMISSION_DENIED',
+    });
+  });
+
+  it('T015: mutating time actions write workflow run audit rows with action metadata and key changed entity IDs', async () => {
+    const entryUserId = await createUser(db, runtimeState.tenantId, {
+      user_type: 'internal',
+      first_name: 'Audit',
+      last_name: 'Trail',
+      timezone: 'America/New_York',
+    });
+    const clientId = await createClient(db, runtimeState.tenantId, 'Audit Client');
+    const ticketId = await createTicket(db, {
+      tenantId: runtimeState.tenantId,
+      actorUserId: runtimeState.actorUserId,
+      clientId,
+    });
+    const serviceId = await createService(db, runtimeState.tenantId);
+    await createTimePeriod(db, runtimeState.tenantId, '2026-04-01', '2026-04-08');
+
+    const runIdCreate = uuidv4();
+    const created = await invokeAction('time.create_entry', {
+      user_id: entryUserId,
+      start: '2026-04-08T14:00:00.000Z',
+      duration_minutes: 20,
+      billable: true,
+      service_id: serviceId,
+      link: { type: 'ticket', id: ticketId },
+    }, { runId: runIdCreate });
+
+    const createAudit = await db('audit_logs')
+      .where({
+        tenant: runtimeState.tenantId,
+        record_id: runIdCreate,
+        operation: 'workflow_action:time.create_entry',
+      })
+      .first();
+    expect(createAudit).toBeTruthy();
+    expect(createAudit.details.action_id).toBe('time.create_entry');
+    expect(createAudit.changed_data.entry_id).toBe(created.time_entry.entry_id);
+
+    const runIdSubmit = uuidv4();
+    const submitted = await invokeAction('time.submit_timesheet', {
+      time_sheet_id: created.time_entry.time_sheet_id,
+    }, { runId: runIdSubmit });
+
+    const submitAudit = await db('audit_logs')
+      .where({
+        tenant: runtimeState.tenantId,
+        record_id: runIdSubmit,
+        operation: 'workflow_action:time.submit_timesheet',
+      })
+      .first();
+    expect(submitAudit).toBeTruthy();
+    expect(submitAudit.details.action_id).toBe('time.submit_timesheet');
+    expect(submitAudit.changed_data.time_sheet_id).toBe(submitted.time_sheet.time_sheet_id);
+  });
+
+  it('T016: existing/migrated time.create_entry input shape follows compatibility decision and enforces canonical service/timesheet/work-date behavior', async () => {
+    const entryUserId = await createUser(db, runtimeState.tenantId, {
+      user_type: 'internal',
+      first_name: 'Compat',
+      last_name: 'Alias',
+      timezone: 'America/Los_Angeles',
+    });
+    const clientId = await createClient(db, runtimeState.tenantId, 'Compatibility Client');
+    const ticketId = await createTicket(db, {
+      tenantId: runtimeState.tenantId,
+      actorUserId: runtimeState.actorUserId,
+      clientId,
+    });
+    const serviceId = await createService(db, runtimeState.tenantId);
+    await createTimePeriod(db, runtimeState.tenantId, '2026-04-01', '2026-04-08');
+
+    const billingContext = {
+      db,
+      tenantId: runtimeState.tenantId,
+      clientId,
+      userId: runtimeState.actorUserId,
+    } as any;
+
+    const assignment = await createFixedPlanAssignment(billingContext, serviceId, {
+      clientId,
+      startDate: '2025-01-01',
+      billingFrequency: 'monthly',
+    });
+
+    const result = await invokeAction('time.create_entry', {
+      user_id: entryUserId,
+      start: '2026-04-02T06:30:00.000Z',
+      duration_minutes: 60,
+      billable: true,
+      service_id: serviceId,
+      billing_plan_id: assignment.contractLineId,
+      link: {
+        type: 'ticket',
+        id: ticketId,
+      },
+      notes: 'Compatibility alias test',
+    });
+
+    expect(result.time_entry.contract_line_id).toBe(assignment.contractLineId);
+    expect(result.time_entry.time_sheet_id).toBeTruthy();
+    expect(result.time_entry.work_date).toBe('2026-04-01');
+    expect(result.time_entry.work_timezone).toBe('America/Los_Angeles');
+  });
 });

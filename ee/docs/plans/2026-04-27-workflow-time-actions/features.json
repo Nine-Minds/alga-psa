@@ -206,7 +206,7 @@
   {
     "id": "F026",
     "description": "Add workflow action input schemas and output schemas for all new time actions with stable IDs, descriptions, and examples where useful.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Workflow registry integration",
       "UX / UI Notes"
@@ -215,7 +215,7 @@
   {
     "id": "F027",
     "description": "Add editor metadata for user, ticket, notes/comment textarea fields, and other high-value fixed/reference inputs supported by current picker infrastructure.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ]
@@ -223,7 +223,7 @@
   {
     "id": "F028",
     "description": "Decide and implement minimal additional fixed picker support for service, contract line, time entry, time sheet, and time period fields if included in phase 1.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Open Questions"
@@ -232,7 +232,7 @@
   {
     "id": "F029",
     "description": "Register all time actions under `registerTimeActions()` and ensure the Workflow Designer Time catalog group lists the expanded action set.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Workflow registry integration"
     ]
@@ -240,7 +240,7 @@
   {
     "id": "F030",
     "description": "Enforce workflow actor permissions for time entry and time sheet actions, including acting-on-behalf and approval constraints where applicable.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions"
     ]
@@ -248,7 +248,7 @@
   {
     "id": "F031",
     "description": "Ensure mutating actions write workflow run audit records with action id, version, step path, key entity IDs, and changed summary data.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Observability / Auditability"
     ]
@@ -256,7 +256,7 @@
   {
     "id": "F032",
     "description": "Document behavior changes and compatibility decisions for `time.create_entry`, especially service requirement and canonical side effects.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Versioning / compatibility"

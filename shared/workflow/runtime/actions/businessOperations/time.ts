@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
+import { withWorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
 import {
   uuidSchema,
   isoDateTimeSchema,
@@ -36,10 +37,38 @@ import {
   type WorkflowTimeSummaryGroupBy,
 } from './timeDomain';
 
+const TIME_WORKFLOW_PICKER_HINTS = {
+  user: 'Search users',
+  ticket: 'Search tickets',
+} as const;
+
+const withTimeWorkflowPicker = <T extends z.ZodTypeAny>(
+  schema: T,
+  description: string,
+  kind: keyof typeof TIME_WORKFLOW_PICKER_HINTS,
+  dependencies?: string[]
+): T =>
+  withWorkflowJsonSchemaMetadata(schema, description, {
+    'x-workflow-picker-kind': kind,
+    'x-workflow-picker-dependencies': dependencies,
+    'x-workflow-picker-fixed-value-hint': TIME_WORKFLOW_PICKER_HINTS[kind],
+    'x-workflow-picker-allow-dynamic-reference': true,
+  });
+
+const withTimeWorkflowTextarea = <T extends z.ZodTypeAny>(schema: T, description: string): T =>
+  withWorkflowJsonSchemaMetadata(schema, description, {
+    'x-workflow-editor': {
+      kind: 'text',
+      inline: { mode: 'textarea' },
+      dialog: { mode: 'large-text' },
+      allowsDynamicReference: true,
+    },
+  });
+
 const timeEntryLinkSchema = z.object({
   type: z.enum(['ticket', 'project', 'project_task', 'interaction', 'ad_hoc', 'non_billable_category'])
     .describe('Work item type for the time entry'),
-  id: uuidSchema.describe('Work item id')
+  id: withTimeWorkflowPicker(uuidSchema, 'Work item id', 'ticket')
 });
 
 export function registerTimeActions(): void {
@@ -49,7 +78,7 @@ export function registerTimeActions(): void {
     id: 'time.create_entry',
     version: 1,
     inputSchema: z.object({
-      user_id: uuidSchema.describe('User id that owns the time entry'),
+      user_id: withTimeWorkflowPicker(uuidSchema, 'User id that owns the time entry', 'user'),
       start: isoDateTimeSchema.describe('Start timestamp in ISO-8601 format'),
       end: isoDateTimeSchema.optional().describe('End timestamp in ISO-8601 format'),
       duration_minutes: z.number().int().min(0).optional().describe('Duration in minutes (used when end is omitted)'),
@@ -59,7 +88,7 @@ export function registerTimeActions(): void {
       service_id: uuidSchema.describe('Service id for the time entry'),
       contract_line_id: uuidSchema.nullable().optional().describe('Optional contract line id'),
       tax_rate_id: uuidSchema.nullable().optional().describe('Optional tax rate id'),
-      notes: z.string().optional().describe('Optional notes'),
+      notes: withTimeWorkflowTextarea(z.string().optional(), 'Optional notes'),
       time_sheet_id: uuidSchema.nullable().optional().describe('Optional explicit time sheet id'),
       attach_to_timesheet: z.boolean().default(true).describe('Automatically find/create a time sheet from work_date when true'),
       billing_plan_id: uuidSchema.nullable().optional().describe('Deprecated alias for contract_line_id (kept for compatibility)')
@@ -183,11 +212,11 @@ export function registerTimeActions(): void {
         'billable',
         'work_date',
       ])).max(5).optional(),
-      user_id: uuidSchema.optional(),
+      user_id: withTimeWorkflowPicker(uuidSchema.optional(), 'Optional user filter', 'user'),
       work_item_id: uuidSchema.optional(),
       work_item_type: z.enum(['ticket', 'project', 'project_task', 'interaction', 'ad_hoc', 'non_billable_category']).optional(),
       client_id: uuidSchema.optional(),
-      ticket_id: uuidSchema.optional(),
+      ticket_id: withTimeWorkflowPicker(uuidSchema.optional(), 'Optional ticket filter', 'ticket'),
       project_task_id: uuidSchema.optional(),
       time_sheet_id: uuidSchema.optional(),
       service_id: uuidSchema.optional(),
@@ -255,11 +284,11 @@ export function registerTimeActions(): void {
     inputSchema: z.object({
       entry_ids: z.array(uuidSchema).max(500).optional(),
       require_timesheet: z.boolean().default(false),
-      user_id: uuidSchema.optional(),
+      user_id: withTimeWorkflowPicker(uuidSchema.optional(), 'Optional user filter', 'user'),
       work_item_id: uuidSchema.optional(),
       work_item_type: z.enum(['ticket', 'project', 'project_task', 'interaction', 'ad_hoc', 'non_billable_category']).optional(),
       client_id: uuidSchema.optional(),
-      ticket_id: uuidSchema.optional(),
+      ticket_id: withTimeWorkflowPicker(uuidSchema.optional(), 'Optional ticket filter', 'ticket'),
       project_task_id: uuidSchema.optional(),
       time_sheet_id: uuidSchema.optional(),
       service_id: uuidSchema.optional(),
@@ -316,11 +345,11 @@ export function registerTimeActions(): void {
     inputSchema: z.object({
       entry_ids: z.array(uuidSchema).max(500).optional(),
       require_timesheet: z.boolean().default(false),
-      user_id: uuidSchema.optional(),
+      user_id: withTimeWorkflowPicker(uuidSchema.optional(), 'Optional user filter', 'user'),
       work_item_id: uuidSchema.optional(),
       work_item_type: z.enum(['ticket', 'project', 'project_task', 'interaction', 'ad_hoc', 'non_billable_category']).optional(),
       client_id: uuidSchema.optional(),
-      ticket_id: uuidSchema.optional(),
+      ticket_id: withTimeWorkflowPicker(uuidSchema.optional(), 'Optional ticket filter', 'ticket'),
       project_task_id: uuidSchema.optional(),
       time_sheet_id: uuidSchema.optional(),
       service_id: uuidSchema.optional(),
@@ -406,12 +435,26 @@ export function registerTimeActions(): void {
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'timesheet', action: 'submit' });
       try {
-        return await submitWorkflowTimeSheet({
+        const result = await submitWorkflowTimeSheet({
           trx: tx.trx,
           tenantId: tx.tenantId,
           actorUserId: tx.actorUserId,
           timeSheetId: input.time_sheet_id,
         });
+        await writeRunAudit(ctx, tx, {
+          operation: 'workflow_action:time.submit_timesheet',
+          changedData: {
+            time_sheet_id: result.time_sheet.time_sheet_id,
+            approval_status: result.time_sheet.approval_status,
+            entry_count: result.time_sheet.entry_count,
+          },
+          details: {
+            action_id: 'time.submit_timesheet',
+            action_version: 1,
+            time_sheet_id: result.time_sheet.time_sheet_id,
+          }
+        });
+        return result;
       } catch (error) {
         if (error instanceof WorkflowTimeDomainError) {
           throwActionError(ctx, {
@@ -431,7 +474,7 @@ export function registerTimeActions(): void {
     version: 1,
     inputSchema: z.object({
       time_sheet_id: uuidSchema.describe('Time sheet id to approve'),
-      comment: z.string().optional().describe('Optional approver comment'),
+      comment: withTimeWorkflowTextarea(z.string().optional(), 'Optional approver comment'),
     }),
     outputSchema: z.object({
       time_sheet: z.object({
@@ -460,13 +503,27 @@ export function registerTimeActions(): void {
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'timesheet', action: 'approve' });
       try {
-        return await approveWorkflowTimeSheet({
+        const result = await approveWorkflowTimeSheet({
           trx: tx.trx,
           tenantId: tx.tenantId,
           actorUserId: tx.actorUserId,
           timeSheetId: input.time_sheet_id,
           comment: input.comment,
         });
+        await writeRunAudit(ctx, tx, {
+          operation: 'workflow_action:time.approve_timesheet',
+          changedData: {
+            time_sheet_id: result.time_sheet.time_sheet_id,
+            approval_status: result.time_sheet.approval_status,
+            approved_by: result.time_sheet.approved_by,
+          },
+          details: {
+            action_id: 'time.approve_timesheet',
+            action_version: 1,
+            time_sheet_id: result.time_sheet.time_sheet_id,
+          }
+        });
+        return result;
       } catch (error) {
         if (error instanceof WorkflowTimeDomainError) {
           throwActionError(ctx, {
@@ -486,7 +543,7 @@ export function registerTimeActions(): void {
     version: 1,
     inputSchema: z.object({
       time_sheet_id: uuidSchema.describe('Time sheet id'),
-      comment: z.string().min(1).describe('Approver change-request comment'),
+      comment: withTimeWorkflowTextarea(z.string().min(1), 'Approver change-request comment'),
     }),
     outputSchema: z.object({
       time_sheet: z.object({
@@ -515,13 +572,26 @@ export function registerTimeActions(): void {
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'timesheet', action: 'approve' });
       try {
-        return await requestWorkflowTimeSheetChanges({
+        const result = await requestWorkflowTimeSheetChanges({
           trx: tx.trx,
           tenantId: tx.tenantId,
           actorUserId: tx.actorUserId,
           timeSheetId: input.time_sheet_id,
           comment: input.comment,
         });
+        await writeRunAudit(ctx, tx, {
+          operation: 'workflow_action:time.request_timesheet_changes',
+          changedData: {
+            time_sheet_id: result.time_sheet.time_sheet_id,
+            approval_status: result.time_sheet.approval_status,
+          },
+          details: {
+            action_id: 'time.request_timesheet_changes',
+            action_version: 1,
+            time_sheet_id: result.time_sheet.time_sheet_id,
+          }
+        });
+        return result;
       } catch (error) {
         if (error instanceof WorkflowTimeDomainError) {
           throwActionError(ctx, {
@@ -541,7 +611,7 @@ export function registerTimeActions(): void {
     version: 1,
     inputSchema: z.object({
       time_sheet_id: uuidSchema.describe('Approved time sheet id'),
-      reason: z.string().min(1).describe('Reason for reversing approval'),
+      reason: withTimeWorkflowTextarea(z.string().min(1), 'Reason for reversing approval'),
     }),
     outputSchema: z.object({
       time_sheet: z.object({
@@ -570,13 +640,26 @@ export function registerTimeActions(): void {
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'timesheet', action: 'reverse' });
       try {
-        return await reverseWorkflowTimeSheetApproval({
+        const result = await reverseWorkflowTimeSheetApproval({
           trx: tx.trx,
           tenantId: tx.tenantId,
           actorUserId: tx.actorUserId,
           timeSheetId: input.time_sheet_id,
           reason: input.reason,
         });
+        await writeRunAudit(ctx, tx, {
+          operation: 'workflow_action:time.reverse_timesheet_approval',
+          changedData: {
+            time_sheet_id: result.time_sheet.time_sheet_id,
+            approval_status: result.time_sheet.approval_status,
+          },
+          details: {
+            action_id: 'time.reverse_timesheet_approval',
+            action_version: 1,
+            time_sheet_id: result.time_sheet.time_sheet_id,
+          }
+        });
+        return result;
       } catch (error) {
         if (error instanceof WorkflowTimeDomainError) {
           throwActionError(ctx, {
@@ -596,7 +679,7 @@ export function registerTimeActions(): void {
     version: 1,
     inputSchema: z.object({
       time_sheet_id: uuidSchema.describe('Time sheet id'),
-      comment: z.string().min(1).describe('Comment text'),
+      comment: withTimeWorkflowTextarea(z.string().min(1), 'Comment text'),
       is_approver: z.boolean().default(false).describe('Mark comment as approver-authored'),
     }),
     outputSchema: z.object({
@@ -636,7 +719,7 @@ export function registerTimeActions(): void {
         await requirePermission(ctx, tx, { resource: 'timesheet', action: 'approve' });
       }
       try {
-        return await addWorkflowTimeSheetComment({
+        const result = await addWorkflowTimeSheetComment({
           trx: tx.trx,
           tenantId: tx.tenantId,
           actorUserId: tx.actorUserId,
@@ -644,6 +727,21 @@ export function registerTimeActions(): void {
           comment: input.comment,
           isApprover: input.is_approver,
         });
+        await writeRunAudit(ctx, tx, {
+          operation: 'workflow_action:time.add_timesheet_comment',
+          changedData: {
+            time_sheet_id: result.time_sheet.time_sheet_id,
+            comment_id: result.comment.comment_id,
+            is_approver: result.comment.is_approver,
+          },
+          details: {
+            action_id: 'time.add_timesheet_comment',
+            action_version: 1,
+            time_sheet_id: result.time_sheet.time_sheet_id,
+            comment_id: result.comment.comment_id,
+          }
+        });
+        return result;
       } catch (error) {
         if (error instanceof WorkflowTimeDomainError) {
           throwActionError(ctx, {
@@ -662,7 +760,7 @@ export function registerTimeActions(): void {
     id: 'time.find_or_create_timesheet',
     version: 1,
     inputSchema: z.object({
-      user_id: uuidSchema.describe('Timesheet owner user id'),
+      user_id: withTimeWorkflowPicker(uuidSchema, 'Timesheet owner user id', 'user'),
       period_id: uuidSchema.optional().describe('Optional explicit time period id'),
       work_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe('Optional work date used to resolve an open period'),
     }).superRefine((value, issueCtx) => {
@@ -708,6 +806,20 @@ export function registerTimeActions(): void {
           userId: input.user_id,
           periodId: input.period_id,
           workDate: input.work_date,
+        });
+        await writeRunAudit(ctx, tx, {
+          operation: 'workflow_action:time.find_or_create_timesheet',
+          changedData: {
+            time_sheet_id: result.time_sheet_id,
+            user_id: result.user_id,
+            period_id: result.period_id,
+            approval_status: result.approval_status,
+          },
+          details: {
+            action_id: 'time.find_or_create_timesheet',
+            action_version: 1,
+            time_sheet_id: result.time_sheet_id,
+          }
         });
         return { time_sheet: result };
       } catch (error) {
@@ -788,7 +900,7 @@ export function registerTimeActions(): void {
     id: 'time.find_timesheets',
     version: 1,
     inputSchema: z.object({
-      user_ids: z.array(uuidSchema).max(100).optional().describe('Optional user filter'),
+      user_ids: z.array(withTimeWorkflowPicker(uuidSchema, 'User filter item', 'user')).max(100).optional().describe('Optional user filter'),
       approval_status: z.enum(['DRAFT', 'SUBMITTED', 'APPROVED', 'CHANGES_REQUESTED']).optional()
         .describe('Optional status filter'),
       period_start_from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe('Lower period start bound (inclusive)'),
@@ -853,7 +965,7 @@ export function registerTimeActions(): void {
       entry_id: uuidSchema.describe('Time entry id to update approval status for'),
       approval_status: z.enum(['DRAFT', 'SUBMITTED', 'APPROVED', 'CHANGES_REQUESTED'])
         .describe('Target approval status'),
-      change_request_comment: z.string().optional().describe('Required when requesting changes'),
+      change_request_comment: withTimeWorkflowTextarea(z.string().optional(), 'Required when requesting changes'),
     }).superRefine((value, issueCtx) => {
       if (value.approval_status === 'CHANGES_REQUESTED' && !value.change_request_comment?.trim()) {
         issueCtx.addIssue({
@@ -921,7 +1033,7 @@ export function registerTimeActions(): void {
     version: 1,
     inputSchema: z.object({
       entry_ids: z.array(uuidSchema).min(1).max(200).describe('Entry ids to move to CHANGES_REQUESTED'),
-      comment: z.string().min(1).describe('Change request comment'),
+      comment: withTimeWorkflowTextarea(z.string().min(1), 'Change request comment'),
     }),
     outputSchema: z.object({
       entries: z.array(z.object({
@@ -1038,12 +1150,12 @@ export function registerTimeActions(): void {
     id: 'time.find_entries',
     version: 1,
     inputSchema: z.object({
-      user_id: uuidSchema.optional().describe('Filter by entry owner user id'),
+      user_id: withTimeWorkflowPicker(uuidSchema.optional(), 'Filter by entry owner user id', 'user'),
       work_item_id: uuidSchema.optional().describe('Filter by work item id'),
       work_item_type: z.enum(['ticket', 'project', 'project_task', 'interaction', 'ad_hoc', 'non_billable_category']).optional()
         .describe('Filter by work item type'),
       client_id: uuidSchema.optional().describe('Filter by client id inferred from linked work items'),
-      ticket_id: uuidSchema.optional().describe('Filter by ticket id'),
+      ticket_id: withTimeWorkflowPicker(uuidSchema.optional(), 'Filter by ticket id', 'ticket'),
       project_task_id: uuidSchema.optional().describe('Filter by project task id'),
       time_sheet_id: uuidSchema.optional().describe('Filter by time sheet id'),
       service_id: uuidSchema.optional().describe('Filter by service id'),
@@ -1128,7 +1240,7 @@ export function registerTimeActions(): void {
       service_id: uuidSchema.optional().describe('Optional updated service id'),
       contract_line_id: uuidSchema.nullable().optional().describe('Optional updated contract line id'),
       tax_rate_id: uuidSchema.nullable().optional().describe('Optional updated tax rate id'),
-      notes: z.string().nullable().optional().describe('Optional updated notes'),
+      notes: withTimeWorkflowTextarea(z.string().nullable().optional(), 'Optional updated notes'),
       time_sheet_id: uuidSchema.nullable().optional().describe('Optional explicit time sheet id'),
       attach_to_timesheet: z.boolean().optional().describe('When false, detaches from timesheet; when true, enforces association'),
     }),

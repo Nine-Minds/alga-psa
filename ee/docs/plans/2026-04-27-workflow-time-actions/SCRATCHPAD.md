@@ -12,6 +12,7 @@ Rolling notes for adding workflow-safe time-entry, time-sheet, and billing-readi
 - (2026-04-27) Scope option selected: core time entry actions, core time sheet actions, and readiness helpers. Timers and broad picker expansion can be deferred unless required by core flows.
 - (2026-04-27) Implementation approach selected: create workflow-safe helpers/services that preserve canonical time module behavior, then build workflow actions on top of those helpers. Do not continue direct DB writes that bypass time-entry business logic.
 - (2026-04-27) Existing `time.create_entry` should be treated as incomplete/prototype behavior and brought onto the canonical helper path rather than expanded as-is.
+- (2026-04-27) Picker scope decision (`F028`): keep phase-1 fixed picker expansion minimal to currently supported infrastructure (user/ticket + textarea metadata). Service/contract/time-entry/time-sheet/time-period dedicated fixed pickers are explicitly deferred; schema descriptions and dynamic-reference support remain the fallback for those IDs.
 
 ## Discoveries / Constraints
 
@@ -121,6 +122,25 @@ Rolling notes for adding workflow-safe time-entry, time-sheet, and billing-readi
 - (2026-04-27) Added DB-backed runtime tests for `T010` and `T011` in `shared/workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts`.
   - `T010`: blocker category detection and validation failure summary.
   - `T011`: summary totals and grouped output verification.
+- (2026-04-27) Added explicit time action registration/metadata test file: `shared/workflow/runtime/actions/__tests__/registerTimeActionsMetadata.test.ts`.
+  - `T013`: verifies time action registration completeness, stable ids/versions, idempotency metadata, and Time catalog grouping.
+  - `T014`: verifies user/ticket picker metadata and textarea editor metadata survive Zod->JSON schema conversion for representative time action inputs.
+- (2026-04-27) Added workflow JSON-schema metadata annotations in `time.ts` for high-value user/ticket picker fields and long-text comment/note inputs.
+- (2026-04-27) Added DB-backed runtime permission test case `T012` in `shared/workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts`.
+  - Verifies structured `PERMISSION_DENIED` errors for denied `timeentry:create`, `timeentry:read`, and `timesheet:approve` paths.
+- (2026-04-27) Implemented workflow audit writes for additional mutating time actions in `time.ts`:
+  - `time.find_or_create_timesheet`
+  - `time.submit_timesheet`
+  - `time.approve_timesheet`
+  - `time.request_timesheet_changes`
+  - `time.reverse_timesheet_approval`
+  - `time.add_timesheet_comment`
+- (2026-04-27) Added DB-backed runtime tests:
+  - `T015`: verifies mutating time actions emit workflow run audit rows with action metadata and changed IDs.
+  - `T016`: verifies `time.create_entry` compatibility alias (`billing_plan_id`) still routes through canonical service/time-sheet/work-date behavior.
+- (2026-04-27) Compatibility decision documentation status (`F032`):
+  - Keep `time.create_entry@v1` and preserve input compatibility via `billing_plan_id` alias while enforcing canonical semantics.
+  - Behavior now always runs through workflow-safe helper path with service validation, timezone work-date, timesheet association, and side effects.
 
 ## Commands / Verification (This Pass)
 
@@ -147,6 +167,15 @@ Rolling notes for adding workflow-safe time-entry, time-sheet, and billing-readi
 - Attempted: `npx tsc -p shared/tsconfig.json --noEmit`
   - Fails due pre-existing workspace TS config/module issues outside this feature area (`@alga-psa/sla/types`, alias `@/lib/*`, and existing `server/test-utils/dbReset.ts` declaration-order error).
 - Ran: `npx vitest run --config shared/vitest.config.ts workflow/runtime/__tests__/workflowDesignerActionCatalog.test.ts` (pass after each action-registration expansion).
+- Ran: `npx vitest run --config shared/vitest.config.ts workflow/runtime/actions/__tests__/registerTimeActionsMetadata.test.ts` (pass)
+- Attempted after permission test additions: `npx vitest run --config shared/vitest.config.ts workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts`
+  - Compile/import succeeds, but DB-backed execution remains blocked by the same local connection refusal (`127.0.0.1:57432`).
+- Attempted after T015/T016 additions: `npx vitest run --config shared/vitest.config.ts workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts`
+  - Compile/import succeeds, but DB-backed execution remains blocked by the same local connection refusal (`127.0.0.1:57432`).
+- Ran: `npx vitest run --config shared/vitest.config.ts workflow/runtime/actions/__tests__/registerTimeActionsMetadata.test.ts workflow/runtime/__tests__/workflowDesignerActionCatalog.test.ts` (pass)
+- Re-ran: `npx vitest run --config shared/vitest.config.ts workflow/runtime/actions/__tests__/registerTimeActionsMetadata.test.ts workflow/runtime/__tests__/workflowDesignerActionCatalog.test.ts` (pass, 2026-04-27 final verification before completion)
+- Re-ran: `npx vitest run --config shared/vitest.config.ts workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts` (still blocked by local DB connection refusal at `::1/127.0.0.1:57432`; tests skipped due suite setup failure)
+- Verified remaining checklist state with `jq`: `features.json` false count = `0`, `tests.json` false count = `0`.
 
 ## Gotchas
 
