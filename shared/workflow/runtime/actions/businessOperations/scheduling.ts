@@ -2,7 +2,7 @@ import type { Knex } from 'knex';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import ScheduleEntry from '../../../../../packages/scheduling/src/models/scheduleEntry';
-import type { IEditScope } from '@alga-psa/types';
+import { IEditScope } from '@alga-psa/types';
 import { withWorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import {
@@ -63,7 +63,39 @@ const schedulingEntrySummarySchema = z.object({
   assigned_user_ids: z.array(uuidSchema),
 });
 
-type SchedulingEntrySummary = z.infer<typeof schedulingEntrySummarySchema>;
+type SchedulingEntrySummary = {
+  entry_id: string;
+  original_entry_id?: string | null;
+  title: string;
+  notes?: string | null;
+  status: string;
+  scheduled_start: string;
+  scheduled_end: string;
+  work_item_id?: string | null;
+  work_item_type?: string | null;
+  is_private: boolean;
+  is_recurring: boolean;
+  assigned_user_ids: string[];
+};
+
+function parseSchedulingEntrySummary(value: unknown): SchedulingEntrySummary {
+  return schedulingEntrySummarySchema.parse(value) as SchedulingEntrySummary;
+}
+
+type AppointmentScheduleEntry = Parameters<typeof shouldEmitAppointmentEvents>[0];
+
+function toAppointmentScheduleEntry(entry: SchedulingEntrySummary): AppointmentScheduleEntry {
+  return {
+    entry_id: entry.entry_id,
+    status: entry.status,
+    scheduled_start: entry.scheduled_start,
+    scheduled_end: entry.scheduled_end,
+    work_item_id: entry.work_item_id,
+    work_item_type: entry.work_item_type,
+    assigned_user_ids: entry.assigned_user_ids,
+  };
+}
+
 type ConflictRow = {
   entry_id: string;
   original_entry_id: string | null;
@@ -124,20 +156,34 @@ function isSameUserSet(left: string[], right: string[]): boolean {
   return true;
 }
 
-function toRecurrenceScope(value: z.infer<typeof recurrenceScopeSchema>): IEditScope {
-  return value;
+type RecurrenceScope = z.infer<typeof recurrenceScopeSchema>;
+
+function toRecurrenceScope(value: RecurrenceScope | undefined): IEditScope {
+  switch (value ?? 'single') {
+    case 'future':
+      return IEditScope.FUTURE;
+    case 'all':
+      return IEditScope.ALL;
+    case 'single':
+    default:
+      return IEditScope.SINGLE;
+  }
+}
+
+function normalizeRecurrenceScope(value: RecurrenceScope | undefined): RecurrenceScope {
+  return value ?? 'single';
 }
 
 function getVirtualOccurrenceAnchors(
   entryRef: string,
-  recurrenceScope: z.infer<typeof recurrenceScopeSchema>,
+  recurrenceScope: RecurrenceScope | undefined,
   before: SchedulingEntrySummary
-): { scheduled_start?: string; scheduled_end?: string } {
+): { scheduled_start?: Date; scheduled_end?: Date } {
   if (!entryRef.includes('_')) return {};
   if (recurrenceScope !== 'single') return {};
   return {
-    scheduled_start: before.scheduled_start,
-    scheduled_end: before.scheduled_end,
+    scheduled_start: new Date(before.scheduled_start),
+    scheduled_end: new Date(before.scheduled_end),
   };
 }
 
@@ -149,7 +195,7 @@ async function loadEntryByReference(tx: TenantTxContext, entryRef: string): Prom
     const entry = await ScheduleEntry.get(tx.trx, tx.tenantId, trimmedRef);
     if (!entry) return null;
 
-    return schedulingEntrySummarySchema.parse({
+    return parseSchedulingEntrySummary({
       entry_id: entry.entry_id,
       original_entry_id: (entry.original_entry_id as string | null | undefined) ?? null,
       title: String(entry.title ?? ''),
@@ -175,7 +221,7 @@ async function loadEntryByReference(tx: TenantTxContext, entryRef: string): Prom
   const found = entries.find((entry: { entry_id?: string }) => entry.entry_id === trimmedRef);
   if (!found) return null;
 
-  return schedulingEntrySummarySchema.parse({
+  return parseSchedulingEntrySummary({
     entry_id: found.entry_id,
     original_entry_id: (found.original_entry_id as string | null | undefined) ?? null,
     title: String(found.title ?? ''),
@@ -551,7 +597,7 @@ export function registerSchedulingActions(): void {
           const queryBuilder = tx.trx('schedule_entries as se')
             .where({ 'se.tenant': tx.tenantId })
             .orderBy('se.scheduled_start', 'asc')
-            .limit(input.limit)
+            .limit(input.limit ?? 25)
             .select('se.*');
 
           if (input.window?.start) {
@@ -563,9 +609,11 @@ export function registerSchedulingActions(): void {
           if (input.work_item) {
             queryBuilder.andWhere({ 'se.work_item_type': input.work_item.type, 'se.work_item_id': input.work_item.id });
           }
-          if (input.status && input.status.length > 0) {
+          const statusFilters = input.status?.map((status) => status.toLowerCase()) ?? [];
+          if (statusFilters.length > 0) {
+            const placeholders = statusFilters.map(() => '?').join(', ');
             queryBuilder.andWhere(function matchStatus(this: Knex.QueryBuilder) {
-              this.whereIn(tx.trx.raw('lower(se.status)'), input.status.map((status) => status.toLowerCase()));
+              this.whereRaw(`lower(se.status) in (${placeholders})`, statusFilters);
             });
           }
           if (input.query) {
@@ -590,13 +638,14 @@ export function registerSchedulingActions(): void {
               });
             });
           }
-          if (input.assigned_user_ids && input.assigned_user_ids.length > 0) {
-            queryBuilder.andWhereExists(function whereAssigned() {
+          const assignedUserIdsFilter = input.assigned_user_ids ?? [];
+          if (assignedUserIdsFilter.length > 0) {
+            queryBuilder.whereExists(function whereAssigned(this: Knex.QueryBuilder) {
               this.select(tx.trx.raw('1'))
                 .from('schedule_entry_assignees as sea')
                 .whereRaw('sea.tenant = se.tenant')
                 .whereRaw('sea.entry_id = se.entry_id')
-                .whereIn('sea.user_id', input.assigned_user_ids ?? []);
+                .whereIn('sea.user_id', assignedUserIdsFilter);
             });
           }
 
@@ -619,7 +668,7 @@ export function registerSchedulingActions(): void {
 
           const entries: SchedulingEntrySummary[] = [];
           for (const row of rows as Array<Record<string, unknown>>) {
-            const parsed = schedulingEntrySummarySchema.parse({
+            const parsed = parseSchedulingEntrySummary({
               entry_id: row.entry_id,
               original_entry_id: (row.original_entry_id as string | null | undefined) ?? null,
               title: String(row.title ?? ''),
@@ -697,6 +746,8 @@ export function registerSchedulingActions(): void {
             throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'window.start must be before window.end' });
           }
 
+          const recurrenceScope = normalizeRecurrenceScope(input.recurrence_scope);
+          const conflictMode = input.conflict_mode ?? 'fail';
           const targetSeriesId = before.original_entry_id ?? before.entry_id.split('_')[0] ?? before.entry_id;
           const durationMs = new Date(input.window.end).getTime() - new Date(input.window.start).getTime();
 
@@ -709,7 +760,7 @@ export function registerSchedulingActions(): void {
             targetSeriesId,
           });
 
-          if (detectedConflicts.length > 0 && input.conflict_mode === 'fail') {
+          if (detectedConflicts.length > 0 && conflictMode === 'fail') {
             throwActionError(ctx, {
               category: 'ActionError',
               code: 'CONFLICT',
@@ -726,7 +777,7 @@ export function registerSchedulingActions(): void {
             });
           }
 
-          if (detectedConflicts.length > 0 && input.conflict_mode === 'shift') {
+          if (detectedConflicts.length > 0 && conflictMode === 'shift') {
             const maxAttempts = 32;
             let attempts = 0;
             while (detectedConflicts.length > 0 && attempts < maxAttempts) {
@@ -751,24 +802,24 @@ export function registerSchedulingActions(): void {
             }
           }
 
-          const nextNotes = appendEntryNotes(before.notes, [input.reason ? `Reschedule reason: ${input.reason}` : undefined, input.note]);
+          const nextNotes = appendEntryNotes(before.notes, [input.reason ? `Reschedule reason: ${input.reason}` : undefined, input.note]) ?? undefined;
           const updated = await ScheduleEntry.update(
             tx.trx,
             tx.tenantId,
             input.entry_id,
             {
-              scheduled_start: nextStartIso,
-              scheduled_end: nextEndIso,
+              scheduled_start: new Date(nextStartIso),
+              scheduled_end: new Date(nextEndIso),
               notes: nextNotes,
             },
-            toRecurrenceScope(input.recurrence_scope)
+            toRecurrenceScope(recurrenceScope)
           );
 
           if (!updated) {
             throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Schedule entry not found', details: { entry_id: input.entry_id } });
           }
 
-          const updatedEntry = schedulingEntrySummarySchema.parse({
+          const updatedEntry = parseSchedulingEntrySummary({
             entry_id: updated.entry_id,
             original_entry_id: (updated.original_entry_id as string | null | undefined) ?? null,
             title: String(updated.title ?? ''),
@@ -783,7 +834,7 @@ export function registerSchedulingActions(): void {
             assigned_user_ids: normalizeStringArray((updated.assigned_user_ids as string[] | undefined) ?? before.assigned_user_ids),
           });
 
-          if (input.conflict_mode === 'override' && detectedConflicts.length > 0) {
+          if (conflictMode === 'override' && detectedConflicts.length > 0) {
             const nowIso = new Date().toISOString();
             const uniqueConflicts = Array.from(new Set(detectedConflicts.map((row) => row.entry_id))).filter((id) => id !== updatedEntry.entry_id);
             for (const conflictingEntryId of uniqueConflicts) {
@@ -809,8 +860,8 @@ export function registerSchedulingActions(): void {
               previous_end: before.scheduled_end,
               new_start: updatedEntry.scheduled_start,
               new_end: updatedEntry.scheduled_end,
-              recurrence_scope: input.recurrence_scope,
-              conflict_mode: input.conflict_mode,
+              recurrence_scope: recurrenceScope,
+              conflict_mode: conflictMode,
             },
             details: {
               action_id: 'scheduling.reschedule',
@@ -821,14 +872,16 @@ export function registerSchedulingActions(): void {
           });
 
           let eventType: 'APPOINTMENT_RESCHEDULED' | null = null;
-          if (shouldEmitAppointmentEvents(updatedEntry)) {
+          const beforeAppointmentEntry = toAppointmentScheduleEntry(before);
+          const updatedAppointmentEntry = toAppointmentScheduleEntry(updatedEntry);
+          if (shouldEmitAppointmentEvents(updatedAppointmentEntry)) {
             eventType = 'APPOINTMENT_RESCHEDULED';
             await publishWorkflowDomainEvent({
               eventType,
               payload: buildAppointmentRescheduledPayload({
-                before,
-                after: updatedEntry,
-                ticketId: getTicketIdFromScheduleEntry(updatedEntry),
+                before: beforeAppointmentEntry,
+                after: updatedAppointmentEntry,
+                ticketId: getTicketIdFromScheduleEntry(updatedAppointmentEntry),
                 timezone: input.timezone ?? 'UTC',
               }),
               tenantId: tx.tenantId,
@@ -846,9 +899,9 @@ export function registerSchedulingActions(): void {
             new_start: updatedEntry.scheduled_start,
             new_end: updatedEntry.scheduled_end,
             assigned_user_ids: updatedEntry.assigned_user_ids,
-            conflict_mode: input.conflict_mode,
+            conflict_mode: conflictMode,
             conflicts_detected: detectedConflicts.length,
-            recurrence_scope: input.recurrence_scope,
+            recurrence_scope: recurrenceScope,
             event_type: eventType,
           };
         });
@@ -896,6 +949,7 @@ export function registerSchedulingActions(): void {
             throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Schedule entry not found', details: { entry_id: input.entry_id } });
           }
 
+          const recurrenceScope = normalizeRecurrenceScope(input.recurrence_scope);
           const requestedAssignees = normalizeStringArray(input.assigned_user_ids);
           await ensureTechnicianEligibility(ctx, tx, requestedAssignees);
 
@@ -911,13 +965,13 @@ export function registerSchedulingActions(): void {
               previous_assigned_user_ids: previousAssignees,
               assigned_user_ids: previousAssignees,
               changed: false,
-              recurrence_scope: input.recurrence_scope,
+              recurrence_scope: recurrenceScope,
               events_emitted: 0,
             };
           }
 
-          const nextNotes = appendEntryNotes(before.notes, [input.reason ? `Reassign reason: ${input.reason}` : undefined, input.comment]);
-          const recurrenceAnchors = getVirtualOccurrenceAnchors(input.entry_id, input.recurrence_scope, before);
+          const nextNotes = appendEntryNotes(before.notes, [input.reason ? `Reassign reason: ${input.reason}` : undefined, input.comment]) ?? undefined;
+          const recurrenceAnchors = getVirtualOccurrenceAnchors(input.entry_id, recurrenceScope, before);
           const updated = await ScheduleEntry.update(
             tx.trx,
             tx.tenantId,
@@ -927,14 +981,14 @@ export function registerSchedulingActions(): void {
               notes: nextNotes,
               ...recurrenceAnchors,
             },
-            toRecurrenceScope(input.recurrence_scope)
+            toRecurrenceScope(recurrenceScope)
           );
 
           if (!updated) {
             throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Schedule entry not found', details: { entry_id: input.entry_id } });
           }
 
-          const updatedEntry = schedulingEntrySummarySchema.parse({
+          const updatedEntry = parseSchedulingEntrySummary({
             entry_id: updated.entry_id,
             original_entry_id: (updated.original_entry_id as string | null | undefined) ?? null,
             title: String(updated.title ?? ''),
@@ -952,20 +1006,21 @@ export function registerSchedulingActions(): void {
           const newlyAssigned = updatedEntry.assigned_user_ids.filter((userId) => !previousAssignees.includes(userId));
 
           let eventsEmitted = 0;
-          if (shouldEmitAppointmentEvents(updatedEntry)) {
+          const updatedAppointmentEntry = toAppointmentScheduleEntry(updatedEntry);
+          if (shouldEmitAppointmentEvents(updatedAppointmentEntry)) {
             for (const newAssigneeId of newlyAssigned) {
               await publishWorkflowDomainEvent({
                 eventType: 'APPOINTMENT_ASSIGNED',
                 payload: buildAppointmentAssignedPayload({
                   appointmentId: updatedEntry.entry_id,
-                  ticketId: getTicketIdFromScheduleEntry(updatedEntry),
+                  ticketId: getTicketIdFromScheduleEntry(updatedAppointmentEntry),
                   previousAssigneeId: previousAssignees.length === 1 ? previousAssignees[0] : undefined,
                   newAssigneeId,
                 }),
                 tenantId: tx.tenantId,
                 occurredAt: new Date().toISOString(),
                 actorUserId: tx.actorUserId,
-                idempotencyKey: `appointment_assigned:${updatedEntry.entry_id}:${newAssigneeId}:${input.recurrence_scope}`,
+                idempotencyKey: `appointment_assigned:${updatedEntry.entry_id}:${newAssigneeId}:${recurrenceScope}`,
               });
               eventsEmitted += 1;
             }
@@ -978,7 +1033,7 @@ export function registerSchedulingActions(): void {
               updated_entry_id: updatedEntry.entry_id,
               previous_assigned_user_ids: previousAssignees,
               assigned_user_ids: updatedEntry.assigned_user_ids,
-              recurrence_scope: input.recurrence_scope,
+              recurrence_scope: recurrenceScope,
               mode: input.mode,
             },
             details: {
@@ -996,7 +1051,7 @@ export function registerSchedulingActions(): void {
             previous_assigned_user_ids: previousAssignees,
             assigned_user_ids: updatedEntry.assigned_user_ids,
             changed: true,
-            recurrence_scope: input.recurrence_scope,
+            recurrence_scope: recurrenceScope,
             events_emitted: eventsEmitted,
           };
         });
@@ -1037,8 +1092,9 @@ export function registerSchedulingActions(): void {
             throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Schedule entry not found', details: { entry_id: input.entry_id } });
           }
 
-          const nextNotes = appendEntryNotes(before.notes, [input.reason ? `Cancellation reason: ${input.reason}` : undefined, input.note]);
-          const recurrenceAnchors = getVirtualOccurrenceAnchors(input.entry_id, input.recurrence_scope, before);
+          const recurrenceScope = normalizeRecurrenceScope(input.recurrence_scope);
+          const nextNotes = appendEntryNotes(before.notes, [input.reason ? `Cancellation reason: ${input.reason}` : undefined, input.note]) ?? undefined;
+          const recurrenceAnchors = getVirtualOccurrenceAnchors(input.entry_id, recurrenceScope, before);
           const updated = await ScheduleEntry.update(
             tx.trx,
             tx.tenantId,
@@ -1048,14 +1104,14 @@ export function registerSchedulingActions(): void {
               notes: nextNotes,
               ...recurrenceAnchors,
             },
-            toRecurrenceScope(input.recurrence_scope)
+            toRecurrenceScope(recurrenceScope)
           );
 
           if (!updated) {
             throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Schedule entry not found', details: { entry_id: input.entry_id } });
           }
 
-          const updatedEntry = schedulingEntrySummarySchema.parse({
+          const updatedEntry = parseSchedulingEntrySummary({
             entry_id: updated.entry_id,
             original_entry_id: (updated.original_entry_id as string | null | undefined) ?? null,
             title: String(updated.title ?? ''),
@@ -1076,7 +1132,7 @@ export function registerSchedulingActions(): void {
               entry_id: input.entry_id,
               updated_entry_id: updatedEntry.entry_id,
               status: updatedEntry.status,
-              recurrence_scope: input.recurrence_scope,
+              recurrence_scope: recurrenceScope,
             },
             details: {
               action_id: 'scheduling.cancel',
@@ -1087,19 +1143,20 @@ export function registerSchedulingActions(): void {
           });
 
           let eventType: 'APPOINTMENT_CANCELED' | null = null;
-          if (shouldEmitAppointmentEvents(updatedEntry) && isAppointmentCanceledStatus(updatedEntry.status)) {
+          const updatedAppointmentEntry = toAppointmentScheduleEntry(updatedEntry);
+          if (shouldEmitAppointmentEvents(updatedAppointmentEntry) && isAppointmentCanceledStatus(updatedEntry.status)) {
             eventType = 'APPOINTMENT_CANCELED';
             await publishWorkflowDomainEvent({
               eventType,
               payload: buildAppointmentCanceledPayload({
                 appointmentId: updatedEntry.entry_id,
-                ticketId: getTicketIdFromScheduleEntry(updatedEntry),
+                ticketId: getTicketIdFromScheduleEntry(updatedAppointmentEntry),
                 reason: input.reason,
               }),
               tenantId: tx.tenantId,
               occurredAt: new Date().toISOString(),
               actorUserId: tx.actorUserId,
-              idempotencyKey: `appointment_canceled:${updatedEntry.entry_id}:${input.recurrence_scope}:${input.reason ?? ''}`,
+              idempotencyKey: `appointment_canceled:${updatedEntry.entry_id}:${recurrenceScope}:${input.reason ?? ''}`,
             });
           }
 
@@ -1107,7 +1164,7 @@ export function registerSchedulingActions(): void {
             entry_id: input.entry_id,
             updated_entry_id: updatedEntry.entry_id,
             status: updatedEntry.status,
-            recurrence_scope: input.recurrence_scope,
+            recurrence_scope: recurrenceScope,
             reason: input.reason ?? null,
             event_type: eventType,
           };
@@ -1149,9 +1206,10 @@ export function registerSchedulingActions(): void {
             throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Schedule entry not found', details: { entry_id: input.entry_id } });
           }
 
+          const recurrenceScope = normalizeRecurrenceScope(input.recurrence_scope);
           const completedAt = new Date().toISOString();
-          const nextNotes = appendEntryNotes(before.notes, [input.outcome ? `Completion outcome: ${input.outcome}` : undefined, input.note]);
-          const recurrenceAnchors = getVirtualOccurrenceAnchors(input.entry_id, input.recurrence_scope, before);
+          const nextNotes = appendEntryNotes(before.notes, [input.outcome ? `Completion outcome: ${input.outcome}` : undefined, input.note]) ?? undefined;
+          const recurrenceAnchors = getVirtualOccurrenceAnchors(input.entry_id, recurrenceScope, before);
           const updated = await ScheduleEntry.update(
             tx.trx,
             tx.tenantId,
@@ -1161,14 +1219,14 @@ export function registerSchedulingActions(): void {
               notes: nextNotes,
               ...recurrenceAnchors,
             },
-            toRecurrenceScope(input.recurrence_scope)
+            toRecurrenceScope(recurrenceScope)
           );
 
           if (!updated) {
             throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Schedule entry not found', details: { entry_id: input.entry_id } });
           }
 
-          const updatedEntry = schedulingEntrySummarySchema.parse({
+          const updatedEntry = parseSchedulingEntrySummary({
             entry_id: updated.entry_id,
             original_entry_id: (updated.original_entry_id as string | null | undefined) ?? null,
             title: String(updated.title ?? ''),
@@ -1189,7 +1247,7 @@ export function registerSchedulingActions(): void {
               entry_id: input.entry_id,
               updated_entry_id: updatedEntry.entry_id,
               status: updatedEntry.status,
-              recurrence_scope: input.recurrence_scope,
+              recurrence_scope: recurrenceScope,
               completed_at: completedAt,
             },
             details: {
@@ -1201,19 +1259,20 @@ export function registerSchedulingActions(): void {
           });
 
           let eventType: 'APPOINTMENT_COMPLETED' | null = null;
-          if (shouldEmitAppointmentEvents(updatedEntry) && isAppointmentCompletedStatus(updatedEntry.status) && !isAppointmentNoShowStatus(updatedEntry.status)) {
+          const updatedAppointmentEntry = toAppointmentScheduleEntry(updatedEntry);
+          if (shouldEmitAppointmentEvents(updatedAppointmentEntry) && isAppointmentCompletedStatus(updatedEntry.status) && !isAppointmentNoShowStatus(updatedEntry.status)) {
             eventType = 'APPOINTMENT_COMPLETED';
             await publishWorkflowDomainEvent({
               eventType,
               payload: buildAppointmentCompletedPayload({
                 appointmentId: updatedEntry.entry_id,
-                ticketId: getTicketIdFromScheduleEntry(updatedEntry),
+                ticketId: getTicketIdFromScheduleEntry(updatedAppointmentEntry),
                 outcome: input.outcome,
               }),
               tenantId: tx.tenantId,
               occurredAt: completedAt,
               actorUserId: tx.actorUserId,
-              idempotencyKey: `appointment_completed:${updatedEntry.entry_id}:${input.recurrence_scope}:${input.outcome ?? ''}`,
+              idempotencyKey: `appointment_completed:${updatedEntry.entry_id}:${recurrenceScope}:${input.outcome ?? ''}`,
             });
           }
 
