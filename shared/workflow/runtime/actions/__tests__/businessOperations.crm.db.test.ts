@@ -18,10 +18,18 @@ const repoRoot = path.resolve(__dirname, '../../../../..');
 const TEST_DB_NAME = 'test_database';
 const PRODUCTION_DB_NAMES = new Set(['sebastian_prod', 'production', 'prod', 'server']);
 
-const publishWorkflowEventMock = vi.hoisted(() => vi.fn(async () => undefined));
+type PublishedWorkflowEvent = {
+  eventType?: string;
+  idempotencyKey?: string;
+  [key: string]: unknown;
+};
+
+const publishWorkflowEventMock = vi.hoisted(() =>
+  vi.fn(async (_event: PublishedWorkflowEvent) => undefined)
+);
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
-  publishWorkflowEvent: (...args: any[]) => publishWorkflowEventMock(...args),
+  publishWorkflowEvent: (event: PublishedWorkflowEvent) => publishWorkflowEventMock(event),
 }));
 
 function verifyTestDatabase(dbName: string): void {
