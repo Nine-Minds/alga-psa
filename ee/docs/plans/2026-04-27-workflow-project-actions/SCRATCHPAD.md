@@ -458,3 +458,76 @@ Action schemas are Zod schemas converted to JSON Schema and consumed by the work
 
 - `task_checklist_items`/`task_resources`/`project_tasks` schemas vary slightly across migrations in this branch; test fixtures and assertions were kept column-aware to avoid false failures.
 - `task_resources` assignment rows are easiest to keep coherent via full-row clone with refreshed ids/timestamps and target task id, while overriding `assigned_to` according to copy options.
+
+## Implementation checkpoint — 2026-04-27 (Delete task/phase/project actions)
+
+### Completed features
+
+- `F043`: Added `projects.delete_task` input/output schemas with cleanup count fields:
+  - input: `task_id`
+  - output: `task_id`, `deleted`, `deleted_ticket_link_count`, `deleted_checklist_item_count`
+
+- `F044`: Implemented delete-task guard for associated project task time entries:
+  - checks `time_entries` by `work_item_type='project_task'` and `work_item_id=task_id`
+  - rejects with `VALIDATION_ERROR` when entries exist
+
+- `F045`: Implemented delete-task cleanup flow mirroring UI semantics:
+  - deletes task ticket links
+  - deletes task checklist items
+  - removes task resources and task-side ticket entity links before deleting task row
+
+- `F046`: Added delete-task permission checks and audit logging:
+  - requires `project:delete`
+  - validates task->project context readability
+  - writes `workflow_action:projects.delete_task` run audit
+
+- `F047`: Added `projects.delete_phase` input/output and handler:
+  - input: `phase_id`
+  - output: `phase_id`, `project_id`, `deleted`
+  - deletes phase with project context validation
+
+- `F048`: Added delete-phase validation, permissions, standardized errors, and audit logging:
+  - requires `project:delete`
+  - validates phase + project context and readability
+  - writes `workflow_action:projects.delete_phase` run audit
+
+- `F049`: Added `projects.delete` input/output schemas exposing validation/result fields:
+  - input: `project_id`
+  - output includes `success`, `deleted`, `can_delete`, `code`, `message`, `dependencies`, `alternatives`
+
+- `F050`: Implemented project delete handler with cleanup behavior:
+  - collects phase/task descendants
+  - blocks delete when descendant task time entries exist
+  - cleans up project tags + task tags (`tag_mappings`)
+  - cleans up project/task ticket links and project email reply tokens
+  - removes descendant tasks/phases then project row
+
+- `F051`: Added delete-project permission checks, failure shape, and run audit logging:
+  - requires `project:delete`
+  - returns structured validation failure result when blocked
+  - writes `workflow_action:projects.delete` run audit on mutation path
+
+### Completed tests
+
+- `T016`: DB-backed destructive task-delete happy path validates:
+  - ticket-link + checklist cleanup counts
+  - task row removed
+  - related checklist/link rows removed
+
+- `T017`: DB-backed destructive guard test validates:
+  - task delete rejected when project_task time entries exist
+  - task/checklist/link rows remain intact
+
+- `T018`: DB-backed destructive phase/project delete coverage validates:
+  - phase delete happy path
+  - project delete happy path including cleanup of project/task tags, project ticket links, and email reply tokens
+  - project delete validation-failure path when descendant task time entries exist
+
+### Commands/runbook used
+
+- `cd shared && npx vitest run workflow/runtime/actions/__tests__/registerProjectActionsMetadata.test.ts workflow/runtime/actions/__tests__/businessOperations.projects.db.test.ts`
+
+### Gotchas discovered
+
+- `time_entries` schema in this branch requires additional non-null columns (e.g., `work_date`, `work_timezone`), so destructive guard fixtures needed column-aware inserts.
+- Project delete cleanup needs to tolerate optional tables (`email_reply_tokens`, `task_resources`, `ticket_entity_links`) across schema variants; helper deletion logic was made table-existence-aware.

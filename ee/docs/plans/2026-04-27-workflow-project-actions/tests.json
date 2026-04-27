@@ -193,7 +193,7 @@
   {
     "id": "T016",
     "description": "DB-backed destructive action test covers `projects.delete_task` happy path cleaning task ticket links and checklist items before deleting the task.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F043",
       "F045",
@@ -203,7 +203,7 @@
   {
     "id": "T017",
     "description": "DB-backed destructive guard test verifies `projects.delete_task` refuses deletion when project_task time entries exist and leaves task/link/checklist data intact.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F043",
       "F044",
@@ -213,7 +213,7 @@
   {
     "id": "T018",
     "description": "DB-backed destructive action test covers `projects.delete_phase` and `projects.delete` representative happy/validation paths, including project deletion validation result shape and cleanup of tags/link records.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F047",
       "F048",

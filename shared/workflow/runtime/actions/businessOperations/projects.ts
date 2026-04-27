@@ -256,6 +256,41 @@ const duplicateTaskResultSchema = z.object({
   created_at: isoDateTimeSchema,
 });
 
+const deleteTaskInputSchema = z.object({
+  task_id: withWorkflowPicker(uuidSchema, 'Project task id', 'project-task', ['project_id', 'phase_id']),
+});
+
+const deleteTaskResultSchema = z.object({
+  task_id: uuidSchema,
+  deleted: z.boolean(),
+  deleted_ticket_link_count: z.number().int().nonnegative(),
+  deleted_checklist_item_count: z.number().int().nonnegative(),
+});
+
+const deletePhaseInputSchema = z.object({
+  phase_id: withWorkflowPicker(uuidSchema, 'Project phase id', 'project-phase', ['project_id']),
+});
+
+const deletePhaseResultSchema = z.object({
+  phase_id: uuidSchema,
+  project_id: uuidSchema,
+  deleted: z.boolean(),
+});
+
+const deleteProjectInputSchema = z.object({
+  project_id: withWorkflowPicker(uuidSchema, 'Project id', 'project'),
+});
+
+const deleteProjectResultSchema = z.object({
+  success: z.boolean(),
+  deleted: z.boolean().optional(),
+  can_delete: z.boolean(),
+  code: z.string().nullable().optional(),
+  message: z.string().nullable().optional(),
+  dependencies: z.array(z.any()).default([]),
+  alternatives: z.array(z.any()).default([]),
+});
+
 function asIsoString(value: unknown): string | undefined {
   if (typeof value === 'string') return value;
   if (value instanceof Date) return value.toISOString();
@@ -637,6 +672,18 @@ async function canReadTickets(ctx: any, tx: TenantTxContext): Promise<boolean> {
     }
     throw error;
   }
+}
+
+async function deleteFromTableIfExists(
+  tx: TenantTxContext,
+  tableName: string,
+  whereBuilder: (query: Knex.QueryBuilder) => Knex.QueryBuilder
+): Promise<number> {
+  const hasTable = await tx.trx.schema.hasTable(tableName);
+  if (!hasTable) return 0;
+  const query = whereBuilder(tx.trx(tableName));
+  const deleted = await query.delete();
+  return Number(deleted ?? 0);
 }
 
 async function canReadProject(tx: TenantTxContext, project: Record<string, unknown>): Promise<boolean> {
@@ -2025,6 +2072,238 @@ export function registerProjectActions(): void {
     }),
   });
 
+  registry.register({
+    id: 'projects.delete_task',
+    version: 1,
+    inputSchema: deleteTaskInputSchema,
+    outputSchema: deleteTaskResultSchema,
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: { label: 'Delete Project Task', category: 'Business Operations', description: 'Delete a project task' },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      try {
+        await requireProjectDeletePermission(ctx, tx);
+        const task = await ensureTaskContext(ctx, tx, input.task_id);
+        const project = await ensureProjectExists(ctx, tx, String(task.project_id));
+        await assertProjectReadable(ctx, tx, project);
+
+        const timeEntriesExist = await tx.trx.schema.hasTable('time_entries');
+        if (timeEntriesExist) {
+          const timeEntryCountRow = await tx.trx('time_entries')
+            .where({ tenant: tx.tenantId, work_item_id: input.task_id, work_item_type: 'project_task' })
+            .count('* as count')
+            .first();
+          const timeEntryCount = Number((timeEntryCountRow as { count?: string | number } | undefined)?.count ?? 0);
+          if (timeEntryCount > 0) {
+            throwActionError(ctx, {
+              category: 'ValidationError',
+              code: 'VALIDATION_ERROR',
+              message: `Cannot delete task: ${timeEntryCount} associated time entries exist.`,
+              details: { task_id: input.task_id, time_entry_count: timeEntryCount },
+            });
+          }
+        }
+
+        const deletedTicketLinks = await deleteFromTableIfExists(tx, 'project_ticket_links', (query) =>
+          query.where({ tenant: tx.tenantId, task_id: input.task_id })
+        );
+        await deleteFromTableIfExists(tx, 'ticket_entity_links', (query) =>
+          query.where({ tenant: tx.tenantId, entity_type: 'project_task', entity_id: input.task_id })
+        );
+        const deletedChecklistItems = await deleteFromTableIfExists(tx, 'task_checklist_items', (query) =>
+          query.where({ tenant: tx.tenantId, task_id: input.task_id })
+        );
+        await deleteFromTableIfExists(tx, 'task_resources', (query) =>
+          query.where({ tenant: tx.tenantId, task_id: input.task_id })
+        );
+        await tx.trx('project_tasks')
+          .where({ tenant: tx.tenantId, task_id: input.task_id })
+          .delete();
+
+        await writeRunAudit(ctx, tx, {
+          operation: 'workflow_action:projects.delete_task',
+          changedData: {
+            task_id: input.task_id,
+            project_id: task.project_id,
+            phase_id: task.phase_id,
+            deleted_ticket_link_count: deletedTicketLinks,
+            deleted_checklist_item_count: deletedChecklistItems,
+          },
+          details: {
+            action_id: 'projects.delete_task',
+            action_version: 1,
+            task_id: input.task_id,
+          },
+        });
+
+        return deleteTaskResultSchema.parse({
+          task_id: input.task_id,
+          deleted: true,
+          deleted_ticket_link_count: deletedTicketLinks,
+          deleted_checklist_item_count: deletedChecklistItems,
+        });
+      } catch (error) {
+        handleActionError(ctx, error);
+      }
+    }),
+  });
+
+  registry.register({
+    id: 'projects.delete_phase',
+    version: 1,
+    inputSchema: deletePhaseInputSchema,
+    outputSchema: deletePhaseResultSchema,
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: { label: 'Delete Project Phase', category: 'Business Operations', description: 'Delete a project phase' },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      try {
+        await requireProjectDeletePermission(ctx, tx);
+        const phase = await ensurePhaseExists(ctx, tx, input.phase_id);
+        const project = await ensureProjectExists(ctx, tx, String(phase.project_id));
+        await assertProjectReadable(ctx, tx, project);
+
+        const deleted = await tx.trx('project_phases')
+          .where({ tenant: tx.tenantId, phase_id: input.phase_id })
+          .delete();
+
+        await writeRunAudit(ctx, tx, {
+          operation: 'workflow_action:projects.delete_phase',
+          changedData: {
+            phase_id: input.phase_id,
+            project_id: phase.project_id,
+          },
+          details: {
+            action_id: 'projects.delete_phase',
+            action_version: 1,
+            phase_id: input.phase_id,
+          },
+        });
+
+        return deletePhaseResultSchema.parse({
+          phase_id: input.phase_id,
+          project_id: String(phase.project_id),
+          deleted: Number(deleted ?? 0) > 0,
+        });
+      } catch (error) {
+        handleActionError(ctx, error);
+      }
+    }),
+  });
+
+  registry.register({
+    id: 'projects.delete',
+    version: 1,
+    inputSchema: deleteProjectInputSchema,
+    outputSchema: deleteProjectResultSchema,
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: { label: 'Delete Project', category: 'Business Operations', description: 'Delete a project with validation and cleanup' },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      try {
+        await requireProjectDeletePermission(ctx, tx);
+        const project = await ensureProjectExists(ctx, tx, input.project_id);
+        await assertProjectReadable(ctx, tx, project);
+
+        const phaseIds = await tx.trx('project_phases')
+          .where({ tenant: tx.tenantId, project_id: input.project_id })
+          .pluck<string[]>('phase_id');
+        const taskIds = phaseIds.length > 0
+          ? await tx.trx('project_tasks')
+              .where({ tenant: tx.tenantId })
+              .whereIn('phase_id', phaseIds)
+              .pluck<string[]>('task_id')
+          : [];
+
+        const timeEntriesExist = await tx.trx.schema.hasTable('time_entries');
+        if (timeEntriesExist && taskIds.length > 0) {
+          const timeEntryCountRow = await tx.trx('time_entries')
+            .where({ tenant: tx.tenantId, work_item_type: 'project_task' })
+            .whereIn('work_item_id', taskIds)
+            .count('* as count')
+            .first();
+          const timeEntryCount = Number((timeEntryCountRow as { count?: string | number } | undefined)?.count ?? 0);
+          if (timeEntryCount > 0) {
+            return deleteProjectResultSchema.parse({
+              success: false,
+              can_delete: false,
+              deleted: false,
+              code: 'VALIDATION_FAILED',
+              message: `Cannot delete project: ${timeEntryCount} associated task time entries exist.`,
+              dependencies: [{ type: 'time_entries', count: timeEntryCount }],
+              alternatives: [],
+            });
+          }
+        }
+
+        await deleteFromTableIfExists(tx, 'tag_mappings', (query) =>
+          query.where({ tenant: tx.tenantId, tagged_type: 'project', tagged_id: input.project_id })
+        );
+        if (taskIds.length > 0) {
+          await deleteFromTableIfExists(tx, 'tag_mappings', (query) =>
+            query.where({ tenant: tx.tenantId, tagged_type: 'project_task' }).whereIn('tagged_id', taskIds)
+          );
+          await deleteFromTableIfExists(tx, 'ticket_entity_links', (query) =>
+            query.where({ tenant: tx.tenantId, entity_type: 'project_task' }).whereIn('entity_id', taskIds)
+          );
+          await deleteFromTableIfExists(tx, 'task_resources', (query) =>
+            query.where({ tenant: tx.tenantId }).whereIn('task_id', taskIds)
+          );
+          await deleteFromTableIfExists(tx, 'task_checklist_items', (query) =>
+            query.where({ tenant: tx.tenantId }).whereIn('task_id', taskIds)
+          );
+        }
+        await deleteFromTableIfExists(tx, 'project_ticket_links', (query) =>
+          query.where({ tenant: tx.tenantId, project_id: input.project_id })
+        );
+        await deleteFromTableIfExists(tx, 'email_reply_tokens', (query) =>
+          query.where({ tenant: tx.tenantId, project_id: input.project_id })
+        );
+
+        if (taskIds.length > 0) {
+          await tx.trx('project_tasks')
+            .where({ tenant: tx.tenantId })
+            .whereIn('task_id', taskIds)
+            .delete();
+        }
+        if (phaseIds.length > 0) {
+          await tx.trx('project_phases')
+            .where({ tenant: tx.tenantId })
+            .whereIn('phase_id', phaseIds)
+            .delete();
+        }
+        const deleted = await tx.trx('projects')
+          .where({ tenant: tx.tenantId, project_id: input.project_id })
+          .delete();
+
+        await writeRunAudit(ctx, tx, {
+          operation: 'workflow_action:projects.delete',
+          changedData: {
+            project_id: input.project_id,
+            deleted: Number(deleted ?? 0) > 0,
+          },
+          details: {
+            action_id: 'projects.delete',
+            action_version: 1,
+            project_id: input.project_id,
+          },
+        });
+
+        return deleteProjectResultSchema.parse({
+          success: Number(deleted ?? 0) > 0,
+          deleted: Number(deleted ?? 0) > 0,
+          can_delete: true,
+          code: null,
+          message: null,
+          dependencies: [],
+          alternatives: [],
+        });
+      } catch (error) {
+        handleActionError(ctx, error);
+      }
+    }),
+  });
+
   void ensureTicketExists;
   void ensurePhaseExists;
   void ensureTaskContext;
@@ -2036,4 +2315,7 @@ export function registerProjectActions(): void {
   void linkResultSchema;
   void assignTaskInputSchema;
   void duplicateTaskInputSchema;
+  void deleteTaskInputSchema;
+  void deletePhaseInputSchema;
+  void deleteProjectInputSchema;
 }

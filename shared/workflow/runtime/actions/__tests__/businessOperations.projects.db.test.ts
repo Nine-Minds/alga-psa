@@ -386,6 +386,64 @@ async function createProjectTicketLink(
   return linkId;
 }
 
+async function createTimeEntryForProjectTask(
+  db: Knex,
+  tenantId: string,
+  taskId: string,
+  userId: string
+): Promise<void> {
+  const now = new Date();
+  const columns = await getTableColumns(db, 'time_entries');
+  const startedAt = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
+  const row: Record<string, unknown> = {
+    tenant: tenantId,
+    entry_id: uuidv4(),
+    user_id: userId,
+    start_time: startedAt,
+    end_time: now.toISOString(),
+    work_item_id: taskId,
+    work_item_type: 'project_task',
+    notes: 'delete guard time entry',
+  };
+  if (columns.has('work_date')) row.work_date = now.toISOString().slice(0, 10);
+  if (columns.has('duration')) row.duration = 60;
+  if (columns.has('billable_duration')) row.billable_duration = 60;
+  if (columns.has('approval_status')) row.approval_status = 'DRAFT';
+  if (columns.has('is_billable')) row.is_billable = true;
+  if (columns.has('work_timezone')) row.work_timezone = 'UTC';
+  if (columns.has('duration_seconds')) row.duration_seconds = 3600;
+  if (columns.has('created_at')) row.created_at = now.toISOString();
+  if (columns.has('updated_at')) row.updated_at = now.toISOString();
+  await db('time_entries').insert(row);
+}
+
+async function createTagMapping(
+  db: Knex,
+  tenantId: string,
+  taggedType: 'project' | 'project_task',
+  taggedId: string,
+  tagText: string
+): Promise<void> {
+  const tagId = uuidv4();
+  await db('tag_definitions').insert({
+    tenant: tenantId,
+    tag_id: tagId,
+    tag_text: tagText,
+    tagged_type: taggedType,
+    background_color: '#EEEEEE',
+    text_color: '#111111',
+    created_at: new Date().toISOString(),
+  });
+  await db('tag_mappings').insert({
+    tenant: tenantId,
+    mapping_id: uuidv4(),
+    tag_id: tagId,
+    tagged_id: taggedId,
+    tagged_type: taggedType,
+    created_at: new Date().toISOString(),
+  });
+}
+
 async function createTicket(
   db: Knex,
   tenantId: string,
@@ -1250,5 +1308,191 @@ describe('project business operation db actions', () => {
       .select('project_id', 'phase_id', 'ticket_id');
     expect(duplicatedLinks).toHaveLength(2);
     expect(duplicatedLinks.every((row: { project_id: string; phase_id: string }) => row.project_id === targetProjectId && row.phase_id === targetPhaseId)).toBe(true);
+  });
+
+  it('T016: projects.delete_task deletes task after cleaning ticket links and checklist items', async () => {
+    const entity = await createClientOrCompany(db, runtimeState.tenantId);
+    const projectId = await createProject(db, runtimeState.tenantId, {
+      name: 'Delete Task Project',
+      clientOrCompanyId: entity.clientId,
+      wbsCode: '60',
+    });
+    const phaseId = await createPhase(db, runtimeState.tenantId, projectId, {
+      name: 'Delete Task Phase',
+      orderNumber: 1,
+      orderKey: 'a0',
+    });
+    const taskId = await createTask(db, runtimeState.tenantId, phaseId, projectId, {
+      taskName: 'Delete Task Target',
+    });
+    await createChecklistItem(db, runtimeState.tenantId, taskId, 'Delete Checklist');
+    const ticketId = await createTicket(db, runtimeState.tenantId, runtimeState.actorUserId, {
+      clientId: entity.clientId,
+    });
+    await createProjectTicketLink(db, runtimeState.tenantId, {
+      projectId,
+      phaseId,
+      taskId,
+      ticketId,
+    });
+
+    const result = await invokeAction('projects.delete_task', { task_id: taskId });
+    expect(result.deleted).toBe(true);
+    expect(result.deleted_ticket_link_count).toBeGreaterThanOrEqual(1);
+    expect(result.deleted_checklist_item_count).toBeGreaterThanOrEqual(1);
+
+    const deletedTask = await db('project_tasks')
+      .where({ tenant: runtimeState.tenantId, task_id: taskId })
+      .first();
+    expect(deletedTask).toBeUndefined();
+    const remainingChecklist = await db('task_checklist_items')
+      .where({ tenant: runtimeState.tenantId, task_id: taskId });
+    expect(remainingChecklist).toHaveLength(0);
+    const remainingLinks = await db('project_ticket_links')
+      .where({ tenant: runtimeState.tenantId, task_id: taskId });
+    expect(remainingLinks).toHaveLength(0);
+  });
+
+  it('T017: projects.delete_task refuses deletion when project_task time entries exist', async () => {
+    const entity = await createClientOrCompany(db, runtimeState.tenantId);
+    const projectId = await createProject(db, runtimeState.tenantId, {
+      name: 'Delete Guard Project',
+      clientOrCompanyId: entity.clientId,
+      wbsCode: '61',
+    });
+    const phaseId = await createPhase(db, runtimeState.tenantId, projectId, {
+      name: 'Delete Guard Phase',
+      orderNumber: 1,
+      orderKey: 'a0',
+    });
+    const taskId = await createTask(db, runtimeState.tenantId, phaseId, projectId, {
+      taskName: 'Delete Guard Task',
+    });
+    await createChecklistItem(db, runtimeState.tenantId, taskId, 'Guard Checklist');
+    const ticketId = await createTicket(db, runtimeState.tenantId, runtimeState.actorUserId, {
+      clientId: entity.clientId,
+    });
+    await createProjectTicketLink(db, runtimeState.tenantId, {
+      projectId,
+      phaseId,
+      taskId,
+      ticketId,
+    });
+    await createTimeEntryForProjectTask(db, runtimeState.tenantId, taskId, runtimeState.actorUserId);
+
+    await expect(invokeAction('projects.delete_task', { task_id: taskId })).rejects.toMatchObject({
+      code: 'VALIDATION_ERROR',
+    });
+
+    const taskAfter = await db('project_tasks')
+      .where({ tenant: runtimeState.tenantId, task_id: taskId })
+      .first();
+    expect(taskAfter).toBeDefined();
+    const checklistAfter = await db('task_checklist_items')
+      .where({ tenant: runtimeState.tenantId, task_id: taskId });
+    expect(checklistAfter.length).toBeGreaterThan(0);
+    const linksAfter = await db('project_ticket_links')
+      .where({ tenant: runtimeState.tenantId, task_id: taskId });
+    expect(linksAfter.length).toBeGreaterThan(0);
+  });
+
+  it('T018: projects.delete_phase/projects.delete cover phase deletion and project cleanup validation paths', async () => {
+    const entity = await createClientOrCompany(db, runtimeState.tenantId);
+
+    const phaseProjectId = await createProject(db, runtimeState.tenantId, {
+      name: 'Delete Phase Project',
+      clientOrCompanyId: entity.clientId,
+      wbsCode: '62',
+    });
+    const phaseDeleteId = await createPhase(db, runtimeState.tenantId, phaseProjectId, {
+      name: 'Delete Me Phase',
+      orderNumber: 1,
+      orderKey: 'a0',
+    });
+    const phaseDeleteResult = await invokeAction('projects.delete_phase', { phase_id: phaseDeleteId });
+    expect(phaseDeleteResult.deleted).toBe(true);
+    const phaseAfter = await db('project_phases')
+      .where({ tenant: runtimeState.tenantId, phase_id: phaseDeleteId })
+      .first();
+    expect(phaseAfter).toBeUndefined();
+
+    const deletableProjectId = await createProject(db, runtimeState.tenantId, {
+      name: 'Delete Project Success',
+      clientOrCompanyId: entity.clientId,
+      wbsCode: '63',
+    });
+    const deletablePhaseId = await createPhase(db, runtimeState.tenantId, deletableProjectId, {
+      name: 'Delete Project Phase',
+      orderNumber: 1,
+      orderKey: 'a0',
+    });
+    const deletableTaskId = await createTask(db, runtimeState.tenantId, deletablePhaseId, deletableProjectId, {
+      taskName: 'Delete Project Task',
+    });
+    const deletableTicketId = await createTicket(db, runtimeState.tenantId, runtimeState.actorUserId, {
+      clientId: entity.clientId,
+    });
+    await createTagMapping(db, runtimeState.tenantId, 'project', deletableProjectId, 'delete-project-tag');
+    await createTagMapping(db, runtimeState.tenantId, 'project_task', deletableTaskId, 'delete-task-tag');
+    await createProjectTicketLink(db, runtimeState.tenantId, {
+      projectId: deletableProjectId,
+      phaseId: deletablePhaseId,
+      taskId: deletableTaskId,
+      ticketId: deletableTicketId,
+    });
+    const hasEmailReplyTokens = await db.schema.hasTable('email_reply_tokens');
+    if (hasEmailReplyTokens) {
+      await db('email_reply_tokens').insert({
+        tenant: runtimeState.tenantId,
+        token: `project-${uuidv4()}`,
+        project_id: deletableProjectId,
+        entity_type: 'project',
+        created_at: new Date().toISOString(),
+      });
+    }
+
+    const deleteProjectResult = await invokeAction('projects.delete', { project_id: deletableProjectId });
+    expect(deleteProjectResult.success).toBe(true);
+    expect(deleteProjectResult.can_delete).toBe(true);
+    expect(deleteProjectResult.deleted).toBe(true);
+
+    const deletedProject = await db('projects')
+      .where({ tenant: runtimeState.tenantId, project_id: deletableProjectId })
+      .first();
+    expect(deletedProject).toBeUndefined();
+    const remainingProjectTags = await db('tag_mappings')
+      .where({ tenant: runtimeState.tenantId, tagged_type: 'project', tagged_id: deletableProjectId });
+    expect(remainingProjectTags).toHaveLength(0);
+    const remainingTaskTags = await db('tag_mappings')
+      .where({ tenant: runtimeState.tenantId, tagged_type: 'project_task', tagged_id: deletableTaskId });
+    expect(remainingTaskTags).toHaveLength(0);
+    const remainingProjectLinks = await db('project_ticket_links')
+      .where({ tenant: runtimeState.tenantId, project_id: deletableProjectId });
+    expect(remainingProjectLinks).toHaveLength(0);
+    if (hasEmailReplyTokens) {
+      const remainingTokens = await db('email_reply_tokens')
+        .where({ tenant: runtimeState.tenantId, project_id: deletableProjectId });
+      expect(remainingTokens).toHaveLength(0);
+    }
+
+    const blockedProjectId = await createProject(db, runtimeState.tenantId, {
+      name: 'Delete Project Blocked',
+      clientOrCompanyId: entity.clientId,
+      wbsCode: '64',
+    });
+    const blockedPhaseId = await createPhase(db, runtimeState.tenantId, blockedProjectId, {
+      name: 'Blocked Phase',
+      orderNumber: 1,
+      orderKey: 'a0',
+    });
+    const blockedTaskId = await createTask(db, runtimeState.tenantId, blockedPhaseId, blockedProjectId, {
+      taskName: 'Blocked Task',
+    });
+    await createTimeEntryForProjectTask(db, runtimeState.tenantId, blockedTaskId, runtimeState.actorUserId);
+
+    const blockedDeleteResult = await invokeAction('projects.delete', { project_id: blockedProjectId });
+    expect(blockedDeleteResult.success).toBe(false);
+    expect(blockedDeleteResult.can_delete).toBe(false);
+    expect(blockedDeleteResult.code).toBe('VALIDATION_FAILED');
   });
 });

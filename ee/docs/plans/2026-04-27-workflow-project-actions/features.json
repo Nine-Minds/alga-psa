@@ -357,7 +357,7 @@
   {
     "id": "F043",
     "description": "Implement `projects.delete_task` input and output schemas with task_id, deleted flag, and cleanup count/guard details where practical.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Delete actions"
     ]
@@ -365,7 +365,7 @@
   {
     "id": "F044",
     "description": "Implement `projects.delete_task` guard that refuses deletion when associated project_task time entries exist, matching existing UI behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Delete actions"
     ]
@@ -373,7 +373,7 @@
   {
     "id": "F045",
     "description": "Implement `projects.delete_task` cleanup for task ticket links and checklist items before deleting the task, matching existing UI behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Delete actions"
     ]
@@ -381,7 +381,7 @@
   {
     "id": "F046",
     "description": "Implement `projects.delete_task` permission checks, standardized errors, and run audit logging.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Delete actions",
       "Security / Permissions",
@@ -391,7 +391,7 @@
   {
     "id": "F047",
     "description": "Implement `projects.delete_phase` input/output schemas and handler that mirrors existing phase delete UI/domain behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Delete actions"
     ]
@@ -399,7 +399,7 @@
   {
     "id": "F048",
     "description": "Implement `projects.delete_phase` project context validation, project delete permission checks, standardized errors, and run audit logging.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Delete actions",
       "Security / Permissions",
@@ -409,7 +409,7 @@
   {
     "id": "F049",
     "description": "Implement `projects.delete` input/output schemas that expose existing project deletion validation result fields plus success/deleted state.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Delete actions"
     ]
@@ -417,7 +417,7 @@
   {
     "id": "F050",
     "description": "Implement `projects.delete` handler by reusing existing project deletion validation/cleanup behavior where possible, including project tags, task tags, project ticket links, and email reply tokens.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Delete actions"
     ]
@@ -425,7 +425,7 @@
   {
     "id": "F051",
     "description": "Implement `projects.delete` permission checks, standardized failure output, and run audit logging.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Delete actions",
       "Security / Permissions",
