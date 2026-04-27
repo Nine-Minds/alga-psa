@@ -257,6 +257,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'document_share_access_log', 'document_share_links',
   'kb_article_relations', 'kb_article_reviewers', 'kb_article_templates', 'kb_articles',
   'document_default_folders',
+  // Document folder templates: items and init rows reference document_folder_templates
+  // (CASCADE / SET NULL), so we delete the children first for a clean trail.
+  'document_folder_template_items', 'document_entity_folder_init', 'document_folder_templates',
   // Document associations must come before documents
   'document_associations',
 
@@ -1170,6 +1173,13 @@ async function getTableTenantColumn(
  * - authorization_bundle_revisions.bundle_id → authorization_bundles.bundle_id
  * - authorization_bundles.published_revision_id → authorization_bundle_revisions.revision_id
  *   (Null published_revision_id first so revisions can be deleted before bundles.)
+ *
+ * - inbound_ticket_defaults.client_id → clients.client_id (NO ACTION)
+ * - clients.inbound_ticket_defaults_id → inbound_ticket_defaults.id (NO ACTION)
+ *   (Cycle. Deletion order has clients early and inbound_ticket_defaults late,
+ *    so we null inbound_ticket_defaults.client_id here to let clients be
+ *    deleted first; clients.inbound_ticket_defaults_id rows are gone by the
+ *    time we get to inbound_ticket_defaults.)
  */
 async function breakCircularDependencies(
   knex: Knex,
@@ -1240,6 +1250,25 @@ async function breakCircularDependencies(
   } catch (error) {
     // Ignore if table/column doesn't exist (older schemas)
     log.debug('Could not clear published_revision_id in authorization_bundles (table or column may not exist)', {
+      error: error instanceof Error ? error.message : 'Unknown',
+    });
+  }
+
+  // Step 5: NULL out inbound_ticket_defaults.client_id so clients can be
+  // deleted before inbound_ticket_defaults (which lives in the late
+  // configuration block). The reverse FK clients.inbound_ticket_defaults_id
+  // is naturally cleared by the time we delete inbound_ticket_defaults.
+  try {
+    const result5 = await knex('inbound_ticket_defaults')
+      .where({ tenant: tenantId })
+      .whereNotNull('client_id')
+      .update({ client_id: null });
+    if (result5 > 0) {
+      log.info('Cleared client_id references in inbound_ticket_defaults', { count: result5 });
+    }
+  } catch (error) {
+    // Ignore if table/column doesn't exist (older schemas)
+    log.debug('Could not clear client_id in inbound_ticket_defaults (table or column may not exist)', {
       error: error instanceof Error ? error.message : 'Unknown',
     });
   }

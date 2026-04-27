@@ -422,6 +422,9 @@ def "main cleanup" [
         "workflow_task_definitions"
         
         # === LEVEL 3: Mid-level entities ===
+        # Document folder templates: items and init rows reference document_folder_templates
+        # (CASCADE / SET NULL), so we delete the children first for a clean trail.
+        "document_folder_template_items" "document_entity_folder_init" "document_folder_templates"
         # Document associations must come before documents
         "document_associations"
         
@@ -588,7 +591,18 @@ def "main cleanup" [
         } catch {
             # Ignore if column doesn't exist or already NULL
         }
-        
+
+        # Step 3: NULL out client_id in inbound_ticket_defaults to break the
+        # inbound_ticket_defaults → clients dependency. inbound_ticket_defaults
+        # is deleted late in the order, so this lets clients be deleted first.
+        try {
+            let null_query = "UPDATE inbound_ticket_defaults SET client_id = NULL WHERE tenant = '" + $tenant_id + "'"
+            execute-sql $null_query --env-name $environment
+            print "  Cleared client_id references in inbound_ticket_defaults"
+        } catch {
+            # Ignore if column doesn't exist or already NULL
+        }
+
         # Note: We cannot NULL users.contact_id because it has a NOT NULL constraint
         # Instead, we'll delete in the order: clients → contacts → users
         # This way contacts are deleted before users tries to reference them
