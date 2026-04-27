@@ -1,0 +1,265 @@
+[
+  {
+    "id": "F001",
+    "description": "Introduce workflow-safe time module helper boundaries that accept tenant, actor user, transaction/knex context, and validated input without relying on Next.js server-action wrappers.",
+    "implemented": true,
+    "prdRefs": [
+      "Workflow-safe time domain helpers"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Normalize helper errors into workflow-compatible validation, action, and transient error categories with actionable messages.",
+    "implemented": true,
+    "prdRefs": [
+      "Workflow-safe time domain helpers",
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Replace or version the existing unsafe direct-write `time.create_entry` action so workflow-created entries use canonical helper behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Time entry actions",
+      "Versioning / compatibility"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Implement `time.create_entry` with service validation, user-timezone work-date computation, optional/default time-sheet association, and normalized output.",
+    "implemented": true,
+    "prdRefs": [
+      "Time entry actions"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Ensure workflow-created time entries resolve default contract line when omitted and canonical contract-line resolution can determine one.",
+    "implemented": false,
+    "prdRefs": [
+      "Time entry actions",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Ensure workflow-created and workflow-updated billable entries preserve bucket usage side effects for bucket-backed contract lines.",
+    "implemented": false,
+    "prdRefs": [
+      "Time entry actions",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Ensure workflow-created, updated, and deleted project-task time entries preserve project task actual-hours recalculation.",
+    "implemented": false,
+    "prdRefs": [
+      "Time entry actions"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Ensure workflow-created ticket and project-task entries preserve canonical resource-assignment side effects where existing product behavior adds the user to ticket/task resources.",
+    "implemented": false,
+    "prdRefs": [
+      "Time entry actions"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Implement `time.get_entry` to load a tenant-scoped time entry by ID with normalized workflow output.",
+    "implemented": false,
+    "prdRefs": [
+      "Time entry actions"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Implement `time.find_entries` with bounded filters for user, work item, client, time sheet, service, contract line, approval status, billable flag, work date/date range, start/end range, invoiced flag, and limit.",
+    "implemented": false,
+    "prdRefs": [
+      "Time entry actions"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Implement `time.update_entry` for allowed non-invoiced entry updates while recomputing dependent fields and preserving canonical state guards.",
+    "implemented": false,
+    "prdRefs": [
+      "Time entry actions"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Implement `time.delete_entry` for non-invoiced entries, including bucket usage decrement and project-task actual-hours recalculation.",
+    "implemented": false,
+    "prdRefs": [
+      "Time entry actions"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Implement `time.set_entry_approval_status` for allowed approval state transitions, including change-request comment support.",
+    "implemented": false,
+    "prdRefs": [
+      "Time entry actions"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Implement `time.request_entry_changes` as a convenience action for requesting changes on one or more submitted entries with comments.",
+    "implemented": false,
+    "prdRefs": [
+      "Time entry actions"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Implement `time.find_or_create_timesheet` by user and period or work date, returning sheet, period, status, and summary fields.",
+    "implemented": false,
+    "prdRefs": [
+      "Time sheet actions"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Implement `time.get_timesheet` with period, comments, and summary counts/minutes.",
+    "implemented": false,
+    "prdRefs": [
+      "Time sheet actions"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Implement `time.find_timesheets` with bounded filters for users, period/date range, status, and approval scope.",
+    "implemented": false,
+    "prdRefs": [
+      "Time sheet actions"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Implement `time.submit_timesheet` using canonical submit behavior and updating associated entries to `SUBMITTED`.",
+    "implemented": false,
+    "prdRefs": [
+      "Time sheet actions"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Implement `time.approve_timesheet` using canonical approval behavior and updating associated entries to `APPROVED`.",
+    "implemented": false,
+    "prdRefs": [
+      "Time sheet actions"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Implement `time.request_timesheet_changes` to move a sheet to `CHANGES_REQUESTED` with approver comment/reason behavior.",
+    "implemented": false,
+    "prdRefs": [
+      "Time sheet actions"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Implement `time.reverse_timesheet_approval` with the existing invoiced-entry guard and status reset behavior.",
+    "implemented": false,
+    "prdRefs": [
+      "Time sheet actions"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Implement `time.add_timesheet_comment` with owner/approver permission semantics and normalized comment output.",
+    "implemented": false,
+    "prdRefs": [
+      "Time sheet actions"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Implement `time.summarize_entries` to return counts and minutes grouped by common workflow dimensions.",
+    "implemented": false,
+    "prdRefs": [
+      "Readiness helper actions"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Implement `time.find_billing_blockers` to detect unapproved, unsubmitted, change-requested, missing-service, missing-contract-line, invalid-duration, missing-work-item, and time-sheet attachment blockers over a bounded scope.",
+    "implemented": false,
+    "prdRefs": [
+      "Readiness helper actions"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Implement `time.validate_entries` to return pass/fail readiness validation details for a bounded entry set or query.",
+    "implemented": false,
+    "prdRefs": [
+      "Readiness helper actions"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Add workflow action input schemas and output schemas for all new time actions with stable IDs, descriptions, and examples where useful.",
+    "implemented": false,
+    "prdRefs": [
+      "Workflow registry integration",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Add editor metadata for user, ticket, notes/comment textarea fields, and other high-value fixed/reference inputs supported by current picker infrastructure.",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Decide and implement minimal additional fixed picker support for service, contract line, time entry, time sheet, and time period fields if included in phase 1.",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Register all time actions under `registerTimeActions()` and ensure the Workflow Designer Time catalog group lists the expanded action set.",
+    "implemented": false,
+    "prdRefs": [
+      "Workflow registry integration"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Enforce workflow actor permissions for time entry and time sheet actions, including acting-on-behalf and approval constraints where applicable.",
+    "implemented": false,
+    "prdRefs": [
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Ensure mutating actions write workflow run audit records with action id, version, step path, key entity IDs, and changed summary data.",
+    "implemented": false,
+    "prdRefs": [
+      "Observability / Auditability"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Document behavior changes and compatibility decisions for `time.create_entry`, especially service requirement and canonical side effects.",
+    "implemented": false,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Versioning / compatibility"
+    ]
+  }
+]

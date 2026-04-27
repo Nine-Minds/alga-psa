@@ -1,0 +1,153 @@
+[
+  {
+    "id": "T001",
+    "description": "DB integration: workflow-safe create-entry helper creates a ticket time entry with service, user-timezone work date, time-sheet association, and normalized output.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F003",
+      "F004",
+      "F026",
+      "F030"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "DB integration: create-entry resolves default contract line and updates bucket usage for a representative billable bucket-backed service.",
+    "implemented": false,
+    "featureIds": [
+      "F005",
+      "F006"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "DB integration: create/update/delete project-task time entries recalculate project task actual hours correctly.",
+    "implemented": false,
+    "featureIds": [
+      "F007",
+      "F011",
+      "F012"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "DB integration: update and delete reject invoiced time entries and leave billing/project side effects unchanged.",
+    "implemented": false,
+    "featureIds": [
+      "F011",
+      "F012",
+      "F030"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "DB integration: find/get time entry actions return tenant-scoped normalized data and bounded aggregate counts for representative filters.",
+    "implemented": false,
+    "featureIds": [
+      "F009",
+      "F010"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "DB integration: entry approval actions move entries through submitted/approved/changes-requested states and create change-request records when comments are supplied.",
+    "implemented": false,
+    "featureIds": [
+      "F013",
+      "F014",
+      "F030"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "DB integration: find-or-create/get/find timesheet actions return sheet, period, comments, and summary fields for representative user/date/status filters.",
+    "implemented": false,
+    "featureIds": [
+      "F015",
+      "F016",
+      "F017"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "DB integration: submit timesheet updates the sheet and all associated entries to `SUBMITTED` using canonical submit behavior.",
+    "implemented": false,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "DB integration: approve/request-changes/reverse timesheet actions enforce state transitions, comments, associated entry statuses, and invoiced-entry reopen guard.",
+    "implemented": false,
+    "featureIds": [
+      "F019",
+      "F020",
+      "F021",
+      "F022",
+      "F030"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "DB integration: readiness helper detects representative billing blockers and returns categories, counts, matching entry IDs, and human-readable explanations without mutating invoices.",
+    "implemented": false,
+    "featureIds": [
+      "F024",
+      "F025"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "DB integration: summarize entries returns correct totals and grouped minutes for representative user/client/service/status/date filters.",
+    "implemented": false,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Permission/authorization tests: workflow actor without required timeentry/timesheet permissions receives structured permission-denied action errors for read and mutation actions.",
+    "implemented": false,
+    "featureIds": [
+      "F002",
+      "F030"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Workflow registry/schema test: all time actions register with stable IDs, versions, side-effect/idempotency metadata, input/output schemas, and Time catalog grouping.",
+    "implemented": false,
+    "featureIds": [
+      "F026",
+      "F029"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Workflow designer metadata test: user/ticket/textarea and any phase-1 service/contract/time pickers survive Zod-to-JSON-schema conversion and resolve to expected editor metadata.",
+    "implemented": false,
+    "featureIds": [
+      "F027",
+      "F028"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Workflow runtime action test: mutating time actions write workflow run audit rows with action metadata and key changed entity IDs.",
+    "implemented": false,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Compatibility test: existing or migrated `time.create_entry` input shape follows the chosen versioning decision and no longer bypasses canonical service/time-sheet/work-date behavior.",
+    "implemented": false,
+    "featureIds": [
+      "F003",
+      "F032"
+    ]
+  }
+]
