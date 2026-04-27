@@ -1,7 +1,6 @@
 import type { Knex } from 'knex';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
-import ScheduleEntry from '../../../../../packages/scheduling/src/models/scheduleEntry';
 import { IEditScope } from '@alga-psa/types';
 import { withWorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
@@ -94,6 +93,26 @@ function toAppointmentScheduleEntry(entry: SchedulingEntrySummary): AppointmentS
     work_item_type: entry.work_item_type,
     assigned_user_ids: entry.assigned_user_ids,
   };
+}
+
+type ScheduleEntryModel = {
+  get: (knexOrTrx: Knex | Knex.Transaction, tenant: string, entryId: string) => Promise<Record<string, unknown> | undefined>;
+  getAll: (knexOrTrx: Knex | Knex.Transaction, tenant: string, start: Date, end: Date) => Promise<Array<Record<string, unknown>>>;
+  update: (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    entryId: string,
+    entry: Record<string, unknown>,
+    updateType?: IEditScope
+  ) => Promise<Record<string, unknown> | undefined>;
+};
+
+let scheduleEntryModelPromise: Promise<ScheduleEntryModel> | null = null;
+
+async function getScheduleEntryModel(): Promise<ScheduleEntryModel> {
+  scheduleEntryModelPromise ??= import('../../../../../packages/scheduling/src/models/' + 'scheduleEntry')
+    .then((module) => (module as { default: ScheduleEntryModel }).default);
+  return scheduleEntryModelPromise;
 }
 
 type ConflictRow = {
@@ -190,6 +209,8 @@ function getVirtualOccurrenceAnchors(
 async function loadEntryByReference(tx: TenantTxContext, entryRef: string): Promise<SchedulingEntrySummary | null> {
   const trimmedRef = String(entryRef).trim();
   if (!trimmedRef) return null;
+
+  const ScheduleEntry = await getScheduleEntryModel();
 
   if (!trimmedRef.includes('_')) {
     const entry = await ScheduleEntry.get(tx.trx, tx.tenantId, trimmedRef);
@@ -803,6 +824,7 @@ export function registerSchedulingActions(): void {
           }
 
           const nextNotes = appendEntryNotes(before.notes, [input.reason ? `Reschedule reason: ${input.reason}` : undefined, input.note]) ?? undefined;
+          const ScheduleEntry = await getScheduleEntryModel();
           const updated = await ScheduleEntry.update(
             tx.trx,
             tx.tenantId,
@@ -972,6 +994,7 @@ export function registerSchedulingActions(): void {
 
           const nextNotes = appendEntryNotes(before.notes, [input.reason ? `Reassign reason: ${input.reason}` : undefined, input.comment]) ?? undefined;
           const recurrenceAnchors = getVirtualOccurrenceAnchors(input.entry_id, recurrenceScope, before);
+          const ScheduleEntry = await getScheduleEntryModel();
           const updated = await ScheduleEntry.update(
             tx.trx,
             tx.tenantId,
@@ -1095,6 +1118,7 @@ export function registerSchedulingActions(): void {
           const recurrenceScope = normalizeRecurrenceScope(input.recurrence_scope);
           const nextNotes = appendEntryNotes(before.notes, [input.reason ? `Cancellation reason: ${input.reason}` : undefined, input.note]) ?? undefined;
           const recurrenceAnchors = getVirtualOccurrenceAnchors(input.entry_id, recurrenceScope, before);
+          const ScheduleEntry = await getScheduleEntryModel();
           const updated = await ScheduleEntry.update(
             tx.trx,
             tx.tenantId,
@@ -1210,6 +1234,7 @@ export function registerSchedulingActions(): void {
           const completedAt = new Date().toISOString();
           const nextNotes = appendEntryNotes(before.notes, [input.outcome ? `Completion outcome: ${input.outcome}` : undefined, input.note]) ?? undefined;
           const recurrenceAnchors = getVirtualOccurrenceAnchors(input.entry_id, recurrenceScope, before);
+          const ScheduleEntry = await getScheduleEntryModel();
           const updated = await ScheduleEntry.update(
             tx.trx,
             tx.tenantId,

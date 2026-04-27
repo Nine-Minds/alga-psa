@@ -1,7 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import ScheduleEntry from '../../../../../packages/scheduling/src/models/scheduleEntry';
 
 import { createTestDbConnection, createTenant, createUser } from './_dbTestUtils';
 
@@ -115,6 +114,18 @@ async function ensureTechnicianRole(db: Knex, tenantId: string, userId: string):
   if (userRoleColumnSet.has('updated_at')) userRoleRow.updated_at = nowIso;
 
   await db('user_roles').insert(userRoleRow);
+}
+
+type ScheduleEntryModel = {
+  getAll: (knexOrTrx: Knex | Knex.Transaction, tenant: string, start: Date, end: Date) => Promise<Array<Record<string, unknown>>>;
+};
+
+let scheduleEntryModelPromise: Promise<ScheduleEntryModel> | null = null;
+
+async function getScheduleEntryModel(): Promise<ScheduleEntryModel> {
+  scheduleEntryModelPromise ??= import('../../../../../packages/scheduling/src/models/' + 'scheduleEntry')
+    .then((module) => (module as { default: ScheduleEntryModel }).default);
+  return scheduleEntryModelPromise;
 }
 
 async function createScheduleEntry(
@@ -466,6 +477,7 @@ describe('scheduling business operation db actions', () => {
 
     expect(result.updated_entry_id).not.toBe(masterEntryId);
 
+    const ScheduleEntry = await getScheduleEntryModel();
     const inRange = await ScheduleEntry.getAll(
       db,
       runtimeState.tenantId,
@@ -515,6 +527,7 @@ describe('scheduling business operation db actions', () => {
     expect(result.updated_entry_id).not.toBe(masterEntryId);
     expect(result.new_start).toBe(rescheduledStart.toISOString());
 
+    const ScheduleEntry = await getScheduleEntryModel();
     const inRange = await ScheduleEntry.getAll(
       db,
       runtimeState.tenantId,
