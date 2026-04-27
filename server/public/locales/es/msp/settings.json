@@ -19,7 +19,13 @@
     "importExport": "Importar/Exportar",
     "email": "Correo",
     "integrations": "Integraciones",
-    "extensions": "Extensiones"
+    "extensions": "Extensiones",
+    "ticketingSettings": "Configuración de tickets",
+    "loadingTicketing": "Cargando configuración de tickets...",
+    "teamManagement": "Gestión de equipo",
+    "loadingTeam": "Cargando configuración del equipo...",
+    "loadingExperimental": "Cargando configuración de funciones experimentales...",
+    "loadingInteractions": "Cargando configuración de interacciones..."
   },
   "unsavedChanges": {
     "title": "Cambios sin guardar",
@@ -304,7 +310,8 @@
         "reportsToSelf": "Un usuario no puede reportarse a sí mismo",
         "reportsToCycle": "Esto crearía una cadena de reporte circular"
       }
-    }
+    },
+    "loading": "Cargando detalles del usuario..."
   },
   "teams": {
     "title": "Gestión de equipos",
@@ -875,7 +882,8 @@
           "saveFailed": "Error al {{action}} el tipo de interacción. Inténtelo de nuevo."
         }
       }
-    }
+    },
+    "openMenu": "Abrir menú"
   },
   "clientPortal": {
     "branding": {
@@ -1020,7 +1028,10 @@
         "retryFailed": "Reintento fallido.",
         "disableFailed": "Error al deshabilitar el dominio personalizado."
       }
-    }
+    },
+    "yourCompanyName": "Nombre de su empresa",
+    "brandingPreviewMode": "Modo de tema de vista previa de marca",
+    "brandingUpdated": "Configuración de marca actualizada"
   },
   "mspLanguage": {
     "title": "Idioma de la organización",
@@ -1300,7 +1311,8 @@
         "loadJobDetails": "No se pudieron cargar los detalles del trabajo",
         "refreshHistory": "No se pudo actualizar el historial de importación"
       }
-    }
+    },
+    "selectJobHint": "Seleccione un trabajo de importación para inspeccionar sus resultados."
   },
   "email": {
     "title": "Configuración de correo electrónico",
@@ -1736,5 +1748,9 @@
     "inheritOption": "Usar el predeterminado de la organización ({{language}})",
     "unsetHint": "Para eliminar la anulación del portal del cliente, cambie el predeterminado de la organización en Configuración → Idioma.",
     "updated": "Idioma predeterminado del portal del cliente actualizado a {{language}}"
+  },
+  "language": {
+    "selectLanguage": "Seleccionar un idioma",
+    "languagesUpdated": "Idiomas disponibles actualizados"
   }
 }

@@ -105,7 +105,7 @@ const SAMPLE_TEMPLATES: Array<{ id: string; label: string; payload: Record<strin
         subject: 'Hello!',
         from: { name: 'Jane Doe', email: 'jane@example.com' },
         to: [{ name: 'Support', email: 'support@example.com' }],
-        body: { text: 'Sample email body', html: '<p>Sample email body</p>' },
+        body: { text: t('runDialog.sampleEmailBody'), html: `<p>${t('runDialog.sampleEmailBody')}</p>` },
         attachments: []
       },
       providerId: 'provider_123',

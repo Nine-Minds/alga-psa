@@ -1247,6 +1247,9 @@
       "acknowledgeFailed": "Failed to acknowledge alert",
       "ticketCreated": "Ticket created successfully",
       "ticketCreateFailed": "Failed to create ticket"
-    }
+    },
+    "activeAlerts": "Active Alerts",
+    "acknowledge": "Acknowledge",
+    "createTicket": "Create Ticket"
   }
 }

@@ -119,7 +119,9 @@
     },
     "checkEmail": {
       "resendSuccess": "Email sent! Please check your inbox.",
-      "resendFailed": "Failed to resend email. Please try again."
+      "resendFailed": "Failed to resend email. Please try again.",
+      "whatsNext": "What's next?",
+      "didntReceive": "Didn't receive the email?"
     }
   },
   "share": {
@@ -133,7 +135,9 @@
       "linkNotAvailable": "Link Not Available",
       "linkExpired": "This share link has expired.",
       "downloadLimitReached": "Download limit has been reached."
-    }
+    },
+    "downloadStarted": "Download started successfully!",
+    "enterPassword": "Enter password"
   },
   "tickets": {
     "origin": {
@@ -1069,5 +1073,8 @@
       "documentEditor": "Document Editor",
       "accountManagement": "Account Management"
     }
+  },
+  "feedback": {
+    "providePlaceholder": "Please provide feedback"
   }
 }

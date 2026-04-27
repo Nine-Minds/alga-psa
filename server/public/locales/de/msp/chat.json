@@ -142,5 +142,8 @@
       "pending": "Funktion in Warteschlange",
       "error": "Funktionsfehler"
     }
+  },
+  "mention": {
+    "noResultsFound": "Keine Ergebnisse gefunden"
   }
 }

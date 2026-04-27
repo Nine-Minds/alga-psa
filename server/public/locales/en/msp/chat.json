@@ -142,5 +142,8 @@
       "pending": "Function queued",
       "error": "Function error"
     }
+  },
+  "mention": {
+    "noResultsFound": "No results found"
   }
 }

@@ -426,7 +426,8 @@
       "summaryTitle": "11111",
       "summaryDescription": "11111",
       "moreErrors": "11111 {{count}} 11111"
-    }
+    },
+    "sampleEmailBody": "11111"
   },
   "eventList": {
     "common": {
@@ -2353,5 +2354,49 @@
     "enableHint": "11111",
     "goToExperimental": "11111",
     "openSettings": "11111"
+  },
+  "flow": {
+    "designer": {
+      "title": "11111"
+    },
+    "sidebar": {
+      "dragHint": "11111"
+    },
+    "picker": {
+      "searchPlaceholder": "11111"
+    },
+    "fields": {
+      "selectInputField": "11111",
+      "customFieldReference": "11111",
+      "selectOrEnterReference": "11111"
+    },
+    "delete": {
+      "confirmTitle": "11111",
+      "confirmMessage": "11111"
+    },
+    "topBar": {
+      "workflowName": "11111",
+      "workflowDescription": "11111"
+    },
+    "nodes": {
+      "classifier": {
+        "newClassification": "11111"
+      },
+      "selector": {
+        "defaultInput": "11111"
+      },
+      "decision": {
+        "type": "11111",
+        "conditionValue": "11111",
+        "defaultOutput": "11111",
+        "defaultOutputProp": "11111"
+      },
+      "ticketCreator": {
+        "ticketTitle": "11111",
+        "ticketDescription": "11111",
+        "selectBoard": "11111",
+        "selectPriority": "11111"
+      }
+    }
   }
 }

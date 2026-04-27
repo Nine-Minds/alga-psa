@@ -426,7 +426,8 @@
       "summaryTitle": "Payload heeft nog verplichte gebeurtenisvelden nodig voordat deze uitvoering kan starten",
       "summaryDescription": "Vul de ontbrekende velden hieronder in, schakel over naar de formulierwizard of gebruik een voorbeeld-payloadknop.",
       "moreErrors": "+{{count}} meer…"
-    }
+    },
+    "sampleEmailBody": "Voorbeeld-e-mailtekst"
   },
   "eventList": {
     "common": {
@@ -2353,5 +2354,49 @@
     "enableHint": "Schakel Workflowautomatisering in bij Instellingen om er toegang toe te krijgen.",
     "goToExperimental": "Ga naar experimentele functies",
     "openSettings": "Instellingen openen"
+  },
+  "flow": {
+    "designer": {
+      "title": "Workflow-ontwerper"
+    },
+    "sidebar": {
+      "dragHint": "Sleep deze knooppunten naar het canvas:"
+    },
+    "picker": {
+      "searchPlaceholder": "Zoeken..."
+    },
+    "fields": {
+      "selectInputField": "Invoerveld selecteren",
+      "customFieldReference": "Aangepaste veldreferentie",
+      "selectOrEnterReference": "Selecteer of voer een veldreferentie in"
+    },
+    "delete": {
+      "confirmTitle": "Verwijderen bevestigen",
+      "confirmMessage": "Weet u zeker dat u deze workflow wilt verwijderen?"
+    },
+    "topBar": {
+      "workflowName": "Workflownaam",
+      "workflowDescription": "Workflowbeschrijving"
+    },
+    "nodes": {
+      "classifier": {
+        "newClassification": "Nieuwe classificatie"
+      },
+      "selector": {
+        "defaultInput": "Standaardinvoer"
+      },
+      "decision": {
+        "type": "Type",
+        "conditionValue": "Voorwaardewaarde",
+        "defaultOutput": "Standaarduitvoer",
+        "defaultOutputProp": "Standaarduitvoer"
+      },
+      "ticketCreator": {
+        "ticketTitle": "Tickettitel:",
+        "ticketDescription": "Ticketbeschrijving:",
+        "selectBoard": "Selecteer of voer een bord in",
+        "selectPriority": "Selecteer of voer een prioriteit in"
+      }
+    }
   }
 }

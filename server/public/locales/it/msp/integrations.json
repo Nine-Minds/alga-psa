@@ -1743,5 +1743,8 @@
         "publishableKeyFormat": "La chiave pubblicabile deve iniziare con pk_"
       }
     }
+  },
+  "ninjaone": {
+    "selectCompany": "Seleziona azienda"
   }
 }

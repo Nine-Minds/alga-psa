@@ -164,7 +164,7 @@ export function AssetAlertsSection({ asset, className = '' }: AssetAlertsSection
       >
         <div className="flex items-center gap-2">
           <AlertTriangle className={`h-5 w-5 ${hasAlerts ? 'text-amber-500' : 'text-gray-400'}`} />
-          <span className="font-medium">Active Alerts</span>
+          <span className="font-medium">{t('alerts.activeAlerts')}</span>
           {hasAlerts && (
             <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium rounded-full bg-warning/15 text-warning-foreground">
               {activeAlerts.length}
@@ -247,7 +247,7 @@ export function AssetAlertsSection({ asset, className = '' }: AssetAlertsSection
                           size="sm"
                           onClick={() => handleAcknowledge(alert.alert_id)}
                           disabled={processingAlertId === alert.alert_id}
-                          title="Acknowledge"
+                          title={t('alerts.acknowledge')}
                         >
                           <Check className="h-4 w-4" />
                         </Button>
@@ -259,7 +259,7 @@ export function AssetAlertsSection({ asset, className = '' }: AssetAlertsSection
                           size="sm"
                           onClick={() => handleCreateTicket(alert.alert_id)}
                           disabled={processingAlertId === alert.alert_id}
-                          title="Create Ticket"
+                          title={t('alerts.createTicket')}
                         >
                           <Ticket className="h-4 w-4" />
                         </Button>

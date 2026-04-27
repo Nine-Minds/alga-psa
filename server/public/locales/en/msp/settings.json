@@ -19,7 +19,13 @@
     "importExport": "Import/Export",
     "email": "Email",
     "integrations": "Integrations",
-    "extensions": "Extensions"
+    "extensions": "Extensions",
+    "ticketingSettings": "Ticketing Settings",
+    "loadingTicketing": "Loading ticketing configuration...",
+    "teamManagement": "Team Management",
+    "loadingTeam": "Loading team configuration...",
+    "loadingExperimental": "Loading experimental feature configuration...",
+    "loadingInteractions": "Loading interaction settings..."
   },
   "unsavedChanges": {
     "title": "Unsaved Changes",
@@ -304,7 +310,8 @@
         "passwordChangeFailed": "Failed to change password",
         "passwordChangeError": "An error occurred while changing password"
       }
-    }
+    },
+    "loading": "Loading user details..."
   },
   "teams": {
     "title": "Team Management",
@@ -875,7 +882,8 @@
           "saveFailed": "Failed to {{action}} interaction type. Please try again."
         }
       }
-    }
+    },
+    "openMenu": "Open menu"
   },
   "clientPortal": {
     "branding": {
@@ -1020,7 +1028,10 @@
         "retryFailed": "Retry failed.",
         "disableFailed": "Failed to disable custom domain."
       }
-    }
+    },
+    "yourCompanyName": "Your Company Name",
+    "brandingPreviewMode": "Branding preview theme mode",
+    "brandingUpdated": "Branding settings updated"
   },
   "mspLanguage": {
     "title": "Organization Language",
@@ -1300,7 +1311,8 @@
         "loadJobDetails": "Failed to load job details",
         "refreshHistory": "Failed to refresh import history"
       }
-    }
+    },
+    "selectJobHint": "Select an import job to inspect its results."
   },
   "email": {
     "title": "Email Configuration",
@@ -1736,5 +1748,9 @@
     "inheritOption": "Use organization default ({{language}})",
     "unsetHint": "To remove the client portal override, change the organization default under Settings → Language.",
     "updated": "Client portal default language updated to {{language}}"
+  },
+  "language": {
+    "selectLanguage": "Select a language",
+    "languagesUpdated": "Available languages updated"
   }
 }

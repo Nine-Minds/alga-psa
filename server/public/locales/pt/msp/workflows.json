@@ -426,7 +426,8 @@
       "summaryTitle": "Payload still needs required event fields before this run can start",
       "summaryDescription": "Fill the missing fields below, switch to Form Builder, or use a sample payload button.",
       "moreErrors": "+{{count}} more…"
-    }
+    },
+    "sampleEmailBody": "Corpo de e-mail de exemplo"
   },
   "eventList": {
     "common": {
@@ -2353,5 +2354,49 @@
     "enableHint": "Ative a Automação de fluxos de trabalho em Definições para aceder.",
     "goToExperimental": "Ir para funcionalidades experimentais",
     "openSettings": "Abrir definições"
+  },
+  "flow": {
+    "designer": {
+      "title": "Designer de fluxo de trabalho"
+    },
+    "sidebar": {
+      "dragHint": "Arraste esses nós para o canvas:"
+    },
+    "picker": {
+      "searchPlaceholder": "Pesquisar..."
+    },
+    "fields": {
+      "selectInputField": "Selecionar campo de entrada",
+      "customFieldReference": "Referência de campo personalizada",
+      "selectOrEnterReference": "Selecione ou insira uma referência de campo"
+    },
+    "delete": {
+      "confirmTitle": "Confirmar exclusão",
+      "confirmMessage": "Tem certeza de que deseja excluir este fluxo de trabalho?"
+    },
+    "topBar": {
+      "workflowName": "Nome do fluxo de trabalho",
+      "workflowDescription": "Descrição do fluxo de trabalho"
+    },
+    "nodes": {
+      "classifier": {
+        "newClassification": "Nova classificação"
+      },
+      "selector": {
+        "defaultInput": "Entrada padrão"
+      },
+      "decision": {
+        "type": "Tipo",
+        "conditionValue": "Valor da condição",
+        "defaultOutput": "Saída padrão",
+        "defaultOutputProp": "Saída padrão"
+      },
+      "ticketCreator": {
+        "ticketTitle": "Título do ticket:",
+        "ticketDescription": "Descrição do ticket:",
+        "selectBoard": "Selecione ou insira um quadro",
+        "selectPriority": "Selecione ou insira uma prioridade"
+      }
+    }
   }
 }

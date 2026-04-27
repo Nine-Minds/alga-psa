@@ -547,7 +547,9 @@
     },
     "checkEmail": {
       "resendSuccess": "E-mail verzonden! Controleer je inbox.",
-      "resendFailed": "E-mail opnieuw verzenden is mislukt. Probeer het opnieuw."
+      "resendFailed": "E-mail opnieuw verzenden is mislukt. Probeer het opnieuw.",
+      "whatsNext": "Wat nu?",
+      "didntReceive": "E-mail niet ontvangen?"
     }
   },
   "share": {
@@ -561,7 +563,9 @@
       "linkNotAvailable": "Link niet beschikbaar",
       "linkExpired": "Deze deellink is verlopen.",
       "downloadLimitReached": "De downloadlimiet is bereikt."
-    }
+    },
+    "downloadStarted": "Download succesvol gestart!",
+    "enterPassword": "Wachtwoord invoeren"
   },
   "tickets": {
     "responseSource": {
@@ -1069,5 +1073,8 @@
       "documentEditor": "Documenteditor",
       "accountManagement": "Accountbeheer"
     }
+  },
+  "feedback": {
+    "providePlaceholder": "Geef feedback"
   }
 }

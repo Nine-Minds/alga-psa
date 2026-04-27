@@ -1247,6 +1247,9 @@
       "acknowledgeFailed": "Échec de l'accusé de réception de l'alerte",
       "ticketCreated": "Ticket créé avec succès",
       "ticketCreateFailed": "Échec de la création du ticket"
-    }
+    },
+    "activeAlerts": "Alertes actives",
+    "acknowledge": "Accuser réception",
+    "createTicket": "Créer un ticket"
   }
 }

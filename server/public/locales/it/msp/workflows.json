@@ -426,7 +426,8 @@
       "summaryTitle": "Il payload necessita ancora dei campi evento obbligatori prima che questa esecuzione possa iniziare",
       "summaryDescription": "Compili i campi mancanti qui sotto, passi al generatore di moduli o utilizzi un pulsante di payload di esempio.",
       "moreErrors": "+{{count}} altri…"
-    }
+    },
+    "sampleEmailBody": "Corpo email di esempio"
   },
   "eventList": {
     "common": {
@@ -2353,5 +2354,49 @@
     "enableHint": "Abilita l'automazione dei flussi di lavoro nelle impostazioni per accedervi.",
     "goToExperimental": "Vai alle funzionalità sperimentali",
     "openSettings": "Apri impostazioni"
+  },
+  "flow": {
+    "designer": {
+      "title": "Designer di workflow"
+    },
+    "sidebar": {
+      "dragHint": "Trascina questi nodi sul canvas:"
+    },
+    "picker": {
+      "searchPlaceholder": "Cerca..."
+    },
+    "fields": {
+      "selectInputField": "Seleziona campo di input",
+      "customFieldReference": "Riferimento campo personalizzato",
+      "selectOrEnterReference": "Seleziona o inserisci un riferimento di campo"
+    },
+    "delete": {
+      "confirmTitle": "Conferma eliminazione",
+      "confirmMessage": "Sei sicuro di voler eliminare questo workflow?"
+    },
+    "topBar": {
+      "workflowName": "Nome del workflow",
+      "workflowDescription": "Descrizione del workflow"
+    },
+    "nodes": {
+      "classifier": {
+        "newClassification": "Nuova classificazione"
+      },
+      "selector": {
+        "defaultInput": "Input predefinito"
+      },
+      "decision": {
+        "type": "Tipo",
+        "conditionValue": "Valore della condizione",
+        "defaultOutput": "Output predefinito",
+        "defaultOutputProp": "Output predefinito"
+      },
+      "ticketCreator": {
+        "ticketTitle": "Titolo del ticket:",
+        "ticketDescription": "Descrizione del ticket:",
+        "selectBoard": "Seleziona o inserisci una board",
+        "selectPriority": "Seleziona o inserisci una priorità"
+      }
+    }
   }
 }

@@ -547,7 +547,9 @@
     },
     "checkEmail": {
       "resendSuccess": "E-mail envoyé ! Veuillez consulter votre boîte de réception.",
-      "resendFailed": "Échec de l'envoi de l'e-mail. Veuillez réessayer."
+      "resendFailed": "Échec de l'envoi de l'e-mail. Veuillez réessayer.",
+      "whatsNext": "Et maintenant ?",
+      "didntReceive": "Vous n'avez pas reçu l'e-mail ?"
     }
   },
   "share": {
@@ -561,7 +563,9 @@
       "linkNotAvailable": "Lien indisponible",
       "linkExpired": "Ce lien de partage a expiré.",
       "downloadLimitReached": "La limite de téléchargements a été atteinte."
-    }
+    },
+    "downloadStarted": "Téléchargement démarré avec succès !",
+    "enterPassword": "Saisir le mot de passe"
   },
   "tickets": {
     "responseSource": {
@@ -1069,5 +1073,8 @@
       "documentEditor": "Éditeur de document",
       "accountManagement": "Gestion du compte"
     }
+  },
+  "feedback": {
+    "providePlaceholder": "Veuillez fournir un commentaire"
   }
 }

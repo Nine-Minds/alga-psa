@@ -535,7 +535,7 @@ const JobDetailsDrawerContent = ({
   }
 
   if (!details) {
-    return <p className="text-sm text-muted-foreground">Select an import job to inspect its results.</p>;
+    return <p className="text-sm text-muted-foreground">{t('importExport.selectJobHint')}</p>;
   }
 
   return <ImportJobDetailsView details={details} />;

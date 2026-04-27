@@ -426,7 +426,8 @@
       "summaryTitle": "La charge utile nécessite encore des champs d’événement requis avant le démarrage.",
       "summaryDescription": "Remplissez les champs manquants ci-dessous, passez au générateur de formulaire ou utilisez un bouton d’exemple de charge utile.",
       "moreErrors": "+{{count}} autres…"
-    }
+    },
+    "sampleEmailBody": "Exemple de corps d'e-mail"
   },
   "eventList": {
     "common": {
@@ -2353,5 +2354,49 @@
     "enableHint": "Activez l'automatisation des workflows dans les paramètres pour y accéder.",
     "goToExperimental": "Accéder aux fonctionnalités expérimentales",
     "openSettings": "Ouvrir les paramètres"
+  },
+  "flow": {
+    "designer": {
+      "title": "Concepteur de workflow"
+    },
+    "sidebar": {
+      "dragHint": "Faites glisser ces nœuds sur le canevas :"
+    },
+    "picker": {
+      "searchPlaceholder": "Rechercher..."
+    },
+    "fields": {
+      "selectInputField": "Sélectionner un champ d'entrée",
+      "customFieldReference": "Référence de champ personnalisée",
+      "selectOrEnterReference": "Sélectionnez ou saisissez une référence de champ"
+    },
+    "delete": {
+      "confirmTitle": "Confirmer la suppression",
+      "confirmMessage": "Êtes-vous sûr de vouloir supprimer ce workflow ?"
+    },
+    "topBar": {
+      "workflowName": "Nom du workflow",
+      "workflowDescription": "Description du workflow"
+    },
+    "nodes": {
+      "classifier": {
+        "newClassification": "Nouvelle classification"
+      },
+      "selector": {
+        "defaultInput": "Entrée par défaut"
+      },
+      "decision": {
+        "type": "Type",
+        "conditionValue": "Valeur de condition",
+        "defaultOutput": "Sortie par défaut",
+        "defaultOutputProp": "Sortie par défaut"
+      },
+      "ticketCreator": {
+        "ticketTitle": "Titre du ticket :",
+        "ticketDescription": "Description du ticket :",
+        "selectBoard": "Sélectionnez ou saisissez un tableau",
+        "selectPriority": "Sélectionnez ou saisissez une priorité"
+      }
+    }
   }
 }

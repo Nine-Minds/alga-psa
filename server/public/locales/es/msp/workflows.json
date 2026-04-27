@@ -426,7 +426,8 @@
       "summaryTitle": "La carga útil todavía necesita campos de evento obligatorios antes de iniciar la ejecución",
       "summaryDescription": "Rellene los campos que faltan a continuación, cambie al constructor de formulario o use un botón de carga útil de ejemplo.",
       "moreErrors": "+{{count}} más…"
-    }
+    },
+    "sampleEmailBody": "Cuerpo de correo de ejemplo"
   },
   "eventList": {
     "common": {
@@ -2353,5 +2354,49 @@
     "enableHint": "Habilite la automatización de flujos de trabajo en la configuración para acceder a ella.",
     "goToExperimental": "Ir a funciones experimentales",
     "openSettings": "Abrir configuración"
+  },
+  "flow": {
+    "designer": {
+      "title": "Diseñador de flujo de trabajo"
+    },
+    "sidebar": {
+      "dragHint": "Arrastre estos nodos al lienzo:"
+    },
+    "picker": {
+      "searchPlaceholder": "Buscar..."
+    },
+    "fields": {
+      "selectInputField": "Seleccionar campo de entrada",
+      "customFieldReference": "Referencia de campo personalizado",
+      "selectOrEnterReference": "Seleccione o introduzca una referencia de campo"
+    },
+    "delete": {
+      "confirmTitle": "Confirmar eliminación",
+      "confirmMessage": "¿Está seguro de que desea eliminar este flujo de trabajo?"
+    },
+    "topBar": {
+      "workflowName": "Nombre del flujo de trabajo",
+      "workflowDescription": "Descripción del flujo de trabajo"
+    },
+    "nodes": {
+      "classifier": {
+        "newClassification": "Nueva clasificación"
+      },
+      "selector": {
+        "defaultInput": "Entrada predeterminada"
+      },
+      "decision": {
+        "type": "Tipo",
+        "conditionValue": "Valor de condición",
+        "defaultOutput": "Salida predeterminada",
+        "defaultOutputProp": "Salida predeterminada"
+      },
+      "ticketCreator": {
+        "ticketTitle": "Título del ticket:",
+        "ticketDescription": "Descripción del ticket:",
+        "selectBoard": "Seleccione o introduzca un tablero",
+        "selectPriority": "Seleccione o introduzca una prioridad"
+      }
+    }
   }
 }

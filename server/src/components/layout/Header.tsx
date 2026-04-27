@@ -419,7 +419,7 @@ export default function Header({
   return (
     <header className="flex items-center justify-between border-b border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-4 py-3 shadow-sm">
       <div className="flex items-center gap-3">
-        <nav aria-label="Breadcrumb">
+        <nav aria-label={t('header.breadcrumb')}>
           <ol className="flex items-center space-x-2">
             {breadcrumbItems.map((item, index) => (
               <li key={`${item.href}-${index}`} className="flex items-center">
@@ -477,7 +477,7 @@ export default function Header({
               id="user-menu-trigger"
               variant="ghost"
               size="icon"
-              aria-label="Open user menu"
+              aria-label={t('header.openUserMenu')}
               className="relative h-10 w-10 rounded-full"
             >
               {userData?.user_type === 'client' ? (

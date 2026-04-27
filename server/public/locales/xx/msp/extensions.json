@@ -341,5 +341,10 @@
     "reprovisionFailed": "11111",
     "manifestReadFailed": "11111",
     "invalidBundleExtension": "11111 {{filename}} 11111"
+  },
+  "debug": {
+    "scopeToOneInstall": "11111",
+    "overrideTenantContext": "11111",
+    "matchRequestId": "11111"
   }
 }

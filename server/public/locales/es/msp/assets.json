@@ -1247,6 +1247,9 @@
       "acknowledgeFailed": "Error al confirmar la alerta",
       "ticketCreated": "Ticket creado correctamente",
       "ticketCreateFailed": "Error al crear el ticket"
-    }
+    },
+    "activeAlerts": "Alertas activas",
+    "acknowledge": "Confirmar",
+    "createTicket": "Crear ticket"
   }
 }

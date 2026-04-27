@@ -1247,6 +1247,9 @@
       "acknowledgeFailed": "Kan melding niet bevestigen",
       "ticketCreated": "Ticket succesvol aangemaakt",
       "ticketCreateFailed": "Kan ticket niet aanmaken"
-    }
+    },
+    "activeAlerts": "Actieve waarschuwingen",
+    "acknowledge": "Bevestigen",
+    "createTicket": "Ticket aanmaken"
   }
 }

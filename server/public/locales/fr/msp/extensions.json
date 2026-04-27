@@ -341,5 +341,10 @@
     "reprovisionFailed": "Échec du reprovisionnement",
     "manifestReadFailed": "Échec de la lecture du fichier manifeste",
     "invalidBundleExtension": "Le fichier doit se terminer par \".tar.zst\" : {{filename}}"
+  },
+  "debug": {
+    "scopeToOneInstall": "Limiter à une installation",
+    "overrideTenantContext": "Remplacer le contexte tenant",
+    "matchRequestId": "Faire correspondre x-request-id / context.request_id"
   }
 }

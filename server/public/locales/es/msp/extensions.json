@@ -341,5 +341,10 @@
     "reprovisionFailed": "Error al reaprovisionar",
     "manifestReadFailed": "Error al leer el archivo de manifiesto",
     "invalidBundleExtension": "El archivo debe terminar con \".tar.zst\": {{filename}}"
+  },
+  "debug": {
+    "scopeToOneInstall": "Limitar a una instalación",
+    "overrideTenantContext": "Anular contexto de tenant",
+    "matchRequestId": "Coincidir x-request-id / context.request_id"
   }
 }

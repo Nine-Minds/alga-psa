@@ -19,7 +19,13 @@
     "importExport": "Import/Export",
     "email": "E-Mail",
     "integrations": "Integrationen",
-    "extensions": "Erweiterungen"
+    "extensions": "Erweiterungen",
+    "ticketingSettings": "Ticketing-Einstellungen",
+    "loadingTicketing": "Ticketing-Konfiguration wird geladen...",
+    "teamManagement": "Team-Verwaltung",
+    "loadingTeam": "Team-Konfiguration wird geladen...",
+    "loadingExperimental": "Experimentelle Funktionskonfiguration wird geladen...",
+    "loadingInteractions": "Interaktionseinstellungen werden geladen..."
   },
   "unsavedChanges": {
     "title": "Ungespeicherte Änderungen",
@@ -304,7 +310,8 @@
         "reportsToSelf": "Ein Benutzer kann sich nicht selbst als Vorgesetzten zuweisen",
         "reportsToCycle": "Dies würde eine zirkuläre Berichtskette erzeugen"
       }
-    }
+    },
+    "loading": "Benutzerdetails werden geladen..."
   },
   "teams": {
     "title": "Teamverwaltung",
@@ -875,7 +882,8 @@
           "saveFailed": "Interaktionstyp konnte nicht {{action}} werden. Bitte versuchen Sie es erneut."
         }
       }
-    }
+    },
+    "openMenu": "Menü öffnen"
   },
   "clientPortal": {
     "branding": {
@@ -1020,7 +1028,10 @@
         "retryFailed": "Wiederholung fehlgeschlagen.",
         "disableFailed": "Benutzerdefinierte Domain konnte nicht deaktiviert werden."
       }
-    }
+    },
+    "yourCompanyName": "Name Ihres Unternehmens",
+    "brandingPreviewMode": "Branding-Vorschau-Themenmodus",
+    "brandingUpdated": "Branding-Einstellungen aktualisiert"
   },
   "mspLanguage": {
     "title": "Organisationssprache",
@@ -1300,7 +1311,8 @@
         "loadJobDetails": "Auftragsdetails konnten nicht geladen werden",
         "refreshHistory": "Importverlauf konnte nicht aktualisiert werden"
       }
-    }
+    },
+    "selectJobHint": "Wählen Sie einen Importauftrag aus, um die Ergebnisse zu untersuchen."
   },
   "email": {
     "title": "E-Mail-Konfiguration",
@@ -1736,5 +1748,9 @@
     "inheritOption": "Organisationsstandard verwenden ({{language}})",
     "unsetHint": "Um die Client-Portal-Überschreibung zu entfernen, ändern Sie den Organisationsstandard unter Einstellungen → Sprache.",
     "updated": "Client-Portal-Standardsprache auf {{language}} aktualisiert"
+  },
+  "language": {
+    "selectLanguage": "Sprache auswählen",
+    "languagesUpdated": "Verfügbare Sprachen aktualisiert"
   }
 }

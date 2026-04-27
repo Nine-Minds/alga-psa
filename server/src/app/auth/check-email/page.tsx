@@ -72,7 +72,7 @@ const CheckEmailContent: React.FC = () => {
           {/* What's next section */}
           <div className="mb-6">
             <div className="p-4 bg-[rgb(var(--color-primary-50))] rounded-lg">
-              <h4 className="font-medium text-sm mb-2 text-[rgb(var(--color-primary-900))]">What's next?</h4>
+              <h4 className="font-medium text-sm mb-2 text-[rgb(var(--color-primary-900))]">{t('auth.checkEmail.whatsNext')}</h4>
               <ol className="text-sm text-[rgb(var(--color-primary-700))] space-y-1">
                 <li>1. Check your email inbox</li>
                 <li>2. Click the reset link in the email</li>
@@ -85,7 +85,7 @@ const CheckEmailContent: React.FC = () => {
           <div className="mb-6">
             <Alert variant="info">
               <AlertDescription>
-                <h4 className="font-medium text-sm mb-2">Didn't receive the email?</h4>
+                <h4 className="font-medium text-sm mb-2">{t('auth.checkEmail.didntReceive')}</h4>
                 <ul className="text-sm space-y-1">
                   <li>• Check your spam or junk folder</li>
                   <li>• Make sure you entered the correct email</li>

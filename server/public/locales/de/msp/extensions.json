@@ -341,5 +341,10 @@
     "reprovisionFailed": "Neubereitstellung fehlgeschlagen",
     "manifestReadFailed": "Manifestdatei konnte nicht gelesen werden",
     "invalidBundleExtension": "Datei muss mit \".tar.zst\" enden: {{filename}}"
+  },
+  "debug": {
+    "scopeToOneInstall": "Auf eine Installation einschränken",
+    "overrideTenantContext": "Mandantenkontext überschreiben",
+    "matchRequestId": "x-request-id / context.request_id abgleichen"
   }
 }

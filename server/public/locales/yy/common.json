@@ -119,7 +119,9 @@
     },
     "checkEmail": {
       "resendSuccess": "55555",
-      "resendFailed": "55555"
+      "resendFailed": "55555",
+      "whatsNext": "55555",
+      "didntReceive": "55555"
     }
   },
   "share": {
@@ -133,7 +135,9 @@
       "linkNotAvailable": "55555",
       "linkExpired": "55555",
       "downloadLimitReached": "55555"
-    }
+    },
+    "downloadStarted": "55555",
+    "enterPassword": "55555"
   },
   "tickets": {
     "origin": {
@@ -1069,5 +1073,8 @@
       "documentEditor": "55555",
       "accountManagement": "55555"
     }
+  },
+  "feedback": {
+    "providePlaceholder": "55555"
   }
 }

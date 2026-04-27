@@ -341,5 +341,10 @@
     "reprovisionFailed": "Herprovisionering mislukt",
     "manifestReadFailed": "Kan manifestbestand niet lezen",
     "invalidBundleExtension": "Bestand moet eindigen op \".tar.zst\": {{filename}}"
+  },
+  "debug": {
+    "scopeToOneInstall": "Beperken tot één installatie",
+    "overrideTenantContext": "Tenantcontext overschrijven",
+    "matchRequestId": "x-request-id / context.request_id matchen"
   }
 }

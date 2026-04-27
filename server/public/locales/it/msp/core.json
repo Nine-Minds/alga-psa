@@ -154,10 +154,7 @@
       "failedLast24h": "Falliti nelle ultime 24 ore",
       "openJobCenter": "Apri centro job"
     },
-    "breadcrumb": {
-      "home": "Inizio",
-      "dashboard": "Dashboard"
-    },
+    "breadcrumb": "Breadcrumb",
     "tenantBadge": {
       "ariaLabel": "Tenant attivo {{tenant}}"
     },
@@ -167,7 +164,8 @@
       "dark": "Scuro",
       "system": "Sistema",
       "selected": "Selezionato"
-    }
+    },
+    "openUserMenu": "Apri menu utente"
   },
   "dialogs": {
     "aiInterrupt": {

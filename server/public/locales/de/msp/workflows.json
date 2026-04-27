@@ -426,7 +426,8 @@
       "summaryTitle": "Den Nutzdaten fehlen noch erforderliche Ereignisfelder, bevor diese Ausführung starten kann",
       "summaryDescription": "Füllen Sie die fehlenden Felder unten aus, wechseln Sie zum Formular-Assistenten oder verwenden Sie eine Beispiel-Nutzdaten-Schaltfläche.",
       "moreErrors": "+{{count}} weitere…"
-    }
+    },
+    "sampleEmailBody": "Beispiel-E-Mail-Inhalt"
   },
   "eventList": {
     "common": {
@@ -2353,5 +2354,49 @@
     "enableHint": "Aktivieren Sie die Workflow-Automatisierung in den Einstellungen, um darauf zuzugreifen.",
     "goToExperimental": "Zu experimentellen Funktionen",
     "openSettings": "Einstellungen öffnen"
+  },
+  "flow": {
+    "designer": {
+      "title": "Workflow-Designer"
+    },
+    "sidebar": {
+      "dragHint": "Ziehen Sie diese Knoten auf die Arbeitsfläche:"
+    },
+    "picker": {
+      "searchPlaceholder": "Suchen..."
+    },
+    "fields": {
+      "selectInputField": "Eingabefeld auswählen",
+      "customFieldReference": "Benutzerdefinierte Feldreferenz",
+      "selectOrEnterReference": "Feldreferenz auswählen oder eingeben"
+    },
+    "delete": {
+      "confirmTitle": "Löschen bestätigen",
+      "confirmMessage": "Möchten Sie diesen Workflow wirklich löschen?"
+    },
+    "topBar": {
+      "workflowName": "Workflow-Name",
+      "workflowDescription": "Workflow-Beschreibung"
+    },
+    "nodes": {
+      "classifier": {
+        "newClassification": "Neue Klassifizierung"
+      },
+      "selector": {
+        "defaultInput": "Standard-Eingabe"
+      },
+      "decision": {
+        "type": "Typ",
+        "conditionValue": "Bedingungswert",
+        "defaultOutput": "Standard-Ausgabe",
+        "defaultOutputProp": "Standard-Ausgabe"
+      },
+      "ticketCreator": {
+        "ticketTitle": "Ticket-Titel:",
+        "ticketDescription": "Ticket-Beschreibung:",
+        "selectBoard": "Board auswählen oder eingeben",
+        "selectPriority": "Priorität auswählen oder eingeben"
+      }
+    }
   }
 }

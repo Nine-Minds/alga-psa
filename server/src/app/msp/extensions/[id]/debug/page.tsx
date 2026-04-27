@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type DebugEvent = {
   ts?: string;
@@ -73,6 +74,7 @@ export default function ExtensionDebugPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const { t } = useTranslation('msp/extensions');
   // Next.js App Router now provides `params` as a Promise; unwrap it once on the client.
   const [extensionId, setExtensionId] = useState<string>('');
 
@@ -386,7 +388,7 @@ export default function ExtensionDebugPage({
             className="px-2 py-1 text-xs rounded border border-slate-200"
             value={installId}
             onChange={(e) => setInstallId(e.target.value)}
-            placeholder="Scope to one install"
+            placeholder={t('debug.scopeToOneInstall')}
           />
         </div>
 
@@ -398,7 +400,7 @@ export default function ExtensionDebugPage({
             className="px-2 py-1 text-xs rounded border border-slate-200"
             value={tenantId}
             onChange={(e) => setTenantId(e.target.value)}
-            placeholder="Override tenant context"
+            placeholder={t('debug.overrideTenantContext')}
           />
         </div>
 
@@ -410,7 +412,7 @@ export default function ExtensionDebugPage({
             className="px-2 py-1 text-xs rounded border border-slate-200"
             value={requestId}
             onChange={(e) => setRequestId(e.target.value)}
-            placeholder="Match x-request-id / context.request_id"
+            placeholder={t('debug.matchRequestId')}
           />
         </div>
 

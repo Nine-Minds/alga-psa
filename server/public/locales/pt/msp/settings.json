@@ -4,14 +4,14 @@
   },
   "tabs": {
     "general": "General",
-    "experimentalFeatures": "Experimental Features",
+    "experimentalFeatures": "Recursos experimentais",
     "clientPortal": "Client Portal",
     "users": "Users",
     "teams": "Teams",
     "language": "Language",
     "ticketing": "Ticketing",
     "projects": "Projects",
-    "interactions": "Interactions",
+    "interactions": "Interações",
     "notifications": "Notifications",
     "timeEntry": "Time Entry",
     "billing": "Billing",
@@ -19,7 +19,13 @@
     "importExport": "Import/Export",
     "email": "Email",
     "integrations": "Integrations",
-    "extensions": "Extensions"
+    "extensions": "Extensions",
+    "ticketingSettings": "Configurações de ticketing",
+    "loadingTicketing": "Carregando configuração de ticketing...",
+    "teamManagement": "Gestão de equipe",
+    "loadingTeam": "Carregando configuração da equipe...",
+    "loadingExperimental": "Carregando configuração de recursos experimentais...",
+    "loadingInteractions": "Carregando configurações de interação..."
   },
   "unsavedChanges": {
     "title": "Unsaved Changes",
@@ -304,7 +310,8 @@
         "reportsToSelf": "Um utilizador não pode reportar a si próprio",
         "reportsToCycle": "Isto criaria uma cadeia de reporte circular"
       }
-    }
+    },
+    "loading": "Carregando detalhes do usuário..."
   },
   "teams": {
     "title": "Team Management",
@@ -875,7 +882,8 @@
           "saveFailed": "Failed to {{action}} interaction type. Please try again."
         }
       }
-    }
+    },
+    "openMenu": "Abrir menu"
   },
   "clientPortal": {
     "branding": {
@@ -1020,7 +1028,10 @@
         "retryFailed": "A nova tentativa falhou.",
         "disableFailed": "Falha ao desativar o domínio personalizado."
       }
-    }
+    },
+    "yourCompanyName": "Nome da sua empresa",
+    "brandingPreviewMode": "Modo de tema de pré-visualização da marca",
+    "brandingUpdated": "Configurações de marca atualizadas"
   },
   "mspLanguage": {
     "title": "Idioma da organização",
@@ -1300,7 +1311,8 @@
         "loadJobDetails": "Falha ao carregar os detalhes do trabalho",
         "refreshHistory": "Falha ao atualizar o histórico de importação"
       }
-    }
+    },
+    "selectJobHint": "Selecione um trabalho de importação para inspecionar seus resultados."
   },
   "email": {
     "title": "Email Configuration",
@@ -1736,5 +1748,9 @@
     "inheritOption": "Usar o padrão da organização ({{language}})",
     "unsetHint": "Para remover a substituição do portal do cliente, altere o padrão da organização em Configurações → Idioma.",
     "updated": "Idioma padrão do portal do cliente atualizado para {{language}}"
+  },
+  "language": {
+    "selectLanguage": "Selecionar um idioma",
+    "languagesUpdated": "Idiomas disponíveis atualizados"
   }
 }

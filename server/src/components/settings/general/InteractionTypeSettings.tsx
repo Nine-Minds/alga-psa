@@ -203,7 +203,7 @@ const InteractionTypesSettings: React.FC = () => {
               id={`interaction-type-actions-menu-${record.type_id}`}
               onClick={(e) => e.stopPropagation()}
             >
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">{t('interactions.openMenu')}</span>
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>

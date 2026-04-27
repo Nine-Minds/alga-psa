@@ -341,5 +341,10 @@
     "reprovisionFailed": "Ponowne udostępnienie nie powiodło się",
     "manifestReadFailed": "Nie udało się odczytać pliku manifestu",
     "invalidBundleExtension": "Plik musi kończyć się na \".tar.zst\": {{filename}}"
+  },
+  "debug": {
+    "scopeToOneInstall": "Ogranicz do jednej instalacji",
+    "overrideTenantContext": "Zastąp kontekst tenanta",
+    "matchRequestId": "Dopasuj x-request-id / context.request_id"
   }
 }

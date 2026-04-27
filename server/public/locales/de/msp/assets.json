@@ -1247,6 +1247,9 @@
       "acknowledgeFailed": "Alarm konnte nicht bestätigt werden",
       "ticketCreated": "Ticket erfolgreich erstellt",
       "ticketCreateFailed": "Ticket konnte nicht erstellt werden"
-    }
+    },
+    "activeAlerts": "Aktive Warnungen",
+    "acknowledge": "Bestätigen",
+    "createTicket": "Ticket erstellen"
   }
 }

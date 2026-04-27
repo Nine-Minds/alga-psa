@@ -142,5 +142,8 @@
       "pending": "Functie in wachtrij",
       "error": "Functiefout"
     }
+  },
+  "mention": {
+    "noResultsFound": "Geen resultaten gevonden"
   }
 }

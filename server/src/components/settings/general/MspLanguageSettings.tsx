@@ -87,7 +87,7 @@ const MspLanguageSettings = () => {
     try {
       await updateTenantDefaultLocaleAction(defaultLocale, selectedLocales);
       setEnabledLocales(selectedLocales);
-      toast.success('Available languages updated');
+      toast.success(t('language.languagesUpdated'));
     } catch (error) {
       handleError(error, 'Failed to update available languages');
     } finally {
@@ -118,7 +118,7 @@ const MspLanguageSettings = () => {
               value={defaultLocale}
               onValueChange={handleDefaultLanguageChange}
               disabled={loading || saving}
-              placeholder="Select a language"
+              placeholder={t('language.selectLanguage')}
               data-automation-id="msp-default-language-select"
             />
             <p className="text-sm text-gray-500">

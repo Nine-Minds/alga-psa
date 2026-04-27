@@ -142,5 +142,8 @@
       "pending": "Funzione in coda",
       "error": "Errore della funzione"
     }
+  },
+  "mention": {
+    "noResultsFound": "Nessun risultato trovato"
   }
 }

@@ -19,7 +19,13 @@
     "importExport": "Importa/Esporta",
     "email": "E-mail",
     "integrations": "Integrazioni",
-    "extensions": "Estensioni"
+    "extensions": "Estensioni",
+    "ticketingSettings": "Impostazioni ticketing",
+    "loadingTicketing": "Caricamento configurazione ticketing...",
+    "teamManagement": "Gestione team",
+    "loadingTeam": "Caricamento configurazione team...",
+    "loadingExperimental": "Caricamento configurazione funzionalità sperimentali...",
+    "loadingInteractions": "Caricamento impostazioni interazioni..."
   },
   "unsavedChanges": {
     "title": "Modifiche non salvate",
@@ -304,7 +310,8 @@
         "reportsToSelf": "Un utente non può riferire a se stesso",
         "reportsToCycle": "Questo creerebbe una catena di riporto circolare"
       }
-    }
+    },
+    "loading": "Caricamento dettagli utente..."
   },
   "teams": {
     "title": "Gestione team",
@@ -875,7 +882,8 @@
           "saveFailed": "Impossibile {{action}} il tipo di interazione. Riprovi."
         }
       }
-    }
+    },
+    "openMenu": "Apri menu"
   },
   "clientPortal": {
     "branding": {
@@ -1020,7 +1028,10 @@
         "retryFailed": "Nuovo tentativo non riuscito.",
         "disableFailed": "Impossibile disattivare il dominio personalizzato."
       }
-    }
+    },
+    "yourCompanyName": "Nome della tua azienda",
+    "brandingPreviewMode": "Modalità tema anteprima branding",
+    "brandingUpdated": "Impostazioni di branding aggiornate"
   },
   "mspLanguage": {
     "title": "Lingua dell’organizzazione",
@@ -1300,7 +1311,8 @@
         "loadJobDetails": "Impossibile caricare i dettagli del processo",
         "refreshHistory": "Impossibile aggiornare la cronologia di importazione"
       }
-    }
+    },
+    "selectJobHint": "Seleziona un lavoro di importazione per esaminarne i risultati."
   },
   "email": {
     "title": "Configurazione email",
@@ -1736,5 +1748,9 @@
     "inheritOption": "Usa l'impostazione predefinita dell'organizzazione ({{language}})",
     "unsetHint": "Per rimuovere la sovrascrittura del portale cliente, modifica l'impostazione predefinita dell'organizzazione in Impostazioni → Lingua.",
     "updated": "Lingua predefinita del portale cliente aggiornata a {{language}}"
+  },
+  "language": {
+    "selectLanguage": "Seleziona una lingua",
+    "languagesUpdated": "Lingue disponibili aggiornate"
   }
 }

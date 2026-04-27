@@ -19,7 +19,13 @@
     "importExport": "Import/Export",
     "email": "E-mail",
     "integrations": "Intégrations",
-    "extensions": "Extensions"
+    "extensions": "Extensions",
+    "ticketingSettings": "Paramètres de ticketing",
+    "loadingTicketing": "Chargement de la configuration de ticketing...",
+    "teamManagement": "Gestion d'équipe",
+    "loadingTeam": "Chargement de la configuration de l'équipe...",
+    "loadingExperimental": "Chargement de la configuration des fonctionnalités expérimentales...",
+    "loadingInteractions": "Chargement des paramètres d'interaction..."
   },
   "unsavedChanges": {
     "title": "Modifications non enregistrées",
@@ -304,7 +310,8 @@
         "reportsToSelf": "Un utilisateur ne peut pas être son propre responsable",
         "reportsToCycle": "Cela créerait une chaîne hiérarchique circulaire"
       }
-    }
+    },
+    "loading": "Chargement des détails de l'utilisateur..."
   },
   "teams": {
     "title": "Gestion des équipes",
@@ -875,7 +882,8 @@
           "saveFailed": "Échec de l'opération « {{action}} » sur le type d'interaction. Veuillez réessayer."
         }
       }
-    }
+    },
+    "openMenu": "Ouvrir le menu"
   },
   "clientPortal": {
     "branding": {
@@ -1020,7 +1028,10 @@
         "retryFailed": "Échec de la nouvelle tentative.",
         "disableFailed": "Échec de la désactivation du domaine personnalisé."
       }
-    }
+    },
+    "yourCompanyName": "Nom de votre entreprise",
+    "brandingPreviewMode": "Mode de thème d'aperçu de la marque",
+    "brandingUpdated": "Paramètres de marque mis à jour"
   },
   "mspLanguage": {
     "title": "Langue de l’organisation",
@@ -1300,7 +1311,8 @@
         "loadJobDetails": "Échec du chargement des détails de la tâche",
         "refreshHistory": "Échec de l'actualisation de l'historique d'importation"
       }
-    }
+    },
+    "selectJobHint": "Sélectionnez un travail d'importation pour inspecter ses résultats."
   },
   "email": {
     "title": "Configuration des courriels",
@@ -1736,5 +1748,9 @@
     "inheritOption": "Utiliser la valeur par défaut de l'organisation ({{language}})",
     "unsetHint": "Pour supprimer le remplacement du portail client, modifiez la valeur par défaut de l'organisation dans Paramètres → Langue.",
     "updated": "Langue par défaut du portail client mise à jour sur {{language}}"
+  },
+  "language": {
+    "selectLanguage": "Sélectionner une langue",
+    "languagesUpdated": "Langues disponibles mises à jour"
   }
 }

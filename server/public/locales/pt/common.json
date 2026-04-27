@@ -105,7 +105,9 @@
     },
     "checkEmail": {
       "resendSuccess": "E-mail enviado! Verifique a sua caixa de entrada.",
-      "resendFailed": "Falha ao reenviar o e-mail. Tente novamente."
+      "resendFailed": "Falha ao reenviar o e-mail. Tente novamente.",
+      "whatsNext": "Próximos passos?",
+      "didntReceive": "Não recebeu o e-mail?"
     }
   },
   "share": {
@@ -119,7 +121,9 @@
       "linkNotAvailable": "Link indisponível",
       "linkExpired": "Este link de partilha expirou.",
       "downloadLimitReached": "O limite de downloads foi atingido."
-    }
+    },
+    "downloadStarted": "Download iniciado com sucesso!",
+    "enterPassword": "Digite a senha"
   },
   "tickets": {
     "origin": {
@@ -1069,5 +1073,8 @@
       "documentEditor": "Editor de documentos",
       "accountManagement": "Gestão da conta"
     }
+  },
+  "feedback": {
+    "providePlaceholder": "Por favor, forneça um comentário"
   }
 }

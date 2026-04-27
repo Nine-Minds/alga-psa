@@ -1743,5 +1743,8 @@
         "publishableKeyFormat": "Publishable key moet beginnen met pk_"
       }
     }
+  },
+  "ninjaone": {
+    "selectCompany": "Bedrijf selecteren"
   }
 }

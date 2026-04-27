@@ -212,7 +212,7 @@ const WelcomeDashboard = ({ onboardingSection }: DashboardContainerProps) => {
   });
 
   return (
-    <ReflectionContainer id="dashboard-main" label="MSP Dashboard">
+    <ReflectionContainer id="dashboard-main" label={t('mspDashboard')}>
       <div className="min-h-screen p-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col gap-8">

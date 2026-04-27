@@ -18,19 +18,34 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { UnsavedChangesProvider } from "@alga-psa/ui";
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
+function TicketingSettingsLoading() {
+  const { t } = useTranslation('msp/settings');
+  return <SettingsTabSkeleton title={t('tabs.ticketingSettings')} description={t('tabs.loadingTicketing')} />;
+}
+
+function TeamManagementLoading() {
+  const { t } = useTranslation('msp/settings');
+  return <SettingsTabSkeleton title={t('tabs.teamManagement')} description={t('tabs.loadingTeam')} showTabs={false} />;
+}
+
+function ExperimentalFeaturesLoading() {
+  const { t } = useTranslation('msp/settings');
+  return <SettingsTabSkeleton title={t('tabs.experimentalFeatures')} description={t('tabs.loadingExperimental')} showTabs={false} />;
+}
+
 // Dynamic imports for heavy settings components
 const TicketingSettings = dynamic(() => import('./general/TicketingSettings'), {
-  loading: () => <SettingsTabSkeleton title="Ticketing Settings" description="Loading ticketing configuration..." />,
+  loading: () => <TicketingSettingsLoading />,
   ssr: false
 });
 
 const TeamManagement = dynamic(() => import('./general/TeamManagement'), {
-  loading: () => <SettingsTabSkeleton title="Team Management" description="Loading team configuration..." showTabs={false} />,
+  loading: () => <TeamManagementLoading />,
   ssr: false
 });
 
 const ExperimentalFeaturesSettings = dynamic(() => import('./general/ExperimentalFeaturesSettings'), {
-  loading: () => <SettingsTabSkeleton title="Experimental Features" description="Loading experimental feature configuration..." showTabs={false} />,
+  loading: () => <ExperimentalFeaturesLoading />,
   ssr: false
 });
 import InteractionSettings from './general/InteractionSettings';
@@ -114,8 +129,8 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
         <Suspense
           fallback={
             <SettingsTabSkeleton
-              title="Experimental Features"
-              description="Loading experimental feature configuration..."
+              title={t('tabs.experimentalFeatures')}
+              description={t('tabs.loadingExperimental')}
               showTabs={false}
             />
           }
@@ -147,7 +162,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
             <CardDescription>{t('teams.description')}</CardDescription>
           </CardHeader>
           <CardContent className="overflow-visible">
-            <Suspense fallback={<SettingsTabSkeleton title="Team Management" description="Loading team configuration..." showTabs={false} />}>
+            <Suspense fallback={<SettingsTabSkeleton title={t('tabs.teamManagement')} description={t('tabs.loadingTeam')} showTabs={false} />}>
               <TeamManagement />
             </Suspense>
           </CardContent>
@@ -165,7 +180,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
       label: t('tabs.ticketing'),
       icon: MessageSquare,
       content: (
-        <Suspense fallback={<SettingsTabSkeleton title="Ticketing Settings" description="Loading ticketing configuration..." />}>
+        <Suspense fallback={<SettingsTabSkeleton title={t('tabs.ticketingSettings')} description={t('tabs.loadingTicketing')} />}>
           <TicketingSettings />
         </Suspense>
       ),
@@ -182,7 +197,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
       label: t('tabs.interactions'),
       icon: Handshake,
       content: (
-        <Suspense fallback={<SettingsTabSkeleton title="Interactions" description="Loading interaction settings..." showTabs={false} />}>
+        <Suspense fallback={<SettingsTabSkeleton title={t('tabs.interactions')} description={t('tabs.loadingInteractions')} showTabs={false} />}>
           <InteractionSettings />
         </Suspense>
       ),

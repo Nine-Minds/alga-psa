@@ -19,7 +19,13 @@
     "importExport": "Import/Eksport",
     "email": "E-mail",
     "integrations": "Integracje",
-    "extensions": "Rozszerzenia"
+    "extensions": "Rozszerzenia",
+    "ticketingSettings": "Ustawienia ticketingu",
+    "loadingTicketing": "Ładowanie konfiguracji ticketingu...",
+    "teamManagement": "Zarządzanie zespołem",
+    "loadingTeam": "Ładowanie konfiguracji zespołu...",
+    "loadingExperimental": "Ładowanie konfiguracji funkcji eksperymentalnych...",
+    "loadingInteractions": "Ładowanie ustawień interakcji..."
   },
   "unsavedChanges": {
     "title": "Niezapisane zmiany",
@@ -304,7 +310,8 @@
         "reportsToSelf": "Użytkownik nie może podlegać samemu sobie",
         "reportsToCycle": "Spowodowałoby to cykliczną strukturę podległości"
       }
-    }
+    },
+    "loading": "Ładowanie szczegółów użytkownika..."
   },
   "teams": {
     "title": "Zarządzanie zespołami",
@@ -875,7 +882,8 @@
           "saveFailed": "Nie udało się wykonać akcji {{action}} dla typu interakcji. Proszę spróbować ponownie."
         }
       }
-    }
+    },
+    "openMenu": "Otwórz menu"
   },
   "clientPortal": {
     "branding": {
@@ -1020,7 +1028,10 @@
         "retryFailed": "Ponowienie nie powiodło się.",
         "disableFailed": "Nie udało się wyłączyć domeny niestandardowej."
       }
-    }
+    },
+    "yourCompanyName": "Nazwa Twojej firmy",
+    "brandingPreviewMode": "Tryb motywu podglądu marki",
+    "brandingUpdated": "Ustawienia marki zaktualizowane"
   },
   "mspLanguage": {
     "title": "Język organizacji",
@@ -1300,7 +1311,8 @@
         "loadJobDetails": "Nie udało się załadować szczegółów zadania",
         "refreshHistory": "Nie udało się odświeżyć historii importu"
       }
-    }
+    },
+    "selectJobHint": "Wybierz zadanie importu, aby sprawdzić jego wyniki."
   },
   "email": {
     "title": "Konfiguracja e-mail",
@@ -1742,5 +1754,9 @@
     "inheritOption": "Użyj domyślnego języka organizacji ({{language}})",
     "unsetHint": "Aby usunąć nadpisanie portalu klienta, zmień domyślny język organizacji w Ustawienia → Język.",
     "updated": "Domyślny język portalu klienta zaktualizowany na {{language}}"
+  },
+  "language": {
+    "selectLanguage": "Wybierz język",
+    "languagesUpdated": "Dostępne języki zaktualizowane"
   }
 }

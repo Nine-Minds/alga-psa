@@ -426,7 +426,8 @@
       "summaryTitle": "Payload still needs required event fields before this run can start",
       "summaryDescription": "Fill the missing fields below, switch to Form Builder, or use a sample payload button.",
       "moreErrors": "+{{count}} more…"
-    }
+    },
+    "sampleEmailBody": "Sample email body"
   },
   "eventList": {
     "common": {
@@ -2353,5 +2354,49 @@
     "enableHint": "Enable Workflow Automation in Settings to access workflow automation features.",
     "goToExperimental": "Go to Experimental Features",
     "openSettings": "Open settings"
+  },
+  "flow": {
+    "designer": {
+      "title": "Workflow Designer"
+    },
+    "sidebar": {
+      "dragHint": "Drag these nodes to the canvas:"
+    },
+    "picker": {
+      "searchPlaceholder": "Search..."
+    },
+    "fields": {
+      "selectInputField": "Select Input Field",
+      "customFieldReference": "Custom Field Reference",
+      "selectOrEnterReference": "Select or enter a field reference"
+    },
+    "delete": {
+      "confirmTitle": "Confirm Deletion",
+      "confirmMessage": "Are you sure you want to delete this workflow?"
+    },
+    "topBar": {
+      "workflowName": "Workflow Name",
+      "workflowDescription": "Workflow Description"
+    },
+    "nodes": {
+      "classifier": {
+        "newClassification": "New classification"
+      },
+      "selector": {
+        "defaultInput": "Default Input"
+      },
+      "decision": {
+        "type": "Type",
+        "conditionValue": "Condition value",
+        "defaultOutput": "Default Output",
+        "defaultOutputProp": "Default output"
+      },
+      "ticketCreator": {
+        "ticketTitle": "Ticket Title:",
+        "ticketDescription": "Ticket Description:",
+        "selectBoard": "Select or enter a board",
+        "selectPriority": "Select or enter a priority"
+      }
+    }
   }
 }

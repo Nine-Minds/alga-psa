@@ -426,7 +426,8 @@
       "summaryTitle": "Ładunek nadal wymaga wymaganych pól zdarzenia, zanim to uruchomienie będzie mogło się rozpocząć",
       "summaryDescription": "Proszę wypełnić brakujące pola poniżej, przełączyć na kreator formularzy lub użyć przycisku przykładowego ładunku.",
       "moreErrors": "+{{count}} więcej…"
-    }
+    },
+    "sampleEmailBody": "Przykładowa treść e-maila"
   },
   "eventList": {
     "common": {
@@ -2353,5 +2354,49 @@
     "enableHint": "Włącz automatyzację przepływów pracy w ustawieniach, aby uzyskać dostęp.",
     "goToExperimental": "Przejdź do funkcji eksperymentalnych",
     "openSettings": "Otwórz ustawienia"
+  },
+  "flow": {
+    "designer": {
+      "title": "Projektant przepływów pracy"
+    },
+    "sidebar": {
+      "dragHint": "Przeciągnij te węzły na płótno:"
+    },
+    "picker": {
+      "searchPlaceholder": "Szukaj..."
+    },
+    "fields": {
+      "selectInputField": "Wybierz pole wejściowe",
+      "customFieldReference": "Niestandardowa referencja pola",
+      "selectOrEnterReference": "Wybierz lub wprowadź referencję pola"
+    },
+    "delete": {
+      "confirmTitle": "Potwierdź usunięcie",
+      "confirmMessage": "Czy na pewno chcesz usunąć ten przepływ pracy?"
+    },
+    "topBar": {
+      "workflowName": "Nazwa przepływu pracy",
+      "workflowDescription": "Opis przepływu pracy"
+    },
+    "nodes": {
+      "classifier": {
+        "newClassification": "Nowa klasyfikacja"
+      },
+      "selector": {
+        "defaultInput": "Wejście domyślne"
+      },
+      "decision": {
+        "type": "Typ",
+        "conditionValue": "Wartość warunku",
+        "defaultOutput": "Wyjście domyślne",
+        "defaultOutputProp": "Wyjście domyślne"
+      },
+      "ticketCreator": {
+        "ticketTitle": "Tytuł zgłoszenia:",
+        "ticketDescription": "Opis zgłoszenia:",
+        "selectBoard": "Wybierz lub wprowadź tablicę",
+        "selectPriority": "Wybierz lub wprowadź priorytet"
+      }
+    }
   }
 }

@@ -19,7 +19,13 @@
     "importExport": "55555",
     "email": "55555",
     "integrations": "55555",
-    "extensions": "55555"
+    "extensions": "55555",
+    "ticketingSettings": "55555",
+    "loadingTicketing": "55555",
+    "teamManagement": "55555",
+    "loadingTeam": "55555",
+    "loadingExperimental": "55555",
+    "loadingInteractions": "55555"
   },
   "unsavedChanges": {
     "title": "55555",
@@ -304,7 +310,8 @@
         "passwordChangeFailed": "55555",
         "passwordChangeError": "55555"
       }
-    }
+    },
+    "loading": "55555"
   },
   "teams": {
     "title": "55555",
@@ -875,7 +882,8 @@
           "saveFailed": "55555 {{action}} 55555"
         }
       }
-    }
+    },
+    "openMenu": "55555"
   },
   "clientPortal": {
     "branding": {
@@ -1020,7 +1028,10 @@
         "retryFailed": "55555",
         "disableFailed": "55555"
       }
-    }
+    },
+    "yourCompanyName": "55555",
+    "brandingPreviewMode": "55555",
+    "brandingUpdated": "55555"
   },
   "mspLanguage": {
     "title": "55555",
@@ -1300,7 +1311,8 @@
         "loadJobDetails": "55555",
         "refreshHistory": "55555"
       }
-    }
+    },
+    "selectJobHint": "55555"
   },
   "email": {
     "title": "55555",
@@ -1736,5 +1748,9 @@
     "inheritOption": "55555 {{language}} 55555",
     "unsetHint": "55555",
     "updated": "55555 {{language}} 55555"
+  },
+  "language": {
+    "selectLanguage": "55555",
+    "languagesUpdated": "55555"
   }
 }

@@ -1247,6 +1247,9 @@
       "acknowledgeFailed": "Nie udało się potwierdzić alertu",
       "ticketCreated": "Zgłoszenie utworzone pomyślnie",
       "ticketCreateFailed": "Nie udało się utworzyć zgłoszenia"
-    }
+    },
+    "activeAlerts": "Aktywne alerty",
+    "acknowledge": "Potwierdź",
+    "createTicket": "Utwórz zgłoszenie"
   }
 }

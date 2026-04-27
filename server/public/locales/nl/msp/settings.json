@@ -19,7 +19,13 @@
     "importExport": "Importeren/Exporteren",
     "email": "E-mail",
     "integrations": "Integraties",
-    "extensions": "Extensies"
+    "extensions": "Extensies",
+    "ticketingSettings": "Ticketing-instellingen",
+    "loadingTicketing": "Ticketing-configuratie laden...",
+    "teamManagement": "Teambeheer",
+    "loadingTeam": "Teamconfiguratie laden...",
+    "loadingExperimental": "Configuratie experimentele functies laden...",
+    "loadingInteractions": "Interactie-instellingen laden..."
   },
   "unsavedChanges": {
     "title": "Niet-opgeslagen wijzigingen",
@@ -304,7 +310,8 @@
         "reportsToSelf": "Een gebruiker kan niet aan zichzelf rapporteren",
         "reportsToCycle": "Dit zou een circulaire rapportagelijn creëren"
       }
-    }
+    },
+    "loading": "Gebruikersdetails laden..."
   },
   "teams": {
     "title": "Teambeheer",
@@ -875,7 +882,8 @@
           "saveFailed": "Kan interactietype niet {{action}}. Probeer het opnieuw."
         }
       }
-    }
+    },
+    "openMenu": "Menu openen"
   },
   "clientPortal": {
     "branding": {
@@ -1020,7 +1028,10 @@
         "retryFailed": "Opnieuw proberen mislukt.",
         "disableFailed": "Kan aangepast domein niet uitschakelen."
       }
-    }
+    },
+    "yourCompanyName": "Naam van uw bedrijf",
+    "brandingPreviewMode": "Branding-voorbeeldthemamodus",
+    "brandingUpdated": "Branding-instellingen bijgewerkt"
   },
   "mspLanguage": {
     "title": "Organisatietaal",
@@ -1300,7 +1311,8 @@
         "loadJobDetails": "Kan opdrachtdetails niet laden",
         "refreshHistory": "Kan importgeschiedenis niet vernieuwen"
       }
-    }
+    },
+    "selectJobHint": "Selecteer een importtaak om de resultaten te bekijken."
   },
   "email": {
     "title": "E-mailconfiguratie",
@@ -1736,5 +1748,9 @@
     "inheritOption": "Organisatiestandaard gebruiken ({{language}})",
     "unsetHint": "Om de klantportaaloverschrijving te verwijderen, wijzig de organisatiestandaard onder Instellingen → Taal.",
     "updated": "Standaardtaal klantportaal bijgewerkt naar {{language}}"
+  },
+  "language": {
+    "selectLanguage": "Selecteer een taal",
+    "languagesUpdated": "Beschikbare talen bijgewerkt"
   }
 }

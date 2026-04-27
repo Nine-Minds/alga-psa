@@ -341,5 +341,10 @@
     "reprovisionFailed": "Riprovisionamento non riuscito",
     "manifestReadFailed": "Impossibile leggere il file manifest",
     "invalidBundleExtension": "Il file deve terminare con \".tar.zst\": {{filename}}"
+  },
+  "debug": {
+    "scopeToOneInstall": "Limita a un'installazione",
+    "overrideTenantContext": "Sovrascrivi il contesto tenant",
+    "matchRequestId": "Corrispondi x-request-id / context.request_id"
   }
 }
