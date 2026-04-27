@@ -28,7 +28,7 @@ export { IEditScope, Views } from '@alga-psa/types';
 
 // Utils
 export { generateICS, type ICSEventData } from './utils/icsGenerator';
-export { generateOccurrences, applyTimeToDate } from './utils/recurrenceUtils';
+export { generateOccurrences, applyTimeToDate } from '@alga-psa/shared/utils/recurrenceUtils';
 
 // Note: This module contains:
 // - Schedule Entry management (migrated)
