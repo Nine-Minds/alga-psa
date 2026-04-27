@@ -394,3 +394,67 @@ Action schemas are Zod schemas converted to JSON Schema and consumed by the work
 
 - `task_resources` has no uniqueness constraint on (`task_id`, `additional_user_id`), so reconciliation uses delete+reinsert to keep assignment state canonical.
 - UUID lexical ordering is non-semantic; tests were adjusted to compare additional-user sets order-insensitively where needed.
+
+## Implementation checkpoint — 2026-04-27 (Task duplicate action)
+
+### Completed features
+
+- `F036`: Added `projects.duplicate_task` input schema with:
+  - `source_task_id`
+  - `target_phase_id`
+  - optional `target_project_status_mapping_id`
+  - copy toggles for primary assignee, additional assignees, checklist, and ticket links
+
+- `F037`: Implemented core duplicate behavior:
+  - clones source task into target phase
+  - appends ` (Copy)` suffix to task name
+  - preserves estimated hours when schema supports it
+  - resets actual hours to `0` when schema supports it
+  - resolves target status mapping/status similarly to move semantics
+
+- `F038`: Implemented optional checklist copy:
+  - copies `task_checklist_items` rows to new task with new ids/timestamps
+  - returns copied checklist count
+
+- `F039`: Implemented optional assignment copy:
+  - optional primary assignment copy to `project_tasks.assigned_to`
+  - optional additional assignment copy via `task_resources`
+  - clears `assigned_team_id` on duplicates when that column exists
+
+- `F040`: Implemented optional ticket link copy with permission-aware filtering:
+  - checks `ticket:read` permission before copying links
+  - copies `project_ticket_links` into target project/phase/task context
+  - writes matching `ticket_entity_links` records for duplicated task links
+
+- `F041`: Added duplicate action output schema:
+  - source/new task ids
+  - target project/phase/status mapping/status ids
+  - copied relation counts
+  - `created_at`
+
+- `F042`: Added permission checks and run audit logging:
+  - requires `project:create` and project read checks for source/target context
+  - writes `workflow_action:projects.duplicate_task` audit with target ids and copied counts
+
+### Completed tests
+
+- `T014`: DB-backed duplicate core behavior test validates:
+  - new task creation in target phase/project
+  - ` (Copy)` suffix
+  - description copy
+  - estimated-hours preservation + actual-hours reset when columns exist
+  - status mapping/status target metadata in output
+
+- `T015`: DB-backed optional relation copy test validates:
+  - checklist copy count and persisted copied checklist rows
+  - primary/additional assignment copy count and `task_resources` rows
+  - ticket-link copy count and copied `project_ticket_links` target context
+
+### Commands/runbook used
+
+- `cd shared && npx vitest run workflow/runtime/actions/__tests__/registerProjectActionsMetadata.test.ts workflow/runtime/actions/__tests__/businessOperations.projects.db.test.ts`
+
+### Gotchas discovered
+
+- `task_checklist_items`/`task_resources`/`project_tasks` schemas vary slightly across migrations in this branch; test fixtures and assertions were kept column-aware to avoid false failures.
+- `task_resources` assignment rows are easiest to keep coherent via full-row clone with refreshed ids/timestamps and target task id, while overriding `assigned_to` according to copy options.

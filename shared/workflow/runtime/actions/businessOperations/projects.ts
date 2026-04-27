@@ -228,6 +228,34 @@ const assignTaskInputSchema = z.object({
   }
 });
 
+const duplicateTaskInputSchema = z.object({
+  source_task_id: withWorkflowPicker(uuidSchema, 'Source project task id', 'project-task', ['project_id', 'phase_id']),
+  target_phase_id: withWorkflowPicker(uuidSchema, 'Target project phase id', 'project-phase', ['target_project_id']),
+  target_project_status_mapping_id: withWorkflowPicker(
+    uuidSchema.optional(),
+    'Optional target status mapping id',
+    'project-task-status',
+    ['target_project_id', 'target_phase_id']
+  ),
+  copy_primary_assignee: z.boolean().default(false),
+  copy_additional_assignees: z.boolean().default(false),
+  copy_checklist: z.boolean().default(false),
+  copy_ticket_links: z.boolean().default(false),
+});
+
+const duplicateTaskResultSchema = z.object({
+  source_task_id: uuidSchema,
+  task_id: uuidSchema,
+  target_project_id: uuidSchema,
+  target_phase_id: uuidSchema,
+  target_project_status_mapping_id: nullableUuidSchema,
+  target_status_id: nullableUuidSchema,
+  copied_checklist_count: z.number().int().nonnegative(),
+  copied_additional_assignee_count: z.number().int().nonnegative(),
+  copied_ticket_link_count: z.number().int().nonnegative(),
+  created_at: isoDateTimeSchema,
+});
+
 function asIsoString(value: unknown): string | undefined {
   if (typeof value === 'string') return value;
   if (value instanceof Date) return value.toISOString();
@@ -592,6 +620,23 @@ async function reconcileTaskAdditionalUsers(
       role: 'support',
     }))
   );
+}
+
+async function canReadTickets(ctx: any, tx: TenantTxContext): Promise<boolean> {
+  try {
+    await requirePermission(ctx, tx, { resource: 'ticket', action: 'read' });
+    return true;
+  } catch (error) {
+    if (
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      (error as { code?: unknown }).code === 'PERMISSION_DENIED'
+    ) {
+      return false;
+    }
+    throw error;
+  }
 }
 
 async function canReadProject(tx: TenantTxContext, project: Record<string, unknown>): Promise<boolean> {
@@ -1765,6 +1810,221 @@ export function registerProjectActions(): void {
     }),
   });
 
+  registry.register({
+    id: 'projects.duplicate_task',
+    version: 1,
+    inputSchema: duplicateTaskInputSchema,
+    outputSchema: duplicateTaskResultSchema,
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: { label: 'Duplicate Project Task', category: 'Business Operations', description: 'Duplicate a task into a target project phase' },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      try {
+        await requirePermission(ctx, tx, { resource: 'project', action: 'create' });
+        await requireProjectReadPermission(ctx, tx);
+
+        const sourceTask = await ensureTaskContext(ctx, tx, input.source_task_id);
+        const sourceProject = await ensureProjectExists(ctx, tx, String(sourceTask.project_id));
+        await assertProjectReadable(ctx, tx, sourceProject);
+
+        const targetPhase = await ensurePhaseExists(ctx, tx, input.target_phase_id);
+        const targetProjectId = String(targetPhase.project_id);
+        const targetProject = await ensureProjectExists(ctx, tx, targetProjectId);
+        await assertProjectReadable(ctx, tx, targetProject);
+
+        const explicitMapping = input.target_project_status_mapping_id
+          ? await ensureStatusMappingExists(ctx, tx, input.target_project_status_mapping_id)
+          : null;
+        if (explicitMapping && explicitMapping.project_id !== targetProjectId) {
+          throwActionError(ctx, {
+            category: 'ValidationError',
+            code: 'VALIDATION_ERROR',
+            message: 'target_project_status_mapping_id does not belong to the target project',
+            details: {
+              target_project_status_mapping_id: input.target_project_status_mapping_id,
+              target_project_id: targetProjectId,
+            },
+          });
+        }
+
+        const targetProjectStatusMappingId = await resolveTargetProjectStatusMappingId(tx, {
+          sourceTask,
+          targetProjectId,
+          targetPhaseId: input.target_phase_id,
+          explicitTargetProjectStatusMappingId: input.target_project_status_mapping_id,
+        });
+        const targetStatusId = await resolveTargetStatusId(tx, {
+          sourceTask,
+          targetProjectStatusMappingId,
+        });
+
+        const sourceTaskRow = await tx.trx('project_tasks')
+          .where({ tenant: tx.tenantId, task_id: input.source_task_id })
+          .first();
+        if (!sourceTaskRow) {
+          throwActionError(ctx, {
+            category: 'ActionError',
+            code: 'NOT_FOUND',
+            message: 'Project task not found',
+            details: { task_id: input.source_task_id },
+          });
+        }
+
+        const taskColumns = await getTableColumns(tx, 'project_tasks');
+        const copiedTaskId = uuidv4();
+        const nowIso = new Date().toISOString();
+        const wbsCode = await generateTaskWbsCode(tx, targetPhase);
+        const orderKey = taskColumns.has('order_key')
+          ? `${Date.now().toString(36)}-${uuidv4().slice(0, 8)}`
+          : null;
+
+        const assignedTo = input.copy_primary_assignee
+          ? parseNullableUuid(sourceTaskRow.assigned_to)
+          : null;
+        const copiedTaskRow: Record<string, unknown> = {
+          ...sourceTaskRow,
+          task_id: copiedTaskId,
+          phase_id: input.target_phase_id,
+          task_name: `${String(sourceTaskRow.task_name ?? '')} (Copy)`,
+          assigned_to: assignedTo,
+          updated_at: nowIso,
+          created_at: nowIso,
+        };
+        if (taskColumns.has('assigned_team_id')) copiedTaskRow.assigned_team_id = null;
+        if (taskColumns.has('actual_hours')) copiedTaskRow.actual_hours = 0;
+        if (taskColumns.has('estimated_hours')) copiedTaskRow.estimated_hours = sourceTaskRow.estimated_hours ?? null;
+        if (taskColumns.has('project_status_mapping_id')) copiedTaskRow.project_status_mapping_id = targetProjectStatusMappingId;
+        if (taskColumns.has('status_id')) copiedTaskRow.status_id = targetStatusId;
+        if (taskColumns.has('wbs_code')) copiedTaskRow.wbs_code = wbsCode;
+        if (taskColumns.has('order_key') && orderKey) copiedTaskRow.order_key = orderKey;
+
+        await tx.trx('project_tasks').insert(copiedTaskRow);
+
+        let copiedChecklistCount = 0;
+        if (input.copy_checklist) {
+          const hasChecklist = await tx.trx.schema.hasTable('task_checklist_items');
+          if (hasChecklist) {
+            const checklistRows = await tx.trx('task_checklist_items')
+              .where({ tenant: tx.tenantId, task_id: input.source_task_id })
+              .select('*');
+            if (checklistRows.length > 0) {
+              const checklistColumns = await getTableColumns(tx, 'task_checklist_items');
+              const checklistInserts = checklistRows.map((row: Record<string, unknown>) => {
+                const item: Record<string, unknown> = {
+                  ...row,
+                  checklist_item_id: uuidv4(),
+                  task_id: copiedTaskId,
+                };
+                if (checklistColumns.has('created_at')) item.created_at = nowIso;
+                if (checklistColumns.has('updated_at')) item.updated_at = nowIso;
+                return item;
+              });
+              await tx.trx('task_checklist_items').insert(checklistInserts);
+              copiedChecklistCount = checklistInserts.length;
+            }
+          }
+        }
+
+        let copiedAdditionalAssigneeCount = 0;
+        if (input.copy_additional_assignees) {
+          const hasTaskResources = await tx.trx.schema.hasTable('task_resources');
+          if (hasTaskResources) {
+            const sourceResources = await tx.trx('task_resources')
+              .where({ tenant: tx.tenantId, task_id: input.source_task_id })
+              .whereNotNull('additional_user_id')
+              .select('*');
+            if (sourceResources.length > 0) {
+              const resourceColumns = await getTableColumns(tx, 'task_resources');
+              const inserts = sourceResources.map((row: Record<string, unknown>) => ({
+                ...row,
+                assignment_id: uuidv4(),
+                task_id: copiedTaskId,
+                assigned_to: assignedTo ?? parseNullableUuid(row.assigned_to) ?? String(row.additional_user_id),
+                assigned_at: resourceColumns.has('assigned_at') ? nowIso : row.assigned_at,
+              }));
+              await tx.trx('task_resources').insert(inserts);
+              copiedAdditionalAssigneeCount = inserts.length;
+            }
+          }
+        }
+
+        let copiedTicketLinkCount = 0;
+        if (input.copy_ticket_links) {
+          const sourceLinks = await tx.trx('project_ticket_links')
+            .where({ tenant: tx.tenantId, task_id: input.source_task_id })
+            .select('*');
+          if (sourceLinks.length > 0) {
+            const canReadTicketLinks = await canReadTickets(ctx, tx);
+            const allowedTicketIds = canReadTicketLinks
+              ? sourceLinks.map((link: Record<string, unknown>) => String(link.ticket_id))
+              : [];
+
+            if (allowedTicketIds.length > 0) {
+              const inserts = sourceLinks
+                .filter((link: Record<string, unknown>) => allowedTicketIds.includes(String(link.ticket_id)))
+                .map((link: Record<string, unknown>) => ({
+                  ...link,
+                  link_id: uuidv4(),
+                  project_id: targetProjectId,
+                  phase_id: input.target_phase_id,
+                  task_id: copiedTaskId,
+                  created_at: nowIso,
+                }));
+              for (const link of inserts) {
+                await tx.trx('project_ticket_links').insert(link).catch(() => undefined);
+                await tx.trx('ticket_entity_links').insert({
+                  tenant: tx.tenantId,
+                  link_id: uuidv4(),
+                  ticket_id: link.ticket_id,
+                  entity_type: 'project_task',
+                  entity_id: copiedTaskId,
+                  link_type: 'project_task',
+                  metadata: { project_id: targetProjectId, phase_id: input.target_phase_id },
+                  created_at: nowIso,
+                }).catch(() => undefined);
+                copiedTicketLinkCount += 1;
+              }
+            }
+          }
+        }
+
+        await writeRunAudit(ctx, tx, {
+          operation: 'workflow_action:projects.duplicate_task',
+          changedData: {
+            source_task_id: input.source_task_id,
+            task_id: copiedTaskId,
+            target_project_id: targetProjectId,
+            target_phase_id: input.target_phase_id,
+            copied_checklist_count: copiedChecklistCount,
+            copied_additional_assignee_count: copiedAdditionalAssigneeCount,
+            copied_ticket_link_count: copiedTicketLinkCount,
+          },
+          details: {
+            action_id: 'projects.duplicate_task',
+            action_version: 1,
+            source_task_id: input.source_task_id,
+            task_id: copiedTaskId,
+          },
+        });
+
+        return duplicateTaskResultSchema.parse({
+          source_task_id: input.source_task_id,
+          task_id: copiedTaskId,
+          target_project_id: targetProjectId,
+          target_phase_id: input.target_phase_id,
+          target_project_status_mapping_id: targetProjectStatusMappingId,
+          target_status_id: targetStatusId,
+          copied_checklist_count: copiedChecklistCount,
+          copied_additional_assignee_count: copiedAdditionalAssigneeCount,
+          copied_ticket_link_count: copiedTicketLinkCount,
+          created_at: nowIso,
+        });
+      } catch (error) {
+        handleActionError(ctx, error);
+      }
+    }),
+  });
+
   void ensureTicketExists;
   void ensurePhaseExists;
   void ensureTaskContext;
@@ -1775,4 +2035,5 @@ export function registerProjectActions(): void {
   void assignmentResultSchema;
   void linkResultSchema;
   void assignTaskInputSchema;
+  void duplicateTaskInputSchema;
 }

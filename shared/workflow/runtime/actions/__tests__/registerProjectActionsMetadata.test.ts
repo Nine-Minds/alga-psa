@@ -17,6 +17,7 @@ const EXPECTED_PROJECT_ACTION_IDS = [
   'projects.update_task',
   'projects.move_task',
   'projects.assign_task',
+  'projects.duplicate_task',
 ] as const;
 
 describe('project workflow action registration metadata', () => {
@@ -50,6 +51,7 @@ describe('project workflow action registration metadata', () => {
     expect(byId.get('projects.update_task')?.ui?.label).toBe('Update Project Task');
     expect(byId.get('projects.move_task')?.ui?.label).toBe('Move Project Task');
     expect(byId.get('projects.assign_task')?.ui?.label).toBe('Assign Project Task');
+    expect(byId.get('projects.duplicate_task')?.ui?.label).toBe('Duplicate Project Task');
 
     expect(byId.get('projects.create_task')?.sideEffectful).toBe(true);
     expect(byId.get('projects.find')?.sideEffectful).toBe(false);
@@ -63,6 +65,7 @@ describe('project workflow action registration metadata', () => {
     expect(byId.get('projects.update_task')?.sideEffectful).toBe(true);
     expect(byId.get('projects.move_task')?.sideEffectful).toBe(true);
     expect(byId.get('projects.assign_task')?.sideEffectful).toBe(true);
+    expect(byId.get('projects.duplicate_task')?.sideEffectful).toBe(true);
 
     for (const id of EXPECTED_PROJECT_ACTION_IDS) {
       expect(byId.get(id)?.idempotency.mode).toBe('engineProvided');

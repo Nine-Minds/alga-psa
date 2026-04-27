@@ -299,7 +299,7 @@
   {
     "id": "F036",
     "description": "Implement `projects.duplicate_task` input schema with source task_id, target phase_id, optional target status mapping, and copy options for primary assignee, additional assignees, checklist, and ticket links.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task duplicate action"
     ]
@@ -307,7 +307,7 @@
   {
     "id": "F037",
     "description": "Implement `projects.duplicate_task` core copy behavior matching existing duplicateTaskToPhase behavior, including copy suffix, estimated hours preservation, and actual hours reset.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task duplicate action"
     ]
@@ -315,7 +315,7 @@
   {
     "id": "F038",
     "description": "Implement `projects.duplicate_task` optional checklist copy behavior using existing checklist item model semantics.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task duplicate action"
     ]
@@ -323,7 +323,7 @@
   {
     "id": "F039",
     "description": "Implement `projects.duplicate_task` optional primary and additional assignee copy behavior using existing task assignment/resource semantics.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task duplicate action"
     ]
@@ -331,7 +331,7 @@
   {
     "id": "F040",
     "description": "Implement `projects.duplicate_task` optional ticket link copy behavior with ticket authorization filtering.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task duplicate action",
       "Security / Permissions"
@@ -340,7 +340,7 @@
   {
     "id": "F041",
     "description": "Implement `projects.duplicate_task` output schema with source task ID, new task ID, target phase/project/status identifiers, copied relation counts, and created_at.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task duplicate action"
     ]
@@ -348,7 +348,7 @@
   {
     "id": "F042",
     "description": "Implement `projects.duplicate_task` permission checks and run audit logging.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task duplicate action",
       "Observability"

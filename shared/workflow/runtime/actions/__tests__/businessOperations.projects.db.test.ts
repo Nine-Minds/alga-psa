@@ -333,6 +333,59 @@ async function addTaskResource(
   });
 }
 
+async function createChecklistItem(
+  db: Knex,
+  tenantId: string,
+  taskId: string,
+  itemName: string,
+  options: { assignedTo?: string | null; description?: string | null; orderNumber?: number } = {}
+): Promise<string> {
+  const hasChecklist = await db.schema.hasTable('task_checklist_items');
+  if (!hasChecklist) return uuidv4();
+
+  const checklistItemId = uuidv4();
+  const nowIso = new Date().toISOString();
+  const columns = await getTableColumns(db, 'task_checklist_items');
+  const row: Record<string, unknown> = {
+    tenant: tenantId,
+    checklist_item_id: checklistItemId,
+    task_id: taskId,
+    item_name: itemName,
+  };
+  if (columns.has('description')) row.description = options.description ?? null;
+  if (columns.has('assigned_to')) row.assigned_to = options.assignedTo ?? null;
+  if (columns.has('completed')) row.completed = false;
+  if (columns.has('order_number')) row.order_number = options.orderNumber ?? 1;
+  if (columns.has('created_at')) row.created_at = nowIso;
+  if (columns.has('updated_at')) row.updated_at = nowIso;
+
+  await db('task_checklist_items').insert(row);
+  return checklistItemId;
+}
+
+async function createProjectTicketLink(
+  db: Knex,
+  tenantId: string,
+  params: {
+    projectId: string;
+    phaseId: string;
+    taskId: string;
+    ticketId: string;
+  }
+): Promise<string> {
+  const linkId = uuidv4();
+  await db('project_ticket_links').insert({
+    tenant: tenantId,
+    link_id: linkId,
+    project_id: params.projectId,
+    phase_id: params.phaseId,
+    task_id: params.taskId,
+    ticket_id: params.ticketId,
+    created_at: new Date().toISOString(),
+  });
+  return linkId;
+}
+
 async function createTicket(
   db: Knex,
   tenantId: string,
@@ -1005,5 +1058,197 @@ describe('project business operation db actions', () => {
       .where({ tenant: runtimeState.tenantId, task_id: taskId })
       .select('additional_user_id');
     expect(resourcesAfter.map((row: { additional_user_id: string }) => row.additional_user_id)).toEqual([additional]);
+  });
+
+  it('T014: projects.duplicate_task copies core fields, resets actual_hours, and returns target metadata', async () => {
+    const entity = await createClientOrCompany(db, runtimeState.tenantId);
+    const sourceProjectId = await createProject(db, runtimeState.tenantId, {
+      name: 'Duplicate Source Project',
+      clientOrCompanyId: entity.clientId,
+      wbsCode: '50',
+    });
+    const targetProjectId = await createProject(db, runtimeState.tenantId, {
+      name: 'Duplicate Target Project',
+      clientOrCompanyId: entity.clientId,
+      wbsCode: '51',
+    });
+    const sourcePhaseId = await createPhase(db, runtimeState.tenantId, sourceProjectId, {
+      name: 'Source Phase',
+      orderNumber: 1,
+      orderKey: 'a0',
+    });
+    const targetPhaseId = await createPhase(db, runtimeState.tenantId, targetProjectId, {
+      name: 'Target Phase',
+      orderNumber: 1,
+      orderKey: 'a0',
+    });
+
+    const sourceStatusId = await ensureStatusId(db, runtimeState.tenantId, 'project_task', 'Duplicate Source Status', runtimeState.actorUserId);
+    await createProjectStatusMapping(db, runtimeState.tenantId, sourceProjectId, {
+      statusId: sourceStatusId,
+      customName: 'Source Mapping',
+      displayOrder: 1,
+    });
+    const targetStatusId = await ensureStatusId(db, runtimeState.tenantId, 'project_task', 'Duplicate Target Status', runtimeState.actorUserId);
+    const targetMappingId = await createProjectStatusMapping(db, runtimeState.tenantId, targetProjectId, {
+      statusId: targetStatusId,
+      customName: 'Target Mapping',
+      displayOrder: 1,
+    });
+
+    const assignee = await createUser(db, runtimeState.tenantId, { email: 'duplicate-core-primary@example.com' });
+    const sourceTaskId = await createTask(db, runtimeState.tenantId, sourcePhaseId, sourceProjectId, {
+      taskName: 'Duplicate Me',
+      assignedTo: assignee,
+      statusId: sourceStatusId,
+    });
+
+    const taskColumns = await getTableColumns(db, 'project_tasks');
+    const sourcePatch: Record<string, unknown> = { description: 'Duplicate core description' };
+    if (taskColumns.has('estimated_hours')) sourcePatch.estimated_hours = 12;
+    if (taskColumns.has('actual_hours')) sourcePatch.actual_hours = 7;
+    await db('project_tasks')
+      .where({ tenant: runtimeState.tenantId, task_id: sourceTaskId })
+      .update(sourcePatch);
+
+    const result = await invokeAction('projects.duplicate_task', {
+      source_task_id: sourceTaskId,
+      target_phase_id: targetPhaseId,
+      target_project_status_mapping_id: targetMappingId,
+      copy_primary_assignee: false,
+      copy_checklist: false,
+      copy_additional_assignees: false,
+      copy_ticket_links: false,
+    });
+
+    expect(result.source_task_id).toBe(sourceTaskId);
+    expect(result.target_project_id).toBe(targetProjectId);
+    expect(result.target_phase_id).toBe(targetPhaseId);
+    expect(result.target_project_status_mapping_id).toBe(targetMappingId);
+    if (taskColumns.has('status_id')) {
+      expect(result.target_status_id).toBe(targetStatusId);
+    }
+
+    const duplicatedTask = await db('project_tasks')
+      .where({ tenant: runtimeState.tenantId, task_id: result.task_id })
+      .first();
+    expect(duplicatedTask).toBeDefined();
+    expect(duplicatedTask.task_name).toBe('Duplicate Me (Copy)');
+    expect(duplicatedTask.phase_id).toBe(targetPhaseId);
+    expect(duplicatedTask.description).toBe('Duplicate core description');
+    if (taskColumns.has('estimated_hours')) expect(Number(duplicatedTask.estimated_hours ?? 0)).toBe(12);
+    if (taskColumns.has('actual_hours')) expect(Number(duplicatedTask.actual_hours ?? 0)).toBe(0);
+    expect(duplicatedTask.assigned_to).toBeNull();
+  });
+
+  it('T015: projects.duplicate_task optionally copies checklist, additional assignees, primary assignee, and ticket links', async () => {
+    const entity = await createClientOrCompany(db, runtimeState.tenantId);
+    const sourceProjectId = await createProject(db, runtimeState.tenantId, {
+      name: 'Duplicate Relations Source',
+      clientOrCompanyId: entity.clientId,
+      wbsCode: '52',
+    });
+    const targetProjectId = await createProject(db, runtimeState.tenantId, {
+      name: 'Duplicate Relations Target',
+      clientOrCompanyId: entity.clientId,
+      wbsCode: '53',
+    });
+    const sourcePhaseId = await createPhase(db, runtimeState.tenantId, sourceProjectId, {
+      name: 'Source Relations Phase',
+      orderNumber: 1,
+      orderKey: 'a0',
+    });
+    const targetPhaseId = await createPhase(db, runtimeState.tenantId, targetProjectId, {
+      name: 'Target Relations Phase',
+      orderNumber: 1,
+      orderKey: 'a0',
+    });
+
+    const sourceStatusId = await ensureStatusId(db, runtimeState.tenantId, 'project_task', 'Relations Source Status', runtimeState.actorUserId);
+    await createProjectStatusMapping(db, runtimeState.tenantId, sourceProjectId, {
+      statusId: sourceStatusId,
+      customName: 'Relations Source Mapping',
+      displayOrder: 1,
+    });
+    const targetStatusId = await ensureStatusId(db, runtimeState.tenantId, 'project_task', 'Relations Target Status', runtimeState.actorUserId);
+    await createProjectStatusMapping(db, runtimeState.tenantId, targetProjectId, {
+      statusId: targetStatusId,
+      customName: 'Relations Target Mapping',
+      displayOrder: 1,
+    });
+
+    const primary = await createUser(db, runtimeState.tenantId, { email: 'duplicate-relations-primary@example.com' });
+    const additionalA = await createUser(db, runtimeState.tenantId, { email: 'duplicate-relations-additional-a@example.com' });
+    const additionalB = await createUser(db, runtimeState.tenantId, { email: 'duplicate-relations-additional-b@example.com' });
+    const sourceTaskId = await createTask(db, runtimeState.tenantId, sourcePhaseId, sourceProjectId, {
+      taskName: 'Duplicate Relations Task',
+      assignedTo: primary,
+      statusId: sourceStatusId,
+    });
+    await addTaskResource(db, runtimeState.tenantId, sourceTaskId, primary, additionalA);
+    await addTaskResource(db, runtimeState.tenantId, sourceTaskId, primary, additionalB);
+    await createChecklistItem(db, runtimeState.tenantId, sourceTaskId, 'Checklist A', { orderNumber: 1 });
+    await createChecklistItem(db, runtimeState.tenantId, sourceTaskId, 'Checklist B', { orderNumber: 2 });
+
+    const ticketA = await createTicket(db, runtimeState.tenantId, runtimeState.actorUserId, {
+      clientId: entity.clientId,
+    });
+    const ticketB = await createTicket(db, runtimeState.tenantId, runtimeState.actorUserId, {
+      clientId: entity.clientId,
+    });
+    await createProjectTicketLink(db, runtimeState.tenantId, {
+      projectId: sourceProjectId,
+      phaseId: sourcePhaseId,
+      taskId: sourceTaskId,
+      ticketId: ticketA,
+    });
+    await createProjectTicketLink(db, runtimeState.tenantId, {
+      projectId: sourceProjectId,
+      phaseId: sourcePhaseId,
+      taskId: sourceTaskId,
+      ticketId: ticketB,
+    });
+
+    const result = await invokeAction('projects.duplicate_task', {
+      source_task_id: sourceTaskId,
+      target_phase_id: targetPhaseId,
+      copy_primary_assignee: true,
+      copy_additional_assignees: true,
+      copy_checklist: true,
+      copy_ticket_links: true,
+    });
+
+    expect(result.copied_checklist_count).toBe(2);
+    expect(result.copied_additional_assignee_count).toBe(2);
+    expect(result.copied_ticket_link_count).toBe(2);
+
+    const duplicatedTask = await db('project_tasks')
+      .where({ tenant: runtimeState.tenantId, task_id: result.task_id })
+      .first('assigned_to');
+    expect(duplicatedTask?.assigned_to).toBe(primary);
+
+    const hasChecklist = await db.schema.hasTable('task_checklist_items');
+    if (hasChecklist) {
+      const duplicatedChecklist = await db('task_checklist_items')
+        .where({ tenant: runtimeState.tenantId, task_id: result.task_id })
+        .select('item_name');
+      expect(duplicatedChecklist).toHaveLength(2);
+    }
+
+    const hasTaskResources = await db.schema.hasTable('task_resources');
+    if (hasTaskResources) {
+      const duplicatedResources = await db('task_resources')
+        .where({ tenant: runtimeState.tenantId, task_id: result.task_id })
+        .orderBy('additional_user_id', 'asc')
+        .select('additional_user_id');
+      expect(duplicatedResources.map((row: { additional_user_id: string }) => row.additional_user_id)).toEqual([additionalA, additionalB].sort());
+    }
+
+    const duplicatedLinks = await db('project_ticket_links')
+      .where({ tenant: runtimeState.tenantId, task_id: result.task_id })
+      .orderBy('ticket_id', 'asc')
+      .select('project_id', 'phase_id', 'ticket_id');
+    expect(duplicatedLinks).toHaveLength(2);
+    expect(duplicatedLinks.every((row: { project_id: string; phase_id: string }) => row.project_id === targetProjectId && row.phase_id === targetPhaseId)).toBe(true);
   });
 });

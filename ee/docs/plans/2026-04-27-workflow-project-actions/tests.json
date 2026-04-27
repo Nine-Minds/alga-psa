@@ -170,7 +170,7 @@
   {
     "id": "T014",
     "description": "DB-backed action handler test covers `projects.duplicate_task` happy path copying core task fields, resetting actual hours, applying copy suffix, assigning target phase/status, and returning new task metadata.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036",
       "F037",
@@ -181,7 +181,7 @@
   {
     "id": "T015",
     "description": "DB-backed action handler test covers `projects.duplicate_task` optional copy of checklist, primary/additional assignees, and authorized ticket links with copied relation counts.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038",
       "F039",
