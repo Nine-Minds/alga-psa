@@ -518,6 +518,7 @@ const JobDetailsDrawerContent = ({
   isLoading: boolean;
   error: string | null;
 }) => {
+  const { t } = useTranslation('msp/settings');
   if (isLoading) {
     return (
       <div className="flex h-48 items-center justify-center">
