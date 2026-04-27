@@ -86,8 +86,11 @@ const ensureWorkflowDefinitionsCitusDistribution = async (knex) => {
     `);
   }
 
+  // `tenants.tenant` is uuid, while Workflow Runtime V2 stores tenant_id as text/string
+  // for consistency with workflow_runs and tenant_workflow_schedule. Do not colocate with
+  // `tenants`, because Citus requires matching distribution column types for colocation.
   await knex.raw(`
-    SELECT create_distributed_table('workflow_definitions', 'tenant_id', colocate_with => 'tenants')
+    SELECT create_distributed_table('workflow_definitions', 'tenant_id', colocate_with => 'none')
   `);
 };
 
