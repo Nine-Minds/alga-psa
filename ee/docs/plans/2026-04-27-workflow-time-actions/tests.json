@@ -62,7 +62,7 @@
   {
     "id": "T007",
     "description": "DB integration: find-or-create/get/find timesheet actions return sheet, period, comments, and summary fields for representative user/date/status filters.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015",
       "F016",

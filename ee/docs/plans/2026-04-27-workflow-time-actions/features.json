@@ -118,7 +118,7 @@
   {
     "id": "F015",
     "description": "Implement `time.find_or_create_timesheet` by user and period or work date, returning sheet, period, status, and summary fields.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Time sheet actions"
     ]
@@ -126,7 +126,7 @@
   {
     "id": "F016",
     "description": "Implement `time.get_timesheet` with period, comments, and summary counts/minutes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Time sheet actions"
     ]
@@ -134,7 +134,7 @@
   {
     "id": "F017",
     "description": "Implement `time.find_timesheets` with bounded filters for users, period/date range, status, and approval scope.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Time sheet actions"
     ]

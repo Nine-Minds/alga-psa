@@ -143,6 +143,30 @@ export type WorkflowTimeEntryApprovalResult = {
   change_request_id: string | null;
 };
 
+export type WorkflowTimeSheetSummary = {
+  time_sheet_id: string;
+  user_id: string;
+  period_id: string;
+  period_start_date: string;
+  period_end_date: string;
+  approval_status: string;
+  submitted_at: string | null;
+  approved_at: string | null;
+  approved_by: string | null;
+  entry_count: number;
+  total_minutes: number;
+  billable_minutes: number;
+  comment_count: number;
+};
+
+export type WorkflowTimeSheetCommentSummary = {
+  comment_id: string;
+  user_id: string;
+  comment: string;
+  is_approver: boolean;
+  created_at: string;
+};
+
 function toIsoString(value: string | Date): string {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }
@@ -1772,4 +1796,229 @@ export async function requestWorkflowTimeEntryChanges(params: {
   }
 
   return { entries: results };
+}
+
+async function summarizeTimeSheet(
+  trx: Knex.Transaction,
+  tenantId: string,
+  timeSheetId: string
+): Promise<WorkflowTimeSheetSummary> {
+  const row = await trx('time_sheets as ts')
+    .join('time_periods as tp', function joinPeriods() {
+      this.on('ts.period_id', '=', 'tp.period_id').andOn('ts.tenant', '=', 'tp.tenant');
+    })
+    .leftJoin('time_entries as te', function joinEntries() {
+      this.on('ts.id', '=', 'te.time_sheet_id').andOn('ts.tenant', '=', 'te.tenant');
+    })
+    .leftJoin('time_sheet_comments as comments', function joinComments() {
+      this.on('ts.id', '=', 'comments.time_sheet_id').andOn('ts.tenant', '=', 'comments.tenant');
+    })
+    .where({
+      'ts.tenant': tenantId,
+      'ts.id': timeSheetId,
+    })
+    .groupBy(
+      'ts.id',
+      'ts.user_id',
+      'ts.period_id',
+      'ts.approval_status',
+      'ts.submitted_at',
+      'ts.approved_at',
+      'ts.approved_by',
+      'tp.start_date',
+      'tp.end_date'
+    )
+    .select(
+      'ts.id',
+      'ts.user_id',
+      'ts.period_id',
+      'ts.approval_status',
+      'ts.submitted_at',
+      'ts.approved_at',
+      'ts.approved_by',
+      'tp.start_date',
+      'tp.end_date',
+      trx.raw('COUNT(DISTINCT te.entry_id) as entry_count'),
+      trx.raw('COALESCE(SUM(EXTRACT(EPOCH FROM (te.end_time - te.start_time)) / 60), 0) as total_minutes'),
+      trx.raw('COALESCE(SUM(te.billable_duration), 0) as billable_minutes'),
+      trx.raw('COUNT(DISTINCT comments.comment_id) as comment_count')
+    )
+    .first();
+
+  if (!row) {
+    throw new WorkflowTimeDomainError({
+      category: 'ActionError',
+      code: 'NOT_FOUND',
+      message: 'Time sheet not found',
+      details: { time_sheet_id: timeSheetId },
+    });
+  }
+
+  return {
+    time_sheet_id: String(row.id),
+    user_id: String(row.user_id),
+    period_id: String(row.period_id),
+    period_start_date: toDateOnly(row.start_date as string | Date),
+    period_end_date: toDateOnly(row.end_date as string | Date),
+    approval_status: String(row.approval_status ?? 'DRAFT'),
+    submitted_at: row.submitted_at ? toIsoString(row.submitted_at as string | Date) : null,
+    approved_at: row.approved_at ? toIsoString(row.approved_at as string | Date) : null,
+    approved_by: (row.approved_by as string | null) ?? null,
+    entry_count: Number(row.entry_count ?? 0),
+    total_minutes: Number(row.total_minutes ?? 0),
+    billable_minutes: Number(row.billable_minutes ?? 0),
+    comment_count: Number(row.comment_count ?? 0),
+  };
+}
+
+export async function findOrCreateWorkflowTimeSheet(params: {
+  trx: Knex.Transaction;
+  tenantId: string;
+  userId: string;
+  periodId?: string;
+  workDate?: string;
+}): Promise<WorkflowTimeSheetSummary> {
+  const { trx, tenantId, userId, periodId, workDate } = params;
+
+  let resolvedPeriodId = periodId;
+  if (!resolvedPeriodId) {
+    if (!workDate) {
+      throw new WorkflowTimeDomainError({
+        category: 'ValidationError',
+        code: 'VALIDATION_ERROR',
+        message: 'Provide period_id or work_date',
+      });
+    }
+    const period = await trx('time_periods')
+      .where({ tenant: tenantId, is_closed: false })
+      .andWhere('start_date', '<=', workDate)
+      .andWhere('end_date', '>', workDate)
+      .orderBy('start_date', 'desc')
+      .first('period_id');
+    if (!period?.period_id) {
+      throw new WorkflowTimeDomainError({
+        category: 'ValidationError',
+        code: 'VALIDATION_ERROR',
+        message: 'No open time period found for work_date',
+        details: { work_date: workDate },
+      });
+    }
+    resolvedPeriodId = String(period.period_id);
+  }
+
+  const existing = await trx('time_sheets')
+    .where({
+      tenant: tenantId,
+      user_id: userId,
+      period_id: resolvedPeriodId,
+    })
+    .first('id');
+
+  const timeSheetId = existing?.id
+    ? String(existing.id)
+    : String((await trx('time_sheets')
+      .insert({
+        tenant: tenantId,
+        id: uuidv4(),
+        user_id: userId,
+        period_id: resolvedPeriodId,
+        approval_status: 'DRAFT',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .returning('id'))[0].id);
+
+  return summarizeTimeSheet(trx, tenantId, timeSheetId);
+}
+
+export async function getWorkflowTimeSheet(params: {
+  trx: Knex.Transaction;
+  tenantId: string;
+  timeSheetId: string;
+}): Promise<{
+  time_sheet: WorkflowTimeSheetSummary;
+  comments: WorkflowTimeSheetCommentSummary[];
+}> {
+  const { trx, tenantId, timeSheetId } = params;
+  const summary = await summarizeTimeSheet(trx, tenantId, timeSheetId);
+
+  const comments = await trx('time_sheet_comments')
+    .where({
+      tenant: tenantId,
+      time_sheet_id: timeSheetId,
+    })
+    .orderBy('created_at', 'desc')
+    .select('comment_id', 'user_id', 'comment', 'is_approver', 'created_at');
+
+  return {
+    time_sheet: summary,
+    comments: comments.map((comment) => ({
+      comment_id: String(comment.comment_id),
+      user_id: String(comment.user_id),
+      comment: String(comment.comment),
+      is_approver: Boolean(comment.is_approver),
+      created_at: toIsoString(comment.created_at as string | Date),
+    })),
+  };
+}
+
+export async function findWorkflowTimeSheets(params: {
+  trx: Knex.Transaction;
+  tenantId: string;
+  input: {
+    user_ids?: string[];
+    approval_status?: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'CHANGES_REQUESTED';
+    period_start_from?: string;
+    period_end_to?: string;
+    work_date?: string;
+    limit?: number;
+  };
+}): Promise<{
+  time_sheets: WorkflowTimeSheetSummary[];
+  summary: {
+    total_count: number;
+  };
+}> {
+  const { trx, tenantId, input } = params;
+  const limit = Math.min(Math.max(input.limit ?? 50, 1), 200);
+
+  const base = trx('time_sheets as ts')
+    .join('time_periods as tp', function joinPeriods() {
+      this.on('ts.period_id', '=', 'tp.period_id').andOn('ts.tenant', '=', 'tp.tenant');
+    })
+    .where('ts.tenant', tenantId);
+
+  if (input.user_ids?.length) {
+    base.whereIn('ts.user_id', input.user_ids);
+  }
+  if (input.approval_status) {
+    base.andWhere('ts.approval_status', input.approval_status);
+  }
+  if (input.period_start_from) {
+    base.andWhere('tp.start_date', '>=', input.period_start_from);
+  }
+  if (input.period_end_to) {
+    base.andWhere('tp.end_date', '<=', input.period_end_to);
+  }
+  if (input.work_date) {
+    base.andWhere('tp.start_date', '<=', input.work_date).andWhere('tp.end_date', '>', input.work_date);
+  }
+
+  const rows = await base
+    .clone()
+    .orderBy('tp.start_date', 'desc')
+    .limit(limit)
+    .select('ts.id');
+
+  const ids = rows.map((row) => String(row.id));
+  const summaries = await Promise.all(ids.map((id) => summarizeTimeSheet(trx, tenantId, id)));
+
+  const countRow = await base.clone().count<{ count: string }[]>('* as count').first();
+
+  return {
+    time_sheets: summaries,
+    summary: {
+      total_count: Number(countRow?.count ?? 0),
+    },
+  };
 }

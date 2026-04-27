@@ -780,4 +780,77 @@ describe('time workflow runtime DB-backed action handlers', () => {
       .whereIn('time_entry_id', [first.time_entry.entry_id, second.time_entry.entry_id]);
     expect(changeRequests.length).toBeGreaterThanOrEqual(2);
   });
+
+  it('T007: find-or-create/get/find timesheet actions return sheet, period, comments, and summary fields for representative user/date/status filters', async () => {
+    const entryUserId = await createUser(db, runtimeState.tenantId, {
+      user_type: 'internal',
+      first_name: 'Timesheet',
+      last_name: 'Reader',
+      timezone: 'America/New_York',
+    });
+    const clientId = await createClient(db, runtimeState.tenantId, 'Timesheet Client');
+    const ticketId = await createTicket(db, {
+      tenantId: runtimeState.tenantId,
+      actorUserId: runtimeState.actorUserId,
+      clientId,
+    });
+    const serviceId = await createService(db, runtimeState.tenantId);
+
+    const periodA = await createTimePeriod(db, runtimeState.tenantId, '2026-04-01', '2026-04-08');
+    await createTimePeriod(db, runtimeState.tenantId, '2026-04-08', '2026-04-15');
+
+    const createdSheet = await invokeAction('time.find_or_create_timesheet', {
+      user_id: entryUserId,
+      period_id: periodA,
+    });
+
+    await invokeAction('time.create_entry', {
+      user_id: entryUserId,
+      start: '2026-04-03T12:00:00.000Z',
+      duration_minutes: 40,
+      billable: true,
+      service_id: serviceId,
+      link: { type: 'ticket', id: ticketId },
+      time_sheet_id: createdSheet.time_sheet.time_sheet_id,
+    });
+    await invokeAction('time.create_entry', {
+      user_id: entryUserId,
+      start: '2026-04-03T13:00:00.000Z',
+      duration_minutes: 20,
+      billable: false,
+      service_id: serviceId,
+      link: { type: 'ticket', id: ticketId },
+      time_sheet_id: createdSheet.time_sheet.time_sheet_id,
+    });
+
+    await db('time_sheet_comments').insert({
+      comment_id: uuidv4(),
+      time_sheet_id: createdSheet.time_sheet.time_sheet_id,
+      user_id: runtimeState.actorUserId,
+      comment: 'Manager note for review',
+      is_approver: true,
+      created_at: new Date().toISOString(),
+      tenant: runtimeState.tenantId,
+    });
+
+    const fetched = await invokeAction('time.get_timesheet', {
+      time_sheet_id: createdSheet.time_sheet.time_sheet_id,
+    });
+    expect(fetched.time_sheet.time_sheet_id).toBe(createdSheet.time_sheet.time_sheet_id);
+    expect(fetched.time_sheet.entry_count).toBe(2);
+    expect(fetched.time_sheet.total_minutes).toBe(60);
+    expect(fetched.time_sheet.billable_minutes).toBe(40);
+    expect(fetched.comments.length).toBeGreaterThanOrEqual(1);
+
+    const found = await invokeAction('time.find_timesheets', {
+      user_ids: [entryUserId],
+      approval_status: 'DRAFT',
+      period_start_from: '2026-04-01',
+      period_end_to: '2026-04-15',
+      limit: 20,
+    });
+    expect(found.time_sheets.length).toBeGreaterThanOrEqual(1);
+    expect(found.time_sheets[0].user_id).toBe(entryUserId);
+    expect(found.summary.total_count).toBeGreaterThanOrEqual(1);
+  });
 });

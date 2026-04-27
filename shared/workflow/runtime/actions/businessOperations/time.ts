@@ -17,6 +17,9 @@ import {
   findWorkflowTimeEntries,
   setWorkflowTimeEntryApprovalStatus,
   requestWorkflowTimeEntryChanges,
+  findOrCreateWorkflowTimeSheet,
+  getWorkflowTimeSheet,
+  findWorkflowTimeSheets,
   WorkflowTimeDomainError,
   type WorkflowTimeCreateEntryInput,
   type WorkflowTimeUpdateEntryInput,
@@ -154,6 +157,194 @@ export function registerTimeActions(): void {
         rethrowAsStandardError(ctx, error);
       }
     })
+  });
+
+  registry.register({
+    id: 'time.find_or_create_timesheet',
+    version: 1,
+    inputSchema: z.object({
+      user_id: uuidSchema.describe('Timesheet owner user id'),
+      period_id: uuidSchema.optional().describe('Optional explicit time period id'),
+      work_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe('Optional work date used to resolve an open period'),
+    }).superRefine((value, issueCtx) => {
+      if (!value.period_id && !value.work_date) {
+        issueCtx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['period_id'],
+          message: 'Provide period_id or work_date',
+        });
+      }
+    }),
+    outputSchema: z.object({
+      time_sheet: z.object({
+        time_sheet_id: uuidSchema,
+        user_id: uuidSchema,
+        period_id: uuidSchema,
+        period_start_date: z.string(),
+        period_end_date: z.string(),
+        approval_status: z.string(),
+        submitted_at: isoDateTimeSchema.nullable(),
+        approved_at: isoDateTimeSchema.nullable(),
+        approved_by: uuidSchema.nullable(),
+        entry_count: z.number().int(),
+        total_minutes: z.number(),
+        billable_minutes: z.number(),
+        comment_count: z.number().int(),
+      }),
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Find or Create Time Sheet',
+      category: 'Business Operations',
+      description: 'Find or create a timesheet by user and period/date',
+    },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      await requirePermission(ctx, tx, { resource: 'timesheet', action: 'read' });
+
+      try {
+        const result = await findOrCreateWorkflowTimeSheet({
+          trx: tx.trx,
+          tenantId: tx.tenantId,
+          userId: input.user_id,
+          periodId: input.period_id,
+          workDate: input.work_date,
+        });
+        return { time_sheet: result };
+      } catch (error) {
+        if (error instanceof WorkflowTimeDomainError) {
+          throwActionError(ctx, {
+            category: error.category,
+            code: error.code,
+            message: error.message,
+            details: error.details ?? undefined,
+          });
+        }
+        rethrowAsStandardError(ctx, error);
+      }
+    }),
+  });
+
+  registry.register({
+    id: 'time.get_timesheet',
+    version: 1,
+    inputSchema: z.object({
+      time_sheet_id: uuidSchema.describe('Time sheet id'),
+    }),
+    outputSchema: z.object({
+      time_sheet: z.object({
+        time_sheet_id: uuidSchema,
+        user_id: uuidSchema,
+        period_id: uuidSchema,
+        period_start_date: z.string(),
+        period_end_date: z.string(),
+        approval_status: z.string(),
+        submitted_at: isoDateTimeSchema.nullable(),
+        approved_at: isoDateTimeSchema.nullable(),
+        approved_by: uuidSchema.nullable(),
+        entry_count: z.number().int(),
+        total_minutes: z.number(),
+        billable_minutes: z.number(),
+        comment_count: z.number().int(),
+      }),
+      comments: z.array(z.object({
+        comment_id: uuidSchema,
+        user_id: uuidSchema,
+        comment: z.string(),
+        is_approver: z.boolean(),
+        created_at: isoDateTimeSchema,
+      })),
+    }),
+    sideEffectful: false,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Get Time Sheet',
+      category: 'Business Operations',
+      description: 'Load a timesheet with period, comments, and summary fields',
+    },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      await requirePermission(ctx, tx, { resource: 'timesheet', action: 'read' });
+
+      try {
+        return await getWorkflowTimeSheet({
+          trx: tx.trx,
+          tenantId: tx.tenantId,
+          timeSheetId: input.time_sheet_id,
+        });
+      } catch (error) {
+        if (error instanceof WorkflowTimeDomainError) {
+          throwActionError(ctx, {
+            category: error.category,
+            code: error.code,
+            message: error.message,
+            details: error.details ?? undefined,
+          });
+        }
+        rethrowAsStandardError(ctx, error);
+      }
+    }),
+  });
+
+  registry.register({
+    id: 'time.find_timesheets',
+    version: 1,
+    inputSchema: z.object({
+      user_ids: z.array(uuidSchema).max(100).optional().describe('Optional user filter'),
+      approval_status: z.enum(['DRAFT', 'SUBMITTED', 'APPROVED', 'CHANGES_REQUESTED']).optional()
+        .describe('Optional status filter'),
+      period_start_from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe('Lower period start bound (inclusive)'),
+      period_end_to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe('Upper period end bound (inclusive)'),
+      work_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe('Find periods containing this work date'),
+      limit: z.number().int().min(1).max(200).default(50).describe('Maximum rows (1-200)'),
+    }),
+    outputSchema: z.object({
+      time_sheets: z.array(z.object({
+        time_sheet_id: uuidSchema,
+        user_id: uuidSchema,
+        period_id: uuidSchema,
+        period_start_date: z.string(),
+        period_end_date: z.string(),
+        approval_status: z.string(),
+        submitted_at: isoDateTimeSchema.nullable(),
+        approved_at: isoDateTimeSchema.nullable(),
+        approved_by: uuidSchema.nullable(),
+        entry_count: z.number().int(),
+        total_minutes: z.number(),
+        billable_minutes: z.number(),
+        comment_count: z.number().int(),
+      })),
+      summary: z.object({
+        total_count: z.number().int(),
+      }),
+    }),
+    sideEffectful: false,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Find Time Sheets',
+      category: 'Business Operations',
+      description: 'Find timesheets by user/date/status with bounded results',
+    },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      await requirePermission(ctx, tx, { resource: 'timesheet', action: 'read' });
+
+      try {
+        return await findWorkflowTimeSheets({
+          trx: tx.trx,
+          tenantId: tx.tenantId,
+          input,
+        });
+      } catch (error) {
+        if (error instanceof WorkflowTimeDomainError) {
+          throwActionError(ctx, {
+            category: error.category,
+            code: error.code,
+            message: error.message,
+            details: error.details ?? undefined,
+          });
+        }
+        rethrowAsStandardError(ctx, error);
+      }
+    }),
   });
 
   registry.register({
