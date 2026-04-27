@@ -72,7 +72,7 @@
   {
     "id": "T008",
     "description": "DB integration: submit timesheet updates the sheet and all associated entries to `SUBMITTED` using canonical submit behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ]
@@ -80,7 +80,7 @@
   {
     "id": "T009",
     "description": "DB integration: approve/request-changes/reverse timesheet actions enforce state transitions, comments, associated entry statuses, and invoiced-entry reopen guard.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019",
       "F020",

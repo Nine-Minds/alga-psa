@@ -20,6 +20,11 @@ import {
   findOrCreateWorkflowTimeSheet,
   getWorkflowTimeSheet,
   findWorkflowTimeSheets,
+  submitWorkflowTimeSheet,
+  approveWorkflowTimeSheet,
+  requestWorkflowTimeSheetChanges,
+  reverseWorkflowTimeSheetApproval,
+  addWorkflowTimeSheetComment,
   WorkflowTimeDomainError,
   type WorkflowTimeCreateEntryInput,
   type WorkflowTimeUpdateEntryInput,
@@ -157,6 +162,291 @@ export function registerTimeActions(): void {
         rethrowAsStandardError(ctx, error);
       }
     })
+  });
+
+  registry.register({
+    id: 'time.submit_timesheet',
+    version: 1,
+    inputSchema: z.object({
+      time_sheet_id: uuidSchema.describe('Time sheet id to submit'),
+    }),
+    outputSchema: z.object({
+      time_sheet: z.object({
+        time_sheet_id: uuidSchema,
+        user_id: uuidSchema,
+        period_id: uuidSchema,
+        period_start_date: z.string(),
+        period_end_date: z.string(),
+        approval_status: z.string(),
+        submitted_at: isoDateTimeSchema.nullable(),
+        approved_at: isoDateTimeSchema.nullable(),
+        approved_by: uuidSchema.nullable(),
+        entry_count: z.number().int(),
+        total_minutes: z.number(),
+        billable_minutes: z.number(),
+        comment_count: z.number().int(),
+      }),
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Submit Time Sheet',
+      category: 'Business Operations',
+      description: 'Submit a draft or changes-requested timesheet and submit associated entries',
+    },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      await requirePermission(ctx, tx, { resource: 'timesheet', action: 'submit' });
+      try {
+        return await submitWorkflowTimeSheet({
+          trx: tx.trx,
+          tenantId: tx.tenantId,
+          actorUserId: tx.actorUserId,
+          timeSheetId: input.time_sheet_id,
+        });
+      } catch (error) {
+        if (error instanceof WorkflowTimeDomainError) {
+          throwActionError(ctx, {
+            category: error.category,
+            code: error.code,
+            message: error.message,
+            details: error.details ?? undefined,
+          });
+        }
+        rethrowAsStandardError(ctx, error);
+      }
+    }),
+  });
+
+  registry.register({
+    id: 'time.approve_timesheet',
+    version: 1,
+    inputSchema: z.object({
+      time_sheet_id: uuidSchema.describe('Time sheet id to approve'),
+      comment: z.string().optional().describe('Optional approver comment'),
+    }),
+    outputSchema: z.object({
+      time_sheet: z.object({
+        time_sheet_id: uuidSchema,
+        user_id: uuidSchema,
+        period_id: uuidSchema,
+        period_start_date: z.string(),
+        period_end_date: z.string(),
+        approval_status: z.string(),
+        submitted_at: isoDateTimeSchema.nullable(),
+        approved_at: isoDateTimeSchema.nullable(),
+        approved_by: uuidSchema.nullable(),
+        entry_count: z.number().int(),
+        total_minutes: z.number(),
+        billable_minutes: z.number(),
+        comment_count: z.number().int(),
+      }),
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Approve Time Sheet',
+      category: 'Business Operations',
+      description: 'Approve a submitted timesheet and approve associated entries',
+    },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      await requirePermission(ctx, tx, { resource: 'timesheet', action: 'approve' });
+      try {
+        return await approveWorkflowTimeSheet({
+          trx: tx.trx,
+          tenantId: tx.tenantId,
+          actorUserId: tx.actorUserId,
+          timeSheetId: input.time_sheet_id,
+          comment: input.comment,
+        });
+      } catch (error) {
+        if (error instanceof WorkflowTimeDomainError) {
+          throwActionError(ctx, {
+            category: error.category,
+            code: error.code,
+            message: error.message,
+            details: error.details ?? undefined,
+          });
+        }
+        rethrowAsStandardError(ctx, error);
+      }
+    }),
+  });
+
+  registry.register({
+    id: 'time.request_timesheet_changes',
+    version: 1,
+    inputSchema: z.object({
+      time_sheet_id: uuidSchema.describe('Time sheet id'),
+      comment: z.string().min(1).describe('Approver change-request comment'),
+    }),
+    outputSchema: z.object({
+      time_sheet: z.object({
+        time_sheet_id: uuidSchema,
+        user_id: uuidSchema,
+        period_id: uuidSchema,
+        period_start_date: z.string(),
+        period_end_date: z.string(),
+        approval_status: z.string(),
+        submitted_at: isoDateTimeSchema.nullable(),
+        approved_at: isoDateTimeSchema.nullable(),
+        approved_by: uuidSchema.nullable(),
+        entry_count: z.number().int(),
+        total_minutes: z.number(),
+        billable_minutes: z.number(),
+        comment_count: z.number().int(),
+      }),
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Request Time Sheet Changes',
+      category: 'Business Operations',
+      description: 'Mark a timesheet as CHANGES_REQUESTED with an approver comment',
+    },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      await requirePermission(ctx, tx, { resource: 'timesheet', action: 'approve' });
+      try {
+        return await requestWorkflowTimeSheetChanges({
+          trx: tx.trx,
+          tenantId: tx.tenantId,
+          actorUserId: tx.actorUserId,
+          timeSheetId: input.time_sheet_id,
+          comment: input.comment,
+        });
+      } catch (error) {
+        if (error instanceof WorkflowTimeDomainError) {
+          throwActionError(ctx, {
+            category: error.category,
+            code: error.code,
+            message: error.message,
+            details: error.details ?? undefined,
+          });
+        }
+        rethrowAsStandardError(ctx, error);
+      }
+    }),
+  });
+
+  registry.register({
+    id: 'time.reverse_timesheet_approval',
+    version: 1,
+    inputSchema: z.object({
+      time_sheet_id: uuidSchema.describe('Approved time sheet id'),
+      reason: z.string().min(1).describe('Reason for reversing approval'),
+    }),
+    outputSchema: z.object({
+      time_sheet: z.object({
+        time_sheet_id: uuidSchema,
+        user_id: uuidSchema,
+        period_id: uuidSchema,
+        period_start_date: z.string(),
+        period_end_date: z.string(),
+        approval_status: z.string(),
+        submitted_at: isoDateTimeSchema.nullable(),
+        approved_at: isoDateTimeSchema.nullable(),
+        approved_by: uuidSchema.nullable(),
+        entry_count: z.number().int(),
+        total_minutes: z.number(),
+        billable_minutes: z.number(),
+        comment_count: z.number().int(),
+      }),
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Reverse Time Sheet Approval',
+      category: 'Business Operations',
+      description: 'Reopen an approved timesheet unless invoiced entries are present',
+    },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      await requirePermission(ctx, tx, { resource: 'timesheet', action: 'reverse' });
+      try {
+        return await reverseWorkflowTimeSheetApproval({
+          trx: tx.trx,
+          tenantId: tx.tenantId,
+          actorUserId: tx.actorUserId,
+          timeSheetId: input.time_sheet_id,
+          reason: input.reason,
+        });
+      } catch (error) {
+        if (error instanceof WorkflowTimeDomainError) {
+          throwActionError(ctx, {
+            category: error.category,
+            code: error.code,
+            message: error.message,
+            details: error.details ?? undefined,
+          });
+        }
+        rethrowAsStandardError(ctx, error);
+      }
+    }),
+  });
+
+  registry.register({
+    id: 'time.add_timesheet_comment',
+    version: 1,
+    inputSchema: z.object({
+      time_sheet_id: uuidSchema.describe('Time sheet id'),
+      comment: z.string().min(1).describe('Comment text'),
+      is_approver: z.boolean().default(false).describe('Mark comment as approver-authored'),
+    }),
+    outputSchema: z.object({
+      comment: z.object({
+        comment_id: uuidSchema,
+        user_id: uuidSchema,
+        comment: z.string(),
+        is_approver: z.boolean(),
+        created_at: isoDateTimeSchema,
+      }),
+      time_sheet: z.object({
+        time_sheet_id: uuidSchema,
+        user_id: uuidSchema,
+        period_id: uuidSchema,
+        period_start_date: z.string(),
+        period_end_date: z.string(),
+        approval_status: z.string(),
+        submitted_at: isoDateTimeSchema.nullable(),
+        approved_at: isoDateTimeSchema.nullable(),
+        approved_by: uuidSchema.nullable(),
+        entry_count: z.number().int(),
+        total_minutes: z.number(),
+        billable_minutes: z.number(),
+        comment_count: z.number().int(),
+      }),
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Add Time Sheet Comment',
+      category: 'Business Operations',
+      description: 'Add an owner or approver comment to a timesheet',
+    },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      await requirePermission(ctx, tx, { resource: 'timesheet', action: 'read' });
+      if (input.is_approver) {
+        await requirePermission(ctx, tx, { resource: 'timesheet', action: 'approve' });
+      }
+      try {
+        return await addWorkflowTimeSheetComment({
+          trx: tx.trx,
+          tenantId: tx.tenantId,
+          actorUserId: tx.actorUserId,
+          timeSheetId: input.time_sheet_id,
+          comment: input.comment,
+          isApprover: input.is_approver,
+        });
+      } catch (error) {
+        if (error instanceof WorkflowTimeDomainError) {
+          throwActionError(ctx, {
+            category: error.category,
+            code: error.code,
+            message: error.message,
+            details: error.details ?? undefined,
+          });
+        }
+        rethrowAsStandardError(ctx, error);
+      }
+    }),
   });
 
   registry.register({

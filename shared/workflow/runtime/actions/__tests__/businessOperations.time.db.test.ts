@@ -853,4 +853,121 @@ describe('time workflow runtime DB-backed action handlers', () => {
     expect(found.time_sheets[0].user_id).toBe(entryUserId);
     expect(found.summary.total_count).toBeGreaterThanOrEqual(1);
   });
+
+  it('T008: submit timesheet updates the sheet and all associated entries to SUBMITTED using canonical submit behavior', async () => {
+    const entryUserId = await createUser(db, runtimeState.tenantId, {
+      user_type: 'internal',
+      first_name: 'Submit',
+      last_name: 'Sheet',
+      timezone: 'America/New_York',
+    });
+    const clientId = await createClient(db, runtimeState.tenantId, 'Submit Client');
+    const ticketId = await createTicket(db, {
+      tenantId: runtimeState.tenantId,
+      actorUserId: runtimeState.actorUserId,
+      clientId,
+    });
+    const serviceId = await createService(db, runtimeState.tenantId);
+    await createTimePeriod(db, runtimeState.tenantId, '2026-04-01', '2026-04-08');
+
+    const first = await invokeAction('time.create_entry', {
+      user_id: entryUserId,
+      start: '2026-04-06T12:00:00.000Z',
+      duration_minutes: 25,
+      billable: true,
+      service_id: serviceId,
+      link: { type: 'ticket', id: ticketId },
+    });
+    await invokeAction('time.create_entry', {
+      user_id: entryUserId,
+      start: '2026-04-06T13:00:00.000Z',
+      duration_minutes: 35,
+      billable: true,
+      service_id: serviceId,
+      link: { type: 'ticket', id: ticketId },
+    });
+
+    const submitted = await invokeAction('time.submit_timesheet', {
+      time_sheet_id: first.time_entry.time_sheet_id,
+    });
+    expect(submitted.time_sheet.approval_status).toBe('SUBMITTED');
+
+    const entryStatuses = await db('time_entries')
+      .where({
+        tenant: runtimeState.tenantId,
+        time_sheet_id: first.time_entry.time_sheet_id,
+      })
+      .select('approval_status');
+    expect(entryStatuses.length).toBe(2);
+    expect(entryStatuses.every((row) => row.approval_status === 'SUBMITTED')).toBe(true);
+  });
+
+  it('T009: approve/request-changes/reverse timesheet actions enforce state transitions, comments, associated entry statuses, and invoiced-entry reopen guard', async () => {
+    const entryUserId = await createUser(db, runtimeState.tenantId, {
+      user_type: 'internal',
+      first_name: 'Approve',
+      last_name: 'Sheet',
+      timezone: 'America/New_York',
+    });
+    const clientId = await createClient(db, runtimeState.tenantId, 'Approve Client');
+    const ticketId = await createTicket(db, {
+      tenantId: runtimeState.tenantId,
+      actorUserId: runtimeState.actorUserId,
+      clientId,
+    });
+    const serviceId = await createService(db, runtimeState.tenantId);
+    await createTimePeriod(db, runtimeState.tenantId, '2026-04-01', '2026-04-08');
+
+    const created = await invokeAction('time.create_entry', {
+      user_id: entryUserId,
+      start: '2026-04-06T15:00:00.000Z',
+      duration_minutes: 60,
+      billable: true,
+      service_id: serviceId,
+      link: { type: 'ticket', id: ticketId },
+    });
+    const timeSheetId = created.time_entry.time_sheet_id;
+
+    await invokeAction('time.submit_timesheet', { time_sheet_id: timeSheetId });
+
+    const approved = await invokeAction('time.approve_timesheet', {
+      time_sheet_id: timeSheetId,
+      comment: 'Looks good',
+    });
+    expect(approved.time_sheet.approval_status).toBe('APPROVED');
+    expect(approved.time_sheet.approved_by).toBe(runtimeState.actorUserId);
+
+    const commentAdded = await invokeAction('time.add_timesheet_comment', {
+      time_sheet_id: timeSheetId,
+      comment: 'Follow-up approver note',
+      is_approver: true,
+    });
+    expect(commentAdded.comment.is_approver).toBe(true);
+
+    const changesRequested = await invokeAction('time.request_timesheet_changes', {
+      time_sheet_id: timeSheetId,
+      comment: 'Need minor corrections',
+    });
+    expect(changesRequested.time_sheet.approval_status).toBe('CHANGES_REQUESTED');
+
+    const changedStatuses = await db('time_entries')
+      .where({ tenant: runtimeState.tenantId, time_sheet_id: timeSheetId })
+      .select('approval_status');
+    expect(changedStatuses.every((row) => row.approval_status === 'CHANGES_REQUESTED')).toBe(true);
+
+    await invokeAction('time.submit_timesheet', { time_sheet_id: timeSheetId });
+    await invokeAction('time.approve_timesheet', { time_sheet_id: timeSheetId });
+
+    await db('time_entries')
+      .where({ tenant: runtimeState.tenantId, time_sheet_id: timeSheetId })
+      .limit(1)
+      .update({ invoiced: true });
+
+    await expect(invokeAction('time.reverse_timesheet_approval', {
+      time_sheet_id: timeSheetId,
+      reason: 'Reopen after invoicing',
+    })).rejects.toMatchObject({
+      code: 'VALIDATION_ERROR',
+    });
+  });
 });

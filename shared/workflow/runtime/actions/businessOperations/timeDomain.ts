@@ -167,6 +167,10 @@ export type WorkflowTimeSheetCommentSummary = {
   created_at: string;
 };
 
+export type WorkflowTimeSheetMutationResult = {
+  time_sheet: WorkflowTimeSheetSummary;
+};
+
 function toIsoString(value: string | Date): string {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }
@@ -2020,5 +2024,302 @@ export async function findWorkflowTimeSheets(params: {
     summary: {
       total_count: Number(countRow?.count ?? 0),
     },
+  };
+}
+
+export async function submitWorkflowTimeSheet(params: {
+  trx: Knex.Transaction;
+  tenantId: string;
+  actorUserId: string;
+  timeSheetId: string;
+}): Promise<WorkflowTimeSheetMutationResult> {
+  const { trx, tenantId, timeSheetId } = params;
+
+  const timeSheet = await trx('time_sheets')
+    .where({ tenant: tenantId, id: timeSheetId })
+    .select('id', 'approval_status')
+    .first();
+
+  if (!timeSheet) {
+    throw new WorkflowTimeDomainError({
+      category: 'ActionError',
+      code: 'NOT_FOUND',
+      message: 'Time sheet not found',
+      details: { time_sheet_id: timeSheetId },
+    });
+  }
+
+  const status = String(timeSheet.approval_status ?? 'DRAFT');
+  if (status !== 'DRAFT' && status !== 'CHANGES_REQUESTED') {
+    throw new WorkflowTimeDomainError({
+      category: 'ValidationError',
+      code: 'VALIDATION_ERROR',
+      message: 'Time sheet must be DRAFT or CHANGES_REQUESTED to submit',
+      details: { time_sheet_id: timeSheetId, approval_status: status },
+    });
+  }
+
+  await trx('time_sheets')
+    .where({ tenant: tenantId, id: timeSheetId })
+    .update({
+      approval_status: 'SUBMITTED',
+      submitted_at: trx.fn.now(),
+      updated_at: new Date().toISOString(),
+    });
+
+  await trx('time_entries')
+    .where({ tenant: tenantId, time_sheet_id: timeSheetId })
+    .update({
+      approval_status: 'SUBMITTED',
+      updated_at: new Date().toISOString(),
+    });
+
+  return {
+    time_sheet: await summarizeTimeSheet(trx, tenantId, timeSheetId),
+  };
+}
+
+export async function approveWorkflowTimeSheet(params: {
+  trx: Knex.Transaction;
+  tenantId: string;
+  actorUserId: string;
+  timeSheetId: string;
+  comment?: string;
+}): Promise<WorkflowTimeSheetMutationResult> {
+  const { trx, tenantId, actorUserId, timeSheetId, comment } = params;
+
+  const timeSheet = await trx('time_sheets')
+    .where({ tenant: tenantId, id: timeSheetId })
+    .select('id', 'approval_status')
+    .first();
+
+  if (!timeSheet) {
+    throw new WorkflowTimeDomainError({
+      category: 'ActionError',
+      code: 'NOT_FOUND',
+      message: 'Time sheet not found',
+      details: { time_sheet_id: timeSheetId },
+    });
+  }
+
+  if (String(timeSheet.approval_status ?? 'DRAFT') !== 'SUBMITTED') {
+    throw new WorkflowTimeDomainError({
+      category: 'ValidationError',
+      code: 'VALIDATION_ERROR',
+      message: 'Time sheet must be SUBMITTED to approve',
+      details: { time_sheet_id: timeSheetId, approval_status: timeSheet.approval_status },
+    });
+  }
+
+  await trx('time_sheets')
+    .where({ tenant: tenantId, id: timeSheetId })
+    .update({
+      approval_status: 'APPROVED',
+      approved_at: trx.fn.now(),
+      approved_by: actorUserId,
+      updated_at: new Date().toISOString(),
+    });
+
+  await trx('time_entries')
+    .where({ tenant: tenantId, time_sheet_id: timeSheetId })
+    .update({
+      approval_status: 'APPROVED',
+      updated_at: new Date().toISOString(),
+    });
+
+  await trx('time_sheet_comments').insert({
+    tenant: tenantId,
+    comment_id: uuidv4(),
+    time_sheet_id: timeSheetId,
+    user_id: actorUserId,
+    comment: comment?.trim() || 'Time sheet approved',
+    is_approver: true,
+    created_at: trx.fn.now(),
+  });
+
+  return {
+    time_sheet: await summarizeTimeSheet(trx, tenantId, timeSheetId),
+  };
+}
+
+export async function requestWorkflowTimeSheetChanges(params: {
+  trx: Knex.Transaction;
+  tenantId: string;
+  actorUserId: string;
+  timeSheetId: string;
+  comment: string;
+}): Promise<WorkflowTimeSheetMutationResult> {
+  const { trx, tenantId, actorUserId, timeSheetId, comment } = params;
+
+  const timeSheet = await trx('time_sheets')
+    .where({ tenant: tenantId, id: timeSheetId })
+    .select('id')
+    .first();
+
+  if (!timeSheet) {
+    throw new WorkflowTimeDomainError({
+      category: 'ActionError',
+      code: 'NOT_FOUND',
+      message: 'Time sheet not found',
+      details: { time_sheet_id: timeSheetId },
+    });
+  }
+
+  await trx('time_sheets')
+    .where({ tenant: tenantId, id: timeSheetId })
+    .update({
+      approval_status: 'CHANGES_REQUESTED',
+      approved_at: null,
+      approved_by: null,
+      updated_at: new Date().toISOString(),
+    });
+
+  await trx('time_entries')
+    .where({ tenant: tenantId, time_sheet_id: timeSheetId })
+    .update({
+      approval_status: 'CHANGES_REQUESTED',
+      updated_at: new Date().toISOString(),
+    });
+
+  await trx('time_sheet_comments').insert({
+    tenant: tenantId,
+    comment_id: uuidv4(),
+    time_sheet_id: timeSheetId,
+    user_id: actorUserId,
+    comment,
+    is_approver: true,
+    created_at: trx.fn.now(),
+  });
+
+  return {
+    time_sheet: await summarizeTimeSheet(trx, tenantId, timeSheetId),
+  };
+}
+
+export async function reverseWorkflowTimeSheetApproval(params: {
+  trx: Knex.Transaction;
+  tenantId: string;
+  actorUserId: string;
+  timeSheetId: string;
+  reason: string;
+}): Promise<WorkflowTimeSheetMutationResult> {
+  const { trx, tenantId, actorUserId, timeSheetId, reason } = params;
+
+  const timeSheet = await trx('time_sheets')
+    .where({ tenant: tenantId, id: timeSheetId })
+    .select('id', 'approval_status')
+    .first();
+
+  if (!timeSheet) {
+    throw new WorkflowTimeDomainError({
+      category: 'ActionError',
+      code: 'NOT_FOUND',
+      message: 'Time sheet not found',
+      details: { time_sheet_id: timeSheetId },
+    });
+  }
+
+  if (String(timeSheet.approval_status ?? 'DRAFT') !== 'APPROVED') {
+    throw new WorkflowTimeDomainError({
+      category: 'ValidationError',
+      code: 'VALIDATION_ERROR',
+      message: 'Time sheet is not in an approved state',
+      details: { time_sheet_id: timeSheetId, approval_status: timeSheet.approval_status },
+    });
+  }
+
+  const invoicedEntry = await trx('time_entries')
+    .where({
+      tenant: tenantId,
+      time_sheet_id: timeSheetId,
+      invoiced: true,
+    })
+    .first('entry_id');
+
+  if (invoicedEntry) {
+    throw new WorkflowTimeDomainError({
+      category: 'ValidationError',
+      code: 'VALIDATION_ERROR',
+      message: 'This time sheet contains invoiced time and cannot be reopened',
+      details: { time_sheet_id: timeSheetId },
+    });
+  }
+
+  await trx('time_sheets')
+    .where({ tenant: tenantId, id: timeSheetId })
+    .update({
+      approval_status: 'CHANGES_REQUESTED',
+      approved_at: null,
+      approved_by: null,
+      updated_at: new Date().toISOString(),
+    });
+
+  await trx('time_entries')
+    .where({ tenant: tenantId, time_sheet_id: timeSheetId })
+    .update({
+      approval_status: 'CHANGES_REQUESTED',
+      updated_at: new Date().toISOString(),
+    });
+
+  await trx('time_sheet_comments').insert({
+    tenant: tenantId,
+    comment_id: uuidv4(),
+    time_sheet_id: timeSheetId,
+    user_id: actorUserId,
+    comment: `Approval reversed: ${reason}`,
+    is_approver: true,
+    created_at: trx.fn.now(),
+  });
+
+  return {
+    time_sheet: await summarizeTimeSheet(trx, tenantId, timeSheetId),
+  };
+}
+
+export async function addWorkflowTimeSheetComment(params: {
+  trx: Knex.Transaction;
+  tenantId: string;
+  actorUserId: string;
+  timeSheetId: string;
+  comment: string;
+  isApprover: boolean;
+}): Promise<{
+  comment: WorkflowTimeSheetCommentSummary;
+  time_sheet: WorkflowTimeSheetSummary;
+}> {
+  const { trx, tenantId, actorUserId, timeSheetId, comment, isApprover } = params;
+  const existing = await trx('time_sheets')
+    .where({ tenant: tenantId, id: timeSheetId })
+    .first('id');
+  if (!existing) {
+    throw new WorkflowTimeDomainError({
+      category: 'ActionError',
+      code: 'NOT_FOUND',
+      message: 'Time sheet not found',
+      details: { time_sheet_id: timeSheetId },
+    });
+  }
+
+  const [inserted] = await trx('time_sheet_comments')
+    .insert({
+      tenant: tenantId,
+      comment_id: uuidv4(),
+      time_sheet_id: timeSheetId,
+      user_id: actorUserId,
+      comment,
+      is_approver: isApprover,
+      created_at: trx.fn.now(),
+    })
+    .returning(['comment_id', 'user_id', 'comment', 'is_approver', 'created_at']);
+
+  return {
+    comment: {
+      comment_id: String(inserted.comment_id),
+      user_id: String(inserted.user_id),
+      comment: String(inserted.comment),
+      is_approver: Boolean(inserted.is_approver),
+      created_at: toIsoString(inserted.created_at as string | Date),
+    },
+    time_sheet: await summarizeTimeSheet(trx, tenantId, timeSheetId),
   };
 }

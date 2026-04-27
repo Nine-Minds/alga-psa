@@ -142,7 +142,7 @@
   {
     "id": "F018",
     "description": "Implement `time.submit_timesheet` using canonical submit behavior and updating associated entries to `SUBMITTED`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Time sheet actions"
     ]
@@ -150,7 +150,7 @@
   {
     "id": "F019",
     "description": "Implement `time.approve_timesheet` using canonical approval behavior and updating associated entries to `APPROVED`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Time sheet actions"
     ]
@@ -158,7 +158,7 @@
   {
     "id": "F020",
     "description": "Implement `time.request_timesheet_changes` to move a sheet to `CHANGES_REQUESTED` with approver comment/reason behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Time sheet actions"
     ]
@@ -166,7 +166,7 @@
   {
     "id": "F021",
     "description": "Implement `time.reverse_timesheet_approval` with the existing invoiced-entry guard and status reset behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Time sheet actions"
     ]
@@ -174,7 +174,7 @@
   {
     "id": "F022",
     "description": "Implement `time.add_timesheet_comment` with owner/approver permission semantics and normalized comment output.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Time sheet actions"
     ]
