@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { generateOccurrences, applyTimeToDate } from '../src/utils/recurrenceUtils';
+import { generateOccurrences, applyTimeToDate } from '@alga-psa/shared/utils/recurrenceUtils';
 import type { IScheduleEntry, IRecurrencePattern } from '@alga-psa/types';
 
 /**

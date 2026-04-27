@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import ScheduleEntry from '../src/models/scheduleEntry';
+import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 import type { IScheduleEntry, IRecurrencePattern } from '@alga-psa/types';
 
 // ---------- Mock Knex Builder ----------

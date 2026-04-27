@@ -43,6 +43,7 @@ const EXCLUDED_TABLES: string[] = [
 const EXEMPT_FK_CONSTRAINTS: Set<string> = new Set([
   'statuses_tenant_board_id_fk', // NULL'd via breakCircularDependencies (statuses.board_id)
   'authorization_bundles_tenant_published_revision_id_foreign', // NULL'd via breakCircularDependencies (authorization_bundles.published_revision_id)
+  'inbound_ticket_defaults_tenant_client_id_foreign', // NULL'd via breakCircularDependencies (inbound_ticket_defaults.client_id)
 ]);
 
 interface FkOrderingViolation {

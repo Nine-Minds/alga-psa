@@ -14,7 +14,7 @@ import { GoogleCalendarAdapter } from './providers/GoogleCalendarAdapter';
 import { MicrosoftCalendarAdapter } from './providers/MicrosoftCalendarAdapter';
 import { BaseCalendarAdapter } from './providers/base/BaseCalendarAdapter';
 import { mapScheduleEntryToExternalEvent, mapExternalEventToScheduleEntry } from '../../utils/calendar/eventMapping';
-import ScheduleEntry from '@alga-psa/scheduling/models/scheduleEntry';
+import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 import { v4 as uuidv4 } from 'uuid';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 
