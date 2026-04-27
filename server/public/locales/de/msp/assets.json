@@ -609,11 +609,67 @@
   },
   "assetPatchStatusSection": {
     "title": "Abschnitt „Asset-Patch-Status“.",
-    "description": "Enterprise-Patch- und Antivirus-Status-Wrapper, der in der Asset-Detailansicht angezeigt wird"
+    "description": "Enterprise-Patch- und Antivirus-Status-Wrapper, der in der Asset-Detailansicht angezeigt wird",
+    "heading": "Patch-Status",
+    "compliance": {
+      "unknown": "Unbekannt",
+      "actionRequired": "Aktion erforderlich",
+      "updatesAvailable": "Updates verfügbar",
+      "minorUpdates": "Kleinere Updates",
+      "upToDate": "Aktuell"
+    },
+    "relativeTime": {
+      "never": "Nie",
+      "justNow": "Gerade eben",
+      "minutesAgo": "vor {{count}} Min.",
+      "hoursAgo": "vor {{count}} Std.",
+      "daysAgo": "vor {{count}} T."
+    },
+    "labels": {
+      "osPatches": "Betriebssystem-Patches",
+      "software": "Software",
+      "failed": "Fehlgeschlagen",
+      "lastScan": "Letzter Scan",
+      "pending": "ausstehend",
+      "patches": "Patches"
+    }
   },
   "assetSoftwareInventory": {
     "title": "Asset-Software-Inventar",
-    "description": "Enterprise-Software-Inventar-Wrapper für installierte Software und Versionsdaten"
+    "description": "Enterprise-Software-Inventar-Wrapper für installierte Software und Versionsdaten",
+    "heading": "Software-Inventar",
+    "searchPlaceholder": "Software suchen...",
+    "appsCount": "{{count}} Apps",
+    "unknownName": "Unbekannt",
+    "noMatch": "Keine Software entspricht Ihrer Suche",
+    "version": "v{{version}}",
+    "by": "von {{publisher}}",
+    "showingOfApplications": "Es werden {{shown}} von {{total}} Anwendungen angezeigt",
+    "more": "+{{count}} weitere"
+  },
+  "remoteAccess": {
+    "remoteDesktop": "Remote-Desktop",
+    "remoteShell": "Remote-Shell",
+    "remoteAccess": "Remote-Zugriff",
+    "deviceOverdue": "Gerät ist überfällig",
+    "deviceOffline": "Gerät ist offline",
+    "errors": {
+      "urlFetchFailed": "URL für Remote-Zugriff konnte nicht abgerufen werden",
+      "initiateFailed": "Remote-Zugriff konnte nicht gestartet werden"
+    },
+    "indicator": {
+      "online": "Online",
+      "offline": "Offline",
+      "available": "Remote-Zugriff verfügbar",
+      "deviceOffline": "Gerät offline"
+    }
+  },
+  "assetListErrors": {
+    "genericError": "Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.",
+    "assetNotFound": "Asset nicht gefunden"
+  },
+  "assetEdit": {
+    "pageTitle": "Asset bearbeiten"
   },
   "associatedAssets": {
     "title": "Zugehörige Vermögenswerte",
@@ -1191,6 +1247,9 @@
       "acknowledgeFailed": "Alarm konnte nicht bestätigt werden",
       "ticketCreated": "Ticket erfolgreich erstellt",
       "ticketCreateFailed": "Ticket konnte nicht erstellt werden"
-    }
+    },
+    "activeAlerts": "Aktive Warnungen",
+    "acknowledge": "Bestätigen",
+    "createTicket": "Ticket erstellen"
   }
 }

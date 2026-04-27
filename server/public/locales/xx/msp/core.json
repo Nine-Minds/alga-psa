@@ -154,10 +154,7 @@
       "failedLast24h": "11111",
       "openJobCenter": "11111"
     },
-    "breadcrumb": {
-      "home": "11111",
-      "dashboard": "11111"
-    },
+    "breadcrumb": "11111",
     "tenantBadge": {
       "ariaLabel": "11111 {{tenant}} 11111"
     },
@@ -167,7 +164,8 @@
       "dark": "11111",
       "system": "11111",
       "selected": "11111"
-    }
+    },
+    "openUserMenu": "11111"
   },
   "dialogs": {
     "aiInterrupt": {

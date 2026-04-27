@@ -1,4 +1,4 @@
-import ScheduleEntry from '@alga-psa/scheduling/models/scheduleEntry';
+import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 import { registerGetAllScheduleEntries } from '@alga-psa/core/lib/scheduleEntryRegistry';
 
 export function registerScheduleEntryIntegration(): void {

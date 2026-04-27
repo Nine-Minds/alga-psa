@@ -73,6 +73,7 @@ async function seedWorkflow(params?: {
 
   await db('workflow_definitions').insert({
     workflow_id: workflowId,
+    tenant_id: tenantId,
     name,
     description: null,
     payload_schema_ref: payloadSchemaRef,

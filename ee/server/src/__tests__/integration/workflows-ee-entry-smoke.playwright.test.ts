@@ -42,7 +42,7 @@ test('EE build: workflows page loads without CE/OSS stub messaging', async ({ pa
       permissions: ADMIN_PERMISSIONS,
     });
 
-    await ensureSystemEmailWorkflow(db);
+    await ensureSystemEmailWorkflow(db, tenantData.tenant.tenantId);
 
     const workflowPage = new WorkflowDesignerPage(page);
     await workflowPage.goto(TEST_CONFIG.baseUrl);

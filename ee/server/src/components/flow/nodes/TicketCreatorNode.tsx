@@ -1,4 +1,5 @@
 // src/components/nodes/TicketCreatorNode.tsx
+'use client';
 import React, { memo, useState, useEffect } from 'react';
 import { Handle, NodeProps, Position, useReactFlow } from 'reactflow';
 import DeleteButton from '../DeleteButton';
@@ -6,6 +7,7 @@ import { TicketCreatorNodeData, Template } from '../../../services/flow/types/wo
 import InputFieldSelector from '../InputFieldSelector';
 import TextAreaFieldSelector from '../TextAreaFieldSelector';
 import ComboBoxFieldSelector from '../ComboBoxFieldSelector';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const boardOptions = [
   { id: 'itsupport', label: 'IT Support' },
@@ -22,6 +24,7 @@ const priorityOptions = [
 ];
 
 const TicketCreatorNode = ({ data, id }: NodeProps<TicketCreatorNodeData>) => {
+  const { t } = useTranslation('msp/workflows');
   const { getNode, setNodes } = useReactFlow();
   const node = getNode(id);
   const isSelected = node?.selected ?? false;
@@ -73,7 +76,7 @@ const TicketCreatorNode = ({ data, id }: NodeProps<TicketCreatorNodeData>) => {
       <Handle type="target" position={Position.Left} style={styles.handle} />
       <div style={styles.title}>{nodeData.label}</div>
       <div style={styles.field}>
-        <label htmlFor="ticketTitle" style={styles.label}>Ticket Title:</label>
+        <label htmlFor="ticketTitle" style={styles.label}>{t('flow.nodes.ticketCreator.ticketTitle')}</label>
         <InputFieldSelector
           value={nodeData.ticketTitle || { template: '', type: { value: '' } }}
           onChange={(value) => handleInputChange('ticketTitle', value)}
@@ -81,7 +84,7 @@ const TicketCreatorNode = ({ data, id }: NodeProps<TicketCreatorNodeData>) => {
         />
       </div>
       <div style={styles.field}>
-        <label htmlFor="ticketDescription" style={styles.label}>Ticket Description:</label>
+        <label htmlFor="ticketDescription" style={styles.label}>{t('flow.nodes.ticketCreator.ticketDescription')}</label>
         <TextAreaFieldSelector
           value={nodeData.ticketDescription || { template: '', type: { value: '' } }}
           onChange={(value) => handleInputChange('ticketDescription', value)}
@@ -96,7 +99,7 @@ const TicketCreatorNode = ({ data, id }: NodeProps<TicketCreatorNodeData>) => {
           onChange={(value) => handleInputChange('ticketBoard', value)}
           options={boardOptions}
           inputType="Email"
-          placeholder="Select or enter a board"
+          placeholder={t('flow.nodes.ticketCreator.selectBoard')}
         />
       </div>
       <div style={styles.field}>
@@ -106,7 +109,7 @@ const TicketCreatorNode = ({ data, id }: NodeProps<TicketCreatorNodeData>) => {
           onChange={(value) => handleInputChange('ticketPriority', value)}
           options={priorityOptions}
           inputType="Email"
-          placeholder="Select or enter a priority"
+          placeholder={t('flow.nodes.ticketCreator.selectPriority')}
         />
       </div>
       <Handle type="source" position={Position.Right} style={styles.handle} />

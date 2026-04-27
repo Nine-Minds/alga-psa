@@ -396,7 +396,8 @@
       "tasks": "Aufgaben:",
       "priority": "Priorität",
       "dueDate": "Fälligkeitsdatum",
-      "showClosed": "Geschlossene anzeigen"
+      "showClosed": "Geschlossene anzeigen",
+      "search": "Suche"
     },
     "activityTypeOptions": {
       "schedule": "Zeitplan",
@@ -409,7 +410,8 @@
       "allStatuses": "Alle Status",
       "allProjects": "Alle Projekte",
       "allPriorities": "Alle Prioritäten",
-      "selectPriority": "Priorität auswählen..."
+      "selectPriority": "Priorität auswählen...",
+      "search": "Aktivitäten suchen..."
     },
     "actions": {
       "reset": "Zurücksetzen"

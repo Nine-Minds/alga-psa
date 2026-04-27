@@ -119,7 +119,9 @@
     },
     "checkEmail": {
       "resendSuccess": "55555",
-      "resendFailed": "55555"
+      "resendFailed": "55555",
+      "whatsNext": "55555",
+      "didntReceive": "55555"
     }
   },
   "share": {
@@ -133,7 +135,9 @@
       "linkNotAvailable": "55555",
       "linkExpired": "55555",
       "downloadLimitReached": "55555"
-    }
+    },
+    "downloadStarted": "55555",
+    "enterPassword": "55555"
   },
   "tickets": {
     "origin": {
@@ -1028,5 +1032,49 @@
       "Pacific": "55555",
       "Etc": "55555"
     }
+  },
+  "pages": {
+    "errors": {
+      "somethingWentWrong": "55555",
+      "genericError": "55555",
+      "notFoundTitle": "55555",
+      "notFoundDescription": "55555",
+      "userNotAuthenticated": "55555",
+      "userNotAuthenticatedError": "55555",
+      "missingRunId": "55555",
+      "teamLeadAccessRequired": "55555",
+      "teamsTabUnavailable": "55555",
+      "teamsSignInUnavailable": "55555",
+      "assetNotFound": "55555",
+      "contactNotFound": "55555",
+      "templateNotFound": "55555",
+      "contactLoadError": "55555",
+      "unknownError": "55555",
+      "templateNotFoundDetail": "55555",
+      "teamLeadAccessDetail": "55555",
+      "teamsTabEnableHint": "55555"
+    },
+    "actions": {
+      "tryAgain": "55555",
+      "goToTeamSettings": "55555",
+      "selectDateRange": "55555"
+    },
+    "loading": {
+      "billingDashboard": "55555",
+      "onboarding": "55555",
+      "extension": "55555",
+      "extensionSettings": "55555",
+      "ssoSettings": "55555"
+    },
+    "titles": {
+      "emailLogs": "55555",
+      "editAsset": "55555",
+      "slaSettings": "55555",
+      "documentEditor": "55555",
+      "accountManagement": "55555"
+    }
+  },
+  "feedback": {
+    "providePlaceholder": "55555"
   }
 }

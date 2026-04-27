@@ -1,10 +1,13 @@
 // src/components/Picker.tsx
+'use client';
 import React, { useState, useRef, useEffect } from 'react';
 import { PickerProps, PickerOption } from '../../services/flow/types/nodes';
 import styles from './Picker.module.css';
 import { Input } from '@alga-psa/ui/components/Input';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const Picker: React.FC<PickerProps> = ({ label, value, options, onChange }) => {
+  const { t } = useTranslation('msp/workflows');
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -40,7 +43,7 @@ const Picker: React.FC<PickerProps> = ({ label, value, options, onChange }) => {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search..."
+            placeholder={t('flow.picker.searchPlaceholder')}
             className={styles.pickerSearch}
           />
           {filteredOptions.map((option) => (

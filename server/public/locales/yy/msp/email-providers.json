@@ -460,6 +460,208 @@
       "create": "55555"
     }
   },
+  "imapForm": {
+    "sections": {
+      "basic": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "auth": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "processing": {
+        "title": "55555",
+        "description": "55555"
+      }
+    },
+    "fields": {
+      "providerName": "55555",
+      "mailboxAddress": "55555",
+      "imapHost": "55555",
+      "port": "55555",
+      "useTls": "55555",
+      "allowStarttls": "55555",
+      "authenticationType": "55555",
+      "username": "55555",
+      "passwordLabel": "55555",
+      "authorizeUrl": "55555",
+      "tokenUrl": "55555",
+      "oauthClientId": "55555",
+      "oauthClientSecret": "55555",
+      "oauthScopes": "55555",
+      "oauthScopesPlaceholder": "55555",
+      "folderFilters": "55555",
+      "folderFiltersPlaceholder": "55555",
+      "active": "55555",
+      "ticketDefaultsLabel": "55555",
+      "ticketDefaultsPlaceholder": "55555",
+      "ticketDefaultsEmpty": "55555"
+    },
+    "authOptions": {
+      "password": "55555",
+      "oauth2": "55555"
+    },
+    "password": {
+      "editHelp": "55555"
+    },
+    "oauth": {
+      "statusLabel": "55555",
+      "connected": "55555",
+      "notConnected": "55555",
+      "authorizing": "55555",
+      "reconnect": "55555"
+    },
+    "validation": {
+      "fixHighlightedFields": "55555"
+    },
+    "actions": {
+      "cancel": "55555",
+      "saving": "55555",
+      "updateProvider": "55555",
+      "createProvider": "55555"
+    }
+  },
+  "microsoftForm": {
+    "header": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "sections": {
+      "accountSetup": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "authentication": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "processing": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "ticketDefaults": {
+        "title": "55555",
+        "description": "55555"
+      }
+    },
+    "fields": {
+      "providerNameLabel": "55555",
+      "providerNamePlaceholder": "55555",
+      "mailboxLabel": "55555",
+      "mailboxPlaceholder": "55555",
+      "enableProvider": "55555",
+      "foldersLabel": "55555",
+      "foldersPlaceholder": "55555",
+      "foldersHelp": "55555",
+      "maxEmailsLabel": "55555",
+      "maxEmailsHelp": "55555",
+      "inboundDefaultsLabel": "55555",
+      "inboundDefaultsPlaceholder": "55555"
+    },
+    "oauth": {
+      "connectionTitle": "55555",
+      "descriptionIdle": "55555",
+      "descriptionSuccess": "55555",
+      "connecting": "55555",
+      "connected": "55555",
+      "connectButton": "55555",
+      "requiredTitle": "55555",
+      "requiredDescriptionUpdate": "55555",
+      "requiredDescriptionAdd": "55555",
+      "authError": "55555",
+      "popupBlocked": "55555",
+      "authorizationFailed": "55555",
+      "initiateFailed": "55555",
+      "hostedConfigIncomplete": "55555",
+      "hostedCredentialsMissing": "55555"
+    },
+    "nextStep": {
+      "title": "55555",
+      "autoSubmit": "55555",
+      "secondsSuffix": "55555",
+      "clickNow": "55555",
+      "manualInstruction": "55555",
+      "manualSuffix": "55555",
+      "cancelAutoSubmit": "55555"
+    },
+    "buttons": {
+      "updateProvider": "55555",
+      "addProvider": "55555",
+      "manageDefaults": "55555",
+      "refreshList": "55555",
+      "cancel": "55555",
+      "completeSetupSuffix": "55555",
+      "settingUp": "55555"
+    },
+    "validation": {
+      "requiredFieldsTitle": "55555",
+      "providerName": "55555",
+      "mailbox": "55555"
+    }
+  },
+  "gmailForm": {
+    "header": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "basicConfig": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "authentication": {
+      "title": "55555",
+      "description": "55555",
+      "connectionTitle": "55555",
+      "descriptionIdle": "55555",
+      "descriptionSuccess": "55555",
+      "buttonIdle": "55555",
+      "buttonAuthorizing": "55555",
+      "buttonSuccess": "55555"
+    },
+    "processing": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "ticketDefaults": {
+      "title": "55555",
+      "description": "55555",
+      "manageDefaults": "55555",
+      "inboundDefaultsLabel": "55555",
+      "inboundDefaultsPlaceholder": "55555",
+      "refreshList": "55555"
+    },
+    "googleConfig": {
+      "notConfigured": "55555",
+      "configureHint": "55555",
+      "settingsPath": "55555",
+      "openSettings": "55555"
+    },
+    "oauth": {
+      "requiredTitle": "55555",
+      "requiredDescriptionUpdate": "55555",
+      "requiredDescriptionAdd": "55555",
+      "fillRequiredFields": "55555",
+      "notConfiguredTenant": "55555",
+      "initiateFailed": "55555"
+    },
+    "validation": {
+      "requiredFieldsTitle": "55555",
+      "providerName": "55555",
+      "mailbox": "55555"
+    },
+    "warnings": {
+      "setupIncomplete": "55555 {{error}} 55555",
+      "setupWarningsTitle": "55555"
+    },
+    "buttons": {
+      "updateProvider": "55555",
+      "addProvider": "55555",
+      "completeSetupSuffix": "55555",
+      "cancel": "55555",
+      "settingUp": "55555"
+    }
+  },
   "managed": {
     "messages": {
       "loadDomainsFailed": "55555",

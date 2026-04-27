@@ -426,7 +426,8 @@
       "summaryTitle": "Ładunek nadal wymaga wymaganych pól zdarzenia, zanim to uruchomienie będzie mogło się rozpocząć",
       "summaryDescription": "Proszę wypełnić brakujące pola poniżej, przełączyć na kreator formularzy lub użyć przycisku przykładowego ładunku.",
       "moreErrors": "+{{count}} więcej…"
-    }
+    },
+    "sampleEmailBody": "Przykładowa treść e-maila"
   },
   "eventList": {
     "common": {
@@ -638,7 +639,10 @@
     },
     "stepPanel": {
       "readOnly": "Dostęp tylko do odczytu: edycja kroków jest wyłączona.",
-      "selectPrompt": "Wybierz krok, aby edytować jego konfigurację."
+      "selectPrompt": "Wybierz krok, aby edytować jego konfigurację.",
+      "readOnlyNotice": "Dostęp tylko do odczytu: edycja kroków jest wyłączona.",
+      "contractMode": "Tryb kontraktu:",
+      "catalogSchema": "Schemat katalogu:"
     },
     "stepConfig": {
       "eventLabel": "Zdarzenie",
@@ -652,7 +656,27 @@
       "assignOnResume": "Przypisz przy wznowieniu",
       "fieldLabel": "Pole",
       "fieldPathLabel": "Ścieżka pola",
-      "dataContextToggle": "Do jakich danych mam tutaj dostęp?"
+      "dataContextToggle": "Do jakich danych mam tutaj dostęp?",
+      "condition": "Warunek",
+      "itemsExpression": "Wyrażenie elementów",
+      "itemVariable": "Zmienna elementu",
+      "concurrency": "Współbieżność",
+      "onItemError": "Przy błędzie elementu",
+      "captureErrorAs": "Przechwyć błąd jako",
+      "workflowId": "ID przepływu pracy",
+      "workflowVersion": "Wersja przepływu pracy",
+      "inputMapping": "Mapowanie wejściowe",
+      "outputMapping": "Mapowanie wyjściowe",
+      "value": "Wartość",
+      "mode": "Tryb",
+      "days": "Dni",
+      "hours": "Godziny",
+      "minutes": "Minuty",
+      "seconds": "Sekundy",
+      "untilInput": "Wejście do",
+      "specificDateTime": "Określona data i godzina",
+      "untilExpression": "Wyrażenie do",
+      "returnNotice": "Return zatrzymuje wykonanie przepływu pracy."
     },
     "mappingExpr": {
       "add": "Dodaj",
@@ -751,7 +775,8 @@
         "warnings": "Ostrzeżenia",
         "valid": "Prawidłowy",
         "unknown": "Nieznany"
-      }
+      },
+      "errors": "Błędy walidacji"
     },
     "discardDialog": {
       "title": "Odrzucić niezapisane zmiany?",
@@ -928,6 +953,61 @@
       "publishFailed": "Nie udało się opublikować przepływu pracy",
       "publishValidationErrors": "Publikacja nie powiodła się — proszę naprawić błędy walidacji",
       "systemEventMissingSchema": "To zdarzenie systemowe nie ma prawidłowego schematu i nie może zostać wybrane do czasu naprawy."
+    },
+    "propsPanel": {
+      "resizeAria": "Zmień rozmiar panelu właściwości",
+      "settingsTitle": "Ustawienia przepływu pracy",
+      "settingsSubtitle": "Widoczność, wstrzymywanie i kontrole bezpieczeństwa.",
+      "visibleToUsers": "Widoczne dla użytkowników",
+      "paused": "Wstrzymano (zatrzymaj nowe uruchomienia)",
+      "concurrencyLimit": "Limit współbieżności",
+      "unlimited": "Bez limitu",
+      "autoPauseFailureRate": "Automatyczna pauza przy wskaźniku błędów",
+      "failureRateThreshold": "Próg wskaźnika błędów",
+      "minRunsBeforeAutoPause": "Minimalna liczba uruchomień przed automatyczną pauzą"
+    },
+    "trigger": {
+      "summary": "Podsumowanie wyzwalacza",
+      "actionNeeded": "Wymagane działanie",
+      "noMappingNeeded": "Mapowanie nie jest wymagane",
+      "sourceSchemaOverride": "Zastąp schemat źródłowy wyzwalacza",
+      "useCatalogSchemaDefault": "Użyj schematu katalogu (domyślnie)",
+      "useCatalogSchemaPlaceholder": "Użyj schematu katalogu…",
+      "noSchemasFound": "Nie znaleziono schematów",
+      "mappingTitle": "Mapowanie wyzwalacza",
+      "mappingNotRequired": "Mapowanie: Niewymagane.",
+      "mappingErrors": "Błędy mapowania",
+      "mappingWarnings": "Ostrzeżenia mapowania"
+    },
+    "schemaSettings": {
+      "lockVersion": "Zablokuj wersję schematu",
+      "lockVersionHelp": "Zablokuj wersję schematu, aby przyszłe zmiany wyzwalaczy nie wpływały na ten przepływ pracy.",
+      "lockedVersion": "Zablokowana wersja schematu",
+      "manualRef": "Ręczne odniesienie do schematu",
+      "fixedForTimeTriggers": "Stałe dla wyzwalaczy czasowych",
+      "availableFieldsPreview": "Podgląd dostępnych pól",
+      "payloadContract": "Schemat kontraktu ładunku przepływu pracy",
+      "ref": "Odniesienie do schematu:",
+      "loadFailed": "Nie udało się załadować schematu.",
+      "notLoaded": "Schemat jeszcze nie załadowany.",
+      "loadPreviewFailed": "Nie udało się załadować podglądu schematu.",
+      "selectVersionPlaceholder": "Wybierz wersję schematu…",
+      "payloadRefAdvanced": "Odniesienie do schematu ładunku (zaawansowane)"
+    },
+    "expression": {
+      "insertField": "Wstaw pole",
+      "enterPlaceholder": "Wprowadź wyrażenie..."
+    },
+    "dataContext": {
+      "availableDataAtStep": "Dostępne dane w tym kroku",
+      "payload": "Ładunek",
+      "noPayloadFields": "Brak pól ładunku",
+      "payloadSchemaRefHint": "Ustaw 'Odniesienie do schematu ładunku', aby zdefiniować strukturę ładunku",
+      "stepOutputs": "Wyjścia kroku (vars)",
+      "outputSchemaUnavailable": "Schemat wyjścia niedostępny",
+      "noFields": "Brak pól",
+      "copyAllPaths": "Kopiuj wszystkie ścieżki",
+      "copyAllFieldPaths": "Kopiuj wszystkie ścieżki pól"
     }
   },
   "actionInputFieldInfo": {
@@ -2274,5 +2354,49 @@
     "enableHint": "Włącz automatyzację przepływów pracy w ustawieniach, aby uzyskać dostęp.",
     "goToExperimental": "Przejdź do funkcji eksperymentalnych",
     "openSettings": "Otwórz ustawienia"
+  },
+  "flow": {
+    "designer": {
+      "title": "Projektant przepływów pracy"
+    },
+    "sidebar": {
+      "dragHint": "Przeciągnij te węzły na płótno:"
+    },
+    "picker": {
+      "searchPlaceholder": "Szukaj..."
+    },
+    "fields": {
+      "selectInputField": "Wybierz pole wejściowe",
+      "customFieldReference": "Niestandardowa referencja pola",
+      "selectOrEnterReference": "Wybierz lub wprowadź referencję pola"
+    },
+    "delete": {
+      "confirmTitle": "Potwierdź usunięcie",
+      "confirmMessage": "Czy na pewno chcesz usunąć ten przepływ pracy?"
+    },
+    "topBar": {
+      "workflowName": "Nazwa przepływu pracy",
+      "workflowDescription": "Opis przepływu pracy"
+    },
+    "nodes": {
+      "classifier": {
+        "newClassification": "Nowa klasyfikacja"
+      },
+      "selector": {
+        "defaultInput": "Wejście domyślne"
+      },
+      "decision": {
+        "type": "Typ",
+        "conditionValue": "Wartość warunku",
+        "defaultOutput": "Wyjście domyślne",
+        "defaultOutputProp": "Wyjście domyślne"
+      },
+      "ticketCreator": {
+        "ticketTitle": "Tytuł zgłoszenia:",
+        "ticketDescription": "Opis zgłoszenia:",
+        "selectBoard": "Wybierz lub wprowadź tablicę",
+        "selectPriority": "Wybierz lub wprowadź priorytet"
+      }
+    }
   }
 }

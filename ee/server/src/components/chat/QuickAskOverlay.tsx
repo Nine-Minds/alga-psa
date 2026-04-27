@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Search } from 'lucide-react';
 import { Chat } from './Chat';
 import { ChatMentionChip, type ChatMention } from './ChatMentionChip';
@@ -44,6 +45,7 @@ export const QuickAskOverlay: React.FC<QuickAskOverlayProps> = ({
   isTitleLocked,
   hf,
 }) => {
+  const { t } = useTranslation('msp/chat');
   const [draft, setDraft] = useState('');
   const [expanded, setExpanded] = useState(false);
   const [chatKey, setChatKey] = useState(0);
@@ -71,16 +73,16 @@ export const QuickAskOverlay: React.FC<QuickAskOverlayProps> = ({
     setMentions([]);
     setInitialMentions([]);
     setChatKey((prev) => prev + 1);
-    const t = setTimeout(() => draftRef.current?.focus(), 0);
-    return () => clearTimeout(t);
+    const focusTimer = setTimeout(() => draftRef.current?.focus(), 0);
+    return () => clearTimeout(focusTimer);
   }, [isOpen]);
 
   const hintText = useMemo(() => {
     const modifier = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
       ? '⌘'
       : 'Ctrl';
-    return `Esc to close • Enter to ask • Shift+Enter for newline • ${modifier}+↑ to reopen`;
-  }, []);
+    return t('quickAsk.hint', { modifier });
+  }, [t]);
 
   const handleSubmit = () => {
     const prompt = draft.trim();
@@ -196,7 +198,7 @@ export const QuickAskOverlay: React.FC<QuickAskOverlayProps> = ({
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-sm font-semibold text-[rgb(var(--color-text-800))]">
             <Search className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
-            Quick Ask
+            {t('quickAsk.title')}
           </div>
           <div className="flex items-center gap-3">
             <div
@@ -211,13 +213,13 @@ export const QuickAskOverlay: React.FC<QuickAskOverlayProps> = ({
                   yoloEnabled ? 'text-destructive' : 'text-[rgb(var(--color-text-600))]',
                 ].join(' ')}
               >
-                YOLO
+                {t('quickAsk.yoloLabel')}
               </span>
               <Switch
                 id="quick-ask-yolo"
                 checked={yoloEnabled}
                 onCheckedChange={(checked) => setYoloEnabled(Boolean(checked))}
-                aria-label="YOLO mode (auto-approve HTTP actions)"
+                aria-label={t('quickAsk.yoloAriaLabel')}
               />
             </div>
             {expanded ? (
@@ -229,7 +231,7 @@ export const QuickAskOverlay: React.FC<QuickAskOverlayProps> = ({
                   onClick={handleOpenInSidebar}
                   disabled={!canOpenInSidebar}
                 >
-                  Open in sidebar
+                  {t('quickAsk.openInSidebar')}
                 </Button>
                 <Button
                   id="quick-ask-close"
@@ -237,7 +239,7 @@ export const QuickAskOverlay: React.FC<QuickAskOverlayProps> = ({
                   variant="ghost"
                   onClick={onClose}
                 >
-                  Close
+                  {t('quickAsk.close')}
                 </Button>
               </>
             ) : null}
@@ -267,9 +269,9 @@ export const QuickAskOverlay: React.FC<QuickAskOverlayProps> = ({
                     onChange={handleDraftChange}
                     onKeyDown={handleDraftKeyDown}
                     rows={2}
-                    placeholder="Ask a quick question…"
+                    placeholder={t('quickAsk.inputPlaceholder')}
                     className="w-full resize-none bg-transparent text-base text-[rgb(var(--color-text-900))] placeholder:text-[rgb(var(--color-text-400))] focus:outline-none"
-                    aria-label="Quick Ask input"
+                    aria-label={t('quickAsk.inputAriaLabel')}
                   />
                 </div>
               </div>
@@ -281,7 +283,7 @@ export const QuickAskOverlay: React.FC<QuickAskOverlayProps> = ({
                   onClick={handleSubmit}
                   disabled={!draft.trim().length}
                 >
-                  Ask
+                  {t('quickAsk.ask')}
                 </Button>
               </div>
             </div>
@@ -298,11 +300,11 @@ export const QuickAskOverlay: React.FC<QuickAskOverlayProps> = ({
         ) : (
           <div className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] shadow-sm overflow-hidden min-h-[520px]">
             <div className="px-4 py-3 border-b border-[rgb(var(--color-border-100))] bg-[rgb(var(--color-border-50))] text-xs text-[rgb(var(--color-text-600))] flex items-center justify-between">
-              <span>Ask follow-ups below. This chat will be saved like sidebar chat.</span>
+              <span>{t('quickAsk.followUpNotice')}</span>
               {!activeChatId ? (
-                <span className="text-[rgb(var(--color-text-400))]">Starting session…</span>
+                <span className="text-[rgb(var(--color-text-400))]">{t('quickAsk.startingSession')}</span>
               ) : (
-                <span className="text-[rgb(var(--color-text-400))]">Session: {activeChatId}</span>
+                <span className="text-[rgb(var(--color-text-400))]">{t('quickAsk.session', { chatId: activeChatId })}</span>
               )}
             </div>
             <div className="px-3 py-3">

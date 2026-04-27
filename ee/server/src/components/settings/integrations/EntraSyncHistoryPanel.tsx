@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getEntraSyncRunHistory, type EntraSyncHistoryRun } from '@alga-psa/integrations/actions';
 
 interface EntraRunDetail {
@@ -29,14 +30,14 @@ interface EntraRunDetail {
   }>;
 }
 
-function formatDateTime(value: string | null): string {
-  if (!value) return 'In progress';
-  const parsed = Date.parse(value);
-  if (Number.isNaN(parsed)) return value;
-  return new Date(parsed).toLocaleString();
-}
-
 export default function EntraSyncHistoryPanel() {
+  const { t } = useTranslation('msp/integrations');
+  const formatDateTime = React.useCallback((value: string | null): string => {
+    if (!value) return t('integrations.entra.syncHistory.run.inProgress');
+    const parsed = Date.parse(value);
+    if (Number.isNaN(parsed)) return value;
+    return new Date(parsed).toLocaleString();
+  }, [t]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [runs, setRuns] = React.useState<EntraSyncHistoryRun[]>([]);
@@ -50,7 +51,7 @@ export default function EntraSyncHistoryPanel() {
       const result = await getEntraSyncRunHistory(10);
       if ('error' in result) {
         setRuns([]);
-        setError(result.error || 'Failed to load sync history.');
+        setError(result.error || t('integrations.entra.syncHistory.errors.loadFailed'));
       } else {
         const nextRuns = (result.data?.runs || []).slice().sort((a, b) => {
           return Date.parse(b.startedAt) - Date.parse(a.startedAt);
@@ -102,22 +103,22 @@ export default function EntraSyncHistoryPanel() {
     try {
       await loadDetails(runId);
     } catch (detailError) {
-      setError(detailError instanceof Error ? detailError.message : 'Failed to load run detail.');
+      setError(detailError instanceof Error ? detailError.message : t('integrations.entra.syncHistory.errors.loadDetailFailed'));
     }
   }, [expandedRunId, loadDetails]);
 
   return (
     <div className="rounded-lg border border-border/70 bg-background p-4" id="entra-sync-history-panel">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <p className="text-sm font-semibold">Recent Sync Runs</p>
+        <p className="text-sm font-semibold">{t('integrations.entra.syncHistory.title')}</p>
         <Button id="entra-sync-history-refresh" type="button" size="sm" variant="ghost" onClick={loadHistory} disabled={loading}>
-          Refresh
+          {t('integrations.entra.syncHistory.actions.refresh')}
         </Button>
       </div>
 
-      {loading ? <p className="text-sm text-muted-foreground">Loading sync history…</p> : null}
+      {loading ? <p className="text-sm text-muted-foreground">{t('integrations.entra.syncHistory.loading')}</p> : null}
       {!loading && runs.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No sync runs found yet.</p>
+        <p className="text-sm text-muted-foreground">{t('integrations.entra.syncHistory.empty')}</p>
       ) : null}
       {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
 
@@ -130,13 +131,21 @@ export default function EntraSyncHistoryPanel() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="text-sm">
                     <p className="font-medium">
-                      {run.runType} · {run.status}
+                      {t('integrations.entra.syncHistory.run.header', { runType: run.runType, status: run.status })}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Started {formatDateTime(run.startedAt)} · Completed {formatDateTime(run.completedAt)}
+                      {t('integrations.entra.syncHistory.run.timing', {
+                        started: formatDateTime(run.startedAt),
+                        completed: formatDateTime(run.completedAt),
+                      })}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Tenants: {run.processedTenants}/{run.totalTenants} · Success: {run.succeededTenants} · Failed: {run.failedTenants}
+                      {t('integrations.entra.syncHistory.run.tenants', {
+                        processed: run.processedTenants,
+                        total: run.totalTenants,
+                        success: run.succeededTenants,
+                        failed: run.failedTenants,
+                      })}
                     </p>
                   </div>
                   <Button
@@ -146,14 +155,16 @@ export default function EntraSyncHistoryPanel() {
                     id={`entra-sync-run-drilldown-${run.runId}`}
                     onClick={() => void toggleExpanded(run.runId)}
                   >
-                    {expandedRunId === run.runId ? 'Hide details' : 'View details'}
+                    {expandedRunId === run.runId
+                      ? t('integrations.entra.syncHistory.actions.hideDetails')
+                      : t('integrations.entra.syncHistory.actions.viewDetails')}
                   </Button>
                 </div>
 
                 {expandedRunId === run.runId && details ? (
                   <div className="mt-3 space-y-2 border-t border-border/60 pt-3">
                     {details.tenantResults.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">No tenant results recorded.</p>
+                      <p className="text-xs text-muted-foreground">{t('integrations.entra.syncHistory.details.noResults')}</p>
                     ) : (
                       details.tenantResults.map((tenant, index) => (
                         <div
@@ -161,10 +172,19 @@ export default function EntraSyncHistoryPanel() {
                           className="rounded border border-border/50 p-2 text-xs"
                         >
                           <p className="font-medium">
-                            Tenant {tenant.managedTenantId || 'unknown'} · {tenant.status}
+                            {t('integrations.entra.syncHistory.details.tenantHeader', {
+                              tenant: tenant.managedTenantId || t('integrations.entra.syncHistory.details.unknownTenant'),
+                              status: tenant.status,
+                            })}
                           </p>
                           <p className="text-muted-foreground">
-                            created {tenant.created}, linked {tenant.linked}, updated {tenant.updated}, ambiguous {tenant.ambiguous}, inactivated {tenant.inactivated}
+                            {t('integrations.entra.syncHistory.details.stats', {
+                              created: tenant.created,
+                              linked: tenant.linked,
+                              updated: tenant.updated,
+                              ambiguous: tenant.ambiguous,
+                              inactivated: tenant.inactivated,
+                            })}
                           </p>
                           {tenant.errorMessage ? (
                             <p className="text-destructive">{tenant.errorMessage}</p>

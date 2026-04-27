@@ -220,6 +220,7 @@ const extractActionInputFields = (schema: JsonSchema | undefined, root?: JsonSch
 
     let children: ActionInputField[] | undefined;
     let itemType: string | undefined;
+    let itemEditor: ReturnType<typeof resolveWorkflowSchemaFieldEditor> | undefined;
     if (type === 'object' && resolvedProp.properties) {
       children = extractActionInputFields(resolvedProp, root);
     } else if (type === 'array' && resolvedProp.items) {
@@ -227,6 +228,7 @@ const extractActionInputFields = (schema: JsonSchema | undefined, root?: JsonSch
       itemType =
         normalizeSchemaType(itemSchema) ??
         (itemSchema.properties ? 'object' : 'unknown');
+      itemEditor = resolveWorkflowSchemaFieldEditor(itemSchema);
       if (itemSchema.properties) {
         children = extractActionInputFields(itemSchema, root);
       }
@@ -244,7 +246,14 @@ const extractActionInputFields = (schema: JsonSchema | undefined, root?: JsonSch
       itemType,
     };
     const hasConstraints = Object.values(constraints).some((constraint) => constraint !== undefined);
-    const editor = resolveWorkflowSchemaFieldEditor(rawResolved);
+    const fieldEditor = resolveWorkflowSchemaFieldEditor(rawResolved);
+    const shouldPromoteItemUserPicker =
+      type === 'array' &&
+      itemType === 'string' &&
+      !children?.length &&
+      itemEditor?.kind === 'picker' &&
+      itemEditor.picker?.resource === 'user';
+    const editor = fieldEditor ?? (shouldPromoteItemUserPicker ? itemEditor : undefined);
 
     return {
       name,

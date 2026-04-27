@@ -1,8 +1,10 @@
 // src/components/TextAreaFieldSelector.tsx
+'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import Popup from './Popup';
 import { Template } from '../../services/flow/types/workflowTypes';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface TextAreaFieldSelectorProps {
   value?: Template;
@@ -12,6 +14,7 @@ interface TextAreaFieldSelectorProps {
 }
 
 const TextAreaFieldSelector: React.FC<TextAreaFieldSelectorProps> = ({ value, onChange, inputType, rows = 4 }) => {
+  const { t } = useTranslation('msp/workflows');
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [fields, setFields] = useState<string[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -83,7 +86,7 @@ const TextAreaFieldSelector: React.FC<TextAreaFieldSelectorProps> = ({ value, on
           ⋮
         </button>
       </div>
-      <Popup isOpen={isPopupOpen} onClose={() => setIsPopupOpen(false)} title="Select Input Field">
+      <Popup isOpen={isPopupOpen} onClose={() => setIsPopupOpen(false)} title={t('flow.fields.selectInputField')}>
         <div style={styles.fieldOptionsContainer}>
           {renderFieldOptions()}
         </div>

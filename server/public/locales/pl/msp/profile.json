@@ -195,5 +195,41 @@
         "default": "Powiadomienie"
       }
     }
+  },
+  "connectSso": {
+    "verify": {
+      "title": "Zabezpiecz swoje konto za pomocą SSO",
+      "description": "Połącz Azure AD lub Google Workspace, aby korzystać z polityk organizacyjnych i pomijać lokalne monity uwierzytelniania dwuskładnikowego.",
+      "signedInAs": "Zalogowano jako",
+      "currentPassword": "Aktualne hasło",
+      "twoFactorCode": "Kod uwierzytelniania dwuskładnikowego",
+      "twoFactorPlaceholder": "123456",
+      "verifyCredentials": "Zweryfikuj poświadczenia",
+      "verifying": "Weryfikowanie...",
+      "reset": "Resetuj",
+      "linkedSuccess": "Dostawca został pomyślnie powiązany.",
+      "credentialsVerified": "Poświadczenia zweryfikowane. Wybierz dostawcę poniżej, aby zakończyć łączenie konta.",
+      "verifyFailed": "Nie można zweryfikować poświadczeń.",
+      "verifyBeforeProvider": "Zweryfikuj swoje hasło (oraz kod uwierzytelniania dwuskładnikowego, jeśli jest wymagany) przed połączeniem dostawcy."
+    },
+    "providers": {
+      "title": "Połącz dostawcę",
+      "description": "Wybierz dostawcę, aby zakończyć łączenie SSO. Zostaniesz przekierowany przez proces logowania dostawcy.",
+      "noneConfigured": "Dla tego środowiska nie skonfigurowano żadnych dostawców SSO. Poproś administratora o skonfigurowanie poświadczeń Google lub Microsoft.",
+      "notConfigured": "Nie skonfigurowano",
+      "branding": {
+        "google": "Kontynuuj z Google",
+        "microsoft": "Kontynuuj z Microsoft",
+        "default": "Kontynuuj"
+      }
+    },
+    "linked": {
+      "title": "Powiązane konta",
+      "description": "Odświeżymy powiązanie przy następnym logowaniu przez połączonego dostawcę.",
+      "empty": "Nie powiązano jeszcze żadnych dostawców SSO. Wykonaj powyższe kroki, aby połączyć dostawcę.",
+      "linkedAt": "Powiązano {{date}}",
+      "lastUsed": "Ostatnio użyto {{date}}",
+      "notUsedYet": "Jeszcze nieużywane"
+    }
   }
 }

@@ -1,0 +1,149 @@
+{
+  "sidebar": {
+    "title": "Chat",
+    "subtitleHistory": "Sessions IA récentes de l'utilisateur actuel",
+    "subtitleDefault": "Discutez avec l'IA et gérez les sessions enregistrées",
+    "showHistory": "Afficher l'historique des chats",
+    "hideHistory": "Masquer l'historique des chats",
+    "showHistoryTooltip": "Afficher l'historique",
+    "hideHistoryTooltip": "Masquer l'historique",
+    "startNewChat": "Démarrer un nouveau chat",
+    "hideSidebar": "Masquer la barre latérale du chat",
+    "hideSidebarTooltip": "Masquer le chat",
+    "introMessage": "Discutez avec l'IA — posez n'importe quelle question !",
+    "loadingChatConversation": "Chargement de la conversation",
+    "history": {
+      "searchResults": "Résultats de recherche",
+      "recentChats": "Chats récents",
+      "loading": "Chargement…",
+      "searchAriaLabel": "Rechercher dans l'historique des chats",
+      "searchPlaceholder": "Rechercher des chats enregistrés",
+      "typeAtLeastNChars": "Saisissez au moins {{count}} caractères pour rechercher des chats enregistrés.",
+      "emptyInitial": "Les chats enregistrés apparaîtront ici après l'envoi d'un message.",
+      "emptySearch": "Aucun chat correspondant trouvé.",
+      "untitled": "Chat sans titre",
+      "noMessagesYet": "Aucun message pour l'instant",
+      "loadingConversation": "Chargement de la conversation…",
+      "chatActionsFor": "Actions du chat pour {{title}}",
+      "rename": "Renommer",
+      "delete": "Supprimer",
+      "unableToLoadRecent": "Impossible de charger les chats récents.",
+      "unableToLoadSearch": "Impossible de charger les résultats de recherche."
+    },
+    "timestamp": {
+      "recently": "Récemment",
+      "justNow": "À l'instant",
+      "minutesAgo": "il y a {{count}} min",
+      "hoursAgo": "il y a {{count}} h",
+      "daysAgo": "il y a {{count}} j"
+    },
+    "newChatConfirm": {
+      "title": "Démarrer un nouveau chat ?",
+      "message": "Votre chat actuel sera effacé de la barre latérale. Les messages enregistrés restent dans l'historique des chats.",
+      "confirmLabel": "Démarrer un nouveau chat",
+      "cancelLabel": "Conserver le chat actuel"
+    },
+    "deleteConfirm": {
+      "title": "Supprimer ce chat ?",
+      "messageWithTitle": "Supprimer « {{title}} » de votre historique IA ? Cette action ne peut pas être annulée.",
+      "fallbackTitle": "ce chat",
+      "confirmLabel": "Supprimer le chat",
+      "cancelLabel": "Annuler"
+    },
+    "rename": {
+      "dialogTitle": "Renommer le chat",
+      "inputLabel": "Titre du chat",
+      "inputPlaceholder": "Saisissez un titre de chat",
+      "cancel": "Annuler",
+      "save": "Enregistrer"
+    }
+  },
+  "chat": {
+    "greeting": "Je suis Alga ! Votre assistant IA préféré. Posez-moi une question.",
+    "avatarAlt": "Alga",
+    "defaultFunctionName": "Appel de fonction",
+    "resultTruncated": "Le résultat était trop volumineux et a été tronqué.",
+    "inputPlaceholder": "Envoyer un message",
+    "inputPlaceholderGenerating": "Génération du texte...",
+    "inputAriaLabel": "Envoyer un message à Alga",
+    "thinking": "Réflexion...",
+    "hintMultiline": "Mode multiligne : Entrée ajoute une nouvelle ligne. Ctrl+Entrée ou ⌘+Entrée envoie.",
+    "hintSingleLine": "Appuyez sur Entrée pour envoyer. Maj+Entrée bascule en mode multiligne.",
+    "editingNotice": "Modification du message sélectionné. L'envoi remplacera ce message et régénérera le fil à partir de celui-ci.",
+    "cancelEdit": "Annuler la modification",
+    "stop": "ARRÊTER",
+    "send": "ENVOYER",
+    "viewDetails": "Voir les détails",
+    "viewFullValue": "Voir la valeur complète",
+    "parameters": "Paramètres",
+    "plan": "Plan",
+    "playbooks": "Playbooks",
+    "validation": {
+      "dialogTitle": "Message requis",
+      "ok": "OK",
+      "enterMessage": "Veuillez saisir un message avant d'envoyer."
+    },
+    "errors": {
+      "userNotIdentified": "Impossible d'envoyer le message : utilisateur non identifié.",
+      "unableToSave": "Impossible d'enregistrer ce message ; on continue sans persistance pour le moment.",
+      "requestFailedStatus": "La requête a échoué avec le statut {{status}}",
+      "unexpectedResponse": "Réponse inattendue de l'assistant.",
+      "unexpectedError": "Une erreur inattendue est survenue.",
+      "generationError": "Une erreur est survenue lors de la génération de la réponse.",
+      "connectionInterrupted": "Connexion interrompue — affichage de la réponse partielle.",
+      "connectionInterruptedWithReason": "Connexion interrompue — {{reason}}"
+    },
+    "function": {
+      "approveAriaLabel": "Approuver l'appel de fonction",
+      "declineAriaLabel": "Refuser l'appel de fonction",
+      "approve": "Approuver",
+      "approving": "Approbation…",
+      "deny": "Refuser",
+      "processing": "Traitement…",
+      "autoApproveLabel": "Approuver automatiquement les futures requêtes {{method}}",
+      "executingRequest": "Exécution de la requête…",
+      "continuingWithoutCall": "Poursuite sans appeler la fonction…",
+      "autoApprovalEnabled": "Approbation automatique activée pour les requêtes {{method}}.",
+      "reviewAndApprove": "Examinez et approuvez lorsque vous êtes prêt.",
+      "completedNoDetails": "L'action s'est terminée sans détails supplémentaires.",
+      "emDash": "—"
+    }
+  },
+  "quickAsk": {
+    "title": "Question rapide",
+    "yoloLabel": "YOLO",
+    "yoloAriaLabel": "Mode YOLO (approbation automatique des actions HTTP)",
+    "openInSidebar": "Ouvrir dans la barre latérale",
+    "close": "Fermer",
+    "ask": "Demander",
+    "inputPlaceholder": "Posez une question rapide…",
+    "inputAriaLabel": "Saisie de question rapide",
+    "followUpNotice": "Posez vos questions complémentaires ci-dessous. Ce chat sera enregistré comme un chat de la barre latérale.",
+    "startingSession": "Démarrage de la session…",
+    "session": "Session : {{chatId}}",
+    "hint": "Échap pour fermer • Entrée pour demander • Maj+Entrée pour une nouvelle ligne • {{modifier}}+↑ pour rouvrir"
+  },
+  "message": {
+    "authorAlga": "Alga",
+    "authorYou": "Vous",
+    "authorSystem": "Système",
+    "avatarAlt": "Avatar Alga",
+    "draftingResponse": "Rédaction de la réponse…",
+    "interrupted": "Interrompu",
+    "interruptionDetail": "Connexion interrompue — affichage de la réponse partielle.",
+    "showAssistantReasoning": "Afficher le raisonnement de l'assistant",
+    "editAriaLabel": "Modifier ce message",
+    "editTooltip": "Modifier ce message",
+    "regenerateAriaLabel": "Régénérer à partir de ce message",
+    "regenerateTooltip": "Régénérer à partir de ce message",
+    "functionStatus": {
+      "success": "Fonction exécutée",
+      "declined": "Fonction refusée",
+      "pending": "Fonction en file d'attente",
+      "error": "Erreur de fonction"
+    }
+  },
+  "mention": {
+    "noResultsFound": "Aucun résultat trouvé"
+  }
+}

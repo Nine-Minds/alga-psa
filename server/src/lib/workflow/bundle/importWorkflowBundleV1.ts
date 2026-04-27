@@ -27,6 +27,7 @@ const rewriteWorkflowDefinitionId = (definition: Record<string, unknown>, workfl
 
 export const importWorkflowBundleV1 = async (
   knex: Knex,
+  tenantId: string,
   bundleJson: unknown,
   options: WorkflowBundleImportOptionsV1 = {}
 ): Promise<WorkflowBundleImportSummaryV1> => {
@@ -49,7 +50,7 @@ export const importWorkflowBundleV1 = async (
     for (const wf of bundle.workflows) {
       const existing = await trx('workflow_definitions')
         .select('workflow_id', 'key')
-        .where({ key: wf.key })
+        .where({ tenant_id: tenantId, key: wf.key })
         .first() as { workflow_id: string; key: string } | undefined;
 
       if (existing) {
@@ -73,7 +74,7 @@ export const importWorkflowBundleV1 = async (
         .sort((a, b) => a.version - b.version);
 
       if (existing) {
-        await WorkflowDefinitionModelV2.update(trx, workflowId, {
+        await WorkflowDefinitionModelV2.update(trx, tenantId, workflowId, {
           key: wf.key,
           name: wf.metadata.name,
           description: wf.metadata.description,
@@ -84,7 +85,6 @@ export const importWorkflowBundleV1 = async (
           draft_definition: draftDefinition,
           draft_version: wf.draft.draftVersion,
           status: publishedVersions.length ? 'published' : 'draft',
-          is_system: wf.metadata.isSystem,
           is_visible: wf.metadata.isVisible,
           is_paused: wf.metadata.isPaused,
           concurrency_limit: wf.metadata.concurrencyLimit,
@@ -95,7 +95,7 @@ export const importWorkflowBundleV1 = async (
           updated_by: actorUserId
         });
       } else {
-        await WorkflowDefinitionModelV2.create(trx, {
+        await WorkflowDefinitionModelV2.create(trx, tenantId, {
           workflow_id: workflowId,
           key: wf.key,
           name: wf.metadata.name,
@@ -107,7 +107,6 @@ export const importWorkflowBundleV1 = async (
           draft_definition: draftDefinition,
           draft_version: wf.draft.draftVersion,
           status: publishedVersions.length ? 'published' : 'draft',
-          is_system: wf.metadata.isSystem,
           is_visible: wf.metadata.isVisible,
           is_paused: wf.metadata.isPaused,
           concurrency_limit: wf.metadata.concurrencyLimit,

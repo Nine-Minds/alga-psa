@@ -1,10 +1,13 @@
+'use client';
 import React, { memo, useCallback } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from 'reactflow';
 import DeleteButton from '../DeleteButton';
 import { v4 as uuidv4 } from 'uuid';
 import { SelectorNodeData, Input, Template } from '../../../services/flow/types/workflowTypes';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const SelectorNode = memo(({ data, id }: NodeProps<SelectorNodeData>) => {
+  const { t } = useTranslation('msp/workflows');
   const { getNode, setNodes } = useReactFlow();
   const node = getNode(id);
   const isSelected = node?.selected ?? false;
@@ -62,7 +65,7 @@ const SelectorNode = memo(({ data, id }: NodeProps<SelectorNodeData>) => {
       </button>
 
       <div className="mt-2 relative">
-        <label className="block text-sm font-medium text-gray-300">Default Input</label>
+        <label className="block text-sm font-medium text-gray-300">{t('flow.nodes.selector.defaultInput')}</label>
         <input
           type="text"
           value={data.defaultInput?.template || ''}

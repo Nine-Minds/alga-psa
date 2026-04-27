@@ -1,0 +1,149 @@
+{
+  "sidebar": {
+    "title": "Chat",
+    "subtitleHistory": "Sessões recentes de IA do usuário atual",
+    "subtitleDefault": "Converse com a IA e gerencie as sessões salvas",
+    "showHistory": "Mostrar histórico de chat",
+    "hideHistory": "Ocultar histórico de chat",
+    "showHistoryTooltip": "Mostrar histórico",
+    "hideHistoryTooltip": "Ocultar histórico",
+    "startNewChat": "Iniciar novo chat",
+    "hideSidebar": "Ocultar barra lateral de chat",
+    "hideSidebarTooltip": "Ocultar chat",
+    "introMessage": "Converse com a IA - Pergunte qualquer coisa!",
+    "loadingChatConversation": "Carregando conversa de chat",
+    "history": {
+      "searchResults": "Resultados da Busca",
+      "recentChats": "Chats Recentes",
+      "loading": "Carregando…",
+      "searchAriaLabel": "Pesquisar histórico de chat",
+      "searchPlaceholder": "Pesquisar chats salvos",
+      "typeAtLeastNChars": "Digite pelo menos {{count}} caracteres para pesquisar chats salvos.",
+      "emptyInitial": "Os chats salvos aparecerão aqui após você enviar uma mensagem.",
+      "emptySearch": "Nenhum chat correspondente encontrado.",
+      "untitled": "Chat sem título",
+      "noMessagesYet": "Nenhuma mensagem ainda",
+      "loadingConversation": "Carregando conversa…",
+      "chatActionsFor": "Ações de chat para {{title}}",
+      "rename": "Renomear",
+      "delete": "Excluir",
+      "unableToLoadRecent": "Não foi possível carregar os chats recentes.",
+      "unableToLoadSearch": "Não foi possível carregar os resultados da busca."
+    },
+    "timestamp": {
+      "recently": "Recentemente",
+      "justNow": "Agora mesmo",
+      "minutesAgo": "há {{count}}m",
+      "hoursAgo": "há {{count}}h",
+      "daysAgo": "há {{count}}d"
+    },
+    "newChatConfirm": {
+      "title": "Iniciar um novo chat?",
+      "message": "Seu chat atual será removido da barra lateral. As mensagens salvas permanecem no histórico de chat.",
+      "confirmLabel": "Iniciar Novo Chat",
+      "cancelLabel": "Manter Chat Atual"
+    },
+    "deleteConfirm": {
+      "title": "Excluir este chat?",
+      "messageWithTitle": "Excluir \"{{title}}\" do seu histórico de IA? Esta ação não pode ser desfeita.",
+      "fallbackTitle": "este chat",
+      "confirmLabel": "Excluir Chat",
+      "cancelLabel": "Cancelar"
+    },
+    "rename": {
+      "dialogTitle": "Renomear chat",
+      "inputLabel": "Título do chat",
+      "inputPlaceholder": "Digite o título do chat",
+      "cancel": "Cancelar",
+      "save": "Salvar"
+    }
+  },
+  "chat": {
+    "greeting": "Eu sou a Alga! Sua assistente de IA favorita. Faça-me uma pergunta.",
+    "avatarAlt": "Alga",
+    "defaultFunctionName": "Chamada de função",
+    "resultTruncated": "O resultado era muito grande e foi truncado.",
+    "inputPlaceholder": "Enviar uma mensagem",
+    "inputPlaceholderGenerating": "Gerando texto...",
+    "inputAriaLabel": "Enviar mensagem para Alga",
+    "thinking": "Pensando...",
+    "hintMultiline": "Modo multilinha: Enter adiciona uma nova linha. Ctrl+Enter ou ⌘+Enter envia.",
+    "hintSingleLine": "Pressione Enter para enviar. Shift+Enter alterna para o modo multilinha.",
+    "editingNotice": "Editando a mensagem selecionada. Enviar substituirá essa mensagem e regenerará a conversa a partir dali.",
+    "cancelEdit": "Cancelar edição",
+    "stop": "PARAR",
+    "send": "ENVIAR",
+    "viewDetails": "Ver detalhes",
+    "viewFullValue": "Ver valor completo",
+    "parameters": "Parâmetros",
+    "plan": "Plano",
+    "playbooks": "Playbooks",
+    "validation": {
+      "dialogTitle": "Mensagem Obrigatória",
+      "ok": "OK",
+      "enterMessage": "Por favor, insira uma mensagem antes de enviar."
+    },
+    "errors": {
+      "userNotIdentified": "Não foi possível enviar a mensagem: usuário não identificado.",
+      "unableToSave": "Não foi possível salvar esta mensagem, continuando sem persistência por enquanto.",
+      "requestFailedStatus": "Requisição falhou com status {{status}}",
+      "unexpectedResponse": "Resposta inesperada do assistente.",
+      "unexpectedError": "Ocorreu um erro inesperado.",
+      "generationError": "Ocorreu um erro ao gerar a resposta.",
+      "connectionInterrupted": "Conexão interrompida — exibindo resposta parcial.",
+      "connectionInterruptedWithReason": "Conexão interrompida — {{reason}}"
+    },
+    "function": {
+      "approveAriaLabel": "Aprovar chamada de função",
+      "declineAriaLabel": "Recusar chamada de função",
+      "approve": "Aprovar",
+      "approving": "Aprovando…",
+      "deny": "Negar",
+      "processing": "Processando…",
+      "autoApproveLabel": "Aprovar automaticamente futuras requisições {{method}}",
+      "executingRequest": "Executando requisição…",
+      "continuingWithoutCall": "Continuando sem chamar a função…",
+      "autoApprovalEnabled": "Aprovação automática ativada para requisições {{method}}.",
+      "reviewAndApprove": "Revise e aprove quando estiver pronto.",
+      "completedNoDetails": "A ação foi concluída sem detalhes adicionais.",
+      "emDash": "—"
+    }
+  },
+  "quickAsk": {
+    "title": "Pergunta Rápida",
+    "yoloLabel": "YOLO",
+    "yoloAriaLabel": "Modo YOLO (aprovar automaticamente ações HTTP)",
+    "openInSidebar": "Abrir na barra lateral",
+    "close": "Fechar",
+    "ask": "Perguntar",
+    "inputPlaceholder": "Faça uma pergunta rápida…",
+    "inputAriaLabel": "Entrada de Pergunta Rápida",
+    "followUpNotice": "Faça perguntas de acompanhamento abaixo. Este chat será salvo como o chat da barra lateral.",
+    "startingSession": "Iniciando sessão…",
+    "session": "Sessão: {{chatId}}",
+    "hint": "Esc para fechar • Enter para perguntar • Shift+Enter para nova linha • {{modifier}}+↑ para reabrir"
+  },
+  "message": {
+    "authorAlga": "Alga",
+    "authorYou": "Você",
+    "authorSystem": "Sistema",
+    "avatarAlt": "Avatar da Alga",
+    "draftingResponse": "Elaborando resposta…",
+    "interrupted": "Interrompida",
+    "interruptionDetail": "Conexão interrompida — exibindo resposta parcial.",
+    "showAssistantReasoning": "Mostrar raciocínio do assistente",
+    "editAriaLabel": "Editar esta mensagem",
+    "editTooltip": "Editar esta mensagem",
+    "regenerateAriaLabel": "Regenerar a partir desta mensagem",
+    "regenerateTooltip": "Regenerar a partir desta mensagem",
+    "functionStatus": {
+      "success": "Função executada",
+      "declined": "Função recusada",
+      "pending": "Função em fila",
+      "error": "Erro na função"
+    }
+  },
+  "mention": {
+    "noResultsFound": "Nenhum resultado encontrado"
+  }
+}

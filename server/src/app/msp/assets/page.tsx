@@ -4,6 +4,7 @@ import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import type { AssetListResponse } from '@alga-psa/types';
 import { MspAssetDashboardClient } from '@alga-psa/msp-composition/assets';
 import { getSession } from '@alga-psa/auth';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -18,7 +19,7 @@ export default async function AssetsPage() {
 
   const currentUser = await getCurrentUser();
   const userId = currentUser?.user_id;
-  
+
   if (!userId) {
     console.error('User ID is missing from the session');
     redirect('/auth/msp/signin');
@@ -29,7 +30,8 @@ export default async function AssetsPage() {
     return <MspAssetDashboardClient initialAssets={assets} />;
   } catch (error) {
     console.error('Error fetching user or assets:', error);
-    return <div>An error occurred. Please try again later.</div>;
+    const { t } = await getServerTranslation(undefined, 'msp/assets');
+    return <div>{t('assetListErrors.genericError')}</div>;
   }
 }
 

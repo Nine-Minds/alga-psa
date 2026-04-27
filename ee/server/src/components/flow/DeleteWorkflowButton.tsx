@@ -5,12 +5,14 @@ import React, { useState } from 'react';
 import styles from '@/app/msp/workflows/Workflows.module.css';
 import Popup from './Popup';
 import { useRouter } from 'next/navigation';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface DeleteWorkflowButtonProps {
   workflowId: number;
 }
 
 const DeleteWorkflowButton: React.FC<DeleteWorkflowButtonProps> = ({ workflowId }) => {
+  const { t } = useTranslation('msp/workflows');
   const [isDeletePopupOpen, setIsDeletePopupOpen] = useState(false);
   const router = useRouter();
 
@@ -48,9 +50,9 @@ const DeleteWorkflowButton: React.FC<DeleteWorkflowButtonProps> = ({ workflowId 
       <Popup
         isOpen={isDeletePopupOpen}
         onClose={() => setIsDeletePopupOpen(false)}
-        title="Confirm Deletion"
+        title={t('flow.delete.confirmTitle')}
       >
-        <p>Are you sure you want to delete this workflow?</p>
+        <p>{t('flow.delete.confirmMessage')}</p>
         <div className={styles.popupButtons}>
           <button className={styles.cancelButton} onClick={() => setIsDeletePopupOpen(false)}>
             Cancel

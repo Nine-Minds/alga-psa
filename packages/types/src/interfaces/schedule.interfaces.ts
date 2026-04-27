@@ -69,6 +69,11 @@ export enum IEditScope {
   ALL = 'all'
 }
 
+export interface CreateScheduleEntryOptions {
+  assignedUserIds: string[];
+  assignedByUserId?: string;
+}
+
 export enum Views {
   MONTH = 'month',
   WEEK = 'week',

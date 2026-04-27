@@ -1,5 +1,5 @@
 'use server'
-import ScheduleEntry from '../models/scheduleEntry';
+import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 import { IScheduleEntry, IEditScope, DeletionValidationResult } from '@alga-psa/types';
 import { WorkItemType } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';

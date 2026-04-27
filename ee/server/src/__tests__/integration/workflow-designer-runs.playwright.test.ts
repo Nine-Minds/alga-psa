@@ -97,6 +97,8 @@ async function createWorkflowDefinition(
   steps: Step[] = []
 ): Promise<WorkflowSeed> {
   const workflowId = uuidv4();
+  const tenantId = (await db('tenants').select('tenant').first())?.tenant;
+  if (!tenantId) throw new Error('tenant_id is required to seed workflow definition');
   const now = new Date().toISOString();
   const definition = {
     id: workflowId,
@@ -109,6 +111,7 @@ async function createWorkflowDefinition(
 
   await db('workflow_definitions').insert({
     workflow_id: workflowId,
+    tenant_id: tenantId,
     name,
     description: null,
     payload_schema_ref: definition.payloadSchemaRef,

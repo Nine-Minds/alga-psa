@@ -6,8 +6,10 @@ import { OnboardingWizard } from '@alga-psa/onboarding/components';
 import { getTenantSettings } from '@alga-psa/tenancy/actions';
 import { getOnboardingInitialData } from '@alga-psa/onboarding/actions';
 import type { WizardData } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export default function OnboardingPage() {
+  const { t } = useTranslation('common');
   const router = useRouter();
   const [initialData, setInitialData] = useState<Partial<WizardData>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -84,7 +86,7 @@ export default function OnboardingPage() {
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading onboarding...</p>
+          <p className="mt-4 text-gray-600">{t('pages.loading.onboarding')}</p>
         </div>
       </div>
     );

@@ -10,6 +10,7 @@
 import React, { useState, useMemo } from 'react';
 import { Package, Search, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { Asset, WorkstationAsset, ServerAsset } from '@/interfaces/asset.interfaces';
 
 interface AssetSoftwareInventoryProps {
@@ -54,6 +55,7 @@ function getSoftwareList(asset: Asset): SoftwareItem[] {
  * Asset Software Inventory
  */
 export function AssetSoftwareInventory({ asset, className = '' }: AssetSoftwareInventoryProps) {
+  const { t } = useTranslation('msp/assets');
   const [isExpanded, setIsExpanded] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -95,9 +97,9 @@ export function AssetSoftwareInventory({ asset, className = '' }: AssetSoftwareI
       >
         <div className="flex items-center gap-2">
           <Package className="h-5 w-5 text-purple-500" />
-          <span className="font-medium">Software Inventory</span>
+          <span className="font-medium">{t('assetSoftwareInventory.heading')}</span>
           <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-purple-100 text-purple-700">
-            {allSoftware.length} apps
+            {t('assetSoftwareInventory.appsCount', { count: allSoftware.length })}
           </span>
         </div>
         {isExpanded ? (
@@ -116,7 +118,7 @@ export function AssetSoftwareInventory({ asset, className = '' }: AssetSoftwareI
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search software..."
+                placeholder={t('assetSoftwareInventory.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
@@ -128,7 +130,7 @@ export function AssetSoftwareInventory({ asset, className = '' }: AssetSoftwareI
           <div className="max-h-80 overflow-y-auto">
             {displaySoftware.length === 0 ? (
               <div className="p-4 text-center text-sm text-gray-500">
-                No software matches your search
+                {t('assetSoftwareInventory.noMatch')}
               </div>
             ) : (
               <div className="divide-y divide-gray-100">
@@ -141,10 +143,10 @@ export function AssetSoftwareInventory({ asset, className = '' }: AssetSoftwareI
                         </p>
                         <div className="flex items-center gap-2 mt-1">
                           {sw.version && (
-                            <span className="text-xs text-gray-500">v{sw.version}</span>
+                            <span className="text-xs text-gray-500">{t('assetSoftwareInventory.version', { version: sw.version })}</span>
                           )}
                           {sw.publisher && (
-                            <span className="text-xs text-gray-400">by {sw.publisher}</span>
+                            <span className="text-xs text-gray-400">{t('assetSoftwareInventory.by', { publisher: sw.publisher })}</span>
                           )}
                         </div>
                       </div>
@@ -159,7 +161,7 @@ export function AssetSoftwareInventory({ asset, className = '' }: AssetSoftwareI
           {filteredSoftware.length > 5 && (
             <div className="p-3 border-t border-gray-100 text-center">
               <span className="text-xs text-gray-500">
-                Showing {displaySoftware.length} of {filteredSoftware.length} applications
+                {t('assetSoftwareInventory.showingOfApplications', { shown: displaySoftware.length, total: filteredSoftware.length })}
               </span>
             </div>
           )}
@@ -180,7 +182,7 @@ export function AssetSoftwareInventory({ asset, className = '' }: AssetSoftwareI
             ))}
             {allSoftware.length > 3 && (
               <span className="inline-flex items-center px-2 py-0.5 text-xs text-gray-500">
-                +{allSoftware.length - 3} more
+                {t('assetSoftwareInventory.more', { count: allSoftware.length - 3 })}
               </span>
             )}
           </div>

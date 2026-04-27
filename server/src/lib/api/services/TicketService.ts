@@ -953,9 +953,33 @@ export class TicketService extends BaseService<ITicket> {
         }
       }
 
+      const structuredChanges: Record<string, { old: unknown; new: unknown }> = {};
+      const trackedChangeFields: Array<keyof ITicket> = [
+        'title',
+        'url',
+        'status_id',
+        'priority_id',
+        'assigned_to',
+        'board_id',
+        'category_id',
+        'subcategory_id',
+        'due_date',
+      ];
+      for (const field of trackedChangeFields) {
+        const nextValue = (cleanedData as Record<string, unknown>)[field as string];
+        const previousValue = (currentTicket as Record<string, unknown>)[field as string];
+        if (nextValue !== undefined && nextValue !== previousValue) {
+          structuredChanges[field as string] = {
+            old: previousValue,
+            new: nextValue,
+          };
+        }
+      }
+
       await this.safePublishEvent('TICKET_UPDATED', context, {
         ticketId: ticket.ticket_id,
         updatedByUserId: context.userId,
+        changes: structuredChanges,
       });
 
       return this.withDescriptionHtml(ticket as ITicket);

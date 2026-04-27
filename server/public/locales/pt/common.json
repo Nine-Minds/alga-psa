@@ -105,7 +105,9 @@
     },
     "checkEmail": {
       "resendSuccess": "E-mail enviado! Verifique a sua caixa de entrada.",
-      "resendFailed": "Falha ao reenviar o e-mail. Tente novamente."
+      "resendFailed": "Falha ao reenviar o e-mail. Tente novamente.",
+      "whatsNext": "Próximos passos?",
+      "didntReceive": "Não recebeu o e-mail?"
     }
   },
   "share": {
@@ -119,7 +121,9 @@
       "linkNotAvailable": "Link indisponível",
       "linkExpired": "Este link de partilha expirou.",
       "downloadLimitReached": "O limite de downloads foi atingido."
-    }
+    },
+    "downloadStarted": "Download iniciado com sucesso!",
+    "enterPassword": "Digite a senha"
   },
   "tickets": {
     "origin": {
@@ -1028,5 +1032,49 @@
       "Pacific": "Pacífico",
       "Etc": "Outro"
     }
+  },
+  "pages": {
+    "errors": {
+      "somethingWentWrong": "Algo deu errado!",
+      "genericError": "Ocorreu um erro. Tente novamente mais tarde.",
+      "notFoundTitle": "404 - Página não encontrada",
+      "notFoundDescription": "A página que você procura não existe.",
+      "userNotAuthenticated": "Usuário não autenticado",
+      "userNotAuthenticatedError": "Erro: Usuário não autenticado",
+      "missingRunId": "ID de execução ausente.",
+      "teamLeadAccessRequired": "Acesso de líder de equipe necessário",
+      "teamsTabUnavailable": "Guia do Teams indisponível",
+      "teamsSignInUnavailable": "Login no Teams indisponível",
+      "assetNotFound": "Ativo não encontrado",
+      "contactNotFound": "Contato não encontrado",
+      "templateNotFound": "Modelo não encontrado",
+      "contactLoadError": "Erro ao carregar o contato",
+      "unknownError": "Ocorreu um erro desconhecido",
+      "templateNotFoundDetail": "O modelo que você procura não existe ou foi excluído.",
+      "teamLeadAccessDetail": "Para aprovar planilhas de tempo de membros da sua equipe, você precisa ser um líder de equipe.",
+      "teamsTabEnableHint": "Peça a um administrador PSA para habilitar a integração do Teams para este tenant antes de reabrir a guia."
+    },
+    "actions": {
+      "tryAgain": "Tentar novamente",
+      "goToTeamSettings": "Ir para configurações da equipe",
+      "selectDateRange": "Selecionar intervalo de datas"
+    },
+    "loading": {
+      "billingDashboard": "Carregando painel de faturamento...",
+      "onboarding": "Carregando onboarding...",
+      "extension": "Carregando extensão...",
+      "extensionSettings": "Carregando configurações da extensão...",
+      "ssoSettings": "Carregando configurações de SSO..."
+    },
+    "titles": {
+      "emailLogs": "Logs de e-mail",
+      "editAsset": "Editar ativo",
+      "slaSettings": "Configurações de SLA",
+      "documentEditor": "Editor de documentos",
+      "accountManagement": "Gestão da conta"
+    }
+  },
+  "feedback": {
+    "providePlaceholder": "Por favor, forneça um comentário"
   }
 }

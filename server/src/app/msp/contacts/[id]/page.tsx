@@ -10,6 +10,7 @@ import { getAllClients } from '@alga-psa/clients/actions';
 import { getContactPortalPermissions } from '@alga-psa/auth/actions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AIChatContextBoundary } from '@product/chat/context';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { Metadata } from 'next';
 
 const getCachedContact = cache((id: string) => getContactByContactNameId(id));
@@ -35,6 +36,7 @@ interface ContactDetailPageProps {
 const ContactDetailPage = async ({ params, searchParams }: ContactDetailPageProps) => {
   const [{ id }, resolvedSearchParams] = await Promise.all([params, searchParams]);
   const tab = typeof resolvedSearchParams.tab === 'string' ? resolvedSearchParams.tab.toLowerCase() : null;
+  const { t } = await getServerTranslation(undefined, 'common');
 
   try {
     // Fetch user data first for authorization
@@ -44,8 +46,8 @@ const ContactDetailPage = async ({ params, searchParams }: ContactDetailPageProp
         <div className="p-6">
           <Alert variant="destructive">
             <AlertDescription>
-              <p className="font-semibold">Error</p>
-              <p>User not authenticated</p>
+              <p className="font-semibold">{t('status.error')}</p>
+              <p>{t('pages.errors.userNotAuthenticated')}</p>
             </AlertDescription>
           </Alert>
         </div>
@@ -107,8 +109,8 @@ const ContactDetailPage = async ({ params, searchParams }: ContactDetailPageProp
       <div className="p-6">
         <Alert variant="destructive">
           <AlertDescription>
-            <p className="font-semibold">Error loading contact</p>
-            <p>{error instanceof Error ? error.message : 'Unknown error occurred'}</p>
+            <p className="font-semibold">{t('pages.errors.contactLoadError', { defaultValue: 'Error loading contact' })}</p>
+            <p>{error instanceof Error ? error.message : t('pages.errors.unknownError', { defaultValue: 'Unknown error occurred' })}</p>
           </AlertDescription>
         </Alert>
       </div>

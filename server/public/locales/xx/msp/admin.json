@@ -255,5 +255,320 @@
       "load": "11111",
       "delete": "11111"
     }
+  },
+  "policyManagement": {
+    "resourceSections": {
+      "tickets": "11111",
+      "documents": "11111",
+      "time": "11111",
+      "projects": "11111",
+      "assets": "11111",
+      "billing": "11111"
+    },
+    "targetTypes": {
+      "role": "11111",
+      "team": "11111",
+      "user": "11111",
+      "apiKey": "11111"
+    },
+    "templateSummaries": {
+      "own": "11111",
+      "assigned": "11111",
+      "managed": "11111",
+      "ownOrAssigned": "11111",
+      "ownOrManaged": "11111",
+      "sameClient": "11111",
+      "clientPortfolio": "11111",
+      "selectedClients": "11111",
+      "sameTeam": "11111",
+      "selectedBoards": "11111"
+    },
+    "constraintSummaries": {
+      "notSelfApprover": "11111",
+      "clientVisibleOnly": "11111",
+      "hideSensitiveFields": "11111"
+    },
+    "dates": {
+      "unknown": "11111"
+    },
+    "ruleSummary": {
+      "base": "11111 {{resourceType}} 11111 {{action}} 11111 {{scope}} 11111",
+      "withConstraint": "11111 {{resourceType}} 11111 {{action}} 11111 {{scope}} 11111 {{constraint}} 11111"
+    },
+    "upsell": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "hero": {
+      "badge": "11111",
+      "title": "11111",
+      "subtitle": "11111",
+      "newBundle": "11111",
+      "addStarters": "11111",
+      "addingStarters": "11111"
+    },
+    "metrics": {
+      "activeBundles": {
+        "title": "11111",
+        "subtitle": "11111"
+      },
+      "activeAssignments": {
+        "title": "11111",
+        "subtitle": "11111"
+      },
+      "starterBundles": {
+        "title": "11111",
+        "subtitle": "11111"
+      },
+      "archivedBundles": {
+        "title": "11111",
+        "subtitle": "11111"
+      }
+    },
+    "library": {
+      "eyebrow": "11111",
+      "title": "11111",
+      "description": "11111",
+      "searchPlaceholder": "11111",
+      "showArchived": "11111",
+      "columns": {
+        "bundle": "11111",
+        "status": "11111",
+        "type": "11111",
+        "assignments": "11111",
+        "updated": "11111",
+        "actions": "11111"
+      },
+      "statusLabels": {
+        "active": "11111",
+        "archived": "11111"
+      },
+      "typeLabels": {
+        "system": "11111",
+        "custom": "11111"
+      },
+      "badges": {
+        "starter": "11111"
+      },
+      "descriptions": {
+        "systemStarter": "11111",
+        "customBundle": "11111"
+      },
+      "effectiveSummary": "11111 {{status}} 11111 {{count}} 11111",
+      "empty": "11111",
+      "loading": "11111",
+      "actions": {
+        "openEditor": "11111",
+        "assignments": "11111",
+        "simulator": "11111",
+        "clone": "11111",
+        "archive": "11111"
+      }
+    },
+    "workspace": {
+      "backToLibrary": "11111",
+      "updatedWithAssignments": "11111 {{date}} 11111 {{count}} 11111",
+      "eyebrow": "11111",
+      "fallbackBundleName": "11111",
+      "fallbackDescription": "11111",
+      "tabs": {
+        "editor": "11111",
+        "assignments": "11111",
+        "simulator": "11111"
+      }
+    },
+    "editor": {
+      "header": "11111",
+      "editingDraftPrefix": "11111",
+      "editingDraftSuffix": "11111",
+      "viewingPublishedPrefix": "11111",
+      "viewingPublishedSuffix": "11111",
+      "publishDraft": "11111",
+      "publishing": "11111",
+      "publishedBadge": "11111",
+      "loading": "11111",
+      "revisionSummary": "11111 {{summary}} 11111",
+      "ruleCount": "11111 {{count}} 11111 {{revisionType}} 11111",
+      "revisionType": {
+        "draft": "11111",
+        "published": "11111"
+      },
+      "emptyRules": "11111 {{revisionType}} 11111 {{resource}} 11111",
+      "ruleForm": {
+        "addDraftTitle": "11111",
+        "editDraftTitle": "11111",
+        "createDraftTitle": "11111",
+        "editPublishedTitle": "11111",
+        "helperEditPublished": "11111",
+        "helperCreateDraft": "11111",
+        "reset": "11111",
+        "action": "11111",
+        "template": "11111",
+        "constraint": "11111",
+        "constraintNone": "11111",
+        "saveDraftRule": "11111",
+        "addDraftRule": "11111",
+        "saveAsDraftChange": "11111",
+        "createDraftRule": "11111"
+      },
+      "rule": {
+        "edit": "11111",
+        "remove": "11111",
+        "removeAsDraft": "11111",
+        "removeDraftTooltip": "11111",
+        "removePublishedTooltip": "11111",
+        "selectedClientScopes": "11111",
+        "selectedBoardScopes": "11111",
+        "redactedFields": "11111"
+      },
+      "scopes": {
+        "clientTitle": "11111",
+        "boardTitle": "11111",
+        "selectClient": "11111",
+        "selectBoard": "11111",
+        "addClientScope": "11111",
+        "addBoardScope": "11111",
+        "noClientScopes": "11111",
+        "noBoardScopes": "11111",
+        "remove": "11111"
+      },
+      "redaction": {
+        "label": "11111",
+        "placeholder": "11111",
+        "helper": "11111"
+      }
+    },
+    "assignments": {
+      "header": "11111",
+      "description": "11111",
+      "loading": "11111",
+      "addAssignment": "11111",
+      "selectTargetPlaceholder": "11111 {{target}} 11111",
+      "addButton": "11111",
+      "adding": "11111",
+      "empty": "11111",
+      "groupEmpty": "11111 {{target}} 11111",
+      "statusActions": {
+        "disable": "11111",
+        "enable": "11111",
+        "saving": "11111"
+      },
+      "statusLabels": {
+        "active": "11111",
+        "disabled": "11111"
+      }
+    },
+    "simulator": {
+      "header": "11111",
+      "description": "11111",
+      "inputTitle": "11111",
+      "resource": "11111",
+      "action": "11111",
+      "principal": "11111",
+      "record": "11111",
+      "useSynthetic": "11111",
+      "syntheticOwnerPlaceholder": "11111",
+      "syntheticClientPlaceholder": "11111",
+      "syntheticBoardPlaceholder": "11111",
+      "clientVisible": "11111",
+      "run": "11111",
+      "running": "11111",
+      "resultTitle": "11111",
+      "draftRevision": "11111",
+      "publishedRevision": "11111",
+      "allowed": "11111",
+      "denied": "11111",
+      "empty": "11111"
+    },
+    "createDialog": {
+      "title": "11111",
+      "cancel": "11111",
+      "create": "11111",
+      "creating": "11111",
+      "nameLabel": "11111",
+      "namePlaceholder": "11111",
+      "descriptionLabel": "11111",
+      "descriptionPlaceholder": "11111"
+    },
+    "clone": {
+      "copySuffix": "11111 {{name}} 11111"
+    },
+    "errors": {
+      "loadBundles": "11111",
+      "loadEditor": "11111",
+      "loadAssignments": "11111",
+      "cloneBundle": "11111",
+      "archiveBundle": "11111",
+      "seedStarters": "11111",
+      "bundleNameRequired": "11111",
+      "createBundle": "11111",
+      "publishDraft": "11111",
+      "selectTemplate": "11111",
+      "selectClientRequired": "11111",
+      "selectBoardRequired": "11111",
+      "redactedFieldRequired": "11111",
+      "saveRule": "11111",
+      "removeRule": "11111",
+      "selectTarget": "11111",
+      "addAssignment": "11111",
+      "updateAssignmentStatus": "11111",
+      "selectPrincipal": "11111",
+      "selectRecord": "11111",
+      "runSimulation": "11111",
+      "simulator": {
+        "unsupportedAction": "11111",
+        "unsupportedResource": "11111",
+        "clientTicketNotSupported": "11111"
+      }
+    }
+  },
+  "emailLogs": {
+    "page": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "metrics": {
+      "totalSent": "11111",
+      "failedRate": "11111",
+      "today": "11111"
+    },
+    "filters": {
+      "startDate": "11111",
+      "endDate": "11111",
+      "status": "11111",
+      "recipient": "11111",
+      "recipientPlaceholder": "11111",
+      "ticket": "11111",
+      "ticketPlaceholder": "11111",
+      "statusOptions": {
+        "all": "11111",
+        "sent": "11111",
+        "failed": "11111"
+      }
+    },
+    "table": {
+      "time": "11111",
+      "ticket": "11111",
+      "recipient": "11111",
+      "subject": "11111",
+      "status": "11111"
+    },
+    "loading": "11111",
+    "results_one": "11111 {{count}} 11111",
+    "results_other": "11111 {{count}} 11111",
+    "refresh": "11111",
+    "close": "11111",
+    "detail": {
+      "title": "11111",
+      "noSubject": "11111",
+      "sentAt": "11111",
+      "status": "11111",
+      "provider": "11111",
+      "messageId": "11111",
+      "to": "11111",
+      "from": "11111",
+      "error": "11111",
+      "metadata": "11111"
+    }
   }
 }

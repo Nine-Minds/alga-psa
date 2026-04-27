@@ -16,13 +16,13 @@ interface CancellationFeedbackModalProps {
   onLogout?: () => Promise<void>;
 }
 
-const CANCELLATION_REASONS = [
-  { value: 'Pricing too high', label: 'Pricing too high' },
-  { value: 'Missing features I need', label: 'Missing features I need' },
-  { value: 'Poor customer support', label: 'Poor customer support' },
-  { value: 'Switching to competitor', label: 'Switching to competitor' },
-  { value: 'No longer need the service', label: 'No longer need the service' },
-  { value: 'Other', label: 'Other' },
+const CANCELLATION_REASON_KEYS = [
+  { value: 'Pricing too high', labelKey: 'cancellationModal.reasons.pricingTooHigh' },
+  { value: 'Missing features I need', labelKey: 'cancellationModal.reasons.missingFeatures' },
+  { value: 'Poor customer support', labelKey: 'cancellationModal.reasons.poorSupport' },
+  { value: 'Switching to competitor', labelKey: 'cancellationModal.reasons.switchingCompetitor' },
+  { value: 'No longer need the service', labelKey: 'cancellationModal.reasons.noLongerNeed' },
+  { value: 'Other', labelKey: 'cancellationModal.reasons.other' },
 ];
 
 export default function CancellationFeedbackModal({
@@ -35,6 +35,10 @@ export default function CancellationFeedbackModal({
   const [reasonText, setReasonText] = useState('');
   const [reasonCategory, setReasonCategory] = useState('');
   const [loading, setLoading] = useState(false);
+  const cancellationReasons = CANCELLATION_REASON_KEYS.map(({ value, labelKey }) => ({
+    value,
+    label: t(labelKey),
+  }));
 
   const maxChars = 500;
   const remainingChars = maxChars - reasonText.length;
@@ -87,7 +91,7 @@ export default function CancellationFeedbackModal({
         onClick={handleClose}
         disabled={loading}
       >
-        Keep Subscription
+        {t('cancellationModal.keepSubscription')}
       </Button>
       <Button
         id="cancel-feedback-submit-btn"
@@ -95,7 +99,7 @@ export default function CancellationFeedbackModal({
         onClick={handleSubmit}
         disabled={loading || !reasonText.trim()}
       >
-        {loading ? 'Submitting...' : 'Submit Feedback'}
+        {loading ? t('cancellationModal.submitting') : t('cancellationModal.submitFeedback')}
       </Button>
     </div>
   );
@@ -104,7 +108,7 @@ export default function CancellationFeedbackModal({
     <Dialog
       isOpen={isOpen}
       onClose={handleClose}
-      title="Cancel Subscription"
+      title={t('cancellationModal.title')}
       className="max-w-[600px]"
       id="cancellation-feedback-modal"
       footer={footer}
@@ -113,9 +117,9 @@ export default function CancellationFeedbackModal({
         {/* Warning */}
         <Alert variant="destructive" id="cancellation-warning-alert">
           <div>
-            <p className="font-semibold">Before you cancel</p>
+            <p className="font-semibold">{t('cancellationModal.beforeYouCancel')}</p>
             <AlertDescription className="mt-1">
-              We'd love to hear your feedback to help us improve our service. Your input is valuable to us.
+              {t('cancellationModal.beforeYouCancelBody')}
             </AlertDescription>
           </div>
         </Alert>
@@ -123,11 +127,11 @@ export default function CancellationFeedbackModal({
         {/* Reason Category (Optional) */}
         <CustomSelect
           id="reason-category"
-          label="Reason for Cancellation (Optional)"
-          options={CANCELLATION_REASONS}
+          label={t('cancellationModal.reasonLabel')}
+          options={cancellationReasons}
           value={reasonCategory}
           onValueChange={setReasonCategory}
-          placeholder="Select a reason (optional)"
+          placeholder={t('cancellationModal.reasonPlaceholder')}
           disabled={loading}
           allowClear
         />
@@ -136,19 +140,19 @@ export default function CancellationFeedbackModal({
         <div>
           <TextArea
             id="feedback-text"
-            label="Why are you leaving us?"
+            label={t('cancellationModal.feedbackLabel')}
             value={reasonText}
             onChange={(e) => setReasonText(e.target.value)}
-            placeholder="We'd love to hear your feedback so we can improve. Your input helps us serve our customers better."
+            placeholder={t('cancellationModal.feedbackPlaceholder')}
             disabled={loading}
             maxLength={maxChars}
             required
             className="min-h-[120px]"
           />
           <div className="flex justify-between text-xs text-muted-foreground -mt-3 px-0.5">
-            <span className="text-destructive">* Required</span>
+            <span className="text-destructive">{t('cancellationModal.required')}</span>
             <span className={remainingChars < 50 ? 'text-destructive font-semibold' : ''}>
-              {remainingChars} characters remaining
+              {t('cancellationModal.charactersRemaining', { count: remainingChars })}
             </span>
           </div>
         </div>

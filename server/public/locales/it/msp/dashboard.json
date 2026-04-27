@@ -153,5 +153,6 @@
       "dismissFailed": "Impossibile nascondere il passaggio di onboarding.",
       "restoreFailed": "Impossibile ripristinare il passaggio di onboarding."
     }
-  }
+  },
+  "mspDashboard": "Dashboard MSP"
 }

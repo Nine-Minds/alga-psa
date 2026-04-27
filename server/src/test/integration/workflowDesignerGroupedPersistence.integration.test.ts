@@ -429,7 +429,7 @@ describe('workflow designer grouped-step persistence', () => {
       definition: invalidDefinition
     });
 
-    const recordAfterSave = await WorkflowDefinitionModelV2.getById(db, created.workflowId);
+    const recordAfterSave = await WorkflowDefinitionModelV2.getById(db, tenantId, created.workflowId);
     expect(recordAfterSave?.draft_definition).toEqual(invalidDefinition);
     expectGroupedValidationError(recordAfterSave?.validation_errors);
 
@@ -473,7 +473,7 @@ describe('workflow designer grouped-step persistence', () => {
     );
     expect(publishedVersion?.definition_json).toEqual(definition);
 
-    const rowAfterPublish = await WorkflowDefinitionModelV2.getById(db, created.workflowId);
+    const rowAfterPublish = await WorkflowDefinitionModelV2.getById(db, tenantId, created.workflowId);
     expect(rowAfterPublish?.draft_version).toBe(2);
     expect((rowAfterPublish?.draft_definition as WorkflowDefinition)?.steps).toEqual(
       definition.steps
@@ -507,7 +507,7 @@ describe('workflow designer grouped-step persistence', () => {
     expect(publishResult.ok).toBe(false);
     expectGroupedValidationError(publishResult.errors as Record<string, unknown>[] | undefined);
 
-    const rowAfterFailedPublish = await WorkflowDefinitionModelV2.getById(db, created.workflowId);
+    const rowAfterFailedPublish = await WorkflowDefinitionModelV2.getById(db, tenantId, created.workflowId);
     expectGroupedValidationError(rowAfterFailedPublish?.validation_errors);
     expect(rowAfterFailedPublish?.status).toBe('draft');
   });
@@ -528,7 +528,7 @@ describe('workflow designer grouped-step persistence', () => {
       version: 1
     });
 
-    const exported1 = await exportWorkflowBundleV1ForWorkflowId(db, created.workflowId);
+    const exported1 = await exportWorkflowBundleV1ForWorkflowId(db, tenantId, created.workflowId);
 
     expect(exported1.workflows[0]?.draft?.definition?.steps?.[0]).toMatchObject({
       type: 'action.call',
@@ -550,15 +550,15 @@ describe('workflow designer grouped-step persistence', () => {
     await resetWorkflowRuntimeTables(db);
     await ensureWorkflowScheduleStateTable(db);
 
-    const imported = await importWorkflowBundleV1(db, exported1);
+    const imported = await importWorkflowBundleV1(db, tenantId, exported1);
     const importedId = imported.createdWorkflows[0].workflowId;
-    const exported2 = await exportWorkflowBundleV1ForWorkflowId(db, importedId);
+    const exported2 = await exportWorkflowBundleV1ForWorkflowId(db, tenantId, importedId);
 
     expect(normalizeBundleForComparison(exported2)).toEqual(
       normalizeBundleForComparison(exported1)
     );
 
-    const importedRow = await WorkflowDefinitionModelV2.getById(db, importedId);
+    const importedRow = await WorkflowDefinitionModelV2.getById(db, tenantId, importedId);
     expect(importedRow?.draft_definition).toMatchObject({
       steps: [
         {

@@ -255,5 +255,322 @@
       "load": "Nie udało się załadować domyślnych wartości zgłoszeń",
       "delete": "Nie udało się usunąć domyślnych wartości zgłoszeń"
     }
+  },
+  "policyManagement": {
+    "resourceSections": {
+      "tickets": "Zgłoszenia",
+      "documents": "Dokumenty",
+      "time": "Czas",
+      "projects": "Projekty",
+      "assets": "Zasoby",
+      "billing": "Rozliczenia"
+    },
+    "targetTypes": {
+      "role": "Rola",
+      "team": "Zespół",
+      "user": "Użytkownik",
+      "apiKey": "Klucz API"
+    },
+    "templateSummaries": {
+      "own": "rekordy należące do użytkownika",
+      "assigned": "rekordy przypisane do użytkownika",
+      "managed": "rekordy należące do zarządzanych użytkowników",
+      "ownOrAssigned": "rekordy należące do użytkownika lub przypisane do niego",
+      "ownOrManaged": "rekordy należące do użytkownika lub zarządzanych użytkowników",
+      "sameClient": "rekordy w tym samym zakresie klienta",
+      "clientPortfolio": "rekordy dla portfolio klientów użytkownika",
+      "selectedClients": "rekordy w wybranych zakresach klientów",
+      "sameTeam": "rekordy należące do tego samego zespołu",
+      "selectedBoards": "rekordy na wybranych tablicach"
+    },
+    "constraintSummaries": {
+      "notSelfApprover": "blokuje samozatwierdzenie",
+      "clientVisibleOnly": "wymaga rekordów widocznych dla klienta",
+      "hideSensitiveFields": "redaguje pola wrażliwe"
+    },
+    "dates": {
+      "unknown": "Nieznane"
+    },
+    "ruleSummary": {
+      "base": "Zawęź {{action}} {{resourceType}} do {{scope}}.",
+      "withConstraint": "Zawęź {{action}} {{resourceType}} do {{scope}}; {{constraint}}."
+    },
+    "upsell": {
+      "title": "Pakiety autoryzacji",
+      "description": "Zaawansowane zarządzanie pakietami autoryzacji jest dostępne w warstwie Premium. Zaktualizuj, aby zarządzać ponownie używalnymi pakietami zawężania."
+    },
+    "hero": {
+      "badge": "Obszar roboczy Premium",
+      "title": "Pakiety autoryzacji",
+      "subtitle": "Zarządzaj premium zawężaniem dostępu z wersjami roboczymi, przypisaniami z zakresem i bezpieczną symulacją z jednego centrum sterowania.",
+      "newBundle": "Nowy pakiet",
+      "addStarters": "Dodaj pakiety startowe",
+      "addingStarters": "Dodawanie pakietów startowych..."
+    },
+    "metrics": {
+      "activeBundles": {
+        "title": "Aktywne pakiety",
+        "subtitle": "Ponownie używalne pakiety zawężania aktualnie dostępne do przypisania"
+      },
+      "activeAssignments": {
+        "title": "Aktywne przypisania",
+        "subtitle": "Aktywne wdrożenia ról, zespołów, użytkowników i kluczy API"
+      },
+      "starterBundles": {
+        "title": "Pakiety startowe",
+        "subtitle": "Gotowe do adaptacji ustawienia wstępne oparte na relacjach"
+      },
+      "archivedBundles": {
+        "title": "Zarchiwizowane pakiety",
+        "subtitle": "Wycofane pakiety zachowane do audytu i ponownego użycia"
+      }
+    },
+    "library": {
+      "eyebrow": "Biblioteka",
+      "title": "Biblioteka pakietów autoryzacji",
+      "description": "Przeglądaj status pakietu, zarządzaj zmianami cyklu życia i otwieraj dedykowany obszar roboczy dla jednego pakietu na raz.",
+      "searchPlaceholder": "Szukaj pakietów według nazwy lub opisu",
+      "showArchived": "Pokaż zarchiwizowane",
+      "columns": {
+        "bundle": "Pakiet",
+        "status": "Status",
+        "type": "Typ",
+        "assignments": "Przypisania",
+        "updated": "Zaktualizowano",
+        "actions": "Akcje"
+      },
+      "statusLabels": {
+        "active": "aktywny",
+        "archived": "zarchiwizowany"
+      },
+      "typeLabels": {
+        "system": "System",
+        "custom": "Niestandardowy"
+      },
+      "badges": {
+        "starter": "Startowy"
+      },
+      "descriptions": {
+        "systemStarter": "Systemowy pakiet startowy.",
+        "customBundle": "Niestandardowy pakiet zawężania dla przypisań ról, zespołów, użytkowników lub kluczy API."
+      },
+      "effectiveSummary": "Aktywne podsumowanie: pakiet {{status}} z {{count}} aktywnymi przypisaniami.",
+      "empty": "Nie znaleziono pakietów autoryzacji.",
+      "loading": "Ładowanie pakietów autoryzacji...",
+      "actions": {
+        "openEditor": "Otwórz edytor",
+        "assignments": "Przypisania",
+        "simulator": "Symulator",
+        "clone": "Klonuj",
+        "archive": "Archiwizuj"
+      }
+    },
+    "workspace": {
+      "backToLibrary": "Powrót do biblioteki",
+      "updatedWithAssignments": "Zaktualizowano {{date}} · {{count}} aktywnych przypisań",
+      "eyebrow": "Obszar roboczy pakietu",
+      "fallbackBundleName": "Wybrany pakiet",
+      "fallbackDescription": "Użyj edytora wersji roboczej, menedżera przypisań i symulatora, aby wdrożyć bezpieczne zmiany zawężania.",
+      "tabs": {
+        "editor": "Edytor wersji roboczej",
+        "assignments": "Przypisania",
+        "simulator": "Symulator"
+      }
+    },
+    "editor": {
+      "header": "Edytor pakietu",
+      "editingDraftPrefix": "Edytowanie wersji roboczej dla ",
+      "editingDraftSuffix": ". Zmiany pozostają w wersji roboczej do opublikowania.",
+      "viewingPublishedPrefix": "Wyświetlanie opublikowanej wersji dla ",
+      "viewingPublishedSuffix": ". Obecnie nie istnieje aktywna wersja robocza.",
+      "publishDraft": "Opublikuj wersję roboczą",
+      "publishing": "Publikowanie...",
+      "publishedBadge": "Opublikowano",
+      "loading": "Ładowanie edytora wersji roboczej...",
+      "revisionSummary": "Podsumowanie wersji: {{summary}}",
+      "ruleCount": "{{count}} {{revisionType}} reguł",
+      "revisionType": {
+        "draft": "wersji roboczej",
+        "published": "opublikowanej"
+      },
+      "emptyRules": "Brak jeszcze reguł {{revisionType}} dla {{resource}}.",
+      "ruleForm": {
+        "addDraftTitle": "Dodaj regułę wersji roboczej",
+        "editDraftTitle": "Edytuj regułę wersji roboczej",
+        "createDraftTitle": "Utwórz regułę wersji roboczej",
+        "editPublishedTitle": "Edytuj opublikowaną regułę jako wersję roboczą",
+        "helperEditPublished": "Zapisanie utworzy nową wersję roboczą z Twoimi zmianami w tej opublikowanej regule.",
+        "helperCreateDraft": "Zapisanie utworzy nową wersję roboczą dla tego pakietu.",
+        "reset": "Resetuj",
+        "action": "Akcja",
+        "template": "Szablon",
+        "constraint": "Ograniczenie (opcjonalne)",
+        "constraintNone": "brak",
+        "saveDraftRule": "Zapisz regułę wersji roboczej",
+        "addDraftRule": "Dodaj regułę wersji roboczej",
+        "saveAsDraftChange": "Zapisz jako zmianę wersji roboczej",
+        "createDraftRule": "Utwórz regułę wersji roboczej"
+      },
+      "rule": {
+        "edit": "Edytuj",
+        "remove": "Usuń",
+        "removeAsDraft": "Usuń jako zmianę wersji roboczej",
+        "removeDraftTooltip": "Usuń tę regułę wersji roboczej.",
+        "removePublishedTooltip": "Utwórz nową wersję roboczą, która usuwa tę opublikowaną regułę.",
+        "selectedClientScopes": "Wybrane zakresy klientów",
+        "selectedBoardScopes": "Wybrane zakresy tablic",
+        "redactedFields": "Zredagowane pola"
+      },
+      "scopes": {
+        "clientTitle": "Wybrane zakresy klientów",
+        "boardTitle": "Wybrane zakresy tablic",
+        "selectClient": "Wybierz klienta",
+        "selectBoard": "Wybierz tablicę",
+        "addClientScope": "Dodaj zakres klienta",
+        "addBoardScope": "Dodaj zakres tablicy",
+        "noClientScopes": "Nie dodano jeszcze żadnych zakresów klientów.",
+        "noBoardScopes": "Nie dodano jeszcze żadnych zakresów tablic.",
+        "remove": "Usuń"
+      },
+      "redaction": {
+        "label": "Zredagowane pola",
+        "placeholder": "internal_cost, margin",
+        "helper": "Oddzielone przecinkami nazwy pól do zredagowania, gdy ta reguła zezwala na dostęp."
+      }
+    },
+    "assignments": {
+      "header": "Menedżer przypisań",
+      "description": "Wyświetl i zarządzaj rolami, zespołami, użytkownikami i celami kluczy API aktualnie objętymi tym pakietem.",
+      "loading": "Ładowanie przypisań...",
+      "addAssignment": "Dodaj przypisanie",
+      "selectTargetPlaceholder": "Wybierz {{target}}",
+      "addButton": "Dodaj przypisanie",
+      "adding": "Dodawanie...",
+      "empty": "Brak jeszcze przypisań dla tego pakietu.",
+      "groupEmpty": "Brak przypisań {{target}}.",
+      "statusActions": {
+        "disable": "Wyłącz",
+        "enable": "Włącz",
+        "saving": "Zapisywanie..."
+      },
+      "statusLabels": {
+        "active": "aktywny",
+        "disabled": "wyłączony"
+      }
+    },
+    "simulator": {
+      "header": "Symulator dostępu",
+      "description": "Symuluj zachowanie wersji roboczej i opublikowanej pakietu dla rzeczywistego użytkownika i istniejącego rekordu.",
+      "inputTitle": "Wejście symulacji",
+      "resource": "Zasób",
+      "action": "Akcja",
+      "principal": "Użytkownik",
+      "record": "Rekord",
+      "useSynthetic": "Użyj syntetycznego scenariusza rekordu",
+      "syntheticOwnerPlaceholder": "ID użytkownika właściciela (opcjonalnie)",
+      "syntheticClientPlaceholder": "ID klienta (opcjonalnie)",
+      "syntheticBoardPlaceholder": "ID tablicy (opcjonalnie)",
+      "clientVisible": "Widoczne dla klienta",
+      "run": "Uruchom symulację",
+      "running": "Uruchamianie symulacji...",
+      "resultTitle": "Wynik symulacji",
+      "draftRevision": "Wersja robocza",
+      "publishedRevision": "Opublikowana wersja",
+      "allowed": "Dozwolone",
+      "denied": "Odmówione",
+      "empty": "Uruchom symulację, aby porównać zachowanie wersji roboczej i opublikowanej."
+    },
+    "createDialog": {
+      "title": "Utwórz pakiet autoryzacji",
+      "cancel": "Anuluj",
+      "create": "Utwórz pakiet",
+      "creating": "Tworzenie...",
+      "nameLabel": "Nazwa",
+      "namePlaceholder": "Finance Reviewer West",
+      "descriptionLabel": "Opis",
+      "descriptionPlaceholder": "Ponownie używalny pakiet zawężania dla określonego zespołu, grupy klientów lub przepływu pracy."
+    },
+    "clone": {
+      "copySuffix": "{{name}} Kopia"
+    },
+    "errors": {
+      "loadBundles": "Nie udało się załadować pakietów.",
+      "loadEditor": "Nie udało się załadować edytora pakietów.",
+      "loadAssignments": "Nie udało się załadować przypisań pakietu.",
+      "cloneBundle": "Nie udało się sklonować pakietu.",
+      "archiveBundle": "Nie udało się zarchiwizować pakietu.",
+      "seedStarters": "Nie udało się zainicjować pakietów startowych.",
+      "bundleNameRequired": "Nazwa pakietu jest wymagana.",
+      "createBundle": "Nie udało się utworzyć pakietu.",
+      "publishDraft": "Nie udało się opublikować wersji roboczej pakietu.",
+      "selectTemplate": "Wybierz szablon przed zapisaniem reguły.",
+      "selectClientRequired": "Dodaj co najmniej jednego wybranego klienta przed zapisaniem tej reguły.",
+      "selectBoardRequired": "Dodaj co najmniej jedną wybraną tablicę przed zapisaniem tej reguły.",
+      "redactedFieldRequired": "Wprowadź co najmniej jedno zredagowane pole przed zapisaniem tej reguły.",
+      "saveRule": "Nie udało się zapisać reguły wersji roboczej.",
+      "removeRule": "Nie udało się usunąć reguły.",
+      "selectTarget": "Wybierz cel przed dodaniem przypisania.",
+      "addAssignment": "Nie udało się dodać przypisania.",
+      "updateAssignmentStatus": "Nie udało się zaktualizować statusu przypisania.",
+      "selectPrincipal": "Wybierz użytkownika przed uruchomieniem symulacji.",
+      "selectRecord": "Wybierz rekord przed uruchomieniem symulacji.",
+      "runSimulation": "Nie udało się uruchomić symulacji.",
+      "simulator": {
+        "unsupportedAction": "Symulator obecnie obsługuje tylko sprawdzenia Odczyt i Zatwierdź. Wybierz jedną z tych akcji i spróbuj ponownie.",
+        "unsupportedResource": "Ten typ rekordu nie jest jeszcze dostępny w symulatorze. Wybierz obsługiwany typ rekordu i spróbuj ponownie.",
+        "clientTicketNotSupported": "Sprawdzenia biletów dla użytkowników klienta nie są jeszcze dostępne w symulatorze, ponieważ widoczność tablicy biletów nie jest uwzględniona. Spróbuj z użytkownikiem wewnętrznym lub zweryfikuj dostęp klienta do biletów w aplikacji."
+      }
+    }
+  },
+  "emailLogs": {
+    "page": {
+      "title": "Dzienniki Email",
+      "description": "Przeglądaj aktywność wychodzących wiadomości email i rozwiązuj problemy z dostarczaniem powiadomień."
+    },
+    "metrics": {
+      "totalSent": "Łącznie wysłanych",
+      "failedRate": "Wskaźnik niepowodzeń",
+      "today": "Dzisiaj"
+    },
+    "filters": {
+      "startDate": "Data początkowa",
+      "endDate": "Data końcowa",
+      "status": "Status",
+      "recipient": "Odbiorca",
+      "recipientPlaceholder": "Szukaj Email…",
+      "ticket": "Zgłoszenie",
+      "ticketPlaceholder": "Nr zgłoszenia…",
+      "statusOptions": {
+        "all": "Wszystkie",
+        "sent": "Wysłane",
+        "failed": "Nieudane"
+      }
+    },
+    "table": {
+      "time": "Czas",
+      "ticket": "Zgłoszenie",
+      "recipient": "Odbiorca",
+      "subject": "Temat",
+      "status": "Status"
+    },
+    "loading": "Ładowanie...",
+    "results_one": "{{count}} wynik",
+    "results_few": "{{count}} wyniki",
+    "results_many": "{{count}} wyników",
+    "results_other": "{{count}} wyników",
+    "refresh": "Odśwież",
+    "close": "Zamknij",
+    "detail": {
+      "title": "Szczegóły dziennika Email",
+      "noSubject": "Brak tematu",
+      "sentAt": "Wysłano",
+      "status": "Status",
+      "provider": "Dostawca",
+      "messageId": "ID wiadomości",
+      "to": "Do",
+      "from": "Od",
+      "error": "Błąd",
+      "metadata": "Metadane"
+    }
   }
 }

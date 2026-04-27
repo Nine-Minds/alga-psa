@@ -171,6 +171,135 @@ export async function recordSlaAuditLog(input: {
   });
 }
 
+export interface CompleteIfTicketClosedResult {
+  closed: boolean;
+  responseMet: boolean | null;
+  resolutionMet: boolean | null;
+  reason?: 'closed' | 'deleted';
+}
+
+/**
+ * Self-heal: if the ticket has been closed (or deleted) but the workflow
+ * never received a completeResolution/cancel signal, backfill the SLA
+ * timestamps where applicable and report back so the workflow can exit
+ * gracefully. Returns { closed: false } when the ticket is still open and
+ * present.
+ */
+export async function completeIfTicketClosed(input: {
+  tenantId: string;
+  ticketId: string;
+}): Promise<CompleteIfTicketClosedResult> {
+  const log = logger();
+  let result: CompleteIfTicketClosedResult = {
+    closed: false,
+    responseMet: null,
+    resolutionMet: null,
+  };
+
+  await withTenantTransaction(input.tenantId, async (trx) => {
+    const ticket = await trx('tickets')
+      .where({ tenant: input.tenantId, ticket_id: input.ticketId })
+      .select(
+        'closed_at',
+        'sla_response_due_at',
+        'sla_resolution_due_at',
+        'sla_response_at',
+        'sla_response_met',
+        'sla_resolution_at',
+        'sla_resolution_met'
+      )
+      .first();
+
+    if (!ticket) {
+      // Ticket was deleted out from under the workflow — exit cleanly so we
+      // don't keep firing breach activities against a row that no longer
+      // exists. Don't try to write to sla_audit_log either: the FK to tickets
+      // would fail.
+      result = {
+        closed: true,
+        responseMet: null,
+        resolutionMet: null,
+        reason: 'deleted',
+      };
+      log.info('SLA workflow self-healed: ticket no longer exists', {
+        ticketId: input.ticketId,
+      });
+      return;
+    }
+
+    if (!ticket.closed_at) {
+      return;
+    }
+
+    const closedAt = new Date(ticket.closed_at);
+    const responseDue = ticket.sla_response_due_at
+      ? new Date(ticket.sla_response_due_at)
+      : null;
+    const resolutionDue = ticket.sla_resolution_due_at
+      ? new Date(ticket.sla_resolution_due_at)
+      : null;
+
+    const responseMet = responseDue ? closedAt <= responseDue : null;
+    const resolutionMet = resolutionDue ? closedAt <= resolutionDue : null;
+
+    const updates: Record<string, unknown> = {};
+    if (!ticket.sla_response_at) {
+      updates.sla_response_at = closedAt;
+    }
+    if (ticket.sla_response_met === null && responseMet !== null) {
+      updates.sla_response_met = responseMet;
+    }
+    if (!ticket.sla_resolution_at) {
+      updates.sla_resolution_at = closedAt;
+    }
+    if (ticket.sla_resolution_met === null && resolutionMet !== null) {
+      updates.sla_resolution_met = resolutionMet;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await trx('tickets')
+        .where({ tenant: input.tenantId, ticket_id: input.ticketId })
+        .update(updates);
+
+      // Only record an audit row when self-heal actually changed something.
+      // Avoids duplicate audit noise if this activity runs again (e.g. a
+      // restarted workflow with the same workflowId) and finds nothing to do.
+      await trx('sla_audit_log').insert({
+        tenant: input.tenantId,
+        ticket_id: input.ticketId,
+        event_type: 'self_healed_on_closed',
+        event_data: JSON.stringify({
+          closed_at: closedAt.toISOString(),
+          response_met: responseMet,
+          resolution_met: resolutionMet,
+          backfilled_fields: Object.keys(updates),
+        }),
+        triggered_by: null,
+      });
+
+      log.info('SLA workflow self-healed: ticket already closed, backfilled fields', {
+        ticketId: input.ticketId,
+        closedAt: closedAt.toISOString(),
+        backfilledFields: Object.keys(updates),
+      });
+    } else {
+      log.info('SLA workflow self-healed: ticket closed, all SLA fields already set', {
+        ticketId: input.ticketId,
+        closedAt: closedAt.toISOString(),
+      });
+    }
+
+    result = {
+      closed: true,
+      responseMet,
+      resolutionMet,
+      reason: 'closed',
+    };
+  });
+
+  return result;
+}
+
 async function withTenantTransaction(
   tenantId: string,
   fn: (trx: Knex.Transaction) => Promise<void>

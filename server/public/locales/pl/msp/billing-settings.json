@@ -1114,6 +1114,82 @@
       "saveSettingsFailed": "Nie udało się zapisać ustawień",
       "webhookConfigured": "Webhook skonfigurowany pomyślnie!",
       "webhookConfigureFailed": "Nie udało się skonfigurować webhooka"
+    },
+    "expiration": {
+      "selectPlaceholder": "Wybierz czas wygaśnięcia",
+      "custom": "Niestandardowe...",
+      "hoursSingular": "{{count}} godzina",
+      "hoursPlural": "{{count}} godzin",
+      "daysSingular": "{{count}} dzień",
+      "daysPlural": "{{count}} dni",
+      "daysDecimal": "{{count}} dni",
+      "hoursUnit": "godzin ({{formatted}})",
+      "willExpireAfter": "Linki płatności wygasną po {{duration}}"
+    },
+    "notConnected": {
+      "title": "Stripe nie jest połączony",
+      "description": "Aby skonfigurować ustawienia płatności, musisz najpierw połączyć swoje konto Stripe.",
+      "connectButton": "Połącz Stripe"
+    },
+    "settings": {
+      "paymentLinksInEmails": {
+        "label": "Dołącz linki płatności w wiadomościach z fakturami",
+        "description": "Dodaj przycisk „Zapłać teraz” do wiadomości e-mail z fakturami"
+      },
+      "paymentConfirmations": {
+        "label": "Wysyłaj wiadomości potwierdzające płatność",
+        "description": "Wysyłaj klientom wiadomość e-mail po otrzymaniu płatności"
+      },
+      "paymentLinkExpiration": {
+        "label": "Wygaśnięcie linku płatności",
+        "description": "Jak długo linki płatności pozostają ważne, zanim wygasną"
+      },
+      "actions": {
+        "save": "Zapisz ustawienia",
+        "saving": "Zapisywanie..."
+      }
+    },
+    "stripe": {
+      "cardTitle": "Płatności Stripe",
+      "cardDescription": "Akceptuj płatności kartą za swoje faktury",
+      "connectedTitle": "Stripe połączony",
+      "publishableKey": "Klucz publikowalny: {{key}}...",
+      "testConnection": "Testuj połączenie",
+      "disconnect": "Rozłącz",
+      "disconnectDialog": {
+        "title": "Rozłącz Stripe",
+        "message": "Czy na pewno chcesz rozłączyć Stripe? Linki płatności przestaną działać.",
+        "confirm": "Rozłącz",
+        "cancel": "Anuluj"
+      },
+      "webhook": {
+        "label": "Konfiguracja webhooka",
+        "configuredTitle": "Webhooki skonfigurowane automatycznie",
+        "configuredDescription": "Alga PSA będzie odbierać powiadomienia o płatnościach dla:",
+        "failedTitle": "Konfiguracja webhooka nie powiodła się",
+        "failedDescription": "Automatyczna konfiguracja webhooka nie powiodła się. Kliknij ponów, aby spróbować skonfigurować ponownie.",
+        "configuring": "Konfigurowanie...",
+        "retry": "Ponów konfigurację"
+      },
+      "connectForm": {
+        "secretKeyLabel": "Klucz tajny",
+        "secretKeyPlaceholder": "sk_live_... lub sk_test_...",
+        "secretKeyHelpPrefix": "Znajdziesz go w",
+        "secretKeyHelpLink": "Stripe Dashboard → API Keys",
+        "publishableKeyLabel": "Klucz publikowalny",
+        "publishableKeyPlaceholder": "pk_live_... lub pk_test_...",
+        "connecting": "Łączenie...",
+        "connect": "Połącz Stripe",
+        "cancel": "Anuluj"
+      },
+      "empty": {
+        "description": "Połącz konto Stripe, aby akceptować płatności online za faktury",
+        "connectButton": "Połącz Stripe"
+      },
+      "settingsCard": {
+        "title": "Ustawienia płatności",
+        "description": "Skonfiguruj sposób działania linków płatności z fakturami"
+      }
     }
   }
 }

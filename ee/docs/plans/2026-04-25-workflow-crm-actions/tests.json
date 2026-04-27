@@ -1,0 +1,172 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: runtime registration exposes crm.find_activities, crm.update_activity, crm.schedule_activity, and crm.send_quote at version 1 while preserving crm.create_activity_note",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F006",
+      "F013",
+      "F021",
+      "F029",
+      "F033"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: Workflow Designer catalog groups the new crm.* actions under the built-in CRM group with expected labels and schema metadata",
+    "implemented": true,
+    "featureIds": [
+      "F028",
+      "F030"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: CRM action schemas expose supported picker metadata for client, contact, ticket, and user UUID fields without requiring new quote/activity pickers",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "DB-backed integration: crm.find_activities returns tenant-scoped filtered activity summaries and rejects unbounded searches",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F004",
+      "F005",
+      "F031"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "DB-backed integration: crm.update_activity applies allowed patch fields, validates status/type IDs, records audit, and returns before/after changed fields",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F007",
+      "F008",
+      "F009",
+      "F010",
+      "F011",
+      "F012",
+      "F031"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "DB-backed integration: crm.update_activity rejects cross-tenant activity IDs, empty patches, invalid statuses, and invalid interaction types",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F008",
+      "F009",
+      "F010",
+      "F012",
+      "F031"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "DB-backed integration: crm.schedule_activity resolves client/contact context, validates ticket relationship, creates a future-dated interaction, records audit, and returns created summary",
+    "implemented": true,
+    "featureIds": [
+      "F013",
+      "F014",
+      "F015",
+      "F016",
+      "F017",
+      "F018",
+      "F020",
+      "F031"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Unit or DB-backed integration: crm.schedule_activity publishes INTERACTION_LOGGED through lazy event publisher with deterministic idempotency key and schema-compatible payload",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "DB-backed integration: crm.schedule_activity rejects missing client/contact, mismatched contact/client, mismatched ticket/client, invalid status/type, and invalid time windows",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F015",
+      "F016",
+      "F017",
+      "F031"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "DB-backed integration: crm.send_quote sends an eligible quote using shared-safe quote send behavior, transitions status to sent, records quote activity/audit, and returns send metadata",
+    "implemented": true,
+    "featureIds": [
+      "F021",
+      "F022",
+      "F023",
+      "F024",
+      "F025",
+      "F026",
+      "F027",
+      "F031"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "DB-backed integration: crm.send_quote rejects quote templates, missing/cross-tenant quotes, ineligible statuses, and quotes blocked by approval settings",
+    "implemented": true,
+    "featureIds": [
+      "F022",
+      "F023",
+      "F024",
+      "F031"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "DB-backed integration: permission-denied paths are covered for CRM read, CRM mutation, and quote send actions according to the resolved permission mapping",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F012",
+      "F023",
+      "F031",
+      "F032"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Runtime smoke: representative CRM action.call step saves output with saveAs and downstream expression assignment can consume it",
+    "implemented": true,
+    "featureIds": [
+      "F029",
+      "F030"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Regression: existing crm.create_activity_note behavior and existing Client/Ticket workflow action tests continue to pass",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Plan hygiene: scratchpad records final decisions for all open questions before implementation is marked complete",
+    "implemented": true,
+    "featureIds": [
+      "F032",
+      "F034"
+    ]
+  }
+]

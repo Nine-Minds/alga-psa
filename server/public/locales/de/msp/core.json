@@ -154,10 +154,7 @@
       "failedLast24h": "Fehlgeschlagen in den letzten 24 Std.",
       "openJobCenter": "Job-Center öffnen"
     },
-    "breadcrumb": {
-      "home": "Start",
-      "dashboard": "Dashboard"
-    },
+    "breadcrumb": "Breadcrumb",
     "tenantBadge": {
       "ariaLabel": "Aktiver Mandant {{tenant}}"
     },
@@ -167,7 +164,8 @@
       "dark": "Dunkel",
       "system": "System",
       "selected": "Ausgewahlt"
-    }
+    },
+    "openUserMenu": "Benutzermenü öffnen"
   },
   "dialogs": {
     "aiInterrupt": {

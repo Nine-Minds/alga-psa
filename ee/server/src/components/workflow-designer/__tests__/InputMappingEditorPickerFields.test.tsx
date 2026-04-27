@@ -626,6 +626,55 @@ describe('InputMappingEditor picker-backed fields', () => {
     ).toEqual(['user-1', 'user-2']);
   });
 
+  it('renders editor-metadata user picker arrays with the multi-user picker instead of a primitive list', async () => {
+    await act(async () => {
+      render(
+        <InputMappingEditor
+          value={{
+            assigned_user_ids: ['user-2'],
+          }}
+          onChange={vi.fn()}
+          targetFields={[
+            {
+              name: 'assigned_user_ids',
+              type: 'array',
+              editor: {
+                kind: 'picker',
+                inline: { mode: 'picker-summary' },
+                fixedValueHint: 'Search users',
+                allowsDynamicReference: true,
+                picker: {
+                  resource: 'user',
+                },
+              },
+              constraints: {
+                itemType: 'string',
+              },
+            },
+          ]}
+          fieldOptions={[]}
+          stepId="step-array-editor-picker"
+          positionsHandlers={positionsHandlers}
+        />
+      );
+    });
+
+    expect(
+      document.getElementById('mapping-step-array-editor-picker-assigned_user_ids-literal-picker-container')
+    ).toBeInTheDocument();
+    expect(
+      document.getElementById('mapping-step-array-editor-picker-assigned_user_ids-literal-list')
+    ).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        Array.from(
+          (screen.getByTestId('mapping-step-array-editor-picker-assigned_user_ids-literal-picker') as HTMLSelectElement)
+            .selectedOptions
+        ).map((option) => option.value)
+      ).toEqual(['user-2'])
+    );
+  });
+
   it('T167/T168/T191/T192/T193/T194/T195/T196/T197/T198/T199/T309: picker-backed fields can switch to reference and back to fixed without losing picker UI', async () => {
     const changeSpy = vi.fn();
 

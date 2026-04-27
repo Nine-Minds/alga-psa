@@ -315,16 +315,16 @@
         "setupHelp": "Configurare prima Google OAuth + Pub/Sub di proprietà del tenant: Impostazioni → Integrazioni → Provider.",
         "openSettings": "Apri Impostazioni Google",
         "requiredTitle": "Autorizzazione OAuth richiesta",
+        "requiredDescriptionAdd": "È necessario completare l'autorizzazione OAuth sopra prima di aggiungere il provider per abilitare le notifiche di Gmail.",
+        "requiredDescriptionUpdate": "È necessario completare l'autorizzazione OAuth sopra prima di aggiornare il provider per abilitare le notifiche di Gmail.",
         "stepTitle": "Passaggio 1: autorizzazione OAuth",
         "stepDescription": "Completa il flusso OAuth per concedere l'accesso a Gmail",
-        "buttonSuccessSaving": "Autorizzato con successo! Salvataggio delle impostazioni...",
-        "requiredDescriptionAdd": "È necessario completare l'autorizzazione OAuth sopra prima di aggiungere il provider per abilitare le notifiche di Gmail.",
-        "requiredDescriptionUpdate": "È necessario completare l'autorizzazione OAuth sopra prima di aggiornare il provider per abilitare le notifiche di Gmail."
+        "buttonSuccessSaving": "Autorizzato con successo! Salvataggio delle impostazioni..."
       },
       "advanced": {
         "title": "Impostazioni avanzate",
         "description": "Configura le opzioni avanzate di elaborazione della posta elettronica",
-        "completeSetupSuffix": "& Completa la configurazione"
+        "completeSetupSuffix": " & Completa la configurazione"
       },
       "processing": {
         "labelFiltersLabel": "Etichette Gmail da monitorare",
@@ -458,6 +458,208 @@
       "creating": "Creazione in corso...",
       "update": "Aggiorna impostazioni predefinite",
       "create": "Crea valori predefiniti"
+    }
+  },
+  "imapForm": {
+    "sections": {
+      "basic": {
+        "title": "Impostazioni di base",
+        "description": "Definisci i dettagli di connessione alla casella di posta IMAP."
+      },
+      "auth": {
+        "title": "Autenticazione",
+        "description": "Scegli la password o l'autenticazione OAuth2."
+      },
+      "processing": {
+        "title": "Impostazioni di elaborazione",
+        "description": "Scegli le cartelle e il comportamento di elaborazione."
+      }
+    },
+    "fields": {
+      "providerName": "Nome del fornitore",
+      "mailboxAddress": "Indirizzo della casella di posta",
+      "imapHost": "Host IMAP",
+      "port": "Porta",
+      "useTls": "Utilizza TLS/SSL",
+      "allowStarttls": "Consenti aggiornamento STARTTLS",
+      "authenticationType": "Tipo di autenticazione",
+      "username": "Nome utente",
+      "passwordLabel": "Password / Password dell'app",
+      "authorizeUrl": "Autorizza l'URL",
+      "tokenUrl": "URL del token",
+      "oauthClientId": "ID cliente OAuth",
+      "oauthClientSecret": "Segreto client OAuth",
+      "oauthScopes": "Ambiti OAuth",
+      "oauthScopesPlaceholder": "ambiti delimitati da spazi",
+      "folderFilters": "Filtri delle cartelle",
+      "folderFiltersPlaceholder": "Posta in arrivo, supporto, ticket",
+      "active": "Attivo",
+      "ticketDefaultsLabel": "Impostazioni predefinite dei ticket",
+      "ticketDefaultsPlaceholder": "Seleziona valori predefiniti...",
+      "ticketDefaultsEmpty": "Nessuna impostazione predefinita disponibile"
+    },
+    "authOptions": {
+      "password": "Password",
+      "oauth2": "OAuth2 (XOAUTH2)"
+    },
+    "password": {
+      "editHelp": "Le password vengono archiviate in modo sicuro e non verranno visualizzate. Lascia vuoto per mantenere la password esistente."
+    },
+    "oauth": {
+      "statusLabel": "Stato OAuth",
+      "connected": "Collegato",
+      "notConnected": "Non connesso",
+      "authorizing": "Autorizzazione in corso...",
+      "reconnect": "Riconnetti OAuth"
+    },
+    "validation": {
+      "fixHighlightedFields": "Correggi i campi evidenziati e riprova."
+    },
+    "actions": {
+      "cancel": "Annulla",
+      "saving": "Salvataggio...",
+      "updateProvider": "Aggiorna fornitore",
+      "createProvider": "Crea fornitore"
+    }
+  },
+  "microsoftForm": {
+    "header": {
+      "title": "Integrazione Microsoft 365",
+      "description": "Connetti semplicemente il tuo account Microsoft 365 e configura le preferenze di elaborazione della posta elettronica per iniziare."
+    },
+    "sections": {
+      "accountSetup": {
+        "title": "Configurazione dell'account Microsoft 365",
+        "description": "Configura il tuo account Microsoft 365 per l'elaborazione della posta in entrata"
+      },
+      "authentication": {
+        "title": "Autenticazione Microsoft 365",
+        "description": "Connetti il tuo account Microsoft 365 per abilitare l'elaborazione della posta elettronica"
+      },
+      "processing": {
+        "title": "Impostazioni di elaborazione delle email",
+        "description": "Configura come le email vengono elaborate e importate"
+      },
+      "ticketDefaults": {
+        "title": "Impostazioni predefinite dei ticket",
+        "description": "Seleziona le impostazioni predefinite da applicare ai ticket creati via email"
+      }
+    },
+    "fields": {
+      "providerNameLabel": "Nome del fornitore *",
+      "providerNamePlaceholder": "ad esempio, Supporto Microsoft 365",
+      "mailboxLabel": "Indirizzo Microsoft 365 *",
+      "mailboxPlaceholder": "support@client.com",
+      "enableProvider": "Abilita questo fornitore",
+      "foldersLabel": "Cartelle da monitorare",
+      "foldersPlaceholder": "Posta in arrivo, Supporto, Cartella personalizzata",
+      "foldersHelp": "Elenco separato da virgole di cartelle da monitorare (impostazione predefinita: Posta in arrivo)",
+      "maxEmailsLabel": "Numero massimo di email per sincronizzazione",
+      "maxEmailsHelp": "Numero massimo di email da elaborare in ogni sincronizzazione (1-1000)",
+      "inboundDefaultsLabel": "Impostazioni predefinite dei ticket in entrata",
+      "inboundDefaultsPlaceholder": "Seleziona valori predefiniti (facoltativo)"
+    },
+    "oauth": {
+      "connectionTitle": "Connessione Microsoft 365",
+      "descriptionIdle": "Autorizza l'accesso al tuo account Microsoft 365",
+      "descriptionSuccess": "Connesso con successo! Completa la configurazione salvando qui sotto.",
+      "connecting": "Connessione in corso...",
+      "connected": "Connesso",
+      "connectButton": "Connetti Microsoft 365",
+      "requiredTitle": "Connessione Microsoft 365 richiesta",
+      "requiredDescriptionUpdate": "Devi connettere il tuo account Microsoft 365 sopra prima di aggiornare il provider.",
+      "requiredDescriptionAdd": "Devi connettere il tuo account Microsoft 365 sopra prima di aggiungere il provider.",
+      "authError": "Si prega di compilare tutti i campi obbligatori prima di autorizzare",
+      "popupBlocked": "Impossibile aprire il popup OAuth. Si prega di consentire i popup per questo sito.",
+      "authorizationFailed": "Autorizzazione fallita",
+      "initiateFailed": "Impossibile avviare OAuth",
+      "hostedConfigIncomplete": "Configurazione Microsoft ospitata non disponibile o incompleta",
+      "hostedCredentialsMissing": "Credenziali client Microsoft ospitate non disponibili"
+    },
+    "nextStep": {
+      "title": "Completa la configurazione",
+      "autoSubmit": "Completamento automatico tra",
+      "secondsSuffix": "secondi, oppure clicca",
+      "clickNow": "qui sotto adesso.",
+      "manualInstruction": "Clicca",
+      "manualSuffix": "qui sotto per terminare la configurazione.",
+      "cancelAutoSubmit": "Annulla completamento automatico"
+    },
+    "buttons": {
+      "updateProvider": "Aggiorna fornitore",
+      "addProvider": "Aggiungi fornitore",
+      "manageDefaults": "Gestisci le impostazioni predefinite",
+      "refreshList": "Aggiorna elenco",
+      "cancel": "Annulla",
+      "completeSetupSuffix": "& Completa la configurazione",
+      "settingUp": "Configurazione dell'integrazione Microsoft 365 in corso..."
+    },
+    "validation": {
+      "requiredFieldsTitle": "Si prega di compilare i campi richiesti:",
+      "providerName": "Nome del fornitore",
+      "mailbox": "Indirizzo Microsoft 365"
+    }
+  },
+  "gmailForm": {
+    "header": {
+      "title": "Integrazione Gmail",
+      "description": "Connetti il tuo account Gmail e configura le preferenze di elaborazione della posta elettronica."
+    },
+    "basicConfig": {
+      "title": "Configurazione dell'account Gmail",
+      "description": "Configura il tuo account Gmail per l'elaborazione della posta in entrata"
+    },
+    "authentication": {
+      "title": "Autenticazione Gmail",
+      "description": "Connetti il tuo account Gmail per abilitare l'elaborazione della posta elettronica",
+      "connectionTitle": "Connessione Gmail",
+      "descriptionIdle": "Autorizza l'accesso al tuo account Gmail",
+      "descriptionSuccess": "Connesso con successo! Salvataggio delle impostazioni...",
+      "buttonIdle": "Connetti Gmail",
+      "buttonAuthorizing": "Connessione in corso...",
+      "buttonSuccess": "Connesso"
+    },
+    "processing": {
+      "title": "Impostazioni di elaborazione delle email",
+      "description": "Configura come le email vengono elaborate e importate"
+    },
+    "ticketDefaults": {
+      "title": "Impostazioni predefinite dei ticket",
+      "description": "Seleziona le impostazioni predefinite da applicare ai ticket creati via email",
+      "manageDefaults": "Gestisci le impostazioni predefinite",
+      "inboundDefaultsLabel": "Impostazioni predefinite dei ticket in entrata",
+      "inboundDefaultsPlaceholder": "Seleziona valori predefiniti (facoltativo)",
+      "refreshList": "Aggiorna elenco"
+    },
+    "googleConfig": {
+      "notConfigured": "L'integrazione di Google non è configurata per questo tenant.",
+      "configureHint": "Configura prima Google OAuth + Pub/Sub di proprietà del tenant:",
+      "settingsPath": "Impostazioni → Integrazioni → Provider",
+      "openSettings": "Apri Impostazioni Google"
+    },
+    "oauth": {
+      "requiredTitle": "Connessione Gmail richiesta",
+      "requiredDescriptionUpdate": "Devi connettere il tuo account Gmail sopra prima di aggiornare il provider.",
+      "requiredDescriptionAdd": "Devi connettere il tuo account Gmail sopra prima di aggiungere il provider.",
+      "fillRequiredFields": "Si prega di compilare tutti i campi obbligatori prima di autorizzare",
+      "notConfiguredTenant": "L'integrazione di Google non è configurata per questo tenant. Configura prima Google, poi riprova.",
+      "initiateFailed": "Impossibile avviare OAuth"
+    },
+    "validation": {
+      "requiredFieldsTitle": "Si prega di compilare i campi richiesti:",
+      "providerName": "Nome del fornitore",
+      "mailbox": "Indirizzo Gmail"
+    },
+    "warnings": {
+      "setupIncomplete": "Fornitore salvato ma configurazione incompleta: {{error}}",
+      "setupWarningsTitle": "Configurazione completata con avvisi:"
+    },
+    "buttons": {
+      "updateProvider": "Aggiorna fornitore",
+      "addProvider": "Aggiungi fornitore",
+      "completeSetupSuffix": "& Completa la configurazione",
+      "cancel": "Annulla",
+      "settingUp": "Configurazione dell'integrazione Gmail in corso..."
     }
   },
   "managed": {

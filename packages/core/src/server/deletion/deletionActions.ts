@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import type { DeletionValidationResult, DeletionBlockCode } from '@alga-psa/types';
-import { getDeletionConfig } from '../../config/deletion';
+import { getDeletionConfig } from '../../config/deletion/index';
 import { validateDeletion } from './deletionValidation';
 
 function buildUnknownEntity(entityType: string): DeletionValidationResult {

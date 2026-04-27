@@ -396,7 +396,8 @@
       "tasks": "Tarefas:",
       "priority": "Prioridade",
       "dueDate": "Data de vencimento",
-      "showClosed": "Exibir fechadas"
+      "showClosed": "Exibir fechadas",
+      "search": "Pesquisar"
     },
     "activityTypeOptions": {
       "schedule": "Agenda",
@@ -409,7 +410,8 @@
       "allStatuses": "Todos os status",
       "allProjects": "Todos os projetos",
       "allPriorities": "Todas as prioridades",
-      "selectPriority": "Selecione a prioridade..."
+      "selectPriority": "Selecione a prioridade...",
+      "search": "Pesquisar atividades..."
     },
     "actions": {
       "reset": "Redefinir"

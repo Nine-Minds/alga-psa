@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 /**
  * EE Install Extension Component
@@ -9,6 +10,7 @@ import Link from 'next/link';
  * Simple extension installation UI for Enterprise Edition.
  */
 export default function InstallExtensionSimple(props: any) {
+  const { t } = useTranslation('msp/extensions');
   return (
     <div className="p-6">
       <div className="flex items-center mb-6">
@@ -20,13 +22,13 @@ export default function InstallExtensionSimple(props: any) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </Link>
-        <h1 className="text-2xl font-semibold text-gray-900">Install Extension</h1>
+        <h1 className="text-2xl font-semibold text-gray-900">{t('installSimple.title')}</h1>
       </div>
 
       <div className="text-center py-8">
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Extension Installation</h3>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">{t('installSimple.heading')}</h3>
         <p className="text-gray-600">
-          Use the full extension installer for advanced options.
+          {t('installSimple.description')}
         </p>
       </div>
     </div>

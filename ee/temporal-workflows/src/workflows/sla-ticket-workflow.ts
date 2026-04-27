@@ -84,6 +84,15 @@ const activities = proxyActivities<{
     eventType: string;
     eventData: Record<string, unknown>;
   }): Promise<void>;
+  completeIfTicketClosed(input: {
+    tenantId: string;
+    ticketId: string;
+  }): Promise<{
+    closed: boolean;
+    responseMet: boolean | null;
+    resolutionMet: boolean | null;
+    reason?: 'closed' | 'deleted';
+  }>;
 }>({
   startToCloseTimeout: '5m',
   retry: {
@@ -239,6 +248,46 @@ export async function slaTicketWorkflow(
     },
   ];
 
+  // Self-heal: if the ticket has already been closed (e.g. the
+  // completeResolution signal was missed because of a transient failure
+  // upstream), backfill the SLA fields and exit. We never want to keep
+  // escalating a closed ticket just because the signal got dropped.
+  // Closed-but-still-present tickets exit as 'completed'; tickets whose
+  // row has been deleted exit as 'cancelled' so the two cases are
+  // distinguishable in workflow state and downstream metrics.
+  const checkClosedAndComplete = async (
+    triggeredBy: 'startup' | 'wake'
+  ): Promise<boolean> => {
+    const result = await activities.completeIfTicketClosed({
+      tenantId,
+      ticketId,
+    });
+    if (!result.closed) {
+      return false;
+    }
+
+    if (result.reason === 'deleted') {
+      cancelled = true;
+      state.currentStatus = 'cancelled';
+    } else {
+      resolutionCompleted = true;
+      state.currentStatus = 'completed';
+    }
+
+    log.info('SLA workflow self-healed', {
+      ticketId,
+      triggeredBy,
+      exitReason: result.reason ?? 'closed',
+      responseMet: result.responseMet,
+      resolutionMet: result.resolutionMet,
+    });
+    return true;
+  };
+
+  if (await checkClosedAndComplete('startup')) {
+    return;
+  }
+
   for (const phase of phases) {
     if (cancelled || resolutionCompleted) {
       break;
@@ -323,6 +372,10 @@ export async function slaTicketWorkflow(
       }
 
       if (phase.phase === 'response' && responseCompleted) {
+        break;
+      }
+
+      if (await checkClosedAndComplete('wake')) {
         break;
       }
 

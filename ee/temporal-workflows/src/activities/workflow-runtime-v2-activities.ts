@@ -23,6 +23,7 @@ import {
 import { createTenantSecretProvider } from '@alga-psa/shared/workflow/secrets';
 import {
   WorkflowActionInvocationModelV2,
+  WorkflowDefinitionModelV2,
   WorkflowDefinitionVersionModelV2,
   WorkflowRunStepModelV2,
   WorkflowRunModelV2,
@@ -538,6 +539,12 @@ export async function startWorkflowRuntimeV2ChildRun(input: {
     throw new Error(`Parent workflow run not found: ${input.parentRunId}`);
   }
 
+  const childTenantId = input.tenantId ?? parentRun.tenant_id ?? null;
+  const childDefinition = await WorkflowDefinitionModelV2.getById(knex, childTenantId ?? '', input.workflowId);
+  if (!childDefinition) {
+    throw new Error(`Child workflow definition not found: ${input.workflowId}`);
+  }
+
   const definitionVersion = await WorkflowDefinitionVersionModelV2.getByWorkflowAndVersion(
     knex,
     input.workflowId,
@@ -556,7 +563,7 @@ export async function startWorkflowRuntimeV2ChildRun(input: {
     workflowId: input.workflowId,
     version: input.workflowVersion,
     payload: input.payload,
-    tenantId: input.tenantId ?? parentRun.tenant_id ?? null,
+    tenantId: childTenantId,
     triggerType: null,
     triggerMetadata: {
       parentRunId: parentRun.run_id,

@@ -1,0 +1,111 @@
+[
+  {
+    "id": "T001",
+    "description": "Run a generated CE spec scan for schemas where properties.data is exactly {} and record component names, operation counts, and examples.",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Run the same untyped-data scan against the generated EE spec and verify counts match expectations or document EE-only differences.",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "After fixing clientsContacts.ts, inspect GET /api/v1/clients/{id} in CE JSON and verify the 200 response data property resolves to typed client fields such as client_id, client_name, billing_cycle, tenant, account_manager_full_name, and logoUrl.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F004"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "After fixing clientsContacts.ts, inspect GET /api/v1/clients/{id} in EE JSON and verify it has the same typed client response envelope.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F004"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "For each replaced generic success component, sample at least one list, one detail, and one mutation operation when present and verify response data is typed appropriately.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F005",
+      "F006",
+      "F007",
+      "F008",
+      "F009",
+      "F010",
+      "F011",
+      "F012",
+      "F013"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Run npm --prefix sdk run openapi:generate and verify CE/legacy specs regenerate successfully.",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Run npm --prefix sdk run openapi:generate -- --edition ee and verify EE specs regenerate successfully.",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Run CE and EE placeholder scans and verify both remain at zero placeholder operations.",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Run npm run guard:ext-v2 and verify no guarded extension-v2 source literals are introduced.",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Run the final untyped-data scan and verify no success response data schemas remain as {}, except explicitly documented allowlist entries if any.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F013"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Before each commit, run git status --short and verify .env.localtest remains unstaged.",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "At completion, update PR notes or summary with before/after untyped-data counts, placeholder counts, generation commands, and guard results.",
+    "implemented": true,
+    "featureIds": [
+      "F017",
+      "F018"
+    ]
+  }
+]

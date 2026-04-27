@@ -10,6 +10,7 @@ import { MspTicketDetailsContainerClient } from '@alga-psa/msp-composition/ticke
 
 import { getTicketById } from '@alga-psa/tickets/actions/ticketActions';
 import { AIChatContextBoundary } from '@product/chat/context';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { Metadata } from 'next';
 
 const getCachedTicket = cache((id: string) => getTicketById(id));
@@ -40,7 +41,8 @@ export default async function TicketDetailsPage({ params }: TicketDetailsPagePro
   // Get current user for authorization
   const user = await getCurrentUser();
   if (!user) {
-    return <div id="ticket-error-message">Error: User not authenticated</div>;
+    const { t } = await getServerTranslation(undefined, 'common');
+    return <div id="ticket-error-message">{t('pages.errors.userNotAuthenticatedError')}</div>;
   }
 
   try {

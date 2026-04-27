@@ -1,7 +1,5 @@
-// @ts-nocheck
-// TODO: CreateScheduleEntryOptions not exported from @alga-psa/types
 /**
- * @alga-psa/scheduling - Schedule Entry Model
+ * Schedule Entry Model
  *
  * Data access layer for schedule entry entities.
  * Migrated from server/src/lib/models/scheduleEntry.ts
@@ -520,8 +518,14 @@ const ScheduleEntry = {
               entry.assigned_user_ids || assignedUserIds[masterEntryId] || []
             );
 
-            // Add exception date to master pattern
-            const exceptionDate = new Date(entry.scheduled_start || originalEntry.scheduled_start);
+            // Add exception for the occurrence being extracted, not necessarily the
+            // occurrence's new target date. Virtual recurring ids carry the
+            // original occurrence timestamp; using a rescheduled start here would
+            // leave the original generated occurrence visible alongside the
+            // standalone override.
+            const exceptionDate = virtualTimestamp
+              ? new Date(virtualTimestamp)
+              : new Date(entry.scheduled_start || originalEntry.scheduled_start);
             exceptionDate.setUTCHours(0, 0, 0, 0);
             const updatedPattern = {
               ...originalPattern,
@@ -631,7 +635,7 @@ const ScheduleEntry = {
               ...newMasterEntry,
               assigned_user_ids:
                 entry.assigned_user_ids || masterAssignees[masterEntryId] || [],
-            } as IScheduleEntry;
+            } as unknown as IScheduleEntry;
           }
 
           case 'all': {

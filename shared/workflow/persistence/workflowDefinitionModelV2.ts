@@ -2,6 +2,7 @@ import { Knex } from 'knex';
 
 export type WorkflowDefinitionRecord = {
   workflow_id: string;
+  tenant_id: string;
   key?: string | null;
   name: string;
   description?: string | null;
@@ -55,12 +56,23 @@ const normalizeWorkflowDefinitionWrite = (
   return out;
 };
 
+const assertTenantId = (tenantId: string | null | undefined): string => {
+  const normalized = String(tenantId ?? '').trim();
+  if (!normalized) {
+    throw new Error('tenant_id is required for workflow definition access');
+  }
+  return normalized;
+};
+
 const WorkflowDefinitionModelV2 = {
-  create: async (knex: Knex, data: Partial<WorkflowDefinitionRecord>): Promise<WorkflowDefinitionRecord> => {
+  create: async (knex: Knex, tenantId: string, data: Partial<WorkflowDefinitionRecord>): Promise<WorkflowDefinitionRecord> => {
+    const tenant = assertTenantId(tenantId);
     const normalized = normalizeWorkflowDefinitionWrite(data);
     const [record] = await knex<WorkflowDefinitionRecord>('workflow_definitions')
       .insert({
         ...normalized,
+        tenant_id: tenant,
+        is_system: false,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -68,27 +80,34 @@ const WorkflowDefinitionModelV2 = {
     return record;
   },
 
-  update: async (knex: Knex, workflowId: string, data: Partial<WorkflowDefinitionRecord>): Promise<WorkflowDefinitionRecord> => {
+  update: async (knex: Knex, tenantId: string, workflowId: string, data: Partial<WorkflowDefinitionRecord>): Promise<WorkflowDefinitionRecord> => {
+    const tenant = assertTenantId(tenantId);
     const normalized = normalizeWorkflowDefinitionWrite(data);
+    delete (normalized as Partial<WorkflowDefinitionRecord>).tenant_id;
     const [record] = await knex<WorkflowDefinitionRecord>('workflow_definitions')
-      .where({ workflow_id: workflowId })
+      .where({ workflow_id: workflowId, tenant_id: tenant })
       .update({
         ...normalized,
+        is_system: false,
         updated_at: new Date().toISOString()
       })
       .returning('*');
     return record;
   },
 
-  getById: async (knex: Knex, workflowId: string): Promise<WorkflowDefinitionRecord | null> => {
+  getById: async (knex: Knex, tenantId: string, workflowId: string): Promise<WorkflowDefinitionRecord | null> => {
+    const tenant = assertTenantId(tenantId);
     const record = await knex<WorkflowDefinitionRecord>('workflow_definitions')
-      .where({ workflow_id: workflowId })
+      .where({ workflow_id: workflowId, tenant_id: tenant })
       .first();
     return record || null;
   },
 
-  list: async (knex: Knex): Promise<WorkflowDefinitionRecord[]> => {
-    return knex<WorkflowDefinitionRecord>('workflow_definitions').select('*');
+  list: async (knex: Knex, tenantId: string): Promise<WorkflowDefinitionRecord[]> => {
+    const tenant = assertTenantId(tenantId);
+    return knex<WorkflowDefinitionRecord>('workflow_definitions')
+      .select('*')
+      .where({ tenant_id: tenant });
   }
 };
 

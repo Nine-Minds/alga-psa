@@ -1,9 +1,11 @@
 // src/components/InputFieldSelector.tsx
+'use client';
 
 import React, { useState, useEffect, useRef, useId } from 'react';
 import Popup from './Popup';
 import { Template } from '../../services/flow/types/workflowTypes';
 import { Input } from '@alga-psa/ui/components/Input';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface InputFieldSelectorProps {
   value: Template;
@@ -13,6 +15,7 @@ interface InputFieldSelectorProps {
 }
 
 const InputFieldSelector: React.FC<InputFieldSelectorProps> = ({ value, onChange, inputType, id }) => {
+  const { t } = useTranslation('msp/workflows');
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [fields, setFields] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -88,7 +91,7 @@ const InputFieldSelector: React.FC<InputFieldSelectorProps> = ({ value, onChange
           ⋮
         </button>
       </div>
-      <Popup isOpen={isPopupOpen} onClose={() => setIsPopupOpen(false)} title="Select Input Field">
+      <Popup isOpen={isPopupOpen} onClose={() => setIsPopupOpen(false)} title={t('flow.fields.selectInputField')}>
         <div style={styles.fieldOptionsContainer}>
           {renderFieldOptions()}
         </div>
