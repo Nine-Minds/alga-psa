@@ -396,7 +396,8 @@
       "tasks": "Taken:",
       "priority": "Prioriteit",
       "dueDate": "Vervaldatum",
-      "showClosed": "Gesloten weergeven"
+      "showClosed": "Gesloten weergeven",
+      "search": "Zoeken"
     },
     "activityTypeOptions": {
       "schedule": "Schema",
@@ -409,7 +410,8 @@
       "allStatuses": "Alle statussen",
       "allProjects": "Alle projecten",
       "allPriorities": "Alle prioriteiten",
-      "selectPriority": "Selecteer prioriteit..."
+      "selectPriority": "Selecteer prioriteit...",
+      "search": "Activiteiten zoeken..."
     },
     "actions": {
       "reset": "Resetten"
