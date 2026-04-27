@@ -191,7 +191,8 @@ export async function groupRowsIntoPhases(
   serviceLookup: Record<string, string>,
   statusLookup: Record<string, string> = {},
   statusLookupByPhase: Record<string, Record<string, string>> = {},
-  agentResolutions: IAgentResolution[] = []
+  agentResolutions: IAgentResolution[] = [],
+  defaultPhaseName: string = DEFAULT_PHASE_NAME
 ): Promise<IGroupedPhaseData[]> {
   const phaseMap = new Map<string, IGroupedPhaseData>();
 
@@ -201,10 +202,12 @@ export async function groupRowsIntoPhases(
     agentResolutionMap.set(resolution.originalAgentName.toLowerCase().trim(), resolution);
   });
 
+  const fallbackPhaseName = defaultPhaseName?.trim() || DEFAULT_PHASE_NAME;
+
   for (const row of rows) {
     if (!row.task_name?.trim()) continue;
 
-    const phaseName = row.phase_name?.trim() || DEFAULT_PHASE_NAME;
+    const phaseName = row.phase_name?.trim() || fallbackPhaseName;
 
     if (!phaseMap.has(phaseName)) {
       phaseMap.set(phaseName, {
@@ -268,14 +271,15 @@ export async function groupRowsIntoPhases(
       status_name: statusName || null,
       status_mapping_id: phaseStatusLookup[statusNameLower] || null,
       tags: row.tags ? row.tags.split(',').map(t => t.trim()).filter(t => t) : [],
+      csvRowNumber: row.csvRowNumber,
     });
   }
 
-  // Sort phases: named phases in order of appearance, then "Unsorted Tasks" last
+  // Sort phases: named phases in order of appearance, then the fallback phase last
   const phases = Array.from(phaseMap.values());
   phases.sort((a, b) => {
-    if (a.phase_name === DEFAULT_PHASE_NAME) return 1;
-    if (b.phase_name === DEFAULT_PHASE_NAME) return -1;
+    if (a.phase_name === fallbackPhaseName) return 1;
+    if (b.phase_name === fallbackPhaseName) return -1;
     return 0;
   });
 
@@ -391,7 +395,7 @@ export const getImportReferenceData = withAuth(async (
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     // Fetch all reference data in parallel within the same transaction
-    const [users, priorities, services, statusReferenceData] = await Promise.all([
+    const [users, priorities, services, phases, statusReferenceData] = await Promise.all([
       // Users (only active internal/MSP agents - exclude client portal users)
       trx('users')
         .select('user_id', 'username', 'first_name', 'last_name', 'email', 'user_type', 'is_inactive', 'tenant')
@@ -413,6 +417,13 @@ export const getImportReferenceData = withAuth(async (
         .where('tenant', tenant)
         .where('is_active', true)
         .orderBy('service_name'),
+
+      // Existing phases for the project (used as fallback phase options)
+      projectId && tenant
+        ? ProjectModel.getPhases(trx, tenant, projectId).then(rows =>
+            rows.map(row => ({ phase_id: row.phase_id, phase_name: row.phase_name }))
+          )
+        : Promise.resolve([] as Array<{ phase_id: string; phase_name: string }>),
 
       projectId && tenant
         ? getImportStatusReferenceData(trx, tenant, projectId)
@@ -444,6 +455,7 @@ export const getImportReferenceData = withAuth(async (
       users,
       priorities,
       services,
+      phases,
       statusMappings: statusReferenceData.statusMappings as IImportReferenceData['statusMappings'],
       userLookup,
       priorityLookup,
@@ -471,23 +483,25 @@ export async function validatePhaseTaskImportDataWithReferenceData(
     statusLookupByPhase = {},
   } = referenceData;
 
-  // Collect unique status names from CSV that don't match existing statuses
-  const csvStatusNames = new Set<string>();
+  // Collect unique (phase, status) pairs from CSV. We preserve original casing for display
+  // while using a normalized key for de-duplication and lookup.
+  const csvStatusPairs = new Map<string, { phaseName: string; statusName: string }>();
   rows.forEach(row => {
     const statusName = row.status?.trim();
     if (statusName) {
-      const phaseKey = row.phase_name?.trim().toLowerCase() || DEFAULT_PHASE_NAME.toLowerCase();
-      csvStatusNames.add(`${phaseKey}::${statusName}`);
+      const phaseName = row.phase_name?.trim() || DEFAULT_PHASE_NAME;
+      const key = `${phaseName.toLowerCase()}::${statusName.toLowerCase()}`;
+      if (!csvStatusPairs.has(key)) {
+        csvStatusPairs.set(key, { phaseName, statusName });
+      }
     }
   });
 
-  const unmatchedStatuses: string[] = [];
-  csvStatusNames.forEach((phaseScopedStatus) => {
-    const [phaseKey, ...rest] = phaseScopedStatus.split('::');
-    const statusName = rest.join('::');
-    const lookup = statusLookupByPhase[phaseKey] || statusLookup;
+  const unmatchedStatuses: Array<{ phaseName: string; statusName: string }> = [];
+  csvStatusPairs.forEach(({ phaseName, statusName }) => {
+    const lookup = statusLookupByPhase[phaseName.toLowerCase()] || statusLookup;
     if (!lookup[statusName.toLowerCase()]) {
-      unmatchedStatuses.push(statusName);
+      unmatchedStatuses.push({ phaseName, statusName });
     }
   });
 
@@ -595,7 +609,7 @@ export async function validatePhaseTaskImportDataWithReferenceData(
     serviceLookup,
     statusLookup,
     statusLookupByPhase,
-    unmatchedStatuses: Array.from(new Set(unmatchedStatuses)),
+    unmatchedStatuses,
     unmatchedAgents,
   };
 }
@@ -643,7 +657,7 @@ export const validatePhaseTaskImportData = withAuth(async (
 
   const statusLookup: Record<string, string> = {};
   let statusLookupByPhase: Record<string, Record<string, string>> = {};
-  const unmatchedStatuses: string[] = [];
+  const unmatchedStatuses: Array<{ phaseName: string; statusName: string }> = [];
 
   if (projectId && tenant) {
     const statusReferenceData = await getImportStatusReferenceData(db, tenant, projectId);
@@ -651,22 +665,23 @@ export const validatePhaseTaskImportData = withAuth(async (
     statusLookupByPhase = statusReferenceData.statusLookupByPhase;
   }
 
-  // Collect unique status names from CSV that don't match existing statuses
-  const csvStatusNames = new Set<string>();
+  // Collect unique (phase, status) pairs from CSV. We preserve original casing for display.
+  const csvStatusPairs = new Map<string, { phaseName: string; statusName: string }>();
   rows.forEach(row => {
     const statusName = row.status?.trim();
     if (statusName) {
-      const phaseKey = row.phase_name?.trim().toLowerCase() || DEFAULT_PHASE_NAME.toLowerCase();
-      csvStatusNames.add(`${phaseKey}::${statusName}`);
+      const phaseName = row.phase_name?.trim() || DEFAULT_PHASE_NAME;
+      const key = `${phaseName.toLowerCase()}::${statusName.toLowerCase()}`;
+      if (!csvStatusPairs.has(key)) {
+        csvStatusPairs.set(key, { phaseName, statusName });
+      }
     }
   });
 
-  csvStatusNames.forEach((phaseScopedStatus) => {
-    const [phaseKey, ...rest] = phaseScopedStatus.split('::');
-    const statusName = rest.join('::');
-    const lookup = statusLookupByPhase[phaseKey] || statusLookup;
+  csvStatusPairs.forEach(({ phaseName, statusName }) => {
+    const lookup = statusLookupByPhase[phaseName.toLowerCase()] || statusLookup;
     if (!lookup[statusName.toLowerCase()]) {
-      unmatchedStatuses.push(statusName);
+      unmatchedStatuses.push({ phaseName, statusName });
     }
   });
 
@@ -784,7 +799,7 @@ export const validatePhaseTaskImportData = withAuth(async (
     serviceLookup,
     statusLookup,
     statusLookupByPhase,
-    unmatchedStatuses: Array.from(new Set(unmatchedStatuses)),
+    unmatchedStatuses,
     unmatchedAgents,
   };
 });
@@ -802,7 +817,8 @@ export const importPhasesAndTasks = withAuth(async (
   { tenant },
   projectId: string,
   groupedPhases: IGroupedPhaseData[],
-  statusResolutions: IStatusResolution[] = []
+  statusResolutions: IStatusResolution[] = [],
+  defaultStatusMappingId?: string
 ): Promise<IPhaseTaskImportResult> => {
   const { knex: db } = await createTenantKnex();
 
@@ -823,7 +839,7 @@ export const importPhasesAndTasks = withAuth(async (
       throw new Error('No status mappings found for project. Please configure task statuses first.');
     }
 
-    // Build a map of status name -> mapping ID
+    // Build a global map of status name -> mapping ID for matched (already-existing) statuses
     const statusMappingByName: Record<string, string> = {};
     statusMappings.forEach((mapping: IProjectStatusMapping) => {
       const statusName = mapping.custom_name || mapping.status_name || mapping.name;
@@ -832,21 +848,37 @@ export const importPhasesAndTasks = withAuth(async (
       }
     });
 
-    // Process status resolutions to create new statuses or map to existing
+    // Build phase-scoped resolution lookup: phaseName(lower) -> statusName(lower) -> mapping_id
+    const resolvedByPhase: Map<string, Map<string, string>> = new Map();
+    const setResolved = (phaseName: string, statusName: string, mappingId: string) => {
+      const phaseKey = phaseName.toLowerCase().trim();
+      if (!resolvedByPhase.has(phaseKey)) resolvedByPhase.set(phaseKey, new Map());
+      resolvedByPhase.get(phaseKey)!.set(statusName.toLowerCase().trim(), mappingId);
+    };
+
     let defaultUnspecifiedStatusId: string | null = null;
 
     for (const resolution of statusResolutions) {
+      const phaseName = resolution.phaseName || DEFAULT_PHASE_NAME;
       if (resolution.action === 'create') {
-        // Create a new status mapping for this status name
-        const newMapping = await createNewStatusMapping(trx, projectId, resolution.originalStatusName, statusMappings.length, tenant);
-        statusMappingByName[resolution.originalStatusName.toLowerCase().trim()] = newMapping.project_status_mapping_id;
-        statusMappings = [...statusMappings, newMapping];
+        // Find or create a status by this name (deduped at the tenant level by createNewStatusMapping).
+        const existingByName = statusMappings.find(
+          m => (m.custom_name || m.status_name || m.name || '').toLowerCase().trim() ===
+            resolution.originalStatusName.toLowerCase().trim()
+        );
+        let mappingId: string;
+        if (existingByName) {
+          mappingId = existingByName.project_status_mapping_id;
+        } else {
+          const newMapping = await createNewStatusMapping(trx, projectId, resolution.originalStatusName, statusMappings.length, tenant);
+          mappingId = newMapping.project_status_mapping_id;
+          statusMappings = [...statusMappings, newMapping];
+        }
+        setResolved(phaseName, resolution.originalStatusName, mappingId);
+        statusMappingByName[resolution.originalStatusName.toLowerCase().trim()] = mappingId;
       } else if (resolution.action === 'map_to_existing' && resolution.mappedStatusId) {
-        // Map to an existing status
-        statusMappingByName[resolution.originalStatusName.toLowerCase().trim()] = resolution.mappedStatusId;
+        setResolved(phaseName, resolution.originalStatusName, resolution.mappedStatusId);
       } else if (resolution.action === 'use_default') {
-        // Will use the default "No Status Specified" column
-        // Create it if it doesn't exist
         if (!defaultUnspecifiedStatusId) {
           const existingDefault = statusMappings.find(
             m => (m.custom_name || m.status_name || m.name || '').toLowerCase() === DEFAULT_UNSPECIFIED_STATUS_NAME.toLowerCase()
@@ -859,12 +891,18 @@ export const importPhasesAndTasks = withAuth(async (
             statusMappings = [...statusMappings, newMapping];
           }
         }
-        statusMappingByName[resolution.originalStatusName.toLowerCase().trim()] = defaultUnspecifiedStatusId;
+        setResolved(phaseName, resolution.originalStatusName, defaultUnspecifiedStatusId);
       }
     }
 
-    // Default status for tasks without any status specified
+    // Default status for tasks without any status specified.
+    // Prefer caller-provided default if it exists in the project's mappings; otherwise fall back to first.
     const firstStatusMappingId = statusMappings[0].project_status_mapping_id;
+    const fallbackStatusMappingId =
+      defaultStatusMappingId &&
+      statusMappings.some((m: IProjectStatusMapping) => m.project_status_mapping_id === defaultStatusMappingId)
+        ? defaultStatusMappingId
+        : firstStatusMappingId;
 
     // Get existing phases
     const existingPhases = await ProjectModel.getPhases(trx, tenant, projectId);
@@ -943,12 +981,15 @@ export const importPhasesAndTasks = withAuth(async (
               // Already resolved during grouping
               taskStatusMappingId = taskData.status_mapping_id;
             } else if (taskData.status_name) {
-              // Look up from resolutions
-              const resolvedId = statusMappingByName[taskData.status_name.toLowerCase().trim()];
-              taskStatusMappingId = resolvedId || defaultUnspecifiedStatusId || firstStatusMappingId;
+              // Prefer phase-scoped resolution; fall back to global match, then default.
+              const phaseKey = groupedPhase.phase_name.toLowerCase().trim();
+              const statusKey = taskData.status_name.toLowerCase().trim();
+              const phaseScoped = resolvedByPhase.get(phaseKey)?.get(statusKey);
+              const globalMatched = statusMappingByName[statusKey];
+              taskStatusMappingId = phaseScoped || globalMatched || defaultUnspecifiedStatusId || fallbackStatusMappingId;
             } else {
-              // No status specified - use first status
-              taskStatusMappingId = firstStatusMappingId;
+              // No status specified - use the user-selected fallback (or first as last resort)
+              taskStatusMappingId = fallbackStatusMappingId;
             }
 
             const newTask = await ProjectTaskModel.addTask(trx, tenant, phase.phase_id, {
@@ -1028,12 +1069,17 @@ export const importPhasesAndTasks = withAuth(async (
             tasksCreated++;
           } catch (taskError) {
             const errorMessage = taskError instanceof Error ? taskError.message : 'Unknown error';
-            errors.push(`Failed to create task "${taskData.task_name}": ${errorMessage}`);
+            const rowRef = taskData.csvRowNumber ? ` (row ${taskData.csvRowNumber})` : '';
+            errors.push(`Failed to create task "${taskData.task_name}"${rowRef}: ${errorMessage}`);
           }
         }
       } catch (phaseError) {
         const errorMessage = phaseError instanceof Error ? phaseError.message : 'Unknown error';
-        errors.push(`Failed to process phase "${groupedPhase.phase_name}": ${errorMessage}`);
+        const rowNumbers = groupedPhase.tasks
+          .map(t => t.csvRowNumber)
+          .filter((n): n is number => typeof n === 'number');
+        const rowRef = rowNumbers.length > 0 ? ` (rows ${rowNumbers.join(', ')})` : '';
+        errors.push(`Failed to process phase "${groupedPhase.phase_name}"${rowRef}: ${errorMessage}`);
       }
     }
 
