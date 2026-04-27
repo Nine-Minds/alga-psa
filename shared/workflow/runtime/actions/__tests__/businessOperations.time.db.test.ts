@@ -704,4 +704,80 @@ describe('time workflow runtime DB-backed action handlers', () => {
       code: 'NOT_FOUND',
     });
   });
+
+  it('T006: entry approval actions move entries through submitted/approved/changes-requested states and create change-request records when comments are supplied', async () => {
+    const entryUserId = await createUser(db, runtimeState.tenantId, {
+      user_type: 'internal',
+      first_name: 'Approval',
+      last_name: 'Flow',
+      timezone: 'America/New_York',
+    });
+    const clientId = await createClient(db, runtimeState.tenantId, 'Approval Client');
+    const ticketId = await createTicket(db, {
+      tenantId: runtimeState.tenantId,
+      actorUserId: runtimeState.actorUserId,
+      clientId,
+    });
+    const serviceId = await createService(db, runtimeState.tenantId);
+    await createTimePeriod(db, runtimeState.tenantId, '2026-04-01', '2026-04-08');
+
+    const first = await invokeAction('time.create_entry', {
+      user_id: entryUserId,
+      start: '2026-04-05T12:00:00.000Z',
+      duration_minutes: 30,
+      billable: true,
+      service_id: serviceId,
+      link: { type: 'ticket', id: ticketId },
+    });
+
+    const second = await invokeAction('time.create_entry', {
+      user_id: entryUserId,
+      start: '2026-04-05T13:00:00.000Z',
+      duration_minutes: 20,
+      billable: true,
+      service_id: serviceId,
+      link: { type: 'ticket', id: ticketId },
+    });
+
+    const submitted = await invokeAction('time.set_entry_approval_status', {
+      entry_id: first.time_entry.entry_id,
+      approval_status: 'SUBMITTED',
+    });
+    expect(submitted.entry.approval_status).toBe('SUBMITTED');
+
+    const approved = await invokeAction('time.set_entry_approval_status', {
+      entry_id: first.time_entry.entry_id,
+      approval_status: 'APPROVED',
+    });
+    expect(approved.entry.approval_status).toBe('APPROVED');
+
+    const changesRequested = await invokeAction('time.set_entry_approval_status', {
+      entry_id: first.time_entry.entry_id,
+      approval_status: 'CHANGES_REQUESTED',
+      change_request_comment: 'Please adjust notes and duration',
+    });
+    expect(changesRequested.entry.approval_status).toBe('CHANGES_REQUESTED');
+    expect(changesRequested.entry.change_request_id).toBeTruthy();
+
+    const requestResult = await invokeAction('time.request_entry_changes', {
+      entry_ids: [first.time_entry.entry_id, second.time_entry.entry_id],
+      comment: 'Bulk review requested changes',
+    });
+    expect(requestResult.entries).toHaveLength(2);
+    expect(requestResult.entries.every((entry: any) => entry.approval_status === 'CHANGES_REQUESTED')).toBe(true);
+
+    const changedRows = await db('time_entries')
+      .where({
+        tenant: runtimeState.tenantId,
+        approval_status: 'CHANGES_REQUESTED',
+      })
+      .whereIn('entry_id', [first.time_entry.entry_id, second.time_entry.entry_id])
+      .select('entry_id');
+    expect(changedRows).toHaveLength(2);
+
+    const changeRequests = await db('time_entry_change_requests')
+      .where({ tenant: runtimeState.tenantId })
+      .whereIn('time_entry_id', [first.time_entry.entry_id, second.time_entry.entry_id]);
+    expect(changeRequests.length).toBeGreaterThanOrEqual(2);
+  });
 });

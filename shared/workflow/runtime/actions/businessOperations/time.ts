@@ -15,10 +15,13 @@ import {
   deleteWorkflowTimeEntry,
   getWorkflowTimeEntry,
   findWorkflowTimeEntries,
+  setWorkflowTimeEntryApprovalStatus,
+  requestWorkflowTimeEntryChanges,
   WorkflowTimeDomainError,
   type WorkflowTimeCreateEntryInput,
   type WorkflowTimeUpdateEntryInput,
   type WorkflowTimeFindEntriesInput,
+  type WorkflowTimeApprovalStatus,
 } from './timeDomain';
 
 const timeEntryLinkSchema = z.object({
@@ -151,6 +154,137 @@ export function registerTimeActions(): void {
         rethrowAsStandardError(ctx, error);
       }
     })
+  });
+
+  registry.register({
+    id: 'time.set_entry_approval_status',
+    version: 1,
+    inputSchema: z.object({
+      entry_id: uuidSchema.describe('Time entry id to update approval status for'),
+      approval_status: z.enum(['DRAFT', 'SUBMITTED', 'APPROVED', 'CHANGES_REQUESTED'])
+        .describe('Target approval status'),
+      change_request_comment: z.string().optional().describe('Required when requesting changes'),
+    }).superRefine((value, issueCtx) => {
+      if (value.approval_status === 'CHANGES_REQUESTED' && !value.change_request_comment?.trim()) {
+        issueCtx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['change_request_comment'],
+          message: 'change_request_comment is required when approval_status is CHANGES_REQUESTED',
+        });
+      }
+    }),
+    outputSchema: z.object({
+      entry: z.object({
+        entry_id: uuidSchema,
+        approval_status: z.enum(['DRAFT', 'SUBMITTED', 'APPROVED', 'CHANGES_REQUESTED']),
+        time_sheet_id: uuidSchema.nullable(),
+        change_request_id: uuidSchema.nullable(),
+      }),
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Set Time Entry Approval Status',
+      category: 'Business Operations',
+      description: 'Set a time entry approval status with optional change-request comment',
+    },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      await requirePermission(ctx, tx, { resource: 'timesheet', action: 'approve' });
+
+      try {
+        const result = await setWorkflowTimeEntryApprovalStatus({
+          trx: tx.trx,
+          tenantId: tx.tenantId,
+          actorUserId: tx.actorUserId,
+          entryId: input.entry_id,
+          approvalStatus: input.approval_status as WorkflowTimeApprovalStatus,
+          changeRequestComment: input.change_request_comment,
+        });
+
+        await writeRunAudit(ctx, tx, {
+          operation: 'workflow_action:time.set_entry_approval_status',
+          changedData: result,
+          details: {
+            action_id: 'time.set_entry_approval_status',
+            action_version: 1,
+            entry_id: result.entry_id,
+          },
+        });
+
+        return { entry: result };
+      } catch (error) {
+        if (error instanceof WorkflowTimeDomainError) {
+          throwActionError(ctx, {
+            category: error.category,
+            code: error.code,
+            message: error.message,
+            details: error.details ?? undefined,
+          });
+        }
+        rethrowAsStandardError(ctx, error);
+      }
+    }),
+  });
+
+  registry.register({
+    id: 'time.request_entry_changes',
+    version: 1,
+    inputSchema: z.object({
+      entry_ids: z.array(uuidSchema).min(1).max(200).describe('Entry ids to move to CHANGES_REQUESTED'),
+      comment: z.string().min(1).describe('Change request comment'),
+    }),
+    outputSchema: z.object({
+      entries: z.array(z.object({
+        entry_id: uuidSchema,
+        approval_status: z.enum(['DRAFT', 'SUBMITTED', 'APPROVED', 'CHANGES_REQUESTED']),
+        time_sheet_id: uuidSchema.nullable(),
+        change_request_id: uuidSchema.nullable(),
+      })),
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Request Time Entry Changes',
+      category: 'Business Operations',
+      description: 'Request changes for one or more time entries with a comment',
+    },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      await requirePermission(ctx, tx, { resource: 'timesheet', action: 'approve' });
+
+      try {
+        const result = await requestWorkflowTimeEntryChanges({
+          trx: tx.trx,
+          tenantId: tx.tenantId,
+          actorUserId: tx.actorUserId,
+          entryIds: input.entry_ids,
+          comment: input.comment,
+        });
+
+        await writeRunAudit(ctx, tx, {
+          operation: 'workflow_action:time.request_entry_changes',
+          changedData: {
+            entry_ids: result.entries.map((entry) => entry.entry_id),
+            count: result.entries.length,
+          },
+          details: {
+            action_id: 'time.request_entry_changes',
+            action_version: 1,
+          },
+        });
+
+        return result;
+      } catch (error) {
+        if (error instanceof WorkflowTimeDomainError) {
+          throwActionError(ctx, {
+            category: error.category,
+            code: error.code,
+            message: error.message,
+            details: error.details ?? undefined,
+          });
+        }
+        rethrowAsStandardError(ctx, error);
+      }
+    }),
   });
 
   registry.register({

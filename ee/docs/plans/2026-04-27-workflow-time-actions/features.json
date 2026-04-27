@@ -102,7 +102,7 @@
   {
     "id": "F013",
     "description": "Implement `time.set_entry_approval_status` for allowed approval state transitions, including change-request comment support.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Time entry actions"
     ]
@@ -110,7 +110,7 @@
   {
     "id": "F014",
     "description": "Implement `time.request_entry_changes` as a convenience action for requesting changes on one or more submitted entries with comments.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Time entry actions"
     ]

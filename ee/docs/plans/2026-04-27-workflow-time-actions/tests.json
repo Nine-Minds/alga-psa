@@ -52,7 +52,7 @@
   {
     "id": "T006",
     "description": "DB integration: entry approval actions move entries through submitted/approved/changes-requested states and create change-request records when comments are supplied.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013",
       "F014",

@@ -134,6 +134,15 @@ export type WorkflowTimeFindEntriesResult = {
   };
 };
 
+export type WorkflowTimeApprovalStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'CHANGES_REQUESTED';
+
+export type WorkflowTimeEntryApprovalResult = {
+  entry_id: string;
+  approval_status: WorkflowTimeApprovalStatus;
+  time_sheet_id: string | null;
+  change_request_id: string | null;
+};
+
 function toIsoString(value: string | Date): string {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }
@@ -1653,4 +1662,114 @@ export async function findWorkflowTimeEntries(params: {
       billable_minutes: Number(aggregate?.billable_minutes ?? 0),
     },
   };
+}
+
+export async function setWorkflowTimeEntryApprovalStatus(params: {
+  trx: Knex.Transaction;
+  tenantId: string;
+  actorUserId: string;
+  entryId: string;
+  approvalStatus: WorkflowTimeApprovalStatus;
+  changeRequestComment?: string;
+}): Promise<WorkflowTimeEntryApprovalResult> {
+  const { trx, tenantId, actorUserId, entryId, approvalStatus, changeRequestComment } = params;
+
+  const existing = await trx('time_entries')
+    .where({ tenant: tenantId, entry_id: entryId })
+    .select('entry_id', 'invoiced', 'time_sheet_id')
+    .first();
+
+  if (!existing) {
+    throw new WorkflowTimeDomainError({
+      category: 'ActionError',
+      code: 'NOT_FOUND',
+      message: 'Time entry not found',
+      details: { entry_id: entryId },
+    });
+  }
+
+  if (existing.invoiced) {
+    throw new WorkflowTimeDomainError({
+      category: 'ValidationError',
+      code: 'VALIDATION_ERROR',
+      message: 'This time entry has already been invoiced and cannot be modified',
+      details: { entry_id: entryId },
+    });
+  }
+
+  await trx('time_entries')
+    .where({ tenant: tenantId, entry_id: entryId })
+    .update({
+      approval_status: approvalStatus,
+      updated_at: new Date().toISOString(),
+      updated_by: actorUserId,
+    });
+
+  if (approvalStatus === 'CHANGES_REQUESTED' && existing.time_sheet_id) {
+    await trx('time_sheets')
+      .where({ tenant: tenantId, id: existing.time_sheet_id })
+      .update({
+        approval_status: 'CHANGES_REQUESTED',
+        approved_at: null,
+        approved_by: null,
+      });
+  }
+
+  let changeRequestId: string | null = null;
+  if (approvalStatus === 'CHANGES_REQUESTED' && changeRequestComment && existing.time_sheet_id) {
+    const inserted = await trx('time_entry_change_requests')
+      .insert({
+        tenant: tenantId,
+        change_request_id: trx.raw('gen_random_uuid()'),
+        time_sheet_id: existing.time_sheet_id,
+        time_entry_id: entryId,
+        created_by: actorUserId,
+        comment: changeRequestComment,
+        created_at: trx.fn.now(),
+      })
+      .returning('change_request_id');
+    const created = Array.isArray(inserted) ? inserted[0] : inserted;
+    changeRequestId = String(created.change_request_id);
+  }
+
+  return {
+    entry_id: entryId,
+    approval_status: approvalStatus,
+    time_sheet_id: (existing.time_sheet_id as string | null) ?? null,
+    change_request_id: changeRequestId,
+  };
+}
+
+export async function requestWorkflowTimeEntryChanges(params: {
+  trx: Knex.Transaction;
+  tenantId: string;
+  actorUserId: string;
+  entryIds: string[];
+  comment: string;
+}): Promise<{
+  entries: WorkflowTimeEntryApprovalResult[];
+}> {
+  const { trx, tenantId, actorUserId, entryIds, comment } = params;
+  if (entryIds.length === 0) {
+    throw new WorkflowTimeDomainError({
+      category: 'ValidationError',
+      code: 'VALIDATION_ERROR',
+      message: 'Provide at least one entry id',
+    });
+  }
+
+  const results: WorkflowTimeEntryApprovalResult[] = [];
+  for (const entryId of entryIds) {
+    const result = await setWorkflowTimeEntryApprovalStatus({
+      trx,
+      tenantId,
+      actorUserId,
+      entryId,
+      approvalStatus: 'CHANGES_REQUESTED',
+      changeRequestComment: comment,
+    });
+    results.push(result);
+  }
+
+  return { entries: results };
 }
