@@ -331,3 +331,66 @@ Action schemas are Zod schemas converted to JSON Schema and consumed by the work
 
 - Ticket fixture schema for this branch requires adaptive field population (e.g., `client_id` constraints and varying timestamp columns), so the test helper was made schema-aware via `information_schema`.
 - Same-project status remap behavior can legitimately keep source mapping in some fixture shapes; tests were adjusted to verify remap outcomes without over-constraining mapping identity.
+
+## Implementation checkpoint — 2026-04-27 (Task assignment action)
+
+### Completed features
+
+- `F030`: Added `projects.assign_task` input schema:
+  - `task_id`
+  - `primary_user_id`
+  - `additional_user_ids` (array; deduped)
+  - optional `reason`
+  - `no_op_if_already_assigned` default `true`
+  - optional `idempotency_key`
+  - schema guard that rejects `additional_user_ids` containing the primary user
+
+- `F031`: Added assignment user resolution helper for active tenant users:
+  - validates primary user exists and is active
+  - validates all additional users exist and are active
+  - enforces internal-user filtering where user schema supports `user_type`
+  - returns deterministic deduped/sorted additional user ids
+
+- `F032`: Implemented no-op comparison for assignment requests:
+  - compares current `project_tasks.assigned_to`
+  - compares current `task_resources.additional_user_id` set
+  - honors `no_op_if_already_assigned` (default true)
+
+- `F033`: Implemented assignment mutation and additional-user reconciliation:
+  - updates `project_tasks.assigned_to`
+  - clears `assigned_team_id` when present
+  - replaces `task_resources` rows for the task with the resolved additional users
+
+- `F034`: Implemented assign action output shape:
+  - `task_id`, `assigned_to`, `additional_user_ids`, `no_op`, `updated_at`
+
+- `F035`: Added permission checks and run audit logging for `projects.assign_task`:
+  - requires `project:update`
+  - validates project readability through task->phase->project context
+  - writes `workflow_action:projects.assign_task` audit rows for both no-op and mutation paths
+
+### Completed tests
+
+- `T011`: Added DB-backed happy-path assignment test validating:
+  - primary assignee change
+  - additional-user reconciliation in `task_resources`
+  - deterministic output
+  - audit record creation
+
+- `T012`: Added DB-backed no-op test validating:
+  - identical requested assignment returns `no_op: true`
+  - task `updated_at` unchanged when no-op short-circuits
+
+- `T013`: Added DB-backed validation failure test validating:
+  - inactive primary user rejected
+  - missing additional user rejected
+  - no partial mutation of `project_tasks.assigned_to` or existing `task_resources`
+
+### Commands/runbook used
+
+- `cd shared && npx vitest run workflow/runtime/actions/__tests__/registerProjectActionsMetadata.test.ts workflow/runtime/actions/__tests__/businessOperations.projects.db.test.ts`
+
+### Gotchas discovered
+
+- `task_resources` has no uniqueness constraint on (`task_id`, `additional_user_id`), so reconciliation uses delete+reinsert to keep assignment state canonical.
+- UUID lexical ordering is non-semantic; tests were adjusted to compare additional-user sets order-insensitively where needed.

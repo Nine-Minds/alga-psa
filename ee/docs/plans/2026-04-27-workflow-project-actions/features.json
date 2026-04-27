@@ -249,7 +249,7 @@
   {
     "id": "F030",
     "description": "Implement `projects.assign_task` input schema with primary user, additional user IDs, optional reason/comment if supported, `no_op_if_already_assigned`, and optional idempotency key if needed.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task assignment action"
     ]
@@ -257,7 +257,7 @@
   {
     "id": "F031",
     "description": "Implement `projects.assign_task` helper to resolve and validate active primary and additional users for the tenant.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task assignment action",
       "Security / Permissions"
@@ -266,7 +266,7 @@
   {
     "id": "F032",
     "description": "Implement `projects.assign_task` no-op comparison covering both primary assignee and additional users.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task assignment action"
     ]
@@ -274,7 +274,7 @@
   {
     "id": "F033",
     "description": "Implement `projects.assign_task` mutation to update `project_tasks.assigned_to` and reconcile existing additional task resource records.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task assignment action"
     ]
@@ -282,7 +282,7 @@
   {
     "id": "F034",
     "description": "Implement `projects.assign_task` output schema with task_id, primary assigned user, additional user IDs, no-op state, and updated_at.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task assignment action"
     ]
@@ -290,7 +290,7 @@
   {
     "id": "F035",
     "description": "Implement `projects.assign_task` permission checks and run audit logging aligned with `tickets.assign` conventions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task assignment action",
       "Observability"

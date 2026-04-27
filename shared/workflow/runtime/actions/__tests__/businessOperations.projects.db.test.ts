@@ -313,6 +313,26 @@ async function createProjectStatusMapping(
   return mappingId;
 }
 
+async function addTaskResource(
+  db: Knex,
+  tenantId: string,
+  taskId: string,
+  assignedTo: string,
+  additionalUserId: string,
+  role = 'support'
+): Promise<void> {
+  const hasTaskResources = await db.schema.hasTable('task_resources');
+  if (!hasTaskResources) return;
+
+  await db('task_resources').insert({
+    tenant: tenantId,
+    task_id: taskId,
+    assigned_to: assignedTo,
+    additional_user_id: additionalUserId,
+    role,
+  });
+}
+
 async function createTicket(
   db: Knex,
   tenantId: string,
@@ -837,5 +857,153 @@ describe('project business operation db actions', () => {
       target_phase_id: phaseId,
       target_project_status_mapping_id: uuidv4(),
     })).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+  });
+
+  it('T011: projects.assign_task updates primary+additional assignment, reconciles task resources, and audits', async () => {
+    const entity = await createClientOrCompany(db, runtimeState.tenantId);
+    const projectId = await createProject(db, runtimeState.tenantId, {
+      name: 'Assign Task Project',
+      clientOrCompanyId: entity.clientId,
+      wbsCode: '40',
+    });
+    const phaseId = await createPhase(db, runtimeState.tenantId, projectId, {
+      name: 'Assignment Phase',
+      orderNumber: 1,
+      orderKey: 'a0',
+    });
+    const initialPrimary = await createUser(db, runtimeState.tenantId, { email: 'assign-initial-primary@example.com' });
+    const initialAdditional = await createUser(db, runtimeState.tenantId, { email: 'assign-initial-additional@example.com' });
+    const nextPrimary = await createUser(db, runtimeState.tenantId, { email: 'assign-next-primary@example.com' });
+    const nextAdditionalA = await createUser(db, runtimeState.tenantId, { email: 'assign-next-additional-a@example.com' });
+    const nextAdditionalB = await createUser(db, runtimeState.tenantId, { email: 'assign-next-additional-b@example.com' });
+
+    const taskId = await createTask(db, runtimeState.tenantId, phaseId, projectId, {
+      taskName: 'Assignment Task',
+      assignedTo: initialPrimary,
+    });
+    await addTaskResource(db, runtimeState.tenantId, taskId, initialPrimary, initialAdditional);
+
+    const result = await invokeAction('projects.assign_task', {
+      task_id: taskId,
+      primary_user_id: nextPrimary,
+      additional_user_ids: [nextAdditionalA, nextAdditionalB, nextAdditionalA],
+      reason: 'Reassigning to project pod',
+    });
+
+    expect(result.task_id).toBe(taskId);
+    expect(result.assigned_to).toBe(nextPrimary);
+    expect(result.additional_user_ids).toEqual([nextAdditionalA, nextAdditionalB].sort());
+    expect(result.no_op).toBe(false);
+
+    const updatedTask = await db('project_tasks')
+      .where({ tenant: runtimeState.tenantId, task_id: taskId })
+      .first('assigned_to');
+    expect(updatedTask?.assigned_to).toBe(nextPrimary);
+
+    const resources = await db('task_resources')
+      .where({ tenant: runtimeState.tenantId, task_id: taskId })
+      .orderBy('additional_user_id', 'asc')
+      .select('assigned_to', 'additional_user_id', 'role');
+    expect(resources).toHaveLength(2);
+    expect(resources.map((row: { additional_user_id: string }) => row.additional_user_id)).toEqual([nextAdditionalA, nextAdditionalB].sort());
+    expect(resources.every((row: { assigned_to: string }) => row.assigned_to === nextPrimary)).toBe(true);
+
+    const audit = await db('audit_logs')
+      .where({ tenant: runtimeState.tenantId, operation: 'workflow_action:projects.assign_task' })
+      .orderBy('timestamp', 'desc')
+      .first('details');
+    expect(audit).toBeDefined();
+  });
+
+  it('T012: projects.assign_task returns no-op when requested assignment already matches', async () => {
+    const entity = await createClientOrCompany(db, runtimeState.tenantId);
+    const projectId = await createProject(db, runtimeState.tenantId, {
+      name: 'Assign No-op Project',
+      clientOrCompanyId: entity.clientId,
+      wbsCode: '41',
+    });
+    const phaseId = await createPhase(db, runtimeState.tenantId, projectId, {
+      name: 'No-op Phase',
+      orderNumber: 1,
+      orderKey: 'a0',
+    });
+    const primary = await createUser(db, runtimeState.tenantId, { email: 'assign-noop-primary@example.com' });
+    const additionalA = await createUser(db, runtimeState.tenantId, { email: 'assign-noop-additional-a@example.com' });
+    const additionalB = await createUser(db, runtimeState.tenantId, { email: 'assign-noop-additional-b@example.com' });
+
+    const taskId = await createTask(db, runtimeState.tenantId, phaseId, projectId, {
+      taskName: 'No-op Assignment Task',
+      assignedTo: primary,
+    });
+    await addTaskResource(db, runtimeState.tenantId, taskId, primary, additionalA);
+    await addTaskResource(db, runtimeState.tenantId, taskId, primary, additionalB);
+
+    const beforeTask = await db('project_tasks')
+      .where({ tenant: runtimeState.tenantId, task_id: taskId })
+      .first('updated_at');
+
+    const result = await invokeAction('projects.assign_task', {
+      task_id: taskId,
+      primary_user_id: primary,
+      additional_user_ids: [additionalB, additionalA],
+      no_op_if_already_assigned: true,
+    });
+
+    expect(result.no_op).toBe(true);
+    expect(result.assigned_to).toBe(primary);
+    expect([...result.additional_user_ids].sort()).toEqual([additionalA, additionalB].sort());
+
+    const afterTask = await db('project_tasks')
+      .where({ tenant: runtimeState.tenantId, task_id: taskId })
+      .first('updated_at');
+    expect(String(afterTask?.updated_at)).toBe(String(beforeTask?.updated_at));
+  });
+
+  it('T013: projects.assign_task rejects inactive/missing users and leaves assignment unchanged', async () => {
+    const entity = await createClientOrCompany(db, runtimeState.tenantId);
+    const projectId = await createProject(db, runtimeState.tenantId, {
+      name: 'Assign Validation Project',
+      clientOrCompanyId: entity.clientId,
+      wbsCode: '42',
+    });
+    const phaseId = await createPhase(db, runtimeState.tenantId, projectId, {
+      name: 'Validation Phase',
+      orderNumber: 1,
+      orderKey: 'a0',
+    });
+    const primary = await createUser(db, runtimeState.tenantId, { email: 'assign-validation-primary@example.com' });
+    const additional = await createUser(db, runtimeState.tenantId, { email: 'assign-validation-additional@example.com' });
+    const inactive = await createUser(db, runtimeState.tenantId, {
+      email: 'assign-validation-inactive@example.com',
+      is_inactive: true,
+    });
+
+    const taskId = await createTask(db, runtimeState.tenantId, phaseId, projectId, {
+      taskName: 'Validation Assignment Task',
+      assignedTo: primary,
+    });
+    await addTaskResource(db, runtimeState.tenantId, taskId, primary, additional);
+
+    await expect(invokeAction('projects.assign_task', {
+      task_id: taskId,
+      primary_user_id: inactive,
+      additional_user_ids: [],
+    })).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+
+    await expect(invokeAction('projects.assign_task', {
+      task_id: taskId,
+      primary_user_id: primary,
+      additional_user_ids: [uuidv4()],
+    })).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+
+    const taskAfter = await db('project_tasks')
+      .where({ tenant: runtimeState.tenantId, task_id: taskId })
+      .first('assigned_to');
+    expect(taskAfter?.assigned_to).toBe(primary);
+
+    const resourcesAfter = await db('task_resources')
+      .where({ tenant: runtimeState.tenantId, task_id: taskId })
+      .select('additional_user_id');
+    expect(resourcesAfter.map((row: { additional_user_id: string }) => row.additional_user_id)).toEqual([additional]);
   });
 });

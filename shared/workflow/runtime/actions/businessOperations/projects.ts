@@ -210,6 +210,24 @@ const moveTaskResultSchema = z.object({
   updated_at: isoDateTimeSchema,
 });
 
+const assignTaskInputSchema = z.object({
+  task_id: withWorkflowPicker(uuidSchema, 'Project task id', 'project-task', ['project_id', 'phase_id']),
+  primary_user_id: withWorkflowPicker(uuidSchema, 'Primary assigned user id', 'user'),
+  additional_user_ids: withWorkflowPicker(z.array(uuidSchema).default([]), 'Additional assigned user ids', 'user'),
+  reason: z.string().min(1).max(1000).optional().describe('Optional assignment reason'),
+  no_op_if_already_assigned: z.boolean().default(true),
+  idempotency_key: z.string().min(1).max(255).optional(),
+}).superRefine((value, refinementCtx) => {
+  const additional = value.additional_user_ids ?? [];
+  if (additional.includes(value.primary_user_id)) {
+    refinementCtx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['additional_user_ids'],
+      message: 'additional_user_ids must not include primary_user_id',
+    });
+  }
+});
+
 function asIsoString(value: unknown): string | undefined {
   if (typeof value === 'string') return value;
   if (value instanceof Date) return value.toISOString();
@@ -469,6 +487,111 @@ async function generateTaskWbsCode(
     .first();
   const nextNumber = parseInt(String((countRow as any)?.count ?? 0), 10) + 1;
   return `${baseWbs}.${nextNumber}`;
+}
+
+const uniqueStringsSorted = (values: string[]): string[] => Array.from(new Set(values)).sort();
+
+async function getCurrentTaskAdditionalUserIds(
+  tx: TenantTxContext,
+  taskId: string
+): Promise<string[]> {
+  const hasTaskResources = await tx.trx.schema.hasTable('task_resources');
+  if (!hasTaskResources) return [];
+
+  const rows = await tx.trx('task_resources')
+    .where({ tenant: tx.tenantId, task_id: taskId })
+    .whereNotNull('additional_user_id')
+    .select('additional_user_id');
+
+  return uniqueStringsSorted(
+    rows
+      .map((row: { additional_user_id: string | null }) => row.additional_user_id)
+      .filter((value: string | null): value is string => Boolean(value))
+  );
+}
+
+async function resolveActiveTaskAssignmentUsers(
+  ctx: any,
+  tx: TenantTxContext,
+  input: { primaryUserId: string; additionalUserIds: string[] }
+): Promise<{ primaryUserId: string; additionalUserIds: string[] }> {
+  const userColumns = await getTableColumns(tx, 'users');
+  const supportsUserType = userColumns.has('user_type');
+  const supportsInactive = userColumns.has('is_inactive');
+
+  const primaryQuery = tx.trx('users')
+    .where({ tenant: tx.tenantId, user_id: input.primaryUserId });
+  if (supportsUserType) primaryQuery.andWhere('user_type', 'internal');
+  if (supportsInactive) primaryQuery.andWhere('is_inactive', false);
+  const primaryUser = await primaryQuery.first();
+
+  if (!primaryUser) {
+    throwActionError(ctx, {
+      category: 'ValidationError',
+      code: 'VALIDATION_ERROR',
+      message: 'Primary assigned user not found or inactive',
+      details: { primary_user_id: input.primaryUserId },
+    });
+  }
+
+  const uniqueAdditional = uniqueStringsSorted(
+    input.additionalUserIds.filter((userId) => userId !== input.primaryUserId)
+  );
+  if (uniqueAdditional.length === 0) {
+    return { primaryUserId: input.primaryUserId, additionalUserIds: [] };
+  }
+
+  const additionalQuery = tx.trx('users')
+    .where({ tenant: tx.tenantId });
+  if (supportsUserType) additionalQuery.andWhere('user_type', 'internal');
+  if (supportsInactive) additionalQuery.andWhere('is_inactive', false);
+
+  const validAdditionalRows = await additionalQuery
+    .whereIn('user_id', uniqueAdditional)
+    .select('user_id');
+
+  const validAdditionalSet = new Set(validAdditionalRows.map((row: { user_id: string }) => row.user_id));
+  const invalidAdditionalUserIds = uniqueAdditional.filter((userId) => !validAdditionalSet.has(userId));
+
+  if (invalidAdditionalUserIds.length > 0) {
+    throwActionError(ctx, {
+      category: 'ValidationError',
+      code: 'VALIDATION_ERROR',
+      message: 'One or more additional assigned users are invalid or inactive',
+      details: { invalid_user_ids: invalidAdditionalUserIds },
+    });
+  }
+
+  return {
+    primaryUserId: input.primaryUserId,
+    additionalUserIds: uniqueAdditional,
+  };
+}
+
+async function reconcileTaskAdditionalUsers(
+  tx: TenantTxContext,
+  taskId: string,
+  assignedTo: string,
+  additionalUserIds: string[]
+): Promise<void> {
+  const hasTaskResources = await tx.trx.schema.hasTable('task_resources');
+  if (!hasTaskResources) return;
+
+  await tx.trx('task_resources')
+    .where({ tenant: tx.tenantId, task_id: taskId })
+    .delete();
+
+  if (additionalUserIds.length === 0) return;
+
+  await tx.trx('task_resources').insert(
+    additionalUserIds.map((userId) => ({
+      tenant: tx.tenantId,
+      task_id: taskId,
+      assigned_to: assignedTo,
+      additional_user_id: userId,
+      role: 'support',
+    }))
+  );
 }
 
 async function canReadProject(tx: TenantTxContext, project: Record<string, unknown>): Promise<boolean> {
@@ -1537,6 +1660,111 @@ export function registerProjectActions(): void {
     }),
   });
 
+  registry.register({
+    id: 'projects.assign_task',
+    version: 1,
+    inputSchema: assignTaskInputSchema,
+    outputSchema: assignmentResultSchema,
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: { label: 'Assign Project Task', category: 'Business Operations', description: 'Assign a project task to a primary user and additional users' },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      try {
+        await requireProjectUpdatePermission(ctx, tx);
+        const taskColumns = await getTableColumns(tx, 'project_tasks');
+        const task = await ensureTaskContext(ctx, tx, input.task_id);
+        const project = await ensureProjectExists(ctx, tx, String(task.project_id));
+        await assertProjectReadable(ctx, tx, project);
+
+        const resolvedUsers = await resolveActiveTaskAssignmentUsers(ctx, tx, {
+          primaryUserId: input.primary_user_id,
+          additionalUserIds: input.additional_user_ids ?? [],
+        });
+        const currentAdditionalUserIds = await getCurrentTaskAdditionalUserIds(tx, input.task_id);
+        const requestedAdditionalUserIds = uniqueStringsSorted(resolvedUsers.additionalUserIds);
+        const noOp = (
+          parseNullableUuid(task.assigned_to) === resolvedUsers.primaryUserId &&
+          currentAdditionalUserIds.join(',') === requestedAdditionalUserIds.join(',')
+        );
+
+        if (noOp && input.no_op_if_already_assigned !== false) {
+          await writeRunAudit(ctx, tx, {
+            operation: 'workflow_action:projects.assign_task',
+            changedData: {
+              task_id: input.task_id,
+              project_id: task.project_id,
+              phase_id: task.phase_id,
+              assigned_to: resolvedUsers.primaryUserId,
+              additional_user_ids: requestedAdditionalUserIds,
+            },
+            details: {
+              action_id: 'projects.assign_task',
+              action_version: 1,
+              task_id: input.task_id,
+              no_op: true,
+              reason: input.reason ?? null,
+            },
+          });
+
+          return assignmentResultSchema.parse({
+            task_id: input.task_id,
+            assigned_to: resolvedUsers.primaryUserId,
+            additional_user_ids: requestedAdditionalUserIds,
+            no_op: true,
+            updated_at: asIsoString(task.updated_at) ?? new Date().toISOString(),
+          });
+        }
+
+        const nowIso = new Date().toISOString();
+        const taskPatch: Record<string, unknown> = {
+          assigned_to: resolvedUsers.primaryUserId,
+          updated_at: nowIso,
+        };
+        if (taskColumns.has('assigned_team_id')) taskPatch.assigned_team_id = null;
+
+        await tx.trx('project_tasks')
+          .where({ tenant: tx.tenantId, task_id: input.task_id })
+          .update(taskPatch);
+
+        await reconcileTaskAdditionalUsers(
+          tx,
+          input.task_id,
+          resolvedUsers.primaryUserId,
+          requestedAdditionalUserIds
+        );
+
+        await writeRunAudit(ctx, tx, {
+          operation: 'workflow_action:projects.assign_task',
+          changedData: {
+            task_id: input.task_id,
+            project_id: task.project_id,
+            phase_id: task.phase_id,
+            assigned_to: resolvedUsers.primaryUserId,
+            additional_user_ids: requestedAdditionalUserIds,
+          },
+          details: {
+            action_id: 'projects.assign_task',
+            action_version: 1,
+            task_id: input.task_id,
+            no_op: false,
+            reason: input.reason ?? null,
+          },
+        });
+
+        const updatedTask = await ensureTaskContext(ctx, tx, input.task_id);
+        return assignmentResultSchema.parse({
+          task_id: input.task_id,
+          assigned_to: parseNullableUuid(updatedTask.assigned_to),
+          additional_user_ids: requestedAdditionalUserIds,
+          no_op: noOp,
+          updated_at: asIsoString(updatedTask.updated_at) ?? nowIso,
+        });
+      } catch (error) {
+        handleActionError(ctx, error);
+      }
+    }),
+  });
+
   void ensureTicketExists;
   void ensurePhaseExists;
   void ensureTaskContext;
@@ -1546,4 +1774,5 @@ export function registerProjectActions(): void {
   void tagResultSchema;
   void assignmentResultSchema;
   void linkResultSchema;
+  void assignTaskInputSchema;
 }
