@@ -279,3 +279,55 @@ Action schemas are Zod schemas converted to JSON Schema and consumed by the work
 ### Checklist correction
 
 - `T001` was initially marked complete during the first checkpoint but that was premature because it requires registration coverage for the full final project action surface. Reset to `implemented:false` until the full action set is present.
+
+## Implementation checkpoint — 2026-04-27 (Task move action)
+
+### Completed features
+
+- `F023`: Added `projects.move_task` input schema with:
+  - `task_id`
+  - `target_phase_id`
+  - optional `target_project_status_mapping_id`
+  - optional `target_project_id`
+  - optional `before_task_id` / `after_task_id` (mutually exclusive)
+  - picker metadata and dependency wiring for project/phase/task/status fields
+
+- `F024` + `F025`: Implemented status remap/default resolution when explicit status mapping is omitted:
+  - attempts same-project mapping reuse
+  - attempts same underlying status id mapping in target project
+  - falls back to first visible target project mapping by display order
+  - cross-project path uses target-project mappings only
+
+- `F026`: Implemented move-time WBS/order metadata updates:
+  - regenerates `wbs_code` based on target phase WBS + next ordinal
+  - updates `order_key` when supported by schema
+
+- `F027`: Implemented `project_ticket_links` context rewrite on move:
+  - updates `project_id` + `phase_id` for all links tied to moved `task_id`
+
+- `F028`: Added move output schema/result payload with previous/current project/phase/status mapping/status ids plus updated WBS/order/updated_at.
+
+- `F029`: Added permission checks, validation errors, and workflow run audit logging for `projects.move_task`.
+
+### Completed tests
+
+- `T008`: DB-backed same-project move test validates:
+  - phase relocation
+  - status mapping/status resolution non-null path
+  - WBS/order metadata change
+  - move audit record creation
+
+- `T009`: DB-backed cross-project move test validates:
+  - target project/phase assignment
+  - status mapping resolution in target project
+  - `project_ticket_links` project/phase context updates
+
+- `T010`: DB-backed validation guard test validates:
+  - missing task => `NOT_FOUND`
+  - missing target phase => `NOT_FOUND`
+  - invalid explicit target mapping => `VALIDATION_ERROR`
+
+### Gotchas discovered
+
+- Ticket fixture schema for this branch requires adaptive field population (e.g., `client_id` constraints and varying timestamp columns), so the test helper was made schema-aware via `information_schema`.
+- Same-project status remap behavior can legitimately keep source mapping in some fixture shapes; tests were adjusted to verify remap outcomes without over-constraining mapping identity.

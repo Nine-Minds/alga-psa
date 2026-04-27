@@ -287,6 +287,66 @@ async function createTask(
   return taskId;
 }
 
+async function createProjectStatusMapping(
+  db: Knex,
+  tenantId: string,
+  projectId: string,
+  options: {
+    statusId?: string | null;
+    customName?: string;
+    displayOrder?: number;
+    isVisible?: boolean;
+  } = {}
+): Promise<string> {
+  const mappingId = uuidv4();
+  await db('project_status_mappings').insert({
+    tenant: tenantId,
+    project_status_mapping_id: mappingId,
+    project_id: projectId,
+    status_id: options.statusId ?? null,
+    standard_status_id: null,
+    custom_name: options.customName ?? 'Workflow Status',
+    display_order: options.displayOrder ?? 1,
+    is_visible: options.isVisible ?? true,
+    is_standard: false,
+  });
+  return mappingId;
+}
+
+async function createTicket(
+  db: Knex,
+  tenantId: string,
+  actorUserId: string,
+  options: { clientId?: string } = {}
+): Promise<string> {
+  const ticketId = uuidv4();
+  const nowIso = new Date().toISOString();
+  const columns = await getTableColumns(db, 'tickets');
+  const row: Record<string, unknown> = {
+    tenant: tenantId,
+    ticket_id: ticketId,
+  };
+
+  if (columns.has('created_at')) row.created_at = nowIso;
+  if (columns.has('updated_at')) row.updated_at = nowIso;
+  if (columns.has('ticket_number')) row.ticket_number = `T-${ticketId.slice(0, 8)}`;
+  if (columns.has('title')) row.title = 'Workflow move task test ticket';
+  if (columns.has('description')) row.description = 'Test ticket for project_ticket_links update validation';
+  if (columns.has('client_id')) row.client_id = options.clientId ?? null;
+  if (columns.has('company_id')) row.company_id = options.clientId ?? null;
+  if (columns.has('entered_by')) row.entered_by = actorUserId;
+  if (columns.has('opened_by')) row.opened_by = actorUserId;
+  if (columns.has('updated_by')) row.updated_by = actorUserId;
+  if (columns.has('category')) row.category = 'Incident';
+  if (columns.has('urgency')) row.urgency = 'medium';
+  if (columns.has('impact')) row.impact = 'medium';
+  if (columns.has('is_closed')) row.is_closed = false;
+  if (columns.has('is_inactive')) row.is_inactive = false;
+
+  await db('tickets').insert(row);
+  return ticketId;
+}
+
 describe('project business operation db actions', () => {
   let db: Knex;
 
@@ -607,5 +667,175 @@ describe('project business operation db actions', () => {
       .where({ tenant: runtimeState.tenantId, project_id: projectId })
       .first('project_name');
     expect(projectAfterDenied?.project_name).toBe('Validation Project');
+  });
+
+  it('T008: projects.move_task same-project move remaps status mapping, updates WBS/order metadata, and audits', async () => {
+    const entity = await createClientOrCompany(db, runtimeState.tenantId);
+    const projectId = await createProject(db, runtimeState.tenantId, {
+      name: 'Move Same Project',
+      clientOrCompanyId: entity.clientId,
+      wbsCode: '30',
+    });
+    const phaseSource = await createPhase(db, runtimeState.tenantId, projectId, {
+      name: 'Source Phase',
+      orderNumber: 1,
+      orderKey: 'a0',
+    });
+    const phaseTarget = await createPhase(db, runtimeState.tenantId, projectId, {
+      name: 'Target Phase',
+      orderNumber: 2,
+      orderKey: 'a1',
+    });
+
+    const sourceStatusId = await ensureStatusId(db, runtimeState.tenantId, 'project_task', 'Source To Do', runtimeState.actorUserId);
+    const targetStatusId = await ensureStatusId(db, runtimeState.tenantId, 'project_task', 'Target In Progress', runtimeState.actorUserId);
+    const sourceMapping = await createProjectStatusMapping(db, runtimeState.tenantId, projectId, {
+      statusId: sourceStatusId,
+      customName: 'Source Mapping',
+      displayOrder: 2,
+    });
+    const targetMapping = await createProjectStatusMapping(db, runtimeState.tenantId, projectId, {
+      statusId: targetStatusId,
+      customName: 'Target Mapping',
+      displayOrder: 1,
+    });
+
+    const taskId = await createTask(db, runtimeState.tenantId, phaseSource, projectId, {
+      taskName: 'Move Same Task',
+      statusId: sourceStatusId,
+      projectStatusMappingId: sourceMapping,
+      orderKey: 'a0',
+    });
+
+    const beforeTask = await db('project_tasks')
+      .where({ tenant: runtimeState.tenantId, task_id: taskId })
+      .first('wbs_code', 'order_key', 'phase_id');
+
+    const moved = await invokeAction('projects.move_task', {
+      task_id: taskId,
+      target_phase_id: phaseTarget,
+    });
+
+    expect(moved.previous_phase_id).toBe(phaseSource);
+    expect(moved.current_phase_id).toBe(phaseTarget);
+    expect(moved.current_project_id).toBe(projectId);
+    expect(moved.current_project_status_mapping_id).toBeTruthy();
+    expect(moved.current_status_id).toBeTruthy();
+    expect(moved.wbs_code).not.toBe(beforeTask?.wbs_code ?? null);
+    expect(moved.order_key).not.toBe(beforeTask?.order_key ?? null);
+
+    const audit = await db('audit_logs')
+      .where({ tenant: runtimeState.tenantId, operation: 'workflow_action:projects.move_task' })
+      .orderBy('timestamp', 'desc')
+      .first('details');
+    expect(audit).toBeDefined();
+  });
+
+  it('T009: projects.move_task cross-project move remaps status mapping and updates project_ticket_links context', async () => {
+    const entity = await createClientOrCompany(db, runtimeState.tenantId);
+    const sourceProjectId = await createProject(db, runtimeState.tenantId, {
+      name: 'Source Project',
+      clientOrCompanyId: entity.clientId,
+      wbsCode: '31',
+    });
+    const targetProjectId = await createProject(db, runtimeState.tenantId, {
+      name: 'Target Project',
+      clientOrCompanyId: entity.clientId,
+      wbsCode: '32',
+    });
+
+    const sourcePhase = await createPhase(db, runtimeState.tenantId, sourceProjectId, {
+      name: 'Source Phase',
+      orderNumber: 1,
+      orderKey: 'a0',
+    });
+    const targetPhase = await createPhase(db, runtimeState.tenantId, targetProjectId, {
+      name: 'Target Phase',
+      orderNumber: 1,
+      orderKey: 'a0',
+    });
+
+    const sourceStatusId = await ensureStatusId(db, runtimeState.tenantId, 'project_task', 'Source Status', runtimeState.actorUserId);
+    const targetStatusId = await ensureStatusId(db, runtimeState.tenantId, 'project_task', 'Target Status', runtimeState.actorUserId);
+
+    await createProjectStatusMapping(db, runtimeState.tenantId, sourceProjectId, {
+      statusId: sourceStatusId,
+      customName: 'Source Map',
+      displayOrder: 1,
+    });
+    const targetMapping = await createProjectStatusMapping(db, runtimeState.tenantId, targetProjectId, {
+      statusId: targetStatusId,
+      customName: 'Target Map',
+      displayOrder: 1,
+    });
+
+    const taskId = await createTask(db, runtimeState.tenantId, sourcePhase, sourceProjectId, {
+      taskName: 'Cross Project Task',
+      statusId: sourceStatusId,
+      orderKey: 'a0',
+    });
+
+    const linkId = uuidv4();
+    const ticketId = await createTicket(db, runtimeState.tenantId, runtimeState.actorUserId, {
+      clientId: entity.clientId,
+    });
+    await db('project_ticket_links').insert({
+      tenant: runtimeState.tenantId,
+      link_id: linkId,
+      project_id: sourceProjectId,
+      phase_id: sourcePhase,
+      task_id: taskId,
+      ticket_id: ticketId,
+      created_at: new Date().toISOString(),
+    });
+
+    const moved = await invokeAction('projects.move_task', {
+      task_id: taskId,
+      target_phase_id: targetPhase,
+      target_project_id: targetProjectId,
+    });
+
+    expect(moved.current_project_id).toBe(targetProjectId);
+    expect(moved.current_phase_id).toBe(targetPhase);
+    expect(moved.current_project_status_mapping_id).toBe(targetMapping);
+
+    const updatedLink = await db('project_ticket_links')
+      .where({ tenant: runtimeState.tenantId, link_id: linkId })
+      .first('project_id', 'phase_id');
+    expect(updatedLink?.project_id).toBe(targetProjectId);
+    expect(updatedLink?.phase_id).toBe(targetPhase);
+  });
+
+  it('T010: projects.move_task rejects missing task, missing phase, and invalid explicit status mapping', async () => {
+    const entity = await createClientOrCompany(db, runtimeState.tenantId);
+    const projectId = await createProject(db, runtimeState.tenantId, {
+      name: 'Move Validation Project',
+      clientOrCompanyId: entity.clientId,
+      wbsCode: '33',
+    });
+    const phaseId = await createPhase(db, runtimeState.tenantId, projectId, {
+      name: 'Validation Phase',
+      orderNumber: 1,
+      orderKey: 'a0',
+    });
+    const taskId = await createTask(db, runtimeState.tenantId, phaseId, projectId, {
+      taskName: 'Validation Move Task',
+    });
+
+    await expect(invokeAction('projects.move_task', {
+      task_id: uuidv4(),
+      target_phase_id: phaseId,
+    })).rejects.toMatchObject({ code: 'NOT_FOUND' });
+
+    await expect(invokeAction('projects.move_task', {
+      task_id: taskId,
+      target_phase_id: uuidv4(),
+    })).rejects.toMatchObject({ code: 'NOT_FOUND' });
+
+    await expect(invokeAction('projects.move_task', {
+      task_id: taskId,
+      target_phase_id: phaseId,
+      target_project_status_mapping_id: uuidv4(),
+    })).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
   });
 });

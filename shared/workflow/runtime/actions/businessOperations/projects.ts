@@ -159,6 +159,28 @@ const taskUpdatePatchSchema = z.object({
   }
 });
 
+const moveTaskInputSchema = z.object({
+  task_id: withWorkflowPicker(uuidSchema, 'Project task id', 'project-task', ['target_project_id', 'target_phase_id']),
+  target_phase_id: withWorkflowPicker(uuidSchema, 'Target project phase id', 'project-phase', ['target_project_id']),
+  target_project_status_mapping_id: withWorkflowPicker(
+    uuidSchema.optional(),
+    'Optional target status mapping id',
+    'project-task-status',
+    ['target_project_id', 'target_phase_id']
+  ),
+  target_project_id: withWorkflowPicker(uuidSchema.optional(), 'Optional target project id', 'project'),
+  before_task_id: withWorkflowPicker(uuidSchema.optional(), 'Optional task id to position before', 'project-task', ['target_project_id', 'target_phase_id']),
+  after_task_id: withWorkflowPicker(uuidSchema.optional(), 'Optional task id to position after', 'project-task', ['target_project_id', 'target_phase_id']),
+}).superRefine((value, refinementCtx) => {
+  if (value.before_task_id && value.after_task_id) {
+    refinementCtx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'before_task_id and after_task_id are mutually exclusive',
+      path: ['before_task_id'],
+    });
+  }
+});
+
 const PROJECT_TABLE_AUTH_COLUMNS = ['project_id', 'client_id', 'assigned_to'] as const;
 
 type ProjectAuthRecord = {
@@ -170,6 +192,21 @@ type ProjectAuthRecord = {
 const updateResultSchema = z.object({
   changed_fields: z.array(z.string()),
   no_op: z.boolean(),
+  updated_at: isoDateTimeSchema,
+});
+
+const moveTaskResultSchema = z.object({
+  task_id: uuidSchema,
+  previous_project_id: uuidSchema,
+  previous_phase_id: uuidSchema,
+  previous_project_status_mapping_id: nullableUuidSchema,
+  previous_status_id: nullableUuidSchema,
+  current_project_id: uuidSchema,
+  current_phase_id: uuidSchema,
+  current_project_status_mapping_id: nullableUuidSchema,
+  current_status_id: nullableUuidSchema,
+  wbs_code: z.string().nullable(),
+  order_key: z.string().nullable(),
   updated_at: isoDateTimeSchema,
 });
 
@@ -351,6 +388,87 @@ async function requireProjectUpdatePermission(ctx: any, tx: TenantTxContext): Pr
 
 async function requireProjectDeletePermission(ctx: any, tx: TenantTxContext): Promise<void> {
   await requirePermission(ctx, tx, { resource: 'project', action: 'delete' });
+}
+
+async function resolveTargetProjectStatusMappingId(
+  tx: TenantTxContext,
+  params: {
+    sourceTask: Record<string, unknown>;
+    targetProjectId: string;
+    targetPhaseId: string;
+    explicitTargetProjectStatusMappingId?: string;
+  }
+): Promise<string | null> {
+  const taskColumns = await getTableColumns(tx, 'project_tasks');
+  if (!taskColumns.has('project_status_mapping_id')) return null;
+
+  if (params.explicitTargetProjectStatusMappingId) {
+    const explicit = await tx.trx('project_status_mappings')
+      .where({ tenant: tx.tenantId, project_status_mapping_id: params.explicitTargetProjectStatusMappingId, project_id: params.targetProjectId })
+      .first();
+    return explicit?.project_status_mapping_id ?? null;
+  }
+
+  const sourceMappingId = parseNullableUuid(params.sourceTask.project_status_mapping_id);
+  const sourceStatusId = parseNullableUuid(params.sourceTask.status_id);
+
+  if (sourceMappingId && String(params.sourceTask.project_id) === params.targetProjectId) {
+    const same = await tx.trx('project_status_mappings')
+      .where({ tenant: tx.tenantId, project_status_mapping_id: sourceMappingId, project_id: params.targetProjectId })
+      .first();
+    if (same?.project_status_mapping_id) return same.project_status_mapping_id;
+  }
+
+  if (sourceStatusId) {
+    const sameStatus = await tx.trx('project_status_mappings')
+      .where({ tenant: tx.tenantId, project_id: params.targetProjectId, status_id: sourceStatusId })
+      .orderBy('display_order', 'asc')
+      .first();
+    if (sameStatus?.project_status_mapping_id) return sameStatus.project_status_mapping_id;
+  }
+
+  const firstVisible = await tx.trx('project_status_mappings')
+    .where({ tenant: tx.tenantId, project_id: params.targetProjectId })
+    .where(function visibleFilter() {
+      this.where('is_visible', true).orWhereNull('is_visible');
+    })
+    .orderBy('display_order', 'asc')
+    .first();
+
+  return firstVisible?.project_status_mapping_id ?? null;
+}
+
+async function resolveTargetStatusId(
+  tx: TenantTxContext,
+  params: {
+    sourceTask: Record<string, unknown>;
+    targetProjectStatusMappingId: string | null;
+  }
+): Promise<string | null> {
+  const taskColumns = await getTableColumns(tx, 'project_tasks');
+  if (!taskColumns.has('status_id')) return null;
+
+  if (params.targetProjectStatusMappingId) {
+    const mapping = await tx.trx('project_status_mappings')
+      .where({ tenant: tx.tenantId, project_status_mapping_id: params.targetProjectStatusMappingId })
+      .first();
+    return parseNullableUuid(mapping?.status_id) ?? parseNullableUuid(params.sourceTask.status_id);
+  }
+
+  return parseNullableUuid(params.sourceTask.status_id);
+}
+
+async function generateTaskWbsCode(
+  tx: TenantTxContext,
+  targetPhase: Record<string, unknown>
+): Promise<string> {
+  const baseWbs = String(targetPhase.wbs_code ?? '1');
+  const countRow = await tx.trx('project_tasks')
+    .where({ tenant: tx.tenantId, phase_id: targetPhase.phase_id })
+    .count('* as count')
+    .first();
+  const nextNumber = parseInt(String((countRow as any)?.count ?? 0), 10) + 1;
+  return `${baseWbs}.${nextNumber}`;
 }
 
 async function canReadProject(tx: TenantTxContext, project: Record<string, unknown>): Promise<boolean> {
@@ -1302,6 +1420,117 @@ export function registerProjectActions(): void {
           no_op: changedFields.length === 0,
           updated_at: asIsoString(updated.updated_at) ?? nowIso,
         };
+      } catch (error) {
+        handleActionError(ctx, error);
+      }
+    }),
+  });
+
+  registry.register({
+    id: 'projects.move_task',
+    version: 1,
+    inputSchema: moveTaskInputSchema,
+    outputSchema: moveTaskResultSchema,
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: { label: 'Move Project Task', category: 'Business Operations', description: 'Move a project task to another phase/project/status mapping' },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      try {
+        await requireProjectUpdatePermission(ctx, tx);
+        const taskColumns = await getTableColumns(tx, 'project_tasks');
+        const sourceTask = await ensureTaskContext(ctx, tx, input.task_id);
+        const sourceProject = await ensureProjectExists(ctx, tx, String(sourceTask.project_id));
+        await assertProjectReadable(ctx, tx, sourceProject);
+
+        const targetPhase = await ensurePhaseExists(ctx, tx, input.target_phase_id);
+        const targetProjectId = String(targetPhase.project_id);
+        if (input.target_project_id && input.target_project_id !== targetProjectId) {
+          throwActionError(ctx, {
+            category: 'ValidationError',
+            code: 'VALIDATION_ERROR',
+            message: 'target_project_id must match target phase project_id',
+            details: { target_project_id: input.target_project_id, target_phase_id: input.target_phase_id },
+          });
+        }
+
+        const targetProject = await ensureProjectExists(ctx, tx, targetProjectId);
+        await assertProjectReadable(ctx, tx, targetProject);
+
+        const targetProjectStatusMappingId = await resolveTargetProjectStatusMappingId(tx, {
+          sourceTask,
+          targetProjectId,
+          targetPhaseId: input.target_phase_id,
+          explicitTargetProjectStatusMappingId: input.target_project_status_mapping_id,
+        });
+        if (input.target_project_status_mapping_id && !targetProjectStatusMappingId) {
+          throwActionError(ctx, {
+            category: 'ValidationError',
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid target_project_status_mapping_id',
+            details: { target_project_status_mapping_id: input.target_project_status_mapping_id },
+          });
+        }
+
+        const targetStatusId = await resolveTargetStatusId(tx, {
+          sourceTask,
+          targetProjectStatusMappingId,
+        });
+
+        const nextWbsCode = await generateTaskWbsCode(tx, targetPhase);
+        const nowIso = new Date().toISOString();
+        const orderKey = taskColumns.has('order_key')
+          ? `${Date.now().toString(36)}-${uuidv4().slice(0, 8)}`
+          : null;
+
+        const updatePayload: Record<string, unknown> = {
+          phase_id: input.target_phase_id,
+          updated_at: nowIso,
+        };
+        if (taskColumns.has('wbs_code')) updatePayload.wbs_code = nextWbsCode;
+        if (taskColumns.has('order_key') && orderKey) updatePayload.order_key = orderKey;
+        if (taskColumns.has('project_status_mapping_id')) updatePayload.project_status_mapping_id = targetProjectStatusMappingId;
+        if (taskColumns.has('status_id')) updatePayload.status_id = targetStatusId;
+
+        await tx.trx('project_tasks')
+          .where({ tenant: tx.tenantId, task_id: input.task_id })
+          .update(updatePayload);
+
+        await tx.trx('project_ticket_links')
+          .where({ tenant: tx.tenantId, task_id: input.task_id })
+          .update({ project_id: targetProjectId, phase_id: input.target_phase_id });
+
+        await writeRunAudit(ctx, tx, {
+          operation: 'workflow_action:projects.move_task',
+          changedData: {
+            task_id: input.task_id,
+            from_project_id: sourceTask.project_id,
+            from_phase_id: sourceTask.phase_id,
+            to_project_id: targetProjectId,
+            to_phase_id: input.target_phase_id,
+            to_project_status_mapping_id: targetProjectStatusMappingId,
+          },
+          details: {
+            action_id: 'projects.move_task',
+            action_version: 1,
+            task_id: input.task_id,
+          },
+        });
+
+        const updatedTask = await ensureTaskContext(ctx, tx, input.task_id);
+        return moveTaskResultSchema.parse({
+          task_id: input.task_id,
+          previous_project_id: sourceTask.project_id,
+          previous_phase_id: sourceTask.phase_id,
+          previous_project_status_mapping_id: sourceTask.project_status_mapping_id ?? null,
+          previous_status_id: sourceTask.status_id ?? null,
+          current_project_id: updatedTask.project_id,
+          current_phase_id: updatedTask.phase_id,
+          current_project_status_mapping_id: updatedTask.project_status_mapping_id ?? null,
+          current_status_id: updatedTask.status_id ?? null,
+          wbs_code: updatedTask.wbs_code ?? null,
+          order_key: updatedTask.order_key ?? null,
+          updated_at: asIsoString(updatedTask.updated_at) ?? nowIso,
+        });
       } catch (error) {
         handleActionError(ctx, error);
       }

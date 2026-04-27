@@ -103,7 +103,7 @@
   {
     "id": "T008",
     "description": "DB-backed action handler test covers `projects.move_task` same-project move to another phase without explicit status and verifies status mapping remap, WBS/order change, task location, and audit output.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023",
       "F024",
@@ -115,7 +115,7 @@
   {
     "id": "T009",
     "description": "DB-backed action handler test covers `projects.move_task` cross-project move without explicit status and verifies target project status mapping resolution plus project_ticket_links project/phase updates.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023",
       "F025",
@@ -127,7 +127,7 @@
   {
     "id": "T010",
     "description": "DB-backed action handler test covers `projects.move_task` validation failures for missing task, missing target phase, and invalid explicit status mapping.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023",
       "F024",
