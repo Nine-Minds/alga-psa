@@ -19,7 +19,13 @@
     "importExport": "Importar/Exportar",
     "email": "Correo",
     "integrations": "Integraciones",
-    "extensions": "Extensiones"
+    "extensions": "Extensiones",
+    "ticketingSettings": "Configuración de tickets",
+    "loadingTicketing": "Cargando configuración de tickets...",
+    "teamManagement": "Gestión de equipo",
+    "loadingTeam": "Cargando configuración del equipo...",
+    "loadingExperimental": "Cargando configuración de funciones experimentales...",
+    "loadingInteractions": "Cargando configuración de interacciones..."
   },
   "unsavedChanges": {
     "title": "Cambios sin guardar",
@@ -304,7 +310,8 @@
         "reportsToSelf": "Un usuario no puede reportarse a sí mismo",
         "reportsToCycle": "Esto crearía una cadena de reporte circular"
       }
-    }
+    },
+    "loading": "Cargando detalles del usuario..."
   },
   "teams": {
     "title": "Gestión de equipos",
@@ -610,7 +617,40 @@
         "priorityMatrixTitle": "Matriz de prioridad",
         "impactDescription": "Los niveles de impacto definen el alcance del problema",
         "urgencyDescription": "Los niveles de urgencia definen la rapidez con que se necesita la resolución",
-        "priorityDescription": "La prioridad se calcula a partir del impacto y la urgencia"
+        "priorityDescription": "La prioridad se calcula a partir del impacto y la urgencia",
+        "categories": {
+          "serviceRequest": "Solicitud de servicio"
+        },
+        "priorityMatrix": {
+          "urgencyHeaderLine1": {
+            "high": "Alta",
+            "mediumHigh": "Media-Alta",
+            "medium": "Media",
+            "mediumLow": "Media-Baja",
+            "low": "Baja"
+          },
+          "urgencyHeaderLine2": {
+            "high": "Urgencia (1)",
+            "mediumHigh": "Urgencia (2)",
+            "medium": "Urgencia (3)",
+            "mediumLow": "Urgencia (4)",
+            "low": "Urgencia (5)"
+          },
+          "impact": {
+            "high": "Impacto alto (1)",
+            "mediumHigh": "Impacto medio-alto (2)",
+            "medium": "Impacto medio (3)",
+            "mediumLow": "Impacto medio-bajo (4)",
+            "low": "Impacto bajo (5)"
+          },
+          "priority": {
+            "critical": "Crítica (1)",
+            "high": "Alta (2)",
+            "medium": "Media (3)",
+            "low": "Baja (4)",
+            "planning": "Planificación (5)"
+          }
+        }
       },
       "messages": {
         "success": {
@@ -842,7 +882,8 @@
           "saveFailed": "Error al {{action}} el tipo de interacción. Inténtelo de nuevo."
         }
       }
-    }
+    },
+    "openMenu": "Abrir menú"
   },
   "clientPortal": {
     "branding": {
@@ -927,7 +968,70 @@
         "forgotPassword": "¿Olvidó su contraseña?",
         "mspStaffLogin": "¿Personal de MSP? Inicie sesión aquí →"
       }
-    }
+    },
+    "domain": {
+      "title": "Dominio personalizado",
+      "description": "Configure un nombre de host con marca propia para su portal del cliente. Aprovisionaremos los certificados TLS automáticamente una vez verificado el DNS.",
+      "currentStatus": "Estado actual",
+      "noDomainConfigured": "No hay un dominio personalizado configurado",
+      "defaultStatusMessage": "Aún no se ha registrado ningún dominio personalizado.",
+      "lastChecked": "Última verificación: {{value}}",
+      "updatingDomainPrefix": "Actualizando dominio a ",
+      "updatingDomainSuffix": ". El aprovisionamiento se reiniciará una vez que se actualice.",
+      "editInstructions": "Para cambiar su dominio, edite el valor a continuación y envíelo para iniciar una nueva ejecución de aprovisionamiento.",
+      "actions": {
+        "refresh": "Actualizar",
+        "refreshing": "Actualizando...",
+        "retry": "Reintentar",
+        "retrying": "Reintentando…",
+        "removeDomain": "Eliminar dominio",
+        "saveDomain": "Guardar dominio",
+        "updateDomain": "Actualizar dominio",
+        "submitting": "Enviando…",
+        "cancelEdit": "Cancelar edición"
+      },
+      "form": {
+        "label": "Dominio personalizado",
+        "helpTextPrefix": "Agregue un registro CNAME apuntando a ",
+        "helpTextSuffix": " antes de enviar.",
+        "placeholder": "portal.ejemplo.com"
+      },
+      "checklist": {
+        "title": "Lista de verificación de configuración",
+        "step1Prefix": "Cree un registro CNAME para el host elegido apuntando a ",
+        "step1Suffix": ".",
+        "step2": "Haga clic en \"Guardar dominio\" para activar la verificación de DNS y el aprovisionamiento del certificado.",
+        "step3": "Use el botón Actualizar para consultar el progreso del aprovisionamiento. Enviaremos un correo electrónico a sus administradores si el aprovisionamiento falla.",
+        "canonicalHostFallback": "host canónico"
+      },
+      "badges": {
+        "pending_dns": "DNS pendiente",
+        "verifying_dns": "Verificando DNS",
+        "dns_failed": "DNS fallido",
+        "pending_certificate": "Certificado pendiente",
+        "certificate_issuing": "Emitiendo certificado",
+        "certificate_failed": "Certificado fallido",
+        "deploying": "Implementando",
+        "active": "Activo",
+        "disabled": "Deshabilitado",
+        "unknown": "Desconocido"
+      },
+      "messages": {
+        "requestSubmitted": "Solicitud de dominio personalizado enviada.",
+        "retryQueued": "Reintento en cola. Vuelva a comprobar el estado en unos momentos.",
+        "removalRequested": "Eliminación de dominio personalizado solicitada.",
+        "enterDomainFirst": "Ingrese un dominio antes de enviar.",
+        "confirmRemove": "¿Eliminar el dominio personalizado actual? El tráfico volverá a la dirección alojada predeterminada.",
+        "loadFailed": "No se pudo cargar el estado del dominio del portal.",
+        "registerFailed": "Error al registrar el dominio personalizado.",
+        "refreshFailed": "Error al actualizar el estado del dominio.",
+        "retryFailed": "Reintento fallido.",
+        "disableFailed": "Error al deshabilitar el dominio personalizado."
+      }
+    },
+    "yourCompanyName": "Nombre de su empresa",
+    "brandingPreviewMode": "Modo de tema de vista previa de marca",
+    "brandingUpdated": "Configuración de marca actualizada"
   },
   "mspLanguage": {
     "title": "Idioma de la organización",
@@ -958,7 +1062,21 @@
       "telemetry": "Telemetría"
     },
     "internalTabs": {
-      "categories": "Categorías"
+      "categories": "Categorías",
+      "categoriesTypes": "Categorías y tipos"
+    },
+    "loading": {
+      "settings": "Cargando configuración...",
+      "templates": "Cargando plantillas...",
+      "categories": "Cargando categorías..."
+    },
+    "unsaved": {
+      "title": "Cambios sin guardar",
+      "message": "Tiene configuración de notificaciones sin guardar. ¿Está seguro de que desea salir? Sus cambios se perderán."
+    },
+    "tenantDescription": {
+      "email": "Configure los ajustes de notificaciones por correo electrónico para todo el inquilino",
+      "internal": "Configure los ajustes de notificaciones internas para todo el inquilino"
     },
     "sections": {
       "globalSettings": {
@@ -1193,7 +1311,8 @@
         "loadJobDetails": "No se pudieron cargar los detalles del trabajo",
         "refreshHistory": "No se pudo actualizar el historial de importación"
       }
-    }
+    },
+    "selectJobHint": "Seleccione un trabajo de importación para inspeccionar sus resultados."
   },
   "email": {
     "title": "Configuración de correo electrónico",
@@ -1238,6 +1357,107 @@
       "apiKeys": "Cargando configuración de claves API...",
       "sso": "Cargando herramientas de gestión de SSO...",
       "sessions": "Cargando sesiones activas..."
+    },
+    "ssoBulk": {
+      "loading": {
+        "title": "Inicio de sesión único",
+        "description": "Cargando herramientas de asignación masiva de SSO..."
+      },
+      "autoLink": {
+        "title": "Configurar SSO automáticamente para nuevos usuarios internos",
+        "description": "Active esta opción para aprovisionar cada nueva cuenta de personal con su proveedor SSO corporativo de inmediato, de modo que nunca necesiten un inicio de sesión basado en contraseña.",
+        "body": "Cuando está habilitado, los nuevos usuarios MSP añadidos pueden iniciar sesión con Google o Microsoft utilizando su correo electrónico de trabajo. No tendrán que vincular su cuenta manualmente.",
+        "toggleLabel": "Alternar coincidencia automática de SSO",
+        "disabledInfo": "Active este interruptor para permitir que el personal nuevo y existente omita el flujo de \"Conectar SSO\" cuando su correo electrónico ya coincide con un proveedor configurado. Aún registraremos cada vínculo automático."
+      },
+      "bulk": {
+        "title": "Asignación masiva de inicio de sesión único",
+        "description": "Seleccione los usuarios internos de la lista a continuación y vincúlelos a un proveedor de Google o Microsoft configurado. Use la vista previa para verificar el impacto antes de ejecutar.",
+        "noProviders": "Aún no hay proveedores SSO configurados. Agregue credenciales OAuth para continuar con las asignaciones masivas."
+      },
+      "errors": {
+        "loadProviders": "No se pudo cargar la configuración del proveedor SSO.",
+        "updatePreferences": "No se pudieron actualizar las preferencias de SSO."
+      },
+      "form": {
+        "title": "Elegir proveedor y seleccionar usuarios",
+        "description": "Elija el proveedor SSO configurado para su personal, luego busque y seleccione los usuarios que deben vincularse.",
+        "providerLabel": "Proveedor",
+        "notConfigured": "No configurado",
+        "providerNotConfiguredAlert": "Proporcione credenciales OAuth para este proveedor antes de vincular cuentas.",
+        "actionLabel": "Acción",
+        "linkSelected": "Vincular usuarios seleccionados",
+        "unlinkSelected": "Desvincular usuarios seleccionados",
+        "actionPlaceholder": "Seleccionar acción masiva de SSO",
+        "actionDescription": "Vincular agrega el proveedor a cada usuario seleccionado. Desvincular elimina el proveedor para que el usuario regrese al inicio de sesión con contraseña/TOTP hasta que vuelva a vincularse.",
+        "searchLabel": "Buscar usuarios internos",
+        "searchPlaceholder": "Buscar por correo electrónico o nombre",
+        "noneSelected": "Aún no hay usuarios seleccionados.",
+        "selected_one": "{{count}} usuario seleccionado.",
+        "selected_other": "{{count}} usuarios seleccionados.",
+        "clearSelection": "Limpiar selección",
+        "loadingUsers": "Cargando usuarios...",
+        "noMatch": "Ningún usuario coincide con esta búsqueda.",
+        "noUsers": "No se encontraron usuarios internos.",
+        "clientPortalComing": "Las asignaciones masivas del portal del cliente estarán disponibles próximamente. Por ahora, esta herramienta se aplica solo a usuarios MSP internos.",
+        "loadUsersFailed": "No se pudieron cargar los usuarios asignables.",
+        "actions": {
+          "previewLink": "Vista previa de asignación",
+          "previewUnlink": "Vista previa de desvinculación",
+          "link": "Vincular cuentas",
+          "unlink": "Desvincular cuentas",
+          "preparingPreview": "Preparando vista previa…",
+          "linking": "Vinculando cuentas…",
+          "unlinking": "Desvinculando cuentas…",
+          "bulkLabel": "Acciones masivas SSO {{location}}"
+        },
+        "table": {
+          "email": "Email",
+          "id": "ID",
+          "name": "Nombre",
+          "status": "Estado",
+          "active": "Activo",
+          "inactive": "Inactivo",
+          "linkedProviders": "Proveedores vinculados",
+          "unlinked": "Sin vincular",
+          "lastLogin": "Último inicio de sesión"
+        },
+        "toast": {
+          "providerRequiredTitle": "Proveedor requerido",
+          "providerRequiredDescription": "Seleccione un proveedor configurado antes de continuar.",
+          "noUsersTitle": "No hay usuarios seleccionados",
+          "noUsersDescription": "Seleccione al menos un usuario de la tabla.",
+          "failedTitle": "Error en la asignación masiva",
+          "failedDescription": "No se pudo procesar la asignación masiva de SSO.",
+          "linkCompleteTitle": "Vinculación completada",
+          "unlinkCompleteTitle": "Desvinculación completada",
+          "previewReadyTitle": "Vista previa lista",
+          "linkedCount": "Se vincularon {{count}} cuentas mediante {{provider}}.",
+          "unlinkedCount": "Se desvincularon {{count}} cuentas mediante {{provider}}.",
+          "previewUnlink_one": "Vista previa lista. Desvincularemos {{count}} usuario seleccionado.",
+          "previewUnlink_other": "Vista previa lista. Desvincularemos {{count}} usuarios seleccionados.",
+          "previewLink": "Vista previa lista. Revise el resumen antes de vincular las cuentas."
+        },
+        "results": {
+          "completeTitle": "Asignación completada",
+          "previewTitle": "Resultados de la vista previa",
+          "noneMatched": "Ninguno de los usuarios seleccionados coincide con los filtros actuales.",
+          "processed_one": "Se procesó {{count}} usuario.",
+          "processed_other": "Se procesaron {{count}} usuarios.",
+          "candidatesSelected": "{{count}} seleccionados",
+          "unlinked": "Desvinculados",
+          "wouldUnlink": "Se desvincularía",
+          "linked": "Vinculados",
+          "wouldLink": "Se vincularía",
+          "alreadyUnlinked": "Ya desvinculados",
+          "alreadyLinked": "Ya vinculados",
+          "skippedInactive": "Omitidos (inactivos)"
+        },
+        "providerNames": {
+          "google": "Google Workspace",
+          "microsoft": "Microsoft 365"
+        }
+      }
     },
     "userRoles": {
       "title": "Asignar roles a usuarios",
@@ -1528,5 +1748,9 @@
     "inheritOption": "Usar el predeterminado de la organización ({{language}})",
     "unsetHint": "Para eliminar la anulación del portal del cliente, cambie el predeterminado de la organización en Configuración → Idioma.",
     "updated": "Idioma predeterminado del portal del cliente actualizado a {{language}}"
+  },
+  "language": {
+    "selectLanguage": "Seleccionar un idioma",
+    "languagesUpdated": "Idiomas disponibles actualizados"
   }
 }

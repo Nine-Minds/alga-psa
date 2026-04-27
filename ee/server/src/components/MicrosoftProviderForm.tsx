@@ -11,6 +11,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button, Input, Label, Switch, Alert, AlertDescription, Card, CardContent, CardDescription, CardHeader, CardTitle, CustomSelect } from '@alga-psa/ui/components';
 import { CheckCircle, Clock, Shield } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { EmailProvider } from '@alga-psa/integrations/components/email/types';
 import {
   createEmailProvider,
@@ -40,12 +41,13 @@ interface EEMicrosoftProviderFormProps {
   onCancel: () => void;
 }
 
-export function MicrosoftProviderForm({ 
-  tenant, 
-  provider, 
-  onSuccess, 
-  onCancel 
+export function MicrosoftProviderForm({
+  tenant,
+  provider,
+  onSuccess,
+  onCancel
 }: EEMicrosoftProviderFormProps) {
+  const { t } = useTranslation('msp/email-providers');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [oauthStatus, setOauthStatus] = useState<'idle' | 'authorizing' | 'success' | 'error'>('idle');
@@ -103,13 +105,13 @@ export function MicrosoftProviderForm({
 
   const onSubmit = async (data: EEMicrosoftProviderFormData, providedOauthData?: any) => {
     setHasAttemptedSubmit(true);
-    
+
     // Check if form is valid
     const isValid = await form.trigger();
     if (!isValid) {
       return;
     }
-    
+
     try {
       setLoading(true);
       setError(null);
@@ -144,7 +146,7 @@ export function MicrosoftProviderForm({
       };
 
       // For normal saves (not OAuth), skip automation to prevent duplicate setup
-      const result = isEditing 
+      const result = isEditing
         ? await updateEmailProvider(provider.id, payload, true) // skipAutomation: true
         : await createEmailProvider(payload, true); // skipAutomation: true
 
@@ -168,7 +170,7 @@ export function MicrosoftProviderForm({
       const isValid = await form.trigger();
       if (!isValid) {
         setOauthStatus('error');
-        setError('Please fill in all required fields before authorizing');
+        setError(t('microsoftForm.oauth.authError'));
         return;
       }
 
@@ -244,15 +246,15 @@ export function MicrosoftProviderForm({
         if (event.data.type === 'oauth-callback' && event.data.provider === 'microsoft') {
           clearInterval(checkClosed);
           popup?.close();
-          
+
           if (event.data.success) {
             // Store tokens for the submit
             setOauthData(event.data.data);
             setOauthStatus('success');
-            
+
             // Store the OAuth data for auto-submission (avoid React state timing issues)
             const oauthDataForSubmit = event.data.data;
-            
+
             // Start countdown for auto-submission
             setAutoSubmitCountdown(10);
             const countdownInterval = setInterval(() => {
@@ -268,9 +270,9 @@ export function MicrosoftProviderForm({
             }, 1000);
           } else {
             setOauthStatus('error');
-            setError(event.data.errorDescription || event.data.error || 'Authorization failed');
+            setError(event.data.errorDescription || event.data.error || t('microsoftForm.oauth.authorizationFailed'));
           }
-          
+
           window.removeEventListener('message', messageHandler);
         }
       };
@@ -289,27 +291,26 @@ export function MicrosoftProviderForm({
       <Alert>
         <Shield className="h-4 w-4" />
         <AlertDescription>
-          <strong>Microsoft 365 Integration</strong> - Simply connect your Microsoft 365 account and configure 
-          your email processing preferences to get started.
+          <strong>{t('microsoftForm.header.title')}</strong> - {t('microsoftForm.header.description')}
         </AlertDescription>
       </Alert>
 
       {/* Basic Configuration */}
       <Card>
         <CardHeader>
-          <CardTitle>Microsoft 365 Account Setup</CardTitle>
+          <CardTitle>{t('microsoftForm.sections.accountSetup.title')}</CardTitle>
           <CardDescription>
-            Configure your Microsoft 365 account for inbound email processing
+            {t('microsoftForm.sections.accountSetup.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="providerName">Provider Name *</Label>
+              <Label htmlFor="providerName">{t('microsoftForm.fields.providerNameLabel')}</Label>
               <Input
                 id="providerName"
                 {...form.register('providerName')}
-                placeholder="e.g., Support Microsoft 365"
+                placeholder={t('microsoftForm.fields.providerNamePlaceholder')}
                 className={hasAttemptedSubmit && form.formState.errors.providerName ? 'border-destructive' : ''}
               />
               {form.formState.errors.providerName && (
@@ -318,12 +319,12 @@ export function MicrosoftProviderForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="mailbox">Microsoft 365 Address *</Label>
+              <Label htmlFor="mailbox">{t('microsoftForm.fields.mailboxLabel')}</Label>
               <Input
                 id="mailbox"
                 type="email"
                 {...form.register('mailbox')}
-                placeholder="support@client.com"
+                placeholder={t('microsoftForm.fields.mailboxPlaceholder')}
                 className={hasAttemptedSubmit && form.formState.errors.mailbox ? 'border-destructive' : ''}
               />
               {form.formState.errors.mailbox && (
@@ -338,7 +339,7 @@ export function MicrosoftProviderForm({
               checked={form.watch('isActive')}
               onCheckedChange={(checked: boolean) => form.setValue('isActive', checked)}
             />
-            <Label htmlFor="isActive">Enable this provider</Label>
+            <Label htmlFor="isActive">{t('microsoftForm.fields.enableProvider')}</Label>
           </div>
         </CardContent>
       </Card>
@@ -346,9 +347,9 @@ export function MicrosoftProviderForm({
       {/* Microsoft Authentication */}
       <Card>
         <CardHeader>
-          <CardTitle>Microsoft 365 Authentication</CardTitle>
+          <CardTitle>{t('microsoftForm.sections.authentication.title')}</CardTitle>
           <CardDescription>
-            Connect your Microsoft 365 account to enable email processing
+            {t('microsoftForm.sections.authentication.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -358,11 +359,11 @@ export function MicrosoftProviderForm({
           }`}>
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="font-medium">Microsoft 365 Connection</h4>
+                <h4 className="font-medium">{t('microsoftForm.oauth.connectionTitle')}</h4>
                 <p className="text-sm text-muted-foreground">
-                  {oauthStatus === 'success' 
-                    ? 'Successfully connected! Complete setup by saving below.'
-                    : 'Authorize access to your Microsoft 365 account'
+                  {oauthStatus === 'success'
+                    ? t('microsoftForm.oauth.descriptionSuccess')
+                    : t('microsoftForm.oauth.descriptionIdle')
                   }
                 </p>
               </div>
@@ -376,16 +377,16 @@ export function MicrosoftProviderForm({
                 {oauthStatus === 'authorizing' && (
                   <>
                     <Clock className="h-4 w-4 mr-2 animate-spin" />
-                    Connecting...
+                    {t('microsoftForm.oauth.connecting')}
                   </>
                 )}
                 {oauthStatus === 'success' && (
                   <>
                     <CheckCircle className="h-4 w-4 mr-2" />
-                    Connected
+                    {t('microsoftForm.oauth.connected')}
                   </>
                 )}
-                {(oauthStatus === 'idle' || oauthStatus === 'error') && 'Connect Microsoft 365'}
+                {(oauthStatus === 'idle' || oauthStatus === 'error') && t('microsoftForm.oauth.connectButton')}
               </Button>
             </div>
           </div>
@@ -402,12 +403,12 @@ export function MicrosoftProviderForm({
                       </div>
                     </div>
                     <div className="ml-3">
-                      <h4 className="font-medium">Complete Setup</h4>
+                      <h4 className="font-medium">{t('microsoftForm.nextStep.title')}</h4>
                       <p className="text-sm">
                         {autoSubmitCountdown !== null ? (
-                          <>Auto-completing in <strong>{autoSubmitCountdown}</strong> seconds, or click "<strong>{isEditing ? 'Update Provider' : 'Add Provider'}</strong>" below now.</>
+                          <>{t('microsoftForm.nextStep.autoSubmit')} <strong>{autoSubmitCountdown}</strong> {t('microsoftForm.nextStep.secondsSuffix')} "<strong>{isEditing ? t('microsoftForm.buttons.updateProvider') : t('microsoftForm.buttons.addProvider')}</strong>" {t('microsoftForm.nextStep.clickNow')}</>
                         ) : (
-                          <>Click "<strong>{isEditing ? 'Update Provider' : 'Add Provider'}</strong>" below to finish configuration.</>
+                          <>{t('microsoftForm.nextStep.manualInstruction')} "<strong>{isEditing ? t('microsoftForm.buttons.updateProvider') : t('microsoftForm.buttons.addProvider')}</strong>" {t('microsoftForm.nextStep.manualSuffix')}</>
                         )}
                       </p>
                     </div>
@@ -422,7 +423,7 @@ export function MicrosoftProviderForm({
                         setAutoSubmitCountdown(null);
                       }}
                     >
-                      Cancel Auto-Submit
+                      {t('microsoftForm.nextStep.cancelAutoSubmit')}
                     </Button>
                   )}
                 </div>
@@ -435,27 +436,27 @@ export function MicrosoftProviderForm({
       {/* Processing Settings */}
       <Card>
         <CardHeader>
-          <CardTitle>Email Processing Settings</CardTitle>
+          <CardTitle>{t('microsoftForm.sections.processing.title')}</CardTitle>
           <CardDescription>
-            Configure how emails are processed and imported
+            {t('microsoftForm.sections.processing.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="folderFilters">Folders to Monitor</Label>
+              <Label htmlFor="folderFilters">{t('microsoftForm.fields.foldersLabel')}</Label>
               <Input
                 id="folderFilters"
                 {...form.register('folderFilters')}
-                placeholder="Inbox, Support, Custom Folder"
+                placeholder={t('microsoftForm.fields.foldersPlaceholder')}
               />
               <p className="text-xs text-muted-foreground">
-                Comma-separated list of folders to monitor (default: Inbox)
+                {t('microsoftForm.fields.foldersHelp')}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="maxEmailsPerSync">Max Emails Per Sync</Label>
+              <Label htmlFor="maxEmailsPerSync">{t('microsoftForm.fields.maxEmailsLabel')}</Label>
               <Input
                 id="maxEmailsPerSync"
                 type="number"
@@ -464,7 +465,7 @@ export function MicrosoftProviderForm({
                 max="1000"
               />
               <p className="text-xs text-muted-foreground">
-                Maximum number of emails to process in each sync (1-1000)
+                {t('microsoftForm.fields.maxEmailsHelp')}
               </p>
             </div>
           </div>
@@ -474,9 +475,9 @@ export function MicrosoftProviderForm({
       {/* Ticket Defaults selection */}
       <Card>
         <CardHeader>
-          <CardTitle>Ticket Defaults</CardTitle>
+          <CardTitle>{t('microsoftForm.sections.ticketDefaults.title')}</CardTitle>
           <CardDescription>
-            Select defaults to apply to email-created tickets
+            {t('microsoftForm.sections.ticketDefaults.description')}
             <Button
               id="manage-defaults-link"
               type="button"
@@ -484,23 +485,23 @@ export function MicrosoftProviderForm({
               className="ml-2 p-0 h-auto"
               onClick={() => window.dispatchEvent(new CustomEvent('open-defaults-tab'))}
             >
-              Manage defaults
+              {t('microsoftForm.buttons.manageDefaults')}
             </Button>
           </CardDescription>
         </CardHeader>
         <CardContent>
           <CustomSelect
             id="ee-microsoft-inbound-defaults-select"
-            label="Inbound Ticket Defaults"
+            label={t('microsoftForm.fields.inboundDefaultsLabel')}
             value={(form.watch('inboundTicketDefaultsId') as any) || ''}
             onValueChange={(v) => form.setValue('inboundTicketDefaultsId', v || undefined)}
             options={defaultsOptions}
-            placeholder="Select defaults (optional)"
+            placeholder={t('microsoftForm.fields.inboundDefaultsPlaceholder')}
             allowClear
           />
           <div className="text-right">
             <Button id="refresh-defaults-list" type="button" variant="outline" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('inbound-defaults-updated'))}>
-              Refresh list
+              {t('microsoftForm.buttons.refreshList')}
             </Button>
           </div>
         </CardContent>
@@ -510,15 +511,15 @@ export function MicrosoftProviderForm({
       {hasAttemptedSubmit && Object.keys(form.formState.errors).length > 0 && (
         <Alert variant="destructive">
           <AlertDescription>
-            <p className="font-medium mb-2">Please fill in the required fields:</p>
+            <p className="font-medium mb-2">{t('microsoftForm.validation.requiredFieldsTitle')}</p>
             <ul className="list-disc list-inside space-y-1">
-              {form.formState.errors.providerName && <li>Provider Name</li>}
-              {form.formState.errors.mailbox && <li>Microsoft 365 Address</li>}
+              {form.formState.errors.providerName && <li>{t('microsoftForm.validation.providerName')}</li>}
+              {form.formState.errors.mailbox && <li>{t('microsoftForm.validation.mailbox')}</li>}
             </ul>
           </AlertDescription>
         </Alert>
       )}
-      
+
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
@@ -529,9 +530,9 @@ export function MicrosoftProviderForm({
       {oauthStatus !== 'success' && (
         <Alert variant="warning">
           <AlertDescription>
-            <h4 className="font-medium">Microsoft 365 Connection Required</h4>
+            <h4 className="font-medium">{t('microsoftForm.oauth.requiredTitle')}</h4>
             <p className="text-sm">
-              You must connect your Microsoft 365 account above before {isEditing ? 'updating' : 'adding'} the provider.
+              {isEditing ? t('microsoftForm.oauth.requiredDescriptionUpdate') : t('microsoftForm.oauth.requiredDescriptionAdd')}
             </p>
           </AlertDescription>
         </Alert>
@@ -540,11 +541,11 @@ export function MicrosoftProviderForm({
       {/* Form Actions */}
       <div className="flex items-center justify-end space-x-2">
         <Button id="microsoft-cancel-btn" type="button" variant="outline" onClick={onCancel}>
-          Cancel
+          {t('microsoftForm.buttons.cancel')}
         </Button>
-        <Button 
-          id="microsoft-submit-btn" 
-          type="submit" 
+        <Button
+          id="microsoft-submit-btn"
+          type="submit"
           disabled={loading}
           className={`${Object.keys(form.formState.errors).length > 0 && !loading ? 'opacity-50' : ''} ${
             oauthStatus === 'success' ? 'bg-green-600 hover:bg-green-700 animate-pulse' : ''
@@ -553,12 +554,12 @@ export function MicrosoftProviderForm({
           {loading ? (
             <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              Setting up Microsoft 365 integration...
+              {t('microsoftForm.buttons.settingUp')}
             </>
           ) : (
             <>
-              {isEditing ? 'Update Provider' : 'Add Provider'}
-              {oauthStatus === 'success' && ' & Complete Setup'}
+              {isEditing ? t('microsoftForm.buttons.updateProvider') : t('microsoftForm.buttons.addProvider')}
+              {oauthStatus === 'success' && ` ${t('microsoftForm.buttons.completeSetupSuffix')}`}
             </>
           )}
         </Button>

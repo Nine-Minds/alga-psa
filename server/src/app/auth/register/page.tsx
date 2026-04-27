@@ -11,8 +11,10 @@ import { AlertProps, TPasswordCriteria } from 'server/src/interfaces';
 import { registerUser } from '@alga-psa/auth/actions';
 import { Alert } from '@alga-psa/auth/client';
 import { Input } from '@alga-psa/ui/components/Input';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export default function Register() {
+  const { t } = useTranslation('msp/auth');
   const [showPassword, setShowPassword] = useState(false);
   const [hasStartedTyping, setHasStartedTyping] = useState(false);
   const [passwordCriteria, setPasswordCriteria] = useState<TPasswordCriteria>({
@@ -67,8 +69,8 @@ export default function Register() {
         setIsAlertOpen(true);
         setAlertInfo({
           type: 'error',
-          title: 'Password ',
-          message: 'Please ensure your password meets all the specified criteria.',
+          title: t('register.alerts.passwordTitle', 'Password '),
+          message: t('register.alerts.passwordCriteriaMessage', 'Please ensure your password meets all the specified criteria.'),
         });
 
         return;
@@ -86,8 +88,8 @@ export default function Register() {
         setIsAlertOpen(true);
         setAlertInfo({
           type: 'error',
-          title: 'Failed !!!',
-          message: 'Please try again',
+          title: t('register.alerts.failedTitle', 'Failed !!!'),
+          message: t('register.alerts.tryAgainMessage', 'Please try again'),
         });
       }
     } catch (error) {
@@ -130,22 +132,20 @@ export default function Register() {
                 height={50}
                 className="rounded-full mr-4 "
               />
-          <span className="text-lg font-semibold text-[rgb(var(--color-text-800))]">AI-Enhanced PSA Platform for MSPs</span>
+          <span className="text-lg font-semibold text-[rgb(var(--color-text-800))]">{t('register.tagline', 'AI-Enhanced PSA Platform for MSPs')}</span>
         </div>
 
       {/* Left side with logo */}
       <div className="hidden lg:flex lg:w-1/2 bg-card p-12 flex-col justify-center items-center">
         <Image
           src="/images/avatar-purple-big.png"
-          alt="Client Logo"
+          alt={t('register.heroAlt', 'Client Logo')}
           width={200}
           height={200}
           className="rounded-full"
         />
         <p className="mt-4 text-center text-2xl font-bold text-[rgb(var(--color-text-700))]">
-          An open source PSA, <br />
-          empowering the future of MSPs <br />
-          with AI-driven insights and automation.
+          {t('register.heroText', 'An open source PSA, empowering the future of MSPs with AI-driven insights and automation.')}
         </p>
       </div>
 
@@ -153,14 +153,14 @@ export default function Register() {
       <div className="w-full lg:w-1/2 flex items-center justify-center">
         <div className="max-w-md w-full space-y-8 p-8">
           <div>
-            <h2 className="mt-6 text-3xl font-extrabold text-[rgb(var(--color-text-900))] text-center">Sign up</h2>
-            <p className="mt-2 text-sm text-[rgb(var(--color-text-600))] text-center">Start to use Alga MSP.</p>
+            <h2 className="mt-6 text-3xl font-extrabold text-[rgb(var(--color-text-900))] text-center">{t('register.title', 'Sign up')}</h2>
+            <p className="mt-2 text-sm text-[rgb(var(--color-text-600))] text-center">{t('register.subtitle', 'Start to use Alga MSP.')}</p>
           </div>
           <form onSubmit={handleSubmit} className="mt-8 space-y-6">
             <div className="space-y-4">
               <div>
                 <Label.Root className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-                  Client name
+                  {t('register.clientNameLabel', 'Client name')}
                 </Label.Root>
                 <Input
                   id="register-client-name-input"
@@ -169,13 +169,13 @@ export default function Register() {
                   value={formData.clientName}
                   onChange={handleChange}
                   required
-                  placeholder="Enter your client name"
+                  placeholder={t('register.clientNamePlaceholder', 'Enter your client name')}
                   className="mt-1 block w-full px-3 py-2 border border-[rgb(var(--color-border-300))] rounded-md shadow-sm placeholder-[rgb(var(--color-text-400))] focus:outline-none focus:ring-[rgb(var(--color-primary-500))] focus:border-[rgb(var(--color-primary-500))] sm:text-sm"
                 />
               </div>
               <div>
                 <Label.Root className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-                  User Name
+                  {t('register.userNameLabel', 'User Name')}
                 </Label.Root>
                 <Input
                   id="register-user-name-input"
@@ -184,13 +184,13 @@ export default function Register() {
                   value={formData.userName}
                   onChange={handleChange}
                   required
-                  placeholder="Enter your user name"
+                  placeholder={t('register.userNamePlaceholder', 'Enter your user name')}
                   className="mt-1 block w-full px-3 py-2 border border-[rgb(var(--color-border-300))] rounded-md shadow-sm placeholder-[rgb(var(--color-text-400))] focus:outline-none focus:ring-[rgb(var(--color-primary-500))] focus:border-[rgb(var(--color-primary-500))] sm:text-sm"
                 />
               </div>
               <div>
                 <Label.Root className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-                  Email <span className="text-destructive">*</span>
+                  {t('register.emailLabel', 'Email')} <span className="text-destructive">*</span>
                 </Label.Root>
                 <Input
                   id="register-email-input"
@@ -199,14 +199,14 @@ export default function Register() {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  placeholder="Enter your email"
+                  placeholder={t('register.emailPlaceholder', 'Enter your email')}
                   className="mt-1 block w-full px-3 py-2 border border-[rgb(var(--color-border-300))] rounded-md shadow-sm placeholder-[rgb(var(--color-text-400))] focus:outline-none focus:ring-[rgb(var(--color-primary-500))] focus:border-[rgb(var(--color-primary-500))] sm:text-sm"
                 />
               </div>
               <div>
 
                 <Label.Root className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-                  Password
+                  {t('register.passwordLabel', 'Password')}
                 </Label.Root>
                 <div className="relative">
                   <Input
@@ -216,7 +216,7 @@ export default function Register() {
                     value={formData.password}
                     onChange={handleChange}
                     required
-                    placeholder="Create a password"
+                    placeholder={t('register.passwordPlaceholder', 'Create a password')}
                     className="mt-1 block w-full px-3 py-2 border border-[rgb(var(--color-border-300))] rounded-md shadow-sm placeholder-[rgb(var(--color-text-400))] focus:outline-none focus:ring-[rgb(var(--color-primary-500))] focus:border-[rgb(var(--color-primary-500))] sm:text-sm"
                   />
                   <button
@@ -234,23 +234,23 @@ export default function Register() {
                 <div className="mt-4 flex flex-wrap justify-center items-center gap-3 text-xs text-[rgb(var(--color-text-600))]">
                   <div className="flex items-center">
                     <CriteriaIcon met={passwordCriteria.minLength} />
-                    <span className="ml-1">8+ chars</span>
+                    <span className="ml-1">{t('register.criteria.minLength', '8+ chars')}</span>
                   </div>
                   <div className="flex items-center">
                     <CriteriaIcon met={passwordCriteria.hasUppercase} />
-                    <span className="ml-1">Uppercase</span>
+                    <span className="ml-1">{t('register.criteria.uppercase', 'Uppercase')}</span>
                   </div>
                   <div className="flex items-center">
                     <CriteriaIcon met={passwordCriteria.hasLowercase} />
-                    <span className="ml-1">Lowercase</span>
+                    <span className="ml-1">{t('register.criteria.lowercase', 'Lowercase')}</span>
                   </div>
                   <div className="flex items-center">
                     <CriteriaIcon met={passwordCriteria.hasNumber} />
-                    <span className="ml-1">Number</span>
+                    <span className="ml-1">{t('register.criteria.number', 'Number')}</span>
                   </div>
                   <div className="flex items-center">
                     <CriteriaIcon met={passwordCriteria.hasSpecial} />
-                    <span className="ml-1">Special char</span>
+                    <span className="ml-1">{t('register.criteria.special', 'Special char')}</span>
                   </div>
                 </div>
               </div>
@@ -261,7 +261,7 @@ export default function Register() {
                 type="submit"
                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[rgb(var(--color-primary-600))] hover:bg-[rgb(var(--color-primary-700))] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[rgb(var(--color-primary-500))]"
               >
-                Sign up
+                {t('register.submit', 'Sign up')}
               </button>
             </div>
           </form>
@@ -283,9 +283,9 @@ export default function Register() {
           </div> */}
 
           <p className="mt-2 text-center text-sm text-[rgb(var(--color-text-600))]">
-            Already have an account?{' '}
+            {t('register.alreadyHaveAccount', 'Already have an account?')}{' '}
             <Link href="/auth/msp/signin" className="font-medium text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-400))]">
-              Log in
+              {t('register.logIn', 'Log in')}
             </Link>
           </p>
         </div>

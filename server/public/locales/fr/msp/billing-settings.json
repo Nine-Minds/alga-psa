@@ -1114,6 +1114,82 @@
       "saveSettingsFailed": "Échec de l'enregistrement des paramètres",
       "webhookConfigured": "Webhook configuré avec succès !",
       "webhookConfigureFailed": "Échec de la configuration du webhook"
+    },
+    "expiration": {
+      "selectPlaceholder": "Sélectionnez le délai d'expiration",
+      "custom": "Personnalisé...",
+      "hoursSingular": "{{count}} heure",
+      "hoursPlural": "{{count}} heures",
+      "daysSingular": "{{count}} jour",
+      "daysPlural": "{{count}} jours",
+      "daysDecimal": "{{count}} jours",
+      "hoursUnit": "heures ({{formatted}})",
+      "willExpireAfter": "Les liens de paiement expireront après {{duration}}"
+    },
+    "notConnected": {
+      "title": "Stripe non connecté",
+      "description": "Pour configurer les paramètres de paiement, vous devez d'abord connecter votre compte Stripe.",
+      "connectButton": "Connecter Stripe"
+    },
+    "settings": {
+      "paymentLinksInEmails": {
+        "label": "Inclure les liens de paiement dans les e-mails de facture",
+        "description": "Ajouter un bouton « Payer maintenant » aux e-mails de facture"
+      },
+      "paymentConfirmations": {
+        "label": "Envoyer des e-mails de confirmation de paiement",
+        "description": "Envoyer un e-mail aux clients lorsque leur paiement est reçu"
+      },
+      "paymentLinkExpiration": {
+        "label": "Expiration du lien de paiement",
+        "description": "Durée pendant laquelle les liens de paiement restent valides avant d'expirer"
+      },
+      "actions": {
+        "save": "Enregistrer les paramètres",
+        "saving": "Enregistrement..."
+      }
+    },
+    "stripe": {
+      "cardTitle": "Paiements Stripe",
+      "cardDescription": "Acceptez les paiements par carte de crédit pour vos factures",
+      "connectedTitle": "Stripe connecté",
+      "publishableKey": "Clé publiable : {{key}}...",
+      "testConnection": "Tester la connexion",
+      "disconnect": "Déconnecter",
+      "disconnectDialog": {
+        "title": "Déconnecter Stripe",
+        "message": "Voulez-vous vraiment déconnecter Stripe ? Les liens de paiement ne fonctionneront plus.",
+        "confirm": "Déconnecter",
+        "cancel": "Annuler"
+      },
+      "webhook": {
+        "label": "Configuration du webhook",
+        "configuredTitle": "Webhooks configurés automatiquement",
+        "configuredDescription": "Alga PSA recevra des notifications de paiement pour :",
+        "failedTitle": "Échec de la configuration du webhook",
+        "failedDescription": "La configuration automatique du webhook a échoué. Cliquez sur Réessayer pour tenter une nouvelle configuration.",
+        "configuring": "Configuration en cours...",
+        "retry": "Réessayer la configuration"
+      },
+      "connectForm": {
+        "secretKeyLabel": "Clé secrète",
+        "secretKeyPlaceholder": "sk_live_... ou sk_test_...",
+        "secretKeyHelpPrefix": "Trouvez-la dans votre",
+        "secretKeyHelpLink": "Tableau de bord Stripe → Clés API",
+        "publishableKeyLabel": "Clé publiable",
+        "publishableKeyPlaceholder": "pk_live_... ou pk_test_...",
+        "connecting": "Connexion en cours...",
+        "connect": "Connecter Stripe",
+        "cancel": "Annuler"
+      },
+      "empty": {
+        "description": "Connectez votre compte Stripe pour accepter les paiements en ligne pour les factures",
+        "connectButton": "Connecter Stripe"
+      },
+      "settingsCard": {
+        "title": "Paramètres de paiement",
+        "description": "Configurez le fonctionnement des liens de paiement avec vos factures"
+      }
     }
   }
 }

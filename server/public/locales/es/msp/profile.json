@@ -195,5 +195,41 @@
         "default": "Aviso"
       }
     }
+  },
+  "connectSso": {
+    "verify": {
+      "title": "Asegure su cuenta con SSO",
+      "description": "Vincule Azure AD o Google Workspace para reutilizar las políticas organizacionales y omitir las solicitudes locales de doble factor.",
+      "signedInAs": "Sesión iniciada como",
+      "currentPassword": "Contraseña actual",
+      "twoFactorCode": "Código de doble factor",
+      "twoFactorPlaceholder": "123456",
+      "verifyCredentials": "Verificar credenciales",
+      "verifying": "Verificando...",
+      "reset": "Restablecer",
+      "linkedSuccess": "Proveedor vinculado correctamente.",
+      "credentialsVerified": "Credenciales verificadas. Elija un proveedor a continuación para terminar de vincular su cuenta.",
+      "verifyFailed": "No se pudieron verificar las credenciales.",
+      "verifyBeforeProvider": "Verifique su contraseña (y el código de doble factor si es necesario) antes de conectar un proveedor."
+    },
+    "providers": {
+      "title": "Conectar un proveedor",
+      "description": "Elija un proveedor para finalizar el enlace SSO. Será redirigido a través del flujo de inicio de sesión del proveedor.",
+      "noneConfigured": "No hay proveedores SSO configurados para este entorno. Solicite a su administrador que configure las credenciales de Google o Microsoft.",
+      "notConfigured": "No configurado",
+      "branding": {
+        "google": "Continuar con Google",
+        "microsoft": "Continuar con Microsoft",
+        "default": "Continuar"
+      }
+    },
+    "linked": {
+      "title": "Cuentas vinculadas",
+      "description": "Actualizaremos el enlace la próxima vez que inicie sesión a través de un proveedor conectado.",
+      "empty": "Aún no hay proveedores SSO vinculados. Complete los pasos anteriores para conectar uno.",
+      "linkedAt": "Vinculado el {{date}}",
+      "lastUsed": "Último uso el {{date}}",
+      "notUsedYet": "Aún no utilizado"
+    }
   }
 }

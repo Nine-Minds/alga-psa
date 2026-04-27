@@ -13,6 +13,7 @@ import {
   type MentionableEntityType,
   type MentionSearchResults,
 } from '../../lib/chat-actions/searchEntitiesForMention';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const typeLabels: Record<MentionableEntityType, string> = {
   ticket: 'Tickets',
@@ -54,6 +55,7 @@ interface ChatMentionPopupProps {
 
 export const ChatMentionPopup = forwardRef<ChatMentionPopupHandle, ChatMentionPopupProps>(
   function ChatMentionPopup({ query, onSelect, onDismiss, placement = 'above' }, ref) {
+    const { t } = useTranslation('msp/chat');
     const [results, setResults] = useState<MentionSearchResults>({});
     const [loading, setLoading] = useState(false);
     const [selectedIndex, setSelectedIndex] = useState(0);
@@ -207,7 +209,7 @@ export const ChatMentionPopup = forwardRef<ChatMentionPopupHandle, ChatMentionPo
             <span>Searching…</span>
           </div>
         ) : flatItems.length === 0 ? (
-          <div className="chat-mention-popup__empty">No results found</div>
+          <div className="chat-mention-popup__empty">{t('mention.noResultsFound')}</div>
         ) : (
           CATEGORY_ORDER.map((category) => {
             const items = results[category];

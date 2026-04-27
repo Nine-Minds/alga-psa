@@ -395,9 +395,9 @@
       "tickets": "55555",
       "tasks": "55555",
       "priority": "55555",
+      "search": "55555",
       "dueDate": "55555",
-      "showClosed": "55555",
-      "search": "55555"
+      "showClosed": "55555"
     },
     "activityTypeOptions": {
       "schedule": "55555",

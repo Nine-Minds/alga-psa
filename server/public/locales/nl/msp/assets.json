@@ -609,11 +609,67 @@
   },
   "assetPatchStatusSection": {
     "title": "Sectie Asset-patchstatus",
-    "description": "Enterprise-patch en antivirusstatuswrapper weergegeven in de assetdetailervaring"
+    "description": "Enterprise-patch en antivirusstatuswrapper weergegeven in de assetdetailervaring",
+    "heading": "Patchstatus",
+    "compliance": {
+      "unknown": "Onbekend",
+      "actionRequired": "Actie vereist",
+      "updatesAvailable": "Updates beschikbaar",
+      "minorUpdates": "Kleine updates",
+      "upToDate": "Up-to-date"
+    },
+    "relativeTime": {
+      "never": "Nooit",
+      "justNow": "Zojuist",
+      "minutesAgo": "{{count}}m geleden",
+      "hoursAgo": "{{count}}u geleden",
+      "daysAgo": "{{count}}d geleden"
+    },
+    "labels": {
+      "osPatches": "OS-patches",
+      "software": "Software",
+      "failed": "Mislukt",
+      "lastScan": "Laatste scan",
+      "pending": "in behandeling",
+      "patches": "patches"
+    }
   },
   "assetSoftwareInventory": {
     "title": "Software-inventarisatie van activa",
-    "description": "Enterprise-software-inventarisverpakking voor geïnstalleerde software en versiegegevens"
+    "description": "Enterprise-software-inventarisverpakking voor geïnstalleerde software en versiegegevens",
+    "heading": "Software-inventaris",
+    "searchPlaceholder": "Zoek software...",
+    "appsCount": "{{count}} apps",
+    "unknownName": "Onbekend",
+    "noMatch": "Geen software komt overeen met uw zoekopdracht",
+    "version": "v{{version}}",
+    "by": "door {{publisher}}",
+    "showingOfApplications": "{{shown}} van {{total}} applicaties weergegeven",
+    "more": "+{{count}} meer"
+  },
+  "remoteAccess": {
+    "remoteDesktop": "Extern bureaublad",
+    "remoteShell": "Externe shell",
+    "remoteAccess": "Externe toegang",
+    "deviceOverdue": "Apparaat is achterstallig",
+    "deviceOffline": "Apparaat is offline",
+    "errors": {
+      "urlFetchFailed": "Kan URL voor externe toegang niet ophalen",
+      "initiateFailed": "Kan externe toegang niet starten"
+    },
+    "indicator": {
+      "online": "Online",
+      "offline": "Offline",
+      "available": "Externe toegang beschikbaar",
+      "deviceOffline": "Apparaat offline"
+    }
+  },
+  "assetListErrors": {
+    "genericError": "Er is een fout opgetreden. Probeer het later opnieuw.",
+    "assetNotFound": "Item niet gevonden"
+  },
+  "assetEdit": {
+    "pageTitle": "Item bewerken"
   },
   "associatedAssets": {
     "title": "Bijbehorende activa",
@@ -1191,6 +1247,9 @@
       "acknowledgeFailed": "Kan melding niet bevestigen",
       "ticketCreated": "Ticket succesvol aangemaakt",
       "ticketCreateFailed": "Kan ticket niet aanmaken"
-    }
+    },
+    "activeAlerts": "Actieve waarschuwingen",
+    "acknowledge": "Bevestigen",
+    "createTicket": "Ticket aanmaken"
   }
 }

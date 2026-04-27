@@ -255,5 +255,320 @@
       "load": "Failed to load ticket defaults",
       "delete": "Failed to delete ticket defaults"
     }
+  },
+  "policyManagement": {
+    "resourceSections": {
+      "tickets": "Tickets",
+      "documents": "Documents",
+      "time": "Time",
+      "projects": "Projects",
+      "assets": "Assets",
+      "billing": "Billing"
+    },
+    "targetTypes": {
+      "role": "Role",
+      "team": "Team",
+      "user": "User",
+      "apiKey": "API Key"
+    },
+    "templateSummaries": {
+      "own": "records owned by the principal",
+      "assigned": "records assigned to the principal",
+      "managed": "records owned by managed users",
+      "ownOrAssigned": "records owned by or assigned to the principal",
+      "ownOrManaged": "records owned by the principal or managed users",
+      "sameClient": "records in the same client scope",
+      "clientPortfolio": "records for the principal client portfolio",
+      "selectedClients": "records in selected client scopes",
+      "sameTeam": "records owned by the same team",
+      "selectedBoards": "records in selected boards"
+    },
+    "constraintSummaries": {
+      "notSelfApprover": "blocks self-approval",
+      "clientVisibleOnly": "requires client-visible records",
+      "hideSensitiveFields": "redacts sensitive fields"
+    },
+    "dates": {
+      "unknown": "Unknown"
+    },
+    "ruleSummary": {
+      "base": "Narrow {{resourceType}} {{action}} to {{scope}}.",
+      "withConstraint": "Narrow {{resourceType}} {{action}} to {{scope}}; {{constraint}}."
+    },
+    "upsell": {
+      "title": "Authorization bundles",
+      "description": "Advanced Authorization Bundle management is available on the Premium tier. Upgrade to manage reusable narrowing bundles."
+    },
+    "hero": {
+      "badge": "Premium workspace",
+      "title": "Authorization bundles",
+      "subtitle": "Manage premium access narrowing with draft revisions, scoped assignments, and safe simulation from one control center.",
+      "newBundle": "New bundle",
+      "addStarters": "Add starter bundles",
+      "addingStarters": "Adding starter bundles..."
+    },
+    "metrics": {
+      "activeBundles": {
+        "title": "Active bundles",
+        "subtitle": "Reusable narrowing bundles currently available to assign"
+      },
+      "activeAssignments": {
+        "title": "Active assignments",
+        "subtitle": "Live role, team, user, and API key rollouts"
+      },
+      "starterBundles": {
+        "title": "Starter bundles",
+        "subtitle": "Bundled relationship-first presets ready to adapt"
+      },
+      "archivedBundles": {
+        "title": "Archived bundles",
+        "subtitle": "Retired bundles preserved for audit and reuse"
+      }
+    },
+    "library": {
+      "eyebrow": "Library",
+      "title": "Authorization bundle library",
+      "description": "Browse bundle status, manage lifecycle changes, and open a focused workspace for one bundle at a time.",
+      "searchPlaceholder": "Search bundles by name or description",
+      "showArchived": "Show archived",
+      "columns": {
+        "bundle": "Bundle",
+        "status": "Status",
+        "type": "Type",
+        "assignments": "Assignments",
+        "updated": "Updated",
+        "actions": "Actions"
+      },
+      "statusLabels": {
+        "active": "active",
+        "archived": "archived"
+      },
+      "typeLabels": {
+        "system": "System",
+        "custom": "Custom"
+      },
+      "badges": {
+        "starter": "Starter"
+      },
+      "descriptions": {
+        "systemStarter": "System starter bundle.",
+        "customBundle": "Custom narrowing bundle for role, team, user, or API key assignments."
+      },
+      "effectiveSummary": "Effective summary: {{status}} bundle with {{count}} active assignment(s).",
+      "empty": "No authorization bundles found.",
+      "loading": "Loading authorization bundles...",
+      "actions": {
+        "openEditor": "Open editor",
+        "assignments": "Assignments",
+        "simulator": "Simulator",
+        "clone": "Clone",
+        "archive": "Archive"
+      }
+    },
+    "workspace": {
+      "backToLibrary": "Back to library",
+      "updatedWithAssignments": "Updated {{date}} · {{count}} active assignment(s)",
+      "eyebrow": "Bundle workspace",
+      "fallbackBundleName": "Selected bundle",
+      "fallbackDescription": "Use the draft editor, assignment manager, and simulator to ship safe narrowing changes.",
+      "tabs": {
+        "editor": "Draft editor",
+        "assignments": "Assignments",
+        "simulator": "Simulator"
+      }
+    },
+    "editor": {
+      "header": "Bundle editor",
+      "editingDraftPrefix": "Editing draft revision for ",
+      "editingDraftSuffix": ". Changes stay in draft until published.",
+      "viewingPublishedPrefix": "Viewing the published revision for ",
+      "viewingPublishedSuffix": ". No active draft revision exists right now.",
+      "publishDraft": "Publish Draft",
+      "publishing": "Publishing...",
+      "publishedBadge": "Published",
+      "loading": "Loading draft editor...",
+      "revisionSummary": "Revision summary: {{summary}}",
+      "ruleCount": "{{count}} {{revisionType}} rule(s)",
+      "revisionType": {
+        "draft": "draft",
+        "published": "published"
+      },
+      "emptyRules": "No {{revisionType}} rules yet for {{resource}}.",
+      "ruleForm": {
+        "addDraftTitle": "Add Draft Rule",
+        "editDraftTitle": "Edit Draft Rule",
+        "createDraftTitle": "Create Draft Rule",
+        "editPublishedTitle": "Edit Published Rule as Draft",
+        "helperEditPublished": "Saving will create a new draft revision with your changes to this published rule.",
+        "helperCreateDraft": "Saving will create a new draft revision for this bundle.",
+        "reset": "Reset",
+        "action": "Action",
+        "template": "Template",
+        "constraint": "Constraint (optional)",
+        "constraintNone": "none",
+        "saveDraftRule": "Save Draft Rule",
+        "addDraftRule": "Add Draft Rule",
+        "saveAsDraftChange": "Save as Draft Change",
+        "createDraftRule": "Create Draft Rule"
+      },
+      "rule": {
+        "edit": "Edit",
+        "remove": "Remove",
+        "removeAsDraft": "Remove as Draft Change",
+        "removeDraftTooltip": "Remove this draft rule.",
+        "removePublishedTooltip": "Create a new draft revision that removes this published rule.",
+        "selectedClientScopes": "Selected client scopes",
+        "selectedBoardScopes": "Selected board scopes",
+        "redactedFields": "Redacted fields"
+      },
+      "scopes": {
+        "clientTitle": "Selected client scopes",
+        "boardTitle": "Selected board scopes",
+        "selectClient": "Select client",
+        "selectBoard": "Select board",
+        "addClientScope": "Add client scope",
+        "addBoardScope": "Add board scope",
+        "noClientScopes": "No client scopes added yet.",
+        "noBoardScopes": "No board scopes added yet.",
+        "remove": "Remove"
+      },
+      "redaction": {
+        "label": "Redacted fields",
+        "placeholder": "internal_cost, margin",
+        "helper": "Comma-separated field names to redact when this rule allows access."
+      }
+    },
+    "assignments": {
+      "header": "Assignment manager",
+      "description": "View and manage role, team, user, and API-key targets currently affected by this bundle.",
+      "loading": "Loading assignments...",
+      "addAssignment": "Add assignment",
+      "selectTargetPlaceholder": "Select {{target}}",
+      "addButton": "Add Assignment",
+      "adding": "Adding...",
+      "empty": "No assignments for this bundle yet.",
+      "groupEmpty": "No {{target}} assignments.",
+      "statusActions": {
+        "disable": "Disable",
+        "enable": "Enable",
+        "saving": "Saving..."
+      },
+      "statusLabels": {
+        "active": "active",
+        "disabled": "disabled"
+      }
+    },
+    "simulator": {
+      "header": "Access simulator",
+      "description": "Simulate draft vs published bundle behavior against a real principal and existing record.",
+      "inputTitle": "Simulation input",
+      "resource": "Resource",
+      "action": "Action",
+      "principal": "Principal",
+      "record": "Record",
+      "useSynthetic": "Use synthetic record scenario",
+      "syntheticOwnerPlaceholder": "Owner user ID (optional)",
+      "syntheticClientPlaceholder": "Client ID (optional)",
+      "syntheticBoardPlaceholder": "Board ID (optional)",
+      "clientVisible": "Client visible",
+      "run": "Run simulation",
+      "running": "Running simulation...",
+      "resultTitle": "Simulation result",
+      "draftRevision": "Draft revision",
+      "publishedRevision": "Published revision",
+      "allowed": "Allowed",
+      "denied": "Denied",
+      "empty": "Run a simulation to compare draft and published behavior."
+    },
+    "createDialog": {
+      "title": "Create Authorization Bundle",
+      "cancel": "Cancel",
+      "create": "Create Bundle",
+      "creating": "Creating...",
+      "nameLabel": "Name",
+      "namePlaceholder": "Finance Reviewer West",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Reusable narrowing bundle for a specific team, client group, or workflow."
+    },
+    "clone": {
+      "copySuffix": "{{name}} Copy"
+    },
+    "errors": {
+      "loadBundles": "Failed to load bundles.",
+      "loadEditor": "Failed to load bundle editor.",
+      "loadAssignments": "Failed to load bundle assignments.",
+      "cloneBundle": "Failed to clone bundle.",
+      "archiveBundle": "Failed to archive bundle.",
+      "seedStarters": "Failed to seed starter bundles.",
+      "bundleNameRequired": "Bundle name is required.",
+      "createBundle": "Failed to create bundle.",
+      "publishDraft": "Failed to publish bundle draft.",
+      "selectTemplate": "Select a template before saving a rule.",
+      "selectClientRequired": "Add at least one selected client before saving this rule.",
+      "selectBoardRequired": "Add at least one selected board before saving this rule.",
+      "redactedFieldRequired": "Enter at least one redacted field before saving this rule.",
+      "saveRule": "Failed to save draft rule.",
+      "removeRule": "Failed to remove rule.",
+      "selectTarget": "Select a target before adding an assignment.",
+      "addAssignment": "Failed to add assignment.",
+      "updateAssignmentStatus": "Failed to update assignment status.",
+      "selectPrincipal": "Select a principal before running simulation.",
+      "selectRecord": "Select a record before running simulation.",
+      "runSimulation": "Failed to run simulation.",
+      "simulator": {
+        "unsupportedAction": "The simulator currently supports only Read and Approve checks. Choose one of those actions and try again.",
+        "unsupportedResource": "This record type is not available in the simulator yet. Choose a supported record type and try again.",
+        "clientTicketNotSupported": "Ticket checks for client users are not available in the simulator yet because ticket board visibility is not included. Try an internal user, or verify client ticket access in the app."
+      }
+    }
+  },
+  "emailLogs": {
+    "page": {
+      "title": "Email Logs",
+      "description": "Review outbound email activity and troubleshoot notification delivery."
+    },
+    "metrics": {
+      "totalSent": "Total sent",
+      "failedRate": "Failed rate",
+      "today": "Today"
+    },
+    "filters": {
+      "startDate": "Start date",
+      "endDate": "End date",
+      "status": "Status",
+      "recipient": "Recipient",
+      "recipientPlaceholder": "Search email…",
+      "ticket": "Ticket",
+      "ticketPlaceholder": "Ticket #…",
+      "statusOptions": {
+        "all": "All",
+        "sent": "Sent",
+        "failed": "Failed"
+      }
+    },
+    "table": {
+      "time": "Time",
+      "ticket": "Ticket",
+      "recipient": "Recipient",
+      "subject": "Subject",
+      "status": "Status"
+    },
+    "loading": "Loading…",
+    "results_one": "{{count}} result",
+    "results_other": "{{count}} results",
+    "refresh": "Refresh",
+    "close": "Close",
+    "detail": {
+      "title": "Email Log Details",
+      "noSubject": "No subject",
+      "sentAt": "Sent at",
+      "status": "Status",
+      "provider": "Provider",
+      "messageId": "Message ID",
+      "to": "To",
+      "from": "From",
+      "error": "Error",
+      "metadata": "Metadata"
+    }
   }
 }

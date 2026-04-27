@@ -195,5 +195,41 @@
         "default": "Avviso"
       }
     }
+  },
+  "connectSso": {
+    "verify": {
+      "title": "Protegga il Suo account con SSO",
+      "description": "Colleghi Azure AD o Google Workspace per riutilizzare le policy aziendali e saltare le richieste locali di autenticazione a due fattori.",
+      "signedInAs": "Connesso come",
+      "currentPassword": "Password attuale",
+      "twoFactorCode": "Codice a due fattori",
+      "twoFactorPlaceholder": "123456",
+      "verifyCredentials": "Verifica credenziali",
+      "verifying": "Verifica in corso...",
+      "reset": "Reimposta",
+      "linkedSuccess": "Provider collegato correttamente.",
+      "credentialsVerified": "Credenziali verificate. Scelga un provider qui sotto per completare il collegamento del Suo account.",
+      "verifyFailed": "Impossibile verificare le credenziali.",
+      "verifyBeforeProvider": "Verifichi la Sua password (e il codice a due fattori se richiesto) prima di collegare un provider."
+    },
+    "providers": {
+      "title": "Colleghi un provider",
+      "description": "Scelga un provider per completare il collegamento SSO. Verrà reindirizzato attraverso il flusso di accesso del provider.",
+      "noneConfigured": "Nessun provider SSO è configurato per questo ambiente. Chieda al Suo amministratore di configurare le credenziali Google o Microsoft.",
+      "notConfigured": "Non configurato",
+      "branding": {
+        "google": "Continua con Google",
+        "microsoft": "Continua con Microsoft",
+        "default": "Continua"
+      }
+    },
+    "linked": {
+      "title": "Account collegati",
+      "description": "Aggiorneremo il collegamento al Suo prossimo accesso tramite un provider connesso.",
+      "empty": "Nessun provider SSO ancora collegato. Completi i passaggi precedenti per collegarne uno.",
+      "linkedAt": "Collegato il {{date}}",
+      "lastUsed": "Ultimo utilizzo: {{date}}",
+      "notUsedYet": "Non ancora utilizzato"
+    }
   }
 }

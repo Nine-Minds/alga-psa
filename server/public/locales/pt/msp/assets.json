@@ -609,11 +609,67 @@
   },
   "assetPatchStatusSection": {
     "title": "Asset Patch Status Section",
-    "description": "Enterprise patch and antivirus status wrapper shown in the asset detail experience"
+    "description": "Enterprise patch and antivirus status wrapper shown in the asset detail experience",
+    "heading": "Estado das Atualizações",
+    "compliance": {
+      "unknown": "Desconhecido",
+      "actionRequired": "Ação Necessária",
+      "updatesAvailable": "Atualizações Disponíveis",
+      "minorUpdates": "Atualizações Menores",
+      "upToDate": "Atualizado"
+    },
+    "relativeTime": {
+      "never": "Nunca",
+      "justNow": "Agora mesmo",
+      "minutesAgo": "há {{count}}m",
+      "hoursAgo": "há {{count}}h",
+      "daysAgo": "há {{count}}d"
+    },
+    "labels": {
+      "osPatches": "Atualizações de SO",
+      "software": "Software",
+      "failed": "Falhou",
+      "lastScan": "Última Análise",
+      "pending": "pendentes",
+      "patches": "atualizações"
+    }
   },
   "assetSoftwareInventory": {
     "title": "Asset Software Inventory",
-    "description": "Enterprise software inventory wrapper for installed software and version data"
+    "description": "Enterprise software inventory wrapper for installed software and version data",
+    "heading": "Inventário de Software",
+    "searchPlaceholder": "Pesquisar software...",
+    "appsCount": "{{count}} aplicações",
+    "unknownName": "Desconhecido",
+    "noMatch": "Nenhum software corresponde à pesquisa",
+    "version": "v{{version}}",
+    "by": "por {{publisher}}",
+    "showingOfApplications": "A mostrar {{shown}} de {{total}} aplicações",
+    "more": "+{{count}} mais"
+  },
+  "remoteAccess": {
+    "remoteDesktop": "Ambiente de Trabalho Remoto",
+    "remoteShell": "Shell Remota",
+    "remoteAccess": "Acesso Remoto",
+    "deviceOverdue": "O dispositivo está em atraso",
+    "deviceOffline": "O dispositivo está offline",
+    "errors": {
+      "urlFetchFailed": "Falha ao obter o URL de acesso remoto",
+      "initiateFailed": "Falha ao iniciar o acesso remoto"
+    },
+    "indicator": {
+      "online": "Online",
+      "offline": "Offline",
+      "available": "Acesso remoto disponível",
+      "deviceOffline": "Dispositivo offline"
+    }
+  },
+  "assetListErrors": {
+    "genericError": "Ocorreu um erro. Por favor, tente novamente mais tarde.",
+    "assetNotFound": "Ativo não encontrado"
+  },
+  "assetEdit": {
+    "pageTitle": "Editar Ativo"
   },
   "associatedAssets": {
     "title": "Associated Assets",
@@ -1191,6 +1247,9 @@
       "acknowledgeFailed": "Falha ao confirmar o alerta",
       "ticketCreated": "Ticket criado com sucesso",
       "ticketCreateFailed": "Falha ao criar o ticket"
-    }
+    },
+    "activeAlerts": "Alertas ativos",
+    "acknowledge": "Confirmar",
+    "createTicket": "Criar ticket"
   }
 }

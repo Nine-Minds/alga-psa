@@ -426,7 +426,8 @@
       "summaryTitle": "55555",
       "summaryDescription": "55555",
       "moreErrors": "55555 {{count}} 55555"
-    }
+    },
+    "sampleEmailBody": "55555"
   },
   "eventList": {
     "common": {
@@ -638,7 +639,10 @@
     },
     "stepPanel": {
       "readOnly": "55555",
-      "selectPrompt": "55555"
+      "selectPrompt": "55555",
+      "readOnlyNotice": "55555",
+      "contractMode": "55555",
+      "catalogSchema": "55555"
     },
     "stepConfig": {
       "eventLabel": "55555",
@@ -652,7 +656,27 @@
       "assignOnResume": "55555",
       "fieldLabel": "55555",
       "fieldPathLabel": "55555",
-      "dataContextToggle": "55555"
+      "dataContextToggle": "55555",
+      "condition": "55555",
+      "itemsExpression": "55555",
+      "itemVariable": "55555",
+      "concurrency": "55555",
+      "onItemError": "55555",
+      "captureErrorAs": "55555",
+      "workflowId": "55555",
+      "workflowVersion": "55555",
+      "inputMapping": "55555",
+      "outputMapping": "55555",
+      "value": "55555",
+      "mode": "55555",
+      "days": "55555",
+      "hours": "55555",
+      "minutes": "55555",
+      "seconds": "55555",
+      "untilInput": "55555",
+      "specificDateTime": "55555",
+      "untilExpression": "55555",
+      "returnNotice": "55555"
     },
     "mappingExpr": {
       "add": "55555",
@@ -751,7 +775,8 @@
         "warnings": "55555",
         "valid": "55555",
         "unknown": "55555"
-      }
+      },
+      "errors": "55555"
     },
     "discardDialog": {
       "title": "55555",
@@ -928,6 +953,61 @@
       "publishFailed": "55555",
       "publishValidationErrors": "55555",
       "systemEventMissingSchema": "55555"
+    },
+    "propsPanel": {
+      "resizeAria": "55555",
+      "settingsTitle": "55555",
+      "settingsSubtitle": "55555",
+      "visibleToUsers": "55555",
+      "paused": "55555",
+      "concurrencyLimit": "55555",
+      "unlimited": "55555",
+      "autoPauseFailureRate": "55555",
+      "failureRateThreshold": "55555",
+      "minRunsBeforeAutoPause": "55555"
+    },
+    "trigger": {
+      "summary": "55555",
+      "actionNeeded": "55555",
+      "noMappingNeeded": "55555",
+      "sourceSchemaOverride": "55555",
+      "useCatalogSchemaDefault": "55555",
+      "useCatalogSchemaPlaceholder": "55555",
+      "noSchemasFound": "55555",
+      "mappingTitle": "55555",
+      "mappingNotRequired": "55555",
+      "mappingErrors": "55555",
+      "mappingWarnings": "55555"
+    },
+    "schemaSettings": {
+      "lockVersion": "55555",
+      "lockVersionHelp": "55555",
+      "lockedVersion": "55555",
+      "manualRef": "55555",
+      "fixedForTimeTriggers": "55555",
+      "availableFieldsPreview": "55555",
+      "payloadContract": "55555",
+      "ref": "55555",
+      "loadFailed": "55555",
+      "notLoaded": "55555",
+      "loadPreviewFailed": "55555",
+      "selectVersionPlaceholder": "55555",
+      "payloadRefAdvanced": "55555"
+    },
+    "expression": {
+      "insertField": "55555",
+      "enterPlaceholder": "55555"
+    },
+    "dataContext": {
+      "availableDataAtStep": "55555",
+      "payload": "55555",
+      "noPayloadFields": "55555",
+      "payloadSchemaRefHint": "55555",
+      "stepOutputs": "55555",
+      "outputSchemaUnavailable": "55555",
+      "noFields": "55555",
+      "copyAllPaths": "55555",
+      "copyAllFieldPaths": "55555"
     }
   },
   "actionInputFieldInfo": {
@@ -2274,5 +2354,49 @@
     "enableHint": "55555",
     "goToExperimental": "55555",
     "openSettings": "55555"
+  },
+  "flow": {
+    "designer": {
+      "title": "55555"
+    },
+    "sidebar": {
+      "dragHint": "55555"
+    },
+    "picker": {
+      "searchPlaceholder": "55555"
+    },
+    "fields": {
+      "selectInputField": "55555",
+      "customFieldReference": "55555",
+      "selectOrEnterReference": "55555"
+    },
+    "delete": {
+      "confirmTitle": "55555",
+      "confirmMessage": "55555"
+    },
+    "topBar": {
+      "workflowName": "55555",
+      "workflowDescription": "55555"
+    },
+    "nodes": {
+      "classifier": {
+        "newClassification": "55555"
+      },
+      "selector": {
+        "defaultInput": "55555"
+      },
+      "decision": {
+        "type": "55555",
+        "conditionValue": "55555",
+        "defaultOutput": "55555",
+        "defaultOutputProp": "55555"
+      },
+      "ticketCreator": {
+        "ticketTitle": "55555",
+        "ticketDescription": "55555",
+        "selectBoard": "55555",
+        "selectPriority": "55555"
+      }
+    }
   }
 }

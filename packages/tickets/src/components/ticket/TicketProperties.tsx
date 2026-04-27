@@ -985,14 +985,16 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                       return fullName || t('properties.unknownAgent', 'Unknown Agent');
                     })()}
                   </span>
-                  <div className="flex items-center text-xs text-gray-500 mt-1">
-                    <Clock className="w-3 h-3 mr-1" />
-                    <span>
-                      {t('properties.scheduled', 'Scheduled: {{time}}', {
-                        time: formatMinutesAsHoursAndMinutes(getAgentScheduledHours(ticket.assigned_to!)),
-                      })}
-                    </span>
-                  </div>
+                  {getAgentScheduledHours(ticket.assigned_to!) > 0 && (
+                    <div className="flex items-center text-xs text-gray-500 mt-1">
+                      <Clock className="w-3 h-3 mr-1" />
+                      <span>
+                        {t('properties.scheduled', 'Scheduled: {{time}}', {
+                          time: formatMinutesAsHoursAndMinutes(getAgentScheduledHours(ticket.assigned_to!)),
+                        })}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (

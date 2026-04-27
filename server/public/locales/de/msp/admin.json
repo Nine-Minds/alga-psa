@@ -255,5 +255,320 @@
       "load": "Ticket-Standardwerte konnten nicht geladen werden",
       "delete": "Ticket-Standardwerte konnten nicht gelöscht werden"
     }
+  },
+  "policyManagement": {
+    "resourceSections": {
+      "tickets": "Tickets",
+      "documents": "Dokumente",
+      "time": "Zeit",
+      "projects": "Projekte",
+      "assets": "Assets",
+      "billing": "Abrechnung"
+    },
+    "targetTypes": {
+      "role": "Rolle",
+      "team": "Team",
+      "user": "Benutzer",
+      "apiKey": "API-Schlüssel"
+    },
+    "templateSummaries": {
+      "own": "Datensätze im Besitz des Principals",
+      "assigned": "Datensätze, die dem Principal zugewiesen sind",
+      "managed": "Datensätze im Besitz verwalteter Benutzer",
+      "ownOrAssigned": "Datensätze im Besitz des Principals oder ihm zugewiesen",
+      "ownOrManaged": "Datensätze im Besitz des Principals oder verwalteter Benutzer",
+      "sameClient": "Datensätze im gleichen Kundenbereich",
+      "clientPortfolio": "Datensätze für das Kundenportfolio des Principals",
+      "selectedClients": "Datensätze in ausgewählten Kundenbereichen",
+      "sameTeam": "Datensätze im Besitz desselben Teams",
+      "selectedBoards": "Datensätze in ausgewählten Boards"
+    },
+    "constraintSummaries": {
+      "notSelfApprover": "verhindert Selbstgenehmigung",
+      "clientVisibleOnly": "erfordert für Kunden sichtbare Datensätze",
+      "hideSensitiveFields": "redigiert sensible Felder"
+    },
+    "dates": {
+      "unknown": "Unbekannt"
+    },
+    "ruleSummary": {
+      "base": "Beschränke {{resourceType}} {{action}} auf {{scope}}.",
+      "withConstraint": "Beschränke {{resourceType}} {{action}} auf {{scope}}; {{constraint}}."
+    },
+    "upsell": {
+      "title": "Autorisierungspakete",
+      "description": "Die erweiterte Verwaltung von Autorisierungspaketen ist in der Premium-Stufe verfügbar. Führen Sie ein Upgrade durch, um wiederverwendbare Beschränkungspakete zu verwalten."
+    },
+    "hero": {
+      "badge": "Premium-Arbeitsbereich",
+      "title": "Autorisierungspakete",
+      "subtitle": "Verwalten Sie die Premium-Zugriffsbeschränkung mit Entwurfsrevisionen, zugewiesenen Geltungsbereichen und sicherer Simulation von einer Kontrollzentrale aus.",
+      "newBundle": "Neues Paket",
+      "addStarters": "Starter-Pakete hinzufügen",
+      "addingStarters": "Starter-Pakete werden hinzugefügt..."
+    },
+    "metrics": {
+      "activeBundles": {
+        "title": "Aktive Pakete",
+        "subtitle": "Wiederverwendbare Beschränkungspakete, die derzeit für Zuweisungen verfügbar sind"
+      },
+      "activeAssignments": {
+        "title": "Aktive Zuweisungen",
+        "subtitle": "Live-Rollouts für Rollen, Teams, Benutzer und API-Schlüssel"
+      },
+      "starterBundles": {
+        "title": "Starter-Pakete",
+        "subtitle": "Vorgefertigte beziehungsorientierte Pakete, bereit zur Anpassung"
+      },
+      "archivedBundles": {
+        "title": "Archivierte Pakete",
+        "subtitle": "Ausgemusterte Pakete, aufbewahrt für Audit und Wiederverwendung"
+      }
+    },
+    "library": {
+      "eyebrow": "Bibliothek",
+      "title": "Bibliothek der Autorisierungspakete",
+      "description": "Durchsuchen Sie den Paketstatus, verwalten Sie Lebenszyklusänderungen und öffnen Sie einen fokussierten Arbeitsbereich für jeweils ein Paket.",
+      "searchPlaceholder": "Pakete nach Name oder Beschreibung suchen",
+      "showArchived": "Archivierte anzeigen",
+      "columns": {
+        "bundle": "Paket",
+        "status": "Status",
+        "type": "Typ",
+        "assignments": "Zuweisungen",
+        "updated": "Aktualisiert",
+        "actions": "Aktionen"
+      },
+      "statusLabels": {
+        "active": "aktiv",
+        "archived": "archiviert"
+      },
+      "typeLabels": {
+        "system": "System",
+        "custom": "Benutzerdefiniert"
+      },
+      "badges": {
+        "starter": "Starter"
+      },
+      "descriptions": {
+        "systemStarter": "System-Starter-Paket.",
+        "customBundle": "Benutzerdefiniertes Beschränkungspaket für Zuweisungen an Rollen, Teams, Benutzer oder API-Schlüssel."
+      },
+      "effectiveSummary": "Effektive Zusammenfassung: {{status}} Paket mit {{count}} aktiven Zuweisung(en).",
+      "empty": "Keine Autorisierungspakete gefunden.",
+      "loading": "Autorisierungspakete werden geladen...",
+      "actions": {
+        "openEditor": "Editor öffnen",
+        "assignments": "Zuweisungen",
+        "simulator": "Simulator",
+        "clone": "Klonen",
+        "archive": "Archivieren"
+      }
+    },
+    "workspace": {
+      "backToLibrary": "Zurück zur Bibliothek",
+      "updatedWithAssignments": "Aktualisiert {{date}} · {{count}} aktive Zuweisung(en)",
+      "eyebrow": "Paket-Arbeitsbereich",
+      "fallbackBundleName": "Ausgewähltes Paket",
+      "fallbackDescription": "Verwenden Sie den Entwurfseditor, den Zuweisungsmanager und den Simulator, um sichere Beschränkungsänderungen bereitzustellen.",
+      "tabs": {
+        "editor": "Entwurfseditor",
+        "assignments": "Zuweisungen",
+        "simulator": "Simulator"
+      }
+    },
+    "editor": {
+      "header": "Paketeditor",
+      "editingDraftPrefix": "Entwurfsrevision bearbeiten für ",
+      "editingDraftSuffix": ". Änderungen bleiben im Entwurf, bis sie veröffentlicht werden.",
+      "viewingPublishedPrefix": "Veröffentlichte Revision anzeigen für ",
+      "viewingPublishedSuffix": ". Es gibt derzeit keine aktive Entwurfsrevision.",
+      "publishDraft": "Entwurf veröffentlichen",
+      "publishing": "Wird veröffentlicht...",
+      "publishedBadge": "Veröffentlicht",
+      "loading": "Entwurfseditor wird geladen...",
+      "revisionSummary": "Revisionszusammenfassung: {{summary}}",
+      "ruleCount": "{{count}} {{revisionType}} Regel(n)",
+      "revisionType": {
+        "draft": "Entwurf",
+        "published": "veröffentlicht"
+      },
+      "emptyRules": "Noch keine {{revisionType}}-Regeln für {{resource}}.",
+      "ruleForm": {
+        "addDraftTitle": "Entwurfsregel hinzufügen",
+        "editDraftTitle": "Entwurfsregel bearbeiten",
+        "createDraftTitle": "Entwurfsregel erstellen",
+        "editPublishedTitle": "Veröffentlichte Regel als Entwurf bearbeiten",
+        "helperEditPublished": "Das Speichern erstellt eine neue Entwurfsrevision mit Ihren Änderungen an dieser veröffentlichten Regel.",
+        "helperCreateDraft": "Das Speichern erstellt eine neue Entwurfsrevision für dieses Paket.",
+        "reset": "Zurücksetzen",
+        "action": "Aktion",
+        "template": "Vorlage",
+        "constraint": "Einschränkung (optional)",
+        "constraintNone": "keine",
+        "saveDraftRule": "Entwurfsregel speichern",
+        "addDraftRule": "Entwurfsregel hinzufügen",
+        "saveAsDraftChange": "Als Entwurfsänderung speichern",
+        "createDraftRule": "Entwurfsregel erstellen"
+      },
+      "rule": {
+        "edit": "Bearbeiten",
+        "remove": "Entfernen",
+        "removeAsDraft": "Als Entwurfsänderung entfernen",
+        "removeDraftTooltip": "Diese Entwurfsregel entfernen.",
+        "removePublishedTooltip": "Eine neue Entwurfsrevision erstellen, die diese veröffentlichte Regel entfernt.",
+        "selectedClientScopes": "Ausgewählte Kundenbereiche",
+        "selectedBoardScopes": "Ausgewählte Board-Bereiche",
+        "redactedFields": "Redigierte Felder"
+      },
+      "scopes": {
+        "clientTitle": "Ausgewählte Kundenbereiche",
+        "boardTitle": "Ausgewählte Board-Bereiche",
+        "selectClient": "Kunde auswählen",
+        "selectBoard": "Board auswählen",
+        "addClientScope": "Kundenbereich hinzufügen",
+        "addBoardScope": "Board-Bereich hinzufügen",
+        "noClientScopes": "Noch keine Kundenbereiche hinzugefügt.",
+        "noBoardScopes": "Noch keine Board-Bereiche hinzugefügt.",
+        "remove": "Entfernen"
+      },
+      "redaction": {
+        "label": "Redigierte Felder",
+        "placeholder": "internal_cost, margin",
+        "helper": "Durch Kommas getrennte Feldnamen, die redigiert werden, wenn diese Regel den Zugriff erlaubt."
+      }
+    },
+    "assignments": {
+      "header": "Zuweisungsmanager",
+      "description": "Zeigen Sie Rollen-, Team-, Benutzer- und API-Schlüssel-Ziele an und verwalten Sie diese, die derzeit von diesem Paket betroffen sind.",
+      "loading": "Zuweisungen werden geladen...",
+      "addAssignment": "Zuweisung hinzufügen",
+      "selectTargetPlaceholder": "{{target}} auswählen",
+      "addButton": "Zuweisung hinzufügen",
+      "adding": "Wird hinzugefügt...",
+      "empty": "Noch keine Zuweisungen für dieses Paket.",
+      "groupEmpty": "Keine {{target}}-Zuweisungen.",
+      "statusActions": {
+        "disable": "Deaktivieren",
+        "enable": "Aktivieren",
+        "saving": "Wird gespeichert..."
+      },
+      "statusLabels": {
+        "active": "aktiv",
+        "disabled": "deaktiviert"
+      }
+    },
+    "simulator": {
+      "header": "Zugriffssimulator",
+      "description": "Simulieren Sie das Verhalten eines Entwurfs gegenüber einem veröffentlichten Paket anhand eines echten Principals und eines bestehenden Datensatzes.",
+      "inputTitle": "Simulationseingabe",
+      "resource": "Ressource",
+      "action": "Aktion",
+      "principal": "Principal",
+      "record": "Datensatz",
+      "useSynthetic": "Synthetisches Datensatzszenario verwenden",
+      "syntheticOwnerPlaceholder": "Besitzer-Benutzer-ID (optional)",
+      "syntheticClientPlaceholder": "Kunden-ID (optional)",
+      "syntheticBoardPlaceholder": "Board-ID (optional)",
+      "clientVisible": "Für Kunden sichtbar",
+      "run": "Simulation ausführen",
+      "running": "Simulation wird ausgeführt...",
+      "resultTitle": "Simulationsergebnis",
+      "draftRevision": "Entwurfsrevision",
+      "publishedRevision": "Veröffentlichte Revision",
+      "allowed": "Erlaubt",
+      "denied": "Verweigert",
+      "empty": "Führen Sie eine Simulation aus, um das Verhalten von Entwurf und veröffentlichter Version zu vergleichen."
+    },
+    "createDialog": {
+      "title": "Autorisierungspaket erstellen",
+      "cancel": "Abbrechen",
+      "create": "Paket erstellen",
+      "creating": "Wird erstellt...",
+      "nameLabel": "Name",
+      "namePlaceholder": "Finance Reviewer West",
+      "descriptionLabel": "Beschreibung",
+      "descriptionPlaceholder": "Wiederverwendbares Beschränkungspaket für ein bestimmtes Team, eine Kundengruppe oder einen Workflow."
+    },
+    "clone": {
+      "copySuffix": "{{name}} Kopie"
+    },
+    "errors": {
+      "loadBundles": "Pakete konnten nicht geladen werden.",
+      "loadEditor": "Paketeditor konnte nicht geladen werden.",
+      "loadAssignments": "Paketzuweisungen konnten nicht geladen werden.",
+      "cloneBundle": "Paket konnte nicht geklont werden.",
+      "archiveBundle": "Paket konnte nicht archiviert werden.",
+      "seedStarters": "Starter-Pakete konnten nicht initialisiert werden.",
+      "bundleNameRequired": "Paketname ist erforderlich.",
+      "createBundle": "Paket konnte nicht erstellt werden.",
+      "publishDraft": "Paketentwurf konnte nicht veröffentlicht werden.",
+      "selectTemplate": "Wählen Sie eine Vorlage aus, bevor Sie eine Regel speichern.",
+      "selectClientRequired": "Fügen Sie mindestens einen ausgewählten Kunden hinzu, bevor Sie diese Regel speichern.",
+      "selectBoardRequired": "Fügen Sie mindestens ein ausgewähltes Board hinzu, bevor Sie diese Regel speichern.",
+      "redactedFieldRequired": "Geben Sie mindestens ein redigiertes Feld ein, bevor Sie diese Regel speichern.",
+      "saveRule": "Entwurfsregel konnte nicht gespeichert werden.",
+      "removeRule": "Regel konnte nicht entfernt werden.",
+      "selectTarget": "Wählen Sie ein Ziel aus, bevor Sie eine Zuweisung hinzufügen.",
+      "addAssignment": "Zuweisung konnte nicht hinzugefügt werden.",
+      "updateAssignmentStatus": "Zuweisungsstatus konnte nicht aktualisiert werden.",
+      "selectPrincipal": "Wählen Sie einen Principal aus, bevor Sie die Simulation ausführen.",
+      "selectRecord": "Wählen Sie einen Datensatz aus, bevor Sie die Simulation ausführen.",
+      "runSimulation": "Simulation konnte nicht ausgeführt werden.",
+      "simulator": {
+        "unsupportedAction": "Der Simulator unterstützt derzeit nur Lese- und Genehmigungsprüfungen. Wählen Sie eine dieser Aktionen aus und versuchen Sie es erneut.",
+        "unsupportedResource": "Dieser Datensatztyp ist im Simulator noch nicht verfügbar. Wählen Sie einen unterstützten Datensatztyp aus und versuchen Sie es erneut.",
+        "clientTicketNotSupported": "Ticketprüfungen für Client-Benutzer sind im Simulator noch nicht verfügbar, da die Sichtbarkeit von Ticket-Boards nicht enthalten ist. Versuchen Sie es mit einem internen Benutzer oder überprüfen Sie den Client-Ticket-Zugriff in der App."
+      }
+    }
+  },
+  "emailLogs": {
+    "page": {
+      "title": "E-Mail-Protokolle",
+      "description": "Überprüfen Sie ausgehende E-Mail-Aktivitäten und beheben Sie Probleme bei der Zustellung von Benachrichtigungen."
+    },
+    "metrics": {
+      "totalSent": "Insgesamt gesendet",
+      "failedRate": "Fehlerquote",
+      "today": "Heute"
+    },
+    "filters": {
+      "startDate": "Startdatum",
+      "endDate": "Enddatum",
+      "status": "Status",
+      "recipient": "Empfänger",
+      "recipientPlaceholder": "E-Mail suchen…",
+      "ticket": "Ticket",
+      "ticketPlaceholder": "Ticket-Nr.…",
+      "statusOptions": {
+        "all": "Alle",
+        "sent": "Gesendet",
+        "failed": "Fehlgeschlagen"
+      }
+    },
+    "table": {
+      "time": "Zeit",
+      "ticket": "Ticket",
+      "recipient": "Empfänger",
+      "subject": "Betreff",
+      "status": "Status"
+    },
+    "loading": "Wird geladen…",
+    "results_one": "{{count}} Ergebnis",
+    "results_other": "{{count}} Ergebnisse",
+    "refresh": "Aktualisieren",
+    "close": "Schließen",
+    "detail": {
+      "title": "Details zum E-Mail-Protokoll",
+      "noSubject": "Kein Betreff",
+      "sentAt": "Gesendet am",
+      "status": "Status",
+      "provider": "Anbieter",
+      "messageId": "Nachrichten-ID",
+      "to": "An",
+      "from": "Von",
+      "error": "Fehler",
+      "metadata": "Metadaten"
+    }
   }
 }

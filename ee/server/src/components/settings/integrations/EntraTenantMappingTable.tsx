@@ -3,6 +3,7 @@
 import React from 'react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getEntraMappingPreview, confirmEntraMappings } from '@alga-psa/integrations/actions';
 import { skipEntraTenantMapping, importEntraTenantAsClient } from '@alga-psa/integrations/actions';
 import { getAllClients } from '@alga-psa/clients/actions';
@@ -65,7 +66,7 @@ function mapPreviewToRows(payload: any): MappingTenantRow[] {
       candidates: [
         {
           clientId: String(match.clientId || ''),
-          clientName: String(match.clientName || 'Unknown client'),
+          clientName: String(match.clientName || ''),
           confidenceScore: Number(match.confidenceScore || 0),
           reason: (match.reason || 'exact_domain') as MatchReason,
         },
@@ -86,7 +87,7 @@ function mapPreviewToRows(payload: any): MappingTenantRow[] {
       state: 'needs_review',
       candidates: candidates.map((candidate: any) => ({
         clientId: String(candidate?.clientId || ''),
-        clientName: String(candidate?.clientName || 'Unknown client'),
+        clientName: String(candidate?.clientName || ''),
         confidenceScore: Number(candidate?.confidenceScore || 0),
         reason: (candidate?.reason || 'fuzzy_name') as MatchReason,
       })),
@@ -112,12 +113,6 @@ function mapPreviewToRows(payload: any): MappingTenantRow[] {
   return rows;
 }
 
-function reasonLabel(reason: MatchReason): string {
-  if (reason === 'exact_domain') return 'Exact domain';
-  if (reason === 'secondary_domain') return 'Secondary domain';
-  return 'Fuzzy name';
-}
-
 export function EntraTenantMappingTable({
   onSummaryChange,
   onSkippedTenantsChange,
@@ -129,6 +124,12 @@ export function EntraTenantMappingTable({
   onPersistedMappingChange?: () => void;
   refreshKey?: number;
 }) {
+  const { t } = useTranslation('msp/integrations');
+  const reasonLabel = React.useCallback((reason: MatchReason): string => {
+    if (reason === 'exact_domain') return t('integrations.entra.tenantMapping.reasons.exactDomain');
+    if (reason === 'secondary_domain') return t('integrations.entra.tenantMapping.reasons.secondaryDomain');
+    return t('integrations.entra.tenantMapping.reasons.fuzzyName');
+  }, [t]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [rows, setRows] = React.useState<MappingTenantRow[]>([]);
@@ -145,7 +146,7 @@ export function EntraTenantMappingTable({
       const result = await getEntraMappingPreview();
       if ('error' in result) {
         setRows([]);
-        setError(result.error || 'Failed to load tenant mapping preview.');
+        setError(result.error || t('integrations.entra.tenantMapping.errors.loadFailed'));
         return;
       }
 
@@ -244,7 +245,7 @@ export function EntraTenantMappingTable({
       });
 
       if ('error' in result) {
-        setError(result.error || 'Failed to skip this tenant mapping.');
+        setError(result.error || t('integrations.entra.tenantMapping.errors.skipFailed'));
         return;
       }
 
@@ -274,7 +275,7 @@ export function EntraTenantMappingTable({
       });
 
       if ('error' in result) {
-        setError(result.error || 'Failed to import tenant as client.');
+        setError(result.error || t('integrations.entra.tenantMapping.errors.importFailed'));
         return;
       }
 
@@ -301,7 +302,7 @@ export function EntraTenantMappingTable({
 
   const handleConfirmSelectedMappings = React.useCallback(async () => {
     if (mappingsToConfirm.length === 0) {
-      setConfirmFeedback('Select at least one client to confirm a mapping.');
+      setConfirmFeedback(t('integrations.entra.tenantMapping.errors.selectAtLeastOne'));
       return;
     }
 
@@ -313,18 +314,22 @@ export function EntraTenantMappingTable({
       });
 
       if ('error' in result) {
-        setError(result.error || 'Failed to confirm selected mappings.');
+        setError(result.error || t('integrations.entra.tenantMapping.errors.confirmFailed'));
         return;
       }
 
       setError(null);
       const confirmed = Number(result.data?.confirmedMappings || 0);
-      setConfirmFeedback(`Confirmed ${confirmed} mapping${confirmed === 1 ? '' : 's'}.`);
+      setConfirmFeedback(
+        confirmed === 1
+          ? t('integrations.entra.tenantMapping.feedback.confirmedOne', { count: confirmed })
+          : t('integrations.entra.tenantMapping.feedback.confirmed', { count: confirmed }),
+      );
       onPersistedMappingChange?.();
     } finally {
       setConfirmingMappings(false);
     }
-  }, [mappingsToConfirm, onPersistedMappingChange]);
+  }, [mappingsToConfirm, onPersistedMappingChange, t]);
 
   const handlePreselectExactMatches = React.useCallback(() => {
     setRows((currentRows) =>
@@ -349,7 +354,7 @@ export function EntraTenantMappingTable({
   return (
     <div className="space-y-3" id="entra-mapping-table">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-semibold">Tenant Mapping Preview</p>
+        <p className="text-sm font-semibold">{t('integrations.entra.tenantMapping.title')}</p>
         <div className="flex gap-2">
           <Button
             id="entra-confirm-selected-mappings"
@@ -359,7 +364,9 @@ export function EntraTenantMappingTable({
             onClick={() => void handleConfirmSelectedMappings()}
             disabled={loading || confirmingMappings || mappingsToConfirm.length === 0}
           >
-            {confirmingMappings ? 'Confirming…' : 'Confirm Selected Mappings'}
+            {confirmingMappings
+              ? t('integrations.entra.tenantMapping.actions.confirming')
+              : t('integrations.entra.tenantMapping.actions.confirmSelected')}
           </Button>
           <Button
             id="entra-preselect-exact-matches"
@@ -369,10 +376,10 @@ export function EntraTenantMappingTable({
             onClick={handlePreselectExactMatches}
             disabled={loading}
           >
-            Preselect Exact Matches
+            {t('integrations.entra.tenantMapping.actions.preselectExact')}
           </Button>
           <Button id="entra-mapping-refresh" type="button" variant="outline" size="sm" onClick={loadPreview} disabled={loading}>
-            Refresh Preview
+            {t('integrations.entra.tenantMapping.actions.refresh')}
           </Button>
         </div>
       </div>
@@ -384,13 +391,13 @@ export function EntraTenantMappingTable({
         <table className="min-w-full text-sm">
           <thead className="bg-muted/30 text-left">
             <tr>
-              <th className="px-3 py-2 font-medium">Entra Tenant</th>
-              <th className="px-3 py-2 font-medium">Primary Domain</th>
-              <th className="px-3 py-2 font-medium">Status</th>
-              <th className="px-3 py-2 font-medium">Suggested Client</th>
-              <th className="px-3 py-2 font-medium">Confidence</th>
-              <th className="px-3 py-2 font-medium">Select Client</th>
-              <th className="px-3 py-2 font-medium">Actions</th>
+              <th className="px-3 py-2 font-medium">{t('integrations.entra.tenantMapping.columns.entraTenant')}</th>
+              <th className="px-3 py-2 font-medium">{t('integrations.entra.tenantMapping.columns.primaryDomain')}</th>
+              <th className="px-3 py-2 font-medium">{t('integrations.entra.tenantMapping.columns.status')}</th>
+              <th className="px-3 py-2 font-medium">{t('integrations.entra.tenantMapping.columns.suggestedClient')}</th>
+              <th className="px-3 py-2 font-medium">{t('integrations.entra.tenantMapping.columns.confidence')}</th>
+              <th className="px-3 py-2 font-medium">{t('integrations.entra.tenantMapping.columns.selectClient')}</th>
+              <th className="px-3 py-2 font-medium">{t('integrations.entra.tenantMapping.columns.actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -405,25 +412,25 @@ export function EntraTenantMappingTable({
                   <td className="px-3 py-2">{row.primaryDomain || '—'}</td>
                   <td className="px-3 py-2">
                     {row.isSkipped ? (
-                      <Badge variant="outline">Skipped</Badge>
+                      <Badge variant="outline">{t('integrations.entra.tenantMapping.states.skipped')}</Badge>
                     ) : row.state === 'auto_matched' ? (
-                      <Badge variant="secondary">Auto-matched</Badge>
+                      <Badge variant="secondary">{t('integrations.entra.tenantMapping.states.autoMatched')}</Badge>
                     ) : row.state === 'imported' ? (
-                      <Badge variant="secondary">Imported</Badge>
+                      <Badge variant="secondary">{t('integrations.entra.tenantMapping.states.imported')}</Badge>
                     ) : row.state === 'needs_review' ? (
-                      <Badge variant="outline">Needs review</Badge>
+                      <Badge variant="outline">{t('integrations.entra.tenantMapping.states.needsReview')}</Badge>
                     ) : (
-                      <Badge variant="outline">Unmatched</Badge>
+                      <Badge variant="outline">{t('integrations.entra.tenantMapping.states.unmatched')}</Badge>
                     )}
                   </td>
                   <td className="px-3 py-2">
                     {topCandidate ? (
                       <div>
-                        <p>{topCandidate.clientName}</p>
+                        <p>{topCandidate.clientName || t('integrations.entra.tenantMapping.picker.unknownClient')}</p>
                         <p className="text-xs text-muted-foreground">{reasonLabel(topCandidate.reason)}</p>
                       </div>
                     ) : (
-                      <span className="text-muted-foreground">No suggestion</span>
+                      <span className="text-muted-foreground">{t('integrations.entra.tenantMapping.noSuggestion')}</span>
                     )}
                   </td>
                   <td className="px-3 py-2">
@@ -441,7 +448,7 @@ export function EntraTenantMappingTable({
                         clientTypeFilter="all"
                         onClientTypeFilterChange={() => { }}
                         triggerButtonClassName="h-9 w-full bg-background font-normal"
-                        placeholder="Select client..."
+                        placeholder={t('integrations.entra.tenantMapping.picker.placeholder')}
                         modal={true}
                         fitContent={false}
                       />
@@ -458,7 +465,9 @@ export function EntraTenantMappingTable({
                           onClick={() => void handleImportAsClient(row)}
                           disabled={loading || row.isSkipped || Boolean(importingByRow[row.managedTenantId])}
                         >
-                          {importingByRow[row.managedTenantId] ? 'Importing…' : 'Import as new client'}
+                          {importingByRow[row.managedTenantId]
+                            ? t('integrations.entra.tenantMapping.actions.importing')
+                            : t('integrations.entra.tenantMapping.actions.import')}
                         </Button>
                         <Button
                           id={`entra-skip-row-${row.managedTenantId}`}
@@ -468,7 +477,9 @@ export function EntraTenantMappingTable({
                           onClick={() => void handleSkip(row)}
                           disabled={loading || row.isSkipped || Boolean(skippingByRow[row.managedTenantId])}
                         >
-                          {row.isSkipped ? 'Skipped' : 'Skip'}
+                          {row.isSkipped
+                            ? t('integrations.entra.tenantMapping.actions.skipped')
+                            : t('integrations.entra.tenantMapping.actions.skip')}
                         </Button>
                       </div>
                     ) : (
@@ -482,7 +493,7 @@ export function EntraTenantMappingTable({
             {!loading && rows.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-3 py-6 text-center text-muted-foreground">
-                  No discovered tenants available for mapping preview.
+                  {t('integrations.entra.tenantMapping.empty')}
                 </td>
               </tr>
             ) : null}

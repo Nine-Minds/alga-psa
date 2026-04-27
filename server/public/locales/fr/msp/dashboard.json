@@ -153,5 +153,6 @@
       "dismissFailed": "Impossible de masquer l'étape d'onboarding.",
       "restoreFailed": "Impossible de restaurer l'étape d'onboarding."
     }
-  }
+  },
+  "mspDashboard": "Tableau de bord MSP"
 }

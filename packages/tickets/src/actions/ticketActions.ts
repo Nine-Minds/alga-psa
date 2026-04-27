@@ -1678,24 +1678,19 @@ export const getScheduledHoursForTicket = withAuth(async (user, { tenant }, tick
         'se.tenant': tenant
       });
 
-    console.log('Schedule entries for ticket', ticketId, ':', scheduleEntries);
-
     // Calculate scheduled hours per agent
     const agentSchedules: Record<string, number> = {};
 
     scheduleEntries.forEach((entry: any) => {
       const userId = entry.user_id;
       if (!userId) {
-        console.log('Warning: Schedule entry has no user_id:', entry);
-        return; // Skip entries with no user_id
+        return;
       }
 
       const startTime = new Date(entry.scheduled_start);
       const endTime = new Date(entry.scheduled_end);
       const durationMs = endTime.getTime() - startTime.getTime();
-      const durationMinutes = Math.ceil(durationMs / (1000 * 60)); // Convert ms to minutes
-
-      console.log('Entry for user', userId, ':', startTime, 'to', endTime, '=', durationMinutes, 'minutes');
+      const durationMinutes = Math.ceil(durationMs / (1000 * 60));
 
       if (!agentSchedules[userId]) {
         agentSchedules[userId] = 0;
@@ -1704,50 +1699,10 @@ export const getScheduledHoursForTicket = withAuth(async (user, { tenant }, tick
       agentSchedules[userId] += durationMinutes;
     });
 
-    console.log('Agent schedules:', agentSchedules);
-
-    // Convert to array format
     const result: IAgentSchedule[] = Object.entries(agentSchedules).map(([userId, minutes]) => ({
       userId,
       minutes
     }));
-
-    console.log('Final result:', result);
-
-    // If no schedules found, add some dummy data for testing
-    if (result.length === 0) {
-      // Get the ticket to find the assigned agent
-      const ticketData = await trx('tickets')
-        .where({
-          ticket_id: ticketId,
-          tenant
-        })
-        .first();
-
-      if (ticketData && ticketData.assigned_to) {
-        result.push({
-          userId: ticketData.assigned_to,
-          minutes: 180 // 3 hours
-        });
-      }
-
-      // Add dummy data for additional agents
-      const additionalAgents = await trx('ticket_resources')
-        .where({
-          ticket_id: ticketId,
-          tenant
-        })
-        .select('additional_user_id');
-
-      additionalAgents.forEach((agent: any) => {
-        if (agent.additional_user_id) {
-          result.push({
-            userId: agent.additional_user_id,
-            minutes: 180 // 3 hours
-          });
-        }
-      });
-      }
 
       return result;
     });

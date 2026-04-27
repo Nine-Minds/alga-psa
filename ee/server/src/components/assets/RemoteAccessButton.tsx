@@ -23,6 +23,7 @@ import {
   AlertCircle,
   ExternalLink,
 } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getNinjaOneRemoteAccessUrl } from '../../lib/actions/integrations/ninjaoneActions';
 import type { Asset } from '@/interfaces/asset.interfaces';
 
@@ -41,6 +42,7 @@ export function RemoteAccessButton({
   size = 'sm',
   className = '',
 }: RemoteAccessButtonProps) {
+  const { t } = useTranslation('msp/assets');
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [activeConnection, setActiveConnection] = useState<ConnectionType | null>(null);
@@ -63,13 +65,13 @@ export function RemoteAccessButton({
         const result = await getNinjaOneRemoteAccessUrl(asset.asset_id);
 
         if (!result.success || !result.url) {
-          throw new Error(result.error || 'Failed to get remote access URL');
+          throw new Error(result.error || t('remoteAccess.errors.urlFetchFailed'));
         }
 
         // Open in new window
         window.open(result.url, '_blank', 'noopener,noreferrer');
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to initiate remote access';
+        const message = err instanceof Error ? err.message : t('remoteAccess.errors.initiateFailed');
         setError(message);
       } finally {
         setActiveConnection(null);
@@ -86,10 +88,10 @@ export function RemoteAccessButton({
         size={size}
         className={`gap-2 ${className}`}
         disabled
-        title={asset.agent_status === 'overdue' ? 'Device is overdue' : 'Device is offline'}
+        title={asset.agent_status === 'overdue' ? t('remoteAccess.deviceOverdue') : t('remoteAccess.deviceOffline')}
       >
         <Monitor className="h-4 w-4" />
-        Remote Access
+        {t('remoteAccess.remoteAccess')}
       </Button>
     );
   }
@@ -110,7 +112,7 @@ export function RemoteAccessButton({
             ) : (
               <Monitor className="h-4 w-4" />
             )}
-            Remote Access
+            {t('remoteAccess.remoteAccess')}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
@@ -120,7 +122,7 @@ export function RemoteAccessButton({
             className="gap-2"
           >
             <Monitor className="h-4 w-4" />
-            <span>Remote Desktop</span>
+            <span>{t('remoteAccess.remoteDesktop')}</span>
             <ExternalLink className="ml-auto h-3 w-3 text-muted-foreground" />
           </DropdownMenuItem>
           <DropdownMenuItem
@@ -129,7 +131,7 @@ export function RemoteAccessButton({
             className="gap-2"
           >
             <Terminal className="h-4 w-4" />
-            <span>Remote Shell</span>
+            <span>{t('remoteAccess.remoteShell')}</span>
             <ExternalLink className="ml-auto h-3 w-3 text-muted-foreground" />
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -151,6 +153,7 @@ export function RemoteAccessButton({
  * Inline remote access indicator for asset lists
  */
 export function RemoteAccessIndicator({ asset }: { asset: Asset }) {
+  const { t } = useTranslation('msp/assets');
   const isRmmManaged = asset.rmm_provider && asset.rmm_device_id;
 
   if (!isRmmManaged) {
@@ -164,10 +167,10 @@ export function RemoteAccessIndicator({ asset }: { asset: Asset }) {
       className={`inline-flex items-center gap-1 text-xs ${
         isOnline ? 'text-emerald-600' : 'text-gray-400'
       }`}
-      title={isOnline ? 'Remote access available' : 'Device offline'}
+      title={isOnline ? t('remoteAccess.indicator.available') : t('remoteAccess.indicator.deviceOffline')}
     >
       <Monitor className="h-3 w-3" />
-      {isOnline ? 'Online' : 'Offline'}
+      {isOnline ? t('remoteAccess.indicator.online') : t('remoteAccess.indicator.offline')}
     </span>
   );
 }

@@ -185,7 +185,7 @@ const ClientPortalSettings = () => {
     };
 
     await updateTenantBrandingAction(brandingData);
-    toast.success('Branding settings updated');
+    toast.success(t('clientPortal.brandingUpdated'));
   };
 
   const handleSaveBranding = async () => {
@@ -303,7 +303,7 @@ const ClientPortalSettings = () => {
                 type="text"
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
-                placeholder="Your Company Name"
+                placeholder={t('clientPortal.yourCompanyName')}
                 disabled={brandingLoading || brandingSaving}
                 containerClassName="mb-1"
               />
@@ -456,7 +456,7 @@ const ClientPortalSettings = () => {
                   checked={previewTheme === 'dark'}
                   onCheckedChange={(checked) => setPreviewTheme(checked ? 'dark' : 'light')}
                   label={t('clientPortal.branding.previewDarkMode')}
-                  aria-label="Branding preview theme mode"
+                  aria-label={t('clientPortal.brandingPreviewMode')}
                 />
               </div>
               <div className="flex gap-2 mb-3">

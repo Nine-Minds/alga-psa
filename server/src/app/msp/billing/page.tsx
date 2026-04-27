@@ -5,6 +5,7 @@ import { getDocumentsByContractId } from '@alga-psa/documents/actions/documentAc
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import type { IDocument } from '@alga-psa/types';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -16,6 +17,7 @@ interface BillingPageProps {
 }
 
 const BillingPage = async ({ searchParams }: BillingPageProps) => {
+  const { t } = await getServerTranslation(undefined, 'common');
   const params = await searchParams;
   const tab = typeof params.tab === 'string' ? params.tab : undefined;
   const subtab = typeof params.subtab === 'string' ? params.subtab : undefined;
@@ -43,7 +45,7 @@ const BillingPage = async ({ searchParams }: BillingPageProps) => {
   }
 
   return (
-    <Suspense fallback={<div className="p-4">Loading billing dashboard...</div>}>
+    <Suspense fallback={<div className="p-4">{t('pages.loading.billingDashboard')}</div>}>
       <BillingPageClient
         initialServices={services}
         contractDocuments={contractDocuments}

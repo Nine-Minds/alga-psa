@@ -1,8 +1,11 @@
 // src/components/Sidebar.tsx
+'use client';
 import React from 'react';
 import { NodeTypes } from '../../services/flow/types/nodes';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const Sidebar: React.FC = () => {
+  const { t } = useTranslation('msp/workflows');
   const onDragStart = (event: React.DragEvent<HTMLDivElement>, nodeType: NodeTypes) => {
     event.dataTransfer.setData('application/reactflow', nodeType);
     event.dataTransfer.effectAllowed = 'move';
@@ -10,7 +13,7 @@ const Sidebar: React.FC = () => {
 
   return (
     <aside className="sidebar">
-      <div style={{ marginBottom: '20px' }}>Drag these nodes to the canvas:</div>
+      <div style={{ marginBottom: '20px' }}>{t('flow.sidebar.dragHint')}</div>
       {['thinking', 'action', 'classifier', 'office365Receiver', 'ticketCreator', 'decision', 'selector'].map((type) => (
         <div
           key={type}

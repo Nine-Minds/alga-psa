@@ -609,11 +609,67 @@
   },
   "assetPatchStatusSection": {
     "title": "11111",
-    "description": "11111"
+    "description": "11111",
+    "heading": "11111",
+    "compliance": {
+      "unknown": "11111",
+      "actionRequired": "11111",
+      "updatesAvailable": "11111",
+      "minorUpdates": "11111",
+      "upToDate": "11111"
+    },
+    "relativeTime": {
+      "never": "11111",
+      "justNow": "11111",
+      "minutesAgo": "11111 {{count}} 11111",
+      "hoursAgo": "11111 {{count}} 11111",
+      "daysAgo": "11111 {{count}} 11111"
+    },
+    "labels": {
+      "osPatches": "11111",
+      "software": "11111",
+      "failed": "11111",
+      "lastScan": "11111",
+      "pending": "11111",
+      "patches": "11111"
+    }
   },
   "assetSoftwareInventory": {
     "title": "11111",
-    "description": "11111"
+    "description": "11111",
+    "heading": "11111",
+    "searchPlaceholder": "11111",
+    "appsCount": "11111 {{count}} 11111",
+    "unknownName": "11111",
+    "noMatch": "11111",
+    "version": "11111 {{version}} 11111",
+    "by": "11111 {{publisher}} 11111",
+    "showingOfApplications": "11111 {{shown}} 11111 {{total}} 11111",
+    "more": "11111 {{count}} 11111"
+  },
+  "remoteAccess": {
+    "remoteDesktop": "11111",
+    "remoteShell": "11111",
+    "remoteAccess": "11111",
+    "deviceOverdue": "11111",
+    "deviceOffline": "11111",
+    "errors": {
+      "urlFetchFailed": "11111",
+      "initiateFailed": "11111"
+    },
+    "indicator": {
+      "online": "11111",
+      "offline": "11111",
+      "available": "11111",
+      "deviceOffline": "11111"
+    }
+  },
+  "assetListErrors": {
+    "genericError": "11111",
+    "assetNotFound": "11111"
+  },
+  "assetEdit": {
+    "pageTitle": "11111"
   },
   "associatedAssets": {
     "title": "11111",
@@ -1191,6 +1247,9 @@
       "acknowledgeFailed": "11111",
       "ticketCreated": "11111",
       "ticketCreateFailed": "11111"
-    }
+    },
+    "activeAlerts": "11111",
+    "acknowledge": "11111",
+    "createTicket": "11111"
   }
 }

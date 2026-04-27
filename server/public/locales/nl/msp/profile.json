@@ -195,5 +195,41 @@
         "default": "Melding"
       }
     }
+  },
+  "connectSso": {
+    "verify": {
+      "title": "Beveilig uw account met SSO",
+      "description": "Koppel Azure AD of Google Workspace om organisatiebeleid te hergebruiken en lokale tweefactor-prompts over te slaan.",
+      "signedInAs": "Aangemeld als",
+      "currentPassword": "Huidig wachtwoord",
+      "twoFactorCode": "Tweefactor-code",
+      "twoFactorPlaceholder": "123456",
+      "verifyCredentials": "Inloggegevens verifiëren",
+      "verifying": "Bezig met verifiëren...",
+      "reset": "Opnieuw instellen",
+      "linkedSuccess": "Provider succesvol gekoppeld.",
+      "credentialsVerified": "Inloggegevens geverifieerd. Kies hieronder een provider om de koppeling van uw account te voltooien.",
+      "verifyFailed": "Kan inloggegevens niet verifiëren.",
+      "verifyBeforeProvider": "Verifieer uw wachtwoord (en tweefactor-code indien vereist) voordat u een provider koppelt."
+    },
+    "providers": {
+      "title": "Een provider koppelen",
+      "description": "Kies een provider om de SSO-koppeling te voltooien. U wordt doorgestuurd via de aanmeldingsflow van de provider.",
+      "noneConfigured": "Er zijn geen SSO-providers geconfigureerd voor deze omgeving. Vraag uw beheerder om Google- of Microsoft-inloggegevens te configureren.",
+      "notConfigured": "Niet geconfigureerd",
+      "branding": {
+        "google": "Doorgaan met Google",
+        "microsoft": "Doorgaan met Microsoft",
+        "default": "Doorgaan"
+      }
+    },
+    "linked": {
+      "title": "Gekoppelde accounts",
+      "description": "We vernieuwen de koppeling de volgende keer dat u zich aanmeldt via een gekoppelde provider.",
+      "empty": "Nog geen SSO-providers gekoppeld. Voltooi de stappen hierboven om er een te koppelen.",
+      "linkedAt": "Gekoppeld op {{date}}",
+      "lastUsed": "Laatst gebruikt op {{date}}",
+      "notUsedYet": "Nog niet gebruikt"
+    }
   }
 }

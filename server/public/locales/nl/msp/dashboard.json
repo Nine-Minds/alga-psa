@@ -153,5 +153,6 @@
       "dismissFailed": "Onboardingstap kon niet worden verborgen.",
       "restoreFailed": "Onboardingstap kon niet worden hersteld."
     }
-  }
+  },
+  "mspDashboard": "MSP-dashboard"
 }

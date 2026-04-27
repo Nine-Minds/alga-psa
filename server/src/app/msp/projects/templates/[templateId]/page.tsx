@@ -9,6 +9,7 @@ import TemplateEditor from '@alga-psa/projects/components/project-templates/Temp
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { Card } from '@alga-psa/ui/components/Card';
 import KanbanBoardSkeleton from '@alga-psa/ui/components/skeletons/KanbanBoardSkeleton';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 function TemplateEditorSkeleton() {
   return (
@@ -62,6 +63,7 @@ function TemplateEditorSkeleton() {
 }
 
 export default function TemplateDetailPage() {
+  const { t } = useTranslation('common');
   const params = useParams();
   const templateId = params?.templateId as string;
 
@@ -103,8 +105,8 @@ export default function TemplateDetailPage() {
         <div className="text-gray-400 mb-2">
           <FileX className="h-16 w-16" strokeWidth={1.5} />
         </div>
-        <h2 className="text-xl font-semibold text-gray-700 mb-1">Template not found</h2>
-        <p className="text-gray-500">The template you're looking for doesn't exist or has been deleted.</p>
+        <h2 className="text-xl font-semibold text-gray-700 mb-1">{t('pages.errors.templateNotFound')}</h2>
+        <p className="text-gray-500">{t('pages.errors.templateNotFoundDetail', { defaultValue: "The template you're looking for doesn't exist or has been deleted." })}</p>
       </div>
     );
   }

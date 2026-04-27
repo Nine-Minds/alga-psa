@@ -1794,7 +1794,7 @@ const BoardsSettings: React.FC = () => {
 
                 {/* Service Request */}
                 <div className="border rounded-lg p-4 md:col-span-2">
-                  <h4 className="font-medium text-blue-800 mb-2">Service Request</h4>
+                  <h4 className="font-medium text-blue-800 mb-2">{t('ticketing.boards.itilInfo.categories.serviceRequest')}</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <ul className="text-sm text-gray-600 space-y-1">
                       <li>• Access Request</li>
@@ -1819,53 +1819,53 @@ const BoardsSettings: React.FC = () => {
                   <thead>
                     <tr>
                       <th className="px-3 py-2 text-left text-gray-600 border-b border-r bg-gray-500/10"></th>
-                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-500/10">High<br/>Urgency (1)</th>
-                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-500/10">Medium-High<br/>Urgency (2)</th>
-                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-500/10">Medium<br/>Urgency (3)</th>
-                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-500/10">Medium-Low<br/>Urgency (4)</th>
-                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-500/10">Low<br/>Urgency (5)</th>
+                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-500/10">{t('ticketing.boards.itilInfo.priorityMatrix.urgencyHeaderLine1.high')}<br/>{t('ticketing.boards.itilInfo.priorityMatrix.urgencyHeaderLine2.high')}</th>
+                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-500/10">{t('ticketing.boards.itilInfo.priorityMatrix.urgencyHeaderLine1.mediumHigh')}<br/>{t('ticketing.boards.itilInfo.priorityMatrix.urgencyHeaderLine2.mediumHigh')}</th>
+                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-500/10">{t('ticketing.boards.itilInfo.priorityMatrix.urgencyHeaderLine1.medium')}<br/>{t('ticketing.boards.itilInfo.priorityMatrix.urgencyHeaderLine2.medium')}</th>
+                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-500/10">{t('ticketing.boards.itilInfo.priorityMatrix.urgencyHeaderLine1.mediumLow')}<br/>{t('ticketing.boards.itilInfo.priorityMatrix.urgencyHeaderLine2.mediumLow')}</th>
+                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-500/10">{t('ticketing.boards.itilInfo.priorityMatrix.urgencyHeaderLine1.low')}<br/>{t('ticketing.boards.itilInfo.priorityMatrix.urgencyHeaderLine2.low')}</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
-                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-500/10">High Impact (1)</td>
-                      <td className="px-3 py-2 text-center bg-red-500/15 text-red-600 font-semibold border border-red-500/20">Critical (1)</td>
-                      <td className="px-3 py-2 text-center bg-orange-500/15 text-orange-600 font-semibold border border-orange-500/20">High (2)</td>
-                      <td className="px-3 py-2 text-center bg-orange-500/15 text-orange-600 font-semibold border border-orange-500/20">High (2)</td>
-                      <td className="px-3 py-2 text-center bg-yellow-500/15 text-yellow-600 font-semibold border border-yellow-500/20">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-yellow-500/15 text-yellow-600 font-semibold border border-yellow-500/20">Medium (3)</td>
+                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-500/10">{t('ticketing.boards.itilInfo.priorityMatrix.impact.high')}</td>
+                      <td className="px-3 py-2 text-center bg-red-500/15 text-red-600 font-semibold border border-red-500/20">{t('ticketing.boards.itilInfo.priorityMatrix.priority.critical')}</td>
+                      <td className="px-3 py-2 text-center bg-orange-500/15 text-orange-600 font-semibold border border-orange-500/20">{t('ticketing.boards.itilInfo.priorityMatrix.priority.high')}</td>
+                      <td className="px-3 py-2 text-center bg-orange-500/15 text-orange-600 font-semibold border border-orange-500/20">{t('ticketing.boards.itilInfo.priorityMatrix.priority.high')}</td>
+                      <td className="px-3 py-2 text-center bg-yellow-500/15 text-yellow-600 font-semibold border border-yellow-500/20">{t('ticketing.boards.itilInfo.priorityMatrix.priority.medium')}</td>
+                      <td className="px-3 py-2 text-center bg-yellow-500/15 text-yellow-600 font-semibold border border-yellow-500/20">{t('ticketing.boards.itilInfo.priorityMatrix.priority.medium')}</td>
                     </tr>
                     <tr>
-                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-500/10">Medium-High Impact (2)</td>
-                      <td className="px-3 py-2 text-center bg-orange-500/15 text-orange-600 font-semibold border border-orange-500/20">High (2)</td>
-                      <td className="px-3 py-2 text-center bg-orange-500/15 text-orange-600 font-semibold border border-orange-500/20">High (2)</td>
-                      <td className="px-3 py-2 text-center bg-yellow-500/15 text-yellow-600 font-semibold border border-yellow-500/20">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-yellow-500/15 text-yellow-600 font-semibold border border-yellow-500/20">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-blue-500/15 text-blue-600 font-semibold border border-blue-500/20">Low (4)</td>
+                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-500/10">{t('ticketing.boards.itilInfo.priorityMatrix.impact.mediumHigh')}</td>
+                      <td className="px-3 py-2 text-center bg-orange-500/15 text-orange-600 font-semibold border border-orange-500/20">{t('ticketing.boards.itilInfo.priorityMatrix.priority.high')}</td>
+                      <td className="px-3 py-2 text-center bg-orange-500/15 text-orange-600 font-semibold border border-orange-500/20">{t('ticketing.boards.itilInfo.priorityMatrix.priority.high')}</td>
+                      <td className="px-3 py-2 text-center bg-yellow-500/15 text-yellow-600 font-semibold border border-yellow-500/20">{t('ticketing.boards.itilInfo.priorityMatrix.priority.medium')}</td>
+                      <td className="px-3 py-2 text-center bg-yellow-500/15 text-yellow-600 font-semibold border border-yellow-500/20">{t('ticketing.boards.itilInfo.priorityMatrix.priority.medium')}</td>
+                      <td className="px-3 py-2 text-center bg-blue-500/15 text-blue-600 font-semibold border border-blue-500/20">{t('ticketing.boards.itilInfo.priorityMatrix.priority.low')}</td>
                     </tr>
                     <tr>
-                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-500/10">Medium Impact (3)</td>
-                      <td className="px-3 py-2 text-center bg-orange-500/15 text-orange-600 font-semibold border border-orange-500/20">High (2)</td>
-                      <td className="px-3 py-2 text-center bg-yellow-500/15 text-yellow-600 font-semibold border border-yellow-500/20">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-yellow-500/15 text-yellow-600 font-semibold border border-yellow-500/20">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-blue-500/15 text-blue-600 font-semibold border border-blue-500/20">Low (4)</td>
-                      <td className="px-3 py-2 text-center bg-blue-500/15 text-blue-600 font-semibold border border-blue-500/20">Low (4)</td>
+                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-500/10">{t('ticketing.boards.itilInfo.priorityMatrix.impact.medium')}</td>
+                      <td className="px-3 py-2 text-center bg-orange-500/15 text-orange-600 font-semibold border border-orange-500/20">{t('ticketing.boards.itilInfo.priorityMatrix.priority.high')}</td>
+                      <td className="px-3 py-2 text-center bg-yellow-500/15 text-yellow-600 font-semibold border border-yellow-500/20">{t('ticketing.boards.itilInfo.priorityMatrix.priority.medium')}</td>
+                      <td className="px-3 py-2 text-center bg-yellow-500/15 text-yellow-600 font-semibold border border-yellow-500/20">{t('ticketing.boards.itilInfo.priorityMatrix.priority.medium')}</td>
+                      <td className="px-3 py-2 text-center bg-blue-500/15 text-blue-600 font-semibold border border-blue-500/20">{t('ticketing.boards.itilInfo.priorityMatrix.priority.low')}</td>
+                      <td className="px-3 py-2 text-center bg-blue-500/15 text-blue-600 font-semibold border border-blue-500/20">{t('ticketing.boards.itilInfo.priorityMatrix.priority.low')}</td>
                     </tr>
                     <tr>
-                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-500/10">Medium-Low Impact (4)</td>
-                      <td className="px-3 py-2 text-center bg-yellow-500/15 text-yellow-600 font-semibold border border-yellow-500/20">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-yellow-500/15 text-yellow-600 font-semibold border border-yellow-500/20">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-blue-500/15 text-blue-600 font-semibold border border-blue-500/20">Low (4)</td>
-                      <td className="px-3 py-2 text-center bg-blue-500/15 text-blue-600 font-semibold border border-blue-500/20">Low (4)</td>
-                      <td className="px-3 py-2 text-center bg-gray-500/15 text-gray-600 font-semibold border border-gray-500/20">Planning (5)</td>
+                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-500/10">{t('ticketing.boards.itilInfo.priorityMatrix.impact.mediumLow')}</td>
+                      <td className="px-3 py-2 text-center bg-yellow-500/15 text-yellow-600 font-semibold border border-yellow-500/20">{t('ticketing.boards.itilInfo.priorityMatrix.priority.medium')}</td>
+                      <td className="px-3 py-2 text-center bg-yellow-500/15 text-yellow-600 font-semibold border border-yellow-500/20">{t('ticketing.boards.itilInfo.priorityMatrix.priority.medium')}</td>
+                      <td className="px-3 py-2 text-center bg-blue-500/15 text-blue-600 font-semibold border border-blue-500/20">{t('ticketing.boards.itilInfo.priorityMatrix.priority.low')}</td>
+                      <td className="px-3 py-2 text-center bg-blue-500/15 text-blue-600 font-semibold border border-blue-500/20">{t('ticketing.boards.itilInfo.priorityMatrix.priority.low')}</td>
+                      <td className="px-3 py-2 text-center bg-gray-500/15 text-gray-600 font-semibold border border-gray-500/20">{t('ticketing.boards.itilInfo.priorityMatrix.priority.planning')}</td>
                     </tr>
                     <tr>
-                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-500/10">Low Impact (5)</td>
-                      <td className="px-3 py-2 text-center bg-yellow-500/15 text-yellow-600 font-semibold border border-yellow-500/20">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-blue-500/15 text-blue-600 font-semibold border border-blue-500/20">Low (4)</td>
-                      <td className="px-3 py-2 text-center bg-blue-500/15 text-blue-600 font-semibold border border-blue-500/20">Low (4)</td>
-                      <td className="px-3 py-2 text-center bg-gray-500/15 text-gray-600 font-semibold border border-gray-500/20">Planning (5)</td>
-                      <td className="px-3 py-2 text-center bg-gray-500/15 text-gray-600 font-semibold border border-gray-500/20">Planning (5)</td>
+                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-500/10">{t('ticketing.boards.itilInfo.priorityMatrix.impact.low')}</td>
+                      <td className="px-3 py-2 text-center bg-yellow-500/15 text-yellow-600 font-semibold border border-yellow-500/20">{t('ticketing.boards.itilInfo.priorityMatrix.priority.medium')}</td>
+                      <td className="px-3 py-2 text-center bg-blue-500/15 text-blue-600 font-semibold border border-blue-500/20">{t('ticketing.boards.itilInfo.priorityMatrix.priority.low')}</td>
+                      <td className="px-3 py-2 text-center bg-blue-500/15 text-blue-600 font-semibold border border-blue-500/20">{t('ticketing.boards.itilInfo.priorityMatrix.priority.low')}</td>
+                      <td className="px-3 py-2 text-center bg-gray-500/15 text-gray-600 font-semibold border border-gray-500/20">{t('ticketing.boards.itilInfo.priorityMatrix.priority.planning')}</td>
+                      <td className="px-3 py-2 text-center bg-gray-500/15 text-gray-600 font-semibold border border-gray-500/20">{t('ticketing.boards.itilInfo.priorityMatrix.priority.planning')}</td>
                     </tr>
                   </tbody>
                 </table>

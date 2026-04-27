@@ -195,5 +195,41 @@
         "default": "55555"
       }
     }
+  },
+  "connectSso": {
+    "verify": {
+      "title": "55555",
+      "description": "55555",
+      "signedInAs": "55555",
+      "currentPassword": "55555",
+      "twoFactorCode": "55555",
+      "twoFactorPlaceholder": "55555",
+      "verifyCredentials": "55555",
+      "verifying": "55555",
+      "reset": "55555",
+      "linkedSuccess": "55555",
+      "credentialsVerified": "55555",
+      "verifyFailed": "55555",
+      "verifyBeforeProvider": "55555"
+    },
+    "providers": {
+      "title": "55555",
+      "description": "55555",
+      "noneConfigured": "55555",
+      "notConfigured": "55555",
+      "branding": {
+        "google": "55555",
+        "microsoft": "55555",
+        "default": "55555"
+      }
+    },
+    "linked": {
+      "title": "55555",
+      "description": "55555",
+      "empty": "55555",
+      "linkedAt": "55555 {{date}} 55555",
+      "lastUsed": "55555 {{date}} 55555",
+      "notUsedYet": "55555"
+    }
   }
 }

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getEntraReconciliationQueue,
   resolveEntraQueueToExisting,
@@ -20,6 +21,7 @@ function formatDateTime(value: string): string {
 }
 
 export default function EntraReconciliationQueue() {
+  const { t } = useTranslation('msp/integrations');
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
@@ -38,7 +40,7 @@ export default function EntraReconciliationQueue() {
       const result = await getEntraReconciliationQueue(50);
       if ('error' in result) {
         setItems([]);
-        setError(result.error || 'Failed to load reconciliation queue.');
+        setError(result.error || t('integrations.entra.reconciliation.errors.loadQueue'));
         return;
       }
       setItems(result.data?.items || []);
@@ -93,7 +95,7 @@ export default function EntraReconciliationQueue() {
   const handleResolveExisting = React.useCallback(async (item: EntraReconciliationQueueItem) => {
     const contactNameId = String(existingContactIdByItem[item.queueItemId] || '').trim();
     if (!contactNameId) {
-      setError('Enter a contact ID to resolve to existing contact.');
+      setError(t('integrations.entra.reconciliation.errors.enterContactId'));
       return;
     }
 
@@ -106,15 +108,15 @@ export default function EntraReconciliationQueue() {
         contactNameId,
       });
       if ('error' in result) {
-        setError(result.error || 'Failed to resolve queue item.');
+        setError(result.error || t('integrations.entra.reconciliation.errors.resolveFailed'));
       } else {
-        setSuccessMessage(`Resolved queue item ${item.queueItemId} to existing contact ${contactNameId}.`);
+        setSuccessMessage(t('integrations.entra.reconciliation.success.resolvedExisting', { queueItemId: item.queueItemId, contactNameId }));
         await loadQueue();
       }
     } finally {
       setResolvingItemId(null);
     }
-  }, [existingContactIdByItem, loadQueue]);
+  }, [existingContactIdByItem, loadQueue, t]);
 
   const handleResolveNew = React.useCallback(async (item: EntraReconciliationQueueItem) => {
     setResolvingItemId(item.queueItemId);
@@ -123,28 +125,28 @@ export default function EntraReconciliationQueue() {
     try {
       const result = await resolveEntraQueueToNew({ queueItemId: item.queueItemId });
       if ('error' in result) {
-        setError(result.error || 'Failed to resolve queue item.');
+        setError(result.error || t('integrations.entra.reconciliation.errors.resolveFailed'));
       } else {
-        setSuccessMessage(`Resolved queue item ${item.queueItemId} by creating contact ${result.data?.contactNameId || ''}.`);
+        setSuccessMessage(t('integrations.entra.reconciliation.success.resolvedNew', { queueItemId: item.queueItemId, contactNameId: result.data?.contactNameId || '' }));
         await loadQueue();
       }
     } finally {
       setResolvingItemId(null);
     }
-  }, [loadQueue]);
+  }, [loadQueue, t]);
 
   return (
     <div className="rounded-lg border border-border/70 bg-background p-4" id="entra-reconciliation-queue">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <p className="text-sm font-semibold">Ambiguous Match Queue</p>
+        <p className="text-sm font-semibold">{t('integrations.entra.reconciliation.title')}</p>
         <Button id="entra-reconciliation-queue-refresh" type="button" size="sm" variant="ghost" onClick={loadQueue} disabled={loading}>
-          Refresh
+          {t('integrations.entra.reconciliation.actions.refresh')}
         </Button>
       </div>
 
-      {loading ? <p className="text-sm text-muted-foreground">Loading queue…</p> : null}
+      {loading ? <p className="text-sm text-muted-foreground">{t('integrations.entra.reconciliation.loading')}</p> : null}
       {!loading && items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No ambiguous matches are waiting for review.</p>
+        <p className="text-sm text-muted-foreground">{t('integrations.entra.reconciliation.empty')}</p>
       ) : null}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
       {successMessage ? <p className="text-sm text-emerald-600">{successMessage}</p> : null}
@@ -161,16 +163,19 @@ export default function EntraReconciliationQueue() {
                 {item.displayName || item.userPrincipalName || item.email || item.entraObjectId}
               </p>
               <p className="text-xs text-muted-foreground">
-                {item.email || item.userPrincipalName || 'No email identity'} · queued {formatDateTime(item.createdAt)}
+                {t('integrations.entra.reconciliation.queuedAt', {
+                  identity: item.email || item.userPrincipalName || t('integrations.entra.reconciliation.noEmailIdentity'),
+                  time: formatDateTime(item.createdAt),
+                })}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Candidate contacts: {item.candidateContacts.length}
+                {t('integrations.entra.reconciliation.candidate.label', { count: item.candidateContacts.length })}
               </p>
               {item.candidateContacts.length > 0 ? (
                 <ul className="mt-1 list-disc pl-4 text-xs text-muted-foreground">
                   {item.candidateContacts.slice(0, 3).map((candidate, index) => (
                     <li key={`${item.queueItemId}-candidate-${index}`}>
-                      {String(candidate.fullName || candidate.email || candidate.contactNameId || 'candidate')}
+                      {String(candidate.fullName || candidate.email || candidate.contactNameId || t('integrations.entra.reconciliation.candidate.fallback'))}
                     </li>
                   ))}
                 </ul>
@@ -178,7 +183,7 @@ export default function EntraReconciliationQueue() {
               <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto_auto]">
                 {item.clientId ? (
                   <p className="text-xs text-muted-foreground sm:col-span-3">
-                    Existing contact options are limited to this mapped client.
+                    {t('integrations.entra.reconciliation.scopedToMappedClient')}
                   </p>
                 ) : null}
                 <ContactPicker
@@ -191,8 +196,8 @@ export default function EntraReconciliationQueue() {
                       [item.queueItemId]: val,
                     }));
                   }}
-                  placeholder="Select existing contact..."
-                  label="Existing Contact"
+                  placeholder={t('integrations.entra.reconciliation.contactPicker.placeholder')}
+                  label={t('integrations.entra.reconciliation.contactPicker.label')}
                   buttonWidth="full"
                   onAddNew={() => setQuickAddItem(item)}
                 />
@@ -204,7 +209,7 @@ export default function EntraReconciliationQueue() {
                   disabled={resolvingItemId === item.queueItemId}
                   onClick={() => void handleResolveExisting(item)}
                 >
-                  Resolve to Existing
+                  {t('integrations.entra.reconciliation.actions.resolveExisting')}
                 </Button>
                 <Button
                   id={`entra-queue-resolve-new-${item.queueItemId}`}
@@ -214,7 +219,7 @@ export default function EntraReconciliationQueue() {
                   disabled={resolvingItemId === item.queueItemId}
                   onClick={() => void handleResolveNew(item)}
                 >
-                  Resolve to New
+                  {t('integrations.entra.reconciliation.actions.resolveNew')}
                 </Button>
               </div>
             </div>

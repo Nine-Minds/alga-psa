@@ -1,0 +1,149 @@
+{
+  "sidebar": {
+    "title": "55555",
+    "subtitleHistory": "55555",
+    "subtitleDefault": "55555",
+    "showHistory": "55555",
+    "hideHistory": "55555",
+    "showHistoryTooltip": "55555",
+    "hideHistoryTooltip": "55555",
+    "startNewChat": "55555",
+    "hideSidebar": "55555",
+    "hideSidebarTooltip": "55555",
+    "introMessage": "55555",
+    "loadingChatConversation": "55555",
+    "history": {
+      "searchResults": "55555",
+      "recentChats": "55555",
+      "loading": "55555",
+      "searchAriaLabel": "55555",
+      "searchPlaceholder": "55555",
+      "typeAtLeastNChars": "55555 {{count}} 55555",
+      "emptyInitial": "55555",
+      "emptySearch": "55555",
+      "untitled": "55555",
+      "noMessagesYet": "55555",
+      "loadingConversation": "55555",
+      "chatActionsFor": "55555 {{title}} 55555",
+      "rename": "55555",
+      "delete": "55555",
+      "unableToLoadRecent": "55555",
+      "unableToLoadSearch": "55555"
+    },
+    "timestamp": {
+      "recently": "55555",
+      "justNow": "55555",
+      "minutesAgo": "55555 {{count}} 55555",
+      "hoursAgo": "55555 {{count}} 55555",
+      "daysAgo": "55555 {{count}} 55555"
+    },
+    "newChatConfirm": {
+      "title": "55555",
+      "message": "55555",
+      "confirmLabel": "55555",
+      "cancelLabel": "55555"
+    },
+    "deleteConfirm": {
+      "title": "55555",
+      "messageWithTitle": "55555 {{title}} 55555",
+      "fallbackTitle": "55555",
+      "confirmLabel": "55555",
+      "cancelLabel": "55555"
+    },
+    "rename": {
+      "dialogTitle": "55555",
+      "inputLabel": "55555",
+      "inputPlaceholder": "55555",
+      "cancel": "55555",
+      "save": "55555"
+    }
+  },
+  "chat": {
+    "greeting": "55555",
+    "avatarAlt": "55555",
+    "defaultFunctionName": "55555",
+    "resultTruncated": "55555",
+    "inputPlaceholder": "55555",
+    "inputPlaceholderGenerating": "55555",
+    "inputAriaLabel": "55555",
+    "thinking": "55555",
+    "hintMultiline": "55555",
+    "hintSingleLine": "55555",
+    "editingNotice": "55555",
+    "cancelEdit": "55555",
+    "stop": "55555",
+    "send": "55555",
+    "viewDetails": "55555",
+    "viewFullValue": "55555",
+    "parameters": "55555",
+    "plan": "55555",
+    "playbooks": "55555",
+    "validation": {
+      "dialogTitle": "55555",
+      "ok": "55555",
+      "enterMessage": "55555"
+    },
+    "errors": {
+      "userNotIdentified": "55555",
+      "unableToSave": "55555",
+      "requestFailedStatus": "55555 {{status}} 55555",
+      "unexpectedResponse": "55555",
+      "unexpectedError": "55555",
+      "generationError": "55555",
+      "connectionInterrupted": "55555",
+      "connectionInterruptedWithReason": "55555 {{reason}} 55555"
+    },
+    "function": {
+      "approveAriaLabel": "55555",
+      "declineAriaLabel": "55555",
+      "approve": "55555",
+      "approving": "55555",
+      "deny": "55555",
+      "processing": "55555",
+      "autoApproveLabel": "55555 {{method}} 55555",
+      "executingRequest": "55555",
+      "continuingWithoutCall": "55555",
+      "autoApprovalEnabled": "55555 {{method}} 55555",
+      "reviewAndApprove": "55555",
+      "completedNoDetails": "55555",
+      "emDash": "55555"
+    }
+  },
+  "quickAsk": {
+    "title": "55555",
+    "yoloLabel": "55555",
+    "yoloAriaLabel": "55555",
+    "openInSidebar": "55555",
+    "close": "55555",
+    "ask": "55555",
+    "inputPlaceholder": "55555",
+    "inputAriaLabel": "55555",
+    "followUpNotice": "55555",
+    "startingSession": "55555",
+    "session": "55555 {{chatId}} 55555",
+    "hint": "55555 {{modifier}} 55555"
+  },
+  "message": {
+    "authorAlga": "55555",
+    "authorYou": "55555",
+    "authorSystem": "55555",
+    "avatarAlt": "55555",
+    "draftingResponse": "55555",
+    "interrupted": "55555",
+    "interruptionDetail": "55555",
+    "showAssistantReasoning": "55555",
+    "editAriaLabel": "55555",
+    "editTooltip": "55555",
+    "regenerateAriaLabel": "55555",
+    "regenerateTooltip": "55555",
+    "functionStatus": {
+      "success": "55555",
+      "declined": "55555",
+      "pending": "55555",
+      "error": "55555"
+    }
+  },
+  "mention": {
+    "noResultsFound": "55555"
+  }
+}

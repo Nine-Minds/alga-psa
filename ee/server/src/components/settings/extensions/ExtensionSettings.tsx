@@ -457,7 +457,7 @@ export default function ExtensionSettings() {
 
   // Reset settings to defaults
   const handleResetToDefaults = async () => {
-    if (!confirm('Are you sure you want to reset all settings to their default values?')) {
+    if (!confirm(t('settings.confirmReset'))) {
       return;
     }
 
@@ -557,7 +557,7 @@ export default function ExtensionSettings() {
             options={(options || []).map((opt) => ({ value: opt.value.toString(), label: opt.label }))}
             value={value || ''}
             onValueChange={(val) => handleSettingChange(key, val)}
-            placeholder={placeholder || 'Select an option'}
+            placeholder={placeholder || t('settings.selectOption')}
             className="max-w-md"
             {...automationIdProps}
           />
@@ -578,7 +578,7 @@ export default function ExtensionSettings() {
 
   if (isLoading) {
     return (
-      <ReflectionContainer id={`extension-settings-${extensionId}`} label="Extension Settings">
+      <ReflectionContainer id={`extension-settings-${extensionId}`} label={t('settings.heading')}>
         <div className="p-6 space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -622,15 +622,15 @@ export default function ExtensionSettings() {
     return (
       <div className="p-6">
         <div className="text-center">
-          <h2 className="text-xl font-medium">Extension not found</h2>
-          <p className="text-gray-500 mt-2">The extension you're looking for doesn't exist or you don't have access to it.</p>
+          <h2 className="text-xl font-medium">{t('settings.notFound')}</h2>
+          <p className="text-gray-500 mt-2">{t('settings.notFoundDescription')}</p>
           <Button
             id="back-to-extensions-button"
             variant="outline"
             className="mt-4"
             onClick={() => router.push('/msp/settings/extensions')}
           >
-            Back to Extensions
+            {t('settings.backToExtensions')}
           </Button>
         </div>
       </div>
@@ -640,7 +640,7 @@ export default function ExtensionSettings() {
   const automationIdProps = automationId(`extension-settings-${extensionId}`);
 
   return (
-    <ReflectionContainer id={`extension-settings-${extensionId}`} label="Extension Settings">
+    <ReflectionContainer id={`extension-settings-${extensionId}`} label={t('settings.heading')}>
       <div className="p-6" {...automationIdProps}>
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center">
@@ -654,7 +654,7 @@ export default function ExtensionSettings() {
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <h1 className="text-2xl font-semibold text-gray-900">
-              {extension.name} Settings
+              {t('settings.nameSuffix', { name: extension.name })}
             </h1>
           </div>
 
@@ -665,29 +665,29 @@ export default function ExtensionSettings() {
               onClick={handleResetToDefaults}
               disabled={isLoading}
             >
-              Reset to Defaults
+              {t('settings.resetToDefaults')}
             </Button>
             <Button
               id="save-settings-button"
               onClick={handleSaveSettings}
               disabled={isLoading || (!hasChanges && !secretChanged)}
             >
-              Save Changes
+              {t('settings.saveChanges')}
             </Button>
           </div>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Extension Settings</CardTitle>
+            <CardTitle>{t('settings.cardTitle')}</CardTitle>
             <CardDescription>
-              Configure settings for this extension. These settings will be used by the extension to customize its behavior.
+              {t('settings.cardDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {configSettingDefinitions.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-gray-500">This extension doesn't have any configurable settings.</p>
+                <p className="text-gray-500">{t('settings.noConfigurable')}</p>
               </div>
             ) : (
               <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -729,16 +729,15 @@ export default function ExtensionSettings() {
 
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle>Custom Configuration</CardTitle>
+            <CardTitle>{t('settings.customConfig.title')}</CardTitle>
             <CardDescription>
-              Add custom configuration values for this extension. These are provided to the extension
-              alongside the settings defined above.
+              {t('settings.customConfig.description')}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {customSettings.length === 0 ? (
               <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-lg mb-4">
-                <p className="text-gray-500 mb-2">No custom configuration entries.</p>
+                <p className="text-gray-500 mb-2">{t('settings.customConfig.empty')}</p>
                 <Button
                   id="add-custom-setting-empty-button"
                   variant="outline"
@@ -748,7 +747,7 @@ export default function ExtensionSettings() {
                   data-automation-id="add-custom-setting-empty"
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Entry
+                  {t('settings.customConfig.addEntry')}
                 </Button>
               </div>
             ) : (
@@ -757,7 +756,7 @@ export default function ExtensionSettings() {
                   <div key={item.id} className="flex items-start gap-3">
                     <div className="flex-1">
                       <Input
-                        placeholder="Key (e.g. MY_API_KEY)"
+                        placeholder={t('settings.customConfig.keyPlaceholder')}
                         value={item.key}
                         onChange={(e) => handleCustomSettingChange(item.id, 'key', e.target.value)}
                         data-automation-id={`custom-setting-key-${item.id}`}
@@ -766,7 +765,7 @@ export default function ExtensionSettings() {
                     <div className="flex-1 relative">
                       <Input
                         type={item.isSensitive ? 'password' : 'text'}
-                        placeholder="Value"
+                        placeholder={t('settings.customConfig.valuePlaceholder')}
                         value={item.value}
                         onChange={(e) => handleCustomSettingChange(item.id, 'value', e.target.value)}
                         data-automation-id={`custom-setting-value-${item.id}`}
@@ -776,7 +775,7 @@ export default function ExtensionSettings() {
                         type="button"
                         onClick={() => handleCustomSettingToggleSensitive(item.id)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                        title={item.isSensitive ? "Mark as public" : "Mark as sensitive"}
+                        title={item.isSensitive ? t('settings.customConfig.markPublic') : t('settings.customConfig.markSensitive')}
                       >
                         {item.isSensitive ? <Lock className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
@@ -802,7 +801,7 @@ export default function ExtensionSettings() {
                     data-automation-id="add-custom-setting"
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    Add Entry
+                    {t('settings.customConfig.addEntry')}
                   </Button>
                 </div>
               </div>
@@ -812,28 +811,27 @@ export default function ExtensionSettings() {
 
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle>Schedules</CardTitle>
+            <CardTitle>{t('settings.schedules.title')}</CardTitle>
             <CardDescription>
-              Configure scheduled tasks for this extension by invoking a manifest-declared API endpoint on a cron schedule.
-              On extension updates, schedules are remapped by endpoint method/path; updates may be blocked if a scheduled endpoint is removed.
+              {t('settings.schedules.description')}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {schedulesError ? (
               <div className="text-sm text-destructive">{schedulesError}</div>
             ) : schedulesLoading ? (
-              <div className="text-sm text-gray-500">Loading schedules…</div>
+              <div className="text-sm text-gray-500">{t('settings.schedules.loading')}</div>
             ) : (
               <div className="space-y-6">
                 {apiEndpoints.length === 0 ? (
                   <div className="text-sm text-gray-500">
-                    This extension does not declare any API endpoints, so there is nothing to schedule.
+                    {t('settings.schedules.noEndpoints')}
                   </div>
                 ) : (
                   <div className="grid gap-3 max-w-2xl">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
                       <div className="md:col-span-2">
-                        <label className="text-sm font-medium">Endpoint</label>
+                        <label className="text-sm font-medium">{t('settings.schedules.endpoint')}</label>
                         <CustomSelect
                           options={apiEndpoints.map((e) => ({
                             value: e.id,
@@ -841,12 +839,12 @@ export default function ExtensionSettings() {
                           }))}
                           value={newScheduleEndpointId}
                           onValueChange={(val) => setNewScheduleEndpointId(val)}
-                          placeholder="Select an endpoint"
+                          placeholder={t('settings.schedules.selectEndpoint')}
                           {...automationId('extension-schedule-endpoint')}
                         />
                       </div>
                       <div>
-                        <label className="text-sm font-medium">Cron</label>
+                        <label className="text-sm font-medium">{t('settings.schedules.cron')}</label>
                         <Input
                           value={newScheduleCron}
                           onChange={(e) => setNewScheduleCron(e.target.value)}
@@ -855,7 +853,7 @@ export default function ExtensionSettings() {
                         />
                       </div>
                       <div>
-                        <label className="text-sm font-medium">Timezone</label>
+                        <label className="text-sm font-medium">{t('settings.schedules.timezone')}</label>
                         <Input
                           value={newScheduleTimezone}
                           onChange={(e) => {
@@ -868,7 +866,7 @@ export default function ExtensionSettings() {
                       </div>
                     </div>
                     <div className="grid gap-2 max-w-2xl">
-                      <label className="text-sm font-medium">Payload (JSON, optional)</label>
+                      <label className="text-sm font-medium">{t('settings.schedules.payloadLabel')}</label>
                       <TextArea
                         value={newSchedulePayload}
                         onChange={(e) => setNewSchedulePayload(e.target.value)}
@@ -876,8 +874,7 @@ export default function ExtensionSettings() {
                         {...automationId('extension-schedule-payload')}
                       />
                       <div className="text-xs text-gray-500">
-                        For GET endpoints, payload is ignored. For POST endpoints, payload becomes the request body.
-                        Avoid including secrets in payloads; use the extension's config/secrets instead.
+                        {t('settings.schedules.payloadHelp')}
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -922,7 +919,7 @@ export default function ExtensionSettings() {
                           }
                         }}
                       >
-                        {creatingSchedule ? 'Creating...' : 'Create schedule'}
+                        {creatingSchedule ? t('settings.schedules.creating') : t('settings.schedules.create')}
                       </Button>
                       <Button
                         id="refresh-schedules-button"
@@ -930,14 +927,14 @@ export default function ExtensionSettings() {
                         disabled={schedulesLoading}
                         onClick={refreshSchedules}
                       >
-                        Refresh
+                        {t('settings.schedules.refresh')}
                       </Button>
                     </div>
                   </div>
                 )}
 
                 {schedules.length === 0 ? (
-                  <div className="text-sm text-gray-500">No schedules configured.</div>
+                  <div className="text-sm text-gray-500">{t('settings.schedules.empty')}</div>
                 ) : (
                   <div className="space-y-3">
                     {schedules.map((s: any) => (
@@ -952,7 +949,7 @@ export default function ExtensionSettings() {
                                 }))}
                                 value={editEndpointId}
                                 onValueChange={(val) => setEditEndpointId(val)}
-                                placeholder="Select an endpoint"
+                                placeholder={t('settings.schedules.selectEndpoint')}
                               />
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                 <Input value={editCron} onChange={(e) => setEditCron(e.target.value)} placeholder="0 0 * * *" />
@@ -996,7 +993,7 @@ export default function ExtensionSettings() {
                                     await refreshSchedules();
                                   }}
                                 >
-                                  Save
+                                  {t('settings.schedules.save')}
                                 </Button>
                                 <Button
                                   id={`cancel-edit-schedule-${s.id}`}
@@ -1004,7 +1001,7 @@ export default function ExtensionSettings() {
                                   variant="ghost"
                                   onClick={() => setEditingScheduleId(null)}
                                 >
-                                  Cancel
+                                  {t('settings.schedules.cancel')}
                                 </Button>
                               </div>
                             </div>
@@ -1014,7 +1011,7 @@ export default function ExtensionSettings() {
                                 {s.endpoint_method} {s.endpoint_path}
                               </div>
                               <div className="text-xs text-gray-500 truncate">
-                                {s.cron} ({s.timezone}){s.last_run_status ? ` • last: ${s.last_run_status}` : ''}
+                                {s.cron} ({s.timezone}){s.last_run_status ? t('settings.schedules.lastStatus', { status: s.last_run_status }) : ''}
                               </div>
                             </>
                           )}
@@ -1044,7 +1041,7 @@ export default function ExtensionSettings() {
                             }}
                             disabled={editingScheduleId === s.id}
                           >
-                            Edit
+                            {t('settings.schedules.edit')}
                           </Button>
                           <Button
                             id={`run-schedule-now-${s.id}`}
@@ -1059,7 +1056,7 @@ export default function ExtensionSettings() {
                               toast.success(t('messages.scheduleRunEnqueued'));
                             }}
                           >
-                            Run now
+                            {t('settings.schedules.runNow')}
                           </Button>
                           <Button
                             id={`delete-schedule-${s.id}`}
@@ -1067,7 +1064,7 @@ export default function ExtensionSettings() {
                             size="sm"
                             className="text-destructive hover:text-destructive"
                             onClick={async () => {
-                              if (!confirm('Delete this schedule?')) return;
+                              if (!confirm(t('settings.schedules.confirmDelete'))) return;
                               const out = await deleteExtensionSchedule(extensionId, s.id);
                               if (!out.success) {
                                 toast.error(out.message || t('messages.deleteScheduleFailed'));
@@ -1077,7 +1074,7 @@ export default function ExtensionSettings() {
                               await refreshSchedules();
                             }}
                           >
-                            Delete
+                            {t('settings.schedules.delete')}
                           </Button>
                         </div>
                       </div>
@@ -1092,11 +1089,11 @@ export default function ExtensionSettings() {
         {secretDefinitions.length > 0 && (
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle>Secret Values</CardTitle>
+              <CardTitle>{t('settings.secrets.title')}</CardTitle>
               <CardDescription>
-                Secrets are encrypted at rest. {hasStoredSecrets ? 'Leave a field blank to keep the existing secret.' : 'Provide values for required secrets before saving.'}
+                {t('settings.secrets.descriptionPrefix')} {hasStoredSecrets ? t('settings.secrets.descriptionHasStored') : t('settings.secrets.descriptionNoStored')}
                 {secretsVersion && (
-                  <span className="ml-2 text-xs text-gray-500">Version: {secretsVersion}</span>
+                  <span className="ml-2 text-xs text-gray-500">{t('settings.secrets.version', { version: secretsVersion })}</span>
                 )}
               </CardDescription>
             </CardHeader>
@@ -1121,14 +1118,14 @@ export default function ExtensionSettings() {
                         type="password"
                         autoComplete="new-password"
                         value={value}
-                        placeholder={secret.placeholder || 'Enter secret value'}
+                        placeholder={secret.placeholder || t('settings.secrets.valuePlaceholder')}
                         onChange={(e) => handleSecretChange(secret.key, e.target.value)}
                         className="max-w-md"
                         {...automationProps}
                       />
                       {hasStoredSecrets && (
                         <p className="text-xs text-gray-500">
-                          Stored secret present. Enter a new value to rotate.
+                          {t('settings.secrets.storedHint')}
                         </p>
                       )}
                     </div>

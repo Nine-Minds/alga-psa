@@ -5,6 +5,7 @@ import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { MspAssetDetailClient } from '@alga-psa/msp-composition/assets';
 import { getSession } from '@alga-psa/auth';
 import { AIChatContextBoundary } from '@product/chat/context';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { Metadata } from 'next';
 
 const getCachedAssetBundle = cache((id: string) => getAssetDetailBundle(id));
@@ -46,7 +47,8 @@ export default async function AssetPage({ params }: Props) {
   try {
     const bundle = await getCachedAssetBundle(resolvedParams.asset_id);
     if (!bundle.asset) {
-      return <div>Asset not found</div>;
+      const { t } = await getServerTranslation(undefined, 'msp/assets');
+      return <div>{t('assetListErrors.assetNotFound')}</div>;
     }
 
     return (
@@ -68,7 +70,8 @@ export default async function AssetPage({ params }: Props) {
     );
   } catch (error) {
     console.error('Error fetching user or asset:', error);
-    return <div>An error occurred. Please try again later.</div>;
+    const { t } = await getServerTranslation(undefined, 'msp/assets');
+    return <div>{t('assetListErrors.genericError')}</div>;
   }
 }
 

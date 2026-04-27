@@ -52,7 +52,7 @@ export default function ExtensionDetails() {
   const { automationIdProps } = useAutomationIdAndRegister<ContainerComponent>({
     id: `extension-details-${extensionId}`,
     type: 'container',
-    label: 'Extension Details'
+    label: t('details.label')
   });
   
   // Fetch extension details
@@ -162,7 +162,7 @@ export default function ExtensionDetails() {
   };
   
   return (
-    <ReflectionContainer id={`extension-details-${extensionId}`} label="Extension Details">
+    <ReflectionContainer id={`extension-details-${extensionId}`} label={t('details.label')}>
       <div className="p-6" {...automationIdProps}>
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center">
@@ -174,7 +174,7 @@ export default function ExtensionDetails() {
               <ChevronLeftIcon className="h-5 w-5" />
             </Link>
             <h1 className="text-2xl font-semibold text-gray-900">
-              {loading ? 'Extension Details' : extension?.name || 'Extension Not Found'}
+              {loading ? t('details.fallbackTitle') : extension?.name || t('details.notFoundTitle')}
             </h1>
               {extension && (
                 <span className={`ml-3 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -182,7 +182,7 @@ export default function ExtensionDetails() {
                   ? 'bg-success/15 text-success'
                   : 'bg-muted text-muted-foreground'
                 }`}>
-                {extension.is_enabled ? 'Enabled' : 'Disabled'}
+                {extension.is_enabled ? t('details.enabled') : t('details.disabled')}
                 </span>
               )}
           </div>
@@ -195,9 +195,9 @@ export default function ExtensionDetails() {
                 data-automation-id="extension-settings-link"
               >
                 <SettingsIcon className="h-4 w-4 mr-1.5" />
-                Settings
+                {t('details.settings')}
               </Link>
-              
+
               <button
                 onClick={() => { void handleToggleExtension(); }}
                 className={`inline-flex items-center px-3 py-1.5 border border-transparent shadow-sm text-sm font-medium rounded-md text-white ${
@@ -210,22 +210,22 @@ export default function ExtensionDetails() {
                 {extension.is_enabled ? (
                   <>
                     <XCircleIcon className="h-4 w-4 mr-1.5" />
-                    Disable
+                    {t('details.disable')}
                   </>
                 ) : (
                   <>
                     <CheckCircleIcon className="h-4 w-4 mr-1.5" />
-                    Enable
+                    {t('details.enable')}
                   </>
                 )}
               </button>
-              
+
               <button
                 onClick={() => { void handleRemoveExtension(); }}
                 className="inline-flex items-center px-3 py-1.5 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                 data-automation-id="remove-extension-button"
               >
-                Remove
+                {t('details.remove')}
               </button>
             </div>
           )}
@@ -234,14 +234,14 @@ export default function ExtensionDetails() {
         {loading && (
           <div className="flex justify-center items-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-            <span className="ml-3 text-gray-600">Loading extension details...</span>
+            <span className="ml-3 text-gray-600">{t('details.loading')}</span>
           </div>
         )}
         
         {error && !loading && (
           <Alert variant="destructive" className="mb-6">
             <AlertDescription>
-              <h3 className="text-sm font-medium">Error</h3>
+              <h3 className="text-sm font-medium">{t('details.error')}</h3>
               <p className="text-sm mt-1">{error}</p>
             </AlertDescription>
           </Alert>
@@ -256,14 +256,14 @@ export default function ExtensionDetails() {
                 <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
                   <div className="flex items-center">
                     <PackageIcon className="h-5 w-5 text-gray-500 mr-2" />
-                    <h2 className="text-lg font-medium text-gray-900">Extension Information</h2>
+                    <h2 className="text-lg font-medium text-gray-900">{t('details.sectionInfo')}</h2>
                   </div>
                 </div>
 
                 {/* Content */}
                 <div className="p-6">
                   <div className="mb-6">
-                    <div className="text-sm font-medium text-gray-500">Runtime Domain</div>
+                    <div className="text-sm font-medium text-gray-500">{t('details.runtimeDomain')}</div>
                     <div className="mt-1 text-sm text-gray-900">{installInfo?.domain || '—'}</div>
                     <div className="text-xs text-gray-500">{installInfo?.status?.state ? String(installInfo?.status?.state) : ''}</div>
                     <div className="mt-2 flex gap-2">
@@ -275,13 +275,13 @@ export default function ExtensionDetails() {
                             rel="noopener noreferrer"
                             className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md bg-success/15 text-success hover:bg-success/25"
                           >
-                            Open
+                            {t('details.open')}
                           </a>
                           <button
                             onClick={() => { void navigator.clipboard.writeText(`https://${installInfo.domain}`); }}
                             className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
                           >
-                            Copy
+                            {t('details.copy')}
                           </button>
                         </>
                       ) : (
@@ -289,38 +289,38 @@ export default function ExtensionDetails() {
                           onClick={() => { void handleReprovision(); }}
                           className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md bg-warning/15 text-warning-foreground hover:bg-warning/25"
                         >
-                          Provision
+                          {t('details.provision')}
                         </button>
                       )}
                     </div>
                   </div>
                   <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
                     <div className="sm:col-span-2">
-                      <dt className="text-sm font-medium text-gray-500">Description</dt>
+                      <dt className="text-sm font-medium text-gray-500">{t('details.description')}</dt>
                       <dd className="mt-1 text-sm text-gray-900">{extension.description}</dd>
                     </div>
-                    
+
                     <div>
-                      <dt className="text-sm font-medium text-gray-500">Version</dt>
+                      <dt className="text-sm font-medium text-gray-500">{t('details.version')}</dt>
                       <dd className="mt-1 text-sm text-gray-900">{extension.version}</dd>
                     </div>
-                    
+
                     <div>
-                      <dt className="text-sm font-medium text-gray-500">Author</dt>
+                      <dt className="text-sm font-medium text-gray-500">{t('details.author')}</dt>
                       <dd className="mt-1 text-sm text-gray-900">
-                        {typeof extension.manifest.author === 'string' 
-                          ? extension.manifest.author 
-                          : (extension.manifest.author?.name || 'Unknown')}
+                        {typeof extension.manifest.author === 'string'
+                          ? extension.manifest.author
+                          : (extension.manifest.author?.name || t('details.unknownAuthor'))}
                       </dd>
                     </div>
-                    
+
                     {extension.manifest.homepage && (
                       <div>
-                        <dt className="text-sm font-medium text-gray-500">Homepage</dt>
+                        <dt className="text-sm font-medium text-gray-500">{t('details.homepage')}</dt>
                         <dd className="mt-1 text-sm text-gray-900">
-                          <a 
-                            href={extension.manifest.homepage} 
-                            target="_blank" 
+                          <a
+                            href={extension.manifest.homepage}
+                            target="_blank"
                             rel="noopener noreferrer"
                             className="text-primary-600 hover:text-primary-800"
                           >
@@ -329,21 +329,21 @@ export default function ExtensionDetails() {
                         </dd>
                       </div>
                     )}
-                    
+
                     {extension.manifest.license && (
                       <div>
-                        <dt className="text-sm font-medium text-gray-500">License</dt>
+                        <dt className="text-sm font-medium text-gray-500">{t('details.license')}</dt>
                         <dd className="mt-1 text-sm text-gray-900">{extension.manifest.license}</dd>
                       </div>
                     )}
-                    
+
                     <div>
-                      <dt className="text-sm font-medium text-gray-500">Installed Date</dt>
+                      <dt className="text-sm font-medium text-gray-500">{t('details.installedDate')}</dt>
                       <dd className="mt-1 text-sm text-gray-900">{extension.created_at.toLocaleDateString()}</dd>
                     </div>
-                    
+
                     <div>
-                      <dt className="text-sm font-medium text-gray-500">Last Updated</dt>
+                      <dt className="text-sm font-medium text-gray-500">{t('details.lastUpdated')}</dt>
                       <dd className="mt-1 text-sm text-gray-900">{extension.updated_at.toLocaleDateString()}</dd>
                     </div>
                   </dl>
@@ -355,14 +355,14 @@ export default function ExtensionDetails() {
                 <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
                   <div className="flex items-center">
                     <ShieldIcon className="h-5 w-5 text-gray-500 mr-2" />
-                    <h2 className="text-lg font-medium text-gray-900">Permissions</h2>
+                    <h2 className="text-lg font-medium text-gray-900">{t('details.sectionPermissions')}</h2>
                   </div>
                 </div>
                 <div className="p-6">
                   {extension.manifest.permissions && extension.manifest.permissions.length > 0 ? (
                     <ExtensionPermissions permissions={extension.manifest.permissions} />
                   ) : (
-                    <p className="text-sm text-gray-500">This extension does not require any permissions.</p>
+                    <p className="text-sm text-gray-500">{t('details.noPermissions')}</p>
                   )}
                 </div>
               </div>
@@ -371,32 +371,32 @@ export default function ExtensionDetails() {
               <div className="bg-white shadow-sm rounded-lg overflow-hidden border border-gray-200 mt-6">
                 <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
                   <div className="flex items-center">
-                    <h2 className="text-lg font-medium text-gray-900">Versions</h2>
+                    <h2 className="text-lg font-medium text-gray-900">{t('details.sectionVersions')}</h2>
                   </div>
                 </div>
                 <div className="p-6">
                   {versionsLoading ? (
-                    <p className="text-sm text-gray-500">Loading versions…</p>
+                    <p className="text-sm text-gray-500">{t('details.loadingVersions')}</p>
                   ) : versionsError ? (
                     <p className="text-sm text-destructive">{versionsError}</p>
                   ) : versions.length === 0 ? (
-                    <p className="text-sm text-gray-500">No published versions available.</p>
+                    <p className="text-sm text-gray-500">{t('details.noVersions')}</p>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="min-w-full divide-y divide-gray-200" data-automation-id="extension-versions-table">
                         <thead className="bg-gray-50">
                           <tr>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Version
+                              {t('details.colVersion')}
                             </th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Published
+                              {t('details.colPublished')}
                             </th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Content hash
+                              {t('details.colContentHash')}
                             </th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Installed
+                              {t('details.colInstalled')}
                             </th>
                           </tr>
                         </thead>
@@ -408,7 +408,7 @@ export default function ExtensionDetails() {
                               <td className="px-6 py-4 text-sm text-gray-900">
                                 <span className="font-mono text-xs break-all">{row.contentHash ?? '—'}</span>
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.installed ? 'Yes' : 'No'}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.installed ? t('details.yes') : t('details.no')}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -423,7 +423,7 @@ export default function ExtensionDetails() {
                 <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
                   <div className="flex items-center">
                     <div className="flex items-center">
-                      <h2 className="text-lg font-medium text-gray-900">Components</h2>
+                      <h2 className="text-lg font-medium text-gray-900">{t('details.sectionComponents')}</h2>
                     </div>
                   </div>
                 </div>
@@ -434,16 +434,16 @@ export default function ExtensionDetails() {
                         <thead className="bg-gray-50">
                           <tr>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Type
+                              {t('details.colType')}
                             </th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              ID
+                              {t('details.colId')}
                             </th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Entry Point
+                              {t('details.colEntryPoint')}
                             </th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Mount Point
+                              {t('details.colMountPoint')}
                             </th>
                           </tr>
                         </thead>
@@ -468,7 +468,7 @@ export default function ExtensionDetails() {
                       </table>
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-500">This extension does not define any components.</p>
+                    <p className="text-sm text-gray-500">{t('details.noComponents')}</p>
                   )}
                 </div>
               </div>
@@ -483,13 +483,13 @@ export default function ExtensionDetails() {
                       <InfoIcon className="h-5 w-5" />
                     </div>
                     <div className="ml-3">
-                      <h3 className="text-sm font-medium">Extension Information</h3>
+                      <h3 className="text-sm font-medium">{t('details.infoTitle')}</h3>
                       <div className="mt-2 text-sm">
                         <p>
-                          This extension was installed on {extension.created_at.toLocaleDateString()} and last updated on {extension.updated_at.toLocaleDateString()}.
+                          {t('details.infoInstalled', { installedDate: extension.created_at.toLocaleDateString(), updatedDate: extension.updated_at.toLocaleDateString() })}
                         </p>
                         <p className="mt-2">
-                          Enabling or disabling the extension may require a page refresh for changes to take effect.
+                          {t('details.infoRefreshHint')}
                         </p>
                       </div>
                     </div>
@@ -503,13 +503,13 @@ export default function ExtensionDetails() {
                     <div className="flex justify-between items-center">
                       <div className="flex items-center">
                         <SettingsIcon className="h-5 w-5 text-gray-500 mr-2" />
-                        <h2 className="text-lg font-medium text-gray-900">Settings</h2>
+                        <h2 className="text-lg font-medium text-gray-900">{t('details.settings')}</h2>
                       </div>
                     </div>
                   </div>
                   <div className="p-6">
                     <p className="text-sm text-gray-500 mb-4">
-                      This extension has {extension.manifest.settings.length} configurable {extension.manifest.settings.length === 1 ? 'setting' : 'settings'}.
+                      {t(extension.manifest.settings.length === 1 ? 'details.settingsCountOne' : 'details.settingsCountOther', { count: extension.manifest.settings.length })}
                     </p>
                     <Link
                       href={`/msp/settings/extensions/${extensionId}/settings`}
@@ -517,7 +517,7 @@ export default function ExtensionDetails() {
                       data-automation-id="go-to-settings-button"
                     >
                       <SettingsIcon className="h-4 w-4 mr-1.5" />
-                      Manage Settings
+                      {t('details.manageSettings')}
                     </Link>
                   </div>
                 </div>
@@ -530,10 +530,10 @@ export default function ExtensionDetails() {
         isOpen={showRemoveConfirm}
         onClose={() => setShowRemoveConfirm(false)}
         onConfirm={confirmRemoveExtension}
-        title="Remove Extension"
-        message="Are you sure you want to remove this extension? This action cannot be undone."
-        confirmLabel="Remove"
-        cancelLabel="Cancel"
+        title={t('details.removeTitle')}
+        message={t('details.removeMessage')}
+        confirmLabel={t('details.confirmRemove')}
+        cancelLabel={t('details.cancel')}
         id="remove-extension-confirm"
       />
     </ReflectionContainer>

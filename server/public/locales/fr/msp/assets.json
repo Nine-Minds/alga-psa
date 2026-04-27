@@ -609,11 +609,67 @@
   },
   "assetPatchStatusSection": {
     "title": "Section État des correctifs d'actifs",
-    "description": "Correctif d'entreprise et wrapper d'état de l'antivirus affichés dans l'expérience détaillée des actifs"
+    "description": "Correctif d'entreprise et wrapper d'état de l'antivirus affichés dans l'expérience détaillée des actifs",
+    "heading": "État des correctifs",
+    "compliance": {
+      "unknown": "Inconnu",
+      "actionRequired": "Action requise",
+      "updatesAvailable": "Mises à jour disponibles",
+      "minorUpdates": "Mises à jour mineures",
+      "upToDate": "À jour"
+    },
+    "relativeTime": {
+      "never": "Jamais",
+      "justNow": "À l'instant",
+      "minutesAgo": "il y a {{count}} min",
+      "hoursAgo": "il y a {{count}} h",
+      "daysAgo": "il y a {{count}} j"
+    },
+    "labels": {
+      "osPatches": "Correctifs OS",
+      "software": "Logiciels",
+      "failed": "Échoués",
+      "lastScan": "Dernière analyse",
+      "pending": "en attente",
+      "patches": "correctifs"
+    }
   },
   "assetSoftwareInventory": {
     "title": "Inventaire des logiciels d'actifs",
-    "description": "Wrapper d'inventaire de logiciels d'entreprise pour les logiciels installés et les données de version"
+    "description": "Wrapper d'inventaire de logiciels d'entreprise pour les logiciels installés et les données de version",
+    "heading": "Inventaire des logiciels",
+    "searchPlaceholder": "Rechercher un logiciel...",
+    "appsCount": "{{count}} applications",
+    "unknownName": "Inconnu",
+    "noMatch": "Aucun logiciel ne correspond à votre recherche",
+    "version": "v{{version}}",
+    "by": "par {{publisher}}",
+    "showingOfApplications": "Affichage de {{shown}} sur {{total}} applications",
+    "more": "+{{count}} de plus"
+  },
+  "remoteAccess": {
+    "remoteDesktop": "Bureau à distance",
+    "remoteShell": "Shell à distance",
+    "remoteAccess": "Accès à distance",
+    "deviceOverdue": "L'appareil est en retard",
+    "deviceOffline": "L'appareil est hors ligne",
+    "errors": {
+      "urlFetchFailed": "Échec de l'obtention de l'URL d'accès à distance",
+      "initiateFailed": "Échec du lancement de l'accès à distance"
+    },
+    "indicator": {
+      "online": "En ligne",
+      "offline": "Hors ligne",
+      "available": "Accès à distance disponible",
+      "deviceOffline": "Appareil hors ligne"
+    }
+  },
+  "assetListErrors": {
+    "genericError": "Une erreur s'est produite. Veuillez réessayer plus tard.",
+    "assetNotFound": "Actif introuvable"
+  },
+  "assetEdit": {
+    "pageTitle": "Modifier l'actif"
   },
   "associatedAssets": {
     "title": "Actifs associés",
@@ -1191,6 +1247,9 @@
       "acknowledgeFailed": "Échec de l'accusé de réception de l'alerte",
       "ticketCreated": "Ticket créé avec succès",
       "ticketCreateFailed": "Échec de la création du ticket"
-    }
+    },
+    "activeAlerts": "Alertes actives",
+    "acknowledge": "Accuser réception",
+    "createTicket": "Créer un ticket"
   }
 }

@@ -1114,6 +1114,82 @@
       "saveSettingsFailed": "Error al guardar la configuración",
       "webhookConfigured": "¡Webhook configurado correctamente!",
       "webhookConfigureFailed": "Error al configurar el webhook"
+    },
+    "expiration": {
+      "selectPlaceholder": "Seleccionar tiempo de expiración",
+      "custom": "Personalizado...",
+      "hoursSingular": "{{count}} hora",
+      "hoursPlural": "{{count}} horas",
+      "daysSingular": "{{count}} día",
+      "daysPlural": "{{count}} días",
+      "daysDecimal": "{{count}} días",
+      "hoursUnit": "horas ({{formatted}})",
+      "willExpireAfter": "Los enlaces de pago expirarán después de {{duration}}"
+    },
+    "notConnected": {
+      "title": "Stripe no conectado",
+      "description": "Para configurar los ajustes de pago, primero debe conectar su cuenta de Stripe.",
+      "connectButton": "Conectar Stripe"
+    },
+    "settings": {
+      "paymentLinksInEmails": {
+        "label": "Incluir enlaces de pago en los correos de facturas",
+        "description": "Agregar un botón \"Pagar ahora\" a los correos de facturas"
+      },
+      "paymentConfirmations": {
+        "label": "Enviar correos de confirmación de pago",
+        "description": "Notificar a los clientes por correo cuando se reciba su pago"
+      },
+      "paymentLinkExpiration": {
+        "label": "Expiración del enlace de pago",
+        "description": "Cuánto tiempo permanecen válidos los enlaces de pago antes de expirar"
+      },
+      "actions": {
+        "save": "Guardar configuración",
+        "saving": "Guardando..."
+      }
+    },
+    "stripe": {
+      "cardTitle": "Pagos con Stripe",
+      "cardDescription": "Acepte pagos con tarjeta de crédito para sus facturas",
+      "connectedTitle": "Stripe conectado",
+      "publishableKey": "Clave publicable: {{key}}...",
+      "testConnection": "Probar conexión",
+      "disconnect": "Desconectar",
+      "disconnectDialog": {
+        "title": "Desconectar Stripe",
+        "message": "¿Está seguro de que desea desconectar Stripe? Los enlaces de pago dejarán de funcionar.",
+        "confirm": "Desconectar",
+        "cancel": "Cancelar"
+      },
+      "webhook": {
+        "label": "Configuración de webhook",
+        "configuredTitle": "Webhooks configurados automáticamente",
+        "configuredDescription": "Alga PSA recibirá notificaciones de pago para:",
+        "failedTitle": "Falló la configuración del webhook",
+        "failedDescription": "La configuración automática del webhook falló. Haga clic en reintentar para intentar la configuración nuevamente.",
+        "configuring": "Configurando...",
+        "retry": "Reintentar configuración"
+      },
+      "connectForm": {
+        "secretKeyLabel": "Clave secreta",
+        "secretKeyPlaceholder": "sk_live_... o sk_test_...",
+        "secretKeyHelpPrefix": "Encuéntrela en su",
+        "secretKeyHelpLink": "Panel de Stripe → Claves API",
+        "publishableKeyLabel": "Clave publicable",
+        "publishableKeyPlaceholder": "pk_live_... o pk_test_...",
+        "connecting": "Conectando...",
+        "connect": "Conectar Stripe",
+        "cancel": "Cancelar"
+      },
+      "empty": {
+        "description": "Conecte su cuenta de Stripe para aceptar pagos en línea de facturas",
+        "connectButton": "Conectar Stripe"
+      },
+      "settingsCard": {
+        "title": "Configuración de pagos",
+        "description": "Configure cómo funcionan los enlaces de pago con sus facturas"
+      }
     }
   }
 }

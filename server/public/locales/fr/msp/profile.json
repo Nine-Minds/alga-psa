@@ -195,5 +195,41 @@
         "default": "Avis"
       }
     }
+  },
+  "connectSso": {
+    "verify": {
+      "title": "Sécurisez votre compte avec le SSO",
+      "description": "Liez Azure AD ou Google Workspace pour réutiliser les politiques de l'organisation et éviter les invites d'authentification à deux facteurs locales.",
+      "signedInAs": "Connecté en tant que",
+      "currentPassword": "Mot de passe actuel",
+      "twoFactorCode": "Code d'authentification à deux facteurs",
+      "twoFactorPlaceholder": "123456",
+      "verifyCredentials": "Vérifier les identifiants",
+      "verifying": "Vérification...",
+      "reset": "Réinitialiser",
+      "linkedSuccess": "Fournisseur lié avec succès.",
+      "credentialsVerified": "Identifiants vérifiés. Choisissez un fournisseur ci-dessous pour finaliser la liaison de votre compte.",
+      "verifyFailed": "Impossible de vérifier les identifiants.",
+      "verifyBeforeProvider": "Vérifiez votre mot de passe (et le code d'authentification à deux facteurs si requis) avant de connecter un fournisseur."
+    },
+    "providers": {
+      "title": "Connecter un fournisseur",
+      "description": "Choisissez un fournisseur pour finaliser la liaison SSO. Vous serez redirigé vers le flux de connexion du fournisseur.",
+      "noneConfigured": "Aucun fournisseur SSO n'est configuré pour cet environnement. Demandez à votre administrateur de configurer les identifiants Google ou Microsoft.",
+      "notConfigured": "Non configuré",
+      "branding": {
+        "google": "Continuer avec Google",
+        "microsoft": "Continuer avec Microsoft",
+        "default": "Continuer"
+      }
+    },
+    "linked": {
+      "title": "Comptes liés",
+      "description": "Nous actualiserons la liaison la prochaine fois que vous vous connecterez via un fournisseur connecté.",
+      "empty": "Aucun fournisseur SSO lié pour le moment. Suivez les étapes ci-dessus pour en connecter un.",
+      "linkedAt": "Lié le {{date}}",
+      "lastUsed": "Dernière utilisation le {{date}}",
+      "notUsedYet": "Pas encore utilisé"
+    }
   }
 }

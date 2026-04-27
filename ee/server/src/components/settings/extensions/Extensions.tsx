@@ -42,7 +42,7 @@ export default function Extensions() {
   const { automationIdProps } = useAutomationIdAndRegister<ContainerComponent>({
     id: 'extensions-page',
     type: 'container',
-    label: 'Extensions Management'
+    label: t('list.label')
   });
   
   // Fetch extensions
@@ -64,7 +64,7 @@ export default function Extensions() {
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'unknown error';
         console.error('Failed to fetch extensions', { error: msg });
-        setError('Failed to load extensions');
+        setError(t('list.loadFailed'));
         setLoading(false);
       }
     };
@@ -138,36 +138,36 @@ export default function Extensions() {
   
   return (
     <>
-    <ReflectionContainer id="extensions-page" label="Extensions Management">
+    <ReflectionContainer id="extensions-page" label={t('list.label')}>
       <div className="p-6" {...automationIdProps}>
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-semibold text-foreground">Extensions</h1>
+          <h1 className="text-2xl font-semibold text-foreground">{t('list.heading')}</h1>
         </div>
-        
+
         {loading && (
           <div className="flex justify-center items-center py-12">
-            <LoadingIndicator 
-              layout="stacked" 
-              text="Loading extensions..."
+            <LoadingIndicator
+              layout="stacked"
+              text={t('list.loading')}
               spinnerProps={{ size: 'md' }}
             />
           </div>
         )}
-        
+
         {error && !loading && (
           <Alert variant="destructive" className="mb-6">
             <AlertDescription>
-              <h3 className="text-sm font-medium">Error</h3>
+              <h3 className="text-sm font-medium">{t('list.error')}</h3>
               <p className="text-sm mt-1">{error}</p>
             </AlertDescription>
           </Alert>
         )}
-        
+
         {!loading && !error && extensions.length === 0 && (
           <div className="bg-card border border-border rounded-lg p-8 text-center">
-            <h3 className="text-lg font-medium text-foreground mb-2">No extensions installed</h3>
+            <h3 className="text-lg font-medium text-foreground mb-2">{t('list.emptyTitle')}</h3>
             <p className="text-muted-foreground mb-4">
-              Install extensions to add new features and functionality to Alga PSA.
+              {t('list.emptyDescription')}
             </p>
           </div>
         )}
@@ -190,10 +190,10 @@ export default function Extensions() {
       isOpen={removeTarget !== null}
       onClose={() => setRemoveTarget(null)}
       onConfirm={confirmRemoveExtension}
-      title="Remove Extension"
-      message="Are you sure you want to remove this extension? This action cannot be undone."
-      confirmLabel="Remove"
-      cancelLabel="Cancel"
+      title={t('list.removeTitle')}
+      message={t('list.removeMessage')}
+      confirmLabel={t('list.confirmRemove')}
+      cancelLabel={t('list.cancel')}
       id="remove-extension-confirm"
     />
     {viewing && (
@@ -204,17 +204,17 @@ export default function Extensions() {
           </DialogHeader>
           <div className="space-y-2">
             <p>
-              <strong>Version:</strong> {viewing.manifest.version}
+              <strong>{t('list.dialogVersion')}</strong> {viewing.manifest.version}
             </p>
             <p>
-              <strong>Author:</strong> {typeof viewing.manifest.author === 'string' ? viewing.manifest.author : viewing.manifest.author?.name ?? '—'}
+              <strong>{t('list.dialogAuthor')}</strong> {typeof viewing.manifest.author === 'string' ? viewing.manifest.author : viewing.manifest.author?.name ?? '—'}
             </p>
             <p>
-              <strong>Domain:</strong> {installInfo[viewing.id]?.domain || '—'}
+              <strong>{t('list.dialogDomain')}</strong> {installInfo[viewing.id]?.domain || '—'}
             </p>
             {installInfo[viewing.id]?.status?.state && (
               <p>
-                <strong>Status:</strong> {String(installInfo[viewing.id]?.status?.state)}
+                <strong>{t('list.dialogStatus')}</strong> {String(installInfo[viewing.id]?.status?.state)}
               </p>
             )}
           </div>
@@ -240,9 +240,10 @@ function ExtensionsTable({
   onRemove: (id: string) => void;
   onView: (ext: ExtRow) => void;
 }) {
+  const { t } = useTranslation('msp/extensions');
   const columns = useMemo<ColumnDefinition<ExtRow>[]>(() => [
     {
-      title: 'Extension',
+      title: t('list.colExtension'),
       dataIndex: 'name',
       width: '320px',
       headerClassName: 'sticky left-0 bg-card z-20',
@@ -261,7 +262,7 @@ function ExtensionsTable({
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
               extension.is_enabled ? 'bg-success/15 text-success' : 'bg-muted text-muted-foreground'
             }`}>
-              {extension.is_enabled ? 'Enabled' : 'Disabled'}
+              {extension.is_enabled ? t('list.enabled') : t('list.disabled')}
             </span>
             {(() => {
               const state = installInfo[extension.id]?.status?.state as string | undefined;
@@ -284,7 +285,7 @@ function ExtensionsTable({
       )
     },
     {
-      title: 'Version',
+      title: t('list.colVersion'),
       dataIndex: ['manifest','version'],
       width: '40px',
       render: (value) => (
@@ -292,7 +293,7 @@ function ExtensionsTable({
       )
     },
     {
-      title: 'Author',
+      title: t('list.colAuthor'),
       dataIndex: ['manifest','author'],
       width: '40px',
       render: (value) => {
@@ -301,7 +302,7 @@ function ExtensionsTable({
       }
     },
     {
-      title: 'Domain',
+      title: t('list.colDomain'),
       dataIndex: 'id',
       render: (_v, extension) => (
         <div className="flex flex-col gap-1">
@@ -324,7 +325,7 @@ function ExtensionsTable({
       )
     },
     {
-      title: 'Actions',
+      title: t('list.colActions'),
       dataIndex: 'id',
       width: '380px',
       headerClassName: 'text-right sticky right-0 bg-card z-20',
@@ -338,7 +339,7 @@ function ExtensionsTable({
             onClick={() => onView(extension)}
           >
             <EyeIcon className="h-3.5 w-3.5 mr-1" />
-            View
+            {t('list.view')}
           </Button>
           <Button
             id={`extension-settings-${extension.id}`}
@@ -348,7 +349,7 @@ function ExtensionsTable({
           >
             <Link href={`/msp/settings/extensions/${extension.id}/settings`}>
               <Settings className="h-3.5 w-3.5 mr-1" />
-              Settings
+              {t('list.settings')}
             </Link>
           </Button>
           {installInfo[extension.id]?.domain ? null : (
@@ -358,7 +359,7 @@ function ExtensionsTable({
               size="xs"
               onClick={() => onReprovision(extension.id)}
             >
-              Provision
+              {t('list.provision')}
             </Button>
           )}
           <Button
@@ -370,12 +371,12 @@ function ExtensionsTable({
             {extension.is_enabled ? (
               <>
                 <XCircleIcon className="h-3.5 w-3.5 mr-1" />
-                Disable
+                {t('list.disable')}
               </>
             ) : (
               <>
                 <CheckCircleIcon className="h-3.5 w-3.5 mr-1" />
-                Enable
+                {t('list.enable')}
               </>
             )}
           </Button>
@@ -385,7 +386,7 @@ function ExtensionsTable({
             size="xs"
             onClick={() => { void onRemove(extension.id); }}
           >
-            Remove
+            {t('list.remove')}
           </Button>
           <Button
             id={`extension-debug-${extension.id}`}
@@ -395,13 +396,13 @@ function ExtensionsTable({
           >
             <Link href={`/msp/extensions/${extension.id}/debug`}>
               <Terminal className="h-3.5 w-3.5 mr-1" />
-              Debug
+              {t('list.debug')}
             </Link>
           </Button>
         </div>
       )
     }
-  ], [installInfo, onRemove, onReprovision, onToggle, onView]);
+  ], [installInfo, onRemove, onReprovision, onToggle, onView, t]);
 
   return (
     <DataTable<ExtRow>

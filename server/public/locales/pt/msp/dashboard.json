@@ -153,5 +153,6 @@
       "dismissFailed": "Failed to dismiss onboarding step.",
       "restoreFailed": "Failed to restore onboarding step."
     }
-  }
+  },
+  "mspDashboard": "Painel MSP"
 }

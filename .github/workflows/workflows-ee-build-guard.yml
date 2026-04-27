@@ -53,11 +53,14 @@ jobs:
         env:
           EDITION: ee
           NEXT_PUBLIC_EDITION: enterprise
-          NODE_OPTIONS: '--max-old-space-size=8192'
           USE_PREBUILT: 'true'
         run: |
           npx nx build-deps server --output-style=static
-          npx nx build server --output-style=static
+          # Override the 8 GB cap baked into server/package.json's build script;
+          # the EE webpack build hits the heap limit on ubuntu-latest at 8 GB.
+          # 14 GB leaves ~2 GB headroom on the 16 GB runner for the OS and other processes.
+          cd server
+          NODE_OPTIONS='--max-old-space-size=14336' NODE_ENV=production npx next build --webpack
 
       - name: "Guard: legacy workflows shims removed"
         run: node scripts/guard-no-legacy-workflows-shims.mjs
