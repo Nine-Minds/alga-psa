@@ -71,6 +71,13 @@ Rolling notes for adding workflow-safe time-entry, time-sheet, and billing-readi
 - (2026-04-27) Added DB-backed runtime test case for `T002` in `shared/workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts`.
   - Uses billing fixtures (`createFixedPlanAssignment`, `createBucketOverlayForPlan`) to seed a bucket-backed contract line.
   - Verifies default contract-line selection and `bucket_usage.minutes_used` increment from workflow `time.create_entry`.
+- (2026-04-27) Implemented workflow `time.update_entry` and `time.delete_entry` actions in `shared/workflow/runtime/actions/businessOperations/time.ts` backed by new domain helpers.
+  - New domain helpers: `updateWorkflowTimeEntry(...)` and `deleteWorkflowTimeEntry(...)` in `shared/workflow/runtime/actions/businessOperations/timeDomain.ts`.
+  - Update behavior includes invoiced guard, recomputation of work-date/timezone + billable minutes, timesheet re-association, bucket usage rebalance (`-old +new`), project-task actual-hours recalc (old/new task), and ticket/project-task assignment side effects.
+  - Delete behavior includes invoiced guard, bucket usage decrement, and project-task actual-hours recalc.
+- (2026-04-27) Added DB-backed runtime test case for `T003` in `shared/workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts`.
+  - Creates a project-task-linked entry, updates duration via workflow action, and deletes via workflow action.
+  - Asserts `project_tasks.actual_hours` transitions `30 -> 90 -> 0`.
 
 ## Commands / Verification (This Pass)
 
@@ -80,6 +87,10 @@ Rolling notes for adding workflow-safe time-entry, time-sheet, and billing-readi
   - Test file compiles/loads, but DB-backed execution requires local test Postgres availability.
 - Attempted after F006/T002 changes: `npx vitest run --config shared/vitest.config.ts workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts`
   - Still blocked locally by the same test DB connection refusal (`127.0.0.1:57432`).
+- Attempted after update/delete action + T003 changes: `npx vitest run --config shared/vitest.config.ts workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts`
+  - Compile/import succeeds, but DB-backed execution remains blocked by local connection refusal (`127.0.0.1:57432`).
+- Attempted: `npx tsc -p shared/tsconfig.json --noEmit`
+  - Fails due pre-existing workspace TS config/module issues outside this feature area (`@alga-psa/sla/types`, alias `@/lib/*`, and existing `server/test-utils/dbReset.ts` declaration-order error).
 
 ## Gotchas
 

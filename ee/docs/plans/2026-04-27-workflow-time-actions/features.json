@@ -54,7 +54,7 @@
   {
     "id": "F007",
     "description": "Ensure workflow-created, updated, and deleted project-task time entries preserve project task actual-hours recalculation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Time entry actions"
     ]
@@ -62,7 +62,7 @@
   {
     "id": "F008",
     "description": "Ensure workflow-created ticket and project-task entries preserve canonical resource-assignment side effects where existing product behavior adds the user to ticket/task resources.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Time entry actions"
     ]

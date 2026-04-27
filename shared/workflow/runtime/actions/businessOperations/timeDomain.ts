@@ -75,12 +75,46 @@ export type WorkflowTimeCreatedEntrySummary = {
   notes: string | null;
 };
 
+export type WorkflowTimeUpdateEntryInput = {
+  entry_id: string;
+  start?: string;
+  end?: string;
+  duration_minutes?: number;
+  billable?: boolean;
+  billable_duration_minutes?: number;
+  link?: {
+    type: 'ticket' | 'project' | 'project_task' | 'interaction' | 'ad_hoc' | 'non_billable_category';
+    id: string;
+  };
+  service_id?: string;
+  contract_line_id?: string | null;
+  tax_rate_id?: string | null;
+  notes?: string | null;
+  time_sheet_id?: string | null;
+  attach_to_timesheet?: boolean;
+};
+
+export type WorkflowTimeDeletedEntrySummary = {
+  entry_id: string;
+  user_id: string;
+  work_item_id: string | null;
+  work_item_type: string | null;
+  service_id: string;
+  contract_line_id: string | null;
+  billable_minutes: number;
+  deleted: true;
+};
+
 function toIsoString(value: string | Date): string {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }
 
 function toDateOnly(value: string | Date): string {
   return value instanceof Date ? value.toISOString().slice(0, 10) : value.slice(0, 10);
+}
+
+function hasOwnProperty(obj: object, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(obj, key);
 }
 
 function ensureValidDate(value: string, field: string): Date {
@@ -963,5 +997,402 @@ export async function createWorkflowTimeEntry(params: {
     approval_status: String(entry.approval_status ?? 'DRAFT'),
     invoiced: Boolean(entry.invoiced),
     notes: (entry.notes as string | null) ?? null,
+  };
+}
+
+function getLinkFromStoredEntry(entry: {
+  work_item_type: string | null;
+  work_item_id: string | null;
+}): WorkflowTimeCreateEntryInput['link'] {
+  if (!entry.work_item_type || !entry.work_item_id) {
+    return undefined;
+  }
+
+  const validTypes = new Set(['ticket', 'project', 'project_task', 'interaction', 'ad_hoc', 'non_billable_category']);
+  if (!validTypes.has(entry.work_item_type)) {
+    return undefined;
+  }
+
+  return {
+    type: entry.work_item_type as NonNullable<WorkflowTimeCreateEntryInput['link']>['type'],
+    id: entry.work_item_id,
+  };
+}
+
+function normalizeEntrySummary(
+  entry: {
+    entry_id: string;
+    user_id: string;
+    work_item_id: string | null;
+    work_item_type: string | null;
+    service_id: string;
+    contract_line_id: string | null;
+    time_sheet_id: string | null;
+    start_time: string | Date;
+    end_time: string | Date;
+    billable_duration: number | null;
+    work_date: string | Date;
+    work_timezone: string | null;
+    approval_status: string | null;
+    invoiced: boolean | null;
+    notes: string | null;
+  },
+  fallbackWorkTimezone?: string
+): WorkflowTimeCreatedEntrySummary {
+  const startIso = toIsoString(entry.start_time);
+  const endIso = toIsoString(entry.end_time);
+
+  return {
+    entry_id: entry.entry_id,
+    user_id: entry.user_id,
+    work_item_id: entry.work_item_id ?? null,
+    work_item_type: entry.work_item_type ?? null,
+    service_id: entry.service_id,
+    contract_line_id: entry.contract_line_id ?? null,
+    time_sheet_id: entry.time_sheet_id ?? null,
+    start_time: startIso,
+    end_time: endIso,
+    total_minutes: Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 60000),
+    billable_minutes: Number(entry.billable_duration ?? 0),
+    work_date: toDateOnly(entry.work_date),
+    work_timezone: String(entry.work_timezone ?? fallbackWorkTimezone ?? 'UTC'),
+    approval_status: String(entry.approval_status ?? 'DRAFT'),
+    invoiced: Boolean(entry.invoiced),
+    notes: entry.notes ?? null,
+  };
+}
+
+export async function updateWorkflowTimeEntry(params: {
+  trx: Knex.Transaction;
+  tenantId: string;
+  actorUserId: string;
+  input: WorkflowTimeUpdateEntryInput;
+}): Promise<WorkflowTimeCreatedEntrySummary> {
+  const { trx, tenantId, actorUserId, input } = params;
+
+  const existing = await trx('time_entries')
+    .where({ tenant: tenantId, entry_id: input.entry_id })
+    .select(
+      'entry_id',
+      'user_id',
+      'work_item_id',
+      'work_item_type',
+      'service_id',
+      'contract_line_id',
+      'time_sheet_id',
+      'start_time',
+      'end_time',
+      'billable_duration',
+      'work_date',
+      'work_timezone',
+      'approval_status',
+      'invoiced',
+      'notes',
+      'tax_rate_id'
+    )
+    .first();
+
+  if (!existing) {
+    throw new WorkflowTimeDomainError({
+      category: 'ActionError',
+      code: 'NOT_FOUND',
+      message: 'Time entry not found',
+      details: { entry_id: input.entry_id },
+    });
+  }
+
+  if (existing.invoiced) {
+    throw new WorkflowTimeDomainError({
+      category: 'ValidationError',
+      code: 'VALIDATION_ERROR',
+      message: 'This time entry has already been invoiced and cannot be modified',
+      details: { entry_id: input.entry_id },
+    });
+  }
+
+  const oldLink = getLinkFromStoredEntry({
+    work_item_type: (existing.work_item_type as string | null) ?? null,
+    work_item_id: (existing.work_item_id as string | null) ?? null,
+  });
+  const oldWorkItem = await getWorkItemClientContext(trx, tenantId, oldLink);
+
+  const effectiveLink = input.link ?? oldLink;
+  const resolvedWorkItem = await getWorkItemClientContext(trx, tenantId, effectiveLink);
+  const resolvedServiceId = input.service_id ?? String(existing.service_id);
+
+  const service = await trx('service_catalog')
+    .where({ tenant: tenantId, service_id: resolvedServiceId })
+    .select('service_id')
+    .first();
+
+  if (!service) {
+    throw new WorkflowTimeDomainError({
+      category: 'ValidationError',
+      code: 'VALIDATION_ERROR',
+      message: 'Service is required and must exist',
+      details: { service_id: resolvedServiceId },
+    });
+  }
+
+  const existingStartIso = toIsoString(existing.start_time as string | Date);
+  const existingEndIso = toIsoString(existing.end_time as string | Date);
+
+  const startDate = input.start
+    ? ensureValidDate(input.start, 'start')
+    : new Date(existingStartIso);
+
+  const explicitEndDate = input.end
+    ? ensureValidDate(input.end, 'end')
+    : null;
+
+  if (input.duration_minutes !== undefined) {
+    assertPositiveOrZeroMinutes(input.duration_minutes, 'duration_minutes');
+  }
+  if (input.billable_duration_minutes !== undefined) {
+    assertPositiveOrZeroMinutes(input.billable_duration_minutes, 'billable_duration_minutes');
+  }
+
+  const computedEndDate = explicitEndDate
+    ?? (input.duration_minutes !== undefined
+      ? new Date(startDate.getTime() + input.duration_minutes * 60 * 1000)
+      : new Date(existingEndIso));
+
+  if (computedEndDate.getTime() < startDate.getTime()) {
+    throw new WorkflowTimeDomainError({
+      category: 'ValidationError',
+      code: 'VALIDATION_ERROR',
+      message: 'end must be at or after start',
+      details: { entry_id: input.entry_id },
+    });
+  }
+
+  const totalMinutes = Math.round((computedEndDate.getTime() - startDate.getTime()) / 60000);
+  const existingBillableMinutes = Number(existing.billable_duration ?? 0);
+  const billableMinutes = input.billable === false
+    ? 0
+    : input.billable_duration_minutes ?? (input.billable === true ? totalMinutes : (existingBillableMinutes === 0 ? 0 : totalMinutes));
+
+  const userTimeZone = await resolveUserTimeZone(trx, tenantId, String(existing.user_id));
+  const { work_date, work_timezone } = computeWorkDateFields(startDate.toISOString(), userTimeZone);
+  const { work_date: endWorkDate } = computeWorkDateFields(computedEndDate.toISOString(), userTimeZone);
+
+  let resolvedContractLineId: string | null;
+  if (hasOwnProperty(input, 'contract_line_id')) {
+    resolvedContractLineId = input.contract_line_id ?? null;
+  } else {
+    resolvedContractLineId = (existing.contract_line_id as string | null) ?? null;
+  }
+
+  if (!resolvedContractLineId && resolvedWorkItem.clientId) {
+    resolvedContractLineId = await determineDefaultContractLineForWorkflow({
+      trx,
+      tenantId,
+      clientId: resolvedWorkItem.clientId,
+      serviceId: resolvedServiceId,
+      effectiveDate: work_date,
+    });
+  }
+
+  const existingTimeSheetId = (existing.time_sheet_id as string | null) ?? null;
+  const providedTimeSheetId = hasOwnProperty(input, 'time_sheet_id')
+    ? (input.time_sheet_id ?? null)
+    : existingTimeSheetId;
+
+  const attachToTimeSheet = hasOwnProperty(input, 'attach_to_timesheet')
+    ? Boolean(input.attach_to_timesheet)
+    : true;
+
+  const timeSheetId = await resolveOrCreateTimeSheet({
+    trx,
+    tenantId,
+    userId: String(existing.user_id),
+    workDate: work_date,
+    startWorkDate: work_date,
+    endWorkDate,
+    providedTimeSheetId,
+    attachToTimeSheet,
+  });
+
+  const updatedRows = await trx('time_entries')
+    .where({ tenant: tenantId, entry_id: input.entry_id })
+    .update({
+      work_item_id: effectiveLink?.id ?? null,
+      work_item_type: effectiveLink?.type ?? null,
+      service_id: resolvedServiceId,
+      contract_line_id: resolvedContractLineId,
+      tax_rate_id: hasOwnProperty(input, 'tax_rate_id') ? (input.tax_rate_id ?? null) : existing.tax_rate_id,
+      start_time: startDate.toISOString(),
+      end_time: computedEndDate.toISOString(),
+      work_date,
+      work_timezone,
+      billable_duration: billableMinutes,
+      notes: hasOwnProperty(input, 'notes') ? (input.notes ?? null) : existing.notes,
+      time_sheet_id: timeSheetId,
+      updated_by: actorUserId,
+      updated_at: new Date().toISOString(),
+    })
+    .returning([
+      'entry_id',
+      'user_id',
+      'work_item_id',
+      'work_item_type',
+      'service_id',
+      'contract_line_id',
+      'time_sheet_id',
+      'start_time',
+      'end_time',
+      'billable_duration',
+      'work_date',
+      'work_timezone',
+      'approval_status',
+      'invoiced',
+      'notes',
+    ]);
+
+  const updated = Array.isArray(updatedRows) ? updatedRows[0] : updatedRows;
+
+  await applyBucketUsageDeltaForEntry({
+    trx,
+    tenantId,
+    clientId: oldWorkItem.clientId,
+    contractLineId: (existing.contract_line_id as string | null) ?? null,
+    serviceId: String(existing.service_id),
+    startTimeIso: existingStartIso,
+    minutesDelta: -existingBillableMinutes,
+  });
+
+  await applyBucketUsageDeltaForEntry({
+    trx,
+    tenantId,
+    clientId: resolvedWorkItem.clientId,
+    contractLineId: (updated.contract_line_id as string | null) ?? null,
+    serviceId: String(updated.service_id),
+    startTimeIso: toIsoString(updated.start_time as string | Date),
+    minutesDelta: Number(updated.billable_duration ?? 0),
+  });
+
+  const oldTaskId = oldLink?.type === 'project_task' ? oldLink.id : null;
+  const newTaskId = effectiveLink?.type === 'project_task' ? effectiveLink.id : null;
+  if (oldTaskId) {
+    await recalculateProjectTaskActualMinutes(trx, tenantId, oldTaskId);
+  }
+  if (newTaskId && newTaskId !== oldTaskId) {
+    await recalculateProjectTaskActualMinutes(trx, tenantId, newTaskId);
+  }
+
+  if (effectiveLink?.type === 'ticket') {
+    await applyTicketAssignmentSideEffects({
+      trx,
+      tenantId,
+      actorUserId,
+      ticketId: effectiveLink.id,
+      entryUserId: String(existing.user_id),
+    });
+  }
+
+  if (effectiveLink?.type === 'project_task') {
+    await applyProjectTaskAssignmentSideEffects({
+      trx,
+      tenantId,
+      taskId: effectiveLink.id,
+      entryUserId: String(existing.user_id),
+    });
+  }
+
+  return normalizeEntrySummary(
+    {
+      entry_id: String(updated.entry_id),
+      user_id: String(updated.user_id),
+      work_item_id: (updated.work_item_id as string | null) ?? null,
+      work_item_type: (updated.work_item_type as string | null) ?? null,
+      service_id: String(updated.service_id),
+      contract_line_id: (updated.contract_line_id as string | null) ?? null,
+      time_sheet_id: (updated.time_sheet_id as string | null) ?? null,
+      start_time: updated.start_time as string | Date,
+      end_time: updated.end_time as string | Date,
+      billable_duration: Number(updated.billable_duration ?? 0),
+      work_date: updated.work_date as string | Date,
+      work_timezone: (updated.work_timezone as string | null) ?? null,
+      approval_status: (updated.approval_status as string | null) ?? null,
+      invoiced: Boolean(updated.invoiced),
+      notes: (updated.notes as string | null) ?? null,
+    },
+    userTimeZone
+  );
+}
+
+export async function deleteWorkflowTimeEntry(params: {
+  trx: Knex.Transaction;
+  tenantId: string;
+  entryId: string;
+}): Promise<WorkflowTimeDeletedEntrySummary> {
+  const { trx, tenantId, entryId } = params;
+
+  const existing = await trx('time_entries')
+    .where({ tenant: tenantId, entry_id: entryId })
+    .select(
+      'entry_id',
+      'user_id',
+      'work_item_id',
+      'work_item_type',
+      'service_id',
+      'contract_line_id',
+      'billable_duration',
+      'start_time',
+      'invoiced'
+    )
+    .first();
+
+  if (!existing) {
+    throw new WorkflowTimeDomainError({
+      category: 'ActionError',
+      code: 'NOT_FOUND',
+      message: 'Time entry not found',
+      details: { entry_id: entryId },
+    });
+  }
+
+  if (existing.invoiced) {
+    throw new WorkflowTimeDomainError({
+      category: 'ValidationError',
+      code: 'VALIDATION_ERROR',
+      message: 'This time entry has already been invoiced and cannot be deleted',
+      details: { entry_id: entryId },
+    });
+  }
+
+  const oldLink = getLinkFromStoredEntry({
+    work_item_type: (existing.work_item_type as string | null) ?? null,
+    work_item_id: (existing.work_item_id as string | null) ?? null,
+  });
+  const oldWorkItem = await getWorkItemClientContext(trx, tenantId, oldLink);
+
+  await applyBucketUsageDeltaForEntry({
+    trx,
+    tenantId,
+    clientId: oldWorkItem.clientId,
+    contractLineId: (existing.contract_line_id as string | null) ?? null,
+    serviceId: String(existing.service_id),
+    startTimeIso: toIsoString(existing.start_time as string | Date),
+    minutesDelta: -Number(existing.billable_duration ?? 0),
+  });
+
+  await trx('time_entries')
+    .where({ tenant: tenantId, entry_id: entryId })
+    .delete();
+
+  if (oldLink?.type === 'project_task') {
+    await recalculateProjectTaskActualMinutes(trx, tenantId, oldLink.id);
+  }
+
+  return {
+    entry_id: String(existing.entry_id),
+    user_id: String(existing.user_id),
+    work_item_id: (existing.work_item_id as string | null) ?? null,
+    work_item_type: (existing.work_item_type as string | null) ?? null,
+    service_id: String(existing.service_id),
+    contract_line_id: (existing.contract_line_id as string | null) ?? null,
+    billable_minutes: Number(existing.billable_duration ?? 0),
+    deleted: true,
   };
 }

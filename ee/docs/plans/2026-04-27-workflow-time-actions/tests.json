@@ -23,7 +23,7 @@
   {
     "id": "T003",
     "description": "DB integration: create/update/delete project-task time entries recalculate project task actual hours correctly.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F011",

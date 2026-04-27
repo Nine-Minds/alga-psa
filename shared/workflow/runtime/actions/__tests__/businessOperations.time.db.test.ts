@@ -119,6 +119,50 @@ async function createTicketStatusId(db: Knex, tenantId: string, actorUserId: str
   return inserted.status_id;
 }
 
+async function createProjectStatusId(db: Knex, tenantId: string, actorUserId: string): Promise<string> {
+  const existing = await db('statuses')
+    .where({ tenant: tenantId, status_type: 'project' })
+    .orderBy('order_number', 'asc')
+    .first();
+  if (existing?.status_id) return existing.status_id;
+
+  const [inserted] = await db('statuses')
+    .insert({
+      tenant: tenantId,
+      name: 'Project Open',
+      status_type: 'project',
+      order_number: 1,
+      created_by: actorUserId,
+      is_closed: false,
+      is_default: true,
+    })
+    .returning('status_id');
+
+  return inserted.status_id;
+}
+
+async function createProjectTaskStatusId(db: Knex, tenantId: string, actorUserId: string): Promise<string> {
+  const existing = await db('statuses')
+    .where({ tenant: tenantId, status_type: 'project_task' })
+    .orderBy('order_number', 'asc')
+    .first();
+  if (existing?.status_id) return existing.status_id;
+
+  const [inserted] = await db('statuses')
+    .insert({
+      tenant: tenantId,
+      name: 'Task Open',
+      status_type: 'project_task',
+      order_number: 1,
+      created_by: actorUserId,
+      is_closed: false,
+      is_default: true,
+    })
+    .returning('status_id');
+
+  return inserted.status_id;
+}
+
 async function createTicket(
   db: Knex,
   params: {
@@ -173,6 +217,67 @@ async function createService(db: Knex, tenantId: string): Promise<string> {
   });
 
   return serviceId;
+}
+
+async function createProjectTask(
+  db: Knex,
+  params: {
+    tenantId: string;
+    actorUserId: string;
+    clientId: string;
+  }
+): Promise<string> {
+  const projectStatusId = await createProjectStatusId(db, params.tenantId, params.actorUserId);
+  const taskStatusId = await createProjectTaskStatusId(db, params.tenantId, params.actorUserId);
+  const projectId = uuidv4();
+  const phaseId = uuidv4();
+  const taskId = uuidv4();
+
+  await db('projects').insert({
+    project_id: projectId,
+    tenant: params.tenantId,
+    project_name: 'Workflow Time Project',
+    client_id: params.clientId,
+    status: projectStatusId,
+    wbs_code: 'WF',
+    project_number: `P-${Date.now()}`,
+  });
+
+  await db('project_phases').insert({
+    phase_id: phaseId,
+    tenant: params.tenantId,
+    project_id: projectId,
+    phase_name: 'Workflow Phase',
+    order_number: 1,
+    status: 'active',
+    wbs_code: '1',
+  });
+
+  const [mapping] = await db('project_status_mappings')
+    .insert({
+      tenant: params.tenantId,
+      project_id: projectId,
+      status_id: taskStatusId,
+      display_order: 1,
+      is_standard: false,
+    })
+    .returning('project_status_mapping_id');
+
+  await db('project_tasks').insert({
+    task_id: taskId,
+    tenant: params.tenantId,
+    phase_id: phaseId,
+    task_name: 'Workflow Task',
+    project_status_mapping_id: mapping.project_status_mapping_id,
+    estimated_hours: 240,
+    actual_hours: 0,
+    wbs_code: '1.1',
+    task_type_key: 'task',
+    created_at: new Date(),
+    updated_at: new Date(),
+  });
+
+  return taskId;
 }
 
 async function createTimePeriod(
@@ -354,5 +459,62 @@ describe('time workflow runtime DB-backed action handlers', () => {
     expect(usageRecord).toBeTruthy();
     expect(Number(usageRecord.minutes_used ?? 0)).toBe(30);
     expect(Number(usageRecord.overage_minutes ?? 0)).toBe(0);
+  });
+
+  it('T003: create/update/delete project-task time entries recalculate project task actual hours correctly', async () => {
+    const entryUserId = await createUser(db, runtimeState.tenantId, {
+      user_type: 'internal',
+      first_name: 'Task',
+      last_name: 'Owner',
+      timezone: 'America/New_York',
+    });
+    const clientId = await createClient(db, runtimeState.tenantId, 'Project Task Client');
+    const taskId = await createProjectTask(db, {
+      tenantId: runtimeState.tenantId,
+      actorUserId: runtimeState.actorUserId,
+      clientId,
+    });
+    const serviceId = await createService(db, runtimeState.tenantId);
+    await createTimePeriod(db, runtimeState.tenantId, '2026-04-01', '2026-04-08');
+
+    const created = await invokeAction('time.create_entry', {
+      user_id: entryUserId,
+      start: '2026-04-03T13:00:00.000Z',
+      duration_minutes: 30,
+      billable: true,
+      service_id: serviceId,
+      link: {
+        type: 'project_task',
+        id: taskId,
+      },
+      notes: 'Project task entry',
+    });
+
+    const afterCreate = await db('project_tasks')
+      .where({ tenant: runtimeState.tenantId, task_id: taskId })
+      .first('actual_hours');
+    expect(Number(afterCreate.actual_hours ?? 0)).toBe(30);
+
+    const updated = await invokeAction('time.update_entry', {
+      entry_id: created.time_entry.entry_id,
+      duration_minutes: 90,
+    });
+    expect(updated.time_entry.total_minutes).toBe(90);
+    expect(updated.time_entry.billable_minutes).toBe(90);
+
+    const afterUpdate = await db('project_tasks')
+      .where({ tenant: runtimeState.tenantId, task_id: taskId })
+      .first('actual_hours');
+    expect(Number(afterUpdate.actual_hours ?? 0)).toBe(90);
+
+    const deleted = await invokeAction('time.delete_entry', {
+      entry_id: created.time_entry.entry_id,
+    });
+    expect(deleted.time_entry.deleted).toBe(true);
+
+    const afterDelete = await db('project_tasks')
+      .where({ tenant: runtimeState.tenantId, task_id: taskId })
+      .first('actual_hours');
+    expect(Number(afterDelete.actual_hours ?? 0)).toBe(0);
   });
 });
