@@ -6,6 +6,7 @@ import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import {
   uuidSchema,
   isoDateTimeSchema,
+  actionProvidedKey,
   withTenantTransaction,
   requirePermission,
   writeRunAudit,
@@ -19,6 +20,7 @@ const WORKFLOW_PICKER_HINTS = {
   'project-phase': 'Search project phases',
   'project-task': 'Search project tasks',
   'project-task-status': 'Search project task statuses',
+  ticket: 'Search tickets',
   user: 'Search users',
 } as const;
 
@@ -289,6 +291,42 @@ const deleteProjectResultSchema = z.object({
   message: z.string().nullable().optional(),
   dependencies: z.array(z.any()).default([]),
   alternatives: z.array(z.any()).default([]),
+});
+
+const linkTicketToTaskInputSchema = z.object({
+  task_id: withWorkflowPicker(uuidSchema, 'Project task id', 'project-task', ['project_id', 'phase_id']),
+  ticket_id: withWorkflowPicker(uuidSchema, 'Ticket id', 'ticket'),
+  project_id: withWorkflowPicker(uuidSchema.optional(), 'Optional project id for validation', 'project'),
+  phase_id: withWorkflowPicker(uuidSchema.optional(), 'Optional phase id for validation', 'project-phase', ['project_id']),
+  idempotency_key: z.string().optional().describe('Optional external idempotency key'),
+});
+
+const linkTicketToTaskResultSchema = z.object({
+  task_id: uuidSchema,
+  ticket_id: uuidSchema,
+  project_ticket_link_id: nullableUuidSchema,
+  ticket_entity_link_id: nullableUuidSchema,
+  project_ticket_link_created: z.boolean(),
+  ticket_entity_link_created: z.boolean(),
+});
+
+const addTagInputSchema = z.object({
+  project_id: withWorkflowPicker(uuidSchema, 'Project id', 'project'),
+  tags: z.array(z.string().min(1)).min(1).describe('One or more tags to attach to the project'),
+  idempotency_key: z.string().optional().describe('Optional external idempotency key'),
+});
+
+const addTaskTagInputSchema = z.object({
+  task_id: withWorkflowPicker(uuidSchema, 'Project task id', 'project-task', ['project_id', 'phase_id']),
+  tags: z.array(z.string().min(1)).min(1).describe('One or more tags to attach to the project task'),
+  idempotency_key: z.string().optional().describe('Optional external idempotency key'),
+});
+
+const tagMutationResultSchema = z.object({
+  added: z.array(tagResultSchema),
+  existing: z.array(tagResultSchema),
+  added_count: z.number().int(),
+  existing_count: z.number().int(),
 });
 
 function asIsoString(value: unknown): string | undefined {
@@ -684,6 +722,156 @@ async function deleteFromTableIfExists(
   const query = whereBuilder(tx.trx(tableName));
   const deleted = await query.delete();
   return Number(deleted ?? 0);
+}
+
+function generateTagColors(text: string): { backgroundColor: string; textColor: string } {
+  let hash = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    hash = text.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  const hue = Math.abs(hash) % 360;
+  const saturation = 70;
+  const lightness = 85;
+
+  const hslToHex = (h: number, s: number, l: number): string => {
+    const normalizedLightness = l / 100;
+    const a = (s * Math.min(normalizedLightness, 1 - normalizedLightness)) / 100;
+    const f = (n: number) => {
+      const k = (n + h / 30) % 12;
+      const color = normalizedLightness - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+      return Math.round(255 * color).toString(16).padStart(2, '0');
+    };
+
+    return `#${f(0)}${f(8)}${f(4)}`.toUpperCase();
+  };
+
+  return {
+    backgroundColor: hslToHex(hue, saturation, lightness),
+    textColor: '#2C3E50',
+  };
+}
+
+function uniqueNormalizedTags(tags: string[]): string[] {
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+
+  for (const raw of tags) {
+    const trimmed = raw.trim();
+    if (!trimmed) continue;
+    if (seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    normalized.push(trimmed);
+  }
+
+  return normalized;
+}
+
+function pickExistingFields(
+  data: Record<string, unknown>,
+  availableColumns: Set<string>,
+  allowedFields: Set<string>
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (!allowedFields.has(key)) continue;
+    if (!availableColumns.has(key)) continue;
+    if (value === undefined) continue;
+    out[key] = value;
+  }
+  return out;
+}
+
+async function ensureTagMappings(
+  tx: TenantTxContext,
+  params: { taggedType: 'project' | 'project_task'; taggedId: string; tags: string[] }
+): Promise<{ added: Array<z.infer<typeof tagResultSchema>>; existing: Array<z.infer<typeof tagResultSchema>> }> {
+  const normalizedTags = uniqueNormalizedTags(params.tags);
+  if (normalizedTags.length === 0) {
+    return { added: [], existing: [] };
+  }
+
+  const added: Array<z.infer<typeof tagResultSchema>> = [];
+  const existing: Array<z.infer<typeof tagResultSchema>> = [];
+  const tagDefinitionColumns = await getTableColumns(tx, 'tag_definitions');
+  const tagMappingColumns = await getTableColumns(tx, 'tag_mappings');
+
+  for (const tagText of normalizedTags) {
+    const { backgroundColor, textColor } = generateTagColors(tagText);
+
+    const definitionRow = pickExistingFields(
+      {
+        tenant: tx.tenantId,
+        tag_id: uuidv4(),
+        tag_text: tagText,
+        tagged_type: params.taggedType,
+        background_color: backgroundColor,
+        text_color: textColor,
+        created_at: new Date().toISOString(),
+      },
+      tagDefinitionColumns,
+      new Set(['tenant', 'tag_id', 'tag_text', 'tagged_type', 'background_color', 'text_color', 'created_at'])
+    );
+
+    await tx.trx('tag_definitions')
+      .insert(definitionRow)
+      .onConflict(['tenant', 'tag_text', 'tagged_type'])
+      .ignore();
+
+    const definition = await tx.trx('tag_definitions')
+      .where({ tenant: tx.tenantId, tag_text: tagText, tagged_type: params.taggedType })
+      .first();
+    if (!definition?.tag_id) {
+      throw new Error(`Failed to resolve tag definition for "${tagText}"`);
+    }
+
+    const mappingId = uuidv4();
+    const mappingRow = pickExistingFields(
+      {
+        tenant: tx.tenantId,
+        mapping_id: mappingId,
+        tag_id: definition.tag_id,
+        tagged_id: params.taggedId,
+        tagged_type: params.taggedType,
+        created_by: tx.actorUserId,
+        created_at: new Date().toISOString(),
+      },
+      tagMappingColumns,
+      new Set(['tenant', 'mapping_id', 'tag_id', 'tagged_id', 'tagged_type', 'created_by', 'created_at'])
+    );
+
+    const insertedMappings = await tx.trx('tag_mappings')
+      .insert(mappingRow)
+      .onConflict(['tenant', 'tag_id', 'tagged_id'])
+      .ignore()
+      .returning('mapping_id');
+
+    if (insertedMappings.length > 0) {
+      added.push(tagResultSchema.parse({
+        tag_id: definition.tag_id,
+        tag_text: definition.tag_text,
+        mapping_id: typeof mappingRow.mapping_id === 'string' ? mappingRow.mapping_id : undefined,
+      }));
+      continue;
+    }
+
+    const mapping = await tx.trx('tag_mappings')
+      .where({
+        tenant: tx.tenantId,
+        tag_id: definition.tag_id,
+        tagged_id: params.taggedId,
+        tagged_type: params.taggedType,
+      })
+      .first();
+
+    existing.push(tagResultSchema.parse({
+      tag_id: definition.tag_id,
+      tag_text: definition.tag_text,
+      mapping_id: typeof mapping?.mapping_id === 'string' ? mapping.mapping_id : undefined,
+    }));
+  }
+
+  return { added, existing };
 }
 
 async function canReadProject(tx: TenantTxContext, project: Record<string, unknown>): Promise<boolean> {
@@ -2304,6 +2492,249 @@ export function registerProjectActions(): void {
     }),
   });
 
+  registry.register({
+    id: 'projects.link_ticket_to_task',
+    version: 1,
+    inputSchema: linkTicketToTaskInputSchema,
+    outputSchema: linkTicketToTaskResultSchema,
+    sideEffectful: true,
+    idempotency: { mode: 'actionProvided', key: actionProvidedKey },
+    ui: { label: 'Link Ticket to Project Task', category: 'Business Operations', description: 'Link a ticket to an existing project task' },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      try {
+        await requireProjectUpdatePermission(ctx, tx);
+        const task = await ensureTaskContext(ctx, tx, input.task_id);
+        const project = await ensureProjectExists(ctx, tx, String(task.project_id));
+        await assertProjectReadable(ctx, tx, project);
+        await ensureTicketExists(ctx, tx, input.ticket_id);
+
+        if (input.project_id && input.project_id !== String(task.project_id)) {
+          throwActionError(ctx, {
+            category: 'ValidationError',
+            code: 'VALIDATION_ERROR',
+            message: 'project_id does not match task project',
+            details: { project_id: input.project_id, task_project_id: task.project_id },
+          });
+        }
+        if (input.phase_id && input.phase_id !== String(task.phase_id)) {
+          throwActionError(ctx, {
+            category: 'ValidationError',
+            code: 'VALIDATION_ERROR',
+            message: 'phase_id does not match task phase',
+            details: { phase_id: input.phase_id, task_phase_id: task.phase_id },
+          });
+        }
+
+        const nowIso = new Date().toISOString();
+        const existingProjectLink = await tx.trx('project_ticket_links')
+          .where({ tenant: tx.tenantId, task_id: input.task_id, ticket_id: input.ticket_id })
+          .first();
+
+        let projectTicketLinkCreated = false;
+        let projectTicketLinkId = parseNullableUuid(existingProjectLink?.link_id) ?? null;
+        if (!existingProjectLink) {
+          const insertedProjectLinks = await tx.trx('project_ticket_links')
+            .insert({
+              tenant: tx.tenantId,
+              link_id: uuidv4(),
+              project_id: task.project_id,
+              phase_id: task.phase_id,
+              task_id: input.task_id,
+              ticket_id: input.ticket_id,
+              created_at: nowIso,
+            })
+            .returning('link_id')
+            .catch(() => []);
+
+          const insertedProjectLinkId = Array.isArray(insertedProjectLinks) && insertedProjectLinks.length > 0
+            ? parseNullableUuid((insertedProjectLinks[0] as Record<string, unknown>).link_id)
+            : null;
+          const resolvedProjectLink = insertedProjectLinkId
+            ? { link_id: insertedProjectLinkId }
+            : await tx.trx('project_ticket_links')
+                .where({ tenant: tx.tenantId, task_id: input.task_id, ticket_id: input.ticket_id })
+                .first('link_id');
+          projectTicketLinkId = parseNullableUuid(resolvedProjectLink?.link_id) ?? null;
+          projectTicketLinkCreated = Boolean(insertedProjectLinkId);
+        }
+
+        const existingEntityLink = await tx.trx('ticket_entity_links')
+          .where({
+            tenant: tx.tenantId,
+            ticket_id: input.ticket_id,
+            entity_type: 'project_task',
+            entity_id: input.task_id,
+            link_type: 'project_task',
+          })
+          .first();
+
+        let ticketEntityLinkCreated = false;
+        let ticketEntityLinkId = parseNullableUuid(existingEntityLink?.link_id) ?? null;
+        if (!existingEntityLink) {
+          const insertedEntityLinks = await tx.trx('ticket_entity_links')
+            .insert({
+              tenant: tx.tenantId,
+              link_id: uuidv4(),
+              ticket_id: input.ticket_id,
+              entity_type: 'project_task',
+              entity_id: input.task_id,
+              link_type: 'project_task',
+              metadata: { project_id: task.project_id, phase_id: task.phase_id },
+              created_at: nowIso,
+            })
+            .returning('link_id')
+            .catch(() => []);
+
+          const insertedEntityLinkId = Array.isArray(insertedEntityLinks) && insertedEntityLinks.length > 0
+            ? parseNullableUuid((insertedEntityLinks[0] as Record<string, unknown>).link_id)
+            : null;
+          const resolvedEntityLink = insertedEntityLinkId
+            ? { link_id: insertedEntityLinkId }
+            : await tx.trx('ticket_entity_links')
+                .where({
+                  tenant: tx.tenantId,
+                  ticket_id: input.ticket_id,
+                  entity_type: 'project_task',
+                  entity_id: input.task_id,
+                  link_type: 'project_task',
+                })
+                .first('link_id');
+          ticketEntityLinkId = parseNullableUuid(resolvedEntityLink?.link_id) ?? null;
+          ticketEntityLinkCreated = Boolean(insertedEntityLinkId);
+        }
+
+        await writeRunAudit(ctx, tx, {
+          operation: 'workflow_action:projects.link_ticket_to_task',
+          changedData: {
+            task_id: input.task_id,
+            project_id: task.project_id,
+            phase_id: task.phase_id,
+            ticket_id: input.ticket_id,
+            project_ticket_link_created: projectTicketLinkCreated,
+            ticket_entity_link_created: ticketEntityLinkCreated,
+          },
+          details: {
+            action_id: 'projects.link_ticket_to_task',
+            action_version: 1,
+            task_id: input.task_id,
+            ticket_id: input.ticket_id,
+          },
+        });
+
+        return linkTicketToTaskResultSchema.parse({
+          task_id: input.task_id,
+          ticket_id: input.ticket_id,
+          project_ticket_link_id: projectTicketLinkId,
+          ticket_entity_link_id: ticketEntityLinkId,
+          project_ticket_link_created: projectTicketLinkCreated,
+          ticket_entity_link_created: ticketEntityLinkCreated,
+        });
+      } catch (error) {
+        handleActionError(ctx, error);
+      }
+    }),
+  });
+
+  registry.register({
+    id: 'projects.add_tag',
+    version: 1,
+    inputSchema: addTagInputSchema,
+    outputSchema: z.object({
+      project_id: uuidSchema,
+      added: tagMutationResultSchema.shape.added,
+      existing: tagMutationResultSchema.shape.existing,
+      added_count: tagMutationResultSchema.shape.added_count,
+      existing_count: tagMutationResultSchema.shape.existing_count,
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'actionProvided', key: actionProvidedKey },
+    ui: { label: 'Add Tag to Project', category: 'Business Operations', description: 'Attach one or more tags to a project' },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      try {
+        await requireProjectUpdatePermission(ctx, tx);
+        const project = await ensureProjectExists(ctx, tx, input.project_id);
+        await assertProjectReadable(ctx, tx, project);
+        const tagResult = await ensureTagMappings(tx, {
+          taggedType: 'project',
+          taggedId: input.project_id,
+          tags: input.tags,
+        });
+
+        await writeRunAudit(ctx, tx, {
+          operation: 'workflow_action:projects.add_tag',
+          changedData: {
+            project_id: input.project_id,
+            added_count: tagResult.added.length,
+            existing_count: tagResult.existing.length,
+          },
+          details: { action_id: 'projects.add_tag', action_version: 1, project_id: input.project_id },
+        });
+
+        return {
+          project_id: input.project_id,
+          added: tagResult.added,
+          existing: tagResult.existing,
+          added_count: tagResult.added.length,
+          existing_count: tagResult.existing.length,
+        };
+      } catch (error) {
+        handleActionError(ctx, error);
+      }
+    }),
+  });
+
+  registry.register({
+    id: 'projects.add_task_tag',
+    version: 1,
+    inputSchema: addTaskTagInputSchema,
+    outputSchema: z.object({
+      task_id: uuidSchema,
+      added: tagMutationResultSchema.shape.added,
+      existing: tagMutationResultSchema.shape.existing,
+      added_count: tagMutationResultSchema.shape.added_count,
+      existing_count: tagMutationResultSchema.shape.existing_count,
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'actionProvided', key: actionProvidedKey },
+    ui: { label: 'Add Tag to Project Task', category: 'Business Operations', description: 'Attach one or more tags to a project task' },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      try {
+        await requireProjectUpdatePermission(ctx, tx);
+        const task = await ensureTaskContext(ctx, tx, input.task_id);
+        const project = await ensureProjectExists(ctx, tx, String(task.project_id));
+        await assertProjectReadable(ctx, tx, project);
+
+        const tagResult = await ensureTagMappings(tx, {
+          taggedType: 'project_task',
+          taggedId: input.task_id,
+          tags: input.tags,
+        });
+
+        await writeRunAudit(ctx, tx, {
+          operation: 'workflow_action:projects.add_task_tag',
+          changedData: {
+            task_id: input.task_id,
+            project_id: task.project_id,
+            phase_id: task.phase_id,
+            added_count: tagResult.added.length,
+            existing_count: tagResult.existing.length,
+          },
+          details: { action_id: 'projects.add_task_tag', action_version: 1, task_id: input.task_id },
+        });
+
+        return {
+          task_id: input.task_id,
+          added: tagResult.added,
+          existing: tagResult.existing,
+          added_count: tagResult.added.length,
+          existing_count: tagResult.existing.length,
+        };
+      } catch (error) {
+        handleActionError(ctx, error);
+      }
+    }),
+  });
+
   void ensureTicketExists;
   void ensurePhaseExists;
   void ensureTaskContext;
@@ -2318,4 +2749,7 @@ export function registerProjectActions(): void {
   void deleteTaskInputSchema;
   void deletePhaseInputSchema;
   void deleteProjectInputSchema;
+  void linkTicketToTaskInputSchema;
+  void addTagInputSchema;
+  void addTaskTagInputSchema;
 }

@@ -225,7 +225,7 @@
   {
     "id": "T019",
     "description": "DB-backed action handler test covers `projects.link_ticket_to_task` creating both `project_ticket_links` and `ticket_entity_links` with project/phase metadata and audit output.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F052",
       "F053",
@@ -238,7 +238,7 @@
   {
     "id": "T020",
     "description": "DB-backed idempotency test verifies repeated `projects.link_ticket_to_task` calls do not create duplicate effective links and report created/existing state correctly.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F054",
       "F055",
@@ -248,7 +248,7 @@
   {
     "id": "T021",
     "description": "DB-backed action handler test covers `projects.add_tag` creating missing tag definitions, idempotently mapping project tags, separating added/existing results, and honoring action-provided idempotency.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058",
       "F059"
@@ -257,7 +257,7 @@
   {
     "id": "T022",
     "description": "DB-backed action handler test covers `projects.add_task_tag` creating missing project_task tag definitions, idempotently mapping task tags, separating added/existing results, and honoring action-provided idempotency.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058",
       "F060"

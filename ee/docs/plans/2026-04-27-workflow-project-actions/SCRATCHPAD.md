@@ -531,3 +531,68 @@ Action schemas are Zod schemas converted to JSON Schema and consumed by the work
 
 - `time_entries` schema in this branch requires additional non-null columns (e.g., `work_date`, `work_timezone`), so destructive guard fixtures needed column-aware inserts.
 - Project delete cleanup needs to tolerate optional tables (`email_reply_tokens`, `task_resources`, `ticket_entity_links`) across schema variants; helper deletion logic was made table-existence-aware.
+
+## Implementation checkpoint — 2026-04-27 (Ticket-link + tag actions)
+
+### Completed features
+
+- `F052`: Added `projects.link_ticket_to_task` input schema:
+  - `task_id`, `ticket_id`, optional `project_id`, optional `phase_id`, optional `idempotency_key`
+  - picker metadata and dependency paths for task/project/phase context fields
+
+- `F053`: Added task/ticket/project/phase validation for link action:
+  - validates task context exists
+  - validates ticket exists
+  - validates optional project/phase inputs match task context
+
+- `F054`: Implemented ensure/insert behavior for `project_ticket_links`:
+  - idempotent existing-link detection
+  - insert-on-miss with created vs existing signaling
+
+- `F055`: Implemented ensure/insert behavior for `ticket_entity_links`:
+  - `entity_type='project_task'`, `entity_id=task_id`, `link_type='project_task'`
+  - metadata includes project/phase ids
+  - created vs existing signaling
+
+- `F056`: Added link output schema with idempotency indicators and resolved ids:
+  - `project_ticket_link_id`, `ticket_entity_link_id`
+  - `project_ticket_link_created`, `ticket_entity_link_created`
+
+- `F057`: Added permission checks + run audit logging for link action:
+  - requires `project:update`
+  - writes `workflow_action:projects.link_ticket_to_task`
+
+- `F058`: Added shared project/project-task tag helper behavior mirroring `contacts.add_tag`:
+  - tag normalization + dedupe
+  - generated colors
+  - tag definition upsert (conflict ignore)
+  - mapping insert conflict ignore
+  - returns `added` + `existing`
+
+- `F059`: Implemented `projects.add_tag`:
+  - schema with `project_id`, `tags[]`, optional `idempotency_key`
+  - action-provided idempotency metadata
+  - project validation + `project:update` permission
+  - added/existing counts + audit logging
+
+- `F060`: Implemented `projects.add_task_tag`:
+  - schema with `task_id`, `tags[]`, optional `idempotency_key`
+  - action-provided idempotency metadata
+  - task/project context validation + `project:update` permission
+  - added/existing counts + audit logging
+
+### Completed tests
+
+- `T019`: DB-backed link action happy path validates both link tables and project/phase metadata.
+- `T020`: DB-backed link idempotency test validates repeat calls do not duplicate effective links and report existing state.
+- `T021`: DB-backed project tag action test validates definition creation, idempotent mappings, and added/existing counts.
+- `T022`: DB-backed project-task tag action test validates definition creation, idempotent mappings, and added/existing counts.
+
+### Commands/runbook used
+
+- `cd shared && npx vitest run workflow/runtime/actions/__tests__/registerProjectActionsMetadata.test.ts workflow/runtime/actions/__tests__/businessOperations.projects.db.test.ts`
+
+### Gotchas discovered
+
+- `project_ticket_links`/`ticket_entity_links` idempotency needed explicit existing-row fallback because unique constraints vary by schema/migration state.
+- Tag helper had to be column-aware for `tag_definitions`/`tag_mappings` to remain robust across branch schema variants.

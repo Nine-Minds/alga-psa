@@ -21,6 +21,9 @@ const EXPECTED_PROJECT_ACTION_IDS = [
   'projects.delete_task',
   'projects.delete_phase',
   'projects.delete',
+  'projects.link_ticket_to_task',
+  'projects.add_tag',
+  'projects.add_task_tag',
 ] as const;
 
 describe('project workflow action registration metadata', () => {
@@ -58,6 +61,9 @@ describe('project workflow action registration metadata', () => {
     expect(byId.get('projects.delete_task')?.ui?.label).toBe('Delete Project Task');
     expect(byId.get('projects.delete_phase')?.ui?.label).toBe('Delete Project Phase');
     expect(byId.get('projects.delete')?.ui?.label).toBe('Delete Project');
+    expect(byId.get('projects.link_ticket_to_task')?.ui?.label).toBe('Link Ticket to Project Task');
+    expect(byId.get('projects.add_tag')?.ui?.label).toBe('Add Tag to Project');
+    expect(byId.get('projects.add_task_tag')?.ui?.label).toBe('Add Tag to Project Task');
 
     expect(byId.get('projects.create_task')?.sideEffectful).toBe(true);
     expect(byId.get('projects.find')?.sideEffectful).toBe(false);
@@ -75,9 +81,15 @@ describe('project workflow action registration metadata', () => {
     expect(byId.get('projects.delete_task')?.sideEffectful).toBe(true);
     expect(byId.get('projects.delete_phase')?.sideEffectful).toBe(true);
     expect(byId.get('projects.delete')?.sideEffectful).toBe(true);
+    expect(byId.get('projects.link_ticket_to_task')?.sideEffectful).toBe(true);
+    expect(byId.get('projects.add_tag')?.sideEffectful).toBe(true);
+    expect(byId.get('projects.add_task_tag')?.sideEffectful).toBe(true);
 
     for (const id of EXPECTED_PROJECT_ACTION_IDS) {
-      expect(byId.get(id)?.idempotency.mode).toBe('engineProvided');
+      const expectedIdempotency = id === 'projects.link_ticket_to_task' || id === 'projects.add_tag' || id === 'projects.add_task_tag'
+        ? 'actionProvided'
+        : 'engineProvided';
+      expect(byId.get(id)?.idempotency.mode).toBe(expectedIdempotency);
       expect(byId.get(id)?.ui?.category).toBe('Business Operations');
     }
   });
@@ -89,13 +101,23 @@ describe('project workflow action registration metadata', () => {
     const findPhase = registry.get('projects.find_phase', 1);
     const findTask = registry.get('projects.find_task', 1);
     const searchTasks = registry.get('projects.search_tasks', 1);
+    const moveTask = registry.get('projects.move_task', 1);
+    const duplicateTask = registry.get('projects.duplicate_task', 1);
+    const linkTicketToTask = registry.get('projects.link_ticket_to_task', 1);
+    const addTag = registry.get('projects.add_tag', 1);
+    const addTaskTag = registry.get('projects.add_task_tag', 1);
 
     expect(createTask).toBeDefined();
     expect(findPhase).toBeDefined();
     expect(findTask).toBeDefined();
     expect(searchTasks).toBeDefined();
+    expect(moveTask).toBeDefined();
+    expect(duplicateTask).toBeDefined();
+    expect(linkTicketToTask).toBeDefined();
+    expect(addTag).toBeDefined();
+    expect(addTaskTag).toBeDefined();
 
-    if (!createTask || !findPhase || !findTask || !searchTasks) {
+    if (!createTask || !findPhase || !findTask || !searchTasks || !moveTask || !duplicateTask || !linkTicketToTask || !addTag || !addTaskTag) {
       throw new Error('Missing expected project actions');
     }
 
@@ -103,11 +125,21 @@ describe('project workflow action registration metadata', () => {
     const findPhaseSchema = zodToWorkflowJsonSchema(findPhase.inputSchema);
     const findTaskSchema = zodToWorkflowJsonSchema(findTask.inputSchema);
     const searchTasksSchema = zodToWorkflowJsonSchema(searchTasks.inputSchema);
+    const moveTaskSchema = zodToWorkflowJsonSchema(moveTask.inputSchema);
+    const duplicateTaskSchema = zodToWorkflowJsonSchema(duplicateTask.inputSchema);
+    const linkTicketToTaskSchema = zodToWorkflowJsonSchema(linkTicketToTask.inputSchema);
+    const addTagSchema = zodToWorkflowJsonSchema(addTag.inputSchema);
+    const addTaskTagSchema = zodToWorkflowJsonSchema(addTaskTag.inputSchema);
 
     const createTaskProps = createTaskSchema.properties as Record<string, any>;
     const findPhaseProps = findPhaseSchema.properties as Record<string, any>;
     const findTaskProps = findTaskSchema.properties as Record<string, any>;
     const searchTasksFilters = (searchTasksSchema.properties?.filters as Record<string, any>)?.properties ?? {};
+    const moveTaskProps = moveTaskSchema.properties as Record<string, any>;
+    const duplicateTaskProps = duplicateTaskSchema.properties as Record<string, any>;
+    const linkTicketToTaskProps = linkTicketToTaskSchema.properties as Record<string, any>;
+    const addTagProps = addTagSchema.properties as Record<string, any>;
+    const addTaskTagProps = addTaskTagSchema.properties as Record<string, any>;
 
     expect(createTaskProps.project_id?.['x-workflow-picker-kind']).toBe('project');
     expect(createTaskProps.phase_id?.['x-workflow-picker-kind']).toBe('project-phase');
@@ -124,5 +156,23 @@ describe('project workflow action registration metadata', () => {
     expect(searchTasksFilters.phase_id?.['x-workflow-picker-kind']).toBe('project-phase');
     expect(searchTasksFilters.phase_id?.['x-workflow-picker-dependencies']).toEqual(['filters.project_id']);
     expect(searchTasksFilters.project_status_mapping_id?.['x-workflow-picker-kind']).toBe('project-task-status');
+
+    expect(moveTaskProps.task_id?.['x-workflow-picker-kind']).toBe('project-task');
+    expect(moveTaskProps.target_phase_id?.['x-workflow-picker-kind']).toBe('project-phase');
+    expect(moveTaskProps.target_project_status_mapping_id?.['x-workflow-picker-kind']).toBe('project-task-status');
+    expect(moveTaskProps.before_task_id?.['x-workflow-picker-dependencies']).toEqual(['target_project_id', 'target_phase_id']);
+
+    expect(duplicateTaskProps.source_task_id?.['x-workflow-picker-kind']).toBe('project-task');
+    expect(duplicateTaskProps.target_phase_id?.['x-workflow-picker-kind']).toBe('project-phase');
+    expect(duplicateTaskProps.target_project_status_mapping_id?.['x-workflow-picker-kind']).toBe('project-task-status');
+
+    expect(linkTicketToTaskProps.task_id?.['x-workflow-picker-kind']).toBe('project-task');
+    expect(linkTicketToTaskProps.ticket_id?.['x-workflow-picker-kind']).toBe('ticket');
+    expect(linkTicketToTaskProps.phase_id?.['x-workflow-picker-kind']).toBe('project-phase');
+
+    expect(addTagProps.project_id?.['x-workflow-picker-kind']).toBe('project');
+    expect(addTagProps.tags?.items?.['x-workflow-picker-kind']).toBeUndefined();
+    expect(addTaskTagProps.task_id?.['x-workflow-picker-kind']).toBe('project-task');
+    expect(addTaskTagProps.tags?.items?.['x-workflow-picker-kind']).toBeUndefined();
   });
 });

@@ -1495,4 +1495,167 @@ describe('project business operation db actions', () => {
     expect(blockedDeleteResult.can_delete).toBe(false);
     expect(blockedDeleteResult.code).toBe('VALIDATION_FAILED');
   });
+
+  it('T019: projects.link_ticket_to_task creates both link tables with task project/phase metadata', async () => {
+    const entity = await createClientOrCompany(db, runtimeState.tenantId);
+    const projectId = await createProject(db, runtimeState.tenantId, {
+      name: 'Link Ticket Project',
+      clientOrCompanyId: entity.clientId,
+      wbsCode: '70',
+    });
+    const phaseId = await createPhase(db, runtimeState.tenantId, projectId, {
+      name: 'Link Phase',
+      orderNumber: 1,
+      orderKey: 'a0',
+    });
+    const taskId = await createTask(db, runtimeState.tenantId, phaseId, projectId, {
+      taskName: 'Link Target Task',
+    });
+    const ticketId = await createTicket(db, runtimeState.tenantId, runtimeState.actorUserId, {
+      clientId: entity.clientId,
+    });
+
+    const result = await invokeAction('projects.link_ticket_to_task', {
+      task_id: taskId,
+      ticket_id: ticketId,
+    });
+
+    expect(result.task_id).toBe(taskId);
+    expect(result.ticket_id).toBe(ticketId);
+    expect(result.project_ticket_link_created).toBe(true);
+    expect(result.ticket_entity_link_created).toBe(true);
+
+    const projectLink = await db('project_ticket_links')
+      .where({ tenant: runtimeState.tenantId, task_id: taskId, ticket_id: ticketId })
+      .first('project_id', 'phase_id');
+    expect(projectLink?.project_id).toBe(projectId);
+    expect(projectLink?.phase_id).toBe(phaseId);
+
+    const entityLink = await db('ticket_entity_links')
+      .where({
+        tenant: runtimeState.tenantId,
+        ticket_id: ticketId,
+        entity_type: 'project_task',
+        entity_id: taskId,
+        link_type: 'project_task',
+      })
+      .first('metadata');
+    expect(entityLink).toBeDefined();
+    expect((entityLink?.metadata as { project_id?: string } | null)?.project_id).toBe(projectId);
+  });
+
+  it('T020: projects.link_ticket_to_task is idempotent and reports existing state on repeat calls', async () => {
+    const entity = await createClientOrCompany(db, runtimeState.tenantId);
+    const projectId = await createProject(db, runtimeState.tenantId, {
+      name: 'Link Idempotency Project',
+      clientOrCompanyId: entity.clientId,
+      wbsCode: '71',
+    });
+    const phaseId = await createPhase(db, runtimeState.tenantId, projectId, {
+      name: 'Link Idempotency Phase',
+      orderNumber: 1,
+      orderKey: 'a0',
+    });
+    const taskId = await createTask(db, runtimeState.tenantId, phaseId, projectId, {
+      taskName: 'Link Idempotency Task',
+    });
+    const ticketId = await createTicket(db, runtimeState.tenantId, runtimeState.actorUserId, {
+      clientId: entity.clientId,
+    });
+
+    const first = await invokeAction('projects.link_ticket_to_task', {
+      task_id: taskId,
+      ticket_id: ticketId,
+      idempotency_key: 'link-1',
+    });
+    const second = await invokeAction('projects.link_ticket_to_task', {
+      task_id: taskId,
+      ticket_id: ticketId,
+      idempotency_key: 'link-2',
+    });
+
+    expect(first.project_ticket_link_created).toBe(true);
+    expect(first.ticket_entity_link_created).toBe(true);
+    expect(second.project_ticket_link_created).toBe(false);
+    expect(second.ticket_entity_link_created).toBe(false);
+
+    const projectLinkRows = await db('project_ticket_links')
+      .where({ tenant: runtimeState.tenantId, task_id: taskId, ticket_id: ticketId });
+    expect(projectLinkRows).toHaveLength(1);
+    const entityLinkRows = await db('ticket_entity_links')
+      .where({
+        tenant: runtimeState.tenantId,
+        ticket_id: ticketId,
+        entity_type: 'project_task',
+        entity_id: taskId,
+        link_type: 'project_task',
+      });
+    expect(entityLinkRows).toHaveLength(1);
+  });
+
+  it('T021: projects.add_tag creates missing project tag definitions, maps idempotently, and reports added/existing', async () => {
+    const entity = await createClientOrCompany(db, runtimeState.tenantId);
+    const projectId = await createProject(db, runtimeState.tenantId, {
+      name: 'Project Tag Target',
+      clientOrCompanyId: entity.clientId,
+      wbsCode: '72',
+    });
+
+    const first = await invokeAction('projects.add_tag', {
+      project_id: projectId,
+      tags: ['Alpha', 'Beta', 'Alpha'],
+      idempotency_key: 'project-tag-1',
+    });
+    expect(first.added_count).toBe(2);
+    expect(first.existing_count).toBe(0);
+
+    const second = await invokeAction('projects.add_tag', {
+      project_id: projectId,
+      tags: ['Alpha', 'Beta'],
+      idempotency_key: 'project-tag-2',
+    });
+    expect(second.added_count).toBe(0);
+    expect(second.existing_count).toBe(2);
+
+    const projectMappings = await db('tag_mappings')
+      .where({ tenant: runtimeState.tenantId, tagged_type: 'project', tagged_id: projectId });
+    expect(projectMappings).toHaveLength(2);
+  });
+
+  it('T022: projects.add_task_tag creates missing project_task tags, maps idempotently, and reports added/existing', async () => {
+    const entity = await createClientOrCompany(db, runtimeState.tenantId);
+    const projectId = await createProject(db, runtimeState.tenantId, {
+      name: 'Task Tag Project',
+      clientOrCompanyId: entity.clientId,
+      wbsCode: '73',
+    });
+    const phaseId = await createPhase(db, runtimeState.tenantId, projectId, {
+      name: 'Task Tag Phase',
+      orderNumber: 1,
+      orderKey: 'a0',
+    });
+    const taskId = await createTask(db, runtimeState.tenantId, phaseId, projectId, {
+      taskName: 'Task Tag Target',
+    });
+
+    const first = await invokeAction('projects.add_task_tag', {
+      task_id: taskId,
+      tags: ['Gamma', 'Delta', 'Gamma'],
+      idempotency_key: 'task-tag-1',
+    });
+    expect(first.added_count).toBe(2);
+    expect(first.existing_count).toBe(0);
+
+    const second = await invokeAction('projects.add_task_tag', {
+      task_id: taskId,
+      tags: ['Gamma', 'Delta'],
+      idempotency_key: 'task-tag-2',
+    });
+    expect(second.added_count).toBe(0);
+    expect(second.existing_count).toBe(2);
+
+    const taskMappings = await db('tag_mappings')
+      .where({ tenant: runtimeState.tenantId, tagged_type: 'project_task', tagged_id: taskId });
+    expect(taskMappings).toHaveLength(2);
+  });
 });

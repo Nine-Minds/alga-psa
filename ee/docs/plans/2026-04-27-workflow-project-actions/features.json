@@ -435,7 +435,7 @@
   {
     "id": "F052",
     "description": "Implement `projects.link_ticket_to_task` input schema with task_id, ticket_id, optional idempotency key, and project/phase picker dependencies where helpful.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket-to-task link action"
     ]
@@ -443,7 +443,7 @@
   {
     "id": "F053",
     "description": "Implement `projects.link_ticket_to_task` validation for task, task phase/project context, and ticket existence.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket-to-task link action"
     ]
@@ -451,7 +451,7 @@
   {
     "id": "F054",
     "description": "Implement `projects.link_ticket_to_task` insertion/ensure behavior for `project_ticket_links`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket-to-task link action"
     ]
@@ -459,7 +459,7 @@
   {
     "id": "F055",
     "description": "Implement `projects.link_ticket_to_task` insertion/ensure behavior for `ticket_entity_links` with project_task metadata matching `projects.create_task` precedent.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket-to-task link action"
     ]
@@ -467,7 +467,7 @@
   {
     "id": "F056",
     "description": "Implement `projects.link_ticket_to_task` output schema with link IDs or created/existing indicators for both link tables.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket-to-task link action"
     ]
@@ -475,7 +475,7 @@
   {
     "id": "F057",
     "description": "Implement `projects.link_ticket_to_task` permission checks and run audit logging.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket-to-task link action",
       "Security / Permissions",
@@ -485,7 +485,7 @@
   {
     "id": "F058",
     "description": "Add shared project/task tag helper behavior mirroring `contacts.add_tag`, including tag normalization, generated colors, tag definition upsert, and mapping conflict-ignore behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Tag actions"
     ]
@@ -493,7 +493,7 @@
   {
     "id": "F059",
     "description": "Implement `projects.add_tag` schema, action-provided idempotency, project existence validation, project update permission, tag mapping mutation, output counts, and audit logging.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Tag actions"
     ]
@@ -501,7 +501,7 @@
   {
     "id": "F060",
     "description": "Implement `projects.add_task_tag` schema, action-provided idempotency, task/project context validation, project update permission, tag mapping mutation, output counts, and audit logging.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Tag actions"
     ]
