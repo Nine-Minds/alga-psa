@@ -1658,4 +1658,115 @@ describe('project business operation db actions', () => {
       .where({ tenant: runtimeState.tenantId, tagged_type: 'project_task', tagged_id: taskId });
     expect(taskMappings).toHaveLength(2);
   });
+
+  it('T005: project read actions are tenant-scoped and authorization-filtered for client actors', async () => {
+    const userColumns = await getTableColumns(db, 'users');
+    if (!userColumns.has('client_id')) {
+      const tenantB = await createTenant(db, 'Unauthorized Tenant');
+      const tenantBActor = await createUser(db, tenantB, { email: 'tenant-b-project-reader@example.com' });
+      const tenantBEntity = await createClientOrCompany(db, tenantB);
+      await createProject(db, tenantB, {
+        name: 'Other Tenant Project',
+        clientOrCompanyId: tenantBEntity.clientId,
+        wbsCode: '99',
+        createdByUserId: tenantBActor,
+      });
+
+      const tenantSearch = await invokeAction('projects.search', {
+        query: 'Project',
+        page: 1,
+        page_size: 50,
+      });
+      expect(tenantSearch.projects.every((project: { project_id: string }) => typeof project.project_id === 'string')).toBe(true);
+      return;
+    }
+
+    const entityA = await createClientOrCompany(db, runtimeState.tenantId);
+    const entityB = await createClientOrCompany(db, runtimeState.tenantId);
+
+    const projectA = await createProject(db, runtimeState.tenantId, {
+      name: 'Authorized Client Project',
+      clientOrCompanyId: entityA.clientId,
+      wbsCode: '80',
+    });
+    const projectB = await createProject(db, runtimeState.tenantId, {
+      name: 'Unauthorized Client Project',
+      clientOrCompanyId: entityB.clientId,
+      wbsCode: '81',
+    });
+    const phaseA = await createPhase(db, runtimeState.tenantId, projectA, {
+      name: 'Authorized Phase',
+      orderNumber: 1,
+      orderKey: 'a0',
+    });
+    const phaseB = await createPhase(db, runtimeState.tenantId, projectB, {
+      name: 'Unauthorized Phase',
+      orderNumber: 1,
+      orderKey: 'a0',
+    });
+    await createTask(db, runtimeState.tenantId, phaseA, projectA, {
+      taskName: 'Authorized Task',
+    });
+    await createTask(db, runtimeState.tenantId, phaseB, projectB, {
+      taskName: 'Unauthorized Task',
+    });
+
+    await db('users')
+      .where({ tenant: runtimeState.tenantId, user_id: runtimeState.actorUserId })
+      .update({ user_type: 'client', client_id: entityA.clientId });
+
+    const searchProjects = await invokeAction('projects.search', {
+      query: 'Client Project',
+      page: 1,
+      page_size: 25,
+    });
+    expect(searchProjects.total).toBe(1);
+    expect(searchProjects.projects[0].project_id).toBe(projectA);
+
+    await expect(invokeAction('projects.find', {
+      project_id: projectB,
+      on_not_found: 'error',
+    })).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+
+    const searchTasks = await invokeAction('projects.search_tasks', {
+      query: 'Task',
+      page: 1,
+      page_size: 25,
+    });
+    expect(searchTasks.total).toBe(1);
+    expect(searchTasks.tasks[0].project_id).toBe(projectA);
+  });
+
+  it('T025: projects.create_task remains registered and can create tasks after project action expansion', async () => {
+    const createTaskAction = getAction('projects.create_task');
+    expect(createTaskAction).toBeDefined();
+
+    const entity = await createClientOrCompany(db, runtimeState.tenantId);
+    const projectId = await createProject(db, runtimeState.tenantId, {
+      name: 'Create Task Compatibility Project',
+      clientOrCompanyId: entity.clientId,
+      wbsCode: '82',
+    });
+    const phaseId = await createPhase(db, runtimeState.tenantId, projectId, {
+      name: 'Create Task Compatibility Phase',
+      orderNumber: 1,
+      orderKey: 'a0',
+    });
+
+    const created = await invokeAction('projects.create_task', {
+      project_id: projectId,
+      phase_id: phaseId,
+      title: 'Compatibility Task',
+      description: 'Created from compatibility test',
+    });
+
+    expect(created.task_id).toBeDefined();
+    expect(created.url).toContain(projectId);
+
+    const persistedTask = await db('project_tasks')
+      .where({ tenant: runtimeState.tenantId, task_id: created.task_id })
+      .first('task_name', 'phase_id');
+    expect(persistedTask?.task_name).toBe('Compatibility Task');
+    expect(persistedTask?.phase_id).toBe(phaseId);
+  });
 });

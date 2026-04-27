@@ -126,11 +126,36 @@ const buildTicketPickerDependencyHints = (t: TFn): Partial<Record<string, Record
     board_id: t('automation.actionInput.dependencyHints.subcategoryBoard', { defaultValue: 'Choose a fixed Board first to load subcategory options.' }),
     category_id: t('automation.actionInput.dependencyHints.subcategoryCategory', { defaultValue: 'Choose a fixed Category first to load subcategory options.' }),
   },
+  'project-phase': {
+    project_id: t('automation.actionInput.dependencyHints.projectPhaseProject', { defaultValue: 'Choose a fixed Project first to load phase options.' }),
+    target_project_id: t('automation.actionInput.dependencyHints.projectPhaseTargetProject', { defaultValue: 'Choose a fixed Project first to load phase options.' }),
+    'filters.project_id': t('automation.actionInput.dependencyHints.projectPhaseFilterProject', { defaultValue: 'Choose a fixed Project first to load phase options.' }),
+  },
+  'project-task': {
+    project_id: t('automation.actionInput.dependencyHints.projectTaskProject', { defaultValue: 'Choose a fixed Project first to load task options.' }),
+    phase_id: t('automation.actionInput.dependencyHints.projectTaskPhase', { defaultValue: 'Choose a fixed Phase first to load task options.' }),
+    target_project_id: t('automation.actionInput.dependencyHints.projectTaskTargetProject', { defaultValue: 'Choose a fixed Project first to load task options.' }),
+    target_phase_id: t('automation.actionInput.dependencyHints.projectTaskTargetPhase', { defaultValue: 'Choose a fixed Phase first to load task options.' }),
+    'filters.project_id': t('automation.actionInput.dependencyHints.projectTaskFilterProject', { defaultValue: 'Choose a fixed Project first to load task options.' }),
+    'filters.phase_id': t('automation.actionInput.dependencyHints.projectTaskFilterPhase', { defaultValue: 'Choose a fixed Phase first to load task options.' }),
+  },
+  'project-task-status': {
+    project_id: t('automation.actionInput.dependencyHints.projectStatusProject', { defaultValue: 'Choose a fixed Project first to load status options.' }),
+    phase_id: t('automation.actionInput.dependencyHints.projectStatusPhase', { defaultValue: 'Choose a fixed Phase first to load status options.' }),
+    target_project_id: t('automation.actionInput.dependencyHints.projectStatusTargetProject', { defaultValue: 'Choose a fixed Project first to load status options.' }),
+    target_phase_id: t('automation.actionInput.dependencyHints.projectStatusTargetPhase', { defaultValue: 'Choose a fixed Phase first to load status options.' }),
+    'filters.project_id': t('automation.actionInput.dependencyHints.projectStatusFilterProject', { defaultValue: 'Choose a fixed Project first to load status options.' }),
+    'filters.phase_id': t('automation.actionInput.dependencyHints.projectStatusFilterPhase', { defaultValue: 'Choose a fixed Phase first to load status options.' }),
+  },
 });
 
 export const WORKFLOW_FIXED_PICKER_SUPPORTED_RESOURCES = new Set([
   'board',
   'client',
+  'project',
+  'project-phase',
+  'project-task',
+  'project-task-status',
   'contact',
   'user',
   'user-or-team',

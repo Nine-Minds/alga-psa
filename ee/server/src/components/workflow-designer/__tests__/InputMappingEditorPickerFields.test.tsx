@@ -1071,6 +1071,70 @@ describe('InputMappingEditor picker-backed fields', () => {
     ).toHaveValue('status-1');
   });
 
+  it('T024: project-related fixed pickers render and stay dependency-disabled until project/phase fixed values are selected', async () => {
+    render(
+      <InputMappingEditor
+        value={{
+          project_id: '',
+          phase_id: '',
+          task_id: '',
+          status_mapping_id: '',
+        }}
+        onChange={vi.fn()}
+        targetFields={[
+          {
+            name: 'project_id',
+            type: 'string',
+            picker: {
+              kind: 'project',
+              allowsDynamicReference: true,
+            },
+          },
+          {
+            name: 'phase_id',
+            type: 'string',
+            picker: {
+              kind: 'project-phase',
+              dependencies: ['project_id'],
+              allowsDynamicReference: true,
+            },
+          },
+          {
+            name: 'task_id',
+            type: 'string',
+            picker: {
+              kind: 'project-task',
+              dependencies: ['project_id', 'phase_id'],
+              allowsDynamicReference: true,
+            },
+          },
+          {
+            name: 'status_mapping_id',
+            type: 'string',
+            picker: {
+              kind: 'project-task-status',
+              dependencies: ['project_id', 'phase_id'],
+              allowsDynamicReference: true,
+            },
+          },
+        ]}
+        fieldOptions={[]}
+        stepId="step-project-picker-dependencies"
+        positionsHandlers={positionsHandlers}
+      />
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId('mapping-step-project-picker-dependencies-project_id-literal-picker')).toBeEnabled()
+    );
+    expect(screen.getByTestId('mapping-step-project-picker-dependencies-phase_id-literal-picker')).toBeDisabled();
+    expect(screen.getByTestId('mapping-step-project-picker-dependencies-task_id-literal-picker')).toBeDisabled();
+    expect(screen.getByTestId('mapping-step-project-picker-dependencies-status_mapping_id-literal-picker')).toBeDisabled();
+    expect(screen.getByText('Choose a fixed Project first to load phase options.')).toBeVisible();
+    expect(screen.getByText('Choose a fixed Project first to load task options.')).toBeVisible();
+    expect(screen.getByText('Choose a fixed Project first to load status options.')).toBeVisible();
+  });
+
   it('T210/T211/T212/T213/T218/T219/T312: dynamic upstream references keep dependent fixed pickers disabled while still allowing a switch back to Reference mode', async () => {
     const ClientScopeHarness = () => {
       const [value, setValue] = React.useState({

@@ -114,11 +114,36 @@ const TICKET_PICKER_DEPENDENCY_HINT_DEFAULTS: DependencyHintDefaults = {
     board_id: 'Choose a fixed Board first to load subcategory options.',
     category_id: 'Choose a fixed Category first to load subcategory options.',
   },
+  'project-phase': {
+    project_id: 'Choose a fixed Project first to load phase options.',
+    target_project_id: 'Choose a fixed Project first to load phase options.',
+    'filters.project_id': 'Choose a fixed Project first to load phase options.',
+  },
+  'project-task': {
+    project_id: 'Choose a fixed Project first to load task options.',
+    phase_id: 'Choose a fixed Phase first to load task options.',
+    target_project_id: 'Choose a fixed Project first to load task options.',
+    target_phase_id: 'Choose a fixed Phase first to load task options.',
+    'filters.project_id': 'Choose a fixed Project first to load task options.',
+    'filters.phase_id': 'Choose a fixed Phase first to load task options.',
+  },
+  'project-task-status': {
+    project_id: 'Choose a fixed Project first to load status options.',
+    phase_id: 'Choose a fixed Phase first to load status options.',
+    target_project_id: 'Choose a fixed Project first to load status options.',
+    target_phase_id: 'Choose a fixed Phase first to load status options.',
+    'filters.project_id': 'Choose a fixed Project first to load status options.',
+    'filters.phase_id': 'Choose a fixed Phase first to load status options.',
+  },
 };
 
 export const WORKFLOW_FIXED_PICKER_SUPPORTED_RESOURCES = new Set([
   'board',
   'client',
+  'project',
+  'project-phase',
+  'project-task',
+  'project-task-status',
   'contact',
   'user',
   'user-or-team',

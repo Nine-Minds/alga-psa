@@ -509,7 +509,7 @@
   {
     "id": "F061",
     "description": "Register new project picker resource support in the workflow fixed picker resource list and route it to a project picker UI or equivalent search/select control.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Workflow designer picker support"
     ]
@@ -517,7 +517,7 @@
   {
     "id": "F062",
     "description": "Register new project phase picker resource support with dependency handling for selected project fixed values.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Workflow designer picker support"
     ]
@@ -525,7 +525,7 @@
   {
     "id": "F063",
     "description": "Register new project task picker resource support with dependency handling for selected project and/or phase fixed values.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Workflow designer picker support"
     ]
@@ -533,7 +533,7 @@
   {
     "id": "F064",
     "description": "Register new project task status/status-mapping picker resource support with dependency handling for selected project and/or phase fixed values.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Workflow designer picker support"
     ]
@@ -541,7 +541,7 @@
   {
     "id": "F065",
     "description": "Annotate all new action ID fields with workflow editor picker metadata and dependency paths so fixed-value mode is dependency-aware.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Workflow designer picker support",
       "UX / UI Notes"
@@ -550,7 +550,7 @@
   {
     "id": "F066",
     "description": "Ensure all new actions appear in the workflow registry API with labels, descriptions, categories, input schemas, output schemas, and side-effect/idempotency metadata.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance Criteria"
     ]
@@ -558,7 +558,7 @@
   {
     "id": "F067",
     "description": "Ensure all side-effectful actions use tenant-scoped transactions, standardized workflow action errors, and workflow run audit records.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Non-functional Requirements",
       "Observability"
@@ -567,7 +567,7 @@
   {
     "id": "F068",
     "description": "Keep `projects.create_task` behavior compatible while adding shared helper code or picker metadata needed by the new project actions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration"
     ]

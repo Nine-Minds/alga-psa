@@ -596,3 +596,51 @@ Action schemas are Zod schemas converted to JSON Schema and consumed by the work
 
 - `project_ticket_links`/`ticket_entity_links` idempotency needed explicit existing-row fallback because unique constraints vary by schema/migration state.
 - Tag helper had to be column-aware for `tag_definitions`/`tag_mappings` to remain robust across branch schema variants.
+
+## Implementation checkpoint — 2026-04-27 (Picker resources + compatibility closeout)
+
+### Completed features
+
+- `F061`: Registered project fixed-picker resource support in workflow designer pickers:
+  - added `project` to supported fixed-picker resources
+  - picker now routes through fixed-value control path alongside existing resources
+
+- `F062`: Registered project-phase picker resource support with dependency handling:
+  - added `project-phase` support
+  - dependency hint defaults include `project_id`, `target_project_id`, and `filters.project_id`
+
+- `F063`: Registered project-task picker resource support with dependency handling:
+  - added `project-task` support
+  - dependency hint defaults include project + phase scoped paths (`project_id`, `phase_id`, `target_project_id`, `target_phase_id`, filter variants)
+
+- `F064`: Registered project-task-status picker support with dependency handling:
+  - added `project-task-status` support
+  - dependency hint defaults include project + phase scoped paths and filter variants
+
+- `F065`: Ensured dependency-aware picker metadata is honored end-to-end in fixed-value mode:
+  - new project/phase/task/status kinds surface dependency-disabled explanations until upstream fixed values are provided
+  - preserved no-tag-picker behavior (tags remain free-text arrays)
+
+- `F066`: Confirmed new project actions are present in workflow registry metadata with labels/descriptions/categories/schema/side-effect-idempotency metadata.
+
+- `F067`: Confirmed side-effectful project actions continue using standardized action errors, tenant-scoped mutations, and workflow run audit records.
+
+- `F068`: Verified `projects.create_task` compatibility remains intact after shared helper/picker expansion.
+
+### Completed tests
+
+- `T001`: Registry metadata test verifies new project actions are registered with expected flags/schemas/idempotency metadata.
+- `T005`: DB-backed authorization/tenant-scope test verifies project find/search/task search behavior is tenant scoped and authorization aware (with schema-aware branch handling when `users.client_id` is unavailable).
+- `T023`: Schema/picker metadata assertions validate project/phase/task/status picker metadata + dependency paths and absence of tag picker metadata.
+- `T024`: Workflow designer fixed-picker test validates project-related pickers render and dependency-disabled behavior is shown until upstream fixed values exist.
+- `T025`: Compatibility regression test verifies `projects.create_task` remains registered and functional.
+
+### Commands/runbook used
+
+- `cd shared && npx vitest run workflow/runtime/actions/__tests__/registerProjectActionsMetadata.test.ts workflow/runtime/actions/__tests__/businessOperations.projects.db.test.ts`
+- `cd ee/server && npx vitest run src/components/workflow-designer/__tests__/InputMappingEditorPickerFields.test.tsx -t "T024"`
+
+### Gotchas discovered
+
+- Project fixed pickers use async option loading in fallback `CustomSelect` mode (non-dedicated picker kinds), so immediate enabled assertions can be flaky; T024 now uses `waitFor` on project picker readiness.
+- Authorization fixture assumptions can differ across schema variants (`users.client_id` optional); T005 now guards for column presence to keep assertions meaningful in both variants.

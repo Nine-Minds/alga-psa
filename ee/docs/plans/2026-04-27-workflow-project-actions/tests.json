@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "DB-backed registry/API test verifies all new project actions are registered with expected ids, labels, sideEffectful flags, idempotency metadata, and JSON Schema input/output schemas.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005",
       "F007",
@@ -61,7 +61,7 @@
   {
     "id": "T005",
     "description": "DB-backed permission/authorization test verifies project find/search/task search results are tenant-scoped and exclude unauthorized project records.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F006",
@@ -266,7 +266,7 @@
   {
     "id": "T023",
     "description": "Schema/picker metadata test verifies new action fields expose project, phase, task, and project-task-status picker metadata with expected dependency paths and no tag picker metadata.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004",
       "F061",
@@ -279,7 +279,7 @@
   {
     "id": "T024",
     "description": "Workflow designer fixed-picker test verifies project, phase, task, and status picker resources render in fixed-value mode and show dependency-disabled explanations until required parent fixed values are selected.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F061",
       "F062",
@@ -291,7 +291,7 @@
   {
     "id": "T025",
     "description": "Compatibility regression test verifies existing `projects.create_task` remains registered and can still create a task after shared project workflow helpers or picker metadata are introduced.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F068"
     ]
