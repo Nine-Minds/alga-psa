@@ -1,27 +1,27 @@
 {
   "configuration": {
-    "loading": "Loading email providers...",
+    "loading": "Carregando provedores de e-mail...",
     "feedback": {
-      "testingConnection": "Testing connection for {{providerName}}...",
-      "connectionSuccess": "Connected to {{providerName}}.",
-      "connectionError": "Connection test failed",
-      "refreshWatchError": "Failed to refresh watch subscription",
-      "renewalError": "Renewal failed",
-      "initiateOauthError": "Failed to initiate IMAP OAuth",
-      "resyncing": "Resyncing {{providerName}}...",
-      "resyncError": "Failed to resync IMAP provider",
-      "resyncStarted": "Resync started for {{providerName}}.",
-      "enterpriseOnly": "Microsoft 365 inbound email is only available in Enterprise Edition."
+      "testingConnection": "Testando conexão para {{providerName}}...",
+      "connectionSuccess": "Conectado a {{providerName}}.",
+      "connectionError": "Falha no teste de conexão",
+      "refreshWatchError": "Falha ao atualizar assinatura de watch",
+      "renewalError": "Falha na renovação",
+      "initiateOauthError": "Falha ao iniciar o OAuth IMAP",
+      "resyncing": "Ressincronizando {{providerName}}...",
+      "resyncError": "Falha ao ressincronizar provedor IMAP",
+      "resyncStarted": "Ressincronização iniciada para {{providerName}}.",
+      "enterpriseOnly": "O e-mail recebido do Microsoft 365 está disponível apenas na Enterprise Edition."
     },
     "editDrawer": {
-      "title": "Edit Email Provider",
-      "description": "Update configuration for {{providerName}}"
+      "title": "Editar provedor de e-mail",
+      "description": "Atualizar configuração para {{providerName}}"
     },
     "header": {
-      "title": "Email Provider Configuration",
+      "title": "Configuração de provedores de e-mail",
       "description": {
-        "enterprise": "Configure Gmail, Microsoft 365, or IMAP providers to receive and process inbound emails as tickets",
-        "standard": "Configure Gmail or IMAP providers to receive and process inbound emails as tickets"
+        "enterprise": "Configure provedores Gmail, Microsoft 365 ou IMAP para receber e processar e-mails recebidos como tickets",
+        "standard": "Configure provedores Gmail ou IMAP para receber e processar e-mails recebidos como tickets"
       },
       "counts": {
         "enterprise": "Gmail: {{gmail}} · Microsoft: {{microsoft}} · IMAP: {{imap}}",
@@ -29,157 +29,157 @@
       }
     },
     "actions": {
-      "addProvider": "Add Email Provider"
+      "addProvider": "Adicionar provedor de e-mail"
     },
     "nav": {
-      "providers": "Providers",
-      "defaults": "Defaults"
+      "providers": "Provedores",
+      "defaults": "Padrões"
     },
     "setup": {
-      "title": "Setup Instructions",
+      "title": "Instruções de configuração",
       "microsoft": {
-        "title": "Microsoft 365 Setup",
+        "title": "Configuração do Microsoft 365",
         "steps": {
-          "registerApp": "Register an application in Azure AD",
-          "permissions": "Configure API permissions for Mail.Read",
-          "redirectUrl": "Set up the redirect URL in your app registration",
-          "credentials": "Use the Client ID and Client Secret in the form above"
+          "registerApp": "Registre um aplicativo no Azure AD",
+          "permissions": "Configure as permissões da API para Mail.Read",
+          "redirectUrl": "Configure o URL de redirecionamento no seu registro de aplicativo",
+          "credentials": "Use o Client ID e o Client Secret no formulário acima"
         }
       },
       "gmail": {
-        "title": "Gmail Setup",
+        "title": "Configuração do Gmail",
         "enterpriseSteps": {
-          "enterAddress": "Enter your Gmail address and provider name",
-          "connect": "Click \"Connect Gmail\" to authorize access",
-          "preferences": "Configure email processing preferences",
-          "save": "Save to complete setup"
+          "enterAddress": "Insira seu endereço Gmail e o nome do provedor",
+          "connect": "Clique em \"Conectar Gmail\" para autorizar o acesso",
+          "preferences": "Configure as preferências de processamento de e-mail",
+          "save": "Salve para concluir a configuração"
         },
         "standardSteps": {
-          "project": "Create a project in Google Cloud Console",
-          "oauth": "Enable Gmail API and create OAuth2 credentials",
-          "pubsub": "Set up Pub/Sub topic for push notifications",
-          "consent": "Configure the OAuth consent screen and add test users"
+          "project": "Crie um projeto no Google Cloud Console",
+          "oauth": "Habilite a API do Gmail e crie credenciais OAuth2",
+          "pubsub": "Configure o tópico Pub/Sub para notificações push",
+          "consent": "Configure a tela de consentimento OAuth e adicione usuários de teste"
         }
       }
     }
   },
   "list": {
     "header": {
-      "title": "Email Providers ({{count}})"
+      "title": "Provedores de e-mail ({{count}})"
     },
     "filters": {
-      "searchPlaceholder": "Search providers...",
-      "allProviders": "All Providers"
+      "searchPlaceholder": "Pesquisar provedores...",
+      "allProviders": "Todos os provedores"
     },
     "actions": {
-      "refresh": "Refresh"
+      "refresh": "Atualizar"
     }
   },
   "selector": {
     "header": {
-      "title": "Choose Your Email Provider",
-      "description": "Select the email service you want to use for inbound email processing. You can configure multiple email providers per account."
+      "title": "Escolha seu provedor de e-mail",
+      "description": "Selecione o serviço de e-mail que você deseja usar para o processamento de e-mails recebidos. Você pode configurar múltiplos provedores de e-mail por conta."
     },
     "cards": {
       "google": {
         "title": "Gmail",
-        "description": "Google Workspace / Gmail Integration",
+        "description": "Integração com Google Workspace / Gmail",
         "features": {
-          "accounts": "✓ Gmail and Google Workspace accounts",
-          "filtering": "✓ Label-based email filtering",
-          "processing": "✓ Real-time email processing",
-          "authentication": "✓ Automatic OAuth authentication"
+          "accounts": "✓ Contas Gmail e Google Workspace",
+          "filtering": "✓ Filtragem de e-mails por rótulos",
+          "processing": "✓ Processamento de e-mails em tempo real",
+          "authentication": "✓ Autenticação OAuth automática"
         },
-        "action": "Set up Gmail"
+        "action": "Configurar Gmail"
       },
       "microsoft": {
         "title": "Microsoft 365",
-        "description": "Microsoft 365 / Outlook Integration",
+        "description": "Integração com Microsoft 365 / Outlook",
         "features": {
-          "accounts": "✓ Microsoft 365 and Outlook accounts",
-          "filtering": "✓ Folder-based email filtering",
-          "processing": "✓ Real-time email processing",
-          "authentication": "✓ Azure AD OAuth integration"
+          "accounts": "✓ Contas Microsoft 365 e Outlook",
+          "filtering": "✓ Filtragem de e-mails por pastas",
+          "processing": "✓ Processamento de e-mails em tempo real",
+          "authentication": "✓ Integração OAuth com Azure AD"
         },
-        "action": "Set up Microsoft 365"
+        "action": "Configurar Microsoft 365"
       },
       "imap": {
         "title": "IMAP",
-        "description": "Custom IMAP Server Integration",
+        "description": "Integração personalizada com servidor IMAP",
         "features": {
-          "accounts": "✓ Any IMAP-compliant mailbox",
-          "filtering": "✓ Folder-based email filtering",
-          "authentication": "✓ OAuth2 or password authentication",
-          "listener": "✓ Real-time IDLE listener"
+          "accounts": "✓ Qualquer caixa de correio compatível com IMAP",
+          "filtering": "✓ Filtragem de e-mails por pastas",
+          "authentication": "✓ Autenticação OAuth2 ou por senha",
+          "listener": "✓ Listener IDLE em tempo real"
         },
-        "action": "Set up IMAP"
+        "action": "Configurar IMAP"
       }
     },
     "actions": {
-      "cancel": "Cancel"
+      "cancel": "Cancelar"
     },
     "help": {
-      "enterprise": "Choose the provider your organization already uses. If you use Google Workspace, pick Gmail; if you use Microsoft 365, pick Microsoft 365. You can change this later by removing and reconfiguring your email provider.",
-      "standard": "Choose the provider your organization already uses. If you use Google Workspace, pick Gmail; otherwise choose IMAP. You can change this later by removing and reconfiguring your email provider."
+      "enterprise": "Escolha o provedor que sua organização já utiliza. Se você usa Google Workspace, escolha Gmail; se você usa Microsoft 365, escolha Microsoft 365. Você pode alterar isto depois removendo e reconfigurando seu provedor de e-mail.",
+      "standard": "Escolha o provedor que sua organização já utiliza. Se você usa Google Workspace, escolha Gmail; caso contrário, escolha IMAP. Você pode alterar isto depois removendo e reconfigurando seu provedor de e-mail."
     }
   },
   "wizard": {
     "title": {
-      "select": "Choose Email Provider",
-      "setup": "{{provider}} Configuration"
+      "select": "Escolha o provedor de e-mail",
+      "setup": "Configuração do {{provider}}"
     },
     "actions": {
-      "cancel": "Cancel",
-      "back": "Back",
-      "close": "Close"
+      "cancel": "Cancelar",
+      "back": "Voltar",
+      "close": "Fechar"
     }
   },
   "providerCard": {
     "subscription": {
-      "expired": "Expired",
-      "expiresInHours": "Expires in {{count}}h",
-      "expiresInDays": "Expires in {{count}}d"
+      "expired": "Expirado",
+      "expiresInHours": "Expira em {{count}}h",
+      "expiresInDays": "Expira em {{count}}d"
     },
     "badges": {
-      "disabled": "Disabled",
-      "connected": "Connected",
-      "disconnected": "Disconnected",
-      "error": "Error",
-      "configuring": "Configuring",
-      "unknown": "Unknown"
+      "disabled": "Desabilitado",
+      "connected": "Conectado",
+      "disconnected": "Desconectado",
+      "error": "Erro",
+      "configuring": "Configurando",
+      "unknown": "Desconhecido"
     },
     "lastSync": {
-      "never": "Never",
-      "justNow": "Just now",
-      "minutesAgo": "{{count}}m ago",
-      "hoursAgo": "{{count}}h ago",
-      "daysAgo": "{{count}}d ago"
+      "never": "Nunca",
+      "justNow": "Agora mesmo",
+      "minutesAgo": "há {{count}}m",
+      "hoursAgo": "há {{count}}h",
+      "daysAgo": "há {{count}}d"
     },
     "actions": {
-      "edit": "Edit Configuration",
-      "testing": "Testing…",
-      "testConnection": "Test Connection",
-      "refreshWatch": "Refresh Pub/Sub & Watch",
-      "retryRenewal": "Retry Renewal",
-      "runDiagnostics": "Run Microsoft 365 Diagnostics",
-      "reconnectOauth": "Reconnect OAuth",
-      "resyncing": "Resyncing…",
-      "resyncMailbox": "Resync Mailbox",
-      "delete": "Delete Provider"
+      "edit": "Editar configuração",
+      "testing": "Testando…",
+      "testConnection": "Testar conexão",
+      "refreshWatch": "Atualizar Pub/Sub e Watch",
+      "retryRenewal": "Tentar renovar novamente",
+      "runDiagnostics": "Executar diagnósticos do Microsoft 365",
+      "reconnectOauth": "Reconectar OAuth",
+      "resyncing": "Ressincronizando…",
+      "resyncMailbox": "Ressincronizar caixa de correio",
+      "delete": "Excluir provedor"
     },
     "fields": {
       "status": "Status",
-      "lastSync": "Last Sync",
-      "created": "Created",
-      "subscription": "Subscription",
-      "defaults": "Ticket Defaults",
-      "error": "Error:"
+      "lastSync": "Última sincronização",
+      "created": "Criado",
+      "subscription": "Assinatura",
+      "defaults": "Padrões de ticket",
+      "error": "Erro:"
     },
     "values": {
-      "active": "Active",
-      "inactive": "Inactive",
-      "disabled": "Disabled",
-      "error": "Error"
+      "active": "Ativo",
+      "inactive": "Inativo",
+      "disabled": "Desabilitado",
+      "error": "Erro"
     },
     "types": {
       "google": "Gmail",
@@ -187,280 +187,503 @@
       "imap": "IMAP"
     },
     "filters": {
-      "folders": "Folders: {{filters}}",
-      "labels": "Labels: {{filters}}"
+      "folders": "Pastas: {{filters}}",
+      "labels": "Rótulos: {{filters}}"
     },
     "warnings": {
-      "inboundDefaults": "Inbound ticket defaults are required and emails won't process until one is selected."
+      "inboundDefaults": "Os padrões de ticket de entrada são obrigatórios e os e-mails não serão processados até que um seja selecionado."
     },
     "defaults": {
-      "placeholder": "Select defaults...",
-      "empty": "No defaults available"
+      "placeholder": "Selecionar padrões...",
+      "empty": "Nenhum padrão disponível"
     },
     "empty": {
-      "title": "No Email Providers Configured",
-      "description": "Add an email provider to start receiving and processing inbound emails as tickets.",
-      "action": "Add Email Provider"
+      "title": "Nenhum provedor de e-mail configurado",
+      "description": "Adicione um provedor de e-mail para começar a receber e processar e-mails recebidos como tickets.",
+      "action": "Adicionar provedor de e-mail"
     }
   },
   "forms": {
     "common": {
       "actions": {
-        "cancel": "Cancel",
-        "saving": "Saving...",
-        "updateProvider": "Update Provider",
-        "addProvider": "Add Provider",
-        "createProvider": "Create Provider",
-        "manageDefaults": "Manage defaults",
-        "refreshList": "Refresh list",
-        "openProvidersSettings": "Open Providers Settings"
+        "cancel": "Cancelar",
+        "saving": "Salvando...",
+        "updateProvider": "Atualizar provedor",
+        "addProvider": "Adicionar provedor",
+        "createProvider": "Criar provedor",
+        "manageDefaults": "Gerenciar padrões",
+        "refreshList": "Atualizar lista",
+        "openProvidersSettings": "Abrir configurações de provedores"
       },
       "validation": {
-        "requiredFieldsTitle": "Please fill in the required fields:",
-        "fixHighlightedFields": "Please fix the highlighted fields and try again."
+        "requiredFieldsTitle": "Preencha os campos obrigatórios:",
+        "fixHighlightedFields": "Corrija os campos destacados e tente novamente."
       },
       "ticketDefaults": {
-        "title": "Ticket Defaults",
-        "description": "Select defaults to apply to email-created tickets",
-        "label": "Inbound Ticket Defaults",
-        "placeholder": "Select defaults (optional)",
-        "empty": "No defaults available"
+        "title": "Padrões de ticket",
+        "description": "Selecione padrões a aplicar a tickets criados por e-mail",
+        "label": "Padrões de ticket de entrada",
+        "placeholder": "Selecionar padrões (opcional)",
+        "empty": "Nenhum padrão disponível"
       },
       "oauth": {
-        "authorizing": "Authorizing...",
-        "authorized": "Authorized",
-        "authorizeAccess": "Authorize Access"
+        "authorizing": "Autorizando...",
+        "authorized": "Autorizado",
+        "authorizeAccess": "Autorizar acesso"
       }
     },
     "microsoft": {
       "validation": {
-        "providerNameRequired": "Provider name is required",
-        "emailRequired": "Valid email address is required",
-        "redirectRequired": "Valid redirect URI is required",
-        "authorizeRequiresValid": "Please fill in all required fields before authorizing",
-        "oauthInitiateFailed": "Failed to initiate OAuth",
-        "popupBlocked": "Failed to open OAuth popup. Please allow popups for this site.",
-        "closedEarly": "Authorization window closed before completing. Please try again.",
-        "authorizationFailed": "Authorization failed"
+        "providerNameRequired": "O nome do provedor é obrigatório",
+        "emailRequired": "É obrigatório um endereço de e-mail válido",
+        "redirectRequired": "É obrigatório um redirect URI válido",
+        "authorizeRequiresValid": "Preencha todos os campos obrigatórios antes de autorizar",
+        "oauthInitiateFailed": "Falha ao iniciar o OAuth",
+        "popupBlocked": "Falha ao abrir o popup OAuth. Permita popups para este site.",
+        "closedEarly": "A janela de autorização foi fechada antes da conclusão. Tente novamente.",
+        "authorizationFailed": "Falha na autorização"
       },
       "requiredFields": {
-        "providerName": "Provider Name",
-        "emailAddress": "Email Address",
+        "providerName": "Nome do provedor",
+        "emailAddress": "Endereço de e-mail",
         "redirectUri": "Redirect URI"
       },
       "basic": {
-        "title": "Basic Configuration",
-        "description": "Basic settings for your Microsoft 365 email provider",
-        "providerNameLabel": "Provider Name *",
-        "providerNamePlaceholder": "e.g., Support Email",
-        "emailLabel": "Email Address *",
-        "emailPlaceholder": "support@client.com",
-        "enableProvider": "Enable this provider"
+        "title": "Configuração básica",
+        "description": "Configurações básicas para seu provedor de e-mail Microsoft 365",
+        "providerNameLabel": "Nome do provedor *",
+        "providerNamePlaceholder": "ex. E-mail de suporte",
+        "emailLabel": "Endereço de e-mail *",
+        "emailPlaceholder": "suporte@cliente.com",
+        "enableProvider": "Habilitar este provedor"
       },
       "oauth": {
-        "sectionTitle": "Microsoft OAuth Configuration",
-        "sectionDescription": "Microsoft app credentials are configured in Providers settings and reused here.",
+        "sectionTitle": "Configuração Microsoft OAuth",
+        "sectionDescription": "As credenciais do aplicativo Microsoft são configuradas em Configurações de provedores e reutilizadas aqui.",
         "setupLabel": "Microsoft Entra",
-        "notConfigured": "Microsoft provider settings are not configured.",
-        "setupHelp": "Configure Providers first in Settings → Integrations → Providers, then return here to authorize this mailbox.",
+        "notConfigured": "As configurações do provedor Microsoft não estão configuradas.",
+        "setupHelp": "Configure primeiro os provedores em Configurações → Integrações → Provedores, depois retorne aqui para autorizar esta caixa de correio.",
         "redirectUriLabel": "Redirect URI *",
-        "redirectUriPlaceholder": "https://yourapp.com/api/auth/microsoft/callback",
-        "authorizationTitle": "OAuth Authorization",
-        "authorizationDescription": "Complete OAuth flow to grant access to the mailbox"
+        "redirectUriPlaceholder": "https://seuapp.com/api/auth/microsoft/callback",
+        "authorizationTitle": "Autorização OAuth",
+        "authorizationDescription": "Conclua o fluxo OAuth para conceder acesso à caixa de correio"
       },
       "advanced": {
-        "title": "Advanced Settings",
-        "description": "Configure advanced email processing options",
-        "folderFiltersLabel": "Folder Filters",
-        "folderFiltersPlaceholder": "Inbox, Support, Custom Folder",
-        "folderFiltersHelp": "Comma-separated list of folders to monitor (default: Inbox)",
-        "maxEmailsPerSync": "Max Emails Per Sync"
+        "title": "Configurações avançadas",
+        "description": "Configure opções avançadas de processamento de e-mail",
+        "folderFiltersLabel": "Filtros de pasta",
+        "folderFiltersPlaceholder": "Inbox, Suporte, Pasta personalizada",
+        "folderFiltersHelp": "Lista separada por vírgulas de pastas a monitorar (padrão: Inbox)",
+        "maxEmailsPerSync": "Máximo de e-mails por sincronização"
       }
     },
     "gmail": {
       "validation": {
-        "providerNameRequired": "Provider name is required",
-        "gmailAddressRequired": "Valid Gmail address is required",
-        "authorizeRequiresValid": "Please fill in all required fields before authorizing",
-        "googleNotConfigured": "Google integration is not configured for this tenant. Configure Google first, then retry.",
-        "oauthInitiateFailed": "Failed to initiate OAuth",
-        "popupBlocked": "Failed to open OAuth popup. Please allow popups for this site.",
-        "closedEarly": "Authorization window was closed before completing.",
-        "authorizationFailed": "Authorization failed",
-        "popupFailed": "OAuth popup failed"
+        "providerNameRequired": "O nome do provedor é obrigatório",
+        "gmailAddressRequired": "É obrigatório um endereço Gmail válido",
+        "authorizeRequiresValid": "Preencha todos os campos obrigatórios antes de autorizar",
+        "googleNotConfigured": "A integração com o Google não está configurada para este tenant. Configure o Google primeiro e tente novamente.",
+        "oauthInitiateFailed": "Falha ao iniciar o OAuth",
+        "popupBlocked": "Falha ao abrir o popup OAuth. Permita popups para este site.",
+        "closedEarly": "A janela de autorização foi fechada antes da conclusão.",
+        "authorizationFailed": "Falha na autorização",
+        "popupFailed": "Falha no popup OAuth"
       },
       "messages": {
-        "setupIncomplete": "Provider saved but setup incomplete: {{error}}",
-        "warningsTitle": "Setup completed with warnings:",
-        "settingUp": "Setting up Gmail notifications..."
+        "setupIncomplete": "Provedor salvo, mas configuração incompleta: {{error}}",
+        "warningsTitle": "Configuração concluída com avisos:",
+        "settingUp": "Configurando notificações do Gmail..."
       },
       "requiredFields": {
-        "providerName": "Provider Name",
-        "gmailAddress": "Gmail Address"
+        "providerName": "Nome do provedor",
+        "gmailAddress": "Endereço Gmail"
       },
       "basic": {
-        "title": "Basic Configuration",
-        "description": "Basic settings for your Gmail email provider",
-        "providerNameLabel": "Provider Name *",
-        "providerNamePlaceholder": "e.g., Support Gmail",
-        "mailboxLabel": "Gmail Address *",
-        "mailboxPlaceholder": "support@client.com",
-        "enableProvider": "Enable this provider"
+        "title": "Configuração básica",
+        "description": "Configurações básicas para seu provedor de e-mail Gmail",
+        "providerNameLabel": "Nome do provedor *",
+        "providerNamePlaceholder": "ex. Suporte Gmail",
+        "mailboxLabel": "Endereço Gmail *",
+        "mailboxPlaceholder": "suporte@cliente.com",
+        "enableProvider": "Habilitar este provedor"
       },
       "oauth": {
         "sectionTitle": "Google OAuth",
-        "sectionDescription": "Uses the tenant-owned Google app configured in Settings → Integrations → Providers.",
+        "sectionDescription": "Usa o aplicativo Google de propriedade do tenant configurado em Configurações → Integrações → Provedores.",
         "setupLabel": "Google Cloud Console",
-        "notConfigured": "Google integration is not configured for this tenant.",
-        "setupHelp": "Configure tenant-owned Google OAuth + Pub/Sub first: Settings → Integrations → Providers.",
-        "openSettings": "Open Google Settings",
-        "requiredTitle": "OAuth Authorization Required",
-        "requiredDescriptionAdd": "You must complete OAuth authorization above before adding the provider to enable Gmail notifications.",
-        "requiredDescriptionUpdate": "You must complete OAuth authorization above before updating the provider to enable Gmail notifications.",
-        "stepTitle": "Step 1: OAuth Authorization",
-        "stepDescription": "Complete OAuth flow to grant access to Gmail",
-        "buttonSuccessSaving": "Successfully authorized! Saving your settings..."
+        "notConfigured": "A integração com o Google não está configurada para este tenant.",
+        "setupHelp": "Configure primeiro o OAuth + Pub/Sub do Google de propriedade do tenant: Configurações → Integrações → Provedores.",
+        "openSettings": "Abrir configurações do Google",
+        "requiredTitle": "Autorização OAuth obrigatória",
+        "requiredDescriptionAdd": "Você deve concluir a autorização OAuth acima antes de adicionar o provedor para habilitar as notificações do Gmail.",
+        "requiredDescriptionUpdate": "Você deve concluir a autorização OAuth acima antes de atualizar o provedor para habilitar as notificações do Gmail.",
+        "stepTitle": "Passo 1: Autorização OAuth",
+        "stepDescription": "Conclua o fluxo OAuth para conceder acesso ao Gmail",
+        "buttonSuccessSaving": "Autorizado com sucesso! Salvando suas configurações..."
       },
       "advanced": {
-        "title": "Advanced Settings",
-        "description": "Configure advanced email processing options",
-        "completeSetupSuffix": " & Complete Setup"
+        "title": "Configurações avançadas",
+        "description": "Configure opções avançadas de processamento de e-mail",
+        "completeSetupSuffix": " e concluir configuração"
       },
       "processing": {
-        "labelFiltersLabel": "Gmail Labels to Monitor",
-        "labelFiltersPlaceholder": "INBOX, Support, Custom Label",
-        "labelFiltersHelp": "Comma-separated list of Gmail labels to monitor (default: INBOX)"
+        "labelFiltersLabel": "Rótulos do Gmail a monitorar",
+        "labelFiltersPlaceholder": "INBOX, Suporte, Rótulo personalizado",
+        "labelFiltersHelp": "Lista separada por vírgulas de rótulos do Gmail a monitorar (padrão: INBOX)"
       }
     },
     "imap": {
       "validation": {
-        "providerNameRequired": "Provider name is required",
-        "mailboxRequired": "Mailbox is required",
-        "mailboxInvalid": "Valid mailbox is required (e.g. user@domain.com, user@localhost, user@test-server, or user)",
-        "hostRequired": "IMAP host is required",
-        "usernameRequired": "IMAP username is required",
-        "oauthInitiateFailed": "Failed to initiate IMAP OAuth"
+        "providerNameRequired": "O nome do provedor é obrigatório",
+        "mailboxRequired": "A caixa de correio é obrigatória",
+        "mailboxInvalid": "É obrigatória uma caixa de correio válida (ex. user@domain.com, user@localhost, user@test-server, ou user)",
+        "hostRequired": "O host IMAP é obrigatório",
+        "usernameRequired": "O nome de usuário IMAP é obrigatório",
+        "oauthInitiateFailed": "Falha ao iniciar o OAuth IMAP"
       },
       "basic": {
-        "title": "Basic Settings",
-        "description": "Define the IMAP mailbox connection details.",
-        "providerName": "Provider Name",
-        "mailboxAddress": "Mailbox Address",
-        "host": "IMAP Host",
-        "port": "Port",
-        "useTls": "Use TLS/SSL",
-        "allowStarttls": "Allow STARTTLS Upgrade"
+        "title": "Configurações básicas",
+        "description": "Defina os detalhes de conexão da caixa de correio IMAP.",
+        "providerName": "Nome do provedor",
+        "mailboxAddress": "Endereço da caixa de correio",
+        "host": "Host IMAP",
+        "port": "Porta",
+        "useTls": "Usar TLS/SSL",
+        "allowStarttls": "Permitir upgrade STARTTLS"
       },
       "auth": {
-        "title": "Authentication",
-        "description": "Choose password or OAuth2 authentication.",
-        "typeLabel": "Authentication Type",
-        "passwordOption": "Password",
+        "title": "Autenticação",
+        "description": "Escolha autenticação por senha ou OAuth2.",
+        "typeLabel": "Tipo de autenticação",
+        "passwordOption": "Senha",
         "oauth2Option": "OAuth2 (XOAUTH2)",
-        "username": "Username",
-        "password": "Password / App Password",
-        "passwordHelp": "Passwords are stored securely and will not be displayed. Leave blank to keep the existing password.",
-        "oauthStatus": "OAuth Status",
-        "connected": "Connected",
-        "notConnected": "Not connected",
-        "reconnectOauth": "Reconnect OAuth",
-        "authorizeUrl": "Authorize URL",
-        "tokenUrl": "Token URL",
+        "username": "Nome de usuário",
+        "password": "Senha / Senha de app",
+        "passwordHelp": "As senhas são armazenadas com segurança e não serão exibidas. Deixe em branco para manter a senha existente.",
+        "oauthStatus": "Status do OAuth",
+        "connected": "Conectado",
+        "notConnected": "Não conectado",
+        "reconnectOauth": "Reconectar OAuth",
+        "authorizeUrl": "URL de autorização",
+        "tokenUrl": "URL de token",
         "clientId": "OAuth Client ID",
         "clientSecret": "OAuth Client Secret",
-        "scopes": "OAuth Scopes",
-        "scopesPlaceholder": "space-delimited scopes"
+        "scopes": "Escopos OAuth",
+        "scopesPlaceholder": "escopos separados por espaço"
       },
       "processing": {
-        "title": "Processing Settings",
-        "description": "Choose folders and processing behavior.",
-        "folderFilters": "Folder Filters",
-        "folderFiltersPlaceholder": "Inbox, Support, Tickets",
-        "active": "Active"
+        "title": "Configurações de processamento",
+        "description": "Escolha pastas e comportamento de processamento.",
+        "folderFilters": "Filtros de pasta",
+        "folderFiltersPlaceholder": "Inbox, Suporte, Tickets",
+        "active": "Ativo"
       }
     }
   },
   "inboundDefaultsForm": {
     "feedback": {
-      "loadOptionsError": "Failed to load field options",
-      "loading": "Loading form options..."
+      "loadOptionsError": "Falha ao carregar as opções do campo",
+      "loading": "Carregando opções do formulário..."
     },
     "validation": {
-      "nameRequired": "Short name and display name are required",
-      "boardRequired": "Board is required",
-      "statusRequired": "Status is required",
-      "priorityRequired": "Priority is required",
-      "clientRequired": "Company is required"
+      "nameRequired": "O nome curto e o nome de exibição são obrigatórios",
+      "boardRequired": "O board é obrigatório",
+      "statusRequired": "O status é obrigatório",
+      "priorityRequired": "A prioridade é obrigatória",
+      "clientRequired": "O cliente é obrigatório"
     },
     "fields": {
       "shortName": {
-        "label": "Short Name *",
-        "placeholder": "email-general",
-        "help": "Unique identifier (e.g., email-general, support-billing)"
+        "label": "Nome curto *",
+        "placeholder": "email-geral",
+        "help": "Identificador único (ex. email-geral, suporte-faturamento)"
       },
       "displayName": {
-        "label": "Display Name *",
-        "placeholder": "General Email Support"
+        "label": "Nome de exibição *",
+        "placeholder": "Suporte geral por e-mail"
       },
       "description": {
-        "label": "Description",
-        "placeholder": "Optional description of when these defaults are used"
+        "label": "Descrição",
+        "placeholder": "Descrição opcional de quando estes padrões são usados"
       },
       "active": {
-        "label": "Active"
+        "label": "Ativo"
       },
       "board": {
         "label": "Board *",
-        "placeholder": "Select Board"
+        "placeholder": "Selecionar board"
       },
       "status": {
         "label": "Status *",
-        "placeholder": "Select status",
-        "selectBoardFirst": "Select board first",
-        "loading": "Loading statuses..."
+        "placeholder": "Selecionar status",
+        "selectBoardFirst": "Selecione o board primeiro",
+        "loading": "Carregando status..."
       },
       "priority": {
-        "label": "Priority *",
-        "placeholder": "Select priority"
+        "label": "Prioridade *",
+        "placeholder": "Selecionar prioridade"
       },
       "client": {
-        "label": "Client *",
-        "placeholder": "Select Client",
-        "help": "Required: used as a catch-all when no client can be matched from the email."
+        "label": "Cliente *",
+        "placeholder": "Selecionar cliente",
+        "help": "Obrigatório: usado como fallback quando nenhum cliente pode ser correspondido a partir do e-mail."
       },
       "category": {
-        "label": "Category",
-        "placeholder": "Select category",
-        "placeholderNoBoard": "Select board first",
-        "empty": "No categories found for the selected board."
+        "label": "Categoria",
+        "placeholder": "Selecionar categoria",
+        "placeholderNoBoard": "Selecione o board primeiro",
+        "empty": "Nenhuma categoria encontrada para o board selecionado."
       },
       "location": {
-        "label": "Location",
-        "placeholder": "Select location",
-        "placeholderNoClient": "Select client first (optional)",
-        "help": "Only applied when the catch-all client is used (no match case)."
+        "label": "Local",
+        "placeholder": "Selecionar local",
+        "placeholderNoClient": "Selecione o cliente primeiro (opcional)",
+        "help": "Aplicado apenas quando o cliente fallback é usado (caso sem correspondência)."
       },
       "enteredBy": {
-        "label": "Entered By",
-        "placeholder": "System (null)",
-        "help": "Used only when we cannot match a contact or client. System tickets will show \"System\" as creator."
+        "label": "Inserido por",
+        "placeholder": "Sistema (nulo)",
+        "help": "Usado apenas quando não podemos corresponder um contato ou cliente. Tickets do sistema mostrarão \"Sistema\" como criador."
       }
     },
     "section": {
-      "ticketDefaults": "Ticket Defaults"
+      "ticketDefaults": "Padrões de ticket"
     },
     "optionSuffix": {
-      "default": "(Default)"
+      "default": "(Padrão)"
     },
     "actions": {
-      "cancel": "Cancel",
-      "updating": "Updating...",
-      "creating": "Creating...",
-      "update": "Update Defaults",
-      "create": "Create Defaults"
+      "cancel": "Cancelar",
+      "updating": "Atualizando...",
+      "creating": "Criando...",
+      "update": "Atualizar padrões",
+      "create": "Criar padrões"
+    }
+  },
+  "imapForm": {
+    "sections": {
+      "basic": {
+        "title": "Configurações básicas",
+        "description": "Defina os detalhes de conexão da caixa de correio IMAP."
+      },
+      "auth": {
+        "title": "Autenticação",
+        "description": "Escolha autenticação por senha ou OAuth2."
+      },
+      "processing": {
+        "title": "Configurações de processamento",
+        "description": "Escolha pastas e comportamento de processamento."
+      }
+    },
+    "fields": {
+      "providerName": "Nome do provedor",
+      "mailboxAddress": "Endereço da caixa de correio",
+      "imapHost": "Host IMAP",
+      "port": "Porta",
+      "useTls": "Usar TLS/SSL",
+      "allowStarttls": "Permitir upgrade STARTTLS",
+      "authenticationType": "Tipo de autenticação",
+      "username": "Nome de usuário",
+      "passwordLabel": "Senha / Senha de app",
+      "authorizeUrl": "URL de autorização",
+      "tokenUrl": "URL de token",
+      "oauthClientId": "OAuth Client ID",
+      "oauthClientSecret": "OAuth Client Secret",
+      "oauthScopes": "Escopos OAuth",
+      "oauthScopesPlaceholder": "escopos separados por espaço",
+      "folderFilters": "Filtros de pasta",
+      "folderFiltersPlaceholder": "Inbox, Suporte, Tickets",
+      "active": "Ativo",
+      "ticketDefaultsLabel": "Padrões de ticket",
+      "ticketDefaultsPlaceholder": "Selecionar padrões...",
+      "ticketDefaultsEmpty": "Nenhum padrão disponível"
+    },
+    "authOptions": {
+      "password": "Senha",
+      "oauth2": "OAuth2 (XOAUTH2)"
+    },
+    "password": {
+      "editHelp": "As senhas são armazenadas com segurança e não serão exibidas. Deixe em branco para manter a senha existente."
+    },
+    "oauth": {
+      "statusLabel": "Status do OAuth",
+      "connected": "Conectado",
+      "notConnected": "Não conectado",
+      "authorizing": "Autorizando...",
+      "reconnect": "Reconectar OAuth"
+    },
+    "validation": {
+      "fixHighlightedFields": "Corrija os campos destacados e tente novamente."
+    },
+    "actions": {
+      "cancel": "Cancelar",
+      "saving": "Salvando...",
+      "updateProvider": "Atualizar provedor",
+      "createProvider": "Criar provedor"
+    }
+  },
+  "microsoftForm": {
+    "header": {
+      "title": "Integração Microsoft 365",
+      "description": "Basta conectar sua conta Microsoft 365 e configurar suas preferências de processamento de e-mail para começar."
+    },
+    "sections": {
+      "accountSetup": {
+        "title": "Configuração da conta Microsoft 365",
+        "description": "Configure sua conta Microsoft 365 para processamento de e-mails recebidos"
+      },
+      "authentication": {
+        "title": "Autenticação Microsoft 365",
+        "description": "Conecte sua conta Microsoft 365 para habilitar o processamento de e-mails"
+      },
+      "processing": {
+        "title": "Configurações de processamento de e-mail",
+        "description": "Configure como os e-mails são processados e importados"
+      },
+      "ticketDefaults": {
+        "title": "Padrões de ticket",
+        "description": "Selecione padrões a aplicar a tickets criados por e-mail"
+      }
+    },
+    "fields": {
+      "providerNameLabel": "Nome do provedor *",
+      "providerNamePlaceholder": "ex. Suporte Microsoft 365",
+      "mailboxLabel": "Endereço Microsoft 365 *",
+      "mailboxPlaceholder": "suporte@cliente.com",
+      "enableProvider": "Habilitar este provedor",
+      "foldersLabel": "Pastas a monitorar",
+      "foldersPlaceholder": "Inbox, Suporte, Pasta personalizada",
+      "foldersHelp": "Lista separada por vírgulas de pastas a monitorar (padrão: Inbox)",
+      "maxEmailsLabel": "Máximo de e-mails por sincronização",
+      "maxEmailsHelp": "Número máximo de e-mails a processar em cada sincronização (1-1000)",
+      "inboundDefaultsLabel": "Padrões de ticket de entrada",
+      "inboundDefaultsPlaceholder": "Selecionar padrões (opcional)"
+    },
+    "oauth": {
+      "connectionTitle": "Conexão Microsoft 365",
+      "descriptionIdle": "Autorize o acesso à sua conta Microsoft 365",
+      "descriptionSuccess": "Conectado com sucesso! Conclua a configuração salvando abaixo.",
+      "connecting": "Conectando...",
+      "connected": "Conectado",
+      "connectButton": "Conectar Microsoft 365",
+      "requiredTitle": "Conexão Microsoft 365 obrigatória",
+      "requiredDescriptionUpdate": "Você deve conectar sua conta Microsoft 365 acima antes de atualizar o provedor.",
+      "requiredDescriptionAdd": "Você deve conectar sua conta Microsoft 365 acima antes de adicionar o provedor.",
+      "authError": "Preencha todos os campos obrigatórios antes de autorizar",
+      "popupBlocked": "Falha ao abrir o popup OAuth. Permita popups para este site.",
+      "authorizationFailed": "Falha na autorização",
+      "initiateFailed": "Falha ao iniciar o OAuth",
+      "hostedConfigIncomplete": "Configuração Microsoft hospedada indisponível ou incompleta",
+      "hostedCredentialsMissing": "Credenciais do cliente Microsoft hospedado indisponíveis"
+    },
+    "nextStep": {
+      "title": "Concluir configuração",
+      "autoSubmit": "Concluindo automaticamente em",
+      "secondsSuffix": "segundos, ou clique em",
+      "clickNow": "abaixo agora.",
+      "manualInstruction": "Clique em",
+      "manualSuffix": "abaixo para finalizar a configuração.",
+      "cancelAutoSubmit": "Cancelar envio automático"
+    },
+    "buttons": {
+      "updateProvider": "Atualizar provedor",
+      "addProvider": "Adicionar provedor",
+      "manageDefaults": "Gerenciar padrões",
+      "refreshList": "Atualizar lista",
+      "cancel": "Cancelar",
+      "completeSetupSuffix": "e concluir configuração",
+      "settingUp": "Configurando a integração Microsoft 365..."
+    },
+    "validation": {
+      "requiredFieldsTitle": "Preencha os campos obrigatórios:",
+      "providerName": "Nome do provedor",
+      "mailbox": "Endereço Microsoft 365"
+    }
+  },
+  "gmailForm": {
+    "header": {
+      "title": "Integração Gmail",
+      "description": "Conecte sua conta Gmail e configure suas preferências de processamento de e-mail."
+    },
+    "basicConfig": {
+      "title": "Configuração da conta Gmail",
+      "description": "Configure sua conta Gmail para processamento de e-mails recebidos"
+    },
+    "authentication": {
+      "title": "Autenticação Gmail",
+      "description": "Conecte sua conta Gmail para habilitar o processamento de e-mails",
+      "connectionTitle": "Conexão Gmail",
+      "descriptionIdle": "Autorize o acesso à sua conta Gmail",
+      "descriptionSuccess": "Conectado com sucesso! Salvando suas configurações...",
+      "buttonIdle": "Conectar Gmail",
+      "buttonAuthorizing": "Conectando...",
+      "buttonSuccess": "Conectado"
+    },
+    "processing": {
+      "title": "Configurações de processamento de e-mail",
+      "description": "Configure como os e-mails são processados e importados"
+    },
+    "ticketDefaults": {
+      "title": "Padrões de ticket",
+      "description": "Selecione padrões a aplicar a tickets criados por e-mail",
+      "manageDefaults": "Gerenciar padrões",
+      "inboundDefaultsLabel": "Padrões de ticket de entrada",
+      "inboundDefaultsPlaceholder": "Selecionar padrões (opcional)",
+      "refreshList": "Atualizar lista"
+    },
+    "googleConfig": {
+      "notConfigured": "A integração com o Google não está configurada para este tenant.",
+      "configureHint": "Configure primeiro o OAuth + Pub/Sub do Google de propriedade do tenant:",
+      "settingsPath": "Configurações → Integrações → Provedores",
+      "openSettings": "Abrir configurações do Google"
+    },
+    "oauth": {
+      "requiredTitle": "Conexão Gmail obrigatória",
+      "requiredDescriptionUpdate": "Você deve conectar sua conta Gmail acima antes de atualizar o provedor.",
+      "requiredDescriptionAdd": "Você deve conectar sua conta Gmail acima antes de adicionar o provedor.",
+      "fillRequiredFields": "Preencha todos os campos obrigatórios antes de autorizar",
+      "notConfiguredTenant": "A integração com o Google não está configurada para este tenant. Configure o Google primeiro e tente novamente.",
+      "initiateFailed": "Falha ao iniciar o OAuth"
+    },
+    "validation": {
+      "requiredFieldsTitle": "Preencha os campos obrigatórios:",
+      "providerName": "Nome do provedor",
+      "mailbox": "Endereço Gmail"
+    },
+    "warnings": {
+      "setupIncomplete": "Provedor salvo, mas configuração incompleta: {{error}}",
+      "setupWarningsTitle": "Configuração concluída com avisos:"
+    },
+    "buttons": {
+      "updateProvider": "Atualizar provedor",
+      "addProvider": "Adicionar provedor",
+      "completeSetupSuffix": "e concluir configuração",
+      "cancel": "Cancelar",
+      "settingUp": "Configurando a integração Gmail..."
     }
   },
   "managed": {
+    "messages": {
+      "loadDomainsFailed": "Falha ao carregar domínios gerenciados",
+      "loadOutboundSettingsFailed": "Falha ao carregar as configurações de e-mail de saída",
+      "ticketingFromUpdated": "Endereço do remetente de tickets atualizado",
+      "ticketingFromSaveFailed": "Falha ao salvar o endereço do remetente de tickets",
+      "ticketingFromCleared": "Endereço do remetente de tickets limpo",
+      "ticketingFromClearFailed": "Falha ao limpar o endereço do remetente de tickets",
+      "switchProviderFailed": "Falha ao alterar o provedor",
+      "smtpHostRequired": "O host SMTP é obrigatório",
+      "fromAddressRequired": "O endereço do remetente é obrigatório",
+      "smtpSaved": "Configurações SMTP salvas",
+      "smtpSaveFailed": "Falha ao salvar as configurações SMTP",
+      "domainRequired": "Insira um nome de domínio",
+      "domainSubmitted": "Solicitação de domínio enviada",
+      "domainRequestFailed": "Falha ao solicitar o domínio",
+      "verificationRecheckScheduled": "Nova verificação agendada",
+      "refreshStatusFailed": "Falha ao atualizar o status do domínio",
+      "domainRemovalScheduled": "Remoção do domínio agendada",
+      "domainRemovalScheduledWithClear": "Remoção do domínio agendada e endereço do remetente de tickets limpo",
+      "removeDomainFailed": "Falha ao remover o domínio"
+    },
     "tabs": {
       "inboundEmail": "E-mail de entrada",
       "outboundEmail": "E-mail de saída"
@@ -590,27 +813,6 @@
       "mismatchHelp": "O registro DNS existe, mas o valor não corresponde ao que o Resend espera.",
       "matchedHelp": "O valor detectado corresponde ao esperado.",
       "unknownHelp": "Ainda não verificamos o DNS. Verifique o DNS novamente para executar a verificação."
-    },
-    "messages": {
-      "loadDomainsFailed": "Falha ao carregar domínios gerenciados",
-      "loadOutboundSettingsFailed": "Falha ao carregar as configurações de e-mail de saída",
-      "ticketingFromUpdated": "Endereço do remetente de tickets atualizado",
-      "ticketingFromSaveFailed": "Falha ao salvar o endereço do remetente de tickets",
-      "ticketingFromCleared": "Endereço do remetente de tickets limpo",
-      "ticketingFromClearFailed": "Falha ao limpar o endereço do remetente de tickets",
-      "switchProviderFailed": "Falha ao alterar o provedor",
-      "smtpHostRequired": "O host SMTP é obrigatório",
-      "fromAddressRequired": "O endereço do remetente é obrigatório",
-      "smtpSaved": "Configurações SMTP salvas",
-      "smtpSaveFailed": "Falha ao salvar as configurações SMTP",
-      "domainRequired": "Insira um nome de domínio",
-      "domainSubmitted": "Solicitação de domínio enviada",
-      "domainRequestFailed": "Falha ao solicitar o domínio",
-      "verificationRecheckScheduled": "Nova verificação agendada",
-      "refreshStatusFailed": "Falha ao atualizar o status do domínio",
-      "domainRemovalScheduled": "Remoção do domínio agendada",
-      "domainRemovalScheduledWithClear": "Remoção do domínio agendada e endereço do remetente de tickets limpo",
-      "removeDomainFailed": "Falha ao remover o domínio"
     }
   }
 }

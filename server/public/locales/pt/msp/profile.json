@@ -195,5 +195,41 @@
         "default": "Notice"
       }
     }
+  },
+  "connectSso": {
+    "verify": {
+      "title": "Proteja a sua conta com SSO",
+      "description": "Associe Azure AD ou Google Workspace para reutilizar políticas organizacionais e dispensar pedidos locais de autenticação de dois fatores.",
+      "signedInAs": "Sessão iniciada como",
+      "currentPassword": "Palavra-passe atual",
+      "twoFactorCode": "Código de dois fatores",
+      "twoFactorPlaceholder": "123456",
+      "verifyCredentials": "Verificar Credenciais",
+      "verifying": "A verificar...",
+      "reset": "Repor",
+      "linkedSuccess": "Fornecedor associado com sucesso.",
+      "credentialsVerified": "Credenciais verificadas. Escolha um fornecedor abaixo para concluir a associação da sua conta.",
+      "verifyFailed": "Não foi possível verificar as credenciais.",
+      "verifyBeforeProvider": "Verifique a sua palavra-passe (e código de dois fatores, se necessário) antes de associar um fornecedor."
+    },
+    "providers": {
+      "title": "Associar um fornecedor",
+      "description": "Escolha um fornecedor para concluir a associação SSO. Será redirecionado através do fluxo de autenticação do fornecedor.",
+      "noneConfigured": "Não existem fornecedores SSO configurados para este ambiente. Peça ao seu administrador para configurar credenciais Google ou Microsoft.",
+      "notConfigured": "Não configurado",
+      "branding": {
+        "google": "Continuar com Google",
+        "microsoft": "Continuar com Microsoft",
+        "default": "Continuar"
+      }
+    },
+    "linked": {
+      "title": "Contas associadas",
+      "description": "Atualizaremos a associação na próxima vez que iniciar sessão através de um fornecedor conectado.",
+      "empty": "Ainda não há fornecedores SSO associados. Conclua os passos acima para associar um.",
+      "linkedAt": "Associado em {{date}}",
+      "lastUsed": "Última utilização em {{date}}",
+      "notUsedYet": "Ainda não utilizado"
+    }
   }
 }

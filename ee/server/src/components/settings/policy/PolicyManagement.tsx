@@ -23,6 +23,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import { TIER_FEATURES } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useTierFeature } from 'server/src/context/TierContext';
 import {
   archiveAuthorizationBundleAction,
@@ -47,13 +48,13 @@ import {
   type AuthorizationSimulationOption,
 } from 'ee/server/src/lib/actions/auth/authorizationBundleActions';
 
-const RESOURCE_SECTIONS: Array<{ label: string; resourceType: string }> = [
-  { label: 'Tickets', resourceType: 'ticket' },
-  { label: 'Documents', resourceType: 'document' },
-  { label: 'Time', resourceType: 'time_entry' },
-  { label: 'Projects', resourceType: 'project' },
-  { label: 'Assets', resourceType: 'asset' },
-  { label: 'Billing', resourceType: 'billing' },
+const RESOURCE_SECTIONS: Array<{ labelKey: string; resourceType: string }> = [
+  { labelKey: 'policyManagement.resourceSections.tickets', resourceType: 'ticket' },
+  { labelKey: 'policyManagement.resourceSections.documents', resourceType: 'document' },
+  { labelKey: 'policyManagement.resourceSections.time', resourceType: 'time_entry' },
+  { labelKey: 'policyManagement.resourceSections.projects', resourceType: 'project' },
+  { labelKey: 'policyManagement.resourceSections.assets', resourceType: 'asset' },
+  { labelKey: 'policyManagement.resourceSections.billing', resourceType: 'billing' },
 ];
 
 const ACTION_OPTIONS = ['read', 'create', 'update', 'delete', 'approve'];
@@ -75,39 +76,31 @@ interface RuleDraftFormState {
   pendingBoardId: string;
 }
 
-const TEMPLATE_SUMMARIES: Record<string, string> = {
-  own: 'records owned by the principal',
-  assigned: 'records assigned to the principal',
-  managed: 'records owned by managed users',
-  own_or_assigned: 'records owned by or assigned to the principal',
-  own_or_managed: 'records owned by the principal or managed users',
-  same_client: 'records in the same client scope',
-  client_portfolio: 'records for the principal client portfolio',
-  selected_clients: 'records in selected client scopes',
-  same_team: 'records owned by the same team',
-  selected_boards: 'records in selected boards',
+const TEMPLATE_SUMMARY_KEYS: Record<string, string> = {
+  own: 'policyManagement.templateSummaries.own',
+  assigned: 'policyManagement.templateSummaries.assigned',
+  managed: 'policyManagement.templateSummaries.managed',
+  own_or_assigned: 'policyManagement.templateSummaries.ownOrAssigned',
+  own_or_managed: 'policyManagement.templateSummaries.ownOrManaged',
+  same_client: 'policyManagement.templateSummaries.sameClient',
+  client_portfolio: 'policyManagement.templateSummaries.clientPortfolio',
+  selected_clients: 'policyManagement.templateSummaries.selectedClients',
+  same_team: 'policyManagement.templateSummaries.sameTeam',
+  selected_boards: 'policyManagement.templateSummaries.selectedBoards',
 };
 
-const CONSTRAINT_SUMMARIES: Record<string, string> = {
-  not_self_approver: 'blocks self-approval',
-  client_visible_only: 'requires client-visible records',
-  hide_sensitive_fields: 'redacts sensitive fields',
+const CONSTRAINT_SUMMARY_KEYS: Record<string, string> = {
+  not_self_approver: 'policyManagement.constraintSummaries.notSelfApprover',
+  client_visible_only: 'policyManagement.constraintSummaries.clientVisibleOnly',
+  hide_sensitive_fields: 'policyManagement.constraintSummaries.hideSensitiveFields',
 };
 
-const TARGET_TYPE_LABELS: Record<AssignmentTargetType, string> = {
-  role: 'Role',
-  team: 'Team',
-  user: 'User',
-  api_key: 'API Key',
+const TARGET_TYPE_LABEL_KEYS: Record<AssignmentTargetType, string> = {
+  role: 'policyManagement.targetTypes.role',
+  team: 'policyManagement.targetTypes.team',
+  user: 'policyManagement.targetTypes.user',
+  api_key: 'policyManagement.targetTypes.apiKey',
 };
-
-function formatDate(value: string): string {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return 'Unknown';
-  }
-  return parsed.toLocaleString();
-}
 
 function parseDelimitedList(value: string): string[] {
   return [...new Set(value.split(',').map((item) => item.trim()).filter(Boolean))];
@@ -117,19 +110,41 @@ function formatDelimitedList(values: string[]): string {
   return values.join(', ');
 }
 
-function summarizeRule(rule: {
-  resourceType: string;
-  action: string;
-  templateKey: string;
-  constraintKey: string | null;
-}): string {
-  const scope = TEMPLATE_SUMMARIES[rule.templateKey] ?? rule.templateKey;
-  const base = `Narrow ${rule.resourceType} ${rule.action} to ${scope}`;
-  if (!rule.constraintKey) {
-    return `${base}.`;
-  }
-  const constraint = CONSTRAINT_SUMMARIES[rule.constraintKey] ?? rule.constraintKey;
-  return `${base}; ${constraint}.`;
+function makeFormatDate(t: (key: string) => string) {
+  return function formatDate(value: string): string {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return t('policyManagement.dates.unknown');
+    }
+    return parsed.toLocaleString();
+  };
+}
+
+function makeSummarizeRule(t: (key: string, opts?: Record<string, unknown>) => string) {
+  return function summarizeRule(rule: {
+    resourceType: string;
+    action: string;
+    templateKey: string;
+    constraintKey: string | null;
+  }): string {
+    const scopeKey = TEMPLATE_SUMMARY_KEYS[rule.templateKey];
+    const scope = scopeKey ? t(scopeKey) : rule.templateKey;
+    if (!rule.constraintKey) {
+      return t('policyManagement.ruleSummary.base', {
+        resourceType: rule.resourceType,
+        action: rule.action,
+        scope,
+      });
+    }
+    const constraintKey = CONSTRAINT_SUMMARY_KEYS[rule.constraintKey];
+    const constraint = constraintKey ? t(constraintKey) : rule.constraintKey;
+    return t('policyManagement.ruleSummary.withConstraint', {
+      resourceType: rule.resourceType,
+      action: rule.action,
+      scope,
+      constraint,
+    });
+  };
 }
 
 function buildEmptyRuleDraft(editorData: AuthorizationBundleDraftEditorPayload): RuleDraftFormState {
@@ -220,6 +235,9 @@ function OverviewMetricCard({
 }
 
 export default function PolicyManagement() {
+  const { t } = useTranslation('msp/admin');
+  const formatDate = useMemo(() => makeFormatDate(t), [t]);
+  const summarizeRule = useMemo(() => makeSummarizeRule(t), [t]);
   const hasBundleLibrary = useTierFeature(TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES);
   const [entries, setEntries] = useState<AuthorizationBundleLibraryEntry[]>([]);
   const [search, setSearch] = useState('');
@@ -330,11 +348,11 @@ export default function PolicyManagement() {
       });
       setEntries(nextEntries);
     } catch (fetchError) {
-      setError(fetchError instanceof Error ? fetchError.message : 'Failed to load bundles.');
+      setError(fetchError instanceof Error ? fetchError.message : t('policyManagement.errors.loadBundles'));
     } finally {
       setLoading(false);
     }
-  }, [hasBundleLibrary, search, includeArchived]);
+  }, [hasBundleLibrary, search, includeArchived, t]);
 
   const loadEditor = useCallback(async (
     bundleId: string,
@@ -350,12 +368,12 @@ export default function PolicyManagement() {
       setEditorData(payload);
       setRuleDrafts(buildInitialRuleDrafts(payload));
     } catch (editorError) {
-      setError(editorError instanceof Error ? editorError.message : 'Failed to load bundle editor.');
+      setError(editorError instanceof Error ? editorError.message : t('policyManagement.errors.loadEditor'));
       setEditorData(null);
     } finally {
       setEditorLoading(false);
     }
-  }, []);
+  }, [t]);
 
   const loadAssignments = useCallback(async (bundleId: string) => {
     setAssignmentLoading(true);
@@ -364,12 +382,12 @@ export default function PolicyManagement() {
       const payload = await listAuthorizationBundleAssignmentsAction(bundleId);
       setAssignmentData(payload);
     } catch (assignmentError) {
-      setError(assignmentError instanceof Error ? assignmentError.message : 'Failed to load bundle assignments.');
+      setError(assignmentError instanceof Error ? assignmentError.message : t('policyManagement.errors.loadAssignments'));
       setAssignmentData(null);
     } finally {
       setAssignmentLoading(false);
     }
-  }, []);
+  }, [t]);
 
   const loadSimulationReferenceData = useCallback(async (resourceType: string) => {
     const [principals, records] = await Promise.all([
@@ -446,18 +464,18 @@ export default function PolicyManagement() {
     () =>
       ASSIGNMENT_TARGET_TYPES.map((targetType) => ({
         value: targetType,
-        label: TARGET_TYPE_LABELS[targetType],
+        label: t(TARGET_TYPE_LABEL_KEYS[targetType]),
       })),
-    []
+    [t]
   );
 
   const workspaceTabs = useMemo(
     () => [
-      { id: 'editor', label: 'Draft editor', icon: Sparkles, content: <div /> },
-      { id: 'assignments', label: 'Assignments', icon: Users, content: <div /> },
-      { id: 'simulator', label: 'Simulator', icon: FlaskConical, content: <div /> },
+      { id: 'editor', label: t('policyManagement.workspace.tabs.editor'), icon: Sparkles, content: <div /> },
+      { id: 'assignments', label: t('policyManagement.workspace.tabs.assignments'), icon: Users, content: <div /> },
+      { id: 'simulator', label: t('policyManagement.workspace.tabs.simulator'), icon: FlaskConical, content: <div /> },
     ],
-    []
+    [t]
   );
 
   const editorHasPublishableDraft = useMemo(() => {
@@ -516,7 +534,7 @@ export default function PolicyManagement() {
   }, []);
 
   const handleClone = async (entry: AuthorizationBundleLibraryEntry): Promise<void> => {
-    const clonedName = `${entry.name} Copy`;
+    const clonedName = t('policyManagement.clone.copySuffix', { name: entry.name });
     setBusyBundleId(entry.bundleId);
     setError(null);
     try {
@@ -526,7 +544,7 @@ export default function PolicyManagement() {
       });
       await fetchEntries();
     } catch (cloneError) {
-      setError(cloneError instanceof Error ? cloneError.message : 'Failed to clone bundle.');
+      setError(cloneError instanceof Error ? cloneError.message : t('policyManagement.errors.cloneBundle'));
     } finally {
       setBusyBundleId(null);
     }
@@ -548,7 +566,7 @@ export default function PolicyManagement() {
         setSimulatorBundleId(null);
       }
     } catch (archiveError) {
-      setError(archiveError instanceof Error ? archiveError.message : 'Failed to archive bundle.');
+      setError(archiveError instanceof Error ? archiveError.message : t('policyManagement.errors.archiveBundle'));
     } finally {
       setBusyBundleId(null);
     }
@@ -561,7 +579,7 @@ export default function PolicyManagement() {
       await seedStarterAuthorizationBundlesAction();
       await fetchEntries();
     } catch (seedError) {
-      setError(seedError instanceof Error ? seedError.message : 'Failed to seed starter bundles.');
+      setError(seedError instanceof Error ? seedError.message : t('policyManagement.errors.seedStarters'));
     } finally {
       setSeeding(false);
     }
@@ -570,7 +588,7 @@ export default function PolicyManagement() {
   const handleCreateBundle = async (): Promise<void> => {
     const trimmedName = newBundleName.trim();
     if (!trimmedName) {
-      setError('Bundle name is required.');
+      setError(t('policyManagement.errors.bundleNameRequired'));
       return;
     }
 
@@ -587,7 +605,7 @@ export default function PolicyManagement() {
       await fetchEntries();
       openWorkspace(created.bundleId, 'editor');
     } catch (createError) {
-      setError(createError instanceof Error ? createError.message : 'Failed to create bundle.');
+      setError(createError instanceof Error ? createError.message : t('policyManagement.errors.createBundle'));
     } finally {
       setCreatingBundle(false);
     }
@@ -609,7 +627,7 @@ export default function PolicyManagement() {
       }
       await loadEditor(bundleId, { createDraftIfMissing: false });
     } catch (publishError) {
-      setError(publishError instanceof Error ? publishError.message : 'Failed to publish bundle draft.');
+      setError(publishError instanceof Error ? publishError.message : t('policyManagement.errors.publishDraft'));
     } finally {
       setPublishingBundleId(null);
     }
@@ -626,17 +644,17 @@ export default function PolicyManagement() {
 
     const draft = ruleDrafts[resourceType];
     if (!draft?.templateKey) {
-      setError('Select a template before saving a rule.');
+      setError(t('policyManagement.errors.selectTemplate'));
       return;
     }
 
     if (draft.templateKey === 'selected_clients' && draft.selectedClientIds.length === 0) {
-      setError('Add at least one selected client before saving this rule.');
+      setError(t('policyManagement.errors.selectClientRequired'));
       return;
     }
 
     if (draft.templateKey === 'selected_boards' && draft.selectedBoardIds.length === 0) {
-      setError('Add at least one selected board before saving this rule.');
+      setError(t('policyManagement.errors.selectBoardRequired'));
       return;
     }
 
@@ -644,7 +662,7 @@ export default function PolicyManagement() {
       draft.constraintKey === 'hide_sensitive_fields' &&
       parseDelimitedList(draft.redactedFieldsInput).length === 0
     ) {
-      setError('Enter at least one redacted field before saving this rule.');
+      setError(t('policyManagement.errors.redactedFieldRequired'));
       return;
     }
 
@@ -662,7 +680,7 @@ export default function PolicyManagement() {
       await loadEditor(editorData.bundle.bundleId);
       resetRuleDraft(resourceType);
     } catch (ruleError) {
-      setError(ruleError instanceof Error ? ruleError.message : 'Failed to save draft rule.');
+      setError(ruleError instanceof Error ? ruleError.message : t('policyManagement.errors.saveRule'));
     }
   };
 
@@ -681,13 +699,13 @@ export default function PolicyManagement() {
         resetRuleDraft(resourceType);
       }
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : 'Failed to remove rule.');
+      setError(deleteError instanceof Error ? deleteError.message : t('policyManagement.errors.removeRule'));
     }
   };
 
   const handleCreateAssignment = async (): Promise<void> => {
     if (!assignmentBundleId || !assignmentTargetId) {
-      setError('Select a target before adding an assignment.');
+      setError(t('policyManagement.errors.selectTarget'));
       return;
     }
 
@@ -701,7 +719,7 @@ export default function PolicyManagement() {
       });
       await Promise.all([loadAssignments(assignmentBundleId), fetchEntries()]);
     } catch (assignmentError) {
-      setError(assignmentError instanceof Error ? assignmentError.message : 'Failed to add assignment.');
+      setError(assignmentError instanceof Error ? assignmentError.message : t('policyManagement.errors.addAssignment'));
     } finally {
       setAssignmentSaving(false);
     }
@@ -721,7 +739,7 @@ export default function PolicyManagement() {
       await setAuthorizationBundleAssignmentStatusAction({ assignmentId, status });
       await Promise.all([loadAssignments(assignmentBundleId), fetchEntries()]);
     } catch (statusError) {
-      setError(statusError instanceof Error ? statusError.message : 'Failed to update assignment status.');
+      setError(statusError instanceof Error ? statusError.message : t('policyManagement.errors.updateAssignmentStatus'));
     } finally {
       setAssignmentStatusBusyId(null);
     }
@@ -729,12 +747,12 @@ export default function PolicyManagement() {
 
   const handleRunSimulation = async (): Promise<void> => {
     if (!simulatorBundleId || !simulatorPrincipalId) {
-      setError('Select a principal before running simulation.');
+      setError(t('policyManagement.errors.selectPrincipal'));
       return;
     }
 
     if (!useSyntheticRecord && !simulatorRecordId) {
-      setError('Select a record before running simulation.');
+      setError(t('policyManagement.errors.selectRecord'));
       return;
     }
 
@@ -758,12 +776,21 @@ export default function PolicyManagement() {
           : undefined,
       });
       if (result.ok === false) {
-        setError(result.error.message);
+        // Map the server-provided error code to a translated message; fall
+        // back to the server's English message for any unknown codes.
+        const simulatorErrorKey: Record<string, string> = {
+          unsupported_simulation_action: 'policyManagement.errors.simulator.unsupportedAction',
+          unsupported_simulation_resource_type: 'policyManagement.errors.simulator.unsupportedResource',
+          unsupported_ticket_client_principal_simulation:
+            'policyManagement.errors.simulator.clientTicketNotSupported',
+        };
+        const translationKey = simulatorErrorKey[result.error.code];
+        setError(translationKey ? t(translationKey) : result.error.message);
         return;
       }
       setSimulationResult(result.data);
     } catch (simulationError) {
-      setError(simulationError instanceof Error ? simulationError.message : 'Failed to run simulation.');
+      setError(simulationError instanceof Error ? simulationError.message : t('policyManagement.errors.runSimulation'));
     } finally {
       setSimulatorLoading(false);
     }
@@ -778,9 +805,9 @@ export default function PolicyManagement() {
     return (
       <Card className="border-dashed border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-card))]">
         <CardHeader>
-          <CardTitle>Authorization bundles</CardTitle>
+          <CardTitle>{t('policyManagement.upsell.title')}</CardTitle>
           <CardDescription>
-            Advanced Authorization Bundle management is available on the Premium tier. Upgrade to manage reusable narrowing bundles.
+            {t('policyManagement.upsell.description')}
           </CardDescription>
         </CardHeader>
       </Card>
@@ -799,12 +826,12 @@ export default function PolicyManagement() {
                 </div>
                 <div className="space-y-2">
                   <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-white/90">
-                    Premium workspace
+                    {t('policyManagement.hero.badge')}
                   </div>
                   <div className="space-y-1">
-                    <h2 className="text-2xl font-semibold tracking-[-0.02em] text-white">Authorization bundles</h2>
+                    <h2 className="text-2xl font-semibold tracking-[-0.02em] text-white">{t('policyManagement.hero.title')}</h2>
                     <p className="max-w-2xl text-sm text-white/85">
-                      Manage premium access narrowing with draft revisions, scoped assignments, and safe simulation from one control center.
+                      {t('policyManagement.hero.subtitle')}
                     </p>
                   </div>
                 </div>
@@ -817,7 +844,7 @@ export default function PolicyManagement() {
                   className="border-white/25 bg-white text-[rgb(var(--color-primary-700))] hover:bg-white/90 hover:text-[rgb(var(--color-primary-700))]"
                   onClick={() => setIsCreateDialogOpen(true)}
                 >
-                  New bundle
+                  {t('policyManagement.hero.newBundle')}
                 </Button>
                 <Button
                   id="authorization-bundle-seed-starters-button"
@@ -827,7 +854,7 @@ export default function PolicyManagement() {
                   onClick={() => void handleSeedStarters()}
                   disabled={seeding}
                 >
-                  {seeding ? 'Adding starter bundles...' : 'Add starter bundles'}
+                  {seeding ? t('policyManagement.hero.addingStarters') : t('policyManagement.hero.addStarters')}
                 </Button>
               </div>
             </div>
@@ -836,27 +863,27 @@ export default function PolicyManagement() {
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
             <OverviewMetricCard
               icon={Layers3}
-              title="Active bundles"
+              title={t('policyManagement.metrics.activeBundles.title')}
               value={activeCount}
-              subtitle="Reusable narrowing bundles currently available to assign"
+              subtitle={t('policyManagement.metrics.activeBundles.subtitle')}
             />
             <OverviewMetricCard
               icon={Users}
-              title="Active assignments"
+              title={t('policyManagement.metrics.activeAssignments.title')}
               value={totalAssignments}
-              subtitle="Live role, team, user, and API key rollouts"
+              subtitle={t('policyManagement.metrics.activeAssignments.subtitle')}
             />
             <OverviewMetricCard
               icon={Sparkles}
-              title="Starter bundles"
+              title={t('policyManagement.metrics.starterBundles.title')}
               value={starterCount}
-              subtitle="Bundled relationship-first presets ready to adapt"
+              subtitle={t('policyManagement.metrics.starterBundles.subtitle')}
             />
             <OverviewMetricCard
               icon={Archive}
-              title="Archived bundles"
+              title={t('policyManagement.metrics.archivedBundles.title')}
               value={archivedCount}
-              subtitle="Retired bundles preserved for audit and reuse"
+              subtitle={t('policyManagement.metrics.archivedBundles.subtitle')}
             />
           </div>
         </>
@@ -874,11 +901,11 @@ export default function PolicyManagement() {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-1">
               <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[rgb(var(--color-text-500))]">
-                Library
+                {t('policyManagement.library.eyebrow')}
               </div>
-              <CardTitle>Authorization bundle library</CardTitle>
+              <CardTitle>{t('policyManagement.library.title')}</CardTitle>
               <CardDescription>
-                Browse bundle status, manage lifecycle changes, and open a focused workspace for one bundle at a time.
+                {t('policyManagement.library.description')}
               </CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-3">
@@ -887,7 +914,7 @@ export default function PolicyManagement() {
                 <Input
                   id="authorization-bundle-search-input"
                   className="pl-9"
-                  placeholder="Search bundles by name or description"
+                  placeholder={t('policyManagement.library.searchPlaceholder')}
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                 />
@@ -897,7 +924,7 @@ export default function PolicyManagement() {
                   id="authorization-bundle-toggle-archived-button"
                   checked={includeArchived}
                   onCheckedChange={setIncludeArchived}
-                  label="Show archived"
+                  label={t('policyManagement.library.showArchived')}
                 />
               </div>
             </div>
@@ -907,49 +934,52 @@ export default function PolicyManagement() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Bundle</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Assignments</TableHead>
-                <TableHead>Updated</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t('policyManagement.library.columns.bundle')}</TableHead>
+                <TableHead>{t('policyManagement.library.columns.status')}</TableHead>
+                <TableHead>{t('policyManagement.library.columns.type')}</TableHead>
+                <TableHead>{t('policyManagement.library.columns.assignments')}</TableHead>
+                <TableHead>{t('policyManagement.library.columns.updated')}</TableHead>
+                <TableHead className="text-right">{t('policyManagement.library.columns.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {!loading && entries.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="px-6 py-10 text-center text-sm text-muted-foreground">
-                    No authorization bundles found.
+                    {t('policyManagement.library.empty')}
                   </TableCell>
                 </TableRow>
               ) : null}
 
               {entries.map((entry) => {
                 const rowBusy = busyBundleId === entry.bundleId;
+                const statusLabel = entry.status === 'active'
+                  ? t('policyManagement.library.statusLabels.active')
+                  : t('policyManagement.library.statusLabels.archived');
                 return (
                   <TableRow key={entry.bundleId}>
                     <TableCell>
                       <div className="space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
                           <div className="font-medium text-[rgb(var(--color-text-900))]">{entry.name}</div>
-                          {entry.isSystem ? <Badge variant="outline">Starter</Badge> : null}
+                          {entry.isSystem ? <Badge variant="outline">{t('policyManagement.library.badges.starter')}</Badge> : null}
                         </div>
                         <div className="text-xs text-[rgb(var(--color-text-500))]">
                           {entry.description || (entry.isSystem
-                            ? 'System starter bundle.'
-                            : 'Custom narrowing bundle for role, team, user, or API key assignments.')}
+                            ? t('policyManagement.library.descriptions.systemStarter')
+                            : t('policyManagement.library.descriptions.customBundle'))}
                         </div>
                         <div className="text-xs text-[rgb(var(--color-text-500))]">
-                          Effective summary: {entry.status === 'active' ? 'active' : 'archived'} bundle with {entry.assignmentCount} active assignment(s).
+                          {t('policyManagement.library.effectiveSummary', { status: statusLabel, count: entry.assignmentCount })}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant={entry.status === 'active' ? 'default' : 'secondary'}>
-                        {entry.status}
+                        {statusLabel}
                       </Badge>
                     </TableCell>
-                    <TableCell>{entry.isSystem ? 'System' : 'Custom'}</TableCell>
+                    <TableCell>{entry.isSystem ? t('policyManagement.library.typeLabels.system') : t('policyManagement.library.typeLabels.custom')}</TableCell>
                     <TableCell>{entry.assignmentCount}</TableCell>
                     <TableCell>{formatDate(entry.updatedAt)}</TableCell>
                     <TableCell className="text-right">
@@ -959,7 +989,7 @@ export default function PolicyManagement() {
                           size="sm"
                           onClick={() => openWorkspace(entry.bundleId, 'editor')}
                         >
-                          Open editor
+                          {t('policyManagement.library.actions.openEditor')}
                         </Button>
                         <Button
                           id={`authorization-bundle-assignments-${entry.bundleId}`}
@@ -967,7 +997,7 @@ export default function PolicyManagement() {
                           variant="outline"
                           onClick={() => openWorkspace(entry.bundleId, 'assignments')}
                         >
-                          Assignments
+                          {t('policyManagement.library.actions.assignments')}
                         </Button>
                         <Button
                           id={`authorization-bundle-simulator-${entry.bundleId}`}
@@ -975,7 +1005,7 @@ export default function PolicyManagement() {
                           variant="outline"
                           onClick={() => openWorkspace(entry.bundleId, 'simulator')}
                         >
-                          Simulator
+                          {t('policyManagement.library.actions.simulator')}
                         </Button>
                         <Button
                           id={`authorization-bundle-clone-${entry.bundleId}`}
@@ -984,7 +1014,7 @@ export default function PolicyManagement() {
                           disabled={rowBusy}
                           onClick={() => void handleClone(entry)}
                         >
-                          Clone
+                          {t('policyManagement.library.actions.clone')}
                         </Button>
                         {entry.status === 'active' ? (
                           <Button
@@ -994,7 +1024,7 @@ export default function PolicyManagement() {
                             disabled={rowBusy}
                             onClick={() => void handleArchive(entry)}
                           >
-                            Archive
+                            {t('policyManagement.library.actions.archive')}
                           </Button>
                         ) : null}
                       </div>
@@ -1006,7 +1036,7 @@ export default function PolicyManagement() {
               {loading ? (
                 <TableRow>
                   <TableCell colSpan={6} className="px-6 py-10 text-center text-sm text-muted-foreground">
-                    Loading authorization bundles...
+                    {t('policyManagement.library.loading')}
                   </TableCell>
                 </TableRow>
               ) : null}
@@ -1029,11 +1059,11 @@ export default function PolicyManagement() {
                   onClick={() => closeWorkspace()}
                 >
                   <ArrowLeft className="h-4 w-4" />
-                  Back to library
+                  {t('policyManagement.workspace.backToLibrary')}
                 </Button>
                 <div className="text-xs text-[rgb(var(--color-text-500))]">
                   {selectedBundleEntry ? (
-                    <>Updated {formatDate(selectedBundleEntry.updatedAt)} · {selectedBundleEntry.assignmentCount} active assignment(s)</>
+                    <>{t('policyManagement.workspace.updatedWithAssignments', { date: formatDate(selectedBundleEntry.updatedAt), count: selectedBundleEntry.assignmentCount })}</>
                   ) : null}
                 </div>
               </div>
@@ -1041,19 +1071,21 @@ export default function PolicyManagement() {
               <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
                 <div className="space-y-2">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[rgb(var(--color-text-500))]">
-                    Bundle workspace
+                    {t('policyManagement.workspace.eyebrow')}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <CardTitle>{selectedBundleEntry?.name ?? editorData?.bundle.name ?? 'Selected bundle'}</CardTitle>
+                    <CardTitle>{selectedBundleEntry?.name ?? editorData?.bundle.name ?? t('policyManagement.workspace.fallbackBundleName')}</CardTitle>
                     {selectedBundleEntry ? (
                       <Badge variant={selectedBundleEntry.status === 'active' ? 'default' : 'secondary'}>
-                        {selectedBundleEntry.status}
+                        {selectedBundleEntry.status === 'active'
+                          ? t('policyManagement.library.statusLabels.active')
+                          : t('policyManagement.library.statusLabels.archived')}
                       </Badge>
                     ) : null}
-                    {selectedBundleEntry?.isSystem ? <Badge variant="outline">Starter</Badge> : null}
+                    {selectedBundleEntry?.isSystem ? <Badge variant="outline">{t('policyManagement.library.badges.starter')}</Badge> : null}
                   </div>
                   <CardDescription>
-                    {selectedBundleEntry?.description || 'Use the draft editor, assignment manager, and simulator to ship safe narrowing changes.'}
+                    {selectedBundleEntry?.description || t('policyManagement.workspace.fallbackDescription')}
                   </CardDescription>
                 </div>
                 <div className="min-w-0 xl:min-w-[420px]">
@@ -1081,19 +1113,17 @@ export default function PolicyManagement() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 text-sm font-medium text-[rgb(var(--color-text-900))]">
                       <Sparkles className="h-4 w-4 text-[rgb(var(--color-primary-600))]" />
-                      Bundle editor
+                      {t('policyManagement.editor.header')}
                     </div>
                     {editorData ? (
                       <p className="text-sm text-muted-foreground">
                         {editorHasPublishableDraft ? (
                           <>
-                            Editing draft revision for <span className="font-medium text-foreground">{editorData.bundle.name}</span>.{' '}
-                            Changes stay in draft until published.
+                            {t('policyManagement.editor.editingDraftPrefix')}<span className="font-medium text-foreground">{editorData.bundle.name}</span>{t('policyManagement.editor.editingDraftSuffix')}
                           </>
                         ) : (
                           <>
-                            Viewing the published revision for <span className="font-medium text-foreground">{editorData.bundle.name}</span>.{' '}
-                            No active draft revision exists right now.
+                            {t('policyManagement.editor.viewingPublishedPrefix')}<span className="font-medium text-foreground">{editorData.bundle.name}</span>{t('policyManagement.editor.viewingPublishedSuffix')}
                           </>
                         )}
                       </p>
@@ -1106,28 +1136,29 @@ export default function PolicyManagement() {
                       onClick={() => void handlePublishDraft()}
                       disabled={!editorData || editorLoading || publishingBundleId === editorData?.bundle.bundleId}
                     >
-                      {publishingBundleId === editorData?.bundle.bundleId ? 'Publishing...' : 'Publish Draft'}
+                      {publishingBundleId === editorData?.bundle.bundleId ? t('policyManagement.editor.publishing') : t('policyManagement.editor.publishDraft')}
                     </Button>
                   ) : (
-                    <Badge variant="outline">Published</Badge>
+                    <Badge variant="outline">{t('policyManagement.editor.publishedBadge')}</Badge>
                   )}
                 </div>
 
                 {editorLoading || !editorData ? (
-                  <div className="text-sm text-muted-foreground">Loading draft editor...</div>
+                  <div className="text-sm text-muted-foreground">{t('policyManagement.editor.loading')}</div>
                 ) : (
                   <div className="space-y-4">
                     <div className="rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-5 text-sm leading-6 text-muted-foreground dark:bg-[rgb(var(--color-border-50))]">
-                      Revision summary: {editorData.revisionChangeSummary}
+                      {t('policyManagement.editor.revisionSummary', { summary: editorData.revisionChangeSummary })}
                     </div>
 
                     {RESOURCE_SECTIONS.map((section) => {
+                      const sectionLabel = t(section.labelKey);
                       const sectionRules = editorData.rules.filter(
                         (rule) => rule.resourceType === section.resourceType
                       );
                       const draft = ruleDrafts[section.resourceType] ?? buildEmptyRuleDraft(editorData);
                       const constraintOptions: SelectOption[] = [
-                        { value: '', label: 'none' },
+                        { value: '', label: t('policyManagement.editor.ruleForm.constraintNone') },
                         ...editorData.availableConstraints.map((constraint) => ({
                           value: constraint,
                           label: constraint,
@@ -1148,38 +1179,43 @@ export default function PolicyManagement() {
                         is_inactive: board.is_inactive,
                       }));
                       const editingExistingRule = Boolean(draft.ruleId);
-                      const ruleCountLabel = `${sectionRules.length} ${editorHasPublishableDraft ? 'draft' : 'published'} rule(s)`;
-                      const emptyRulesLabel = `No ${editorHasPublishableDraft ? 'draft' : 'published'} rules yet for ${section.label.toLowerCase()}.`;
+                      const revisionTypeLabel = editorHasPublishableDraft
+                        ? t('policyManagement.editor.revisionType.draft')
+                        : t('policyManagement.editor.revisionType.published');
+                      const ruleCountLabel = t('policyManagement.editor.ruleCount', { count: sectionRules.length, revisionType: revisionTypeLabel });
+                      const emptyRulesLabel = t('policyManagement.editor.emptyRules', { revisionType: revisionTypeLabel, resource: sectionLabel.toLowerCase() });
                       const ruleFormTitle = editorHasPublishableDraft
                         ? editingExistingRule
-                          ? 'Edit Draft Rule'
-                          : 'Add Draft Rule'
+                          ? t('policyManagement.editor.ruleForm.editDraftTitle')
+                          : t('policyManagement.editor.ruleForm.addDraftTitle')
                         : editingExistingRule
-                          ? 'Edit Published Rule as Draft'
-                          : 'Create Draft Rule';
+                          ? t('policyManagement.editor.ruleForm.editPublishedTitle')
+                          : t('policyManagement.editor.ruleForm.createDraftTitle');
                       const ruleFormHelper = !editorHasPublishableDraft
                         ? editingExistingRule
-                          ? 'Saving will create a new draft revision with your changes to this published rule.'
-                          : 'Saving will create a new draft revision for this bundle.'
+                          ? t('policyManagement.editor.ruleForm.helperEditPublished')
+                          : t('policyManagement.editor.ruleForm.helperCreateDraft')
                         : null;
                       const saveRuleLabel = editorHasPublishableDraft
                         ? editingExistingRule
-                          ? 'Save Draft Rule'
-                          : 'Add Draft Rule'
+                          ? t('policyManagement.editor.ruleForm.saveDraftRule')
+                          : t('policyManagement.editor.ruleForm.addDraftRule')
                         : editingExistingRule
-                          ? 'Save as Draft Change'
-                          : 'Create Draft Rule';
-                      const removeRuleLabel = editorHasPublishableDraft ? 'Remove' : 'Remove as Draft Change';
+                          ? t('policyManagement.editor.ruleForm.saveAsDraftChange')
+                          : t('policyManagement.editor.ruleForm.createDraftRule');
+                      const removeRuleLabel = editorHasPublishableDraft
+                        ? t('policyManagement.editor.rule.remove')
+                        : t('policyManagement.editor.rule.removeAsDraft');
                       const removeRuleTitle = editorHasPublishableDraft
-                        ? 'Remove this draft rule.'
-                        : 'Create a new draft revision that removes this published rule.';
+                        ? t('policyManagement.editor.rule.removeDraftTooltip')
+                        : t('policyManagement.editor.rule.removePublishedTooltip');
 
                       return (
                         <Card key={section.resourceType} className="border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] shadow-sm">
                           <CardHeader className="gap-3 border-b border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] pb-5">
                             <div className="flex items-center justify-between gap-2">
                               <div>
-                                <CardTitle className="text-base">{section.label}</CardTitle>
+                                <CardTitle className="text-base">{sectionLabel}</CardTitle>
                                 <CardDescription className="mt-1">{emptyRulesLabel}</CardDescription>
                               </div>
                               <Badge variant="outline">{ruleCountLabel}</Badge>
@@ -1211,7 +1247,7 @@ export default function PolicyManagement() {
                                         </div>
                                         {rule.selectedClientIds.length > 0 ? (
                                           <div className="space-y-1">
-                                            <div className="text-xs font-medium text-[rgb(var(--color-text-500))]">Selected client scopes</div>
+                                            <div className="text-xs font-medium text-[rgb(var(--color-text-500))]">{t('policyManagement.editor.rule.selectedClientScopes')}</div>
                                             <div className="flex flex-wrap gap-2">
                                               {renderNamedIds(rule.selectedClientIds, 'client').map((clientName) => (
                                                 <span key={clientName} className="rounded-full border border-[rgb(var(--color-primary-200))] bg-[rgb(var(--color-primary-50))] px-3 py-1 text-xs text-[rgb(var(--color-primary-700))] dark:bg-[rgb(var(--color-primary-400)/0.18)]">
@@ -1223,7 +1259,7 @@ export default function PolicyManagement() {
                                         ) : null}
                                         {rule.selectedBoardIds.length > 0 ? (
                                           <div className="space-y-1">
-                                            <div className="text-xs font-medium text-[rgb(var(--color-text-500))]">Selected board scopes</div>
+                                            <div className="text-xs font-medium text-[rgb(var(--color-text-500))]">{t('policyManagement.editor.rule.selectedBoardScopes')}</div>
                                             <div className="flex flex-wrap gap-2">
                                               {renderNamedIds(rule.selectedBoardIds, 'board').map((boardName) => (
                                                 <span key={boardName} className="rounded-full border border-[rgb(var(--color-primary-200))] bg-[rgb(var(--color-primary-50))] px-3 py-1 text-xs text-[rgb(var(--color-primary-700))] dark:bg-[rgb(var(--color-primary-400)/0.18)]">
@@ -1235,7 +1271,7 @@ export default function PolicyManagement() {
                                         ) : null}
                                         {rule.redactedFields.length > 0 ? (
                                           <div className="space-y-1">
-                                            <div className="text-xs font-medium text-[rgb(var(--color-text-500))]">Redacted fields</div>
+                                            <div className="text-xs font-medium text-[rgb(var(--color-text-500))]">{t('policyManagement.editor.rule.redactedFields')}</div>
                                             <div className="flex flex-wrap gap-2">
                                               {rule.redactedFields.map((field) => (
                                                 <span key={field} className="rounded-full border border-[rgb(var(--color-accent-200))] bg-[rgb(var(--color-accent-50))] px-3 py-1 text-xs text-[rgb(var(--color-accent-700))]">
@@ -1253,7 +1289,7 @@ export default function PolicyManagement() {
                                           variant="outline"
                                           onClick={() => handleEditRule(section.resourceType, rule)}
                                         >
-                                          Edit
+                                          {t('policyManagement.editor.rule.edit')}
                                         </Button>
                                         <Button
                                           id={`authorization-bundle-delete-rule-${rule.ruleId}`}
@@ -1285,13 +1321,13 @@ export default function PolicyManagement() {
                                   variant="outline"
                                   onClick={() => resetRuleDraft(section.resourceType)}
                                 >
-                                  Reset
+                                  {t('policyManagement.editor.ruleForm.reset')}
                                 </Button>
                               </div>
 
                               <div className="grid gap-3 md:grid-cols-3">
                                 <label className="text-sm">
-                                  <div className="mb-1 text-muted-foreground">Action</div>
+                                  <div className="mb-1 text-muted-foreground">{t('policyManagement.editor.ruleForm.action')}</div>
                                   <CustomSelect
                                     id={`authorization-bundle-rule-action-${section.resourceType}`}
                                     options={actionOptions}
@@ -1301,7 +1337,7 @@ export default function PolicyManagement() {
                                 </label>
 
                                 <label className="text-sm">
-                                  <div className="mb-1 text-muted-foreground">Template</div>
+                                  <div className="mb-1 text-muted-foreground">{t('policyManagement.editor.ruleForm.template')}</div>
                                   <CustomSelect
                                     id={`authorization-bundle-rule-template-${section.resourceType}`}
                                     options={templateOptions}
@@ -1311,7 +1347,7 @@ export default function PolicyManagement() {
                                 </label>
 
                                 <label className="text-sm">
-                                  <div className="mb-1 text-muted-foreground">Constraint (optional)</div>
+                                  <div className="mb-1 text-muted-foreground">{t('policyManagement.editor.ruleForm.constraint')}</div>
                                   <CustomSelect
                                     id={`authorization-bundle-rule-constraint-${section.resourceType}`}
                                     options={constraintOptions}
@@ -1323,14 +1359,14 @@ export default function PolicyManagement() {
 
                               {draft.templateKey === 'selected_clients' ? (
                                 <div className="space-y-3 rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-5 dark:bg-[rgb(var(--color-border-50))]">
-                                  <div className="text-sm font-medium">Selected client scopes</div>
+                                  <div className="text-sm font-medium">{t('policyManagement.editor.scopes.clientTitle')}</div>
                                   <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
                                     <CustomSelect
                                       id={`authorization-bundle-rule-client-scope-${section.resourceType}`}
                                       options={clientOptions}
                                       value={draft.pendingClientId}
                                       onValueChange={(value) => updateRuleDraft(section.resourceType, { pendingClientId: value })}
-                                      placeholder="Select client"
+                                      placeholder={t('policyManagement.editor.scopes.selectClient')}
                                     />
                                     <Button
                                       id={`authorization-bundle-add-client-scope-${section.resourceType}`}
@@ -1346,12 +1382,12 @@ export default function PolicyManagement() {
                                         });
                                       }}
                                     >
-                                      Add client scope
+                                      {t('policyManagement.editor.scopes.addClientScope')}
                                     </Button>
                                   </div>
                                   <div className="flex flex-wrap gap-2">
                                     {draft.selectedClientIds.length === 0 ? (
-                                      <span className="text-xs text-muted-foreground">No client scopes added yet.</span>
+                                      <span className="text-xs text-muted-foreground">{t('policyManagement.editor.scopes.noClientScopes')}</span>
                                     ) : (
                                       draft.selectedClientIds.map((clientId) => (
                                         <div
@@ -1369,7 +1405,7 @@ export default function PolicyManagement() {
                                               })
                                             }
                                           >
-                                            Remove
+                                            {t('policyManagement.editor.scopes.remove')}
                                           </button>
                                         </div>
                                       ))
@@ -1380,14 +1416,14 @@ export default function PolicyManagement() {
 
                               {draft.templateKey === 'selected_boards' ? (
                                 <div className="space-y-3 rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-5 dark:bg-[rgb(var(--color-border-50))]">
-                                  <div className="text-sm font-medium">Selected board scopes</div>
+                                  <div className="text-sm font-medium">{t('policyManagement.editor.scopes.boardTitle')}</div>
                                   <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
                                     <CustomSelect
                                       id={`authorization-bundle-rule-board-scope-${section.resourceType}`}
                                       options={boardOptions}
                                       value={draft.pendingBoardId}
                                       onValueChange={(value) => updateRuleDraft(section.resourceType, { pendingBoardId: value })}
-                                      placeholder="Select board"
+                                      placeholder={t('policyManagement.editor.scopes.selectBoard')}
                                     />
                                     <Button
                                       id={`authorization-bundle-add-board-scope-${section.resourceType}`}
@@ -1403,12 +1439,12 @@ export default function PolicyManagement() {
                                         });
                                       }}
                                     >
-                                      Add board scope
+                                      {t('policyManagement.editor.scopes.addBoardScope')}
                                     </Button>
                                   </div>
                                   <div className="flex flex-wrap gap-2">
                                     {draft.selectedBoardIds.length === 0 ? (
-                                      <span className="text-xs text-muted-foreground">No board scopes added yet.</span>
+                                      <span className="text-xs text-muted-foreground">{t('policyManagement.editor.scopes.noBoardScopes')}</span>
                                     ) : (
                                       draft.selectedBoardIds.map((boardId) => (
                                         <div
@@ -1426,7 +1462,7 @@ export default function PolicyManagement() {
                                               })
                                             }
                                           >
-                                            Remove
+                                            {t('policyManagement.editor.scopes.remove')}
                                           </button>
                                         </div>
                                       ))
@@ -1437,10 +1473,10 @@ export default function PolicyManagement() {
 
                               {draft.constraintKey === 'hide_sensitive_fields' ? (
                                 <label className="block text-sm">
-                                  <div className="mb-1 text-muted-foreground">Redacted fields</div>
+                                  <div className="mb-1 text-muted-foreground">{t('policyManagement.editor.redaction.label')}</div>
                                   <Input
                                     id={`authorization-bundle-rule-redacted-fields-${section.resourceType}`}
-                                    placeholder="internal_cost, margin"
+                                    placeholder={t('policyManagement.editor.redaction.placeholder')}
                                     value={draft.redactedFieldsInput}
                                     onChange={(event) =>
                                       updateRuleDraft(section.resourceType, {
@@ -1449,7 +1485,7 @@ export default function PolicyManagement() {
                                     }
                                   />
                                   <div className="mt-1 text-xs text-muted-foreground">
-                                    Comma-separated field names to redact when this rule allows access.
+                                    {t('policyManagement.editor.redaction.helper')}
                                   </div>
                                 </label>
                               ) : null}
@@ -1477,18 +1513,18 @@ export default function PolicyManagement() {
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-sm font-medium text-[rgb(var(--color-text-900))]">
                   <Users className="h-4 w-4 text-[rgb(var(--color-primary-600))]" />
-                  Assignment manager
+                  {t('policyManagement.assignments.header')}
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  View and manage role, team, user, and API-key targets currently affected by this bundle.
+                  {t('policyManagement.assignments.description')}
                 </p>
 
                 {assignmentLoading || !assignmentData ? (
-                  <div className="text-sm text-muted-foreground">Loading assignments...</div>
+                  <div className="text-sm text-muted-foreground">{t('policyManagement.assignments.loading')}</div>
                 ) : (
                   <>
                     <div className="rounded-2xl border border-dashed border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-card))] p-5">
-                      <div className="mb-3 text-sm font-medium text-[rgb(var(--color-text-900))]">Add assignment</div>
+                      <div className="mb-3 text-sm font-medium text-[rgb(var(--color-text-900))]">{t('policyManagement.assignments.addAssignment')}</div>
                       <div className="grid gap-3 md:grid-cols-[180px_minmax(0,1fr)_auto]">
                         <CustomSelect
                           id="authorization-bundle-assignment-target-type"
@@ -1504,7 +1540,7 @@ export default function PolicyManagement() {
                           }))}
                           value={assignmentTargetId}
                           onValueChange={setAssignmentTargetId}
-                          placeholder={`Select ${TARGET_TYPE_LABELS[assignmentTargetType].toLowerCase()}`}
+                          placeholder={t('policyManagement.assignments.selectTargetPlaceholder', { target: t(TARGET_TYPE_LABEL_KEYS[assignmentTargetType]).toLowerCase() })}
                           disabled={assignmentTargetOptions.length === 0}
                         />
                         <Button
@@ -1513,33 +1549,37 @@ export default function PolicyManagement() {
                           onClick={() => void handleCreateAssignment()}
                           disabled={assignmentSaving || !assignmentTargetId}
                         >
-                          {assignmentSaving ? 'Adding...' : 'Add Assignment'}
+                          {assignmentSaving ? t('policyManagement.assignments.adding') : t('policyManagement.assignments.addButton')}
                         </Button>
                       </div>
                     </div>
 
                     {assignmentData.assignments.length === 0 ? (
                       <div className="rounded-xl border border-dashed border-[rgb(var(--color-border-300))] px-4 py-6 text-sm text-muted-foreground">
-                        No assignments for this bundle yet.
+                        {t('policyManagement.assignments.empty')}
                       </div>
                     ) : (
                       <div className="grid gap-4 lg:grid-cols-2">
                         {ASSIGNMENT_TARGET_TYPES.map((targetType) => {
                           const rows = groupedAssignments.get(targetType) ?? [];
+                          const targetLabel = t(TARGET_TYPE_LABEL_KEYS[targetType]);
                           return (
                             <Card key={targetType} className="border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))]">
                               <CardHeader className="gap-2 border-b border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] pb-5">
                                 <div className="flex items-center justify-between gap-2">
-                                  <CardTitle className="text-base">{TARGET_TYPE_LABELS[targetType]}</CardTitle>
+                                  <CardTitle className="text-base">{targetLabel}</CardTitle>
                                   <Badge variant="outline">{rows.length}</Badge>
                                 </div>
                               </CardHeader>
                               <CardContent className="space-y-3 p-4">
                                 {rows.length === 0 ? (
-                                  <div className="text-sm text-muted-foreground">No {TARGET_TYPE_LABELS[targetType].toLowerCase()} assignments.</div>
+                                  <div className="text-sm text-muted-foreground">{t('policyManagement.assignments.groupEmpty', { target: targetLabel.toLowerCase() })}</div>
                                 ) : (
                                   rows.map((assignment) => {
                                     const nextStatus = assignment.status === 'active' ? 'disabled' : 'active';
+                                    const statusLabel = assignment.status === 'active'
+                                      ? t('policyManagement.assignments.statusLabels.active')
+                                      : t('policyManagement.assignments.statusLabels.disabled');
                                     return (
                                       <div key={assignment.assignmentId} className="rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-5 dark:bg-[rgb(var(--color-border-50))]">
                                         <div className="flex items-start justify-between gap-3">
@@ -1548,7 +1588,7 @@ export default function PolicyManagement() {
                                             <div className="text-xs text-muted-foreground">{assignment.targetId}</div>
                                           </div>
                                           <Badge variant={assignment.status === 'active' ? 'default' : 'secondary'}>
-                                            {assignment.status}
+                                            {statusLabel}
                                           </Badge>
                                         </div>
                                         <div className="mt-3 flex justify-end">
@@ -1560,10 +1600,10 @@ export default function PolicyManagement() {
                                             onClick={() => void handleSetAssignmentStatus(assignment.assignmentId, nextStatus)}
                                           >
                                             {assignmentStatusBusyId === assignment.assignmentId
-                                              ? 'Saving...'
+                                              ? t('policyManagement.assignments.statusActions.saving')
                                               : nextStatus === 'disabled'
-                                                ? 'Disable'
-                                                : 'Enable'}
+                                                ? t('policyManagement.assignments.statusActions.disable')
+                                                : t('policyManagement.assignments.statusActions.enable')}
                                           </Button>
                                         </div>
                                       </div>
@@ -1585,21 +1625,21 @@ export default function PolicyManagement() {
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-sm font-medium text-[rgb(var(--color-text-900))]">
                   <FlaskConical className="h-4 w-4 text-[rgb(var(--color-primary-600))]" />
-                  Access simulator
+                  {t('policyManagement.simulator.header')}
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Simulate draft vs published bundle behavior against a real principal and existing record.
+                  {t('policyManagement.simulator.description')}
                 </p>
 
                 <div className="grid gap-4 lg:grid-cols-2">
                   <div className="space-y-5 rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-5 lg:p-6">
-                    <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">Simulation input</div>
+                    <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">{t('policyManagement.simulator.inputTitle')}</div>
                     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                       <label className="text-sm">
-                        <div className="mb-1 text-muted-foreground">Resource</div>
+                        <div className="mb-1 text-muted-foreground">{t('policyManagement.simulator.resource')}</div>
                         <CustomSelect
                           id="authorization-bundle-simulator-resource"
-                          options={RESOURCE_SECTIONS.map((section) => ({ value: section.resourceType, label: section.label }))}
+                          options={RESOURCE_SECTIONS.map((section) => ({ value: section.resourceType, label: t(section.labelKey) }))}
                           value={simulatorResourceType}
                           onValueChange={(value) => {
                             setSimulatorResourceType(value);
@@ -1610,7 +1650,7 @@ export default function PolicyManagement() {
                       </label>
 
                       <label className="text-sm">
-                        <div className="mb-1 text-muted-foreground">Action</div>
+                        <div className="mb-1 text-muted-foreground">{t('policyManagement.simulator.action')}</div>
                         <CustomSelect
                           id="authorization-bundle-simulator-action"
                           options={actionOptions}
@@ -1620,7 +1660,7 @@ export default function PolicyManagement() {
                       </label>
 
                       <label className="text-sm">
-                        <div className="mb-1 text-muted-foreground">Principal</div>
+                        <div className="mb-1 text-muted-foreground">{t('policyManagement.simulator.principal')}</div>
                         <CustomSelect
                           id="authorization-bundle-simulator-principal"
                           options={principalOptions.map((option) => ({ value: option.id, label: option.label }))}
@@ -1630,7 +1670,7 @@ export default function PolicyManagement() {
                       </label>
 
                       <label className="text-sm">
-                        <div className="mb-1 text-muted-foreground">Record</div>
+                        <div className="mb-1 text-muted-foreground">{t('policyManagement.simulator.record')}</div>
                         <CustomSelect
                           id="authorization-bundle-simulator-record"
                           options={recordOptions.map((option) => ({ value: option.id, label: option.label }))}
@@ -1646,25 +1686,25 @@ export default function PolicyManagement() {
                         id="authorization-bundle-simulator-use-synthetic"
                         checked={useSyntheticRecord}
                         onCheckedChange={setUseSyntheticRecord}
-                        label="Use synthetic record scenario"
+                        label={t('policyManagement.simulator.useSynthetic')}
                       />
                       {useSyntheticRecord ? (
                         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                           <Input
                             id="authorization-bundle-simulator-synthetic-owner"
-                            placeholder="Owner user ID (optional)"
+                            placeholder={t('policyManagement.simulator.syntheticOwnerPlaceholder')}
                             value={syntheticOwnerUserId}
                             onChange={(event) => setSyntheticOwnerUserId(event.target.value)}
                           />
                           <Input
                             id="authorization-bundle-simulator-synthetic-client"
-                            placeholder="Client ID (optional)"
+                            placeholder={t('policyManagement.simulator.syntheticClientPlaceholder')}
                             value={syntheticClientId}
                             onChange={(event) => setSyntheticClientId(event.target.value)}
                           />
                           <Input
                             id="authorization-bundle-simulator-synthetic-board"
-                            placeholder="Board ID (optional)"
+                            placeholder={t('policyManagement.simulator.syntheticBoardPlaceholder')}
                             value={syntheticBoardId}
                             onChange={(event) => setSyntheticBoardId(event.target.value)}
                           />
@@ -1672,7 +1712,7 @@ export default function PolicyManagement() {
                             id="authorization-bundle-simulator-synthetic-client-visible"
                             checked={syntheticClientVisible}
                             onCheckedChange={setSyntheticClientVisible}
-                            label="Client visible"
+                            label={t('policyManagement.simulator.clientVisible')}
                           />
                         </div>
                       ) : null}
@@ -1685,20 +1725,20 @@ export default function PolicyManagement() {
                         onClick={() => void handleRunSimulation()}
                         disabled={simulatorLoading}
                       >
-                        {simulatorLoading ? 'Running simulation...' : 'Run simulation'}
+                        {simulatorLoading ? t('policyManagement.simulator.running') : t('policyManagement.simulator.run')}
                       </Button>
                     </div>
                   </div>
 
                   <div className="space-y-5 rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-5 lg:p-6">
-                    <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">Simulation result</div>
+                    <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">{t('policyManagement.simulator.resultTitle')}</div>
                     {simulationResult ? (
                       <div className="grid gap-3 md:grid-cols-2">
                         <div className="space-y-4 rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-5 dark:bg-[rgb(var(--color-border-50))]">
                           <div className="flex items-center justify-between gap-2">
-                            <h4 className="font-medium text-[rgb(var(--color-text-900))]">Draft revision</h4>
+                            <h4 className="font-medium text-[rgb(var(--color-text-900))]">{t('policyManagement.simulator.draftRevision')}</h4>
                             <Badge variant={simulationResult.draft.allowed ? 'default' : 'error'}>
-                              {simulationResult.draft.allowed ? 'Allowed' : 'Denied'}
+                              {simulationResult.draft.allowed ? t('policyManagement.simulator.allowed') : t('policyManagement.simulator.denied')}
                             </Badge>
                           </div>
                           <div className="space-y-1 text-xs text-muted-foreground">
@@ -1709,9 +1749,9 @@ export default function PolicyManagement() {
                         </div>
                         <div className="space-y-4 rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-5 dark:bg-[rgb(var(--color-border-50))]">
                           <div className="flex items-center justify-between gap-2">
-                            <h4 className="font-medium text-[rgb(var(--color-text-900))]">Published revision</h4>
+                            <h4 className="font-medium text-[rgb(var(--color-text-900))]">{t('policyManagement.simulator.publishedRevision')}</h4>
                             <Badge variant={simulationResult.published.allowed ? 'default' : 'error'}>
-                              {simulationResult.published.allowed ? 'Allowed' : 'Denied'}
+                              {simulationResult.published.allowed ? t('policyManagement.simulator.allowed') : t('policyManagement.simulator.denied')}
                             </Badge>
                           </div>
                           <div className="space-y-1 text-xs text-muted-foreground">
@@ -1723,7 +1763,7 @@ export default function PolicyManagement() {
                       </div>
                     ) : (
                       <div className="rounded-xl border border-dashed border-[rgb(var(--color-border-300))] px-4 py-8 text-sm text-muted-foreground">
-                        Run a simulation to compare draft and published behavior.
+                        {t('policyManagement.simulator.empty')}
                       </div>
                     )}
                   </div>
@@ -1738,7 +1778,7 @@ export default function PolicyManagement() {
         id="authorization-bundle-create-dialog"
         isOpen={isCreateDialogOpen}
         onClose={() => setIsCreateDialogOpen(false)}
-        title="Create Authorization Bundle"
+        title={t('policyManagement.createDialog.title')}
         className="max-w-lg"
         footer={(
           <div className="flex justify-end gap-2">
@@ -1748,14 +1788,14 @@ export default function PolicyManagement() {
               onClick={() => setIsCreateDialogOpen(false)}
               disabled={creatingBundle}
             >
-              Cancel
+              {t('policyManagement.createDialog.cancel')}
             </Button>
             <Button
               id="authorization-bundle-create-confirm"
               onClick={() => void handleCreateBundle()}
               disabled={creatingBundle}
             >
-              {creatingBundle ? 'Creating...' : 'Create Bundle'}
+              {creatingBundle ? t('policyManagement.createDialog.creating') : t('policyManagement.createDialog.create')}
             </Button>
           </div>
         )}
@@ -1763,21 +1803,21 @@ export default function PolicyManagement() {
         <DialogContent>
           <div className="space-y-4">
             <label className="block text-sm">
-              <div className="mb-1 text-muted-foreground">Name</div>
+              <div className="mb-1 text-muted-foreground">{t('policyManagement.createDialog.nameLabel')}</div>
               <Input
                 id="authorization-bundle-create-name"
                 value={newBundleName}
                 onChange={(event) => setNewBundleName(event.target.value)}
-                placeholder="Finance Reviewer West"
+                placeholder={t('policyManagement.createDialog.namePlaceholder')}
               />
             </label>
             <label className="block text-sm">
-              <div className="mb-1 text-muted-foreground">Description</div>
+              <div className="mb-1 text-muted-foreground">{t('policyManagement.createDialog.descriptionLabel')}</div>
               <TextArea
                 id="authorization-bundle-create-description"
                 value={newBundleDescription}
                 onChange={(event) => setNewBundleDescription(event.target.value)}
-                placeholder="Reusable narrowing bundle for a specific team, client group, or workflow."
+                placeholder={t('policyManagement.createDialog.descriptionPlaceholder')}
                 rows={4}
               />
             </label>

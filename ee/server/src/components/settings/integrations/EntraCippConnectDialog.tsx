@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { connectEntraCipp, validateEntraCippConnection } from '@alga-psa/integrations/actions';
 
 interface EntraCippConnectDialogProps {
@@ -18,6 +19,7 @@ export function EntraCippConnectDialog({
     onOpenChange,
     onSuccess,
 }: EntraCippConnectDialogProps) {
+    const { t } = useTranslation('msp/integrations');
     const [baseUrl, setBaseUrl] = React.useState('');
     const [apiToken, setApiToken] = React.useState('');
     const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -26,7 +28,7 @@ export function EntraCippConnectDialog({
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!baseUrl || !apiToken) {
-            setError('Both Base URL and API Token are required.');
+            setError(t('integrations.entra.cippDialog.errors.missingFields'));
             return;
         }
 
@@ -49,7 +51,7 @@ export function EntraCippConnectDialog({
             onSuccess();
             onOpenChange(false);
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+            setError(err instanceof Error ? err.message : t('integrations.entra.cippDialog.errors.unknown'));
         } finally {
             setIsSubmitting(false);
         }
@@ -64,7 +66,7 @@ export function EntraCippConnectDialog({
                 onClick={() => onOpenChange(false)}
                 disabled={isSubmitting}
             >
-                Cancel
+                {t('integrations.entra.cippDialog.actions.cancel')}
             </Button>
             <Button
                 id="entra-cipp-submit"
@@ -72,7 +74,7 @@ export function EntraCippConnectDialog({
                 onClick={() => (document.getElementById('entra-cipp-form') as HTMLFormElement | null)?.requestSubmit()}
                 disabled={isSubmitting}
             >
-                {isSubmitting ? 'Connecting...' : 'Connect'}
+                {isSubmitting ? t('integrations.entra.cippDialog.actions.connecting') : t('integrations.entra.cippDialog.actions.connect')}
             </Button>
         </div>
     );
@@ -86,18 +88,18 @@ export function EntraCippConnectDialog({
         >
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Connect CIPP</DialogTitle>
+                    <DialogTitle>{t('integrations.entra.cippDialog.title')}</DialogTitle>
                     <DialogDescription>
-                        Enter your CIPP instance URL and an API token to allow Alga to discover and sync Entra data.
+                        {t('integrations.entra.cippDialog.description')}
                     </DialogDescription>
                 </DialogHeader>
 
                 <form id="entra-cipp-form" onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
-                        <Label htmlFor="entra-cipp-baseurl">CIPP Base URL</Label>
+                        <Label htmlFor="entra-cipp-baseurl">{t('integrations.entra.cippDialog.fields.baseUrl')}</Label>
                         <Input
                             id="entra-cipp-baseurl"
-                            placeholder="https://cipp.yourdomain.com"
+                            placeholder={t('integrations.entra.cippDialog.fields.baseUrlPlaceholder')}
                             value={baseUrl}
                             onChange={(e) => setBaseUrl(e.target.value)}
                             disabled={isSubmitting}
@@ -105,11 +107,11 @@ export function EntraCippConnectDialog({
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="entra-cipp-apitoken">API Token</Label>
+                        <Label htmlFor="entra-cipp-apitoken">{t('integrations.entra.cippDialog.fields.apiToken')}</Label>
                         <Input
                             id="entra-cipp-apitoken"
                             type="password"
-                            placeholder="Enter token..."
+                            placeholder={t('integrations.entra.cippDialog.fields.apiTokenPlaceholder')}
                             value={apiToken}
                             onChange={(e) => setApiToken(e.target.value)}
                             disabled={isSubmitting}

@@ -345,6 +345,322 @@
         }
       }
     },
+    "entra": {
+      "settings": {
+        "actions": {
+          "disconnect": "11111",
+          "reconnect": "11111",
+          "reconnecting": "11111",
+          "refresh": "11111",
+          "resetFieldSync": "11111",
+          "reviewMappings": "11111",
+          "reviewRemap": "11111",
+          "hideReviewRemap": "11111",
+          "runDiscovery": "11111",
+          "runDiscoveryAgain": "11111",
+          "runDiscoveryRunning": "11111",
+          "runInitialSync": "11111",
+          "runInitialSyncRunning": "11111",
+          "saveFieldSync": "11111",
+          "savingFieldSync": "11111",
+          "syncAll": "11111",
+          "syncAllStarting": "11111"
+        },
+        "badges": {
+          "enterprise": "11111",
+          "reviewBeforeInitialSync": "11111"
+        },
+        "connection": {
+          "connectingSuffix": "11111",
+          "details": "11111",
+          "directCredentialSourceLabel": "11111",
+          "directTenantDefault": "11111",
+          "directTenantLabel": "11111",
+          "cippServerLabel": "11111",
+          "notAvailable": "11111",
+          "notConfigured": "11111",
+          "notConnectedStatus": "11111",
+          "optionsTitle": "11111",
+          "promptDetails": "11111"
+        },
+        "currentStep": {
+          "connect": {
+            "guidance": "11111",
+            "title": "11111"
+          },
+          "connectionsBelow": "11111",
+          "discover": {
+            "guidance": "11111",
+            "title": "11111"
+          },
+          "label": "11111",
+          "map": {
+            "guidance": "11111",
+            "title": "11111"
+          },
+          "sync": {
+            "guidance": "11111",
+            "title": "11111"
+          }
+        },
+        "description": "11111",
+        "disabled": {
+          "description": "11111",
+          "title": "11111"
+        },
+        "discovery": {
+          "completed": "11111 {{count}} 11111",
+          "completedOne": "11111 {{count}} 11111",
+          "failed": "11111"
+        },
+        "errors": {
+          "loadStatus": "11111",
+          "unknown": "11111"
+        },
+        "fieldSync": {
+          "description": "11111",
+          "feedback": {
+            "saveFailed": "11111",
+            "saved": "11111"
+          },
+          "options": {
+            "displayName": {
+              "description": "11111",
+              "label": "11111"
+            },
+            "email": {
+              "description": "11111",
+              "label": "11111"
+            },
+            "phone": {
+              "description": "11111",
+              "label": "11111"
+            },
+            "role": {
+              "description": "11111",
+              "label": "11111"
+            },
+            "upn": {
+              "description": "11111",
+              "label": "11111"
+            }
+          },
+          "title": "11111"
+        },
+        "guidedStep": {
+          "current": "11111",
+          "complete": "11111",
+          "locked": "11111",
+          "stepLabel": "11111 {{number}} 11111",
+          "thisIsCurrent": "11111"
+        },
+        "initialSync": {
+          "failed": "11111",
+          "started": "11111 {{runId}} 11111",
+          "startedNoId": "11111"
+        },
+        "maintenance": {
+          "description": "11111",
+          "healthDescription": "11111",
+          "healthTitle": "11111",
+          "title": "11111"
+        },
+        "mapping": {
+          "description": "11111",
+          "needsReviewLabel": "11111",
+          "savedLabel": "11111",
+          "selectedLabel": "11111",
+          "skippedLabel": "11111",
+          "stepLabel": "11111",
+          "title": "11111"
+        },
+        "onboarding": {
+          "description": "11111",
+          "title": "11111"
+        },
+        "ongoing": {
+          "description": "11111",
+          "title": "11111"
+        },
+        "overview": {
+          "connectionLabel": "11111",
+          "connectionTypeLabel": "11111",
+          "label": "11111",
+          "mappedTenantsLabel": "11111",
+          "nextSyncIntervalEvery": "11111 {{minutes}} 11111",
+          "nextSyncIntervalLabel": "11111"
+        },
+        "skipped": {
+          "empty": "11111",
+          "noPrimaryDomain": "11111",
+          "remap": "11111",
+          "title": "11111"
+        },
+        "status": {
+          "connectionHealth": "11111",
+          "label": "11111"
+        },
+        "syncAll": {
+          "failed": "11111",
+          "started": "11111 {{runId}} 11111",
+          "startedNoId": "11111"
+        },
+        "title": "11111",
+        "validation": {
+          "label": "11111",
+          "lastDiscoveryLabel": "11111",
+          "lastValidatedLabel": "11111",
+          "neverFormatted": "11111",
+          "noneValidationError": "11111",
+          "validationErrorLabel": "11111"
+        },
+        "wizard": {
+          "connect": {
+            "description": "11111",
+            "title": "11111"
+          },
+          "discover": {
+            "description": "11111",
+            "title": "11111"
+          },
+          "map": {
+            "description": "11111",
+            "title": "11111"
+          },
+          "sync": {
+            "description": "11111",
+            "title": "11111"
+          }
+        }
+      },
+      "tenantMapping": {
+        "actions": {
+          "confirmSelected": "11111",
+          "confirming": "11111",
+          "import": "11111",
+          "importing": "11111",
+          "preselectExact": "11111",
+          "refresh": "11111",
+          "skip": "11111",
+          "skipped": "11111"
+        },
+        "columns": {
+          "actions": "11111",
+          "confidence": "11111",
+          "entraTenant": "11111",
+          "primaryDomain": "11111",
+          "selectClient": "11111",
+          "status": "11111",
+          "suggestedClient": "11111"
+        },
+        "empty": "11111",
+        "errors": {
+          "confirmFailed": "11111",
+          "importFailed": "11111",
+          "loadFailed": "11111",
+          "selectAtLeastOne": "11111",
+          "skipFailed": "11111"
+        },
+        "feedback": {
+          "confirmed": "11111 {{count}} 11111",
+          "confirmedOne": "11111 {{count}} 11111"
+        },
+        "noSuggestion": "11111",
+        "picker": {
+          "placeholder": "11111",
+          "unknownClient": "11111"
+        },
+        "reasons": {
+          "exactDomain": "11111",
+          "fuzzyName": "11111",
+          "secondaryDomain": "11111"
+        },
+        "states": {
+          "autoMatched": "11111",
+          "imported": "11111",
+          "needsReview": "11111",
+          "skipped": "11111",
+          "unmatched": "11111"
+        },
+        "title": "11111"
+      },
+      "cippDialog": {
+        "actions": {
+          "cancel": "11111",
+          "connect": "11111",
+          "connecting": "11111"
+        },
+        "description": "11111",
+        "errors": {
+          "missingFields": "11111",
+          "unknown": "11111"
+        },
+        "fields": {
+          "apiToken": "11111",
+          "apiTokenPlaceholder": "11111",
+          "baseUrl": "11111",
+          "baseUrlPlaceholder": "11111"
+        },
+        "title": "11111"
+      },
+      "reconciliation": {
+        "actions": {
+          "refresh": "11111",
+          "resolveExisting": "11111",
+          "resolveNew": "11111"
+        },
+        "candidate": {
+          "fallback": "11111",
+          "label": "11111 {{count}} 11111"
+        },
+        "contactPicker": {
+          "label": "11111",
+          "placeholder": "11111"
+        },
+        "errors": {
+          "enterContactId": "11111",
+          "loadQueue": "11111",
+          "resolveFailed": "11111"
+        },
+        "empty": "11111",
+        "loading": "11111",
+        "noEmailIdentity": "11111",
+        "queuedAt": "11111 {{identity}} 11111 {{time}} 11111",
+        "scopedToMappedClient": "11111",
+        "success": {
+          "resolvedExisting": "11111 {{queueItemId}} 11111 {{contactNameId}} 11111",
+          "resolvedNew": "11111 {{queueItemId}} 11111 {{contactNameId}} 11111"
+        },
+        "title": "11111"
+      },
+      "syncHistory": {
+        "actions": {
+          "hideDetails": "11111",
+          "refresh": "11111",
+          "viewDetails": "11111"
+        },
+        "details": {
+          "noResults": "11111",
+          "stats": "11111 {{created}} 11111 {{linked}} 11111 {{updated}} 11111 {{ambiguous}} 11111 {{inactivated}} 11111",
+          "tenantHeader": "11111 {{tenant}} 11111 {{status}} 11111",
+          "unknownTenant": "11111"
+        },
+        "empty": "11111",
+        "errors": {
+          "loadDetailFailed": "11111",
+          "loadFailed": "11111",
+          "loadRunFailed": "11111 {{runId}} 11111"
+        },
+        "loading": "11111",
+        "run": {
+          "header": "11111 {{runType}} 11111 {{status}} 11111",
+          "inProgress": "11111",
+          "tenants": "11111 {{processed}} 11111 {{total}} 11111 {{success}} 11111 {{failed}} 11111",
+          "timing": "11111 {{started}} 11111 {{completed}} 11111"
+        },
+        "title": "11111"
+      }
+    },
     "google": {
       "settings": {
         "actions": {
@@ -685,6 +1001,26 @@
           "disconnectUnexpected": "11111",
           "orgSyncFailed": "11111",
           "deviceSyncFailed": "11111"
+        },
+        "compliance": {
+          "actions": {
+            "retry": "11111",
+            "syncing": "11111",
+            "syncPatches": "11111",
+            "syncSoftware": "11111"
+          },
+          "description": "11111",
+          "loading": "11111",
+          "metrics": {
+            "devicesOffline": "11111",
+            "devicesOnline": "11111",
+            "devicesWithAlerts": "11111",
+            "patchesFailed": "11111",
+            "patchesPending": "11111"
+          },
+          "noData": "11111",
+          "summaryError": "11111",
+          "title": "11111"
         }
       },
       "setup": {
@@ -834,7 +1170,72 @@
         }
       },
       "tanium": {
-        "loading": "11111"
+        "loading": "11111",
+        "actions": {
+          "discoverScopes": "11111",
+          "disconnect": "11111",
+          "runInventorySync": "11111",
+          "saveConfiguration": "11111",
+          "testConnection": "11111"
+        },
+        "connection": {
+          "connectedAt": "11111 {{time}} 11111",
+          "description": "11111",
+          "never": "11111",
+          "syncLabel": "11111 {{status}} 11111",
+          "syncLabelWithError": "11111 {{status}} 11111 {{error}} 11111",
+          "title": "11111"
+        },
+        "errors": {
+          "loadMappings": "11111",
+          "loadSettings": "11111",
+          "loadState": "11111",
+          "saveConfiguration": "11111",
+          "testConnectionFailed": "11111",
+          "disconnectFailed": "11111",
+          "scopeDiscoveryFailed": "11111",
+          "inventorySyncFailed": "11111",
+          "updateMappingFailed": "11111"
+        },
+        "fields": {
+          "apiToken": "11111 {{state}} 11111",
+          "apiTokenPlaceholderExisting": "11111",
+          "apiTokenPlaceholderNew": "11111",
+          "apiTokenStateRequired": "11111",
+          "apiTokenStateSaved": "11111",
+          "assetApiUrl": "11111",
+          "assetApiUrlPlaceholder": "11111",
+          "assetFallbackLabel": "11111",
+          "gatewayUrl": "11111",
+          "gatewayUrlPlaceholder": "11111"
+        },
+        "mappings": {
+          "autoSync": "11111",
+          "autoSyncDisabled": "11111",
+          "autoSyncEnabled": "11111",
+          "externalScope": "11111",
+          "loading": "11111",
+          "mappedClient": "11111",
+          "noScopes": "11111",
+          "scopeIdLabel": "11111 {{id}} 11111",
+          "unmapped": "11111"
+        },
+        "status": {
+          "connected": "11111",
+          "disconnected": "11111",
+          "label": "11111"
+        },
+        "success": {
+          "configurationSaved": "11111",
+          "connectionTestSucceeded": "11111",
+          "disconnected": "11111",
+          "inventorySyncCompleted": "11111 {{processed}} 11111 {{created}} 11111 {{updated}} 11111",
+          "scopeDiscoveryCompleted": "11111 {{processed}} 11111 {{created}} 11111 {{updated}} 11111"
+        },
+        "sync": {
+          "description": "11111",
+          "title": "11111"
+        }
       }
     },
     "sso": {
@@ -1342,5 +1743,8 @@
         "publishableKeyFormat": "11111"
       }
     }
+  },
+  "ninjaone": {
+    "selectCompany": "11111"
   }
 }

@@ -1114,6 +1114,82 @@
       "saveSettingsFailed": "Impossibile salvare le impostazioni",
       "webhookConfigured": "Webhook configurato con successo!",
       "webhookConfigureFailed": "Impossibile configurare il webhook"
+    },
+    "expiration": {
+      "selectPlaceholder": "Seleziona il tempo di scadenza",
+      "custom": "Personalizzato...",
+      "hoursSingular": "{{count}} ora",
+      "hoursPlural": "{{count}} ore",
+      "daysSingular": "{{count}} giorno",
+      "daysPlural": "{{count}} giorni",
+      "daysDecimal": "{{count}} giorni",
+      "hoursUnit": "ore ({{formatted}})",
+      "willExpireAfter": "I link di pagamento scadranno dopo {{duration}}"
+    },
+    "notConnected": {
+      "title": "Stripe non connesso",
+      "description": "Per configurare le impostazioni di pagamento, devi prima connettere il tuo account Stripe.",
+      "connectButton": "Connetti Stripe"
+    },
+    "settings": {
+      "paymentLinksInEmails": {
+        "label": "Includi link di pagamento nelle email delle fatture",
+        "description": "Aggiungi un pulsante \"Paga ora\" alle email delle fatture"
+      },
+      "paymentConfirmations": {
+        "label": "Invia email di conferma pagamento",
+        "description": "Invia un'email ai clienti quando viene ricevuto il loro pagamento"
+      },
+      "paymentLinkExpiration": {
+        "label": "Scadenza dei link di pagamento",
+        "description": "Per quanto tempo i link di pagamento restano validi prima di scadere"
+      },
+      "actions": {
+        "save": "Salva impostazioni",
+        "saving": "Salvataggio in corso..."
+      }
+    },
+    "stripe": {
+      "cardTitle": "Pagamenti Stripe",
+      "cardDescription": "Accetta pagamenti con carta di credito per le tue fatture",
+      "connectedTitle": "Stripe connesso",
+      "publishableKey": "Chiave pubblicabile: {{key}}...",
+      "testConnection": "Testa connessione",
+      "disconnect": "Disconnetti",
+      "disconnectDialog": {
+        "title": "Disconnetti Stripe",
+        "message": "Vuoi davvero disconnettere Stripe? I link di pagamento non funzioneranno più.",
+        "confirm": "Disconnetti",
+        "cancel": "Annulla"
+      },
+      "webhook": {
+        "label": "Configurazione webhook",
+        "configuredTitle": "Webhook configurati automaticamente",
+        "configuredDescription": "Alga PSA riceverà notifiche di pagamento per:",
+        "failedTitle": "Configurazione webhook non riuscita",
+        "failedDescription": "La configurazione automatica del webhook non è riuscita. Fai clic su Riprova per tentare di nuovo la configurazione.",
+        "configuring": "Configurazione in corso...",
+        "retry": "Riprova configurazione"
+      },
+      "connectForm": {
+        "secretKeyLabel": "Chiave segreta",
+        "secretKeyPlaceholder": "sk_live_... o sk_test_...",
+        "secretKeyHelpPrefix": "La trovi nella tua",
+        "secretKeyHelpLink": "dashboard Stripe → Chiavi API",
+        "publishableKeyLabel": "Chiave pubblicabile",
+        "publishableKeyPlaceholder": "pk_live_... o pk_test_...",
+        "connecting": "Connessione in corso...",
+        "connect": "Connetti Stripe",
+        "cancel": "Annulla"
+      },
+      "empty": {
+        "description": "Connetti il tuo account Stripe per accettare pagamenti online per le fatture",
+        "connectButton": "Connetti Stripe"
+      },
+      "settingsCard": {
+        "title": "Impostazioni di pagamento",
+        "description": "Configura come funzionano i link di pagamento con le tue fatture"
+      }
     }
   }
 }

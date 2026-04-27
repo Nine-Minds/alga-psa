@@ -4,6 +4,7 @@ import ExtensionIframe from '@product/extensions/ee/ExtensionIframe';
 import DockerExtensionIframe from '@product/extensions/ee/DockerExtensionIframe';
 import { getInstallInfo } from '@ee/lib/actions/extensionDomainActions';
 import { buildExtUiSrc } from 'server/src/lib/extensions/assets/url.shared';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -19,14 +20,15 @@ export default async function ExtensionPage({ params }: { params: PageParams | P
   const resolvedParams = await params;
   const id = resolvedParams.id;
   const runnerBackend = (process.env.RUNNER_BACKEND || 'knative').toLowerCase();
-  
+  const { t } = await getServerTranslation(undefined, 'msp/extensions');
+
   let error: string | null = null;
   let info: Awaited<ReturnType<typeof getInstallInfo>> = null;
 
   try {
     info = await getInstallInfo(id);
   } catch (e: unknown) {
-    error = 'Failed to load extension runtime info';
+    error = t('clientPortal.loadError');
   }
 
   if (error) {
@@ -36,8 +38,8 @@ export default async function ExtensionPage({ params }: { params: PageParams | P
   if (!info) {
     return (
       <div className="p-6 space-y-2">
-        <div className="text-gray-800 font-medium">Extension not found.</div>
-        <Link href="/client-portal/dashboard" className="text-primary-600 hover:underline text-sm">Back to Dashboard</Link>
+        <div className="text-gray-800 font-medium">{t('clientPortal.notFoundTitle')}</div>
+        <Link href="/client-portal/dashboard" className="text-primary-600 hover:underline text-sm">{t('clientPortal.backToDashboard')}</Link>
       </div>
     );
   }
@@ -47,8 +49,8 @@ export default async function ExtensionPage({ params }: { params: PageParams | P
     if (!info.content_hash) {
       return (
         <div className="p-6 space-y-2">
-          <div className="text-gray-800 font-medium">Extension bundle not available.</div>
-          <div className="text-gray-600 text-sm">The extension bundle is missing or has not been uploaded.</div>
+          <div className="text-gray-800 font-medium">{t('clientPortal.bundleUnavailableTitle')}</div>
+          <div className="text-gray-600 text-sm">{t('clientPortal.bundleUnavailableDescription')}</div>
         </div>
       );
     }
@@ -75,8 +77,8 @@ export default async function ExtensionPage({ params }: { params: PageParams | P
   if (!info.runner_domain) {
     return (
       <div className="p-6 space-y-2">
-        <div className="text-gray-800 font-medium">Extension runtime domain not available.</div>
-        <div className="text-gray-600 text-sm">Extension domain not provisioned.</div>
+        <div className="text-gray-800 font-medium">{t('clientPortal.runtimeDomainUnavailableTitle')}</div>
+        <div className="text-gray-600 text-sm">{t('clientPortal.runtimeDomainUnavailableDescription')}</div>
       </div>
     );
   }

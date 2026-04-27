@@ -1,8 +1,10 @@
+'use client';
 import React, { useState, useEffect } from 'react';
 import { updateMessageAction } from '../../lib/chat-actions/chatActions';
 import Image from 'next/image';
 import { X } from 'lucide-react';
 import './feedback.css';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type FeedbackProps = {
   messageId: string,
@@ -10,6 +12,7 @@ type FeedbackProps = {
 }
 
 const Feedback: React.FC<FeedbackProps> = ({ messageId, role }) => {
+  const { t } = useTranslation('common');
 
   const [thumbStatus, setThumbStatus] = useState<string | null>(null); // 'up', 'down', or null
   const [feedbackInput, setFeedbackInput] = useState<string | null>(null);
@@ -153,7 +156,7 @@ const Feedback: React.FC<FeedbackProps> = ({ messageId, role }) => {
             <div className="feedback-input-container">
               <textarea
                 onChange={handleFeedbackInputChange}
-                placeholder="Please provide feedback"
+                placeholder={t('feedback.providePlaceholder')}
                 className="feedback-input"
                 rows={4}
                 maxLength={500}

@@ -1,12 +1,14 @@
 import { Card } from '@alga-psa/ui/components/Card';
 import { isTeamsEnterpriseEdition, TEAMS_AVAILABILITY_MESSAGES } from '@alga-psa/integrations/lib/teamsAvailability';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { ReactNode } from 'react';
 
-function renderUnavailableCard(message: string) {
+async function renderUnavailableCard(message: string) {
+  const { t } = await getServerTranslation(undefined, 'common');
   return (
     <Card className="m-6 p-6 text-sm text-gray-700">
       <div className="space-y-2">
-        <h1 className="text-lg font-semibold text-gray-900">Teams sign-in unavailable</h1>
+        <h1 className="text-lg font-semibold text-gray-900">{t('pages.errors.teamsSignInUnavailable')}</h1>
         <p>{message}</p>
       </div>
     </Card>
@@ -21,7 +23,7 @@ let eePagePromise: Promise<EePopupCompleteModule | null> | null = null;
 
 export default async function TeamsTabPopupCompletePage() {
   if (!isTeamsEnterpriseEdition()) {
-    return renderUnavailableCard(TEAMS_AVAILABILITY_MESSAGES.ce_unavailable);
+    return await renderUnavailableCard(TEAMS_AVAILABILITY_MESSAGES.ce_unavailable);
   }
 
   if (!eePagePromise) {
@@ -35,7 +37,7 @@ export default async function TeamsTabPopupCompletePage() {
 
   const eePage = await eePagePromise;
   if (!eePage?.default) {
-    return renderUnavailableCard(TEAMS_AVAILABILITY_MESSAGES.ce_unavailable);
+    return await renderUnavailableCard(TEAMS_AVAILABILITY_MESSAGES.ce_unavailable);
   }
 
   return eePage.default();

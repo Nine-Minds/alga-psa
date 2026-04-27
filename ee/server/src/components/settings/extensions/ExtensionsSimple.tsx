@@ -13,6 +13,7 @@ import ExtensionDetailsModal from './ExtensionDetailsModal';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Define local interface to match UI expectations
 interface ExtensionUI {
@@ -44,6 +45,7 @@ const convertExtensionToUI = (ext: Extension): ExtensionUI => ({
 
 
 export default function Extensions() {
+  const { t } = useTranslation('msp/extensions');
   const [extensions, setExtensions] = useState<ExtensionUI[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,11 +58,11 @@ export default function Extensions() {
     const loadExtensions = async () => {
       try {
         const v2 = await fetchInstalledExtensionsV2();
-        setExtensions(v2.map((r: any) => ({ id: r.id, name: r.name, description: '', version: r.version, author: r.author || 'Unknown', isEnabled: r.is_enabled, createdAt: new Date(), updatedAt: new Date(), tenantId: r.tenant_id })));
+        setExtensions(v2.map((r: any) => ({ id: r.id, name: r.name, description: '', version: r.version, author: r.author || t('simple.unknownAuthor'), isEnabled: r.is_enabled, createdAt: new Date(), updatedAt: new Date(), tenantId: r.tenant_id })));
         setLoading(false);
       } catch (err) {
         console.error('Failed to fetch extensions', err);
-        setError('Failed to load extensions');
+        setError(t('simple.loadFailed'));
         setLoading(false);
       }
     };
@@ -87,7 +89,7 @@ export default function Extensions() {
       console.log(`Extension ${currentStatus ? 'disabled' : 'enabled'}`, { id });
     } catch (err) {
       console.error('Failed to toggle extension', { id, error: err });
-      alert(`Failed to ${currentStatus ? 'disable' : 'enable'} extension`);
+      alert(currentStatus ? t('simple.toggleDisableFailed') : t('simple.toggleEnableFailed'));
     }
   };
   
@@ -116,37 +118,37 @@ export default function Extensions() {
       console.log('Extension removed', { id });
     } catch (err) {
       console.error('Failed to remove extension', { id, error: err });
-      alert('Failed to remove extension');
+      alert(t('simple.removeFailed'));
     }
   };
   
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold text-foreground">Extensions</h2>
+        <h2 className="text-xl font-semibold text-foreground">{t('simple.heading')}</h2>
       </div>
-      
+
       {loading && (
         <div className="flex justify-center items-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
-          <span className="ml-3 text-muted-foreground">Loading extensions...</span>
+          <span className="ml-3 text-muted-foreground">{t('simple.loading')}</span>
         </div>
       )}
-      
+
       {error && !loading && (
         <Alert variant="destructive" className="mb-6">
           <AlertDescription>
-            <h3 className="text-sm font-medium">Error</h3>
+            <h3 className="text-sm font-medium">{t('simple.error')}</h3>
             <p className="text-sm mt-1">{error}</p>
           </AlertDescription>
         </Alert>
       )}
-      
+
       {!loading && !error && extensions.length === 0 && (
         <div className="bg-card border border-border rounded-lg p-8 text-center">
-          <h3 className="text-lg font-medium text-foreground mb-2">No extensions installed</h3>
+          <h3 className="text-lg font-medium text-foreground mb-2">{t('simple.emptyTitle')}</h3>
           <p className="text-muted-foreground mb-4">
-            Install extensions to add new features and functionality to Alga PSA.
+            {t('simple.emptyDescription')}
           </p>
         </div>
       )}
@@ -157,19 +159,19 @@ export default function Extensions() {
             <thead className="bg-muted/50">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Extension
+                  {t('simple.colExtension')}
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Version
+                  {t('simple.colVersion')}
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Author
+                  {t('simple.colAuthor')}
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Status
+                  {t('simple.colStatus')}
                 </th>
                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Actions
+                  {t('simple.colActions')}
                 </th>
               </tr>
             </thead>
@@ -200,7 +202,7 @@ export default function Extensions() {
                     <div className="text-sm text-foreground">{extension.version}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-foreground">{extension.author || 'Unknown'}</div>
+                    <div className="text-sm text-foreground">{extension.author || t('simple.unknownAuthor')}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -208,7 +210,7 @@ export default function Extensions() {
                         ? 'bg-success/15 text-success'
                         : 'bg-muted text-muted-foreground'
                     }`}>
-                      {extension.isEnabled ? 'Enabled' : 'Disabled'}
+                      {extension.isEnabled ? t('simple.enabled') : t('simple.disabled')}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -222,15 +224,15 @@ export default function Extensions() {
                           setShowModal(true);
                         }}
                       >
-                        View
+                        {t('simple.view')}
                       </Button>
                       <Button
                         id={`extension-settings-${extension.id}`}
                         variant="soft"
                         size="xs"
-                        onClick={() => alert('Extension settings will be available in the next update.')}
+                        onClick={() => alert(t('simple.settingsComingSoon'))}
                       >
-                        Settings
+                        {t('simple.settings')}
                       </Button>
                       <Button
                         id={`extension-toggle-${extension.id}`}
@@ -238,7 +240,7 @@ export default function Extensions() {
                         size="xs"
                         onClick={() => void handleToggleExtension(extension.id, extension.isEnabled)}
                       >
-                        {extension.isEnabled ? 'Disable' : 'Enable'}
+                        {extension.isEnabled ? t('simple.disable') : t('simple.enable')}
                       </Button>
                       <Button
                         id={`extension-remove-${extension.id}`}
@@ -246,7 +248,7 @@ export default function Extensions() {
                         size="xs"
                         onClick={() => void handleRemoveExtension(extension.id)}
                       >
-                        Remove
+                        {t('simple.remove')}
                       </Button>
                     </div>
                   </td>
@@ -271,10 +273,10 @@ export default function Extensions() {
         isOpen={removeTarget !== null}
         onClose={() => setRemoveTarget(null)}
         onConfirm={confirmRemoveExtension}
-        title="Remove Extension"
-        message="Are you sure you want to remove this extension? This action cannot be undone."
-        confirmLabel="Remove"
-        cancelLabel="Cancel"
+        title={t('simple.removeTitle')}
+        message={t('simple.removeMessage')}
+        confirmLabel={t('simple.confirmRemove')}
+        cancelLabel={t('simple.cancel')}
         id="remove-extension-confirm"
       />
     </div>

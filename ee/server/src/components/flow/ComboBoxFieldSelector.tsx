@@ -1,9 +1,11 @@
 // src/components/ComboBoxFieldSelector.tsx
+'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import Popup from './Popup';
 import { Template } from '../../services/flow/types/workflowTypes';
 import { Input } from '@alga-psa/ui/components/Input';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ComboBoxFieldSelectorProps {
   value?: Template;
@@ -18,8 +20,10 @@ const ComboBoxFieldSelector: React.FC<ComboBoxFieldSelectorProps> = ({
   onChange,
   options,
   inputType,
-  placeholder = 'Select or enter a field reference',
+  placeholder,
 }) => {
+  const { t } = useTranslation('msp/workflows');
+  const resolvedPlaceholder = placeholder ?? t('flow.fields.selectOrEnterReference');
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [fields, setFields] = useState<string[]>([]);
   const [selectedOption, setSelectedOption] = useState('');
@@ -103,7 +107,7 @@ const ComboBoxFieldSelector: React.FC<ComboBoxFieldSelectorProps> = ({
           onChange={handleSelectChange}
           style={styles.select}
         >
-          <option value="">Custom Field Reference</option>
+          <option value="">{t('flow.fields.customFieldReference')}</option>
           {options.map(option => (
             <option key={option.id} value={option.id}>
               {option.label}
@@ -116,7 +120,7 @@ const ComboBoxFieldSelector: React.FC<ComboBoxFieldSelectorProps> = ({
             type="text"
             value={selectedOption ? selectedOption : value?.template || ''}
             onChange={handleInputChange}
-            placeholder={placeholder}
+            placeholder={resolvedPlaceholder}
             style={styles.input}
           />
           <button onClick={() => setIsPopupOpen(true)} style={styles.pickerButton}>
@@ -124,7 +128,7 @@ const ComboBoxFieldSelector: React.FC<ComboBoxFieldSelectorProps> = ({
           </button>
         </div>
       </div>
-      <Popup isOpen={isPopupOpen} onClose={() => setIsPopupOpen(false)} title="Select Input Field">
+      <Popup isOpen={isPopupOpen} onClose={() => setIsPopupOpen(false)} title={t('flow.fields.selectInputField')}>
         <div style={styles.fieldOptionsContainer}>
           {renderFieldOptions()}
         </div>

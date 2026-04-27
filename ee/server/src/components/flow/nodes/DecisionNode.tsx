@@ -1,4 +1,5 @@
 // src/components/nodes/DecisionNode.tsx
+'use client';
 
 import React, { memo, useState, useEffect } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from 'reactflow';
@@ -6,6 +7,7 @@ import DeleteButton from '../DeleteButton';
 import Picker from '../Picker';
 import { DecisionNodeData, ConditionType } from '../../../services/flow/types/workflowTypes';
 import { PickerOption } from '../../../services/flow/types/nodes';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const conditionOptions: PickerOption[] = [
   { id: ConditionType.EQUALS, label: 'Equals' },
@@ -14,6 +16,7 @@ const conditionOptions: PickerOption[] = [
 ];
 
 const DecisionNode = memo(({ data, id }: NodeProps<DecisionNodeData>) => {
+  const { t } = useTranslation('msp/workflows');
   const { getNode, setNodes } = useReactFlow();
   const node = getNode(id);
   const isSelected = node?.selected ?? false;
@@ -96,7 +99,7 @@ const DecisionNode = memo(({ data, id }: NodeProps<DecisionNodeData>) => {
         <div key={outputKey} className="mt-2 relative">
           <label className="block text-sm font-medium text-gray-300">Condition {index + 1}</label>
           <Picker
-            label="Type"
+            label={t('flow.nodes.decision.type')}
             value={condition.type ?? ConditionType.EQUALS}
             options={conditionOptions}
             onChange={(value) => handleConditionChange(outputKey, 'type', value)}
@@ -106,7 +109,7 @@ const DecisionNode = memo(({ data, id }: NodeProps<DecisionNodeData>) => {
             value={condition.value?.template ?? ''}
             onChange={(e) => handleConditionChange(outputKey, 'value', e.target.value)}
             className="mt-1 focus:ring-[#00ffff] focus:border-[#00ffff] block w-full shadow-sm sm:text-sm border-[#4a4a5e] rounded-md bg-[#3a3a4c] text-white"
-            placeholder="Condition value"
+            placeholder={t('flow.nodes.decision.conditionValue')}
             style={inputStyle}
           />
           <Handle
@@ -127,13 +130,13 @@ const DecisionNode = memo(({ data, id }: NodeProps<DecisionNodeData>) => {
       </button>
 
       <div className="mt-2 relative">
-        <label className="block text-sm font-medium text-gray-300">Default Output</label>
+        <label className="block text-sm font-medium text-gray-300">{t('flow.nodes.decision.defaultOutput')}</label>
         <input
           type="text"
           value={nodeData.defaultOutput?.template ?? ''}
           onChange={(e) => handleInputChange('defaultOutput', { template: e.target.value, type: { value: '' } })}
           className="mt-1 focus:ring-[#00ffff] focus:border-[#00ffff] block w-full shadow-sm sm:text-sm border-[#4a4a5e] rounded-md bg-[#3a3a4c] text-white"
-          placeholder="Default output"
+          placeholder={t('flow.nodes.decision.defaultOutputProp')}
           style={inputStyle}
         />
         <Handle

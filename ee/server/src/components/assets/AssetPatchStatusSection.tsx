@@ -10,6 +10,7 @@
 import React, { useState } from 'react';
 import { Shield, AlertCircle, CheckCircle, Clock, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { Asset, WorkstationAsset, ServerAsset } from '@/interfaces/asset.interfaces';
 
 interface AssetPatchStatusSectionProps {
@@ -17,11 +18,13 @@ interface AssetPatchStatusSectionProps {
   className?: string;
 }
 
-/**
- * Format relative time from ISO string
- */
-function formatRelativeTime(isoString: string | null | undefined): string {
-  if (!isoString) return 'Never';
+type RelativeTimeTranslator = (key: string, options?: Record<string, unknown>) => string;
+
+function formatRelativeTime(
+  isoString: string | null | undefined,
+  t: RelativeTimeTranslator,
+): string {
+  if (!isoString) return t('assetPatchStatusSection.relativeTime.never');
 
   const date = new Date(isoString);
   const now = new Date();
@@ -31,13 +34,13 @@ function formatRelativeTime(isoString: string | null | undefined): string {
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
   if (diffMinutes < 1) {
-    return 'Just now';
+    return t('assetPatchStatusSection.relativeTime.justNow');
   } else if (diffMinutes < 60) {
-    return `${diffMinutes}m ago`;
+    return t('assetPatchStatusSection.relativeTime.minutesAgo', { count: diffMinutes });
   } else if (diffHours < 24) {
-    return `${diffHours}h ago`;
+    return t('assetPatchStatusSection.relativeTime.hoursAgo', { count: diffHours });
   } else if (diffDays < 7) {
-    return `${diffDays}d ago`;
+    return t('assetPatchStatusSection.relativeTime.daysAgo', { count: diffDays });
   } else {
     return date.toLocaleDateString();
   }
@@ -77,35 +80,56 @@ function getPatchData(asset: Asset): {
   };
 }
 
-/**
- * Get compliance status
- */
-function getComplianceStatus(patchData: ReturnType<typeof getPatchData>): {
+function getComplianceStatus(
+  patchData: ReturnType<typeof getPatchData>,
+  t: RelativeTimeTranslator,
+): {
   status: 'compliant' | 'warning' | 'critical';
   label: string;
   color: string;
 } {
   if (!patchData) {
-    return { status: 'warning', label: 'Unknown', color: 'text-gray-600 bg-gray-500/15' };
+    return {
+      status: 'warning',
+      label: t('assetPatchStatusSection.compliance.unknown'),
+      color: 'text-gray-600 bg-gray-500/15',
+    };
   }
 
   const totalPending = patchData.pendingOsPatches + patchData.pendingSoftwarePatches;
 
   if (patchData.failedPatches > 0) {
-    return { status: 'critical', label: 'Action Required', color: 'text-red-600 bg-red-500/15' };
+    return {
+      status: 'critical',
+      label: t('assetPatchStatusSection.compliance.actionRequired'),
+      color: 'text-red-600 bg-red-500/15',
+    };
   } else if (totalPending > 10) {
-    return { status: 'warning', label: 'Updates Available', color: 'text-amber-600 bg-amber-500/15' };
+    return {
+      status: 'warning',
+      label: t('assetPatchStatusSection.compliance.updatesAvailable'),
+      color: 'text-amber-600 bg-amber-500/15',
+    };
   } else if (totalPending > 0) {
-    return { status: 'warning', label: 'Minor Updates', color: 'text-blue-600 bg-blue-500/15' };
+    return {
+      status: 'warning',
+      label: t('assetPatchStatusSection.compliance.minorUpdates'),
+      color: 'text-blue-600 bg-blue-500/15',
+    };
   }
 
-  return { status: 'compliant', label: 'Up to Date', color: 'text-emerald-600 bg-emerald-500/15' };
+  return {
+    status: 'compliant',
+    label: t('assetPatchStatusSection.compliance.upToDate'),
+    color: 'text-emerald-600 bg-emerald-500/15',
+  };
 }
 
 /**
  * Asset Patch Status Section
  */
 export function AssetPatchStatusSection({ asset, className = '' }: AssetPatchStatusSectionProps) {
+  const { t } = useTranslation('msp/assets');
   const [isExpanded, setIsExpanded] = useState(true);
 
   // Only render for workstations and servers that are RMM-managed
@@ -123,7 +147,7 @@ export function AssetPatchStatusSection({ asset, className = '' }: AssetPatchSta
     return null;
   }
 
-  const compliance = getComplianceStatus(patchData);
+  const compliance = getComplianceStatus(patchData, t);
   const totalPending = patchData.pendingOsPatches + patchData.pendingSoftwarePatches;
 
   return (
@@ -138,7 +162,7 @@ export function AssetPatchStatusSection({ asset, className = '' }: AssetPatchSta
             compliance.status === 'compliant' ? 'text-emerald-500' :
             compliance.status === 'warning' ? 'text-amber-500' : 'text-red-500'
           }`} />
-          <span className="font-medium">Patch Status</span>
+          <span className="font-medium">{t('assetPatchStatusSection.heading')}</span>
           <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full ${compliance.color}`}>
             {compliance.label}
           </span>
@@ -166,9 +190,9 @@ export function AssetPatchStatusSection({ asset, className = '' }: AssetPatchSta
                 )}
               </div>
               <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">OS Patches</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{t('assetPatchStatusSection.labels.osPatches')}</p>
                 <p className="text-lg font-semibold text-[rgb(var(--color-text-900))]">{patchData.pendingOsPatches}</p>
-                <p className="text-xs text-gray-500">pending</p>
+                <p className="text-xs text-gray-500">{t('assetPatchStatusSection.labels.pending')}</p>
               </div>
             </div>
 
@@ -184,9 +208,9 @@ export function AssetPatchStatusSection({ asset, className = '' }: AssetPatchSta
                 )}
               </div>
               <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Software</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{t('assetPatchStatusSection.labels.software')}</p>
                 <p className="text-lg font-semibold text-[rgb(var(--color-text-900))]">{patchData.pendingSoftwarePatches}</p>
-                <p className="text-xs text-gray-500">pending</p>
+                <p className="text-xs text-gray-500">{t('assetPatchStatusSection.labels.pending')}</p>
               </div>
             </div>
 
@@ -197,9 +221,9 @@ export function AssetPatchStatusSection({ asset, className = '' }: AssetPatchSta
                   <AlertCircle className="h-4 w-4 text-red-600" />
                 </div>
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Failed</p>
+                  <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{t('assetPatchStatusSection.labels.failed')}</p>
                   <p className="text-lg font-semibold text-destructive">{patchData.failedPatches}</p>
-                  <p className="text-xs text-gray-500">patches</p>
+                  <p className="text-xs text-gray-500">{t('assetPatchStatusSection.labels.patches')}</p>
                 </div>
               </div>
             )}
@@ -210,9 +234,9 @@ export function AssetPatchStatusSection({ asset, className = '' }: AssetPatchSta
                 <Clock className="h-4 w-4 text-gray-600" />
               </div>
               <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Last Scan</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{t('assetPatchStatusSection.labels.lastScan')}</p>
                 <p className="text-sm font-medium text-[rgb(var(--color-text-900))]">
-                  {formatRelativeTime(patchData.lastPatchScan)}
+                  {formatRelativeTime(patchData.lastPatchScan, t)}
                 </p>
               </div>
             </div>
@@ -235,7 +259,7 @@ export function AssetPatchStatusSection({ asset, className = '' }: AssetPatchSta
                     ? 'bg-emerald-500/15 text-emerald-600'
                     : 'bg-amber-500/15 text-amber-600'
                 }`}>
-                  {patchData.antivirusStatus || 'Unknown'}
+                  {patchData.antivirusStatus || t('assetPatchStatusSection.compliance.unknown')}
                 </span>
               </div>
             </div>

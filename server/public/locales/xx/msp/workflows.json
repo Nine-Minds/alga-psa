@@ -426,7 +426,8 @@
       "summaryTitle": "11111",
       "summaryDescription": "11111",
       "moreErrors": "11111 {{count}} 11111"
-    }
+    },
+    "sampleEmailBody": "11111"
   },
   "eventList": {
     "common": {
@@ -638,7 +639,10 @@
     },
     "stepPanel": {
       "readOnly": "11111",
-      "selectPrompt": "11111"
+      "selectPrompt": "11111",
+      "readOnlyNotice": "11111",
+      "contractMode": "11111",
+      "catalogSchema": "11111"
     },
     "stepConfig": {
       "eventLabel": "11111",
@@ -652,7 +656,27 @@
       "assignOnResume": "11111",
       "fieldLabel": "11111",
       "fieldPathLabel": "11111",
-      "dataContextToggle": "11111"
+      "dataContextToggle": "11111",
+      "condition": "11111",
+      "itemsExpression": "11111",
+      "itemVariable": "11111",
+      "concurrency": "11111",
+      "onItemError": "11111",
+      "captureErrorAs": "11111",
+      "workflowId": "11111",
+      "workflowVersion": "11111",
+      "inputMapping": "11111",
+      "outputMapping": "11111",
+      "value": "11111",
+      "mode": "11111",
+      "days": "11111",
+      "hours": "11111",
+      "minutes": "11111",
+      "seconds": "11111",
+      "untilInput": "11111",
+      "specificDateTime": "11111",
+      "untilExpression": "11111",
+      "returnNotice": "11111"
     },
     "mappingExpr": {
       "add": "11111",
@@ -751,7 +775,8 @@
         "warnings": "11111",
         "valid": "11111",
         "unknown": "11111"
-      }
+      },
+      "errors": "11111"
     },
     "discardDialog": {
       "title": "11111",
@@ -928,6 +953,61 @@
       "publishFailed": "11111",
       "publishValidationErrors": "11111",
       "systemEventMissingSchema": "11111"
+    },
+    "propsPanel": {
+      "resizeAria": "11111",
+      "settingsTitle": "11111",
+      "settingsSubtitle": "11111",
+      "visibleToUsers": "11111",
+      "paused": "11111",
+      "concurrencyLimit": "11111",
+      "unlimited": "11111",
+      "autoPauseFailureRate": "11111",
+      "failureRateThreshold": "11111",
+      "minRunsBeforeAutoPause": "11111"
+    },
+    "trigger": {
+      "summary": "11111",
+      "actionNeeded": "11111",
+      "noMappingNeeded": "11111",
+      "sourceSchemaOverride": "11111",
+      "useCatalogSchemaDefault": "11111",
+      "useCatalogSchemaPlaceholder": "11111",
+      "noSchemasFound": "11111",
+      "mappingTitle": "11111",
+      "mappingNotRequired": "11111",
+      "mappingErrors": "11111",
+      "mappingWarnings": "11111"
+    },
+    "schemaSettings": {
+      "lockVersion": "11111",
+      "lockVersionHelp": "11111",
+      "lockedVersion": "11111",
+      "manualRef": "11111",
+      "fixedForTimeTriggers": "11111",
+      "availableFieldsPreview": "11111",
+      "payloadContract": "11111",
+      "ref": "11111",
+      "loadFailed": "11111",
+      "notLoaded": "11111",
+      "loadPreviewFailed": "11111",
+      "selectVersionPlaceholder": "11111",
+      "payloadRefAdvanced": "11111"
+    },
+    "expression": {
+      "insertField": "11111",
+      "enterPlaceholder": "11111"
+    },
+    "dataContext": {
+      "availableDataAtStep": "11111",
+      "payload": "11111",
+      "noPayloadFields": "11111",
+      "payloadSchemaRefHint": "11111",
+      "stepOutputs": "11111",
+      "outputSchemaUnavailable": "11111",
+      "noFields": "11111",
+      "copyAllPaths": "11111",
+      "copyAllFieldPaths": "11111"
     }
   },
   "actionInputFieldInfo": {
@@ -2274,5 +2354,49 @@
     "enableHint": "11111",
     "goToExperimental": "11111",
     "openSettings": "11111"
+  },
+  "flow": {
+    "designer": {
+      "title": "11111"
+    },
+    "sidebar": {
+      "dragHint": "11111"
+    },
+    "picker": {
+      "searchPlaceholder": "11111"
+    },
+    "fields": {
+      "selectInputField": "11111",
+      "customFieldReference": "11111",
+      "selectOrEnterReference": "11111"
+    },
+    "delete": {
+      "confirmTitle": "11111",
+      "confirmMessage": "11111"
+    },
+    "topBar": {
+      "workflowName": "11111",
+      "workflowDescription": "11111"
+    },
+    "nodes": {
+      "classifier": {
+        "newClassification": "11111"
+      },
+      "selector": {
+        "defaultInput": "11111"
+      },
+      "decision": {
+        "type": "11111",
+        "conditionValue": "11111",
+        "defaultOutput": "11111",
+        "defaultOutputProp": "11111"
+      },
+      "ticketCreator": {
+        "ticketTitle": "11111",
+        "ticketDescription": "11111",
+        "selectBoard": "11111",
+        "selectPriority": "11111"
+      }
+    }
   }
 }

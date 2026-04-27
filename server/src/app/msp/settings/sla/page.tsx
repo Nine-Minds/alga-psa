@@ -38,6 +38,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { ArrowLeft, RefreshCw, Calendar } from 'lucide-react';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const DEFAULT_TAB = 'dashboard';
 const SLA_TAB_IDS = ['dashboard', 'policies', 'business-hours', 'pause-rules', 'escalation'] as const;
@@ -52,6 +53,7 @@ const DATE_RANGE_OPTIONS: { value: DateRangeOption; label: string }[] = [
 ];
 
 export default function SlaSettingsPage() {
+  const { t } = useTranslation('common');
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
 
@@ -282,7 +284,7 @@ export default function SlaSettingsPage() {
               options={DATE_RANGE_OPTIONS}
               value={dateRange}
               onValueChange={(value) => setDateRange(value as DateRangeOption)}
-              placeholder="Select date range"
+              placeholder={t('pages.actions.selectDateRange', { defaultValue: 'Select date range' })}
             />
           </div>
           <Button
@@ -391,7 +393,7 @@ export default function SlaSettingsPage() {
   return (
     <div className="container mx-auto p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold">SLA Settings</h1>
+        <h1 className="text-2xl font-semibold">{t('pages.titles.slaSettings')}</h1>
         <p className="text-gray-600 text-sm mt-1">
           Configure service level agreement policies, business hours, and pause rules
         </p>

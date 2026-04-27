@@ -609,11 +609,67 @@
   },
   "assetPatchStatusSection": {
     "title": "Asset Patch Status Section",
-    "description": "Enterprise patch and antivirus status wrapper shown in the asset detail experience"
+    "description": "Enterprise patch and antivirus status wrapper shown in the asset detail experience",
+    "heading": "Patch Status",
+    "compliance": {
+      "unknown": "Unknown",
+      "actionRequired": "Action Required",
+      "updatesAvailable": "Updates Available",
+      "minorUpdates": "Minor Updates",
+      "upToDate": "Up to Date"
+    },
+    "relativeTime": {
+      "never": "Never",
+      "justNow": "Just now",
+      "minutesAgo": "{{count}}m ago",
+      "hoursAgo": "{{count}}h ago",
+      "daysAgo": "{{count}}d ago"
+    },
+    "labels": {
+      "osPatches": "OS Patches",
+      "software": "Software",
+      "failed": "Failed",
+      "lastScan": "Last Scan",
+      "pending": "pending",
+      "patches": "patches"
+    }
   },
   "assetSoftwareInventory": {
     "title": "Asset Software Inventory",
-    "description": "Enterprise software inventory wrapper for installed software and version data"
+    "description": "Enterprise software inventory wrapper for installed software and version data",
+    "heading": "Software Inventory",
+    "searchPlaceholder": "Search software...",
+    "appsCount": "{{count}} apps",
+    "unknownName": "Unknown",
+    "noMatch": "No software matches your search",
+    "version": "v{{version}}",
+    "by": "by {{publisher}}",
+    "showingOfApplications": "Showing {{shown}} of {{total}} applications",
+    "more": "+{{count}} more"
+  },
+  "remoteAccess": {
+    "remoteDesktop": "Remote Desktop",
+    "remoteShell": "Remote Shell",
+    "remoteAccess": "Remote Access",
+    "deviceOverdue": "Device is overdue",
+    "deviceOffline": "Device is offline",
+    "errors": {
+      "urlFetchFailed": "Failed to get remote access URL",
+      "initiateFailed": "Failed to initiate remote access"
+    },
+    "indicator": {
+      "online": "Online",
+      "offline": "Offline",
+      "available": "Remote access available",
+      "deviceOffline": "Device offline"
+    }
+  },
+  "assetListErrors": {
+    "genericError": "An error occurred. Please try again later.",
+    "assetNotFound": "Asset not found"
+  },
+  "assetEdit": {
+    "pageTitle": "Edit Asset"
   },
   "associatedAssets": {
     "title": "Associated Assets",
@@ -1191,6 +1247,9 @@
       "acknowledgeFailed": "Failed to acknowledge alert",
       "ticketCreated": "Ticket created successfully",
       "ticketCreateFailed": "Failed to create ticket"
-    }
+    },
+    "activeAlerts": "Active Alerts",
+    "acknowledge": "Acknowledge",
+    "createTicket": "Create Ticket"
   }
 }

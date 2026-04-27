@@ -1114,6 +1114,82 @@
       "saveSettingsFailed": "Einstellungen konnten nicht gespeichert werden",
       "webhookConfigured": "Webhook erfolgreich konfiguriert!",
       "webhookConfigureFailed": "Webhook konnte nicht konfiguriert werden"
+    },
+    "expiration": {
+      "selectPlaceholder": "Ablaufzeit auswählen",
+      "custom": "Benutzerdefiniert...",
+      "hoursSingular": "{{count}} Stunde",
+      "hoursPlural": "{{count}} Stunden",
+      "daysSingular": "{{count}} Tag",
+      "daysPlural": "{{count}} Tage",
+      "daysDecimal": "{{count}} Tage",
+      "hoursUnit": "Stunden ({{formatted}})",
+      "willExpireAfter": "Zahlungslinks laufen nach {{duration}} ab"
+    },
+    "notConnected": {
+      "title": "Stripe nicht verbunden",
+      "description": "Um Zahlungseinstellungen zu konfigurieren, müssen Sie zunächst Ihr Stripe-Konto verbinden.",
+      "connectButton": "Stripe verbinden"
+    },
+    "settings": {
+      "paymentLinksInEmails": {
+        "label": "Zahlungslinks in Rechnungs-E-Mails einbeziehen",
+        "description": "Eine \"Jetzt bezahlen\"-Schaltfläche zu Rechnungs-E-Mails hinzufügen"
+      },
+      "paymentConfirmations": {
+        "label": "Zahlungsbestätigungs-E-Mails senden",
+        "description": "Kunden per E-Mail benachrichtigen, wenn ihre Zahlung eingegangen ist"
+      },
+      "paymentLinkExpiration": {
+        "label": "Ablauf des Zahlungslinks",
+        "description": "Wie lange Zahlungslinks gültig bleiben, bevor sie ablaufen"
+      },
+      "actions": {
+        "save": "Einstellungen speichern",
+        "saving": "Wird gespeichert..."
+      }
+    },
+    "stripe": {
+      "cardTitle": "Stripe-Zahlungen",
+      "cardDescription": "Akzeptieren Sie Kreditkartenzahlungen für Ihre Rechnungen",
+      "connectedTitle": "Stripe verbunden",
+      "publishableKey": "Veröffentlichbarer Schlüssel: {{key}}...",
+      "testConnection": "Verbindung testen",
+      "disconnect": "Trennen",
+      "disconnectDialog": {
+        "title": "Stripe trennen",
+        "message": "Sind Sie sicher, dass Sie Stripe trennen möchten? Zahlungslinks funktionieren dann nicht mehr.",
+        "confirm": "Trennen",
+        "cancel": "Abbrechen"
+      },
+      "webhook": {
+        "label": "Webhook-Konfiguration",
+        "configuredTitle": "Webhooks automatisch konfiguriert",
+        "configuredDescription": "Alga PSA erhält Zahlungsbenachrichtigungen für:",
+        "failedTitle": "Webhook-Konfiguration fehlgeschlagen",
+        "failedDescription": "Die automatische Webhook-Konfiguration ist fehlgeschlagen. Klicken Sie auf Wiederholen, um die Konfiguration erneut zu versuchen.",
+        "configuring": "Wird konfiguriert...",
+        "retry": "Konfiguration wiederholen"
+      },
+      "connectForm": {
+        "secretKeyLabel": "Geheimer Schlüssel",
+        "secretKeyPlaceholder": "sk_live_... oder sk_test_...",
+        "secretKeyHelpPrefix": "Sie finden ihn in Ihrem",
+        "secretKeyHelpLink": "Stripe-Dashboard → API-Schlüssel",
+        "publishableKeyLabel": "Veröffentlichbarer Schlüssel",
+        "publishableKeyPlaceholder": "pk_live_... oder pk_test_...",
+        "connecting": "Wird verbunden...",
+        "connect": "Stripe verbinden",
+        "cancel": "Abbrechen"
+      },
+      "empty": {
+        "description": "Verbinden Sie Ihr Stripe-Konto, um Online-Zahlungen für Rechnungen zu akzeptieren",
+        "connectButton": "Stripe verbinden"
+      },
+      "settingsCard": {
+        "title": "Zahlungseinstellungen",
+        "description": "Konfigurieren Sie, wie Zahlungslinks mit Ihren Rechnungen funktionieren"
+      }
     }
   }
 }

@@ -14,6 +14,7 @@ import Spinner from "@alga-psa/ui/components/Spinner";
 import { Loader2, Search } from "lucide-react";
 import { useToast } from "server/src/hooks/use-toast";
 import ViewSwitcher from "@alga-psa/ui/components/ViewSwitcher";
+import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import {
   executeBulkSsoAssignmentAction,
   previewBulkSsoAssignmentAction,
@@ -61,12 +62,13 @@ function buildRequest(
   };
 }
 
-function formatProviderName(provider: LinkProvider): string {
-  return provider === "microsoft" ? "Microsoft 365" : "Google Workspace";
+function useFormatProviderName() {
+  const { t } = useTranslation("msp/settings");
+  return (provider: LinkProvider): string =>
+    provider === "microsoft"
+      ? t("ssoBulk.form.providerNames.microsoft")
+      : t("ssoBulk.form.providerNames.google");
 }
-
-
-
 
 function ActionButtons({
   disableActions,
@@ -85,11 +87,16 @@ function ActionButtons({
   location?: "top" | "bottom";
   mode: AssignmentMode;
 }) {
+  const { t } = useTranslation("msp/settings");
   const isTop = location === "top";
-  const actionLabel = mode === "unlink" ? "Unlink accounts" : "Link accounts";
-  const previewLabel = mode === "unlink" ? "Preview unlink" : "Preview assignment";
+  const actionLabel = mode === "unlink"
+    ? t("ssoBulk.form.actions.unlink")
+    : t("ssoBulk.form.actions.link");
+  const previewLabel = mode === "unlink"
+    ? t("ssoBulk.form.actions.previewUnlink")
+    : t("ssoBulk.form.actions.previewLink");
   return (
-    <div className="flex flex-wrap gap-3" aria-label={`Bulk SSO actions ${location}`}>
+    <div className="flex flex-wrap gap-3" aria-label={t("ssoBulk.form.actions.bulkLabel", { location })}>
       <Button
         id={`sso-bulk-${location}-preview-${mode}-button`}
         type="button"
@@ -99,7 +106,7 @@ function ActionButtons({
       >
         {isPending && lastMode === "preview" ? (
           <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Preparing preview…
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t("ssoBulk.form.actions.preparingPreview")}
           </>
         ) : (
           previewLabel
@@ -114,7 +121,9 @@ function ActionButtons({
         {isPending && lastMode === "execute" ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            {mode === "unlink" ? "Unlinking accounts…" : "Linking accounts…"}
+            {mode === "unlink"
+              ? t("ssoBulk.form.actions.unlinking")
+              : t("ssoBulk.form.actions.linking")}
           </>
         ) : (
           actionLabel
@@ -140,6 +149,8 @@ function formatDate(value: string | null): string {
 }
 
 export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssignmentFormProps) {
+  const { t } = useTranslation("msp/settings");
+  const formatProviderName = useFormatProviderName();
   const providerMetadata = useMemo(() => {
     const map = new Map<LinkProvider, ProviderOption>();
     providerOptions.forEach((option) => {
@@ -220,7 +231,7 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
         if (!response.success || !response.users) {
           setUsers([]);
           setTotalItems(0);
-          setTableError(response.error ?? "Unable to load assignable users.");
+          setTableError(response.error ?? t("ssoBulk.form.loadUsersFailed"));
           return;
         }
 
@@ -230,7 +241,7 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
         if (!cancelled) {
           setUsers([]);
           setTotalItems(0);
-          setTableError(error?.message ?? "Unable to load assignable users.");
+          setTableError(error?.message ?? t("ssoBulk.form.loadUsersFailed"));
         }
       } finally {
         if (!cancelled) {
@@ -289,18 +300,18 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
 
     if (request.providers.length === 0) {
       toast({
-        title: "Provider required",
+        title: t("ssoBulk.form.toast.providerRequiredTitle"),
         variant: "destructive",
-        description: "Select a configured provider before continuing.",
+        description: t("ssoBulk.form.toast.providerRequiredDescription"),
       });
       return;
     }
 
     if (request.userIds.length === 0) {
       toast({
-        title: "No users selected",
+        title: t("ssoBulk.form.toast.noUsersTitle"),
         variant: "destructive",
-        description: "Select at least one user from the table.",
+        description: t("ssoBulk.form.toast.noUsersDescription"),
       });
       return;
     }
@@ -316,9 +327,9 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
 
       if (!response.success || !response.result) {
         toast({
-          title: "Bulk assignment failed",
+          title: t("ssoBulk.form.toast.failedTitle"),
           variant: "destructive",
-          description: response.error ?? "Unable to process SSO bulk assignment.",
+          description: response.error ?? t("ssoBulk.form.toast.failedDescription"),
         });
         return;
       }
@@ -331,20 +342,22 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
         0,
       );
 
+      const providerName = formatProviderName(request.providers[0] as LinkProvider);
+
       toast({
         title: mode === "execute"
           ? request.mode === "unlink"
-            ? "Unlink complete"
-            : "Link complete"
-          : "Preview ready",
+            ? t("ssoBulk.form.toast.unlinkCompleteTitle")
+            : t("ssoBulk.form.toast.linkCompleteTitle")
+          : t("ssoBulk.form.toast.previewReadyTitle"),
         description:
           mode === "execute"
             ? request.mode === "unlink"
-              ? `Unlinked ${affectedCount} accounts via ${formatProviderName(request.providers[0] as LinkProvider)}.`
-              : `Linked ${affectedCount} accounts via ${formatProviderName(request.providers[0] as LinkProvider)}.`
+              ? t("ssoBulk.form.toast.unlinkedCount", { count: affectedCount, provider: providerName })
+              : t("ssoBulk.form.toast.linkedCount", { count: affectedCount, provider: providerName })
             : request.mode === "unlink"
-              ? `Preview ready. We'll unlink ${request.userIds.length} selected user${request.userIds.length === 1 ? '' : 's'}.`
-              : `Preview ready. Review the summary before linking accounts.`,
+              ? t("ssoBulk.form.toast.previewUnlink", { count: request.userIds.length })
+              : t("ssoBulk.form.toast.previewLink"),
       });
 
       if (mode === "execute") {
@@ -397,44 +410,44 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
       },
     },
     {
-      title: "Email",
+      title: t("ssoBulk.form.table.email"),
       dataIndex: "email",
       width: "30%",
       render: (email: string | null, record: SsoAssignableUser) => (
         <div className="flex flex-col">
           <span className="font-medium text-foreground">{email || "—"}</span>
-          <span className="text-xs text-muted-foreground">ID: {record.userId}</span>
+          <span className="text-xs text-muted-foreground">{t("ssoBulk.form.table.id")}: {record.userId}</span>
         </div>
       ),
     },
     {
-      title: "Name",
+      title: t("ssoBulk.form.table.name"),
       dataIndex: "displayName",
       width: "20%",
       render: (displayName: string | null) => displayName || "—",
     },
     {
-      title: "Status",
+      title: t("ssoBulk.form.table.status"),
       dataIndex: "inactive",
       width: "12%",
       render: (inactive: boolean) => (
         <div className="flex flex-wrap gap-2">
           {inactive ? (
-            <Badge variant="error">Inactive</Badge>
+            <Badge variant="error">{t("ssoBulk.form.table.inactive")}</Badge>
           ) : (
-            <Badge variant="secondary">Active</Badge>
+            <Badge variant="secondary">{t("ssoBulk.form.table.active")}</Badge>
           )}
         </div>
       ),
     },
     {
-      title: "Linked providers",
+      title: t("ssoBulk.form.table.linkedProviders"),
       dataIndex: "linkedProviders",
       width: "18%",
       sortable: false,
       render: (linkedProviders: string[], record: SsoAssignableUser) => {
         if (linkedProviders.length === 0) {
-          return <Badge variant="outline">Unlinked</Badge>;
+          return <Badge variant="outline">{t("ssoBulk.form.table.unlinked")}</Badge>;
         }
         return (
           <div className="flex flex-wrap gap-2">
@@ -448,7 +461,7 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
       },
     },
     {
-      title: "Last login",
+      title: t("ssoBulk.form.table.lastLogin"),
       dataIndex: "lastLoginAt",
       width: "15%",
       render: (lastLoginAt: string | null) => formatDate(lastLoginAt),
@@ -459,14 +472,14 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
     <div className="space-y-8">
       <Card>
         <CardHeader>
-          <CardTitle>Choose provider & select users</CardTitle>
+          <CardTitle>{t("ssoBulk.form.title")}</CardTitle>
           <CardDescription>
-            Pick the configured SSO provider for your staff, then search and select the users who should be linked.
+            {t("ssoBulk.form.description")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
-            <Label className="block text-sm font-medium text-muted-foreground">Provider</Label>
+            <Label className="block text-sm font-medium text-muted-foreground">{t("ssoBulk.form.providerLabel")}</Label>
             <div className="flex flex-wrap gap-2">
               {Array.from(providerMetadata.entries()).map(([provider, option]) => {
                 const selected = selectedProvider === provider;
@@ -484,24 +497,24 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
                     {option.name}
                     {!option.configured && (
                       <Badge className="ml-2" variant="secondary">
-                        Not configured
+                        {t("ssoBulk.form.notConfigured")}
                       </Badge>
                     )}
                   </Button>
                 );
               })}
-          </div>
+            </div>
             {!selectedProviderConfigured && (
               <Alert variant="info" className="mt-4">
                 <AlertDescription>
-                  Provide OAuth credentials for this provider before linking accounts.
+                  {t("ssoBulk.form.providerNotConfiguredAlert")}
                 </AlertDescription>
               </Alert>
             )}
           </div>
 
           <div className="space-y-3">
-            <Label className="block text-sm font-medium text-muted-foreground">Action</Label>
+            <Label className="block text-sm font-medium text-muted-foreground">{t("ssoBulk.form.actionLabel")}</Label>
             <ViewSwitcher
               currentView={assignmentMode}
               onChange={(value) => {
@@ -510,25 +523,25 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
                 }
               }}
               options={[
-                { value: "link" as AssignmentMode, label: "Link selected users", disabled: isPending },
-                { value: "unlink" as AssignmentMode, label: "Unlink selected users", disabled: isPending },
+                { value: "link" as AssignmentMode, label: t("ssoBulk.form.linkSelected"), disabled: isPending },
+                { value: "unlink" as AssignmentMode, label: t("ssoBulk.form.unlinkSelected"), disabled: isPending },
               ]}
-              aria-label="Select SSO bulk action"
+              aria-label={t("ssoBulk.form.actionPlaceholder")}
             />
             <p className="text-sm text-muted-foreground">
-              Linking adds the provider to each selected user. Unlinking removes the provider so the user returns to password/TOTP sign-in until they link again.
+              {t("ssoBulk.form.actionDescription")}
             </p>
           </div>
 
           <div className="space-y-3">
             <Label htmlFor="sso-search" className="block text-sm font-medium text-muted-foreground">
-              Find internal users
+              {t("ssoBulk.form.searchLabel")}
             </Label>
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="sso-search"
-                placeholder="Search by email or name"
+                placeholder={t("ssoBulk.form.searchPlaceholder")}
                 value={searchInput}
                 onChange={(event) => setSearchInput(event.target.value)}
                 disabled={tableLoading && users.length === 0}
@@ -538,8 +551,8 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
             <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
               <span>
                 {selectionCount === 0
-                  ? "No users selected yet."
-                  : `${selectionCount} user${selectionCount === 1 ? '' : 's'} selected.`}
+                  ? t("ssoBulk.form.noneSelected")
+                  : t("ssoBulk.form.selected", { count: selectionCount })}
               </span>
               {selectionCount > 0 && (
                 <Button
@@ -549,7 +562,7 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
                   size="sm"
                   onClick={clearSelection}
                 >
-                  Clear selection
+                  {t("ssoBulk.form.clearSelection")}
                 </Button>
               )}
             </div>
@@ -573,11 +586,11 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
             {tableLoading ? (
               <div className="flex flex-col items-center justify-center py-12">
                 <Spinner size="sm" />
-                <p className="mt-4 text-sm text-muted-foreground">Loading users...</p>
+                <p className="mt-4 text-sm text-muted-foreground">{t("ssoBulk.form.loadingUsers")}</p>
               </div>
             ) : users.length === 0 ? (
               <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
-                {searchQuery ? "No users match this search." : "No internal users found."}
+                {searchQuery ? t("ssoBulk.form.noMatch") : t("ssoBulk.form.noUsers")}
               </div>
             ) : (
               <DataTable
@@ -597,7 +610,7 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
 
           <Alert variant="info">
             <AlertDescription>
-              Client portal bulk assignments are coming soon. For now, this tool applies only to internal MSP users.
+              {t("ssoBulk.form.clientPortalComing")}
             </AlertDescription>
           </Alert>
 
@@ -610,12 +623,12 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
           <Card>
             <CardHeader>
               <CardTitle>
-                {lastMode === "execute" ? "Assignment complete" : "Preview results"}
+                {lastMode === "execute" ? t("ssoBulk.form.results.completeTitle") : t("ssoBulk.form.results.previewTitle")}
               </CardTitle>
               <CardDescription>
                 {result.summary.scannedUsers === 0
-                  ? "None of the selected users matched the current filters."
-                  : `Processed ${result.summary.scannedUsers} user${result.summary.scannedUsers === 1 ? '' : 's'}.`}
+                  ? t("ssoBulk.form.results.noneMatched")
+                  : t("ssoBulk.form.results.processed", { count: result.summary.scannedUsers })}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -623,12 +636,14 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
                 {summaryProviders.map((summary) => {
                   const actionLabel = activeResultMode === "unlink"
                     ? lastMode === "execute"
-                      ? "Unlinked"
-                      : "Would unlink"
+                      ? t("ssoBulk.form.results.unlinked")
+                      : t("ssoBulk.form.results.wouldUnlink")
                     : lastMode === "execute"
-                      ? "Linked"
-                      : "Would link";
-                  const alreadyLabel = activeResultMode === "unlink" ? "Already unlinked" : "Already linked";
+                      ? t("ssoBulk.form.results.linked")
+                      : t("ssoBulk.form.results.wouldLink");
+                  const alreadyLabel = activeResultMode === "unlink"
+                    ? t("ssoBulk.form.results.alreadyUnlinked")
+                    : t("ssoBulk.form.results.alreadyLinked");
                   return (
                     <div
                       key={summary.provider}
@@ -638,7 +653,7 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
                         <p className="text-sm font-medium text-muted-foreground">
                           {formatProviderName(summary.provider as LinkProvider)}
                         </p>
-                        <Badge variant="secondary">{summary.candidates} selected</Badge>
+                        <Badge variant="secondary">{t("ssoBulk.form.results.candidatesSelected", { count: summary.candidates })}</Badge>
                       </div>
                       <dl className="mt-3 space-y-1 text-sm">
                         <div className="flex justify-between">
@@ -650,7 +665,7 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
                           <dd>{summary.alreadyLinked}</dd>
                         </div>
                         <div className="flex justify-between">
-                          <dt>Skipped (inactive)</dt>
+                          <dt>{t("ssoBulk.form.results.skippedInactive")}</dt>
                           <dd>{summary.skippedInactive}</dd>
                         </div>
                       </dl>

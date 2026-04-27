@@ -10,6 +10,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button, Input, Label, Switch, Alert, AlertDescription, Card, CardContent, CardDescription, CardHeader, CardTitle, CustomSelect } from '@alga-psa/ui/components';
 import { Eye, EyeOff } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { EmailProvider } from '@alga-psa/integrations/components/email/types';
 import { createEmailProvider, updateEmailProvider } from '@alga-psa/integrations/actions/email-actions/emailProviderActions';
 import { getInboundTicketDefaults } from '@alga-psa/integrations/actions/email-actions/inboundTicketDefaultsActions';
@@ -58,6 +59,7 @@ export function ImapProviderForm({
   onSuccess,
   onCancel
 }: EEImapProviderFormProps) {
+  const { t } = useTranslation('msp/email-providers');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -199,34 +201,34 @@ export function ImapProviderForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Basic Settings</CardTitle>
-          <CardDescription>Define the IMAP mailbox connection details.</CardDescription>
+          <CardTitle>{t('imapForm.sections.basic.title')}</CardTitle>
+          <CardDescription>{t('imapForm.sections.basic.description')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label htmlFor="providerName">Provider Name</Label>
+            <Label htmlFor="providerName">{t('imapForm.fields.providerName')}</Label>
             <Input id="providerName" {...form.register('providerName')} error={form.formState.errors.providerName?.message} />
           </div>
           <div>
-            <Label htmlFor="mailbox">Mailbox Address</Label>
+            <Label htmlFor="mailbox">{t('imapForm.fields.mailboxAddress')}</Label>
             <Input id="mailbox" type="email" {...form.register('mailbox')} error={form.formState.errors.mailbox?.message} />
           </div>
           <div>
-            <Label htmlFor="host">IMAP Host</Label>
+            <Label htmlFor="host">{t('imapForm.fields.imapHost')}</Label>
             <Input id="host" {...form.register('host')} error={form.formState.errors.host?.message} />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="port">Port</Label>
+              <Label htmlFor="port">{t('imapForm.fields.port')}</Label>
               <Input id="port" type="number" {...form.register('port', { valueAsNumber: true })} />
             </div>
             <div className="flex items-center justify-between pt-6">
-              <Label htmlFor="secure">Use TLS/SSL</Label>
+              <Label htmlFor="secure">{t('imapForm.fields.useTls')}</Label>
               <Switch id="secure" checked={form.watch('secure')} onCheckedChange={(v) => form.setValue('secure', v)} />
             </div>
           </div>
           <div className="flex items-center justify-between">
-            <Label htmlFor="allowStarttls">Allow STARTTLS Upgrade</Label>
+            <Label htmlFor="allowStarttls">{t('imapForm.fields.allowStarttls')}</Label>
             <Switch id="allowStarttls" checked={form.watch('allowStarttls')} onCheckedChange={(v) => form.setValue('allowStarttls', v)} />
           </div>
         </CardContent>
@@ -234,33 +236,33 @@ export function ImapProviderForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Authentication</CardTitle>
-          <CardDescription>Choose password or OAuth2 authentication.</CardDescription>
+          <CardTitle>{t('imapForm.sections.auth.title')}</CardTitle>
+          <CardDescription>{t('imapForm.sections.auth.description')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label>Authentication Type</Label>
+            <Label>{t('imapForm.fields.authenticationType')}</Label>
             <CustomSelect
               id="imap-auth-type"
               value={authType}
               onValueChange={(v) => form.setValue('authType', v as 'password' | 'oauth2')}
               options={[
-                { value: 'password', label: 'Password' },
-                { value: 'oauth2', label: 'OAuth2 (XOAUTH2)' }
+                { value: 'password', label: t('imapForm.authOptions.password') },
+                { value: 'oauth2', label: t('imapForm.authOptions.oauth2') }
               ]}
             />
           </div>
           <div>
-            <Label htmlFor="username">Username</Label>
+            <Label htmlFor="username">{t('imapForm.fields.username')}</Label>
             <Input id="username" {...form.register('username')} error={form.formState.errors.username?.message} />
           </div>
 
           {authType === 'password' && (
             <div>
-              <Label htmlFor="password">Password / App Password</Label>
+              <Label htmlFor="password">{t('imapForm.fields.passwordLabel')}</Label>
               {isEditing && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Passwords are stored securely and will not be displayed. Leave blank to keep the existing password.
+                  {t('imapForm.password.editHelp')}
                 </p>
               )}
               <div className="relative">
@@ -281,8 +283,8 @@ export function ImapProviderForm({
               {provider && (
                 <div className="flex items-center justify-between rounded border border-gray-200 p-3 text-sm">
                   <div>
-                    <p className="font-medium">OAuth Status</p>
-                    <p className="text-muted-foreground">{oauthConnected ? 'Connected' : 'Not connected'}</p>
+                    <p className="font-medium">{t('imapForm.oauth.statusLabel')}</p>
+                    <p className="text-muted-foreground">{oauthConnected ? t('imapForm.oauth.connected') : t('imapForm.oauth.notConnected')}</p>
                   </div>
                   <Button
                     id="imap-reconnect-oauth-btn"
@@ -291,24 +293,24 @@ export function ImapProviderForm({
                     onClick={handleOauthConnect}
                     disabled={oauthStatus === 'authorizing'}
                   >
-                    {oauthStatus === 'authorizing' ? 'Authorizing...' : 'Reconnect OAuth'}
+                    {oauthStatus === 'authorizing' ? t('imapForm.oauth.authorizing') : t('imapForm.oauth.reconnect')}
                   </Button>
                 </div>
               )}
               <div>
-                <Label htmlFor="oauthAuthorizeUrl">Authorize URL</Label>
+                <Label htmlFor="oauthAuthorizeUrl">{t('imapForm.fields.authorizeUrl')}</Label>
                 <Input id="oauthAuthorizeUrl" {...form.register('oauthAuthorizeUrl')} error={form.formState.errors.oauthAuthorizeUrl?.message} />
               </div>
               <div>
-                <Label htmlFor="oauthTokenUrl">Token URL</Label>
+                <Label htmlFor="oauthTokenUrl">{t('imapForm.fields.tokenUrl')}</Label>
                 <Input id="oauthTokenUrl" {...form.register('oauthTokenUrl')} error={form.formState.errors.oauthTokenUrl?.message} />
               </div>
               <div>
-                <Label htmlFor="oauthClientId">OAuth Client ID</Label>
+                <Label htmlFor="oauthClientId">{t('imapForm.fields.oauthClientId')}</Label>
                 <Input id="oauthClientId" {...form.register('oauthClientId')} error={form.formState.errors.oauthClientId?.message} />
               </div>
               <div>
-                <Label htmlFor="oauthClientSecret">OAuth Client Secret</Label>
+                <Label htmlFor="oauthClientSecret">{t('imapForm.fields.oauthClientSecret')}</Label>
                 <div className="relative">
                   <Input id="oauthClientSecret" type={showClientSecret ? 'text' : 'password'} {...form.register('oauthClientSecret')} error={form.formState.errors.oauthClientSecret?.message} />
                   <button
@@ -321,8 +323,8 @@ export function ImapProviderForm({
                 </div>
               </div>
               <div>
-                <Label htmlFor="oauthScopes">OAuth Scopes</Label>
-                <Input id="oauthScopes" {...form.register('oauthScopes')} error={form.formState.errors.oauthScopes?.message} placeholder="space-delimited scopes" />
+                <Label htmlFor="oauthScopes">{t('imapForm.fields.oauthScopes')}</Label>
+                <Input id="oauthScopes" {...form.register('oauthScopes')} error={form.formState.errors.oauthScopes?.message} placeholder={t('imapForm.fields.oauthScopesPlaceholder')} />
               </div>
             </div>
           )}
@@ -331,25 +333,25 @@ export function ImapProviderForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Processing Settings</CardTitle>
-          <CardDescription>Choose folders and processing behavior.</CardDescription>
+          <CardTitle>{t('imapForm.sections.processing.title')}</CardTitle>
+          <CardDescription>{t('imapForm.sections.processing.description')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label htmlFor="folderFilters">Folder Filters</Label>
-            <Input id="folderFilters" {...form.register('folderFilters')} error={form.formState.errors.folderFilters?.message} placeholder="Inbox, Support, Tickets" />
+            <Label htmlFor="folderFilters">{t('imapForm.fields.folderFilters')}</Label>
+            <Input id="folderFilters" {...form.register('folderFilters')} error={form.formState.errors.folderFilters?.message} placeholder={t('imapForm.fields.folderFiltersPlaceholder')} />
           </div>
           <div className="flex items-center justify-between">
-            <Label htmlFor="isActive">Active</Label>
+            <Label htmlFor="isActive">{t('imapForm.fields.active')}</Label>
             <Switch id="isActive" checked={form.watch('isActive')} onCheckedChange={(v) => form.setValue('isActive', v)} />
           </div>
           <CustomSelect
             id="imap-defaults-select"
-            label="Ticket Defaults"
+            label={t('imapForm.fields.ticketDefaultsLabel')}
             value={form.watch('inboundTicketDefaultsId') || ''}
             onValueChange={(v) => form.setValue('inboundTicketDefaultsId', v || undefined)}
             options={defaultsOptions}
-            placeholder={defaultsOptions.length ? 'Select defaults...' : 'No defaults available'}
+            placeholder={defaultsOptions.length ? t('imapForm.fields.ticketDefaultsPlaceholder') : t('imapForm.fields.ticketDefaultsEmpty')}
             allowClear
           />
         </CardContent>
@@ -357,16 +359,16 @@ export function ImapProviderForm({
 
       {hasAttemptedSubmit && Object.keys(form.formState.errors).length > 0 && (
         <Alert variant="destructive">
-          <AlertDescription>Please fix the highlighted fields and try again.</AlertDescription>
+          <AlertDescription>{t('imapForm.validation.fixHighlightedFields')}</AlertDescription>
         </Alert>
       )}
 
       <div className="flex justify-end space-x-3">
         <Button id="imap-cancel-btn" type="button" variant="outline" onClick={onCancel} disabled={loading}>
-          Cancel
+          {t('imapForm.actions.cancel')}
         </Button>
         <Button id="imap-submit-btn" type="submit" disabled={loading}>
-          {loading ? 'Saving...' : isEditing ? 'Update Provider' : 'Create Provider'}
+          {loading ? t('imapForm.actions.saving') : isEditing ? t('imapForm.actions.updateProvider') : t('imapForm.actions.createProvider')}
         </Button>
       </div>
     </form>

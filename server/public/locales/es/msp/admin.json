@@ -255,5 +255,320 @@
       "load": "No se pudieron cargar los valores predeterminados de tickets",
       "delete": "No se pudieron eliminar los valores predeterminados de tickets"
     }
+  },
+  "policyManagement": {
+    "resourceSections": {
+      "tickets": "Tickets",
+      "documents": "Documentos",
+      "time": "Tiempo",
+      "projects": "Proyectos",
+      "assets": "Activos",
+      "billing": "Facturación"
+    },
+    "targetTypes": {
+      "role": "Rol",
+      "team": "Equipo",
+      "user": "Usuario",
+      "apiKey": "Clave API"
+    },
+    "templateSummaries": {
+      "own": "registros propiedad del principal",
+      "assigned": "registros asignados al principal",
+      "managed": "registros propiedad de usuarios gestionados",
+      "ownOrAssigned": "registros propiedad o asignados al principal",
+      "ownOrManaged": "registros propiedad del principal o de usuarios gestionados",
+      "sameClient": "registros en el mismo ámbito de cliente",
+      "clientPortfolio": "registros del portafolio de clientes del principal",
+      "selectedClients": "registros en los ámbitos de cliente seleccionados",
+      "sameTeam": "registros propiedad del mismo equipo",
+      "selectedBoards": "registros en los tableros seleccionados"
+    },
+    "constraintSummaries": {
+      "notSelfApprover": "bloquea la autoaprobación",
+      "clientVisibleOnly": "requiere registros visibles para el cliente",
+      "hideSensitiveFields": "redacta campos sensibles"
+    },
+    "dates": {
+      "unknown": "Desconocido"
+    },
+    "ruleSummary": {
+      "base": "Restringir {{action}} de {{resourceType}} a {{scope}}.",
+      "withConstraint": "Restringir {{action}} de {{resourceType}} a {{scope}}; {{constraint}}."
+    },
+    "upsell": {
+      "title": "Paquetes de autorización",
+      "description": "La gestión avanzada de paquetes de autorización está disponible en el nivel Premium. Actualice para gestionar paquetes de restricción reutilizables."
+    },
+    "hero": {
+      "badge": "Espacio de trabajo Premium",
+      "title": "Paquetes de autorización",
+      "subtitle": "Gestione la restricción de acceso premium con revisiones en borrador, asignaciones acotadas y simulación segura desde un único centro de control.",
+      "newBundle": "Nuevo paquete",
+      "addStarters": "Añadir paquetes iniciales",
+      "addingStarters": "Añadiendo paquetes iniciales..."
+    },
+    "metrics": {
+      "activeBundles": {
+        "title": "Paquetes activos",
+        "subtitle": "Paquetes de restricción reutilizables disponibles para asignar"
+      },
+      "activeAssignments": {
+        "title": "Asignaciones activas",
+        "subtitle": "Implementaciones activas en roles, equipos, usuarios y claves API"
+      },
+      "starterBundles": {
+        "title": "Paquetes iniciales",
+        "subtitle": "Preajustes basados en relaciones listos para adaptar"
+      },
+      "archivedBundles": {
+        "title": "Paquetes archivados",
+        "subtitle": "Paquetes retirados conservados para auditoría y reutilización"
+      }
+    },
+    "library": {
+      "eyebrow": "Biblioteca",
+      "title": "Biblioteca de paquetes de autorización",
+      "description": "Explore el estado de los paquetes, gestione cambios de ciclo de vida y abra un espacio de trabajo enfocado para un paquete a la vez.",
+      "searchPlaceholder": "Buscar paquetes por nombre o descripción",
+      "showArchived": "Mostrar archivados",
+      "columns": {
+        "bundle": "Paquete",
+        "status": "Estado",
+        "type": "Tipo",
+        "assignments": "Asignaciones",
+        "updated": "Actualizado",
+        "actions": "Acciones"
+      },
+      "statusLabels": {
+        "active": "activo",
+        "archived": "archivado"
+      },
+      "typeLabels": {
+        "system": "Sistema",
+        "custom": "Personalizado"
+      },
+      "badges": {
+        "starter": "Inicial"
+      },
+      "descriptions": {
+        "systemStarter": "Paquete inicial del sistema.",
+        "customBundle": "Paquete de restricción personalizado para asignaciones de rol, equipo, usuario o clave API."
+      },
+      "effectiveSummary": "Resumen efectivo: paquete {{status}} con {{count}} asignación(es) activa(s).",
+      "empty": "No se encontraron paquetes de autorización.",
+      "loading": "Cargando paquetes de autorización...",
+      "actions": {
+        "openEditor": "Abrir editor",
+        "assignments": "Asignaciones",
+        "simulator": "Simulador",
+        "clone": "Clonar",
+        "archive": "Archivar"
+      }
+    },
+    "workspace": {
+      "backToLibrary": "Volver a la biblioteca",
+      "updatedWithAssignments": "Actualizado el {{date}} · {{count}} asignación(es) activa(s)",
+      "eyebrow": "Espacio de trabajo del paquete",
+      "fallbackBundleName": "Paquete seleccionado",
+      "fallbackDescription": "Use el editor de borrador, el administrador de asignaciones y el simulador para implementar cambios de restricción de forma segura.",
+      "tabs": {
+        "editor": "Editor de borrador",
+        "assignments": "Asignaciones",
+        "simulator": "Simulador"
+      }
+    },
+    "editor": {
+      "header": "Editor del paquete",
+      "editingDraftPrefix": "Editando la revisión en borrador de ",
+      "editingDraftSuffix": ". Los cambios permanecen en borrador hasta que se publican.",
+      "viewingPublishedPrefix": "Viendo la revisión publicada de ",
+      "viewingPublishedSuffix": ". Actualmente no existe ninguna revisión en borrador activa.",
+      "publishDraft": "Publicar borrador",
+      "publishing": "Publicando...",
+      "publishedBadge": "Publicado",
+      "loading": "Cargando editor de borrador...",
+      "revisionSummary": "Resumen de la revisión: {{summary}}",
+      "ruleCount": "{{count}} regla(s) {{revisionType}}",
+      "revisionType": {
+        "draft": "en borrador",
+        "published": "publicada"
+      },
+      "emptyRules": "Aún no hay reglas {{revisionType}} para {{resource}}.",
+      "ruleForm": {
+        "addDraftTitle": "Añadir regla en borrador",
+        "editDraftTitle": "Editar regla en borrador",
+        "createDraftTitle": "Crear regla en borrador",
+        "editPublishedTitle": "Editar regla publicada como borrador",
+        "helperEditPublished": "Al guardar se creará una nueva revisión en borrador con sus cambios sobre esta regla publicada.",
+        "helperCreateDraft": "Al guardar se creará una nueva revisión en borrador para este paquete.",
+        "reset": "Restablecer",
+        "action": "Acción",
+        "template": "Plantilla",
+        "constraint": "Restricción (opcional)",
+        "constraintNone": "ninguna",
+        "saveDraftRule": "Guardar regla en borrador",
+        "addDraftRule": "Añadir regla en borrador",
+        "saveAsDraftChange": "Guardar como cambio en borrador",
+        "createDraftRule": "Crear regla en borrador"
+      },
+      "rule": {
+        "edit": "Editar",
+        "remove": "Eliminar",
+        "removeAsDraft": "Eliminar como cambio en borrador",
+        "removeDraftTooltip": "Eliminar esta regla en borrador.",
+        "removePublishedTooltip": "Crear una nueva revisión en borrador que elimine esta regla publicada.",
+        "selectedClientScopes": "Ámbitos de cliente seleccionados",
+        "selectedBoardScopes": "Ámbitos de tablero seleccionados",
+        "redactedFields": "Campos redactados"
+      },
+      "scopes": {
+        "clientTitle": "Ámbitos de cliente seleccionados",
+        "boardTitle": "Ámbitos de tablero seleccionados",
+        "selectClient": "Seleccionar cliente",
+        "selectBoard": "Seleccionar tablero",
+        "addClientScope": "Añadir ámbito de cliente",
+        "addBoardScope": "Añadir ámbito de tablero",
+        "noClientScopes": "Aún no se han añadido ámbitos de cliente.",
+        "noBoardScopes": "Aún no se han añadido ámbitos de tablero.",
+        "remove": "Eliminar"
+      },
+      "redaction": {
+        "label": "Campos redactados",
+        "placeholder": "internal_cost, margin",
+        "helper": "Nombres de campo separados por comas que se redactarán cuando esta regla permita el acceso."
+      }
+    },
+    "assignments": {
+      "header": "Administrador de asignaciones",
+      "description": "Vea y gestione los objetivos de rol, equipo, usuario y clave API actualmente afectados por este paquete.",
+      "loading": "Cargando asignaciones...",
+      "addAssignment": "Añadir asignación",
+      "selectTargetPlaceholder": "Seleccionar {{target}}",
+      "addButton": "Añadir asignación",
+      "adding": "Añadiendo...",
+      "empty": "Aún no hay asignaciones para este paquete.",
+      "groupEmpty": "No hay asignaciones de {{target}}.",
+      "statusActions": {
+        "disable": "Deshabilitar",
+        "enable": "Habilitar",
+        "saving": "Guardando..."
+      },
+      "statusLabels": {
+        "active": "activa",
+        "disabled": "deshabilitada"
+      }
+    },
+    "simulator": {
+      "header": "Simulador de acceso",
+      "description": "Simule el comportamiento del paquete en borrador frente al publicado contra un principal real y un registro existente.",
+      "inputTitle": "Entrada de simulación",
+      "resource": "Recurso",
+      "action": "Acción",
+      "principal": "Principal",
+      "record": "Registro",
+      "useSynthetic": "Usar escenario de registro sintético",
+      "syntheticOwnerPlaceholder": "ID de usuario propietario (opcional)",
+      "syntheticClientPlaceholder": "ID de cliente (opcional)",
+      "syntheticBoardPlaceholder": "ID de tablero (opcional)",
+      "clientVisible": "Visible para el cliente",
+      "run": "Ejecutar simulación",
+      "running": "Ejecutando simulación...",
+      "resultTitle": "Resultado de la simulación",
+      "draftRevision": "Revisión en borrador",
+      "publishedRevision": "Revisión publicada",
+      "allowed": "Permitido",
+      "denied": "Denegado",
+      "empty": "Ejecute una simulación para comparar el comportamiento del borrador y el publicado."
+    },
+    "createDialog": {
+      "title": "Crear paquete de autorización",
+      "cancel": "Cancelar",
+      "create": "Crear paquete",
+      "creating": "Creando...",
+      "nameLabel": "Nombre",
+      "namePlaceholder": "Revisor de Finanzas Oeste",
+      "descriptionLabel": "Descripción",
+      "descriptionPlaceholder": "Paquete de restricción reutilizable para un equipo, grupo de clientes o flujo de trabajo específico."
+    },
+    "clone": {
+      "copySuffix": "{{name}} copia"
+    },
+    "errors": {
+      "loadBundles": "No se pudieron cargar los paquetes.",
+      "loadEditor": "No se pudo cargar el editor del paquete.",
+      "loadAssignments": "No se pudieron cargar las asignaciones del paquete.",
+      "cloneBundle": "No se pudo clonar el paquete.",
+      "archiveBundle": "No se pudo archivar el paquete.",
+      "seedStarters": "No se pudieron sembrar los paquetes iniciales.",
+      "bundleNameRequired": "El nombre del paquete es obligatorio.",
+      "createBundle": "No se pudo crear el paquete.",
+      "publishDraft": "No se pudo publicar el borrador del paquete.",
+      "selectTemplate": "Seleccione una plantilla antes de guardar una regla.",
+      "selectClientRequired": "Añada al menos un cliente seleccionado antes de guardar esta regla.",
+      "selectBoardRequired": "Añada al menos un tablero seleccionado antes de guardar esta regla.",
+      "redactedFieldRequired": "Introduzca al menos un campo redactado antes de guardar esta regla.",
+      "saveRule": "No se pudo guardar la regla en borrador.",
+      "removeRule": "No se pudo eliminar la regla.",
+      "selectTarget": "Seleccione un objetivo antes de añadir una asignación.",
+      "addAssignment": "No se pudo añadir la asignación.",
+      "updateAssignmentStatus": "No se pudo actualizar el estado de la asignación.",
+      "selectPrincipal": "Seleccione un principal antes de ejecutar la simulación.",
+      "selectRecord": "Seleccione un registro antes de ejecutar la simulación.",
+      "runSimulation": "No se pudo ejecutar la simulación.",
+      "simulator": {
+        "unsupportedAction": "El simulador actualmente solo admite comprobaciones de Lectura y Aprobación. Elija una de esas acciones y vuelva a intentarlo.",
+        "unsupportedResource": "Este tipo de registro aún no está disponible en el simulador. Elija un tipo de registro compatible y vuelva a intentarlo.",
+        "clientTicketNotSupported": "Las comprobaciones de tickets para usuarios cliente aún no están disponibles en el simulador porque la visibilidad del tablero de tickets no está incluida. Pruebe con un usuario interno o verifique el acceso de tickets de cliente en la aplicación."
+      }
+    }
+  },
+  "emailLogs": {
+    "page": {
+      "title": "Registros de correo electrónico",
+      "description": "Revise la actividad de correo electrónico saliente y solucione problemas de entrega de notificaciones."
+    },
+    "metrics": {
+      "totalSent": "Total enviados",
+      "failedRate": "Tasa de fallos",
+      "today": "Hoy"
+    },
+    "filters": {
+      "startDate": "Fecha de inicio",
+      "endDate": "Fecha de fin",
+      "status": "Estado",
+      "recipient": "Destinatario",
+      "recipientPlaceholder": "Buscar Email…",
+      "ticket": "Ticket",
+      "ticketPlaceholder": "Ticket #…",
+      "statusOptions": {
+        "all": "Todos",
+        "sent": "Enviado",
+        "failed": "Fallido"
+      }
+    },
+    "table": {
+      "time": "Hora",
+      "ticket": "Ticket",
+      "recipient": "Destinatario",
+      "subject": "Asunto",
+      "status": "Estado"
+    },
+    "loading": "Cargando…",
+    "results_one": "{{count}} resultado",
+    "results_other": "{{count}} resultados",
+    "refresh": "Actualizar",
+    "close": "Cerrar",
+    "detail": {
+      "title": "Detalles del registro de correo electrónico",
+      "noSubject": "Sin asunto",
+      "sentAt": "Enviado el",
+      "status": "Estado",
+      "provider": "Proveedor",
+      "messageId": "ID de mensaje",
+      "to": "Para",
+      "from": "De",
+      "error": "Error",
+      "metadata": "Metadatos"
+    }
   }
 }

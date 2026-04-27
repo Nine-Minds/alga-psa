@@ -8,6 +8,7 @@ import {
   isTicketStatusOpenFilter,
   TICKET_STATUS_FILTER_OPEN,
 } from '@alga-psa/tickets/lib';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -208,7 +209,8 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     );
   } catch (error) {
     console.error('Error fetching user or tickets:', error);
-    return <div id="tickets-error-message">An error occurred. Please try again later.</div>;
+    const { t } = await getServerTranslation(undefined, 'common');
+    return <div id="tickets-error-message">{t('pages.errors.genericError')}</div>;
   }
 }
 

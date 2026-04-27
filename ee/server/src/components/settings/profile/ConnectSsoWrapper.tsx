@@ -5,6 +5,7 @@ import ConnectSsoClient from "./ConnectSsoClient";
 import { getSsoProviderOptionsAction } from "@ee/lib/actions/auth/getSsoProviderOptions";
 import { getLinkedSsoAccountsAction, type LinkedSsoAccount } from "@ee/lib/actions/auth/ssoPreferences";
 import Spinner from "@alga-psa/ui/components/Spinner";
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ProviderOption {
   id: string;
@@ -24,6 +25,7 @@ function getErrorMessage(err: unknown): string {
 }
 
 export default function ConnectSsoWrapper() {
+  const { t } = useTranslation('common');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
@@ -91,7 +93,7 @@ export default function ConnectSsoWrapper() {
     return (
       <div className="flex flex-col items-center justify-center py-12">
         <Spinner size="sm" />
-        <p className="mt-4 text-sm text-muted-foreground">Loading SSO settings...</p>
+        <p className="mt-4 text-sm text-muted-foreground">{t('pages.loading.ssoSettings', { defaultValue: 'Loading SSO settings...' })}</p>
       </div>
     );
   }

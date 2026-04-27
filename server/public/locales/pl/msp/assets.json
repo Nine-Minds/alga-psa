@@ -609,11 +609,67 @@
   },
   "assetPatchStatusSection": {
     "title": "Sekcja stanu aktualizacji zasobów",
-    "description": "Opakowanie łatki korporacyjnej i stanu programu antywirusowego wyświetlane w oknie szczegółów zasobu"
+    "description": "Opakowanie łatki korporacyjnej i stanu programu antywirusowego wyświetlane w oknie szczegółów zasobu",
+    "heading": "Status aktualizacji",
+    "compliance": {
+      "unknown": "Nieznany",
+      "actionRequired": "Wymagane działanie",
+      "updatesAvailable": "Dostępne aktualizacje",
+      "minorUpdates": "Drobne aktualizacje",
+      "upToDate": "Aktualne"
+    },
+    "relativeTime": {
+      "never": "Nigdy",
+      "justNow": "Przed chwilą",
+      "minutesAgo": "{{count}} min temu",
+      "hoursAgo": "{{count}} godz. temu",
+      "daysAgo": "{{count}} dni temu"
+    },
+    "labels": {
+      "osPatches": "Aktualizacje systemu",
+      "software": "Oprogramowanie",
+      "failed": "Niepowodzenia",
+      "lastScan": "Ostatnie skanowanie",
+      "pending": "oczekujące",
+      "patches": "aktualizacje"
+    }
   },
   "assetSoftwareInventory": {
     "title": "Inwentaryzacja oprogramowania",
-    "description": "Opakowanie inwentarza oprogramowania dla przedsiębiorstw dotyczące zainstalowanego oprogramowania i danych wersji"
+    "description": "Opakowanie inwentarza oprogramowania dla przedsiębiorstw dotyczące zainstalowanego oprogramowania i danych wersji",
+    "heading": "Inwentarz oprogramowania",
+    "searchPlaceholder": "Szukaj oprogramowania...",
+    "appsCount": "{{count}} aplikacji",
+    "unknownName": "Nieznane",
+    "noMatch": "Brak oprogramowania pasującego do wyszukiwania",
+    "version": "v{{version}}",
+    "by": "przez {{publisher}}",
+    "showingOfApplications": "Wyświetlanie {{shown}} z {{total}} aplikacji",
+    "more": "+{{count}} więcej"
+  },
+  "remoteAccess": {
+    "remoteDesktop": "Pulpit zdalny",
+    "remoteShell": "Powłoka zdalna",
+    "remoteAccess": "Dostęp zdalny",
+    "deviceOverdue": "Urządzenie zalega z aktualizacjami",
+    "deviceOffline": "Urządzenie jest offline",
+    "errors": {
+      "urlFetchFailed": "Nie udało się pobrać adresu URL dostępu zdalnego",
+      "initiateFailed": "Nie udało się zainicjować dostępu zdalnego"
+    },
+    "indicator": {
+      "online": "Online",
+      "offline": "Offline",
+      "available": "Dostęp zdalny dostępny",
+      "deviceOffline": "Urządzenie offline"
+    }
+  },
+  "assetListErrors": {
+    "genericError": "Wystąpił błąd. Spróbuj ponownie później.",
+    "assetNotFound": "Nie znaleziono zasobu"
+  },
+  "assetEdit": {
+    "pageTitle": "Edytuj zasób"
   },
   "associatedAssets": {
     "title": "Powiązane zasoby",
@@ -1191,6 +1247,9 @@
       "acknowledgeFailed": "Nie udało się potwierdzić alertu",
       "ticketCreated": "Zgłoszenie utworzone pomyślnie",
       "ticketCreateFailed": "Nie udało się utworzyć zgłoszenia"
-    }
+    },
+    "activeAlerts": "Aktywne alerty",
+    "acknowledge": "Potwierdź",
+    "createTicket": "Utwórz zgłoszenie"
   }
 }

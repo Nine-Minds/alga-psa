@@ -19,7 +19,13 @@
     "importExport": "Importa/Esporta",
     "email": "E-mail",
     "integrations": "Integrazioni",
-    "extensions": "Estensioni"
+    "extensions": "Estensioni",
+    "ticketingSettings": "Impostazioni ticketing",
+    "loadingTicketing": "Caricamento configurazione ticketing...",
+    "teamManagement": "Gestione team",
+    "loadingTeam": "Caricamento configurazione team...",
+    "loadingExperimental": "Caricamento configurazione funzionalità sperimentali...",
+    "loadingInteractions": "Caricamento impostazioni interazioni..."
   },
   "unsavedChanges": {
     "title": "Modifiche non salvate",
@@ -304,7 +310,8 @@
         "reportsToSelf": "Un utente non può riferire a se stesso",
         "reportsToCycle": "Questo creerebbe una catena di riporto circolare"
       }
-    }
+    },
+    "loading": "Caricamento dettagli utente..."
   },
   "teams": {
     "title": "Gestione team",
@@ -610,7 +617,40 @@
         "priorityMatrixTitle": "Matrice di priorità",
         "impactDescription": "I livelli di impatto definiscono la portata del problema",
         "urgencyDescription": "I livelli di urgenza definiscono la rapidità con cui il problema deve essere risolto",
-        "priorityDescription": "La priorità viene calcolata in base all'impatto e all'urgenza"
+        "priorityDescription": "La priorità viene calcolata in base all'impatto e all'urgenza",
+        "categories": {
+          "serviceRequest": "Richiesta di servizio"
+        },
+        "priorityMatrix": {
+          "urgencyHeaderLine1": {
+            "high": "Alta",
+            "mediumHigh": "Medio-alta",
+            "medium": "Media",
+            "mediumLow": "Medio-bassa",
+            "low": "Bassa"
+          },
+          "urgencyHeaderLine2": {
+            "high": "Urgenza (1)",
+            "mediumHigh": "Urgenza (2)",
+            "medium": "Urgenza (3)",
+            "mediumLow": "Urgenza (4)",
+            "low": "Urgenza (5)"
+          },
+          "impact": {
+            "high": "Impatto alto (1)",
+            "mediumHigh": "Impatto medio-alto (2)",
+            "medium": "Impatto medio (3)",
+            "mediumLow": "Impatto medio-basso (4)",
+            "low": "Impatto basso (5)"
+          },
+          "priority": {
+            "critical": "Critica (1)",
+            "high": "Alta (2)",
+            "medium": "Media (3)",
+            "low": "Bassa (4)",
+            "planning": "Pianificazione (5)"
+          }
+        }
       },
       "messages": {
         "success": {
@@ -842,7 +882,8 @@
           "saveFailed": "Impossibile {{action}} il tipo di interazione. Riprovi."
         }
       }
-    }
+    },
+    "openMenu": "Apri menu"
   },
   "clientPortal": {
     "branding": {
@@ -927,7 +968,70 @@
         "forgotPassword": "Password dimenticata?",
         "mspStaffLogin": "Personale MSP? Acceda qui →"
       }
-    }
+    },
+    "domain": {
+      "title": "Dominio personalizzato",
+      "description": "Configuri un hostname personalizzato per il Suo portale clienti. Provvederemo automaticamente al provisioning dei certificati TLS una volta verificato il DNS.",
+      "currentStatus": "Stato attuale",
+      "noDomainConfigured": "Nessun dominio personalizzato configurato",
+      "defaultStatusMessage": "Nessun dominio personalizzato ancora registrato.",
+      "lastChecked": "Ultimo controllo: {{value}}",
+      "updatingDomainPrefix": "Aggiornamento del dominio a ",
+      "updatingDomainSuffix": ". Il provisioning verrà riavviato dopo l'aggiornamento.",
+      "editInstructions": "Per modificare il Suo dominio, modifichi il valore qui sotto e invii per avviare un nuovo processo di provisioning.",
+      "actions": {
+        "refresh": "Aggiorna",
+        "refreshing": "Aggiornamento in corso...",
+        "retry": "Riprova",
+        "retrying": "Nuovo tentativo in corso…",
+        "removeDomain": "Rimuovi dominio",
+        "saveDomain": "Salva dominio",
+        "updateDomain": "Aggiorna dominio",
+        "submitting": "Invio in corso…",
+        "cancelEdit": "Annulla modifica"
+      },
+      "form": {
+        "label": "Dominio personalizzato",
+        "helpTextPrefix": "Aggiunga un record CNAME che punta a ",
+        "helpTextSuffix": " prima di inviare.",
+        "placeholder": "portal.example.com"
+      },
+      "checklist": {
+        "title": "Lista di controllo per la configurazione",
+        "step1Prefix": "Crei un record CNAME per l'host scelto che punti a ",
+        "step1Suffix": ".",
+        "step2": "Clicchi su \"Salva dominio\" per attivare la verifica DNS e il provisioning del certificato.",
+        "step3": "Utilizzi il pulsante Aggiorna per controllare l'avanzamento del provisioning. Invieremo un'email ai Suoi amministratori se il provisioning fallisce.",
+        "canonicalHostFallback": "host canonico"
+      },
+      "badges": {
+        "pending_dns": "DNS in attesa",
+        "verifying_dns": "Verifica DNS in corso",
+        "dns_failed": "DNS non riuscito",
+        "pending_certificate": "Certificato in attesa",
+        "certificate_issuing": "Emissione certificato",
+        "certificate_failed": "Certificato non riuscito",
+        "deploying": "Distribuzione in corso",
+        "active": "Attivo",
+        "disabled": "Disattivato",
+        "unknown": "Sconosciuto"
+      },
+      "messages": {
+        "requestSubmitted": "Richiesta di dominio personalizzato inviata.",
+        "retryQueued": "Nuovo tentativo in coda. Ricontrolli lo stato tra qualche istante.",
+        "removalRequested": "Richiesta di rimozione del dominio personalizzato inviata.",
+        "enterDomainFirst": "Inserisca un dominio prima di inviare.",
+        "confirmRemove": "Rimuovere il dominio personalizzato attuale? Il traffico tornerà all'indirizzo predefinito ospitato.",
+        "loadFailed": "Impossibile caricare lo stato del dominio del portale.",
+        "registerFailed": "Impossibile registrare il dominio personalizzato.",
+        "refreshFailed": "Impossibile aggiornare lo stato del dominio.",
+        "retryFailed": "Nuovo tentativo non riuscito.",
+        "disableFailed": "Impossibile disattivare il dominio personalizzato."
+      }
+    },
+    "yourCompanyName": "Nome della tua azienda",
+    "brandingPreviewMode": "Modalità tema anteprima branding",
+    "brandingUpdated": "Impostazioni di branding aggiornate"
   },
   "mspLanguage": {
     "title": "Lingua dell’organizzazione",
@@ -958,7 +1062,21 @@
       "telemetry": "Telemetria"
     },
     "internalTabs": {
-      "categories": "Categorie"
+      "categories": "Categorie",
+      "categoriesTypes": "Categorie e tipi"
+    },
+    "loading": {
+      "settings": "Caricamento impostazioni...",
+      "templates": "Caricamento modelli...",
+      "categories": "Caricamento categorie..."
+    },
+    "unsaved": {
+      "title": "Modifiche non salvate",
+      "message": "Ha impostazioni di notifica non salvate. È sicuro di voler uscire? Le Sue modifiche andranno perse."
+    },
+    "tenantDescription": {
+      "email": "Configuri le impostazioni delle notifiche email per l'intero tenant",
+      "internal": "Configuri le impostazioni delle notifiche interne per l'intero tenant"
     },
     "sections": {
       "globalSettings": {
@@ -1193,7 +1311,8 @@
         "loadJobDetails": "Impossibile caricare i dettagli del processo",
         "refreshHistory": "Impossibile aggiornare la cronologia di importazione"
       }
-    }
+    },
+    "selectJobHint": "Seleziona un lavoro di importazione per esaminarne i risultati."
   },
   "email": {
     "title": "Configurazione email",
@@ -1238,6 +1357,107 @@
       "apiKeys": "Caricamento configurazione chiavi API...",
       "sso": "Caricamento strumenti di gestione SSO...",
       "sessions": "Caricamento sessioni attive..."
+    },
+    "ssoBulk": {
+      "loading": {
+        "title": "SSO",
+        "description": "Caricamento degli strumenti di assegnazione SSO in blocco..."
+      },
+      "autoLink": {
+        "title": "Configuri automaticamente l'SSO per i nuovi utenti interni",
+        "description": "Attivi questa opzione per provisionare immediatamente ogni nuovo account del personale con il Suo provider SSO aziendale, in modo che non sia mai necessario un accesso basato su password.",
+        "body": "Quando è attivata, gli utenti MSP appena aggiunti possono accedere con Google o Microsoft utilizzando la loro email aziendale. Non dovranno collegare manualmente il proprio account.",
+        "toggleLabel": "Attiva/disattiva la corrispondenza SSO automatica",
+        "disabledInfo": "Attivi questo interruttore per consentire al personale nuovo ed esistente di saltare il flusso “Connetti SSO” quando la loro email corrisponde già a un provider configurato. Registreremo comunque ogni collegamento automatico."
+      },
+      "bulk": {
+        "title": "Assegnazione SSO in blocco",
+        "description": "Selezioni gli utenti interni dall'elenco sottostante e li colleghi a un provider Google o Microsoft configurato. Utilizzi l'anteprima per verificare l'impatto prima dell'esecuzione.",
+        "noProviders": "Nessun provider SSO è ancora configurato. Aggiunga le credenziali OAuth per continuare con le assegnazioni in blocco."
+      },
+      "errors": {
+        "loadProviders": "Impossibile caricare la configurazione del provider SSO.",
+        "updatePreferences": "Impossibile aggiornare le preferenze SSO."
+      },
+      "form": {
+        "title": "Scelga il provider e selezioni gli utenti",
+        "description": "Selezioni il provider SSO configurato per il Suo personale, quindi cerchi e selezioni gli utenti che devono essere collegati.",
+        "providerLabel": "Provider",
+        "notConfigured": "Non configurato",
+        "providerNotConfiguredAlert": "Fornisca le credenziali OAuth per questo provider prima di collegare gli account.",
+        "actionLabel": "Azione",
+        "linkSelected": "Collega utenti selezionati",
+        "unlinkSelected": "Scollega utenti selezionati",
+        "actionPlaceholder": "Selezioni l'azione SSO in blocco",
+        "actionDescription": "Il collegamento aggiunge il provider a ciascun utente selezionato. Lo scollegamento rimuove il provider, quindi l'utente torna all'accesso con password/TOTP fino al prossimo collegamento.",
+        "searchLabel": "Trovi utenti interni",
+        "searchPlaceholder": "Cerchi per email o nome",
+        "noneSelected": "Nessun utente ancora selezionato.",
+        "selected_one": "{{count}} utente selezionato.",
+        "selected_other": "{{count}} utenti selezionati.",
+        "clearSelection": "Cancella selezione",
+        "loadingUsers": "Caricamento utenti...",
+        "noMatch": "Nessun utente corrisponde a questa ricerca.",
+        "noUsers": "Nessun utente interno trovato.",
+        "clientPortalComing": "Le assegnazioni in blocco per il portale clienti arriveranno presto. Per ora, questo strumento si applica solo agli utenti MSP interni.",
+        "loadUsersFailed": "Impossibile caricare gli utenti assegnabili.",
+        "actions": {
+          "previewLink": "Anteprima assegnazione",
+          "previewUnlink": "Anteprima scollegamento",
+          "link": "Collega account",
+          "unlink": "Scollega account",
+          "preparingPreview": "Preparazione anteprima…",
+          "linking": "Collegamento account…",
+          "unlinking": "Scollegamento account…",
+          "bulkLabel": "Azioni SSO in blocco {{location}}"
+        },
+        "table": {
+          "email": "Email",
+          "id": "ID",
+          "name": "Nome",
+          "status": "Stato",
+          "active": "Attivo",
+          "inactive": "Inattivo",
+          "linkedProviders": "Provider collegati",
+          "unlinked": "Scollegato",
+          "lastLogin": "Ultimo accesso"
+        },
+        "toast": {
+          "providerRequiredTitle": "Provider richiesto",
+          "providerRequiredDescription": "Selezioni un provider configurato prima di continuare.",
+          "noUsersTitle": "Nessun utente selezionato",
+          "noUsersDescription": "Selezioni almeno un utente dalla tabella.",
+          "failedTitle": "Assegnazione in blocco non riuscita",
+          "failedDescription": "Impossibile elaborare l'assegnazione SSO in blocco.",
+          "linkCompleteTitle": "Collegamento completato",
+          "unlinkCompleteTitle": "Scollegamento completato",
+          "previewReadyTitle": "Anteprima pronta",
+          "linkedCount": "Collegati {{count}} account tramite {{provider}}.",
+          "unlinkedCount": "Scollegati {{count}} account tramite {{provider}}.",
+          "previewUnlink_one": "Anteprima pronta. Scolleghemo {{count}} utente selezionato.",
+          "previewUnlink_other": "Anteprima pronta. Scolleghemo {{count}} utenti selezionati.",
+          "previewLink": "Anteprima pronta. Esamini il riepilogo prima di collegare gli account."
+        },
+        "results": {
+          "completeTitle": "Assegnazione completata",
+          "previewTitle": "Risultati anteprima",
+          "noneMatched": "Nessuno degli utenti selezionati corrisponde ai filtri attuali.",
+          "processed_one": "Elaborato {{count}} utente.",
+          "processed_other": "Elaborati {{count}} utenti.",
+          "candidatesSelected": "{{count}} selezionati",
+          "unlinked": "Scollegati",
+          "wouldUnlink": "Verrebbero scollegati",
+          "linked": "Collegati",
+          "wouldLink": "Verrebbero collegati",
+          "alreadyUnlinked": "Già scollegati",
+          "alreadyLinked": "Già collegati",
+          "skippedInactive": "Saltati (inattivi)"
+        },
+        "providerNames": {
+          "google": "Google Workspace",
+          "microsoft": "Microsoft 365"
+        }
+      }
     },
     "userRoles": {
       "title": "Assegna ruoli agli utenti",
@@ -1528,5 +1748,9 @@
     "inheritOption": "Usa l'impostazione predefinita dell'organizzazione ({{language}})",
     "unsetHint": "Per rimuovere la sovrascrittura del portale cliente, modifica l'impostazione predefinita dell'organizzazione in Impostazioni → Lingua.",
     "updated": "Lingua predefinita del portale cliente aggiornata a {{language}}"
+  },
+  "language": {
+    "selectLanguage": "Seleziona una lingua",
+    "languagesUpdated": "Lingue disponibili aggiornate"
   }
 }

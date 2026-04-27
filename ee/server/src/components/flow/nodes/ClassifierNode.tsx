@@ -5,6 +5,7 @@ import { Handle, NodeProps, Position, useReactFlow } from 'reactflow';
 import DeleteButton from '../DeleteButton';
 import InputFieldSelector from '../InputFieldSelector';
 import { ClassifierNodeData, Template } from '../../../services/flow/types/workflowTypes';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ClassifierNodeProps {
   id: string;
@@ -12,6 +13,7 @@ interface ClassifierNodeProps {
 }
 
 const ClassifierNode = ({ data, id }: NodeProps<ClassifierNodeData>) => {
+  const { t } = useTranslation('msp/workflows');
   const { getNode, setNodes } = useReactFlow();
   const node = getNode(id);
   const isSelected = node?.selected ?? false;
@@ -141,7 +143,7 @@ const ClassifierNode = ({ data, id }: NodeProps<ClassifierNodeData>) => {
             value={newClassification}
             onChange={(e) => setNewClassification(e.target.value)}
             style={styles.input}
-            placeholder="New classification"
+            placeholder={t('flow.nodes.classifier.newClassification')}
           />
           <button onClick={handleAddClassification} style={styles.addButton}>
             Add

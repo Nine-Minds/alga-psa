@@ -11,6 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   deleteCurrentUserChatAction,
   getChatMessagesAction,
@@ -46,48 +47,50 @@ const HISTORY_LIMIT = 20;
 const MIN_HISTORY_SEARCH_CHARS = 2;
 const HISTORY_SEARCH_DEBOUNCE_MS = 250;
 
-const formatHistoryTimestamp = (value?: string | Date | null) => {
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
+
+const formatHistoryTimestamp = (t: TranslateFn, value?: string | Date | null) => {
   if (!value) {
-    return 'Recently';
+    return t('sidebar.timestamp.recently');
   }
 
   const timestamp = new Date(value);
   if (Number.isNaN(timestamp.getTime())) {
-    return 'Recently';
+    return t('sidebar.timestamp.recently');
   }
 
   const diffMs = Date.now() - timestamp.getTime();
   const diffMinutes = Math.max(0, Math.floor(diffMs / 60_000));
   if (diffMinutes < 1) {
-    return 'Just now';
+    return t('sidebar.timestamp.justNow');
   }
   if (diffMinutes < 60) {
-    return `${diffMinutes}m ago`;
+    return t('sidebar.timestamp.minutesAgo', { count: diffMinutes });
   }
 
   const diffHours = Math.floor(diffMinutes / 60);
   if (diffHours < 24) {
-    return `${diffHours}h ago`;
+    return t('sidebar.timestamp.hoursAgo', { count: diffHours });
   }
 
   const diffDays = Math.floor(diffHours / 24);
   if (diffDays < 7) {
-    return `${diffDays}d ago`;
+    return t('sidebar.timestamp.daysAgo', { count: diffDays });
   }
 
   return timestamp.toLocaleDateString();
 };
 
-const getChatTitle = (chat: Pick<ChatHistoryItem, 'title_text'>) => {
+const getChatTitle = (t: TranslateFn, chat: Pick<ChatHistoryItem, 'title_text'>) => {
   const title = chat.title_text?.trim();
-  return title && title.length > 0 ? title : 'Untitled chat';
+  return title && title.length > 0 ? title : t('sidebar.history.untitled');
 };
 
-const ChatLoadingSkeleton = () => (
+const ChatLoadingSkeleton: React.FC<{ t: TranslateFn }> = ({ t }) => (
   <div
     className="flex h-full flex-col gap-4 bg-white p-4"
     data-testid="chat-loading-skeleton"
-    aria-label="Loading chat conversation"
+    aria-label={t('sidebar.loadingChatConversation')}
   >
     <div className="space-y-2">
       <Skeleton className="h-4 w-32" />
@@ -132,6 +135,7 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
   onInterruptibleStateChange,
   onRegisterCancelHandler,
 }) => {
+  const { t } = useTranslation('msp/chat');
   const [chatKey, setChatKey] = useState(0);
   const [width, setWidth] = useState(560);
   const [isResizing, setIsResizing] = useState(false);
@@ -210,14 +214,16 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
       }
       console.error('[RightSidebarContent] Failed to load chat history', error);
       setHistoryError(
-        nextMode === 'recent' ? 'Unable to load recent chats.' : 'Unable to load search results.',
+        nextMode === 'recent'
+          ? t('sidebar.history.unableToLoadRecent')
+          : t('sidebar.history.unableToLoadSearch'),
       );
     } finally {
       if (historyRequestSequenceRef.current === requestSequence) {
         setIsHistoryLoading(false);
       }
     }
-  }, [userId]);
+  }, [userId, t]);
 
   const refreshActiveHistoryDataset = useCallback(() => {
     if (trimmedHistoryQuery.length > 0 && trimmedHistoryQuery.length < MIN_HISTORY_SEARCH_CHARS) {
@@ -459,9 +465,9 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
             <div className="p-4 pb-3">
               <div className="flex justify-between items-center">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-800">Chat</h2>
+                  <h2 className="text-xl font-bold text-gray-800">{t('sidebar.title')}</h2>
                   <p className="mt-1 text-xs text-gray-500">
-                    {showHistory ? 'Current user recent AI sessions' : 'Chat with AI and manage saved sessions'}
+                    {showHistory ? t('sidebar.subtitleHistory') : t('sidebar.subtitleDefault')}
                   </p>
                 </div>
                 <div className="flex items-center gap-1">
@@ -473,24 +479,24 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
                         : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
                     ].join(' ')}
                     onClick={() => setShowHistory((prev) => !prev)}
-                    aria-label={showHistory ? 'Hide chat history' : 'Show chat history'}
-                    title={showHistory ? 'Hide history' : 'Show history'}
+                    aria-label={showHistory ? t('sidebar.hideHistory') : t('sidebar.showHistory')}
+                    title={showHistory ? t('sidebar.hideHistoryTooltip') : t('sidebar.showHistoryTooltip')}
                   >
                     <History className="h-4 w-4" />
                   </button>
                   <button
                     className="rounded p-1.5 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
                     onClick={handleNewChat}
-                    aria-label="Start new chat"
-                    title="Start new chat"
+                    aria-label={t('sidebar.startNewChat')}
+                    title={t('sidebar.startNewChat')}
                   >
                     <Plus className="h-4 w-4" />
                   </button>
                   <button
                     className="rounded p-1.5 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
                     onClick={handleHideSidebar}
-                    aria-label="Hide chat sidebar"
-                    title="Hide chat"
+                    aria-label={t('sidebar.hideSidebar')}
+                    title={t('sidebar.hideSidebarTooltip')}
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -502,17 +508,17 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
                 <div className="rounded-xl border border-gray-200 bg-gray-50 overflow-hidden">
                   <div className="flex items-center justify-between border-b border-gray-200 bg-white px-3 py-2">
                     <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      {isSearchMode ? 'Search Results' : 'Recent Chats'}
+                      {isSearchMode ? t('sidebar.history.searchResults') : t('sidebar.history.recentChats')}
                     </span>
                     <span className="text-xs text-gray-400">
-                      {isHistoryLoading ? 'Loading…' : `${historyItems.length}`}
+                      {isHistoryLoading ? t('sidebar.history.loading') : `${historyItems.length}`}
                     </span>
                   </div>
                   <div className="border-b border-gray-200 bg-white px-3 py-2">
                     <Input
                       id="chat-history-search"
-                      aria-label="Search chat history"
-                      placeholder="Search saved chats"
+                      aria-label={t('sidebar.history.searchAriaLabel')}
+                      placeholder={t('sidebar.history.searchPlaceholder')}
                       value={historyQuery}
                       onChange={(event) => setHistoryQuery(event.target.value)}
                     />
@@ -525,12 +531,12 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
                     ) : null}
                     {!historyError && !isHistoryLoading && isSearchQueryTooShort ? (
                       <div className="rounded-lg border border-dashed border-gray-200 bg-white px-3 py-3 text-xs text-gray-500">
-                        Type at least 2 characters to search saved chats.
+                        {t('sidebar.history.typeAtLeastNChars', { count: MIN_HISTORY_SEARCH_CHARS })}
                       </div>
                     ) : null}
                     {!historyError && !isHistoryLoading && !isSearchMode && historyItems.length === 0 ? (
                       <div className="rounded-lg border border-dashed border-gray-200 bg-white px-3 py-3 text-xs text-gray-500">
-                        Saved chats will appear here after you send a message.
+                        {t('sidebar.history.emptyInitial')}
                       </div>
                     ) : null}
                     {!historyError &&
@@ -539,12 +545,12 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
                     !isSearchQueryTooShort &&
                     historyItems.length === 0 ? (
                       <div className="rounded-lg border border-dashed border-gray-200 bg-white px-3 py-3 text-xs text-gray-500">
-                        No matching chats found.
+                        {t('sidebar.history.emptySearch')}
                       </div>
                     ) : null}
                     {historyItems.map((chat) => {
                       const isActive = activeChatId === chat.id;
-                      const preview = chat.preview_text?.trim() || 'No messages yet';
+                      const preview = chat.preview_text?.trim() || t('sidebar.history.noMessagesYet');
                       return (
                         <div
                           key={chat.id}
@@ -566,21 +572,21 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
                           >
                             <div className="flex items-center justify-between gap-2">
                               <span className="truncate text-sm font-medium text-gray-900">
-                                {getChatTitle(chat)}
+                                {getChatTitle(t, chat)}
                               </span>
                               <span className="shrink-0 text-[11px] text-gray-400">
-                                {formatHistoryTimestamp(chat.updated_at ?? chat.created_at)}
+                                {formatHistoryTimestamp(t, chat.updated_at ?? chat.created_at)}
                               </span>
                             </div>
                             <p className="mt-1 line-clamp-2 text-xs text-gray-500 break-words">
-                              {loadingHistoryChatId === chat.id ? 'Loading conversation…' : preview}
+                              {loadingHistoryChatId === chat.id ? t('sidebar.history.loadingConversation') : preview}
                             </p>
                           </button>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <button
                                 className="mt-0.5 rounded p-1 text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-700"
-                                aria-label={`Chat actions for ${getChatTitle(chat)}`}
+                                aria-label={t('sidebar.history.chatActionsFor', { title: getChatTitle(t, chat) })}
                               >
                                 <MoreHorizontal className="h-4 w-4" />
                               </button>
@@ -589,18 +595,18 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
                               <DropdownMenuItem
                                 onSelect={() => {
                                   setRenameTargetChat(chat);
-                                  setRenameValue(getChatTitle(chat));
+                                  setRenameValue(getChatTitle(t, chat));
                                 }}
                               >
                                 <Pencil className="mr-2 h-4 w-4" />
-                                Rename
+                                {t('sidebar.history.rename')}
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-red-600 focus:text-red-600"
                                 onSelect={() => setDeleteTargetChat(chat)}
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
+                                {t('sidebar.history.delete')}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -614,11 +620,11 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
           </div>
           <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
             <div className="p-4 bg-gray-100 text-sm text-gray-500 border-b border-gray-200">
-              Chat with AI - Ask anything!
+              {t('sidebar.introMessage')}
             </div>
             <div className="flex flex-1 min-h-0">
               {isChatLoading ? (
-                <ChatLoadingSkeleton />
+                <ChatLoadingSkeleton t={t} />
               ) : (
                 <Chat
                   key={chatKey}
@@ -653,20 +659,22 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
           setShowNewChatConfirmation(false);
           resetChatSession();
         }}
-        title="Start a new chat?"
-        message="Your current chat will be cleared from the sidebar. Saved messages remain in chat history."
-        confirmLabel="Start New Chat"
-        cancelLabel="Keep Current Chat"
+        title={t('sidebar.newChatConfirm.title')}
+        message={t('sidebar.newChatConfirm.message')}
+        confirmLabel={t('sidebar.newChatConfirm.confirmLabel')}
+        cancelLabel={t('sidebar.newChatConfirm.cancelLabel')}
       />
       <ConfirmationDialog
         id="confirm-delete-chat"
         isOpen={deleteTargetChat !== null}
         onClose={() => setDeleteTargetChat(null)}
         onConfirm={handleDeleteChat}
-        title="Delete this chat?"
-        message={`Delete "${deleteTargetChat ? getChatTitle(deleteTargetChat) : 'this chat'}" from your AI history? This cannot be undone.`}
-        confirmLabel="Delete Chat"
-        cancelLabel="Cancel"
+        title={t('sidebar.deleteConfirm.title')}
+        message={t('sidebar.deleteConfirm.messageWithTitle', {
+          title: deleteTargetChat ? getChatTitle(t, deleteTargetChat) : t('sidebar.deleteConfirm.fallbackTitle'),
+        })}
+        confirmLabel={t('sidebar.deleteConfirm.confirmLabel')}
+        cancelLabel={t('sidebar.deleteConfirm.cancelLabel')}
         isConfirming={isDeletingChat}
       />
       <Dialog
@@ -679,7 +687,7 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
           setRenameTargetChat(null);
           setRenameValue('');
         }}
-        title="Rename chat"
+        title={t('sidebar.rename.dialogTitle')}
         className="max-w-md"
         draggable={false}
         footer={(
@@ -693,14 +701,14 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
               }}
               disabled={isRenamingChat}
             >
-              Cancel
+              {t('sidebar.rename.cancel')}
             </Button>
             <Button
               id="rename-chat-save"
               onClick={() => void handleRenameSubmit()}
               disabled={isRenamingChat || renameValue.trim().length === 0}
             >
-              Save
+              {t('sidebar.rename.save')}
             </Button>
           </div>
         )}
@@ -708,10 +716,10 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
         <DialogContent>
           <Input
             id="rename-chat-input"
-            label="Chat title"
+            label={t('sidebar.rename.inputLabel')}
             value={renameValue}
             onChange={(event) => setRenameValue(event.target.value)}
-            placeholder="Enter chat title"
+            placeholder={t('sidebar.rename.inputPlaceholder')}
             autoFocus
             disabled={isRenamingChat}
           />

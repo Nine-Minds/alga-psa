@@ -460,6 +460,208 @@
       "create": "Standardeinstellungen erstellen"
     }
   },
+  "imapForm": {
+    "sections": {
+      "basic": {
+        "title": "Grundeinstellungen",
+        "description": "Definieren Sie die Verbindungsdetails für das IMAP-Postfach."
+      },
+      "auth": {
+        "title": "Authentifizierung",
+        "description": "Wählen Sie Passwort oder OAuth2-Authentifizierung."
+      },
+      "processing": {
+        "title": "Verarbeitungseinstellungen",
+        "description": "Wählen Sie Ordner und Verarbeitungsverhalten."
+      }
+    },
+    "fields": {
+      "providerName": "Anbietername",
+      "mailboxAddress": "Postfachadresse",
+      "imapHost": "IMAP-Host",
+      "port": "Port",
+      "useTls": "TLS/SSL verwenden",
+      "allowStarttls": "STARTTLS-Upgrade zulassen",
+      "authenticationType": "Authentifizierungstyp",
+      "username": "Benutzername",
+      "passwordLabel": "Passwort / App-Passwort",
+      "authorizeUrl": "URL autorisieren",
+      "tokenUrl": "Token-URL",
+      "oauthClientId": "OAuth-Client-ID",
+      "oauthClientSecret": "OAuth-Client-Geheimnis",
+      "oauthScopes": "OAuth-Bereiche",
+      "oauthScopesPlaceholder": "durch Leerzeichen getrennte Bereiche",
+      "folderFilters": "Ordnerfilter",
+      "folderFiltersPlaceholder": "Posteingang, Support, Tickets",
+      "active": "Aktiv",
+      "ticketDefaultsLabel": "Ticket-Standardeinstellungen",
+      "ticketDefaultsPlaceholder": "Standardeinstellungen auswählen...",
+      "ticketDefaultsEmpty": "Keine Standardeinstellungen verfügbar"
+    },
+    "authOptions": {
+      "password": "Passwort",
+      "oauth2": "OAuth2 (XOAUTH2)"
+    },
+    "password": {
+      "editHelp": "Passwörter werden sicher gespeichert und nicht angezeigt. Lassen Sie das Feld leer, um das vorhandene Passwort beizubehalten."
+    },
+    "oauth": {
+      "statusLabel": "OAuth-Status",
+      "connected": "Verbunden",
+      "notConnected": "Nicht verbunden",
+      "authorizing": "Wird autorisiert...",
+      "reconnect": "OAuth erneut verbinden"
+    },
+    "validation": {
+      "fixHighlightedFields": "Bitte korrigieren Sie die hervorgehobenen Felder und versuchen Sie es erneut."
+    },
+    "actions": {
+      "cancel": "Abbrechen",
+      "saving": "Speichern...",
+      "updateProvider": "Anbieter aktualisieren",
+      "createProvider": "Anbieter erstellen"
+    }
+  },
+  "microsoftForm": {
+    "header": {
+      "title": "Microsoft 365-Integration",
+      "description": "Verbinden Sie einfach Ihr Microsoft 365-Konto und konfigurieren Sie Ihre E-Mail-Verarbeitungseinstellungen, um zu beginnen."
+    },
+    "sections": {
+      "accountSetup": {
+        "title": "Microsoft 365-Kontoeinrichtung",
+        "description": "Konfigurieren Sie Ihr Microsoft 365-Konto für die Verarbeitung eingehender E-Mails"
+      },
+      "authentication": {
+        "title": "Microsoft 365-Authentifizierung",
+        "description": "Verbinden Sie Ihr Microsoft 365-Konto, um die E-Mail-Verarbeitung zu aktivieren"
+      },
+      "processing": {
+        "title": "Einstellungen für E-Mail-Verarbeitung",
+        "description": "Konfigurieren Sie, wie E-Mails verarbeitet und importiert werden"
+      },
+      "ticketDefaults": {
+        "title": "Ticket-Standardeinstellungen",
+        "description": "Wählen Sie Standardeinstellungen aus, die auf per E-Mail erstellte Tickets angewendet werden sollen"
+      }
+    },
+    "fields": {
+      "providerNameLabel": "Anbietername *",
+      "providerNamePlaceholder": "z. B. Support Microsoft 365",
+      "mailboxLabel": "Microsoft 365-Adresse *",
+      "mailboxPlaceholder": "support@client.com",
+      "enableProvider": "Diesen Anbieter aktivieren",
+      "foldersLabel": "Zu überwachende Ordner",
+      "foldersPlaceholder": "Posteingang, Support, Benutzerdefinierter Ordner",
+      "foldersHelp": "Durch Kommas getrennte Liste der zu überwachenden Ordner (Standard: Posteingang)",
+      "maxEmailsLabel": "Maximale E-Mails pro Synchronisierung",
+      "maxEmailsHelp": "Maximale Anzahl der pro Synchronisierung zu verarbeitenden E-Mails (1-1000)",
+      "inboundDefaultsLabel": "Standardeinstellungen für eingehende Tickets",
+      "inboundDefaultsPlaceholder": "Standardeinstellungen auswählen (optional)"
+    },
+    "oauth": {
+      "connectionTitle": "Microsoft 365-Verbindung",
+      "descriptionIdle": "Zugriff auf Ihr Microsoft 365-Konto autorisieren",
+      "descriptionSuccess": "Erfolgreich verbunden! Schließen Sie die Einrichtung ab, indem Sie unten speichern.",
+      "connecting": "Verbindung wird hergestellt...",
+      "connected": "Verbunden",
+      "connectButton": "Microsoft 365 verbinden",
+      "requiredTitle": "Microsoft 365-Verbindung erforderlich",
+      "requiredDescriptionUpdate": "Sie müssen Ihr Microsoft 365-Konto oben verbinden, bevor Sie den Anbieter aktualisieren.",
+      "requiredDescriptionAdd": "Sie müssen Ihr Microsoft 365-Konto oben verbinden, bevor Sie den Anbieter hinzufügen.",
+      "authError": "Bitte füllen Sie vor der Autorisierung alle erforderlichen Felder aus",
+      "popupBlocked": "Das OAuth-Popup konnte nicht geöffnet werden. Bitte erlauben Sie Popups für diese Website.",
+      "authorizationFailed": "Die Autorisierung ist fehlgeschlagen",
+      "initiateFailed": "OAuth konnte nicht gestartet werden",
+      "hostedConfigIncomplete": "Gehostete Microsoft-Konfiguration nicht verfügbar oder unvollständig",
+      "hostedCredentialsMissing": "Gehostete Microsoft-Client-Anmeldeinformationen nicht verfügbar"
+    },
+    "nextStep": {
+      "title": "Einrichtung abschließen",
+      "autoSubmit": "Wird automatisch abgeschlossen in",
+      "secondsSuffix": "Sekunden, oder klicken Sie",
+      "clickNow": "jetzt unten.",
+      "manualInstruction": "Klicken Sie auf",
+      "manualSuffix": "unten, um die Konfiguration abzuschließen.",
+      "cancelAutoSubmit": "Automatische Übermittlung abbrechen"
+    },
+    "buttons": {
+      "updateProvider": "Anbieter aktualisieren",
+      "addProvider": "Anbieter hinzufügen",
+      "manageDefaults": "Standardeinstellungen verwalten",
+      "refreshList": "Liste aktualisieren",
+      "cancel": "Abbrechen",
+      "completeSetupSuffix": "& Einrichtung abschließen",
+      "settingUp": "Microsoft 365-Integration wird eingerichtet..."
+    },
+    "validation": {
+      "requiredFieldsTitle": "Bitte füllen Sie die erforderlichen Felder aus:",
+      "providerName": "Anbietername",
+      "mailbox": "Microsoft 365-Adresse"
+    }
+  },
+  "gmailForm": {
+    "header": {
+      "title": "Gmail-Integration",
+      "description": "Verbinden Sie Ihr Gmail-Konto und konfigurieren Sie Ihre E-Mail-Verarbeitungseinstellungen."
+    },
+    "basicConfig": {
+      "title": "Gmail-Kontoeinrichtung",
+      "description": "Konfigurieren Sie Ihr Gmail-Konto für die Verarbeitung eingehender E-Mails"
+    },
+    "authentication": {
+      "title": "Gmail-Authentifizierung",
+      "description": "Verbinden Sie Ihr Gmail-Konto, um die E-Mail-Verarbeitung zu aktivieren",
+      "connectionTitle": "Gmail-Verbindung",
+      "descriptionIdle": "Zugriff auf Ihr Gmail-Konto autorisieren",
+      "descriptionSuccess": "Erfolgreich verbunden! Speichern Sie Ihre Einstellungen...",
+      "buttonIdle": "Gmail verbinden",
+      "buttonAuthorizing": "Verbindung wird hergestellt...",
+      "buttonSuccess": "Verbunden"
+    },
+    "processing": {
+      "title": "Einstellungen für E-Mail-Verarbeitung",
+      "description": "Konfigurieren Sie, wie E-Mails verarbeitet und importiert werden"
+    },
+    "ticketDefaults": {
+      "title": "Ticket-Standardeinstellungen",
+      "description": "Wählen Sie Standardeinstellungen aus, die auf per E-Mail erstellte Tickets angewendet werden sollen",
+      "manageDefaults": "Standardeinstellungen verwalten",
+      "inboundDefaultsLabel": "Standardeinstellungen für eingehende Tickets",
+      "inboundDefaultsPlaceholder": "Standardeinstellungen auswählen (optional)",
+      "refreshList": "Liste aktualisieren"
+    },
+    "googleConfig": {
+      "notConfigured": "Die Google-Integration ist für diesen Mandanten nicht konfiguriert.",
+      "configureHint": "Konfigurieren Sie zunächst mandanteneigenes Google OAuth + Pub/Sub:",
+      "settingsPath": "Einstellungen → Integrationen → Anbieter",
+      "openSettings": "Google-Einstellungen öffnen"
+    },
+    "oauth": {
+      "requiredTitle": "Gmail-Verbindung erforderlich",
+      "requiredDescriptionUpdate": "Sie müssen Ihr Gmail-Konto oben verbinden, bevor Sie den Anbieter aktualisieren.",
+      "requiredDescriptionAdd": "Sie müssen Ihr Gmail-Konto oben verbinden, bevor Sie den Anbieter hinzufügen.",
+      "fillRequiredFields": "Bitte füllen Sie vor der Autorisierung alle erforderlichen Felder aus",
+      "notConfiguredTenant": "Die Google-Integration ist für diesen Mandanten nicht konfiguriert. Konfigurieren Sie zuerst Google und versuchen Sie es dann erneut.",
+      "initiateFailed": "OAuth konnte nicht gestartet werden"
+    },
+    "validation": {
+      "requiredFieldsTitle": "Bitte füllen Sie die erforderlichen Felder aus:",
+      "providerName": "Anbietername",
+      "mailbox": "Gmail-Adresse"
+    },
+    "warnings": {
+      "setupIncomplete": "Anbieter gespeichert, aber Einrichtung unvollständig: {{error}}",
+      "setupWarningsTitle": "Einrichtung mit Warnungen abgeschlossen:"
+    },
+    "buttons": {
+      "updateProvider": "Anbieter aktualisieren",
+      "addProvider": "Anbieter hinzufügen",
+      "completeSetupSuffix": "& Einrichtung abschließen",
+      "cancel": "Abbrechen",
+      "settingUp": "Gmail-Integration wird eingerichtet..."
+    }
+  },
   "managed": {
     "messages": {
       "loadDomainsFailed": "Verwaltete Domänen konnten nicht geladen werden",
