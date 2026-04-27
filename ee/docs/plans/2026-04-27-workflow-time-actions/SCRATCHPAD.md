@@ -86,6 +86,9 @@ Rolling notes for adding workflow-safe time-entry, time-sheet, and billing-readi
   - Verifies `time.get_entry` normalized response shape.
   - Verifies `time.find_entries` filtered list + aggregate totals.
   - Verifies tenant-scoped isolation by asserting cross-tenant entry lookup returns `NOT_FOUND`.
+- (2026-04-27) Added DB-backed runtime test case for `T004` in `shared/workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts`.
+  - Marks a project-task time entry as invoiced, then verifies `time.update_entry` and `time.delete_entry` reject with validation errors.
+  - Verifies project-task actual-hours and bucket-usage totals remain unchanged after rejected mutations.
 
 ## Commands / Verification (This Pass)
 
@@ -98,6 +101,8 @@ Rolling notes for adding workflow-safe time-entry, time-sheet, and billing-readi
 - Attempted after update/delete action + T003 changes: `npx vitest run --config shared/vitest.config.ts workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts`
   - Compile/import succeeds, but DB-backed execution remains blocked by local connection refusal (`127.0.0.1:57432`).
 - Attempted after get/find actions + T005 changes: `npx vitest run --config shared/vitest.config.ts workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts`
+  - Compile/import succeeds, but DB-backed execution remains blocked by the same local connection refusal (`127.0.0.1:57432`).
+- Attempted after T004 additions: `npx vitest run --config shared/vitest.config.ts workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts`
   - Compile/import succeeds, but DB-backed execution remains blocked by the same local connection refusal (`127.0.0.1:57432`).
 - Attempted: `npx tsc -p shared/tsconfig.json --noEmit`
   - Fails due pre-existing workspace TS config/module issues outside this feature area (`@alga-psa/sla/types`, alias `@/lib/*`, and existing `server/test-utils/dbReset.ts` declaration-order error).

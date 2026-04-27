@@ -86,7 +86,7 @@
   {
     "id": "F011",
     "description": "Implement `time.update_entry` for allowed non-invoiced entry updates while recomputing dependent fields and preserving canonical state guards.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Time entry actions"
     ]
@@ -94,7 +94,7 @@
   {
     "id": "F012",
     "description": "Implement `time.delete_entry` for non-invoiced entries, including bucket usage decrement and project-task actual-hours recalculation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Time entry actions"
     ]

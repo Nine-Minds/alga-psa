@@ -33,7 +33,7 @@
   {
     "id": "T004",
     "description": "DB integration: update and delete reject invoiced time entries and leave billing/project side effects unchanged.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011",
       "F012",

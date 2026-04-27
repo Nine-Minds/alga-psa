@@ -518,6 +518,98 @@ describe('time workflow runtime DB-backed action handlers', () => {
     expect(Number(afterDelete.actual_hours ?? 0)).toBe(0);
   });
 
+  it('T004: update and delete reject invoiced time entries and leave billing/project side effects unchanged', async () => {
+    const entryUserId = await createUser(db, runtimeState.tenantId, {
+      user_type: 'internal',
+      first_name: 'Invoiced',
+      last_name: 'Guard',
+      timezone: 'America/New_York',
+    });
+    const clientId = await createClient(db, runtimeState.tenantId, 'Invoiced Guard Client');
+    const taskId = await createProjectTask(db, {
+      tenantId: runtimeState.tenantId,
+      actorUserId: runtimeState.actorUserId,
+      clientId,
+    });
+    const serviceId = await createService(db, runtimeState.tenantId);
+    await createTimePeriod(db, runtimeState.tenantId, '2026-04-01', '2026-04-08');
+
+    const billingContext = {
+      db,
+      tenantId: runtimeState.tenantId,
+      clientId,
+      userId: runtimeState.actorUserId,
+    } as any;
+
+    const assignment = await createFixedPlanAssignment(billingContext, serviceId, {
+      clientId,
+      startDate: '2025-01-01',
+      billingFrequency: 'monthly',
+    });
+    await createBucketOverlayForPlan(billingContext, assignment.contractLineId, {
+      serviceId,
+      totalMinutes: 180,
+      allowRollover: false,
+      billingPeriod: 'monthly',
+    });
+
+    const created = await invokeAction('time.create_entry', {
+      user_id: entryUserId,
+      start: '2026-04-04T10:00:00.000Z',
+      duration_minutes: 60,
+      billable: true,
+      service_id: serviceId,
+      link: {
+        type: 'project_task',
+        id: taskId,
+      },
+    });
+
+    await db('time_entries')
+      .where({ tenant: runtimeState.tenantId, entry_id: created.time_entry.entry_id })
+      .update({ invoiced: true });
+
+    const beforeTask = await db('project_tasks')
+      .where({ tenant: runtimeState.tenantId, task_id: taskId })
+      .first('actual_hours');
+    const beforeUsage = await db('bucket_usage')
+      .where({
+        tenant: runtimeState.tenantId,
+        client_id: clientId,
+        contract_line_id: assignment.contractLineId,
+        service_catalog_id: serviceId,
+      })
+      .first('minutes_used');
+
+    await expect(invokeAction('time.update_entry', {
+      entry_id: created.time_entry.entry_id,
+      duration_minutes: 30,
+    })).rejects.toMatchObject({
+      code: 'VALIDATION_ERROR',
+    });
+
+    await expect(invokeAction('time.delete_entry', {
+      entry_id: created.time_entry.entry_id,
+    })).rejects.toMatchObject({
+      code: 'VALIDATION_ERROR',
+    });
+
+    const afterTask = await db('project_tasks')
+      .where({ tenant: runtimeState.tenantId, task_id: taskId })
+      .first('actual_hours');
+    const afterUsage = await db('bucket_usage')
+      .where({
+        tenant: runtimeState.tenantId,
+        client_id: clientId,
+        contract_line_id: assignment.contractLineId,
+        service_catalog_id: serviceId,
+      })
+      .first('minutes_used');
+
+    expect(Number(afterTask.actual_hours ?? 0)).toBe(Number(beforeTask.actual_hours ?? 0));
+    expect(Number(afterUsage.minutes_used ?? 0)).toBe(Number(beforeUsage.minutes_used ?? 0));
+  });
+
   it('T005: find/get time entry actions return tenant-scoped normalized data and bounded aggregate counts for representative filters', async () => {
     const entryUserId = await createUser(db, runtimeState.tenantId, {
       user_type: 'internal',
