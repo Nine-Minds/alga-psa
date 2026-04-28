@@ -87,7 +87,8 @@
     },
     "hidden": {
       "title": "Cartes de configuration masquées ({{count}})",
-      "subtitle": "Restaurez une carte si vous en avez besoin plus tard."
+      "subtitle": "Restaurez une carte si vous en avez besoin plus tard.",
+      "titleCombined": "Cartes masquées ({{count}})"
     },
     "checklist": {
       "title": "Checklist d'onboarding",
@@ -154,5 +155,24 @@
       "restoreFailed": "Impossible de restaurer l'étape d'onboarding."
     }
   },
-  "mspDashboard": "Tableau de bord MSP"
+  "mspDashboard": "Tableau de bord MSP",
+  "mobileApp": {
+    "title": "Téléchargez l'application mobile AlgaPSA",
+    "description": "Scannez un QR code avec votre téléphone pour télécharger l'application mobile AlgaPSA.",
+    "appStore": "App Store (iOS)",
+    "playStore": "Google Play (Android)",
+    "appStoreQrAlt": "QR code menant à l'application AlgaPSA sur l'App Store d'Apple",
+    "playStoreQrAlt": "QR code menant à l'application AlgaPSA sur Google Play",
+    "hide": "Masquer",
+    "hiding": "Masquage...",
+    "dismissAria": "Masquer la carte de l'application mobile",
+    "dismissError": "Échec du masquage de la carte.",
+    "restore": "Obtenez l'application mobile AlgaPSA",
+    "restoring": "Restauration...",
+    "restoreError": "Échec de la restauration de la carte.",
+    "hidden": {
+      "title": "Carte de l'application mobile masquée",
+      "subtitle": "Restaurez-la si vous en avez besoin plus tard."
+    }
+  }
 }

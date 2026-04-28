@@ -10,6 +10,7 @@ import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutoma
 import type { ButtonComponent } from '@alga-psa/ui/ui-reflection/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { Button } from '@alga-psa/ui/components/Button';
 import { Progress } from '@alga-psa/ui/components/Progress';
 import { STEP_DEFINITIONS, type StepDefinition } from '@alga-psa/onboarding/lib';
 import {
@@ -19,6 +20,7 @@ import {
   type OnboardingStepServerState,
 } from '@alga-psa/onboarding/actions';
 import { ArrowRight, CheckCircle2, Circle, EyeOff, RotateCcw, Sparkles } from 'lucide-react';
+import { useHiddenCardsExtras, type ExtraHiddenItem } from './HiddenCardsExtrasContext';
 
 interface OnboardingProgressSummary {
   completed: number;
@@ -318,6 +320,7 @@ export default function DashboardOnboardingSection({
 }: DashboardOnboardingSectionProps) {
   const { t } = useTranslation(['msp/dashboard', 'msp/core']);
   const posthog = usePostHog();
+  const extraHiddenItems = useHiddenCardsExtras();
   const [dismissedStepIds, setDismissedStepIds] = useState<OnboardingStepId[]>(() =>
     getInitialDismissedStepIds(stepStates, initialDismissedStepIds)
   );
@@ -509,10 +512,11 @@ export default function DashboardOnboardingSection({
         </div>
       ) : null}
 
-      {hiddenSteps.length > 0 ? (
+      {hiddenSteps.length > 0 || extraHiddenItems.length > 0 ? (
         <div className={cn('mt-6', visibleSteps.length > 0 && !isOnboardingComplete && 'pt-2')}>
           <HiddenStepsPanel
             steps={translatedHiddenSteps}
+            extras={extraHiddenItems}
             t={t}
             onRestore={handleRestore}
             isPending={isPending}
@@ -526,25 +530,34 @@ export default function DashboardOnboardingSection({
 
 function HiddenStepsPanel({
   steps,
+  extras,
   t,
   onRestore,
   isPending,
   activeStepId,
 }: {
   steps: OnboardingStep[];
+  extras: ExtraHiddenItem[];
   t: DashboardTranslator;
   onRestore: (step: OnboardingStep) => void;
   isPending: boolean;
   activeStepId: OnboardingStepId | null;
 }) {
+  const totalCount = steps.length + extras.length;
+
   return (
     <div className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-4">
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm font-semibold text-[rgb(var(--color-text-800))]">
-          {t('onboarding.hidden.title', {
-            defaultValue: 'Hidden setup cards ({{count}})',
-            count: steps.length,
-          })}
+          {extras.length > 0
+            ? t('onboarding.hidden.titleCombined', {
+                defaultValue: 'Hidden cards ({{count}})',
+                count: totalCount,
+              })
+            : t('onboarding.hidden.title', {
+                defaultValue: 'Hidden setup cards ({{count}})',
+                count: steps.length,
+              })}
         </p>
         <p className="text-xs text-[rgb(var(--color-text-500))]">
           {t('onboarding.hidden.subtitle', {
@@ -567,6 +580,22 @@ function HiddenStepsPanel({
               ? t('onboarding.cta.restoring', { defaultValue: 'Restoring...' })
               : step.title}
           </button>
+        ))}
+        {extras.map((extra) => (
+          <Button
+            key={extra.id}
+            id={`restore-dashboard-extra-${extra.id}`}
+            variant="outline"
+            size="xs"
+            className="gap-1.5"
+            onClick={() => extra.onRestore()}
+            disabled={extra.isRestoring}
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            {extra.isRestoring
+              ? t('onboarding.cta.restoring', { defaultValue: 'Restoring...' })
+              : extra.title}
+          </Button>
         ))}
       </div>
     </div>

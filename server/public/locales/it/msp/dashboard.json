@@ -87,7 +87,8 @@
     },
     "hidden": {
       "title": "Schede di configurazione nascoste ({{count}})",
-      "subtitle": "Ripristina una scheda se ti serve più avanti."
+      "subtitle": "Ripristina una scheda se ti serve più avanti.",
+      "titleCombined": "Schede nascoste ({{count}})"
     },
     "checklist": {
       "title": "Checklist di onboarding",
@@ -154,5 +155,24 @@
       "restoreFailed": "Impossibile ripristinare il passaggio di onboarding."
     }
   },
-  "mspDashboard": "Dashboard MSP"
+  "mspDashboard": "Dashboard MSP",
+  "mobileApp": {
+    "title": "Scarica l'app mobile AlgaPSA",
+    "description": "Scansiona un codice QR con il telefono per scaricare l'app mobile AlgaPSA.",
+    "appStore": "App Store (iOS)",
+    "playStore": "Google Play (Android)",
+    "appStoreQrAlt": "Codice QR per l'app AlgaPSA sull'Apple App Store",
+    "playStoreQrAlt": "Codice QR per l'app AlgaPSA su Google Play",
+    "hide": "Nascondi",
+    "hiding": "Nascondo...",
+    "dismissAria": "Nascondi la scheda dell'app mobile",
+    "dismissError": "Impossibile nascondere la scheda.",
+    "restore": "Ottieni l'app mobile AlgaPSA",
+    "restoring": "Ripristino...",
+    "restoreError": "Impossibile ripristinare la scheda.",
+    "hidden": {
+      "title": "Scheda dell'app mobile nascosta",
+      "subtitle": "Ripristinala se ti serve più avanti."
+    }
+  }
 }
