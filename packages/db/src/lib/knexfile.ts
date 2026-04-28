@@ -27,8 +27,13 @@ setTypeParser(20, parseFloat);
 setTypeParser(1114, (str: string) => new Date(str + 'Z')); // TIMESTAMP WITHOUT TIME ZONE - add Z to parse as UTC
 setTypeParser(1184, (str: string) => new Date(str)); // TIMESTAMP WITH TIME ZONE - already has timezone info, parse as-is
 
+const getEnvValue = (key: string): string | undefined =>
+  typeof process !== 'undefined' ? process.env?.[key] : undefined;
+
 const getDbPassword = async () => await getSecret('db_password_server', 'DB_PASSWORD_SERVER');
 const getPostgresPassword = async () => await getSecret('postgres_password', 'DB_PASSWORD_ADMIN');
+const getDbPasswordFromEnv = () => getEnvValue('DB_PASSWORD_SERVER');
+const getPostgresPasswordFromEnv = () => getEnvValue('DB_PASSWORD_ADMIN');
 
 // Special connection config for postgres user (needed for job scheduler)
 export const getPostgresConnection = async () => ({
@@ -68,7 +73,7 @@ const baseConfig: Record<string, CustomKnexConfig> = {
       host: (typeof process !== 'undefined' && process.env?.DB_HOST) || 'localhost',
       port: Number((typeof process !== 'undefined' && process.env?.DB_PORT) || 5432),
       user: (typeof process !== 'undefined' && process.env?.DB_USER_SERVER) || 'app_user',
-      password: await getDbPassword(),
+      password: getDbPasswordFromEnv(),
       database: (typeof process !== 'undefined' && process.env?.DB_NAME_SERVER) || 'server'
     },
     pool: {
@@ -91,7 +96,7 @@ const baseConfig: Record<string, CustomKnexConfig> = {
       host: (typeof process !== 'undefined' && process.env?.DB_HOST) || 'localhost',
       port: Number((typeof process !== 'undefined' && process.env?.DB_PORT) || 5432),
       user: (typeof process !== 'undefined' && process.env?.DB_USER_ADMIN) || 'postgres',
-      password: await getPostgresPassword(),
+      password: getPostgresPasswordFromEnv(),
       database: (typeof process !== 'undefined' && process.env?.DB_NAME_SERVER) || 'server'
     },
     pool: {
@@ -114,7 +119,7 @@ const baseConfig: Record<string, CustomKnexConfig> = {
       host: (typeof process !== 'undefined' && process.env?.DB_HOST) || 'localhost',
       port: Number((typeof process !== 'undefined' && process.env?.DB_PORT) || 5432),
       user: 'app_user',
-      password: await getDbPassword(),
+      password: getDbPasswordFromEnv(),
       database: (typeof process !== 'undefined' && process.env?.DB_NAME_SERVER) || 'server'
     },
     pool: {

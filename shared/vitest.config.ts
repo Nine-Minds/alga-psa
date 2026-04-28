@@ -40,6 +40,10 @@ export default defineConfig({
         replacement: path.resolve(__dirname, '../packages/db/src/lib/connection.ts'),
       },
       {
+        find: /^@alga-psa\/db\/workDate$/,
+        replacement: path.resolve(__dirname, '../packages/db/src/lib/workDate.ts'),
+      },
+      {
         find: /^@alga-psa\/db\/(.*)$/,
         replacement: path.resolve(__dirname, '../packages/db/src/$1'),
       },

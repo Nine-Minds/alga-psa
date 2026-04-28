@@ -76,6 +76,11 @@ RUN npm run build
 
 WORKDIR /app/packages/db
 RUN npm run build
+# packages/db currently emits under dist/db/src when built in the worker image because
+# it compiles path-mapped sources from the monorepo. Normalize the output to the
+# package.json exports expected by Node at runtime.
+RUN if [ -d dist/db/src ]; then cp -R dist/db/src/. dist/; fi \
+  && tsc-alias -p tsconfig.json -f --resolve-full-paths
 
 WORKDIR /app/packages/authorization
 RUN npm run build

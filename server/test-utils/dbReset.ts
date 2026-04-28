@@ -67,6 +67,8 @@ export async function resetDatabase(
       throw new Error('Test database connection must specify a database name');
     }
 
+    const adminPassword = await getSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'test_password');
+
     if (!connectionConfig.password) {
       const candidatePassword = (clientConfig.connection as Record<string, any> | undefined)?.password;
       connectionConfig.password = candidatePassword ?? adminPassword;
@@ -74,7 +76,6 @@ export async function resetDatabase(
 
     verifyTestDatabase(targetDatabase);
 
-    const adminPassword = await getSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'test_password');
     const adminUser = process.env.DB_USER_ADMIN || 'postgres';
     const appUser = process.env.DB_USER_SERVER || 'app_user';
     const appPassword = await getSecret('db_password_server', 'DB_PASSWORD_SERVER', adminPassword);
