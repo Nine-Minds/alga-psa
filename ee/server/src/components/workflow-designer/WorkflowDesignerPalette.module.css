@@ -88,6 +88,19 @@
   max-height: 20rem;
 }
 
+.itemGrid {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.itemGridFloating {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.itemGridStacked {
+  grid-template-columns: repeat(auto-fill, 5rem);
+}
+
 .scrollArea {
   scrollbar-width: thin;
   scrollbar-color: rgb(var(--color-border-200)) transparent;
