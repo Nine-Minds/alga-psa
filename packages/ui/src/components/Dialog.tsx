@@ -537,8 +537,10 @@ export function DialogFooter({ children, className }: { children: ReactNode; cla
 
 export const DialogTrigger = RadixDialog.Trigger;
 
-export function DialogDescription({ children }: { children: ReactNode }): React.ReactElement {
+export function DialogDescription({ children, className }: { children: ReactNode; className?: string }): React.ReactElement {
   return (
-    <RadixDialog.Description className="text-sm text-muted-foreground mb-4">{children}</RadixDialog.Description>
+    <RadixDialog.Description className={className ?? 'text-sm text-muted-foreground mb-4'}>
+      {children}
+    </RadixDialog.Description>
   );
 }

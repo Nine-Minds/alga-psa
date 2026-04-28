@@ -9,6 +9,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -39,8 +40,10 @@ import {
   useWorkflowLogLevelOptions,
   useWorkflowStepStatusOptions,
 } from '@alga-psa/workflows/hooks/useWorkflowEnumOptions';
+import { getAllUsersBasic } from '@alga-psa/user-composition/actions';
 
 import type { WorkflowDefinition, Step, IfBlock, ForEachBlock, TryCatchBlock } from '@alga-psa/workflows/runtime/client';
+import type { ColumnDefinition, IUser } from '@alga-psa/types';
 import { pathDepth } from '@alga-psa/workflows/authoring';
 import {
   getWorkflowScheduleStatusBadgeClass,
@@ -294,6 +297,11 @@ const truncateJsonPreview = (value: unknown, maxChars: number) => {
   return { preview: `${serialized.slice(0, maxChars)}\n… truncated …`, truncated: true };
 };
 
+const getUserDisplayName = (user: Pick<IUser, 'first_name' | 'last_name' | 'username' | 'email'>): string => {
+  const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ').trim();
+  return fullName || user.username || user.email;
+};
+
 interface WorkflowRunDetailsProps {
   runId: string;
   workflowName?: string;
@@ -347,6 +355,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
   const [auditLogs, setAuditLogs] = useState<WorkflowAuditLogRecord[]>([]);
   const [auditCursor, setAuditCursor] = useState<number | null>(null);
   const [auditLoading, setAuditLoading] = useState(false);
+  const [auditUserMap, setAuditUserMap] = useState<Map<string, IUser>>(new Map());
   const auditLimit = 25;
   const selectedStepPathRef = useRef<string | null>(null);
   const emptyValueLabel = t('runDetails.common.emptyValue', { defaultValue: '—' });
@@ -459,9 +468,26 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
     [auditLimit, canAdmin, runId, t]
   );
 
+  const fetchAuditUsers = useCallback(async () => {
+    if (!canAdmin) {
+      setAuditUserMap(new Map());
+      return;
+    }
+    try {
+      const users = await getAllUsersBasic(true);
+      setAuditUserMap(new Map(users.map((user) => [user.user_id, user])));
+    } catch {
+      setAuditUserMap(new Map());
+    }
+  }, [canAdmin]);
+
   useEffect(() => {
     fetchDetails();
   }, [fetchDetails]);
+
+  useEffect(() => {
+    fetchAuditUsers();
+  }, [fetchAuditUsers]);
 
   useEffect(() => {
     setSelectedStepPath(null);
@@ -592,6 +618,124 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
     ];
   }, [steps, stepTypeById, t]);
 
+  const logColumns: ColumnDefinition<WorkflowRunLogRecord>[] = useMemo(() => [
+    {
+      title: t('runDetails.logs.columns.timestamp', { defaultValue: 'Timestamp' }),
+      dataIndex: 'created_at',
+      width: '180px',
+      render: (_value: unknown, log: WorkflowRunLogRecord) => (
+        <div className="whitespace-nowrap text-xs text-gray-500">{formatDateTime(log.created_at)}</div>
+      ),
+    },
+    {
+      title: t('runDetails.logs.columns.level', { defaultValue: 'Level' }),
+      dataIndex: 'level',
+      width: '120px',
+      render: (_value: unknown, log: WorkflowRunLogRecord) => (
+        <Badge className={STATUS_STYLES[log.level] ?? 'bg-gray-100 text-gray-600'}>
+          {formatWorkflowLogLevel(log.level)}
+        </Badge>
+      ),
+    },
+    {
+      title: t('runDetails.logs.columns.message', { defaultValue: 'Message' }),
+      dataIndex: 'message',
+      sortable: false,
+      render: (_value: unknown, log: WorkflowRunLogRecord) => (
+        <div className="min-w-[18rem] max-w-[28rem]">
+          <div className="text-sm text-gray-800 break-words">{log.message}</div>
+          {log.context_json && (
+            <pre className="mt-1 max-h-24 max-w-full overflow-auto whitespace-pre-wrap break-words rounded bg-gray-900 text-gray-100 text-xs p-2">
+              {truncateJsonPreview(log.context_json, 2000).preview}
+            </pre>
+          )}
+        </div>
+      ),
+    },
+    {
+      title: t('runDetails.logs.columns.step', { defaultValue: 'Step' }),
+      dataIndex: 'step_path',
+      width: '180px',
+      render: (_value: unknown, log: WorkflowRunLogRecord) => (
+        <div className="max-w-[12rem] break-all text-xs text-gray-500">{log.step_path ?? emptyValueLabel}</div>
+      ),
+    },
+    {
+      title: t('runDetails.logs.columns.event', { defaultValue: 'Event' }),
+      dataIndex: 'event_name',
+      width: '180px',
+      render: (_value: unknown, log: WorkflowRunLogRecord) => (
+        <div className="max-w-[12rem] break-all text-xs text-gray-500">{log.event_name ?? emptyValueLabel}</div>
+      ),
+    },
+    {
+      title: t('runDetails.logs.columns.correlation', { defaultValue: 'Correlation' }),
+      dataIndex: 'correlation_key',
+      width: '180px',
+      render: (_value: unknown, log: WorkflowRunLogRecord) => (
+        <div className="max-w-[12rem] break-all text-xs text-gray-500">{log.correlation_key ?? emptyValueLabel}</div>
+      ),
+    },
+  ], [emptyValueLabel, formatDateTime, formatWorkflowLogLevel, t]);
+
+  const auditColumns: ColumnDefinition<WorkflowAuditLogRecord>[] = useMemo(() => [
+    {
+      title: t('runDetails.audit.columns.timestamp', { defaultValue: 'Timestamp' }),
+      dataIndex: 'timestamp',
+      width: '180px',
+      render: (_value: unknown, record: WorkflowAuditLogRecord) => (
+        <div className="whitespace-nowrap text-xs text-gray-500">{formatDateTime(record.timestamp)}</div>
+      ),
+    },
+    {
+      title: t('runDetails.audit.columns.operation', { defaultValue: 'Operation' }),
+      dataIndex: 'operation',
+      width: '140px',
+      render: (_value: unknown, record: WorkflowAuditLogRecord) => (
+        <div className="whitespace-nowrap text-xs text-gray-700">{record.operation}</div>
+      ),
+    },
+    {
+      title: t('runDetails.audit.columns.user', { defaultValue: 'User' }),
+      dataIndex: 'user_id',
+      width: '220px',
+      render: (_value: unknown, record: WorkflowAuditLogRecord) => {
+        if (!record.user_id) {
+          return <span className="text-xs text-gray-500">{t('runDetails.audit.systemUser', { defaultValue: 'system' })}</span>;
+        }
+        const auditUser = auditUserMap.get(record.user_id);
+        if (!auditUser) {
+          return (
+            <div className="min-w-0 text-xs">
+              <div className="font-medium text-gray-700">
+                {t('runDetails.audit.unknownUser', { defaultValue: 'Unknown user' })}
+              </div>
+              <div className="font-mono text-[11px] text-gray-500 break-all">{record.user_id}</div>
+            </div>
+          );
+        }
+        return (
+          <div className="min-w-0 text-xs">
+            <div className="font-medium text-gray-700 truncate">{getUserDisplayName(auditUser)}</div>
+            <div className="text-[11px] text-gray-500 truncate">{auditUser.email || auditUser.username}</div>
+          </div>
+        );
+      },
+    },
+    {
+      title: t('runDetails.audit.columns.details', { defaultValue: 'Details' }),
+      dataIndex: 'details',
+      sortable: false,
+      render: (_value: unknown, record: WorkflowAuditLogRecord) => (
+        record.details ? (
+          <pre className="max-h-24 max-w-full overflow-auto whitespace-pre-wrap break-words rounded bg-gray-900 text-gray-100 text-xs p-2">
+            {truncateJsonPreview(record.details, 2000).preview}
+          </pre>
+        ) : emptyValueLabel
+      ),
+    },
+  ], [auditUserMap, emptyValueLabel, formatDateTime, t]);
+
   const filteredSteps = useMemo(() => {
     return steps.filter((step) => {
       if (stepStatusFilter !== 'all' && step.status !== stepStatusFilter) {
@@ -607,6 +751,92 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
       return true;
     });
   }, [steps, stepStatusFilter, stepTypeFilter, stepTypeById, collapseNested]);
+
+  const stepTimelineColumns: ColumnDefinition<WorkflowRunStepRecord>[] = useMemo(() => [
+    {
+      title: t('runDetails.stepTimeline.columns.stepPath', { defaultValue: 'Step Path' }),
+      dataIndex: 'step_path',
+      width: '260px',
+      render: (_value: unknown, step: WorkflowRunStepRecord) => (
+        <div className="max-w-[18rem] break-all font-mono text-xs">{step.step_path}</div>
+      ),
+    },
+    {
+      title: t('runDetails.stepTimeline.columns.type', { defaultValue: 'Type' }),
+      dataIndex: 'definition_step_id',
+      width: '130px',
+      render: (_value: unknown, step: WorkflowRunStepRecord) => (
+        <div className="text-xs text-gray-500">
+          {stepTypeById.get(step.definition_step_id) ?? emptyValueLabel}
+        </div>
+      ),
+    },
+    {
+      title: t('runDetails.stepTimeline.columns.status', { defaultValue: 'Status' }),
+      dataIndex: 'status',
+      width: '150px',
+      render: (_value: unknown, step: WorkflowRunStepRecord) => (
+        <Badge className={STATUS_STYLES[step.status] ?? 'bg-gray-100 text-gray-600'}>
+          {formatWorkflowStepStatus(step.status)}
+        </Badge>
+      ),
+    },
+    {
+      title: t('runDetails.stepTimeline.columns.attempt', { defaultValue: 'Attempt' }),
+      dataIndex: 'attempt',
+      width: '100px',
+    },
+    {
+      title: t('runDetails.stepTimeline.columns.duration', { defaultValue: 'Duration' }),
+      dataIndex: 'duration_ms',
+      width: '120px',
+      render: (_value: unknown, step: WorkflowRunStepRecord) => formatDurationMs(step.duration_ms),
+    },
+    {
+      title: t('runDetails.stepTimeline.columns.nextRetry', { defaultValue: 'Next Retry' }),
+      dataIndex: ['step_id', 'next_retry'],
+      width: '160px',
+      render: (_value: unknown, step: WorkflowRunStepRecord) => (
+        <div className="text-xs text-gray-500">
+          {formatDateTime(retryWaitsByStep.get(step.step_path)?.timeout_at ?? null)}
+        </div>
+      ),
+    },
+    {
+      title: t('runDetails.stepTimeline.columns.started', { defaultValue: 'Started' }),
+      dataIndex: 'started_at',
+      width: '180px',
+      render: (_value: unknown, step: WorkflowRunStepRecord) => (
+        <div className="whitespace-nowrap">{formatDateTime(step.started_at)}</div>
+      ),
+    },
+    {
+      title: t('runDetails.stepTimeline.columns.error', { defaultValue: 'Error' }),
+      dataIndex: 'error_json',
+      sortable: false,
+      render: (_value: unknown, step: WorkflowRunStepRecord) => (
+        <div className="max-w-[18rem] break-words text-xs text-destructive">
+          {(step.error_json as any)?.message ?? emptyValueLabel}
+        </div>
+      ),
+    },
+    {
+      title: t('runDetails.stepTimeline.columns.action', { defaultValue: 'Action' }),
+      dataIndex: ['step_id', 'action'],
+      width: '110px',
+      sortable: false,
+      render: (_value: unknown, step: WorkflowRunStepRecord) => (
+        <Button
+          id={`workflow-run-step-${step.step_id}`}
+          variant="outline"
+          size="sm"
+          onClick={() => setSelectedStepPath(step.step_path)}
+        >
+          {t('runDetails.actions.view', { defaultValue: 'View' })}
+        </Button>
+      ),
+    },
+  ], [emptyValueLabel, formatDateTime, formatWorkflowStepStatus, retryWaitsByStep, stepTypeById, t]);
 
   const handleApplyLogFilters = () => {
     fetchLogs(0, false, logFilters);
@@ -802,17 +1032,16 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
   const hasRedactions = Array.isArray((redactedSnapshot as any)?.meta?.redactions)
     ? (redactedSnapshot as any).meta.redactions.length > 0
     : false;
-  const stepColumnCount = 9;
 
   return (
     <div className="space-y-4 min-w-0 max-w-full">
       <Card className="p-4 space-y-3">
-        <div className="flex items-start justify-between gap-4">
-          <div>
+        <div className="min-w-0">
+          <div className="min-w-0">
             <div className="text-sm text-gray-500">
               {t('runDetails.header.runIdLabel', { defaultValue: 'Run ID' })}
             </div>
-            <div id="workflow-run-detail-id" className="text-lg font-semibold text-gray-900">
+            <div id="workflow-run-detail-id" className="break-all text-lg font-semibold text-gray-900">
               {runId}
             </div>
             <div className="text-sm text-gray-600">
@@ -827,44 +1056,44 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="mt-3 flex flex-wrap items-center justify-end gap-2 border-t border-[rgb(var(--color-border-200))] pt-3">
             {canResume && (
-              <Button id="workflow-run-resume" variant="outline" onClick={() => setConfirmAction('resume')}>
+              <Button id="workflow-run-resume" variant="outline" size="sm" onClick={() => setConfirmAction('resume')}>
                 <Play className="h-4 w-4 mr-2" />
                 {t('runDetails.actions.resume', { defaultValue: 'Resume' })}
               </Button>
             )}
             {canCancel && (
-              <Button id="workflow-run-cancel" variant="outline" onClick={() => setConfirmAction('cancel')}>
+              <Button id="workflow-run-cancel" variant="outline" size="sm" onClick={() => setConfirmAction('cancel')}>
                 <StopCircle className="h-4 w-4 mr-2" />
                 {t('runDetails.actions.cancel', { defaultValue: 'Cancel' })}
               </Button>
             )}
             {run && (
-              <Button id="workflow-run-export" variant="outline" onClick={handleExport}>
+              <Button id="workflow-run-export" variant="outline" size="sm" onClick={handleExport}>
                 {t('runDetails.actions.export', { defaultValue: 'Export' })}
               </Button>
             )}
             {canRetry && (
-              <Button id="workflow-run-retry" variant="outline" onClick={() => setConfirmAction('retry')}>
+              <Button id="workflow-run-retry" variant="outline" size="sm" onClick={() => setConfirmAction('retry')}>
                 <RotateCcw className="h-4 w-4 mr-2" />
                 {t('runDetails.actions.retry', { defaultValue: 'Retry' })}
               </Button>
             )}
             {canReplay && (
-              <Button id="workflow-run-replay" variant="outline" onClick={() => setConfirmAction('replay')}>
+              <Button id="workflow-run-replay" variant="outline" size="sm" onClick={() => setConfirmAction('replay')}>
                 <Repeat className="h-4 w-4 mr-2" />
                 {t('runDetails.actions.replay', { defaultValue: 'Replay' })}
               </Button>
             )}
             {canRequeue && (
-              <Button id="workflow-run-requeue" variant="outline" onClick={() => setConfirmAction('requeue')}>
+              <Button id="workflow-run-requeue" variant="outline" size="sm" onClick={() => setConfirmAction('requeue')}>
                 <RefreshCw className="h-4 w-4 mr-2" />
                 {t('runDetails.actions.requeueEvent', { defaultValue: 'Requeue Event' })}
               </Button>
             )}
             {onClose && (
-              <Button id="workflow-run-close" variant="ghost" onClick={onClose}>
+              <Button id="workflow-run-close" variant="ghost" size="sm" onClick={onClose}>
                 {t('runDetails.actions.close', { defaultValue: 'Close' })}
               </Button>
             )}
@@ -980,7 +1209,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
       </Card>
 
       <Card className="p-4">
-        <div className="flex items-center justify-between mb-3">
+        <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="text-sm font-semibold text-gray-800">
               {t('runDetails.stepTimeline.title', { defaultValue: 'Step Timeline' })}
@@ -997,8 +1226,8 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
             </span>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-4 mb-4">
-          <div className="min-w-[180px]">
+        <div className="mb-4 grid grid-cols-1 items-end gap-4 md:grid-cols-[minmax(180px,220px)_minmax(220px,280px)]">
+          <div>
             <CustomSelect
               id="workflow-run-step-status-filter"
               label={t('runDetails.stepTimeline.stepStatusLabel', { defaultValue: 'Step status' })}
@@ -1007,7 +1236,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
               onValueChange={setStepStatusFilter}
             />
           </div>
-          <div className="min-w-[220px]">
+          <div>
             <CustomSelect
               id="workflow-run-step-type-filter"
               label={t('runDetails.stepTimeline.nodeTypeLabel', { defaultValue: 'Node type' })}
@@ -1016,74 +1245,41 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
               onValueChange={setStepTypeFilter}
             />
           </div>
-          <Switch
-            id="workflow-run-collapse-nested"
-            checked={collapseNested}
-            onCheckedChange={setCollapseNested}
-            label={t('runDetails.stepTimeline.collapseNestedLabel', {
-              defaultValue: 'Collapse nested blocks',
-            })}
-          />
+          <div className="md:col-span-2">
+            <Switch
+              id="workflow-run-collapse-nested"
+              checked={collapseNested}
+              onCheckedChange={setCollapseNested}
+              label={t('runDetails.stepTimeline.collapseNestedLabel', {
+                defaultValue: 'Collapse nested blocks',
+              })}
+            />
+          </div>
         </div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t('runDetails.stepTimeline.columns.stepPath', { defaultValue: 'Step Path' })}</TableHead>
-              <TableHead>{t('runDetails.stepTimeline.columns.type', { defaultValue: 'Type' })}</TableHead>
-              <TableHead>{t('runDetails.stepTimeline.columns.status', { defaultValue: 'Status' })}</TableHead>
-              <TableHead>{t('runDetails.stepTimeline.columns.attempt', { defaultValue: 'Attempt' })}</TableHead>
-              <TableHead>{t('runDetails.stepTimeline.columns.duration', { defaultValue: 'Duration' })}</TableHead>
-              <TableHead>{t('runDetails.stepTimeline.columns.nextRetry', { defaultValue: 'Next Retry' })}</TableHead>
-              <TableHead>{t('runDetails.stepTimeline.columns.started', { defaultValue: 'Started' })}</TableHead>
-              <TableHead>{t('runDetails.stepTimeline.columns.error', { defaultValue: 'Error' })}</TableHead>
-              <TableHead></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredSteps.map((step) => (
-              <TableRow
-                key={step.step_id}
-                data-state={selectedStepPath === step.step_path ? 'selected' : undefined}
-              >
-                <TableCell className="font-mono text-xs">{step.step_path}</TableCell>
-                <TableCell className="text-xs text-gray-500">
-                  {stepTypeById.get(step.definition_step_id) ?? emptyValueLabel}
-                </TableCell>
-                <TableCell>
-                  <Badge className={STATUS_STYLES[step.status] ?? 'bg-gray-100 text-gray-600'}>
-                    {formatWorkflowStepStatus(step.status)}
-                  </Badge>
-                </TableCell>
-                <TableCell>{step.attempt}</TableCell>
-                <TableCell>{formatDurationMs(step.duration_ms)}</TableCell>
-                <TableCell className="text-xs text-gray-500">
-                  {formatDateTime(retryWaitsByStep.get(step.step_path)?.timeout_at ?? null)}
-                </TableCell>
-                <TableCell>{formatDateTime(step.started_at)}</TableCell>
-                <TableCell className="text-xs text-destructive">
-                  {(step.error_json as any)?.message ?? emptyValueLabel}
-                </TableCell>
-                <TableCell>
-                  <Button
-                    id={`workflow-run-step-${step.step_id}`}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectedStepPath(step.step_path)}
-                  >
-                    {t('runDetails.actions.view', { defaultValue: 'View' })}
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-            {!isLoading && filteredSteps.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={stepColumnCount} className="text-center text-sm text-gray-500 py-6">
-                  {t('runDetails.stepTimeline.empty', { defaultValue: 'No step history yet.' })}
-                </TableCell>
-              </TableRow>
+        {isLoading && filteredSteps.length === 0 && (
+          <div className="py-2 text-sm text-gray-500">
+            {t('runDetails.stepTimeline.loading', { defaultValue: 'Loading...' })}
+          </div>
+        )}
+        {!isLoading && filteredSteps.length === 0 && (
+          <div className="py-6 text-center text-sm text-gray-500">
+            {t('runDetails.stepTimeline.empty', { defaultValue: 'No step history yet.' })}
+          </div>
+        )}
+        {filteredSteps.length > 0 && (
+          <DataTable
+            id="workflow-run-step-timeline"
+            data={filteredSteps}
+            columns={stepTimelineColumns}
+            pagination={false}
+            pageSize={Math.max(filteredSteps.length, 1)}
+            initialSorting={[{ id: 'started_at', desc: false }]}
+            onRowClick={(step) => setSelectedStepPath(step.step_path)}
+            rowClassName={(step) => (
+              step.step_path === selectedStepPath ? 'bg-table-selected' : ''
             )}
-          </TableBody>
-        </Table>
+          />
+        )}
       </Card>
 
       {selectedStep && (
@@ -1369,7 +1565,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
                 defaultValue: 'Operational log events for this run.',
               })}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+            <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(12rem,1fr)_minmax(12rem,14rem)]">
               <Input
                 id="workflow-run-logs-search"
                 label={t('runDetails.logs.searchLabel', { defaultValue: 'Search' })}
@@ -1386,7 +1582,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
                 value={logFilters.level}
                 onValueChange={(value) => setLogFilters((prev) => ({ ...prev, level: value }))}
               />
-              <div className="flex items-end gap-2">
+              <div className="flex flex-wrap items-center gap-2 lg:col-span-2 lg:justify-end">
                 <Button id="workflow-run-logs-apply" onClick={handleApplyLogFilters} disabled={logLoading}>
                   {t('runDetails.actions.apply', { defaultValue: 'Apply' })}
                 </Button>
@@ -1407,49 +1603,25 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
                 </Button>
               </div>
             </div>
-            <div className="mt-4 max-w-full overflow-x-auto">
-              <Table className="min-w-[960px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('runDetails.logs.columns.timestamp', { defaultValue: 'Timestamp' })}</TableHead>
-                    <TableHead>{t('runDetails.logs.columns.level', { defaultValue: 'Level' })}</TableHead>
-                    <TableHead>{t('runDetails.logs.columns.message', { defaultValue: 'Message' })}</TableHead>
-                    <TableHead>{t('runDetails.logs.columns.step', { defaultValue: 'Step' })}</TableHead>
-                    <TableHead>{t('runDetails.logs.columns.event', { defaultValue: 'Event' })}</TableHead>
-                    <TableHead>{t('runDetails.logs.columns.correlation', { defaultValue: 'Correlation' })}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {logs.map((log) => (
-                    <TableRow key={log.log_id}>
-                      <TableCell className="whitespace-nowrap text-xs text-gray-500">{formatDateTime(log.created_at)}</TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        <Badge className={STATUS_STYLES[log.level] ?? 'bg-gray-100 text-gray-600'}>
-                          {formatWorkflowLogLevel(log.level)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="max-w-[28rem] min-w-[18rem]">
-                        <div className="text-sm text-gray-800 break-words">{log.message}</div>
-                        {log.context_json && (
-                          <pre className="mt-1 max-h-24 max-w-full overflow-auto whitespace-pre-wrap break-words rounded bg-gray-900 text-gray-100 text-xs p-2">
-                            {truncateJsonPreview(log.context_json, 2000).preview}
-                          </pre>
-                        )}
-                      </TableCell>
-                      <TableCell className="max-w-[12rem] break-all text-xs text-gray-500">{log.step_path ?? emptyValueLabel}</TableCell>
-                      <TableCell className="max-w-[12rem] break-all text-xs text-gray-500">{log.event_name ?? emptyValueLabel}</TableCell>
-                      <TableCell className="max-w-[12rem] break-all text-xs text-gray-500">{log.correlation_key ?? emptyValueLabel}</TableCell>
-                    </TableRow>
-                  ))}
-                  {!logLoading && logs.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center text-sm text-gray-500 py-6">
-                        {noLogEntriesLabel}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+            <div className="mt-4">
+              {logLoading && logs.length === 0 && (
+                <div className="py-2 text-sm text-gray-500">
+                  {t('runDetails.logs.loading', { defaultValue: 'Loading logs...' })}
+                </div>
+              )}
+              {!logLoading && logs.length === 0 && (
+                <div className="py-6 text-center text-sm text-gray-500">{noLogEntriesLabel}</div>
+              )}
+              {logs.length > 0 && (
+                <DataTable
+                  id="workflow-run-logs-table"
+                  data={logs}
+                  columns={logColumns}
+                  pagination={false}
+                  pageSize={Math.max(logs.length, 1)}
+                  initialSorting={[{ id: 'created_at', desc: true }]}
+                />
+              )}
               {logCursor !== null && (
                 <div className="flex justify-center mt-3">
                   <Button
@@ -1475,7 +1647,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
                   defaultValue: 'Administrative actions for this run.',
                 })}
               </div>
-              <div className="flex items-center gap-2 mt-2">
+              <div className="mt-2 flex flex-wrap items-center gap-2">
                 <Button
                   id="workflow-run-audit-export"
                   variant="outline"
@@ -1485,41 +1657,24 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
                 </Button>
               </div>
               <div className="mt-3">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t('runDetails.audit.columns.timestamp', { defaultValue: 'Timestamp' })}</TableHead>
-                      <TableHead>{t('runDetails.audit.columns.operation', { defaultValue: 'Operation' })}</TableHead>
-                      <TableHead>{t('runDetails.audit.columns.user', { defaultValue: 'User' })}</TableHead>
-                      <TableHead>{t('runDetails.audit.columns.details', { defaultValue: 'Details' })}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {auditLogs.map((log) => (
-                      <TableRow key={log.audit_id}>
-                        <TableCell className="text-xs text-gray-500">{formatDateTime(log.timestamp)}</TableCell>
-                        <TableCell className="text-xs text-gray-700">{log.operation}</TableCell>
-                        <TableCell className="text-xs text-gray-500">
-                          {log.user_id ?? t('runDetails.audit.systemUser', { defaultValue: 'system' })}
-                        </TableCell>
-                        <TableCell>
-                          {log.details ? (
-                            <pre className="max-h-24 overflow-auto rounded bg-gray-900 text-gray-100 text-xs p-2">
-                              {truncateJsonPreview(log.details, 2000).preview}
-                            </pre>
-                          ) : emptyValueLabel}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {!auditLoading && auditLogs.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center text-sm text-gray-500 py-6">
-                          {noAuditEntriesLabel}
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                {auditLoading && auditLogs.length === 0 && (
+                  <div className="py-2 text-sm text-gray-500">
+                    {t('runDetails.audit.loading', { defaultValue: 'Loading audit trail...' })}
+                  </div>
+                )}
+                {!auditLoading && auditLogs.length === 0 && (
+                  <div className="py-6 text-center text-sm text-gray-500">{noAuditEntriesLabel}</div>
+                )}
+                {auditLogs.length > 0 && (
+                  <DataTable
+                    id="workflow-run-audit-trail"
+                    data={auditLogs}
+                    columns={auditColumns}
+                    pagination={false}
+                    pageSize={Math.max(auditLogs.length, 1)}
+                    initialSorting={[{ id: 'timestamp', desc: true }]}
+                  />
+                )}
                 {auditCursor !== null && (
                   <div className="flex justify-center mt-3">
                     <Button
