@@ -10,7 +10,9 @@ import { RequestAppointmentModal } from './RequestAppointmentModal';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
-import { Calendar, Clock, User, FileText, AlertCircle, X, ExternalLink } from 'lucide-react';
+import { Calendar, Clock, User, FileText, AlertCircle, X, ExternalLink, List, LayoutGrid } from 'lucide-react';
+import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
+import { AppointmentsCalendar } from './AppointmentsCalendar';
 import { format } from 'date-fns';
 import { fromZonedTime } from 'date-fns-tz';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
@@ -67,6 +69,7 @@ export default function AppointmentsPage() {
   const [appointmentToCancel, setAppointmentToCancel] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
 
   const loadAppointments = useCallback(async () => {
     setLoading(true);
@@ -255,16 +258,7 @@ export default function AppointmentsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-semibold text-[rgb(var(--color-text-900))]">
-            {t('page.title')}
-          </h1>
-          <p className="mt-1 text-sm text-[rgb(var(--color-text-600))]">
-            {t('page.subtitle')}
-          </p>
-        </div>
+      <div className="flex justify-end">
         <Button
           id="request-appointment-button"
           variant="default"
@@ -274,67 +268,104 @@ export default function AppointmentsPage() {
         </Button>
       </div>
 
-      {/* Appointments Table with Filter Tabs */}
+      {/* Appointments with Filter Tabs + View Switcher */}
       <Card>
         <CardContent className="p-0">
-          {/* Filter Tabs */}
-          <div className="flex gap-2 border-b border-gray-200 px-6 pt-4">
-            {(['all', 'pending', 'approved', 'declined'] as FilterStatus[]).map((status) => (
-              <button
-                key={status}
-                id={`filter-${status}-button`}
-                onClick={() => setFilterStatus(status)}
-                className={`
-                  px-4 py-2 text-sm font-medium border-b-2 transition-colors
-                  ${filterStatus === status
-                    ? 'border-[rgb(var(--color-primary-500))] text-[rgb(var(--color-primary-600))]'
-                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
-                  }
-                `}
-              >
-                {t(`filters.${status}`)}
-                {status !== 'all' && (
-                  <span className="ml-2 px-2 py-0.5 rounded-full bg-gray-100 text-xs">
-                    {appointments.filter(apt => apt.status === status).length}
-                  </span>
-                )}
-              </button>
-            ))}
+          <div className="flex items-center justify-between gap-4 border-b border-gray-200 px-6 pt-4">
+            {/* Filter Tabs */}
+            <div className="flex gap-2">
+              {(['all', 'pending', 'approved', 'declined'] as FilterStatus[]).map((status) => (
+                <button
+                  key={status}
+                  id={`filter-${status}-button`}
+                  onClick={() => setFilterStatus(status)}
+                  className={`
+                    px-4 py-2 text-sm font-medium border-b-2 transition-colors
+                    ${filterStatus === status
+                      ? 'border-[rgb(var(--color-primary-500))] text-[rgb(var(--color-primary-600))]'
+                      : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                    }
+                  `}
+                >
+                  {t(`filters.${status}`)}
+                  {status !== 'all' && (
+                    <span className="ml-2 px-2 py-0.5 rounded-full bg-gray-100 text-xs">
+                      {appointments.filter(apt => apt.status === status).length}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* View Switcher */}
+            <div className="pb-2">
+              <ViewSwitcher
+                aria-label={t('views.label', 'Switch view')}
+                currentView={viewMode}
+                onChange={setViewMode}
+                options={[
+                  {
+                    value: 'list',
+                    label: t('views.list', 'List'),
+                    icon: List,
+                    id: 'appointments-view-list',
+                  },
+                  {
+                    value: 'calendar',
+                    label: t('views.calendar', 'Calendar'),
+                    icon: LayoutGrid,
+                    id: 'appointments-view-calendar',
+                  },
+                ]}
+              />
+            </div>
           </div>
 
-          {/* Table Content */}
-          <div className="p-6">
-            {filteredAppointments.length === 0 ? (
-              <div className="text-center py-12">
-                <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  {t('page.noAppointments')}
-                </h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  {t('page.noAppointmentsDescription')}
-                </p>
-                <Button
-                  id="request-first-appointment-button"
-                  variant="default"
-                  onClick={() => setIsRequestModalOpen(true)}
-                >
-                  {t('page.requestButton')}
-                </Button>
-              </div>
-            ) : (
-              <DataTable
-                id="appointments-table"
-                data={filteredAppointments}
-                columns={columns}
-                pagination={true}
-                currentPage={currentPage}
-                onPageChange={setCurrentPage}
-                pageSize={pageSize}
-                onItemsPerPageChange={setPageSize}
-                rowClassName={() => ""}
-              />
-            )}
-          </div>
+          {/* Content */}
+          {viewMode === 'calendar' ? (
+            <AppointmentsCalendar
+              appointments={filteredAppointments}
+              onSelect={(apt) => {
+                const full = appointments.find(
+                  (a) => a.appointment_request_id === apt.appointment_request_id,
+                );
+                if (full) setSelectedAppointment(full);
+              }}
+            />
+          ) : (
+            <div className="p-6">
+              {filteredAppointments.length === 0 ? (
+                <div className="text-center py-12">
+                  <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    {t('page.noAppointments')}
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    {t('page.noAppointmentsDescription')}
+                  </p>
+                  <Button
+                    id="request-first-appointment-button"
+                    variant="default"
+                    onClick={() => setIsRequestModalOpen(true)}
+                  >
+                    {t('page.requestButton')}
+                  </Button>
+                </div>
+              ) : (
+                <DataTable
+                  id="appointments-table"
+                  data={filteredAppointments}
+                  columns={columns}
+                  pagination={true}
+                  currentPage={currentPage}
+                  onPageChange={setCurrentPage}
+                  pageSize={pageSize}
+                  onItemsPerPageChange={setPageSize}
+                  rowClassName={() => ""}
+                />
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
