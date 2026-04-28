@@ -61,6 +61,7 @@ const apiKeySkipPaths = [
   '/api/documents/view/',
   '/api/email/webhooks/',
   '/api/calendar/webhooks/',
+  '/api/calendar/appointment/',
   '/api/email/oauth/',
   '/api/teams/auth/',
   '/api/teams/bot/',

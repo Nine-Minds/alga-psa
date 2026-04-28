@@ -19,7 +19,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
-import { Plus, Trash2, Save } from 'lucide-react';
+import { ExternalLink, Plus, Trash2, Save } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -1527,6 +1527,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
 
 $appId = "<your-app-registration-client-id>"
 $organizerUpn = "scheduling@acme.com"
+$organizerObjectId = (Get-CsOnlineUser -Identity $organizerUpn).ExternalDirectoryObjectId
 
 New-CsApplicationAccessPolicy \`
   -Identity "Alga-Appointment-Meetings" \`
@@ -1535,15 +1536,27 @@ New-CsApplicationAccessPolicy \`
 
 Grant-CsApplicationAccessPolicy \`
   -PolicyName "Alga-Appointment-Meetings" \`
-  -Identity $organizerUpn`}</pre>
+  -Identity $organizerObjectId`}</pre>
                         <p className="text-xs mt-1 text-gray-600">
                           {t('availabilitySettings.teamsMeetings.prerequisites.steps.step2.note', {
-                            defaultValue: 'Allow 5–10 minutes for policy propagation before clicking Verify.',
+                            defaultValue: 'Allow up to 30 minutes for policy propagation before clicking Verify.',
                           })}
                         </p>
                       </section>
                     </div>
                   </details>
+                  <Button
+                    id="open-teams-meetings-runbook"
+                    type="button"
+                    variant="outline"
+                    className="w-fit"
+                    onClick={() => window.open('/docs/integrations/teams-meetings-setup.md', '_blank', 'noopener,noreferrer')}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    {t('availabilitySettings.teamsMeetings.actions.openRunbook', {
+                      defaultValue: 'Open setup runbook',
+                    })}
+                  </Button>
                 </AlertDescription>
               </Alert>
 
@@ -1559,12 +1572,12 @@ Grant-CsApplicationAccessPolicy \`
                   <div>
                     <Label htmlFor="default-meeting-organizer-upn">
                       {t('availabilitySettings.teamsMeetings.organizer.label', {
-                        defaultValue: 'Default meeting organizer (UPN or Microsoft user ID)',
+                        defaultValue: 'Default meeting organizer Microsoft user object ID',
                       })}
                     </Label>
                     <p className="text-xs text-gray-600 mb-2">
                       {t('availabilitySettings.teamsMeetings.organizer.help', {
-                        defaultValue: 'Approved appointments create Teams meetings as this Microsoft user. A UPN such as scheduling@acme.com is usually the safest choice.',
+                        defaultValue: 'Approved appointments create Teams meetings as this Microsoft user. Use the Entra object ID; UPNs can return 404 from Microsoft Graph onlineMeetings.',
                       })}
                     </p>
                     <Input
@@ -1575,7 +1588,7 @@ Grant-CsApplicationAccessPolicy \`
                         setMeetingOrganizerVerification(null);
                       }}
                       placeholder={t('availabilitySettings.teamsMeetings.organizer.placeholder', {
-                        defaultValue: 'scheduling@acme.com',
+                        defaultValue: '00000000-0000-0000-0000-000000000000',
                       })}
                     />
                   </div>

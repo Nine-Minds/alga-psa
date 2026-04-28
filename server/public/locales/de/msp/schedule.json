@@ -445,21 +445,22 @@
           "step2": {
             "title": "2. Application Access Policy erstellen",
             "intro": "Die reine App-Besprechungserstellung muss dem Organisator-Konto ausdrücklich erlaubt werden.",
-            "note": "Warten Sie 5–10 Minuten auf die Richtlinienverbreitung, bevor Sie auf Verifizieren klicken."
+            "note": "Warten Sie bis zu 30 Minuten auf die Richtlinienverbreitung, bevor Sie auf Verifizieren klicken."
           }
         }
       },
       "organizer": {
         "title": "Besprechungsorganisator",
-        "label": "Standard-Besprechungsorganisator (UPN oder Microsoft-Benutzer-ID)",
-        "help": "Genehmigte Termine erstellen Teams-Besprechungen als dieser Microsoft-Benutzer. Ein UPN wie scheduling@acme.com ist meist die sicherste Wahl.",
-        "placeholder": "scheduling@acme.com"
+        "label": "Microsoft-Benutzerobjekt-ID des Standard-Besprechungsorganisators",
+        "help": "Genehmigte Termine erstellen Teams-Besprechungen als dieser Microsoft-Benutzer. Verwenden Sie die Entra-Objekt-ID; UPNs können bei Microsoft Graph onlineMeetings 404 zurückgeben.",
+        "placeholder": "00000000-0000-0000-0000-000000000000"
       },
       "actions": {
         "save": "Speichern",
         "saving": "Wird gespeichert...",
         "verify": "Verifizieren",
-        "verifying": "Wird verifiziert..."
+        "verifying": "Wird verifiziert...",
+        "openRunbook": "Setup-Runbook öffnen"
       },
       "feedback": {
         "saveSuccess": "Teams-Besprechungsorganisator gespeichert",
