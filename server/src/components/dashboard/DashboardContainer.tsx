@@ -1,13 +1,21 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { usePostHog } from 'posthog-js/react';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { usePerformanceTracking } from '@alga-psa/analytics/client';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { isEnterprise } from '@/lib/features';
+
+function getGreetingKey(): 'morning' | 'afternoon' | 'evening' {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'morning';
+  if (hour < 18) return 'afternoon';
+  return 'evening';
+}
 
 // App shell: dashboard landing container (server-owned, uses analytics).
 import {
@@ -135,7 +143,13 @@ const FeatureCard = ({ icon: Icon, title, description, analyticsName }: FeatureC
   );
 };
 
-function EnterpriseWelcomeBanner({ title, description }: { title: string; description: string }) {
+interface BannerProps {
+  greeting?: string;
+  title: string;
+  description: string;
+}
+
+function EnterpriseWelcomeBanner({ greeting, title, description }: BannerProps) {
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-r from-violet-600 to-cyan-500 px-6 py-5 shadow-[0_10px_30px_rgba(2,6,23,0.12)]">
       <div className="flex items-start gap-4">
@@ -143,6 +157,11 @@ function EnterpriseWelcomeBanner({ title, description }: { title: string; descri
           <Sparkles className="h-5 w-5 text-white" />
         </div>
         <div className="min-w-0">
+          {greeting && (
+            <div className="text-xs font-medium uppercase tracking-wider text-white/80">
+              {greeting}
+            </div>
+          )}
           <h1 className="text-xl font-semibold tracking-tight text-white sm:text-2xl">
             {title}
           </h1>
@@ -155,7 +174,7 @@ function EnterpriseWelcomeBanner({ title, description }: { title: string; descri
   );
 }
 
-function CommunityWelcomeBanner({ title, description }: { title: string; description: string }) {
+function CommunityWelcomeBanner({ greeting, title, description }: BannerProps) {
   return (
     <div className="overflow-hidden rounded-2xl border border-[rgb(var(--color-border-200))] bg-white px-6 py-5 shadow-sm">
       <div className="flex items-start gap-4">
@@ -163,6 +182,11 @@ function CommunityWelcomeBanner({ title, description }: { title: string; descrip
           <Sparkles className="h-5 w-5" style={{ color: 'rgb(var(--color-primary-500))' }} />
         </div>
         <div className="min-w-0">
+          {greeting && (
+            <div className="text-xs font-medium uppercase tracking-wider" style={{ color: 'rgb(var(--color-text-500))' }}>
+              {greeting}
+            </div>
+          )}
           <h1 className="text-xl font-semibold tracking-tight" style={{ color: 'rgb(var(--color-text-900))' }}>
             {title}
           </h1>
@@ -178,6 +202,7 @@ function CommunityWelcomeBanner({ title, description }: { title: string; descrip
 const WelcomeDashboard = ({ onboardingSection }: DashboardContainerProps) => {
   const posthog = usePostHog();
   const { t } = useTranslation('msp/dashboard');
+  const [firstName, setFirstName] = useState<string>('');
 
   usePerformanceTracking('dashboard');
 
@@ -191,6 +216,30 @@ const WelcomeDashboard = ({ onboardingSection }: DashboardContainerProps) => {
       discovery_method: 'navigation',
     });
   }, [posthog]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const user = await getCurrentUser();
+        if (mounted) setFirstName(user?.first_name || '');
+      } catch {
+        /* ignore — banner falls back to non-personalized greeting */
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const greetingPart = t(`greeting.${getGreetingKey()}`, {
+    defaultValue: getGreetingKey() === 'morning'
+      ? 'Good morning'
+      : getGreetingKey() === 'afternoon'
+        ? 'Good afternoon'
+        : 'Good evening',
+  });
+  const greetingLine = firstName ? `${greetingPart}, ${firstName}` : greetingPart;
 
   const translatedFeatureCards = featureCards.map((feature) => ({
     ...feature,
@@ -218,11 +267,13 @@ const WelcomeDashboard = ({ onboardingSection }: DashboardContainerProps) => {
           <div className="flex flex-col gap-8">
               {isEnterprise ? (
                 <EnterpriseWelcomeBanner
+                  greeting={greetingLine}
                   title={welcomeTitle}
                   description={welcomeDescription}
                 />
               ) : (
                 <CommunityWelcomeBanner
+                  greeting={greetingLine}
                   title={welcomeCommunityTitle}
                   description={welcomeCommunityDescription}
                 />
