@@ -138,5 +138,13 @@
     "on": "op",
     "declined": "Afgewezen:",
     "invalidDateTime": "Ongeldige datum/tijd"
+  },
+  "views": {
+    "list": "Lijst",
+    "calendar": "Kalender"
+  },
+  "calendar": {
+    "today": "Vandaag",
+    "more": "meer"
   }
 }

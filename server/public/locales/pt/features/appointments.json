@@ -138,5 +138,13 @@
     "on": "on",
     "declined": "Declined:",
     "invalidDateTime": "Invalid date/time"
+  },
+  "views": {
+    "list": "Lista",
+    "calendar": "Calendário"
+  },
+  "calendar": {
+    "today": "Hoje",
+    "more": "mais"
   }
 }

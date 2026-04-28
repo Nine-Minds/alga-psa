@@ -153,5 +153,10 @@
       "dismissFailed": "Onboardingstap kon niet worden verborgen.",
       "restoreFailed": "Onboardingstap kon niet worden hersteld."
     }
+  },
+  "greeting": {
+    "morning": "Goedemorgen",
+    "afternoon": "Goedemiddag",
+    "evening": "Goedenavond"
   }
 }

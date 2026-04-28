@@ -153,5 +153,10 @@
       "dismissFailed": "55555",
       "restoreFailed": "55555"
     }
+  },
+  "greeting": {
+    "morning": "55555",
+    "afternoon": "55555",
+    "evening": "55555"
   }
 }

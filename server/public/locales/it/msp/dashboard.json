@@ -153,5 +153,10 @@
       "dismissFailed": "Impossibile nascondere il passaggio di onboarding.",
       "restoreFailed": "Impossibile ripristinare il passaggio di onboarding."
     }
+  },
+  "greeting": {
+    "morning": "Buongiorno",
+    "afternoon": "Buon pomeriggio",
+    "evening": "Buonasera"
   }
 }

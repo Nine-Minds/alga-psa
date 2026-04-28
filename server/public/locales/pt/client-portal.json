@@ -1,7 +1,7 @@
 {
   "nav": {
     "dashboard": "Dashboard",
-    "tickets": "Support Tickets",
+    "tickets": "Tickets",
     "projects": "Projects",
     "appointments": "Appointments",
     "billing": "Billing",
@@ -15,7 +15,25 @@
     "notifications": "Notifications",
     "documents": "Documents",
     "knowledgeBase": "Knowledge Base",
-    "requestServices": "Request Services"
+    "requestServices": "Request Services",
+    "home": "Início",
+    "myTickets": "Meus tickets",
+    "newRequest": "Novo pedido",
+    "schedule": "Agenda",
+    "myDevices": "Meus dispositivos",
+    "helpCenter": "Centro de ajuda",
+    "organization": "Organização",
+    "clientPortalLabel": "Portal do cliente",
+    "supportCard": {
+      "title": "Precisa de ajuda urgente?",
+      "description": "Entre em contato a qualquer momento."
+    },
+    "sections": {
+      "workspace": "Área de trabalho",
+      "resources": "Recursos",
+      "more": "Mais",
+      "apps": "Apps"
+    }
   },
   "dashboard": {
     "title": "Dashboard",
@@ -26,7 +44,14 @@
       "openTickets": "Open Support Tickets",
       "activeProjects": "Open Projects",
       "pendingInvoices": "Pending Invoices",
-      "activeAssets": "Active Assets"
+      "activeAssets": "Active Assets",
+      "upcomingVisits": "Próximas visitas",
+      "activeDevices": "Dispositivos ativos",
+      "openTicketsHint": "Suporte ativo",
+      "activeProjectsHint": "Em andamento",
+      "nextLabel": "Próximo: {{when}}",
+      "noneScheduled": "Nada agendado",
+      "deviceStatusHint": "Endpoints geridos"
     },
     "quickActions": {
       "title": "Quick Actions",
@@ -39,12 +64,50 @@
       "noUpcoming": "No upcoming appointments. Request one now!",
       "requestButton": "Request Appointment",
       "viewAll": "View all appointments →",
-      "technician": "Technician"
+      "technician": "Technician",
+      "noUpcomingShort": "Nada na agenda",
+      "countLabel": "{{count}} próximos"
     },
     "recentActivity": {
       "title": "Recent Activity"
     },
-    "viewAll": "View all {{item}} →"
+    "viewAll": "View all {{item}} →",
+    "welcomeBack": "Bem-vindo de volta",
+    "heroSubtitle": "Aqui está um resumo da sua atividade de suporte de TI. Nossa equipe está disponível para ajudar.",
+    "greeting": {
+      "morning": "Bom dia",
+      "afternoon": "Boa tarde",
+      "evening": "Boa noite"
+    },
+    "nextToday": "Hoje",
+    "nextTomorrow": "Amanhã",
+    "recentTickets": {
+      "title": "Tickets recentes",
+      "viewAll": "Ver todos",
+      "id": "ID",
+      "subject": "Assunto",
+      "status": "Status",
+      "priority": "Prioridade",
+      "updated": "Atualizado",
+      "empty": "Sem tickets ativos — ótimo!",
+      "countLabel": "{{count}} exibidos"
+    },
+    "activity": {
+      "title": "Atividade recente",
+      "subtitle": "Atualizações recentes da sua conta",
+      "empty": "Sem atividade ainda",
+      "emptyHint": "Quando tickets forem atualizados ou faturas chegarem, você as verá aqui.",
+      "viewTickets": "Ver todos os tickets"
+    },
+    "devices": {
+      "title": "Seus dispositivos",
+      "viewAll": "Ver todos",
+      "countLabel": "{{count}} geridos",
+      "emptyShort": "Ainda sem dispositivos",
+      "emptyBody": "Os dispositivos geridos pelo seu fornecedor aparecerão aqui.",
+      "healthy": "Saudável",
+      "inactive": "Inativo"
+    }
   },
   "auth": {
     "signIn": "Sign In",
@@ -531,6 +594,30 @@
       "messages": "Messages",
       "projects": "Projects",
       "system": "System"
+    }
+  },
+  "sidebar": {
+    "goToDashboard": "Ir para o painel",
+    "logoAlt": "Logotipo do portal do cliente",
+    "expandSidebar": "Expandir barra lateral",
+    "collapseSidebar": "Recolher barra lateral"
+  },
+  "devices": {
+    "pageTitle": "Meus dispositivos",
+    "loading": "Carregando dispositivos…",
+    "statusOkTitle": "Todos os dispositivos saudáveis",
+    "statusOkBody": "{{count}} dispositivos reportando",
+    "empty": {
+      "title": "Ainda sem dispositivos",
+      "body": "Os dispositivos geridos pelo seu fornecedor aparecerão aqui."
+    },
+    "types": {
+      "workstation": "Estações de trabalho",
+      "server": "Servidores",
+      "mobile": "Móvel",
+      "printer": "Impressoras",
+      "network": "Rede",
+      "unknown": "Outros"
     }
   }
 }

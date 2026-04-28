@@ -1,7 +1,7 @@
 {
   "nav": {
     "dashboard": "Panel",
-    "tickets": "Zgłoszenia wsparcia",
+    "tickets": "Zgłoszenia",
     "projects": "Projekty",
     "appointments": "Wizyty",
     "billing": "Rozliczenia",
@@ -15,7 +15,25 @@
     "notifications": "Powiadomienia",
     "documents": "Dokumenty",
     "knowledgeBase": "Baza wiedzy",
-    "requestServices": "Zamów usługi"
+    "requestServices": "Zamów usługi",
+    "home": "Strona główna",
+    "myTickets": "Moje zgłoszenia",
+    "newRequest": "Nowe zgłoszenie",
+    "schedule": "Harmonogram",
+    "myDevices": "Moje urządzenia",
+    "helpCenter": "Centrum pomocy",
+    "organization": "Organizacja",
+    "clientPortalLabel": "Portal klienta",
+    "supportCard": {
+      "title": "Potrzebujesz pilnej pomocy?",
+      "description": "Skontaktuj się z nami w dowolnej chwili."
+    },
+    "sections": {
+      "workspace": "Obszar roboczy",
+      "resources": "Zasoby",
+      "more": "Więcej",
+      "apps": "Aplikacje"
+    }
   },
   "dashboard": {
     "title": "Panel",
@@ -26,7 +44,14 @@
       "openTickets": "Otwarte zgłoszenia wsparcia",
       "activeProjects": "Otwarte projekty",
       "pendingInvoices": "Oczekujące faktury",
-      "activeAssets": "Aktywne zasoby"
+      "activeAssets": "Aktywne zasoby",
+      "upcomingVisits": "Nadchodzące wizyty",
+      "activeDevices": "Aktywne urządzenia",
+      "openTicketsHint": "Aktywne wsparcie",
+      "activeProjectsHint": "W toku",
+      "nextLabel": "Następna: {{when}}",
+      "noneScheduled": "Nic nie zaplanowano",
+      "deviceStatusHint": "Zarządzane urządzenia"
     },
     "quickActions": {
       "title": "Szybkie akcje",
@@ -39,12 +64,50 @@
       "noUpcoming": "Brak nadchodzących wizyt. Złóż wniosek teraz!",
       "requestButton": "Złóż wniosek o wizytę",
       "viewAll": "Zobacz wszystkie wizyty →",
-      "technician": "Technik"
+      "technician": "Technik",
+      "noUpcomingShort": "Nic w kalendarzu",
+      "countLabel": "Nadchodzące: {{count}}"
     },
     "recentActivity": {
       "title": "Ostatnia aktywność"
     },
-    "viewAll": "Zobacz wszystkie {{item}} →"
+    "viewAll": "Zobacz wszystkie {{item}} →",
+    "welcomeBack": "Witamy z powrotem",
+    "heroSubtitle": "Oto podsumowanie Twojej aktywności wsparcia IT. Nasz zespół jest gotowy pomóc.",
+    "greeting": {
+      "morning": "Dzień dobry",
+      "afternoon": "Dzień dobry",
+      "evening": "Dobry wieczór"
+    },
+    "nextToday": "Dziś",
+    "nextTomorrow": "Jutro",
+    "recentTickets": {
+      "title": "Ostatnie zgłoszenia",
+      "viewAll": "Zobacz wszystkie",
+      "id": "ID",
+      "subject": "Temat",
+      "status": "Status",
+      "priority": "Priorytet",
+      "updated": "Zaktualizowano",
+      "empty": "Brak aktywnych zgłoszeń — super!",
+      "countLabel": "Pokazano: {{count}}"
+    },
+    "activity": {
+      "title": "Ostatnia aktywność",
+      "subtitle": "Najnowsze aktualizacje konta",
+      "empty": "Brak ostatniej aktywności",
+      "emptyHint": "Gdy zgłoszenia będą aktualizowane lub pojawią się faktury, zobaczysz je tutaj.",
+      "viewTickets": "Zobacz wszystkie zgłoszenia"
+    },
+    "devices": {
+      "title": "Twoje urządzenia",
+      "viewAll": "Zobacz wszystkie",
+      "countLabel": "Zarządzane: {{count}}",
+      "emptyShort": "Brak urządzeń",
+      "emptyBody": "Tutaj pojawią się urządzenia zarządzane przez dostawcę.",
+      "healthy": "Sprawne",
+      "inactive": "Nieaktywne"
+    }
   },
   "auth": {
     "signIn": "Zaloguj się",
@@ -531,6 +594,30 @@
       "messages": "Wiadomości",
       "projects": "Projekty",
       "system": "System"
+    }
+  },
+  "sidebar": {
+    "goToDashboard": "Przejdź do panelu",
+    "logoAlt": "Logo portalu klienta",
+    "expandSidebar": "Rozwiń pasek boczny",
+    "collapseSidebar": "Zwiń pasek boczny"
+  },
+  "devices": {
+    "pageTitle": "Moje urządzenia",
+    "loading": "Ładowanie urządzeń…",
+    "statusOkTitle": "Wszystkie urządzenia są sprawne",
+    "statusOkBody": "Zgłaszane urządzenia: {{count}}",
+    "empty": {
+      "title": "Brak urządzeń",
+      "body": "Tutaj pojawią się urządzenia zarządzane przez dostawcę."
+    },
+    "types": {
+      "workstation": "Stacje robocze",
+      "server": "Serwery",
+      "mobile": "Mobilne",
+      "printer": "Drukarki",
+      "network": "Sieć",
+      "unknown": "Inne"
     }
   }
 }

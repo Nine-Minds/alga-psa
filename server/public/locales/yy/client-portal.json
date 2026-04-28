@@ -15,7 +15,25 @@
     "notifications": "55555",
     "documents": "55555",
     "knowledgeBase": "55555",
-    "requestServices": "55555"
+    "requestServices": "55555",
+    "home": "55555",
+    "myTickets": "55555",
+    "newRequest": "55555",
+    "schedule": "55555",
+    "myDevices": "55555",
+    "helpCenter": "55555",
+    "organization": "55555",
+    "clientPortalLabel": "55555",
+    "supportCard": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "sections": {
+      "workspace": "55555",
+      "resources": "55555",
+      "more": "55555",
+      "apps": "55555"
+    }
   },
   "dashboard": {
     "title": "55555",
@@ -26,7 +44,14 @@
       "openTickets": "55555",
       "activeProjects": "55555",
       "pendingInvoices": "55555",
-      "activeAssets": "55555"
+      "activeAssets": "55555",
+      "upcomingVisits": "55555",
+      "activeDevices": "55555",
+      "openTicketsHint": "55555",
+      "activeProjectsHint": "55555",
+      "nextLabel": "55555",
+      "noneScheduled": "55555",
+      "deviceStatusHint": "55555"
     },
     "quickActions": {
       "title": "55555",
@@ -39,12 +64,50 @@
       "noUpcoming": "55555",
       "requestButton": "55555",
       "viewAll": "55555",
-      "technician": "55555"
+      "technician": "55555",
+      "noUpcomingShort": "55555",
+      "countLabel": "55555"
     },
     "recentActivity": {
       "title": "55555"
     },
-    "viewAll": "55555 {{item}} 55555"
+    "viewAll": "55555 {{item}} 55555",
+    "welcomeBack": "55555",
+    "heroSubtitle": "55555",
+    "greeting": {
+      "morning": "55555",
+      "afternoon": "55555",
+      "evening": "55555"
+    },
+    "nextToday": "55555",
+    "nextTomorrow": "55555",
+    "recentTickets": {
+      "title": "55555",
+      "viewAll": "55555",
+      "id": "55555",
+      "subject": "55555",
+      "status": "55555",
+      "priority": "55555",
+      "updated": "55555",
+      "empty": "55555",
+      "countLabel": "55555"
+    },
+    "activity": {
+      "title": "55555",
+      "subtitle": "55555",
+      "empty": "55555",
+      "emptyHint": "55555",
+      "viewTickets": "55555"
+    },
+    "devices": {
+      "title": "55555",
+      "viewAll": "55555",
+      "countLabel": "55555",
+      "emptyShort": "55555",
+      "emptyBody": "55555",
+      "healthy": "55555",
+      "inactive": "55555"
+    }
   },
   "auth": {
     "signIn": "55555",
@@ -531,6 +594,30 @@
       "messages": "55555",
       "projects": "55555",
       "system": "55555"
+    }
+  },
+  "sidebar": {
+    "goToDashboard": "55555",
+    "logoAlt": "55555",
+    "expandSidebar": "55555",
+    "collapseSidebar": "55555"
+  },
+  "devices": {
+    "pageTitle": "55555",
+    "loading": "55555",
+    "statusOkTitle": "55555",
+    "statusOkBody": "55555",
+    "empty": {
+      "title": "55555",
+      "body": "55555"
+    },
+    "types": {
+      "workstation": "55555",
+      "server": "55555",
+      "mobile": "55555",
+      "printer": "55555",
+      "network": "55555",
+      "unknown": "55555"
     }
   }
 }

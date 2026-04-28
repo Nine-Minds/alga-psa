@@ -153,5 +153,10 @@
       "dismissFailed": "Impossible de masquer l'étape d'onboarding.",
       "restoreFailed": "Impossible de restaurer l'étape d'onboarding."
     }
+  },
+  "greeting": {
+    "morning": "Bonjour",
+    "afternoon": "Bon après-midi",
+    "evening": "Bonsoir"
   }
 }

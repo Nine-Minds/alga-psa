@@ -153,5 +153,10 @@
       "dismissFailed": "No se pudo ocultar el paso de incorporación.",
       "restoreFailed": "No se pudo restaurar el paso de incorporación."
     }
+  },
+  "greeting": {
+    "morning": "Buenos días",
+    "afternoon": "Buenas tardes",
+    "evening": "Buenas noches"
   }
 }

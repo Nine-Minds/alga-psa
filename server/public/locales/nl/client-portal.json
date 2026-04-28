@@ -1,7 +1,7 @@
 {
   "nav": {
     "dashboard": "Dashboard",
-    "tickets": "Supporttickets",
+    "tickets": "Tickets",
     "projects": "Projecten",
     "appointments": "Afspraken",
     "billing": "Facturatie",
@@ -15,7 +15,25 @@
     "notifications": "Meldingen",
     "documents": "Documenten",
     "knowledgeBase": "Kennisbank",
-    "requestServices": "Services aanvragen"
+    "requestServices": "Services aanvragen",
+    "home": "Home",
+    "myTickets": "Mijn tickets",
+    "newRequest": "Nieuw verzoek",
+    "schedule": "Planning",
+    "myDevices": "Mijn apparaten",
+    "helpCenter": "Helpcentrum",
+    "organization": "Organisatie",
+    "clientPortalLabel": "Klantenportaal",
+    "supportCard": {
+      "title": "Dringend hulp nodig?",
+      "description": "Neem op elk moment contact op."
+    },
+    "sections": {
+      "workspace": "Werkruimte",
+      "resources": "Bronnen",
+      "more": "Meer",
+      "apps": "Apps"
+    }
   },
   "dashboard": {
     "title": "Dashboard",
@@ -26,7 +44,14 @@
       "openTickets": "Open supporttickets",
       "activeProjects": "Lopende projecten",
       "pendingInvoices": "Openstaande facturen",
-      "activeAssets": "Actieve assets"
+      "activeAssets": "Actieve assets",
+      "upcomingVisits": "Aankomende bezoeken",
+      "activeDevices": "Actieve apparaten",
+      "openTicketsHint": "Actieve support",
+      "activeProjectsHint": "Lopend",
+      "nextLabel": "Volgende: {{when}}",
+      "noneScheduled": "Niets gepland",
+      "deviceStatusHint": "Beheerde endpoints"
     },
     "quickActions": {
       "title": "Snelle acties",
@@ -39,12 +64,50 @@
       "noUpcoming": "Geen komende afspraken. Vraag er nu een aan!",
       "requestButton": "Afspraak aanvragen",
       "viewAll": "Alle afspraken bekijken →",
-      "technician": "Technicus"
+      "technician": "Technicus",
+      "noUpcomingShort": "Niets gepland",
+      "countLabel": "{{count}} aankomend"
     },
     "recentActivity": {
       "title": "Recente activiteit"
     },
-    "viewAll": "Alle {{item}} bekijken →"
+    "viewAll": "Alle {{item}} bekijken →",
+    "welcomeBack": "Welkom terug",
+    "heroSubtitle": "Hier is een overzicht van je IT-supportactiviteit. Ons team staat klaar om te helpen.",
+    "greeting": {
+      "morning": "Goedemorgen",
+      "afternoon": "Goedemiddag",
+      "evening": "Goedenavond"
+    },
+    "nextToday": "Vandaag",
+    "nextTomorrow": "Morgen",
+    "recentTickets": {
+      "title": "Recente tickets",
+      "viewAll": "Bekijk alles",
+      "id": "ID",
+      "subject": "Onderwerp",
+      "status": "Status",
+      "priority": "Prioriteit",
+      "updated": "Bijgewerkt",
+      "empty": "Geen actieve tickets — top!",
+      "countLabel": "{{count}} weergegeven"
+    },
+    "activity": {
+      "title": "Recente activiteit",
+      "subtitle": "Laatste updates van je account",
+      "empty": "Nog geen activiteit",
+      "emptyHint": "Wanneer tickets worden bijgewerkt of facturen binnenkomen, zie je ze hier.",
+      "viewTickets": "Alle tickets bekijken"
+    },
+    "devices": {
+      "title": "Je apparaten",
+      "viewAll": "Bekijk alles",
+      "countLabel": "{{count}} beheerd",
+      "emptyShort": "Nog geen apparaten",
+      "emptyBody": "De apparaten die je provider beheert verschijnen hier.",
+      "healthy": "Gezond",
+      "inactive": "Inactief"
+    }
   },
   "auth": {
     "signIn": "Aanmelden",
@@ -531,6 +594,30 @@
       "messages": "Berichten",
       "projects": "Projecten",
       "system": "Systeem"
+    }
+  },
+  "sidebar": {
+    "goToDashboard": "Naar dashboard",
+    "logoAlt": "Klantenportaal-logo",
+    "expandSidebar": "Zijbalk uitvouwen",
+    "collapseSidebar": "Zijbalk inklappen"
+  },
+  "devices": {
+    "pageTitle": "Mijn apparaten",
+    "loading": "Apparaten laden…",
+    "statusOkTitle": "Alle apparaten gezond",
+    "statusOkBody": "{{count}} apparaten rapporteren",
+    "empty": {
+      "title": "Nog geen apparaten",
+      "body": "De apparaten die je provider beheert verschijnen hier."
+    },
+    "types": {
+      "workstation": "Werkstations",
+      "server": "Servers",
+      "mobile": "Mobiel",
+      "printer": "Printers",
+      "network": "Netwerk",
+      "unknown": "Overig"
     }
   }
 }

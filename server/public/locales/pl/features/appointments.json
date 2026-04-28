@@ -138,5 +138,13 @@
     "on": "w dniu",
     "declined": "Odrzucono:",
     "invalidDateTime": "Nieprawidłowa data/godzina"
+  },
+  "views": {
+    "list": "Lista",
+    "calendar": "Kalendarz"
+  },
+  "calendar": {
+    "today": "Dziś",
+    "more": "więcej"
   }
 }

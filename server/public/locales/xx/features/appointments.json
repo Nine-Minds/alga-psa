@@ -138,5 +138,13 @@
     "on": "11111",
     "declined": "11111",
     "invalidDateTime": "11111"
+  },
+  "views": {
+    "list": "11111",
+    "calendar": "11111"
+  },
+  "calendar": {
+    "today": "11111",
+    "more": "11111"
   }
 }

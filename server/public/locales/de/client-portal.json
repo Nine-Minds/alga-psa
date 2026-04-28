@@ -1,7 +1,7 @@
 {
   "nav": {
     "dashboard": "Dashboard",
-    "tickets": "Support-Tickets",
+    "tickets": "Tickets",
     "projects": "Projekte",
     "appointments": "Termine",
     "billing": "Abrechnung",
@@ -15,7 +15,25 @@
     "notifications": "Benachrichtigungen",
     "documents": "Dokumente",
     "knowledgeBase": "Wissensdatenbank",
-    "requestServices": "Dienste anfordern"
+    "requestServices": "Dienste anfordern",
+    "home": "Start",
+    "myTickets": "Meine Tickets",
+    "newRequest": "Neue Anfrage",
+    "schedule": "Zeitplan",
+    "myDevices": "Meine Geräte",
+    "helpCenter": "Hilfe-Center",
+    "organization": "Organisation",
+    "clientPortalLabel": "Kundenportal",
+    "supportCard": {
+      "title": "Dringende Hilfe?",
+      "description": "Kontaktiere uns jederzeit."
+    },
+    "sections": {
+      "workspace": "Arbeitsbereich",
+      "resources": "Ressourcen",
+      "more": "Mehr",
+      "apps": "Apps"
+    }
   },
   "dashboard": {
     "title": "Dashboard",
@@ -26,7 +44,14 @@
       "openTickets": "Offene Support-Tickets",
       "activeProjects": "Laufende Projekte",
       "pendingInvoices": "Ausstehende Rechnungen",
-      "activeAssets": "Aktive Assets"
+      "activeAssets": "Aktive Assets",
+      "upcomingVisits": "Anstehende Besuche",
+      "activeDevices": "Aktive Geräte",
+      "openTicketsHint": "Aktiver Support",
+      "activeProjectsHint": "In Bearbeitung",
+      "nextLabel": "Nächster: {{when}}",
+      "noneScheduled": "Keine geplant",
+      "deviceStatusHint": "Verwaltete Endpunkte"
     },
     "quickActions": {
       "title": "Schnellaktionen",
@@ -39,12 +64,50 @@
       "noUpcoming": "Keine anstehenden Termine. Jetzt einen anfragen!",
       "requestButton": "Termin anfragen",
       "viewAll": "Alle Termine anzeigen →",
-      "technician": "Techniker"
+      "technician": "Techniker",
+      "noUpcomingShort": "Nichts im Kalender",
+      "countLabel": "{{count}} bevorstehend"
     },
     "recentActivity": {
       "title": "Neueste Aktivitäten"
     },
-    "viewAll": "Alle {{item}} anzeigen →"
+    "viewAll": "Alle {{item}} anzeigen →",
+    "welcomeBack": "Willkommen zurück",
+    "heroSubtitle": "Hier ist eine Übersicht deiner IT-Aktivitäten. Unser Team unterstützt dich.",
+    "greeting": {
+      "morning": "Guten Morgen",
+      "afternoon": "Guten Tag",
+      "evening": "Guten Abend"
+    },
+    "nextToday": "Heute",
+    "nextTomorrow": "Morgen",
+    "recentTickets": {
+      "title": "Aktuelle Tickets",
+      "viewAll": "Alle anzeigen",
+      "id": "ID",
+      "subject": "Betreff",
+      "status": "Status",
+      "priority": "Priorität",
+      "updated": "Aktualisiert",
+      "empty": "Keine offenen Tickets — super!",
+      "countLabel": "{{count}} angezeigt"
+    },
+    "activity": {
+      "title": "Aktuelle Aktivität",
+      "subtitle": "Neueste Updates aus deinem Konto",
+      "empty": "Noch keine Aktivität",
+      "emptyHint": "Wenn Tickets aktualisiert werden oder Rechnungen eintreffen, siehst du sie hier.",
+      "viewTickets": "Alle Tickets anzeigen"
+    },
+    "devices": {
+      "title": "Deine Geräte",
+      "viewAll": "Alle anzeigen",
+      "countLabel": "{{count}} verwaltet",
+      "emptyShort": "Noch keine Geräte",
+      "emptyBody": "Vom Anbieter verwaltete Geräte erscheinen hier.",
+      "healthy": "Fehlerfrei",
+      "inactive": "Inaktiv"
+    }
   },
   "auth": {
     "signIn": "Anmelden",
@@ -531,6 +594,30 @@
       "messages": "Nachrichten",
       "projects": "Projekte",
       "system": "System"
+    }
+  },
+  "sidebar": {
+    "goToDashboard": "Zum Dashboard",
+    "logoAlt": "Kundenportal-Logo",
+    "expandSidebar": "Seitenleiste erweitern",
+    "collapseSidebar": "Seitenleiste einklappen"
+  },
+  "devices": {
+    "pageTitle": "Meine Geräte",
+    "loading": "Geräte werden geladen…",
+    "statusOkTitle": "Alle Geräte fehlerfrei",
+    "statusOkBody": "{{count}} Geräte melden sich",
+    "empty": {
+      "title": "Noch keine Geräte",
+      "body": "Vom Anbieter verwaltete Geräte erscheinen hier."
+    },
+    "types": {
+      "workstation": "Arbeitsplätze",
+      "server": "Server",
+      "mobile": "Mobil",
+      "printer": "Drucker",
+      "network": "Netzwerk",
+      "unknown": "Sonstiges"
     }
   }
 }

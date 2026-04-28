@@ -153,5 +153,10 @@
       "dismissFailed": "Onboarding-Schritt konnte nicht ausgeblendet werden.",
       "restoreFailed": "Onboarding-Schritt konnte nicht wiederhergestellt werden."
     }
+  },
+  "greeting": {
+    "morning": "Guten Morgen",
+    "afternoon": "Guten Tag",
+    "evening": "Guten Abend"
   }
 }

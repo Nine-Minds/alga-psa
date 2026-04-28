@@ -1,7 +1,7 @@
 {
   "nav": {
     "dashboard": "Dashboard",
-    "tickets": "Ticket di supporto",
+    "tickets": "Ticket",
     "projects": "Progetti",
     "appointments": "Appuntamenti",
     "billing": "Fatturazione",
@@ -15,7 +15,25 @@
     "notifications": "Notifiche",
     "documents": "Documenti",
     "knowledgeBase": "Base di conoscenza",
-    "requestServices": "Richiedi servizi"
+    "requestServices": "Richiedi servizi",
+    "home": "Home",
+    "myTickets": "I miei ticket",
+    "newRequest": "Nuova richiesta",
+    "schedule": "Pianificazione",
+    "myDevices": "I miei dispositivi",
+    "helpCenter": "Centro assistenza",
+    "organization": "Organizzazione",
+    "clientPortalLabel": "Portale clienti",
+    "supportCard": {
+      "title": "Hai bisogno di aiuto urgente?",
+      "description": "Contattaci in qualsiasi momento."
+    },
+    "sections": {
+      "workspace": "Area di lavoro",
+      "resources": "Risorse",
+      "more": "Altro",
+      "apps": "App"
+    }
   },
   "dashboard": {
     "title": "Dashboard",
@@ -26,7 +44,14 @@
       "openTickets": "Ticket di supporto aperti",
       "activeProjects": "Progetti aperti",
       "pendingInvoices": "Fatture in sospeso",
-      "activeAssets": "Asset attivi"
+      "activeAssets": "Asset attivi",
+      "upcomingVisits": "Visite previste",
+      "activeDevices": "Dispositivi attivi",
+      "openTicketsHint": "Supporto attivo",
+      "activeProjectsHint": "In corso",
+      "nextLabel": "Successivo: {{when}}",
+      "noneScheduled": "Nessuno programmato",
+      "deviceStatusHint": "Endpoint gestiti"
     },
     "quickActions": {
       "title": "Azioni rapide",
@@ -39,12 +64,50 @@
       "noUpcoming": "Nessun appuntamento in programma. Richiedine uno ora!",
       "requestButton": "Richiedi appuntamento",
       "viewAll": "Vedi tutti gli appuntamenti →",
-      "technician": "Tecnico"
+      "technician": "Tecnico",
+      "noUpcomingShort": "Niente in agenda",
+      "countLabel": "{{count}} in arrivo"
     },
     "recentActivity": {
       "title": "Attività recente"
     },
-    "viewAll": "Mostra tutti i {{item}} →"
+    "viewAll": "Mostra tutti i {{item}} →",
+    "welcomeBack": "Bentornato",
+    "heroSubtitle": "Ecco un riepilogo dell'attività di supporto IT. Il nostro team è a tua disposizione.",
+    "greeting": {
+      "morning": "Buongiorno",
+      "afternoon": "Buon pomeriggio",
+      "evening": "Buonasera"
+    },
+    "nextToday": "Oggi",
+    "nextTomorrow": "Domani",
+    "recentTickets": {
+      "title": "Ticket recenti",
+      "viewAll": "Vedi tutti",
+      "id": "ID",
+      "subject": "Oggetto",
+      "status": "Stato",
+      "priority": "Priorità",
+      "updated": "Aggiornato",
+      "empty": "Nessun ticket attivo — bene!",
+      "countLabel": "{{count}} mostrati"
+    },
+    "activity": {
+      "title": "Attività recente",
+      "subtitle": "Ultimi aggiornamenti del tuo account",
+      "empty": "Nessuna attività ancora",
+      "emptyHint": "Quando i ticket vengono aggiornati o arrivano le fatture, le vedrai qui.",
+      "viewTickets": "Vedi tutti i ticket"
+    },
+    "devices": {
+      "title": "I tuoi dispositivi",
+      "viewAll": "Vedi tutti",
+      "countLabel": "{{count}} gestiti",
+      "emptyShort": "Nessun dispositivo",
+      "emptyBody": "I dispositivi gestiti dal tuo provider appariranno qui.",
+      "healthy": "In salute",
+      "inactive": "Inattivo"
+    }
   },
   "auth": {
     "signIn": "Accedi",
@@ -531,6 +594,30 @@
       "messages": "Messaggi",
       "projects": "Progetti",
       "system": "Sistema"
+    }
+  },
+  "sidebar": {
+    "goToDashboard": "Vai al dashboard",
+    "logoAlt": "Logo del portale clienti",
+    "expandSidebar": "Espandi barra laterale",
+    "collapseSidebar": "Comprimi barra laterale"
+  },
+  "devices": {
+    "pageTitle": "I miei dispositivi",
+    "loading": "Caricamento dispositivi…",
+    "statusOkTitle": "Tutti i dispositivi sono in salute",
+    "statusOkBody": "{{count}} dispositivi segnalano",
+    "empty": {
+      "title": "Nessun dispositivo ancora",
+      "body": "I dispositivi gestiti dal tuo provider appariranno qui."
+    },
+    "types": {
+      "workstation": "Postazioni di lavoro",
+      "server": "Server",
+      "mobile": "Mobile",
+      "printer": "Stampanti",
+      "network": "Rete",
+      "unknown": "Altro"
     }
   }
 }

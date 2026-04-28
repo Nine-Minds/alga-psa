@@ -1,7 +1,7 @@
 {
   "nav": {
     "dashboard": "Tableau de bord",
-    "tickets": "Tickets d'assistance",
+    "tickets": "Tickets",
     "projects": "Projets",
     "appointments": "Rendez-vous",
     "billing": "Facturation",
@@ -15,7 +15,25 @@
     "notifications": "Notifications",
     "documents": "Documents",
     "knowledgeBase": "Base de connaissances",
-    "requestServices": "Demander des services"
+    "requestServices": "Demander des services",
+    "home": "Accueil",
+    "myTickets": "Mes tickets",
+    "newRequest": "Nouvelle demande",
+    "schedule": "Planning",
+    "myDevices": "Mes appareils",
+    "helpCenter": "Centre d'aide",
+    "organization": "Organisation",
+    "clientPortalLabel": "Portail client",
+    "supportCard": {
+      "title": "Aide urgente ?",
+      "description": "Contactez-nous à tout moment."
+    },
+    "sections": {
+      "workspace": "Espace de travail",
+      "resources": "Ressources",
+      "more": "Plus",
+      "apps": "Apps"
+    }
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -26,7 +44,14 @@
       "openTickets": "Tickets d'assistance ouverts",
       "activeProjects": "Projets en cours",
       "pendingInvoices": "Factures en attente",
-      "activeAssets": "Actifs en service"
+      "activeAssets": "Actifs en service",
+      "upcomingVisits": "Visites à venir",
+      "activeDevices": "Appareils actifs",
+      "openTicketsHint": "Support actif",
+      "activeProjectsHint": "En cours",
+      "nextLabel": "Prochain : {{when}}",
+      "noneScheduled": "Aucun prévu",
+      "deviceStatusHint": "Points de terminaison gérés"
     },
     "quickActions": {
       "title": "Actions rapides",
@@ -39,12 +64,50 @@
       "noUpcoming": "Aucun rendez-vous à venir. Demandez-en un maintenant !",
       "requestButton": "Demander un rendez-vous",
       "viewAll": "Voir tous les rendez-vous →",
-      "technician": "Technicien"
+      "technician": "Technicien",
+      "noUpcomingShort": "Aucun événement",
+      "countLabel": "{{count}} à venir"
     },
     "recentActivity": {
       "title": "Activité récente"
     },
-    "viewAll": "Voir tous les {{item}} →"
+    "viewAll": "Voir tous les {{item}} →",
+    "welcomeBack": "Bon retour",
+    "heroSubtitle": "Voici un aperçu de votre activité d'assistance IT. Notre équipe est à votre disposition.",
+    "greeting": {
+      "morning": "Bonjour",
+      "afternoon": "Bon après-midi",
+      "evening": "Bonsoir"
+    },
+    "nextToday": "Aujourd'hui",
+    "nextTomorrow": "Demain",
+    "recentTickets": {
+      "title": "Tickets récents",
+      "viewAll": "Voir tout",
+      "id": "ID",
+      "subject": "Sujet",
+      "status": "Statut",
+      "priority": "Priorité",
+      "updated": "Mis à jour",
+      "empty": "Aucun ticket actif — génial !",
+      "countLabel": "{{count}} affichés"
+    },
+    "activity": {
+      "title": "Activité récente",
+      "subtitle": "Dernières mises à jour de votre compte",
+      "empty": "Aucune activité pour l'instant",
+      "emptyHint": "Lorsque des tickets seront mis à jour ou que des factures arriveront, vous les verrez ici.",
+      "viewTickets": "Voir tous les tickets"
+    },
+    "devices": {
+      "title": "Vos appareils",
+      "viewAll": "Voir tout",
+      "countLabel": "{{count}} gérés",
+      "emptyShort": "Aucun appareil",
+      "emptyBody": "Les appareils gérés par votre fournisseur apparaîtront ici.",
+      "healthy": "Sain",
+      "inactive": "Inactif"
+    }
   },
   "auth": {
     "signIn": "Se connecter",
@@ -531,6 +594,30 @@
       "messages": "Messages",
       "projects": "Projets",
       "system": "Système"
+    }
+  },
+  "sidebar": {
+    "goToDashboard": "Aller au tableau de bord",
+    "logoAlt": "Logo du portail client",
+    "expandSidebar": "Étendre la barre latérale",
+    "collapseSidebar": "Réduire la barre latérale"
+  },
+  "devices": {
+    "pageTitle": "Mes appareils",
+    "loading": "Chargement des appareils…",
+    "statusOkTitle": "Tous les appareils en bon état",
+    "statusOkBody": "{{count}} appareils signalent",
+    "empty": {
+      "title": "Aucun appareil pour l'instant",
+      "body": "Les appareils gérés par votre fournisseur apparaîtront ici."
+    },
+    "types": {
+      "workstation": "Postes de travail",
+      "server": "Serveurs",
+      "mobile": "Mobile",
+      "printer": "Imprimantes",
+      "network": "Réseau",
+      "unknown": "Autres"
     }
   }
 }

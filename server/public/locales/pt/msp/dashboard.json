@@ -153,5 +153,10 @@
       "dismissFailed": "Failed to dismiss onboarding step.",
       "restoreFailed": "Failed to restore onboarding step."
     }
+  },
+  "greeting": {
+    "morning": "Bom dia",
+    "afternoon": "Boa tarde",
+    "evening": "Boa noite"
   }
 }

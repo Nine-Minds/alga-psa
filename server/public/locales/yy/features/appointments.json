@@ -138,5 +138,13 @@
     "on": "55555",
     "declined": "55555",
     "invalidDateTime": "55555"
+  },
+  "views": {
+    "list": "55555",
+    "calendar": "55555"
+  },
+  "calendar": {
+    "today": "55555",
+    "more": "55555"
   }
 }

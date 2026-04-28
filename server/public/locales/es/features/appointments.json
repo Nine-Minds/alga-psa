@@ -138,5 +138,13 @@
     "on": "el",
     "declined": "Rechazado:",
     "invalidDateTime": "Fecha/hora no válida"
+  },
+  "views": {
+    "list": "Lista",
+    "calendar": "Calendario"
+  },
+  "calendar": {
+    "today": "Hoy",
+    "more": "más"
   }
 }

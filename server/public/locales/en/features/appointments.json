@@ -1,4 +1,12 @@
 {
+  "views": {
+    "list": "List",
+    "calendar": "Calendar"
+  },
+  "calendar": {
+    "today": "Today",
+    "more": "more"
+  },
   "modal": {
     "title": "Request Appointment",
     "editTitle": "Edit Appointment Request",
