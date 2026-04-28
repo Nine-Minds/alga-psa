@@ -59,6 +59,7 @@
     "clean": "^4.0.2",
     "date-fns": "^4.1.0",
     "dotenv": "^16.4.5",
+    "fractional-indexing": "^3.2.0",
     "google-auth-library": "^10.5.0",
     "googleapis": "^152.0.0",
     "imapflow": "^1.3.1",
