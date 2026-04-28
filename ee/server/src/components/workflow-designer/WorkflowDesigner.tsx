@@ -124,7 +124,6 @@ import {
 } from './workflowTriggerEventOptions';
 import {
   DEFAULT_WORKFLOW_DESIGNER_SIDEBAR_WIDTH,
-  MIN_WORKFLOW_DESIGNER_SIDEBAR_WIDTH,
   getWorkflowDesignerSidebarWidthFromDrag,
 } from './workflowDesignerSidebarSizing';
 
@@ -301,8 +300,10 @@ const DESIGNER_PALETTE_COLLAPSED_WIDTH = 32;
 const DESIGNER_PALETTE_TOGGLE_OVERHANG = 16;
 const DESIGNER_CENTER_LEFT_EXTRA_PADDING = 16;
 const DESIGNER_CENTER_RIGHT_EXTRA_PADDING = 24;
-const DESIGNER_CENTER_MIN_WIDTH = 640;
+const DESIGNER_CENTER_MIN_WIDTH = 480;
 const DESIGNER_CENTER_MAX_WIDTH = 896;
+const DESIGNER_SIDEBAR_FLOATING_MIN_WIDTH = 252;
+const DESIGNER_FLOAT_MIN_WIDTH = 1100;
 
 type PipeSegment = {
   index: number;
@@ -1533,11 +1534,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       + DESIGNER_PALETTE_TOGGLE_OVERHANG
       + DESIGNER_CENTER_LEFT_EXTRA_PADDING
       + DESIGNER_CENTER_RIGHT_EXTRA_PADDING;
-    const minimumFloatingWidth =
-      fixedFloatingWidth
-      + DESIGNER_CENTER_MIN_WIDTH
-      + MIN_WORKFLOW_DESIGNER_SIDEBAR_WIDTH;
-    const isStacked = anchorWidth < minimumFloatingWidth;
+    const isStacked = anchorWidth < DESIGNER_FLOAT_MIN_WIDTH;
 
     if (isStacked) {
       return {
@@ -1557,18 +1554,18 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     }
 
     const availableEditorWidth = Math.max(
-      DESIGNER_CENTER_MIN_WIDTH + MIN_WORKFLOW_DESIGNER_SIDEBAR_WIDTH,
+      DESIGNER_CENTER_MIN_WIDTH + DESIGNER_SIDEBAR_FLOATING_MIN_WIDTH,
       anchorWidth - fixedFloatingWidth
     );
     const preferredEditorWidth = DESIGNER_CENTER_MAX_WIDTH + designerSidebarWidth;
     const editorWidthShortfall = Math.max(0, preferredEditorWidth - availableEditorWidth);
     const sharedShrink = editorWidthShortfall / 2;
     let centerShrink = Math.min(DESIGNER_CENTER_MAX_WIDTH - DESIGNER_CENTER_MIN_WIDTH, sharedShrink);
-    let sidebarShrink = Math.min(designerSidebarWidth - MIN_WORKFLOW_DESIGNER_SIDEBAR_WIDTH, sharedShrink);
+    let sidebarShrink = Math.min(designerSidebarWidth - DESIGNER_SIDEBAR_FLOATING_MIN_WIDTH, sharedShrink);
     let remainingShrink = editorWidthShortfall - centerShrink - sidebarShrink;
 
     if (remainingShrink > 0) {
-      const sidebarShrinkRoom = designerSidebarWidth - MIN_WORKFLOW_DESIGNER_SIDEBAR_WIDTH - sidebarShrink;
+      const sidebarShrinkRoom = designerSidebarWidth - DESIGNER_SIDEBAR_FLOATING_MIN_WIDTH - sidebarShrink;
       const extraSidebarShrink = Math.min(sidebarShrinkRoom, remainingShrink);
       sidebarShrink += extraSidebarShrink;
       remainingShrink -= extraSidebarShrink;
