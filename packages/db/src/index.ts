@@ -20,7 +20,7 @@ export { getAdminConnection, destroyAdminConnection, refreshAdminConnection, wit
 export { getConnection, withTransaction, createTenantKnex, runWithTenant, getTenantContext, setTenantContext, resetTenantConnectionPool, destroyTenantConnection, refreshTenantConnection, withTenantTransactionRetryReadOnly, retryOnTenantReadOnly } from './lib/tenant';
 
 // Read-only error helpers (for callers building their own retry strategies)
-export { isReadOnlyError, READ_ONLY_ERROR_RE } from './lib/readOnlyRetry';
+export { isReadOnlyError, READ_ONLY_ERROR_RE, retryOnReadOnly } from './lib/readOnlyRetry';
 export { resolveTenantId, requireTenantId } from './lib/tenantId';
 
 // Audit logging

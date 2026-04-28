@@ -10,6 +10,7 @@
 
 import { Context } from '@temporalio/activity';
 import { getAdminConnection, refreshAdminConnection } from '@alga-psa/db/admin.js';
+import { retryOnReadOnly } from '@alga-psa/db';
 import { TagModel } from '@alga-psa/shared/models/tagModel.js';
 import { Knex } from 'knex';
 import type {
@@ -24,24 +25,6 @@ import type {
   DeleteTenantDataResult,
   SendCancellationEmailResult,
 } from '../types/tenant-deletion-types.js';
-
-/**
- * PgBouncer transaction-pooling in front of a Citus/Patroni HA setup occasionally
- * hands out a backend connection that has become read-only (e.g., after a failover
- * the backend is now attached to a standby). The process-cached admin pool's
- * own probe can pass on those connections, so queries fail later with
- * "read-only transaction" or "writing to worker nodes is not currently allowed".
- *
- * Callers use `isReadOnlyError` to detect the pattern, then call
- * `refreshAdminConnection()` to force-recreate the pool and retry once.
- */
-const READ_ONLY_ERROR_RE =
-  /read-only transaction|writing to worker nodes|cannot execute [A-Z]+ in a read-only/i;
-
-function isReadOnlyError(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message : String(err ?? '');
-  return READ_ONLY_ERROR_RE.test(msg);
-}
 
 /**
  * Comprehensive list of tables to delete from, in dependency order.
@@ -1295,24 +1278,23 @@ export async function deleteTenantData(
   try {
     let adminKnex = await getAdminConnection();
 
-    // Retry helper for transient read-only backends. See isReadOnlyError above
-    // for context. If the retry also fails, the error propagates.
-    const withReadOnlyRetry = async <T>(
+    // Per-op wrapper that reuses `adminKnex` across calls — on a read-only
+    // failure, the refresh callback updates the closure variable so the
+    // remainder of this deletion uses the new pool without re-probing.
+    const withReadOnlyRetry = <T>(
       op: (k: Knex) => Promise<T>,
       label: string
-    ): Promise<T> => {
-      try {
-        return await op(adminKnex);
-      } catch (err) {
-        if (!isReadOnlyError(err)) throw err;
-        log.warn(
-          `[${label}] admin pool returned a read-only connection; refreshing pool and retrying once`,
-          { error: err instanceof Error ? err.message : String(err) }
-        );
-        adminKnex = await refreshAdminConnection();
-        return await op(adminKnex);
-      }
-    };
+    ): Promise<T> =>
+      retryOnReadOnly(
+        () => op(adminKnex),
+        async () => {
+          adminKnex = await refreshAdminConnection();
+        },
+        {
+          logLabel: label,
+          logger: { warn: (msg, meta) => log.warn(msg, meta as any) },
+        }
+      );
 
     // ============================================================
     // CRITICAL SAFEGUARD 1: Validate tenant is not master tenant
