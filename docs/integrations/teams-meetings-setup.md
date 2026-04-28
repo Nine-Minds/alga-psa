@@ -6,7 +6,7 @@ This runbook enables automatic Teams meeting creation for approved appointment r
 
 - A tenant with the Teams integration installed and `install_status = active`.
 - A Microsoft app registration already used by the tenant's Teams integration.
-- A dedicated organizer account, for example `scheduling@acme.com`.
+- A dedicated organizer account, for example `scheduling@acme.com`, and its Microsoft Entra user object ID.
 - PowerShell access to Microsoft Teams / Skype for Business Online cmdlets for Application Access Policy management.
 
 ## 1. Grant Graph application permission
@@ -30,6 +30,7 @@ Connect-MicrosoftTeams
 
 $appId = "<your-app-registration-client-id>"
 $organizerUpn = "scheduling@acme.com"
+$organizerObjectId = (Get-CsOnlineUser -Identity $organizerUpn).ExternalDirectoryObjectId
 
 New-CsApplicationAccessPolicy `
   -Identity "Alga-Appointment-Meetings" `
@@ -38,23 +39,23 @@ New-CsApplicationAccessPolicy `
 
 Grant-CsApplicationAccessPolicy `
   -PolicyName "Alga-Appointment-Meetings" `
-  -Identity $organizerUpn
+  -Identity $organizerObjectId
 ```
 
-Wait roughly 5 to 10 minutes for policy propagation before verification.
+Wait up to 30 minutes for policy propagation before verification.
 
 ## 3. Save the organizer in Alga PSA
 
 In the MSP app:
 
 1. Go to `Scheduling -> Availability Settings -> Teams Meetings`.
-2. Enter the organizer UPN or Microsoft user ID.
+2. Enter the organizer's Microsoft Entra user object ID.
 3. Click `Save`.
 4. Click `Verify`.
 
 Verification does two checks:
 
-- `GET /users/{upn}` to confirm the Microsoft user exists.
+- `GET /users/{id}` to confirm the Microsoft user exists.
 - A short create/delete meeting round-trip to confirm the Application Access Policy is actually allowing app-only meeting creation.
 
 ## 4. Expected behavior after setup
@@ -72,12 +73,12 @@ Verification does two checks:
 
 ### Verify says the user was not found
 
-- Confirm the value in Availability Settings is the organizer's UPN or Microsoft user ID.
+- Confirm the value in Availability Settings is the organizer's Microsoft Entra user object ID. UPNs can work for normal user lookup, but Microsoft Graph online meetings expects the object ID in `/users/{userId}/onlineMeetings`.
 - Test the account directly in Graph:
 
 ```bash
 curl -H "Authorization: Bearer $TOKEN" \
-  "https://graph.microsoft.com/v1.0/users/scheduling@acme.com"
+  "https://graph.microsoft.com/v1.0/users/<organizer-object-id>"
 ```
 
 ### Verify says the policy is missing

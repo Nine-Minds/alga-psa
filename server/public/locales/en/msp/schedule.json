@@ -445,21 +445,22 @@
           "step2": {
             "title": "2. Create an Application Access Policy",
             "intro": "App-only meeting creation must be explicitly allowed for the organizer account.",
-            "note": "Allow 5–10 minutes for policy propagation before clicking Verify."
+            "note": "Allow up to 30 minutes for policy propagation before clicking Verify."
           }
         }
       },
       "organizer": {
         "title": "Meeting organizer",
-        "label": "Default meeting organizer (UPN or Microsoft user ID)",
-        "help": "Approved appointments create Teams meetings as this Microsoft user. A UPN such as scheduling@acme.com is usually the safest choice.",
-        "placeholder": "scheduling@acme.com"
+        "label": "Default meeting organizer Microsoft user object ID",
+        "help": "Approved appointments create Teams meetings as this Microsoft user. Use the Entra object ID; UPNs can return 404 from Microsoft Graph onlineMeetings.",
+        "placeholder": "00000000-0000-0000-0000-000000000000"
       },
       "actions": {
         "save": "Save",
         "saving": "Saving...",
         "verify": "Verify",
-        "verifying": "Verifying..."
+        "verifying": "Verifying...",
+        "openRunbook": "Open setup runbook"
       },
       "feedback": {
         "saveSuccess": "Teams meeting organizer saved",

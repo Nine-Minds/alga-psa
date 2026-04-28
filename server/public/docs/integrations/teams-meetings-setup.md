@@ -10,8 +10,8 @@ Canonical source:
 
 1. Grant Microsoft Graph application permission `OnlineMeetings.ReadWrite.All`.
 2. Create an Application Access Policy for the organizer account.
-3. Save the organizer in `Scheduling -> Availability Settings -> Teams Meetings`.
-4. Click `Verify` after policy propagation.
+3. Save the organizer's Microsoft Entra user object ID in `Scheduling -> Availability Settings -> Teams Meetings`.
+4. Click `Verify` after policy propagation. Microsoft says policy changes can take up to 30 minutes to affect Graph calls.
 
 ## PowerShell example
 
@@ -20,6 +20,7 @@ Connect-MicrosoftTeams
 
 $appId = "<your-app-registration-client-id>"
 $organizerUpn = "scheduling@acme.com"
+$organizerObjectId = (Get-CsOnlineUser -Identity $organizerUpn).ExternalDirectoryObjectId
 
 New-CsApplicationAccessPolicy `
   -Identity "Alga-Appointment-Meetings" `
@@ -28,7 +29,7 @@ New-CsApplicationAccessPolicy `
 
 Grant-CsApplicationAccessPolicy `
   -PolicyName "Alga-Appointment-Meetings" `
-  -Identity $organizerUpn
+  -Identity $organizerObjectId
 ```
 
 ## References
