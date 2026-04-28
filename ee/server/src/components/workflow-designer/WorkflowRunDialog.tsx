@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Badge } from '@alga-psa/ui/components/Badge';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/components/Dialog';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -552,6 +553,27 @@ const validateAgainstSchema = (schema: JsonSchema, value: unknown, root: JsonSch
   }
 
   return errors;
+};
+
+const CollapsibleSection: React.FC<{
+  title: string;
+  defaultCollapsed?: boolean;
+  children: React.ReactNode;
+}> = ({ title, defaultCollapsed = true, children }) => {
+  const [isOpen, setIsOpen] = useState(!defaultCollapsed);
+  return (
+    <div className="rounded border border-gray-200 dark:border-[rgb(var(--color-border-200))] overflow-hidden">
+      <button
+        type="button"
+        className="flex items-center justify-between w-full px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))] transition-colors"
+        onClick={() => setIsOpen((prev) => !prev)}
+      >
+        <span>{title}</span>
+        <ChevronRight className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+      </button>
+      {isOpen && <div className="px-3 pb-3 space-y-3">{children}</div>}
+    </div>
+  );
 };
 
 const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
@@ -1515,22 +1537,17 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
       )}
     >
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
-            {t('runDialog.title', { defaultValue: 'Run Workflow' })}{selectedEventType ? ` · ${selectedEventType}` : ''}
-          </DialogTitle>
-          <DialogDescription>
-            {t('runDialog.description', {
-              defaultValue: 'Provide a synthetic payload to preview (and run) a workflow.',
-            })}
-            {selectedEventEntry?.name
-              ? ` ${t('runDialog.descriptionEvent', {
-                  defaultValue: 'Event: {{name}}.',
-                  name: selectedEventEntry.name,
-                })}`
-              : ''}
-          </DialogDescription>
-        </DialogHeader>
+        <DialogDescription>
+          {t('runDialog.description', {
+            defaultValue: 'Provide a synthetic payload to preview (and run) a workflow.',
+          })}
+          {selectedEventEntry?.name
+            ? ` ${t('runDialog.descriptionEvent', {
+                defaultValue: 'Event: {{name}}.',
+                name: selectedEventEntry.name,
+              })}`
+            : ''}
+        </DialogDescription>
 
         <div className="space-y-4">
           {!publishedVersion && (
@@ -1589,6 +1606,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
             />
           </div>
 
+          <CollapsibleSection title="Schema & Events">
           <div className="rounded border border-gray-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] p-3 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
@@ -1783,8 +1801,9 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
               </div>
             )}
           </div>
+          </CollapsibleSection>
 
-          {draftVersion && publishedVersion && draftVersion !== publishedVersion && (
+          {draftVersion && publishedVersion && draftVersion !== publishedVersion + 1 && (
             <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950 shadow-sm flex items-center justify-between gap-3">
               <span className="font-medium">
                 {t('runDialog.draftWarning', {
@@ -1847,34 +1866,38 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
             >
               {t('runDialog.actions.formBuilder', { defaultValue: 'Form Builder' })}
             </Button>
-            <Button
-              id="run-dialog-reset-defaults"
-              variant="outline"
-              size="sm"
-              className={utilityButtonClass}
-              onClick={handleResetDefaults}
-            >
-              {t('runDialog.actions.resetToDefaults', { defaultValue: 'Reset to defaults' })}
-            </Button>
-            <Button
-              id="run-dialog-copy-payload"
-              variant="outline"
-              size="sm"
-              className={utilityButtonClass}
-              onClick={copyPayload}
-            >
-              {t('runDialog.actions.copyPayload', { defaultValue: 'Copy payload' })}
-            </Button>
-            <Button
-              id="run-dialog-clone-latest"
-              variant="outline"
-              size="sm"
-              className={utilityButtonClass}
-              onClick={handleCloneLatest}
-            >
-              {t('runDialog.actions.cloneLatestRun', { defaultValue: 'Clone latest run' })}
-            </Button>
           </div>
+
+          <CollapsibleSection title="Payload Tools" defaultCollapsed={true}>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                id="run-dialog-reset-defaults"
+                variant="outline"
+                size="sm"
+                className={utilityButtonClass}
+                onClick={handleResetDefaults}
+              >
+                {t('runDialog.actions.resetToDefaults', { defaultValue: 'Reset to defaults' })}
+              </Button>
+              <Button
+                id="run-dialog-copy-payload"
+                variant="outline"
+                size="sm"
+                className={utilityButtonClass}
+                onClick={copyPayload}
+              >
+                {t('runDialog.actions.copyPayload', { defaultValue: 'Copy payload' })}
+              </Button>
+              <Button
+                id="run-dialog-clone-latest"
+                variant="outline"
+                size="sm"
+                className={utilityButtonClass}
+                onClick={handleCloneLatest}
+              >
+                {t('runDialog.actions.cloneLatestRun', { defaultValue: 'Clone latest run' })}
+              </Button>
+            </div>
 
           <div className="flex flex-wrap items-center gap-2">
             {exampleOptions.map((example) => (
@@ -1966,6 +1989,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
               </div>
             </div>
           )}
+          </CollapsibleSection>
 
           <div className="text-xs text-gray-500">
             {t('runDialog.payload.payloadSize', {
