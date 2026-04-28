@@ -87,7 +87,8 @@
     },
     "hidden": {
       "title": "Tarjetas de configuración ocultas ({{count}})",
-      "subtitle": "Restaura cualquier tarjeta si la necesitas más adelante."
+      "subtitle": "Restaura cualquier tarjeta si la necesitas más adelante.",
+      "titleCombined": "Tarjetas ocultas ({{count}})"
     },
     "checklist": {
       "title": "Checklist de incorporación",
@@ -154,5 +155,24 @@
       "restoreFailed": "No se pudo restaurar el paso de incorporación."
     }
   },
-  "mspDashboard": "Panel MSP"
+  "mspDashboard": "Panel MSP",
+  "mobileApp": {
+    "title": "Descarga la aplicación móvil de AlgaPSA",
+    "description": "Escanea un código QR con tu teléfono para descargar la aplicación móvil de AlgaPSA.",
+    "appStore": "App Store (iOS)",
+    "playStore": "Google Play (Android)",
+    "appStoreQrAlt": "Código QR que enlaza con la aplicación de AlgaPSA en la App Store de Apple",
+    "playStoreQrAlt": "Código QR que enlaza con la aplicación de AlgaPSA en Google Play",
+    "hide": "Ocultar",
+    "hiding": "Ocultando...",
+    "dismissAria": "Ocultar la tarjeta de la aplicación móvil",
+    "dismissError": "No se pudo ocultar la tarjeta.",
+    "restore": "Obtén la aplicación móvil de AlgaPSA",
+    "restoring": "Restaurando...",
+    "restoreError": "No se pudo restaurar la tarjeta.",
+    "hidden": {
+      "title": "Tarjeta de la aplicación móvil oculta",
+      "subtitle": "Restáurala si la necesitas más adelante."
+    }
+  }
 }

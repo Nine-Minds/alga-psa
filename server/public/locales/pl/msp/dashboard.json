@@ -87,7 +87,8 @@
     },
     "hidden": {
       "title": "Ukryte karty konfiguracji ({{count}})",
-      "subtitle": "Przywróć dowolną kartę, jeśli będzie potrzebna później."
+      "subtitle": "Przywróć dowolną kartę, jeśli będzie potrzebna później.",
+      "titleCombined": "Ukryte karty ({{count}})"
     },
     "checklist": {
       "title": "Lista kontrolna onboardingu",
@@ -154,5 +155,24 @@
       "restoreFailed": "Nie udało się przywrócić kroku onboardingu."
     }
   },
-  "mspDashboard": "Pulpit MSP"
+  "mspDashboard": "Pulpit MSP",
+  "mobileApp": {
+    "title": "Pobierz aplikację mobilną AlgaPSA",
+    "description": "Zeskanuj kod QR telefonem, aby pobrać aplikację mobilną AlgaPSA.",
+    "appStore": "App Store (iOS)",
+    "playStore": "Google Play (Android)",
+    "appStoreQrAlt": "Kod QR z linkiem do aplikacji AlgaPSA w Apple App Store",
+    "playStoreQrAlt": "Kod QR z linkiem do aplikacji AlgaPSA w Google Play",
+    "hide": "Ukryj",
+    "hiding": "Ukrywanie...",
+    "dismissAria": "Ukryj kartę aplikacji mobilnej",
+    "dismissError": "Nie udało się ukryć karty.",
+    "restore": "Pobierz aplikację mobilną AlgaPSA",
+    "restoring": "Przywracanie...",
+    "restoreError": "Nie udało się przywrócić karty.",
+    "hidden": {
+      "title": "Ukryta karta aplikacji mobilnej",
+      "subtitle": "Przywróć ją, jeśli będzie potrzebna później."
+    }
+  }
 }
