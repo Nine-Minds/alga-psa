@@ -14,10 +14,13 @@ export { default as knexConfig } from './lib/knexfile';
 export { default as Knex } from './lib/knex-turbopack';
 
 // Admin Connection
-export { getAdminConnection, destroyAdminConnection, refreshAdminConnection } from './lib/admin';
+export { getAdminConnection, destroyAdminConnection, refreshAdminConnection, withAdminTransactionRetryReadOnly, retryOnAdminReadOnly } from './lib/admin';
 
 // Tenant Connection
-export { getConnection, withTransaction, createTenantKnex, runWithTenant, getTenantContext, setTenantContext, resetTenantConnectionPool } from './lib/tenant';
+export { getConnection, withTransaction, createTenantKnex, runWithTenant, getTenantContext, setTenantContext, resetTenantConnectionPool, destroyTenantConnection, refreshTenantConnection, withTenantTransactionRetryReadOnly, retryOnTenantReadOnly } from './lib/tenant';
+
+// Read-only error helpers (for callers building their own retry strategies)
+export { isReadOnlyError, READ_ONLY_ERROR_RE } from './lib/readOnlyRetry';
 export { resolveTenantId, requireTenantId } from './lib/tenantId';
 
 // Audit logging

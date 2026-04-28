@@ -9,6 +9,7 @@ import type { Knex } from 'knex';
 import knexfile from './knexfile';
 import logger from '@alga-psa/core/logger';
 import { getSecret } from '@alga-psa/core/secrets';
+import { isReadOnlyError, retryOnReadOnly } from './readOnlyRetry';
 
 let adminConnection: Knex | null = null;
 
@@ -116,4 +117,43 @@ export async function refreshAdminConnection(): Promise<Knex> {
         /* ignore; destroyAdminConnection clears the ref regardless */
     }
     return await getAdminConnection();
+}
+
+/**
+ * Run a callback inside an admin-scoped transaction with one automatic
+ * retry on read-only errors. Mirrors withTenantTransactionRetryReadOnly()
+ * for the admin pool — see ./readOnlyRetry.ts for the rationale.
+ */
+export async function withAdminTransactionRetryReadOnly<T>(
+    callback: (trx: Knex.Transaction) => Promise<T>
+): Promise<T> {
+    try {
+        const conn = await getAdminConnection();
+        return await conn.transaction(callback);
+    } catch (err) {
+        if (!isReadOnlyError(err)) throw err;
+        logger.warn(
+            '[db/admin] admin pool returned a read-only connection (likely post-failover stale pool); refreshing pool and retrying once',
+            { error: err instanceof Error ? err.message : String(err) }
+        );
+        const conn = await refreshAdminConnection();
+        return await conn.transaction(callback);
+    }
+}
+
+/**
+ * Run an operation against the admin pool with one automatic retry on
+ * read-only errors. Mirror of retryOnTenantReadOnly() for the admin
+ * pool — useful for callers that don't fit a single-transaction shape
+ * (e.g. an activity that issues many separate queries with a loop in
+ * the middle).
+ */
+export async function retryOnAdminReadOnly<T>(
+    op: () => Promise<T>,
+    context?: { logLabel?: string }
+): Promise<T> {
+    return retryOnReadOnly(op, refreshAdminConnection, {
+        logLabel: context?.logLabel ?? 'db/admin',
+        logger,
+    });
 }

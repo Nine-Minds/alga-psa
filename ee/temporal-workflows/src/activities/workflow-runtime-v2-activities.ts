@@ -1,4 +1,4 @@
-import { getAdminConnection } from '@alga-psa/db/admin';
+import { getAdminConnection, retryOnAdminReadOnly } from '@alga-psa/db/admin';
 import { getFormValidationService } from '@shared/task-inbox';
 import {
   WorkflowRuntimeV2,
@@ -36,10 +36,15 @@ export async function executeWorkflowRuntimeV2Run(input: {
   runId: string;
   executionKey: string;
 }): Promise<void> {
-  const knex = await getAdminConnection();
-  initializeWorkflowRuntimeV2();
-  const runtime = new WorkflowRuntimeV2();
-  await runtime.executeRun(knex, input.runId, `temporal:${input.executionKey}`);
+  return retryOnAdminReadOnly(
+    async () => {
+      const knex = await getAdminConnection();
+      initializeWorkflowRuntimeV2();
+      const runtime = new WorkflowRuntimeV2();
+      await runtime.executeRun(knex, input.runId, `temporal:${input.executionKey}`);
+    },
+    { logLabel: 'executeWorkflowRuntimeV2Run' }
+  );
 }
 
 export async function loadWorkflowRuntimeV2PinnedDefinition(input: {
@@ -110,15 +115,20 @@ export async function completeWorkflowRuntimeV2Run(input: {
   runId: string;
   status: 'SUCCEEDED' | 'FAILED' | 'CANCELED';
 }): Promise<void> {
-  const knex = await getAdminConnection();
-  await knex('workflow_runs')
-    .where({ run_id: input.runId })
-    .update({
-      status: input.status,
-      node_path: null,
-      completed_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    });
+  return retryOnAdminReadOnly(
+    async () => {
+      const knex = await getAdminConnection();
+      await knex('workflow_runs')
+        .where({ run_id: input.runId })
+        .update({
+          status: input.status,
+          node_path: null,
+          completed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+    },
+    { logLabel: 'completeWorkflowRuntimeV2Run' }
+  );
 }
 
 export async function projectWorkflowRuntimeV2StepStart(input: {
@@ -126,23 +136,28 @@ export async function projectWorkflowRuntimeV2StepStart(input: {
   stepPath: string;
   definitionStepId: string;
 }): Promise<{ stepId: string }> {
-  const knex = await getAdminConnection();
-  const latest = await WorkflowRunStepModelV2.getLatestByRunAndPath(knex, input.runId, input.stepPath);
-  const attempt = (latest?.attempt ?? 0) + 1;
-  const step = await WorkflowRunStepModelV2.create(knex, {
-    run_id: input.runId,
-    step_path: input.stepPath,
-    definition_step_id: input.definitionStepId,
-    status: 'STARTED',
-    attempt,
-  });
-  await WorkflowRunModelV2.update(knex, input.runId, {
-    node_path: input.stepPath,
-    status: 'RUNNING',
-  });
-  return {
-    stepId: step.step_id,
-  };
+  return retryOnAdminReadOnly(
+    async () => {
+      const knex = await getAdminConnection();
+      const latest = await WorkflowRunStepModelV2.getLatestByRunAndPath(knex, input.runId, input.stepPath);
+      const attempt = (latest?.attempt ?? 0) + 1;
+      const step = await WorkflowRunStepModelV2.create(knex, {
+        run_id: input.runId,
+        step_path: input.stepPath,
+        definition_step_id: input.definitionStepId,
+        status: 'STARTED',
+        attempt,
+      });
+      await WorkflowRunModelV2.update(knex, input.runId, {
+        node_path: input.stepPath,
+        status: 'RUNNING',
+      });
+      return {
+        stepId: step.step_id,
+      };
+    },
+    { logLabel: 'projectWorkflowRuntimeV2StepStart' }
+  );
 }
 
 export async function projectWorkflowRuntimeV2StepCompletion(input: {
@@ -152,33 +167,38 @@ export async function projectWorkflowRuntimeV2StepCompletion(input: {
   status: 'SUCCEEDED' | 'FAILED' | 'CANCELED';
   errorMessage?: string;
 }): Promise<void> {
-  const knex = await getAdminConnection();
-  const now = new Date().toISOString();
-  const step = await knex('workflow_run_steps')
-    .where({ step_id: input.stepId })
-    .first();
-  const startedAt = step?.started_at ? new Date(step.started_at).getTime() : Date.now();
-  const durationMs = Math.max(Date.now() - startedAt, 0);
+  return retryOnAdminReadOnly(
+    async () => {
+      const knex = await getAdminConnection();
+      const now = new Date().toISOString();
+      const step = await knex('workflow_run_steps')
+        .where({ step_id: input.stepId })
+        .first();
+      const startedAt = step?.started_at ? new Date(step.started_at).getTime() : Date.now();
+      const durationMs = Math.max(Date.now() - startedAt, 0);
 
-  await WorkflowRunStepModelV2.update(knex, input.stepId, {
-    status: input.status,
-    duration_ms: durationMs,
-    completed_at: now,
-    error_json: input.status === 'FAILED' && input.errorMessage
-      ? { message: input.errorMessage }
-      : null,
-  });
+      await WorkflowRunStepModelV2.update(knex, input.stepId, {
+        status: input.status,
+        duration_ms: durationMs,
+        completed_at: now,
+        error_json: input.status === 'FAILED' && input.errorMessage
+          ? { message: input.errorMessage }
+          : null,
+      });
 
-  await WorkflowRunModelV2.update(knex, input.runId, {
-    status: input.status === 'FAILED'
-      ? 'FAILED'
-      : input.status === 'CANCELED'
-        ? 'CANCELED'
-        : 'RUNNING',
-    error_json: input.status === 'FAILED' && input.errorMessage
-      ? { message: input.errorMessage, nodePath: input.stepPath }
-      : null,
-  });
+      await WorkflowRunModelV2.update(knex, input.runId, {
+        status: input.status === 'FAILED'
+          ? 'FAILED'
+          : input.status === 'CANCELED'
+            ? 'CANCELED'
+            : 'RUNNING',
+        error_json: input.status === 'FAILED' && input.errorMessage
+          ? { message: input.errorMessage, nodePath: input.stepPath }
+          : null,
+      });
+    },
+    { logLabel: 'projectWorkflowRuntimeV2StepCompletion' }
+  );
 }
 
 export async function projectWorkflowRuntimeV2TimeWaitStart(input: {
@@ -191,19 +211,24 @@ export async function projectWorkflowRuntimeV2TimeWaitStart(input: {
     dueAt: string;
   };
 }): Promise<{ waitId: string }> {
-  const knex = await getAdminConnection();
-  const wait = await WorkflowRunWaitModelV2.create(knex, {
-    run_id: input.runId,
-    step_path: input.stepPath,
-    wait_type: 'time',
-    timeout_at: input.dueAt,
-    status: 'WAITING',
-    payload: input.payload,
-  });
+  return retryOnAdminReadOnly(
+    async () => {
+      const knex = await getAdminConnection();
+      const wait = await WorkflowRunWaitModelV2.create(knex, {
+        run_id: input.runId,
+        step_path: input.stepPath,
+        wait_type: 'time',
+        timeout_at: input.dueAt,
+        status: 'WAITING',
+        payload: input.payload,
+      });
 
-  return {
-    waitId: wait.wait_id,
-  };
+      return {
+        waitId: wait.wait_id,
+      };
+    },
+    { logLabel: 'projectWorkflowRuntimeV2TimeWaitStart' }
+  );
 }
 
 export async function projectWorkflowRuntimeV2TimeWaitResolved(input: {
@@ -211,12 +236,17 @@ export async function projectWorkflowRuntimeV2TimeWaitResolved(input: {
   runId: string;
   status: 'RESOLVED' | 'CANCELED';
 }): Promise<void> {
-  const knex = await getAdminConnection();
-  const now = new Date().toISOString();
-  await WorkflowRunWaitModelV2.update(knex, input.waitId, {
-    status: input.status,
-    resolved_at: now,
-  });
+  return retryOnAdminReadOnly(
+    async () => {
+      const knex = await getAdminConnection();
+      const now = new Date().toISOString();
+      await WorkflowRunWaitModelV2.update(knex, input.waitId, {
+        status: input.status,
+        resolved_at: now,
+      });
+    },
+    { logLabel: 'projectWorkflowRuntimeV2TimeWaitResolved' }
+  );
 }
 
 export async function projectWorkflowRuntimeV2EventWaitStart(input: {
@@ -232,21 +262,26 @@ export async function projectWorkflowRuntimeV2EventWaitStart(input: {
     timeoutAt: string | null;
   };
 }): Promise<{ waitId: string }> {
-  const knex = await getAdminConnection();
-  const wait = await WorkflowRunWaitModelV2.create(knex, {
-    run_id: input.runId,
-    step_path: input.stepPath,
-    wait_type: 'event',
-    event_name: input.eventName,
-    key: input.correlationKey,
-    timeout_at: input.timeoutAt,
-    status: 'WAITING',
-    payload: input.payload,
-  });
+  return retryOnAdminReadOnly(
+    async () => {
+      const knex = await getAdminConnection();
+      const wait = await WorkflowRunWaitModelV2.create(knex, {
+        run_id: input.runId,
+        step_path: input.stepPath,
+        wait_type: 'event',
+        event_name: input.eventName,
+        key: input.correlationKey,
+        timeout_at: input.timeoutAt,
+        status: 'WAITING',
+        payload: input.payload,
+      });
 
-  return {
-    waitId: wait.wait_id,
-  };
+      return {
+        waitId: wait.wait_id,
+      };
+    },
+    { logLabel: 'projectWorkflowRuntimeV2EventWaitStart' }
+  );
 }
 
 export async function projectWorkflowRuntimeV2EventWaitResolved(input: {
@@ -255,19 +290,24 @@ export async function projectWorkflowRuntimeV2EventWaitResolved(input: {
   status: 'RESOLVED' | 'CANCELED';
   matchedEventId?: string | null;
 }): Promise<void> {
-  const knex = await getAdminConnection();
-  const now = new Date().toISOString();
-  const existing = await knex('workflow_run_waits').where({ wait_id: input.waitId }).first(['payload']);
-  const payload = isRecord(existing?.payload) ? existing.payload : {};
-  await WorkflowRunWaitModelV2.update(knex, input.waitId, {
-    status: input.status,
-    resolved_at: now,
-    payload: {
-      ...payload,
-      matchedEventId: input.matchedEventId ?? null,
-      resolvedAt: now,
+  return retryOnAdminReadOnly(
+    async () => {
+      const knex = await getAdminConnection();
+      const now = new Date().toISOString();
+      const existing = await knex('workflow_run_waits').where({ wait_id: input.waitId }).first(['payload']);
+      const payload = isRecord(existing?.payload) ? existing.payload : {};
+      await WorkflowRunWaitModelV2.update(knex, input.waitId, {
+        status: input.status,
+        resolved_at: now,
+        payload: {
+          ...payload,
+          matchedEventId: input.matchedEventId ?? null,
+          resolvedAt: now,
+        },
+      });
     },
-  });
+    { logLabel: 'projectWorkflowRuntimeV2EventWaitResolved' }
+  );
 }
 
 export async function startWorkflowRuntimeV2HumanTaskWait(input: {
@@ -283,39 +323,44 @@ export async function startWorkflowRuntimeV2HumanTaskWait(input: {
   taskId: string;
   eventName: string;
 }> {
-  const knex = await getAdminConnection();
-  const taskId = await WorkflowTaskModel.createTask(knex, input.tenantId ?? '', {
-    execution_id: input.runId,
-    task_definition_type: 'system',
-    system_task_definition_task_type: input.taskType,
-    title: input.title,
-    description: input.description ?? '',
-    status: WorkflowTaskStatus.PENDING,
-    priority: 'medium',
-    context_data: input.contextData,
-  } as never);
+  return retryOnAdminReadOnly(
+    async () => {
+      const knex = await getAdminConnection();
+      const taskId = await WorkflowTaskModel.createTask(knex, input.tenantId ?? '', {
+        execution_id: input.runId,
+        task_definition_type: 'system',
+        system_task_definition_task_type: input.taskType,
+        title: input.title,
+        description: input.description ?? '',
+        status: WorkflowTaskStatus.PENDING,
+        priority: 'medium',
+        context_data: input.contextData,
+      } as never);
 
-  const formSchema = await resolveTaskFormSchema(knex, input.tenantId, input.taskType);
-  const wait = await WorkflowRunWaitModelV2.create(knex, {
-    run_id: input.runId,
-    step_path: input.stepPath,
-    wait_type: 'human',
-    key: taskId,
-    event_name: 'HUMAN_TASK_COMPLETED',
-    status: 'WAITING',
-    payload: {
-      taskId,
-      contextData: input.contextData,
-      formSchema,
-      taskType: input.taskType,
+      const formSchema = await resolveTaskFormSchema(knex, input.tenantId, input.taskType);
+      const wait = await WorkflowRunWaitModelV2.create(knex, {
+        run_id: input.runId,
+        step_path: input.stepPath,
+        wait_type: 'human',
+        key: taskId,
+        event_name: 'HUMAN_TASK_COMPLETED',
+        status: 'WAITING',
+        payload: {
+          taskId,
+          contextData: input.contextData,
+          formSchema,
+          taskType: input.taskType,
+        },
+      });
+
+      return {
+        waitId: wait.wait_id,
+        taskId,
+        eventName: 'HUMAN_TASK_COMPLETED',
+      };
     },
-  });
-
-  return {
-    waitId: wait.wait_id,
-    taskId,
-    eventName: 'HUMAN_TASK_COMPLETED',
-  };
+    { logLabel: 'startWorkflowRuntimeV2HumanTaskWait' }
+  );
 }
 
 export async function resolveWorkflowRuntimeV2HumanTaskWait(input: {
@@ -324,19 +369,24 @@ export async function resolveWorkflowRuntimeV2HumanTaskWait(input: {
   status: 'RESOLVED' | 'CANCELED';
   payload: Record<string, unknown>;
 }): Promise<void> {
-  const knex = await getAdminConnection();
-  const now = new Date().toISOString();
-  const existing = await knex('workflow_run_waits').where({ wait_id: input.waitId }).first(['payload']);
-  const currentPayload = isRecord(existing?.payload) ? existing.payload : {};
-  await WorkflowRunWaitModelV2.update(knex, input.waitId, {
-    status: input.status,
-    resolved_at: now,
-    payload: {
-      ...currentPayload,
-      ...input.payload,
-      resolvedAt: now,
+  return retryOnAdminReadOnly(
+    async () => {
+      const knex = await getAdminConnection();
+      const now = new Date().toISOString();
+      const existing = await knex('workflow_run_waits').where({ wait_id: input.waitId }).first(['payload']);
+      const currentPayload = isRecord(existing?.payload) ? existing.payload : {};
+      await WorkflowRunWaitModelV2.update(knex, input.waitId, {
+        status: input.status,
+        resolved_at: now,
+        payload: {
+          ...currentPayload,
+          ...input.payload,
+          resolvedAt: now,
+        },
+      });
     },
-  });
+    { logLabel: 'resolveWorkflowRuntimeV2HumanTaskWait' }
+  );
 }
 
 export async function validateWorkflowRuntimeV2HumanTaskResponse(input: {
@@ -386,6 +436,7 @@ export async function executeWorkflowRuntimeV2NodeStep(input: {
   };
   scopes: WorkflowRuntimeV2ScopeState;
 }): Promise<{ scopes: WorkflowRuntimeV2ScopeState }> {
+  return retryOnAdminReadOnly(async () => {
   initializeWorkflowRuntimeV2();
   const knex = await getAdminConnection();
   const nodeRegistry = getNodeTypeRegistry();
@@ -462,6 +513,7 @@ export async function executeWorkflowRuntimeV2NodeStep(input: {
         : null,
     },
   };
+  }, { logLabel: 'executeWorkflowRuntimeV2NodeStep' });
 }
 
 export async function executeWorkflowRuntimeV2ActionStep(input: {
@@ -475,6 +527,7 @@ export async function executeWorkflowRuntimeV2ActionStep(input: {
   };
   scopes: WorkflowRuntimeV2ScopeState;
 }): Promise<{ output: unknown; saveAsPath: string | null }> {
+  return retryOnAdminReadOnly(async () => {
   initializeWorkflowRuntimeV2();
   const knex = await getAdminConnection();
 
@@ -519,6 +572,7 @@ export async function executeWorkflowRuntimeV2ActionStep(input: {
     output,
     saveAsPath: typeof config.saveAs === 'string' ? config.saveAs : null,
   };
+  }, { logLabel: 'executeWorkflowRuntimeV2ActionStep' });
 }
 
 export async function startWorkflowRuntimeV2ChildRun(input: {
@@ -533,8 +587,10 @@ export async function startWorkflowRuntimeV2ChildRun(input: {
   rootRunId: string;
   temporalWorkflowId: string;
 }> {
-  const knex = await getAdminConnection();
-  const parentRun = await WorkflowRunModelV2.getById(knex, input.parentRunId);
+  return retryOnAdminReadOnly(
+    async () => {
+      const knex = await getAdminConnection();
+      const parentRun = await WorkflowRunModelV2.getById(knex, input.parentRunId);
   if (!parentRun) {
     throw new Error(`Parent workflow run not found: ${input.parentRunId}`);
   }
@@ -576,16 +632,19 @@ export async function startWorkflowRuntimeV2ChildRun(input: {
     parentRunId: parentRun.run_id,
     rootRunId,
   });
-  await WorkflowRunModelV2.update(knex, childRunId, {
-    parent_run_id: parentRun.run_id,
-    root_run_id: rootRunId,
-  });
+      await WorkflowRunModelV2.update(knex, childRunId, {
+        parent_run_id: parentRun.run_id,
+        root_run_id: rootRunId,
+      });
 
-  return {
-    childRunId,
-    rootRunId,
-    temporalWorkflowId: `workflow-runtime-v2:run:${childRunId}`,
-  };
+      return {
+        childRunId,
+        rootRunId,
+        temporalWorkflowId: `workflow-runtime-v2:run:${childRunId}`,
+      };
+    },
+    { logLabel: 'startWorkflowRuntimeV2ChildRun' }
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
