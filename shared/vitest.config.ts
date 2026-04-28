@@ -15,6 +15,8 @@ export default defineConfig({
       { find: /^@alga-psa\/types\/(.*)$/, replacement: path.resolve(__dirname, '../packages/types/src/$1') },
       { find: /^@alga-psa\/auth$/, replacement: path.resolve(__dirname, '../packages/auth/src/index.ts') },
       { find: /^@alga-psa\/auth\/(.*)$/, replacement: path.resolve(__dirname, '../packages/auth/src/$1') },
+      { find: /^@alga-psa\/authorization$/, replacement: path.resolve(__dirname, '../packages/authorization/src/index.ts') },
+      { find: /^@alga-psa\/authorization\/(.*)$/, replacement: path.resolve(__dirname, '../packages/authorization/src/$1') },
       { find: /^@alga-psa\/validation$/, replacement: path.resolve(__dirname, '../packages/validation/src/index.ts') },
       { find: /^@alga-psa\/validation\/(.*)$/, replacement: path.resolve(__dirname, '../packages/validation/src/$1') },
       { find: /^@alga-psa\/event-schemas$/, replacement: path.resolve(__dirname, '../packages/event-schemas/src/index.ts') },
