@@ -77,6 +77,61 @@ async function invokeAction(actionId: string, input: Record<string, unknown>, ct
   return action.handler(parsedInput, actionCtx(ctxOverrides) as any);
 }
 
+async function grantWorkflowTimeTestPermissions(db: Knex, tenantId: string, userId: string): Promise<void> {
+  const roleId = uuidv4();
+  await db('roles').insert({
+    tenant: tenantId,
+    role_id: roleId,
+    role_name: `Workflow Time Test Role ${userId}`,
+    description: 'Grants workflow time action permissions for DB-backed tests',
+    msp: true,
+    client: false,
+  });
+
+  const permissions = [
+    ['timeentry', 'create'],
+    ['timeentry', 'read'],
+    ['timeentry', 'update'],
+    ['timeentry', 'delete'],
+    ['timesheet', 'read'],
+    ['timesheet', 'read_all'],
+    ['timesheet', 'submit'],
+    ['timesheet', 'approve'],
+    ['timesheet', 'reverse'],
+  ] as const;
+
+  for (const [resource, action] of permissions) {
+    let permission = await db('permissions')
+      .where({ tenant: tenantId, resource, action, msp: true })
+      .first('permission_id');
+
+    if (!permission?.permission_id) {
+      [permission] = await db('permissions')
+        .insert({
+          tenant: tenantId,
+          permission_id: uuidv4(),
+          resource,
+          action,
+          msp: true,
+          client: false,
+        })
+        .returning('permission_id');
+    }
+
+    await db('role_permissions').insert({
+      tenant: tenantId,
+      role_id: roleId,
+      permission_id: permission.permission_id,
+    });
+  }
+
+  await db('user_roles').insert({
+    tenant: tenantId,
+    user_id: userId,
+    role_id: roleId,
+  });
+}
+
 async function createClient(db: Knex, tenantId: string, name = 'Test Client'): Promise<string> {
   const clientId = uuidv4();
   const now = new Date().toISOString();
@@ -322,6 +377,7 @@ describe('time workflow runtime DB-backed action handlers', () => {
       last_name: 'Actor',
       timezone: 'America/New_York',
     });
+    await grantWorkflowTimeTestPermissions(db, runtimeState.tenantId, runtimeState.actorUserId);
 
     runtimeState.deniedPermissions.clear();
   });

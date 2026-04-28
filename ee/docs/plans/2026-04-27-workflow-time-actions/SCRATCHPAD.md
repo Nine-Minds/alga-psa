@@ -184,3 +184,16 @@ Rolling notes for adding workflow-safe time-entry, time-sheet, and billing-readi
   - Added tenant-scoped eligible-contract query with effective-date filtering and deterministic selection fallback (single eligible line, or single bucket-overlay candidate).
   - `time.create_entry` now assigns `contract_line_id` automatically when omitted and client/service context can resolve a default.
 - (2026-04-27) Bucket usage side-effect implementation in workflow helper intentionally keeps explicit tenant-scoped SQL in `timeDomain.ts` instead of importing `@alga-psa/billing`/`@alga-psa/scheduling` internals to avoid export-boundary and tenant-resolution brittleness in shared runtime tests.
+
+## Review Follow-up Fixes
+
+- (2026-04-27) Removed workflow time-sheet writes to non-existent `time_sheets.created_at` / `time_sheets.updated_at` columns; the current schema only has `submitted_at`, `approved_at`, and `approved_by` on `time_sheets`.
+- (2026-04-27) Fixed TypeScript aggregate typing in `findWorkflowTimeEntries` so shared typecheck no longer reports `timeDomain.ts` aggregate property errors.
+- (2026-04-27) Added workflow-time subject guards for acting on behalf of another user, self-approval denial, and scoped find/read helpers. The guard uses `timesheet:read_all` or manager/reporting relationship for cross-user access after the action-level permission check.
+- (2026-04-27) Reworked `summarizeTimeSheet` to aggregate entries and comments separately to avoid entry-minute inflation when a sheet has multiple comments.
+- (2026-04-27) Fixed `time.update_entry` detach semantics so `attach_to_timesheet: false` actually clears the sheet instead of retaining the existing sheet.
+- (2026-04-27) Removed the misleading ticket picker from polymorphic `link.id`; ticket-specific filters still use the ticket picker.
+- (2026-04-27) Validation run: `npx vitest run shared/workflow/runtime/actions/__tests__/registerTimeActionsMetadata.test.ts --config shared/vitest.config.ts` passed.
+- (2026-04-27) Validation run: `npx eslint shared/workflow/runtime/actions/businessOperations/time.ts shared/workflow/runtime/actions/businessOperations/timeDomain.ts` passed.
+- (2026-04-27) Validation run: `npx tsc --noEmit --project shared/tsconfig.json` still fails on pre-existing unrelated path/dbReset errors, but no longer reports `timeDomain.ts` errors.
+- (2026-04-27) Updated DB-backed workflow time tests to grant the workflow actor real MSP time permissions so the new subject-scope helper checks can run under migrated schema instead of relying only on the mocked `requirePermission` path.

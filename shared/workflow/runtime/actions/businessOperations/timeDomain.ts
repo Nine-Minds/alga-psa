@@ -3,6 +3,7 @@ import type { Knex } from 'knex';
 import { computeWorkDateFields, resolveUserTimeZone } from '@alga-psa/db';
 import { Temporal } from '@js-temporal/polyfill';
 import { toISODate, toPlainDate } from '@alga-psa/core';
+import { hasPermissionByUserId } from './shared';
 
 export type WorkflowTimeDomainErrorCategory = 'ValidationError' | 'ActionError' | 'TransientError';
 
@@ -216,6 +217,152 @@ function assertPositiveOrZeroMinutes(value: number, field: string): void {
       details: { field, value },
     });
   }
+}
+
+async function isManagerOfSubject(
+  trx: Knex.Transaction,
+  tenantId: string,
+  actorUserId: string,
+  subjectUserId: string
+): Promise<boolean> {
+  const teamManagerRow = await trx('teams')
+    .join('team_members', function joinTeamMembers() {
+      this.on('teams.team_id', '=', 'team_members.team_id')
+        .andOn('teams.tenant', '=', 'team_members.tenant');
+    })
+    .where({
+      'teams.tenant': tenantId,
+      'teams.manager_id': actorUserId,
+      'team_members.user_id': subjectUserId,
+    })
+    .first('teams.team_id');
+
+  if (teamManagerRow) {
+    return true;
+  }
+
+  const reportsToRow = await trx('users')
+    .where({ tenant: tenantId, user_id: subjectUserId, reports_to: actorUserId })
+    .first('user_id');
+
+  return Boolean(reportsToRow);
+}
+
+async function assertCanActOnBehalfForWorkflowTime(
+  trx: Knex.Transaction,
+  tenantId: string,
+  actorUserId: string,
+  subjectUserId: string
+): Promise<void> {
+  if (actorUserId === subjectUserId) {
+    return;
+  }
+
+  const canApprove = await hasPermissionByUserId(trx, tenantId, actorUserId, 'timesheet', 'approve');
+  if (!canApprove) {
+    throw new WorkflowTimeDomainError({
+      category: 'ActionError',
+      code: 'PERMISSION_DENIED',
+      message: 'Permission denied: Cannot access other users time submissions',
+      details: { actor_user_id: actorUserId, subject_user_id: subjectUserId },
+    });
+  }
+
+  const canReadAll = await hasPermissionByUserId(trx, tenantId, actorUserId, 'timesheet', 'read_all');
+  if (canReadAll) {
+    return;
+  }
+
+  if (await isManagerOfSubject(trx, tenantId, actorUserId, subjectUserId)) {
+    return;
+  }
+
+  throw new WorkflowTimeDomainError({
+    category: 'ActionError',
+    code: 'PERMISSION_DENIED',
+    message: 'Permission denied: Cannot access other users time submissions',
+    details: { actor_user_id: actorUserId, subject_user_id: subjectUserId },
+  });
+}
+
+async function assertCanApproveSubjectForWorkflowTime(
+  trx: Knex.Transaction,
+  tenantId: string,
+  actorUserId: string,
+  subjectUserId: string
+): Promise<void> {
+  if (actorUserId === subjectUserId) {
+    throw new WorkflowTimeDomainError({
+      category: 'ActionError',
+      code: 'PERMISSION_DENIED',
+      message: 'Permission denied: Cannot approve your own time submissions',
+      details: { actor_user_id: actorUserId, subject_user_id: subjectUserId },
+    });
+  }
+
+  await assertCanActOnBehalfForWorkflowTime(trx, tenantId, actorUserId, subjectUserId);
+}
+
+async function scopeFindEntriesInputForActor<T extends WorkflowTimeFindEntriesInput>(
+  trx: Knex.Transaction,
+  tenantId: string,
+  actorUserId: string,
+  input: T
+): Promise<T> {
+  const canReadAll = await hasPermissionByUserId(trx, tenantId, actorUserId, 'timesheet', 'read_all');
+  if (canReadAll) {
+    return input;
+  }
+
+  if (input.user_id) {
+    await assertCanActOnBehalfForWorkflowTime(trx, tenantId, actorUserId, input.user_id);
+    return input;
+  }
+
+  const entryIds = (input as { entry_ids?: string[] }).entry_ids;
+  if (entryIds?.length) {
+    const rows = await trx('time_entries')
+      .where({ tenant: tenantId })
+      .whereIn('entry_id', entryIds)
+      .distinct<{ user_id: string }[]>('user_id');
+    for (const row of rows) {
+      await assertCanActOnBehalfForWorkflowTime(trx, tenantId, actorUserId, String(row.user_id));
+    }
+    return input;
+  }
+
+  if (input.time_sheet_id) {
+    const sheet = await trx('time_sheets')
+      .where({ tenant: tenantId, id: input.time_sheet_id })
+      .first<{ user_id: string }>('user_id');
+    if (sheet?.user_id) {
+      await assertCanActOnBehalfForWorkflowTime(trx, tenantId, actorUserId, String(sheet.user_id));
+      return input;
+    }
+  }
+
+  return { ...input, user_id: actorUserId };
+}
+
+async function scopeFindTimeSheetsInputForActor<T extends { user_ids?: string[] }>(
+  trx: Knex.Transaction,
+  tenantId: string,
+  actorUserId: string,
+  input: T
+): Promise<T> {
+  const canReadAll = await hasPermissionByUserId(trx, tenantId, actorUserId, 'timesheet', 'read_all');
+  if (canReadAll) {
+    return input;
+  }
+
+  if (input.user_ids?.length) {
+    for (const userId of input.user_ids) {
+      await assertCanActOnBehalfForWorkflowTime(trx, tenantId, actorUserId, userId);
+    }
+    return input;
+  }
+
+  return { ...input, user_ids: [actorUserId] };
 }
 
 async function getWorkItemClientContext(
@@ -749,8 +896,6 @@ async function resolveOrCreateTimeSheet(params: {
         user_id: userId,
         period_id: period.period_id,
         approval_status: 'DRAFT',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
       })
       .returning('id');
 
@@ -899,6 +1044,8 @@ export async function createWorkflowTimeEntry(params: {
     });
   }
 
+  await assertCanActOnBehalfForWorkflowTime(trx, tenantId, actorUserId, input.user_id);
+
   const service = await trx('service_catalog')
     .where({ tenant: tenantId, service_id: input.service_id })
     .select('service_id')
@@ -921,7 +1068,7 @@ export async function createWorkflowTimeEntry(params: {
       category: 'ValidationError',
       code: 'VALIDATION_ERROR',
       message: 'Provide end or duration_minutes',
-      details: null,
+      details: undefined,
     });
   }
 
@@ -1178,6 +1325,8 @@ export async function updateWorkflowTimeEntry(params: {
     });
   }
 
+  await assertCanActOnBehalfForWorkflowTime(trx, tenantId, actorUserId, String(existing.user_id));
+
   if (existing.invoiced) {
     throw new WorkflowTimeDomainError({
       category: 'ValidationError',
@@ -1271,13 +1420,15 @@ export async function updateWorkflowTimeEntry(params: {
   }
 
   const existingTimeSheetId = (existing.time_sheet_id as string | null) ?? null;
-  const providedTimeSheetId = hasOwnProperty(input, 'time_sheet_id')
-    ? (input.time_sheet_id ?? null)
-    : existingTimeSheetId;
-
   const attachToTimeSheet = hasOwnProperty(input, 'attach_to_timesheet')
     ? Boolean(input.attach_to_timesheet)
     : true;
+
+  const providedTimeSheetId = !attachToTimeSheet
+    ? null
+    : hasOwnProperty(input, 'time_sheet_id')
+      ? (input.time_sheet_id ?? null)
+      : existingTimeSheetId;
 
   const timeSheetId = await resolveOrCreateTimeSheet({
     trx,
@@ -1401,9 +1552,10 @@ export async function updateWorkflowTimeEntry(params: {
 export async function deleteWorkflowTimeEntry(params: {
   trx: Knex.Transaction;
   tenantId: string;
+  actorUserId: string;
   entryId: string;
 }): Promise<WorkflowTimeDeletedEntrySummary> {
-  const { trx, tenantId, entryId } = params;
+  const { trx, tenantId, actorUserId, entryId } = params;
 
   const existing = await trx('time_entries')
     .where({ tenant: tenantId, entry_id: entryId })
@@ -1428,6 +1580,8 @@ export async function deleteWorkflowTimeEntry(params: {
       details: { entry_id: entryId },
     });
   }
+
+  await assertCanActOnBehalfForWorkflowTime(trx, tenantId, actorUserId, String(existing.user_id));
 
   if (existing.invoiced) {
     throw new WorkflowTimeDomainError({
@@ -1477,9 +1631,10 @@ export async function deleteWorkflowTimeEntry(params: {
 export async function getWorkflowTimeEntry(params: {
   trx: Knex.Transaction;
   tenantId: string;
+  actorUserId: string;
   entryId: string;
 }): Promise<WorkflowTimeCreatedEntrySummary> {
-  const { trx, tenantId, entryId } = params;
+  const { trx, tenantId, actorUserId, entryId } = params;
 
   const entry = await trx('time_entries')
     .where({ tenant: tenantId, entry_id: entryId })
@@ -1510,6 +1665,8 @@ export async function getWorkflowTimeEntry(params: {
       details: { entry_id: entryId },
     });
   }
+
+  await assertCanActOnBehalfForWorkflowTime(trx, tenantId, actorUserId, String(entry.user_id));
 
   return normalizeEntrySummary({
     entry_id: String(entry.entry_id),
@@ -1634,9 +1791,11 @@ function applyFindEntriesFilters(
 export async function findWorkflowTimeEntries(params: {
   trx: Knex.Transaction;
   tenantId: string;
+  actorUserId: string;
   input: WorkflowTimeFindEntriesInput;
 }): Promise<WorkflowTimeFindEntriesResult> {
-  const { trx, tenantId, input } = params;
+  const { trx, tenantId, actorUserId } = params;
+  const input = await scopeFindEntriesInputForActor(trx, tenantId, actorUserId, params.input);
 
   const limit = Math.min(Math.max(input.limit ?? 50, 1), 200);
 
@@ -1673,7 +1832,11 @@ export async function findWorkflowTimeEntries(params: {
   applyFindEntriesFilters(aggregateQuery, tenantId, input);
 
   const [rows, aggregateRows] = await Promise.all([listQuery, aggregateQuery]);
-  const aggregate = Array.isArray(aggregateRows) ? aggregateRows[0] : (aggregateRows as unknown as { count: string; total_minutes: string | null; billable_minutes: string | null });
+  const aggregate = (Array.isArray(aggregateRows) ? aggregateRows[0] : aggregateRows) as unknown as {
+    count?: string | number;
+    total_minutes?: string | number | null;
+    billable_minutes?: string | number | null;
+  } | undefined;
 
   const entries = rows.map((row) => normalizeEntrySummary({
     entry_id: String(row.entry_id),
@@ -1715,7 +1878,7 @@ export async function setWorkflowTimeEntryApprovalStatus(params: {
 
   const existing = await trx('time_entries')
     .where({ tenant: tenantId, entry_id: entryId })
-    .select('entry_id', 'invoiced', 'time_sheet_id')
+    .select('entry_id', 'user_id', 'invoiced', 'time_sheet_id')
     .first();
 
   if (!existing) {
@@ -1734,6 +1897,12 @@ export async function setWorkflowTimeEntryApprovalStatus(params: {
       message: 'This time entry has already been invoiced and cannot be modified',
       details: { entry_id: entryId },
     });
+  }
+
+  if (approvalStatus === 'APPROVED') {
+    await assertCanApproveSubjectForWorkflowTime(trx, tenantId, actorUserId, String(existing.user_id));
+  } else {
+    await assertCanActOnBehalfForWorkflowTime(trx, tenantId, actorUserId, String(existing.user_id));
   }
 
   await trx('time_entries')
@@ -1822,27 +1991,10 @@ async function summarizeTimeSheet(
     .join('time_periods as tp', function joinPeriods() {
       this.on('ts.period_id', '=', 'tp.period_id').andOn('ts.tenant', '=', 'tp.tenant');
     })
-    .leftJoin('time_entries as te', function joinEntries() {
-      this.on('ts.id', '=', 'te.time_sheet_id').andOn('ts.tenant', '=', 'te.tenant');
-    })
-    .leftJoin('time_sheet_comments as comments', function joinComments() {
-      this.on('ts.id', '=', 'comments.time_sheet_id').andOn('ts.tenant', '=', 'comments.tenant');
-    })
     .where({
       'ts.tenant': tenantId,
       'ts.id': timeSheetId,
     })
-    .groupBy(
-      'ts.id',
-      'ts.user_id',
-      'ts.period_id',
-      'ts.approval_status',
-      'ts.submitted_at',
-      'ts.approved_at',
-      'ts.approved_by',
-      'tp.start_date',
-      'tp.end_date'
-    )
     .select(
       'ts.id',
       'ts.user_id',
@@ -1852,11 +2004,7 @@ async function summarizeTimeSheet(
       'ts.approved_at',
       'ts.approved_by',
       'tp.start_date',
-      'tp.end_date',
-      trx.raw('COUNT(DISTINCT te.entry_id) as entry_count'),
-      trx.raw('COALESCE(SUM(EXTRACT(EPOCH FROM (te.end_time - te.start_time)) / 60), 0) as total_minutes'),
-      trx.raw('COALESCE(SUM(te.billable_duration), 0) as billable_minutes'),
-      trx.raw('COUNT(DISTINCT comments.comment_id) as comment_count')
+      'tp.end_date'
     )
     .first();
 
@@ -1869,6 +2017,27 @@ async function summarizeTimeSheet(
     });
   }
 
+  const [entryAggregate, commentAggregate] = await Promise.all([
+    trx('time_entries')
+      .where({ tenant: tenantId, time_sheet_id: timeSheetId })
+      .countDistinct<{ entry_count: string | number }>('entry_id as entry_count')
+      .sum<{ total_minutes: string | number | null }>({
+        total_minutes: trx.raw('EXTRACT(EPOCH FROM (end_time - start_time)) / 60'),
+      })
+      .sum<{ billable_minutes: string | number | null }>('billable_duration as billable_minutes')
+      .first(),
+    trx('time_sheet_comments')
+      .where({ tenant: tenantId, time_sheet_id: timeSheetId })
+      .count<{ comment_count: string | number }>('comment_id as comment_count')
+      .first(),
+  ]);
+
+  const entryStats = entryAggregate as unknown as {
+    entry_count?: string | number;
+    total_minutes?: string | number | null;
+    billable_minutes?: string | number | null;
+  } | undefined;
+
   return {
     time_sheet_id: String(row.id),
     user_id: String(row.user_id),
@@ -1879,21 +2048,23 @@ async function summarizeTimeSheet(
     submitted_at: row.submitted_at ? toIsoString(row.submitted_at as string | Date) : null,
     approved_at: row.approved_at ? toIsoString(row.approved_at as string | Date) : null,
     approved_by: (row.approved_by as string | null) ?? null,
-    entry_count: Number(row.entry_count ?? 0),
-    total_minutes: Number(row.total_minutes ?? 0),
-    billable_minutes: Number(row.billable_minutes ?? 0),
-    comment_count: Number(row.comment_count ?? 0),
+    entry_count: Number(entryStats?.entry_count ?? 0),
+    total_minutes: Number(entryStats?.total_minutes ?? 0),
+    billable_minutes: Number(entryStats?.billable_minutes ?? 0),
+    comment_count: Number(commentAggregate?.comment_count ?? 0),
   };
 }
 
 export async function findOrCreateWorkflowTimeSheet(params: {
   trx: Knex.Transaction;
   tenantId: string;
+  actorUserId: string;
   userId: string;
   periodId?: string;
   workDate?: string;
 }): Promise<WorkflowTimeSheetSummary> {
-  const { trx, tenantId, userId, periodId, workDate } = params;
+  const { trx, tenantId, actorUserId, userId, periodId, workDate } = params;
+  await assertCanActOnBehalfForWorkflowTime(trx, tenantId, actorUserId, userId);
 
   let resolvedPeriodId = periodId;
   if (!resolvedPeriodId) {
@@ -1938,8 +2109,6 @@ export async function findOrCreateWorkflowTimeSheet(params: {
         user_id: userId,
         period_id: resolvedPeriodId,
         approval_status: 'DRAFT',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
       })
       .returning('id'))[0].id);
 
@@ -1949,13 +2118,15 @@ export async function findOrCreateWorkflowTimeSheet(params: {
 export async function getWorkflowTimeSheet(params: {
   trx: Knex.Transaction;
   tenantId: string;
+  actorUserId: string;
   timeSheetId: string;
 }): Promise<{
   time_sheet: WorkflowTimeSheetSummary;
   comments: WorkflowTimeSheetCommentSummary[];
 }> {
-  const { trx, tenantId, timeSheetId } = params;
+  const { trx, tenantId, actorUserId, timeSheetId } = params;
   const summary = await summarizeTimeSheet(trx, tenantId, timeSheetId);
+  await assertCanActOnBehalfForWorkflowTime(trx, tenantId, actorUserId, summary.user_id);
 
   const comments = await trx('time_sheet_comments')
     .where({
@@ -1980,6 +2151,7 @@ export async function getWorkflowTimeSheet(params: {
 export async function findWorkflowTimeSheets(params: {
   trx: Knex.Transaction;
   tenantId: string;
+  actorUserId: string;
   input: {
     user_ids?: string[];
     approval_status?: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'CHANGES_REQUESTED';
@@ -1994,7 +2166,8 @@ export async function findWorkflowTimeSheets(params: {
     total_count: number;
   };
 }> {
-  const { trx, tenantId, input } = params;
+  const { trx, tenantId, actorUserId } = params;
+  const input = await scopeFindTimeSheetsInputForActor(trx, tenantId, actorUserId, params.input);
   const limit = Math.min(Math.max(input.limit ?? 50, 1), 200);
 
   const base = trx('time_sheets as ts')
@@ -2044,11 +2217,11 @@ export async function submitWorkflowTimeSheet(params: {
   actorUserId: string;
   timeSheetId: string;
 }): Promise<WorkflowTimeSheetMutationResult> {
-  const { trx, tenantId, timeSheetId } = params;
+  const { trx, tenantId, actorUserId, timeSheetId } = params;
 
   const timeSheet = await trx('time_sheets')
     .where({ tenant: tenantId, id: timeSheetId })
-    .select('id', 'approval_status')
+    .select('id', 'user_id', 'approval_status')
     .first();
 
   if (!timeSheet) {
@@ -2059,6 +2232,8 @@ export async function submitWorkflowTimeSheet(params: {
       details: { time_sheet_id: timeSheetId },
     });
   }
+
+  await assertCanActOnBehalfForWorkflowTime(trx, tenantId, actorUserId, String(timeSheet.user_id));
 
   const status = String(timeSheet.approval_status ?? 'DRAFT');
   if (status !== 'DRAFT' && status !== 'CHANGES_REQUESTED') {
@@ -2075,7 +2250,6 @@ export async function submitWorkflowTimeSheet(params: {
     .update({
       approval_status: 'SUBMITTED',
       submitted_at: trx.fn.now(),
-      updated_at: new Date().toISOString(),
     });
 
   await trx('time_entries')
@@ -2101,7 +2275,7 @@ export async function approveWorkflowTimeSheet(params: {
 
   const timeSheet = await trx('time_sheets')
     .where({ tenant: tenantId, id: timeSheetId })
-    .select('id', 'approval_status')
+    .select('id', 'user_id', 'approval_status')
     .first();
 
   if (!timeSheet) {
@@ -2112,6 +2286,8 @@ export async function approveWorkflowTimeSheet(params: {
       details: { time_sheet_id: timeSheetId },
     });
   }
+
+  await assertCanApproveSubjectForWorkflowTime(trx, tenantId, actorUserId, String(timeSheet.user_id));
 
   if (String(timeSheet.approval_status ?? 'DRAFT') !== 'SUBMITTED') {
     throw new WorkflowTimeDomainError({
@@ -2128,7 +2304,6 @@ export async function approveWorkflowTimeSheet(params: {
       approval_status: 'APPROVED',
       approved_at: trx.fn.now(),
       approved_by: actorUserId,
-      updated_at: new Date().toISOString(),
     });
 
   await trx('time_entries')
@@ -2164,7 +2339,7 @@ export async function requestWorkflowTimeSheetChanges(params: {
 
   const timeSheet = await trx('time_sheets')
     .where({ tenant: tenantId, id: timeSheetId })
-    .select('id')
+    .select('id', 'user_id')
     .first();
 
   if (!timeSheet) {
@@ -2176,13 +2351,14 @@ export async function requestWorkflowTimeSheetChanges(params: {
     });
   }
 
+  await assertCanActOnBehalfForWorkflowTime(trx, tenantId, actorUserId, String(timeSheet.user_id));
+
   await trx('time_sheets')
     .where({ tenant: tenantId, id: timeSheetId })
     .update({
       approval_status: 'CHANGES_REQUESTED',
       approved_at: null,
       approved_by: null,
-      updated_at: new Date().toISOString(),
     });
 
   await trx('time_entries')
@@ -2218,7 +2394,7 @@ export async function reverseWorkflowTimeSheetApproval(params: {
 
   const timeSheet = await trx('time_sheets')
     .where({ tenant: tenantId, id: timeSheetId })
-    .select('id', 'approval_status')
+    .select('id', 'user_id', 'approval_status')
     .first();
 
   if (!timeSheet) {
@@ -2229,6 +2405,8 @@ export async function reverseWorkflowTimeSheetApproval(params: {
       details: { time_sheet_id: timeSheetId },
     });
   }
+
+  await assertCanActOnBehalfForWorkflowTime(trx, tenantId, actorUserId, String(timeSheet.user_id));
 
   if (String(timeSheet.approval_status ?? 'DRAFT') !== 'APPROVED') {
     throw new WorkflowTimeDomainError({
@@ -2262,7 +2440,6 @@ export async function reverseWorkflowTimeSheetApproval(params: {
       approval_status: 'CHANGES_REQUESTED',
       approved_at: null,
       approved_by: null,
-      updated_at: new Date().toISOString(),
     });
 
   await trx('time_entries')
@@ -2301,7 +2478,7 @@ export async function addWorkflowTimeSheetComment(params: {
   const { trx, tenantId, actorUserId, timeSheetId, comment, isApprover } = params;
   const existing = await trx('time_sheets')
     .where({ tenant: tenantId, id: timeSheetId })
-    .first('id');
+    .first('id', 'user_id');
   if (!existing) {
     throw new WorkflowTimeDomainError({
       category: 'ActionError',
@@ -2310,6 +2487,8 @@ export async function addWorkflowTimeSheetComment(params: {
       details: { time_sheet_id: timeSheetId },
     });
   }
+
+  await assertCanActOnBehalfForWorkflowTime(trx, tenantId, actorUserId, String(existing.user_id));
 
   const [inserted] = await trx('time_sheet_comments')
     .insert({
@@ -2351,6 +2530,7 @@ async function resolveClientIdForEntryRow(
 export async function summarizeWorkflowTimeEntries(params: {
   trx: Knex.Transaction;
   tenantId: string;
+  actorUserId: string;
   input: WorkflowTimeFindEntriesInput & {
     group_by?: WorkflowTimeSummaryGroupBy[];
   };
@@ -2373,7 +2553,8 @@ export async function summarizeWorkflowTimeEntries(params: {
     billable_minutes: number;
   }>;
 }> {
-  const { trx, tenantId, input } = params;
+  const { trx, tenantId, actorUserId } = params;
+  const input = await scopeFindEntriesInputForActor(trx, tenantId, actorUserId, params.input);
   const limit = Math.min(Math.max(input.limit ?? 200, 1), 500);
   const groupBy = input.group_by ?? [];
 
@@ -2428,7 +2609,7 @@ export async function summarizeWorkflowTimeEntries(params: {
     if (approval === 'SUBMITTED') submittedCount += 1;
     if (approval === 'DRAFT') draftCount += 1;
     if (approval === 'CHANGES_REQUESTED') changesRequestedCount += 1;
-    if (Boolean(row.invoiced)) invoicedCount += 1;
+    if (row.invoiced) invoicedCount += 1;
 
     if (groupBy.length > 0) {
       const key: Record<string, string | boolean | null> = {};
@@ -2574,6 +2755,7 @@ async function findBillingBlockersInternal(params: {
 export async function findWorkflowTimeBillingBlockers(params: {
   trx: Knex.Transaction;
   tenantId: string;
+  actorUserId: string;
   input: WorkflowTimeFindEntriesInput & {
     entry_ids?: string[];
     require_timesheet?: boolean;
@@ -2582,7 +2764,8 @@ export async function findWorkflowTimeBillingBlockers(params: {
 }): Promise<{
   blockers: WorkflowBillingBlocker[];
 }> {
-  const { trx, tenantId, input } = params;
+  const { trx, tenantId, actorUserId } = params;
+  const input = await scopeFindEntriesInputForActor(trx, tenantId, actorUserId, params.input);
   return {
     blockers: await findBillingBlockersInternal({
       trx,
@@ -2598,6 +2781,7 @@ export async function findWorkflowTimeBillingBlockers(params: {
 export async function validateWorkflowTimeEntries(params: {
   trx: Knex.Transaction;
   tenantId: string;
+  actorUserId: string;
   input: WorkflowTimeFindEntriesInput & {
     entry_ids?: string[];
     require_timesheet?: boolean;
@@ -2608,13 +2792,14 @@ export async function validateWorkflowTimeEntries(params: {
   blocker_count: number;
   blockers: WorkflowBillingBlocker[];
 }> {
+  const input = await scopeFindEntriesInputForActor(params.trx, params.tenantId, params.actorUserId, params.input);
   const blockers = await findBillingBlockersInternal({
     trx: params.trx,
     tenantId: params.tenantId,
-    filters: params.input,
-    entryIds: params.input.entry_ids,
-    requireTimesheet: params.input.require_timesheet,
-    limit: Math.min(Math.max(params.input.limit ?? 200, 1), 500),
+    filters: input,
+    entryIds: input.entry_ids,
+    requireTimesheet: input.require_timesheet,
+    limit: Math.min(Math.max(input.limit ?? 200, 1), 500),
   });
 
   return {

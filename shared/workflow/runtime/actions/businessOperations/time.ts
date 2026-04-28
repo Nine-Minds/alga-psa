@@ -68,7 +68,7 @@ const withTimeWorkflowTextarea = <T extends z.ZodTypeAny>(schema: T, description
 const timeEntryLinkSchema = z.object({
   type: z.enum(['ticket', 'project', 'project_task', 'interaction', 'ad_hoc', 'non_billable_category'])
     .describe('Work item type for the time entry'),
-  id: withTimeWorkflowPicker(uuidSchema, 'Work item id', 'ticket')
+  id: uuidSchema.describe('Work item id matching the selected work item type')
 });
 
 export function registerTimeActions(): void {
@@ -262,6 +262,7 @@ export function registerTimeActions(): void {
         return await summarizeWorkflowTimeEntries({
           trx: tx.trx,
           tenantId: tx.tenantId,
+          actorUserId: tx.actorUserId,
           input: input as WorkflowTimeFindEntriesInput & { group_by?: WorkflowTimeSummaryGroupBy[] },
         });
       } catch (error) {
@@ -323,6 +324,7 @@ export function registerTimeActions(): void {
         return await findWorkflowTimeBillingBlockers({
           trx: tx.trx,
           tenantId: tx.tenantId,
+          actorUserId: tx.actorUserId,
           input,
         });
       } catch (error) {
@@ -386,6 +388,7 @@ export function registerTimeActions(): void {
         return await validateWorkflowTimeEntries({
           trx: tx.trx,
           tenantId: tx.tenantId,
+          actorUserId: tx.actorUserId,
           input,
         });
       } catch (error) {
@@ -725,7 +728,7 @@ export function registerTimeActions(): void {
           actorUserId: tx.actorUserId,
           timeSheetId: input.time_sheet_id,
           comment: input.comment,
-          isApprover: input.is_approver,
+          isApprover: input.is_approver ?? false,
         });
         await writeRunAudit(ctx, tx, {
           operation: 'workflow_action:time.add_timesheet_comment',
@@ -803,6 +806,7 @@ export function registerTimeActions(): void {
         const result = await findOrCreateWorkflowTimeSheet({
           trx: tx.trx,
           tenantId: tx.tenantId,
+          actorUserId: tx.actorUserId,
           userId: input.user_id,
           periodId: input.period_id,
           workDate: input.work_date,
@@ -880,6 +884,7 @@ export function registerTimeActions(): void {
         return await getWorkflowTimeSheet({
           trx: tx.trx,
           tenantId: tx.tenantId,
+          actorUserId: tx.actorUserId,
           timeSheetId: input.time_sheet_id,
         });
       } catch (error) {
@@ -942,6 +947,7 @@ export function registerTimeActions(): void {
         return await findWorkflowTimeSheets({
           trx: tx.trx,
           tenantId: tx.tenantId,
+          actorUserId: tx.actorUserId,
           input,
         });
       } catch (error) {
@@ -1129,6 +1135,7 @@ export function registerTimeActions(): void {
         const entry = await getWorkflowTimeEntry({
           trx: tx.trx,
           tenantId: tx.tenantId,
+          actorUserId: tx.actorUserId,
           entryId: input.entry_id,
         });
         return { time_entry: entry };
@@ -1209,6 +1216,7 @@ export function registerTimeActions(): void {
         const result = await findWorkflowTimeEntries({
           trx: tx.trx,
           tenantId: tx.tenantId,
+          actorUserId: tx.actorUserId,
           input: input as WorkflowTimeFindEntriesInput,
         });
         return result;
@@ -1368,6 +1376,7 @@ export function registerTimeActions(): void {
         const deleted = await deleteWorkflowTimeEntry({
           trx: tx.trx,
           tenantId: tx.tenantId,
+          actorUserId: tx.actorUserId,
           entryId: input.entry_id,
         });
 
