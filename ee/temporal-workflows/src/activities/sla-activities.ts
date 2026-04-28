@@ -1,6 +1,6 @@
 import { Context } from '@temporalio/activity';
 import { v4 as uuidv4 } from 'uuid';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { withTenantTransactionRetryReadOnly } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type {
   IBusinessHoursScheduleWithEntries,
@@ -304,6 +304,5 @@ async function withTenantTransaction(
   tenantId: string,
   fn: (trx: Knex.Transaction) => Promise<void>
 ): Promise<void> {
-  const { knex } = await createTenantKnex(tenantId);
-  await withTransaction(knex, fn);
+  await withTenantTransactionRetryReadOnly(tenantId, fn);
 }

@@ -1,5 +1,6 @@
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db/tenant';
+import { retryOnTenantReadOnly } from '@alga-psa/db';
 import { getEntraProviderAdapter } from '@ee/lib/integrations/entra/providers';
 import type { EntraConnectionType } from '@ee/interfaces/entra.interfaces';
 import type {
@@ -38,35 +39,40 @@ export async function discoverManagedTenantsActivity(
     return { discoveredTenantCount: 0 };
   }
 
-  await runWithTenant(input.tenantId, async () => {
-    const { knex } = await createTenantKnex();
-    const now = knex.fn.now();
+  // Retry once on read-only errors (PgBouncer/Patroni post-failover stale pool).
+  await retryOnTenantReadOnly(
+    () =>
+      runWithTenant(input.tenantId, async () => {
+        const { knex } = await createTenantKnex();
+        const now = knex.fn.now();
 
-    await knex('entra_managed_tenants')
-      .insert(
-        discovered.map((item) => ({
-          tenant: input.tenantId,
-          entra_tenant_id: item.entraTenantId,
-          display_name: item.displayName,
-          primary_domain: item.primaryDomain,
-          source_user_count: item.sourceUserCount,
-          discovered_at: now,
-          last_seen_at: now,
-          metadata: item.raw || {},
-          created_at: now,
-          updated_at: now,
-        }))
-      )
-      .onConflict(['tenant', 'entra_tenant_id'])
-      .merge({
-        display_name: knex.raw('EXCLUDED.display_name'),
-        primary_domain: knex.raw('EXCLUDED.primary_domain'),
-        source_user_count: knex.raw('EXCLUDED.source_user_count'),
-        metadata: knex.raw('EXCLUDED.metadata'),
-        last_seen_at: now,
-        updated_at: now,
-      });
-  });
+        await knex('entra_managed_tenants')
+          .insert(
+            discovered.map((item) => ({
+              tenant: input.tenantId,
+              entra_tenant_id: item.entraTenantId,
+              display_name: item.displayName,
+              primary_domain: item.primaryDomain,
+              source_user_count: item.sourceUserCount,
+              discovered_at: now,
+              last_seen_at: now,
+              metadata: item.raw || {},
+              created_at: now,
+              updated_at: now,
+            }))
+          )
+          .onConflict(['tenant', 'entra_tenant_id'])
+          .merge({
+            display_name: knex.raw('EXCLUDED.display_name'),
+            primary_domain: knex.raw('EXCLUDED.primary_domain'),
+            source_user_count: knex.raw('EXCLUDED.source_user_count'),
+            metadata: knex.raw('EXCLUDED.metadata'),
+            last_seen_at: now,
+            updated_at: now,
+          });
+      }),
+    { logLabel: 'discoverManagedTenantsActivity' }
+  );
 
   logger.info('Completed discoverManagedTenantsActivity', {
     tenantId: input.tenantId,

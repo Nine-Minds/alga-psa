@@ -4,8 +4,13 @@ import { v4 as uuidv4 } from 'uuid';
 import { heartbeat } from '@temporalio/activity';
 
 import logger from '@alga-psa/core/logger';
-import { getAdminConnection } from '@alga-psa/db/admin.js';
-import { withTransaction } from '@alga-psa/db';
+import {
+  getAdminConnection,
+  refreshAdminConnection,
+  withAdminTransactionRetryReadOnly,
+  retryOnAdminReadOnly,
+} from '@alga-psa/db/admin.js';
+import { withTransaction, isReadOnlyError } from '@alga-psa/db';
 import { getRedisStreamClient } from '@alga-psa/workflow-streams';
 
 import { createNinjaOneClient, NinjaOneClient } from '@ee/lib/integrations/ninjaone/ninjaOneClient';
@@ -78,6 +83,33 @@ class NinjaOneSyncWorker {
     }
     if (!this.auditUserId) {
       this.auditUserId = await this.getDefaultAuditUserId();
+    }
+  }
+
+  /**
+   * Run a non-transaction write against the cached admin pool with one
+   * automatic retry on read-only errors. PgBouncer/Patroni post-failover
+   * stale-pool issue — see @alga-psa/db/readOnlyRetry for details. After
+   * a refresh, this.knex is re-acquired so subsequent operations see the
+   * new pool.
+   */
+  private async runWriteWithRetry<T>(
+    label: string,
+    op: (knex: Knex) => Promise<T>
+  ): Promise<T> {
+    if (!this.knex) {
+      this.knex = await getAdminConnection();
+    }
+    try {
+      return await op(this.knex);
+    } catch (err) {
+      if (!isReadOnlyError(err)) throw err;
+      logger.warn(
+        `[NinjaOneSyncWorker.${label}] admin pool returned a read-only connection; refreshing and retrying once`,
+        { tenantId: this.tenantId, error: err instanceof Error ? err.message : String(err) }
+      );
+      this.knex = await refreshAdminConnection();
+      return await op(this.knex);
     }
   }
 
@@ -536,7 +568,7 @@ class NinjaOneSyncWorker {
     const createRequest = mappingResult.createRequest;
     const baseAssetData = mappingResult.baseFields!;
 
-    return await withTransaction(this.knex!, async (trx: Knex.Transaction) => {
+    return await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
       const now = new Date().toISOString();
 
       const [asset] = await trx('assets')
@@ -634,7 +666,7 @@ class NinjaOneSyncWorker {
         break;
     }
 
-    return await withTransaction(this.knex!, async (trx: Knex.Transaction) => {
+    return await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
       const now = new Date().toISOString();
 
       // Get current asset to check if client_id needs updating
@@ -747,14 +779,16 @@ class NinjaOneSyncWorker {
   private async updateAssetLastSeen(assetId: string, device: NinjaOneDeviceDetail): Promise<void> {
     const now = new Date().toISOString();
 
-    await this.knex!('assets')
-      .where({ tenant: this.tenantId, asset_id: assetId })
-      .update({
-        agent_status: device.offline ? 'offline' : 'online',
-        last_seen_at: unixTimestampToIso(device.lastContact),
-        last_rmm_sync_at: now,
-        updated_at: now,
-      });
+    await this.runWriteWithRetry('updateAssetLastSeen', (knex) =>
+      knex('assets')
+        .where({ tenant: this.tenantId, asset_id: assetId })
+        .update({
+          agent_status: device.offline ? 'offline' : 'online',
+          last_seen_at: unixTimestampToIso(device.lastContact),
+          last_rmm_sync_at: now,
+          updated_at: now,
+        })
+    );
   }
 
   private async handleDeletedDevices(mappings: RmmOrganizationMapping[]): Promise<number> {
@@ -790,7 +824,7 @@ class NinjaOneSyncWorker {
   private async markAssetAsDeleted(assetId: string): Promise<void> {
     const now = new Date().toISOString();
 
-    await withTransaction(this.knex!, async (trx: Knex.Transaction) => {
+    await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
       await trx('assets')
         .where({ tenant: this.tenantId, asset_id: assetId })
         .update({
@@ -902,9 +936,11 @@ class NinjaOneSyncWorker {
   }
 
   private async updateOrganizationMappingLastSynced(mappingId: string): Promise<void> {
-    await this.knex!('rmm_organization_mappings')
-      .where({ tenant: this.tenantId, mapping_id: mappingId })
-      .update({ last_synced_at: new Date().toISOString() });
+    await this.runWriteWithRetry('updateOrganizationMappingLastSynced', (knex) =>
+      knex('rmm_organization_mappings')
+        .where({ tenant: this.tenantId, mapping_id: mappingId })
+        .update({ last_synced_at: new Date().toISOString() })
+    );
   }
 
   private async updateSyncStatus(status: RmmSyncStatus, errorMessage?: string): Promise<void> {
@@ -919,9 +955,11 @@ class NinjaOneSyncWorker {
       updateData.sync_error = undefined;
     }
 
-    await this.knex!('rmm_integrations')
-      .where({ tenant: this.tenantId, integration_id: this.integrationId })
-      .update(updateData);
+    await this.runWriteWithRetry('updateSyncStatus', (knex) =>
+      knex('rmm_integrations')
+        .where({ tenant: this.tenantId, integration_id: this.integrationId })
+        .update(updateData)
+    );
   }
 
   private async updateIntegrationAfterSync(
@@ -946,9 +984,11 @@ class NinjaOneSyncWorker {
       updateData.sync_error = undefined;
     }
 
-    await this.knex!('rmm_integrations')
-      .where({ tenant: this.tenantId, integration_id: this.integrationId })
-      .update(updateData);
+    await this.runWriteWithRetry('updateIntegrationAfterSync', (knex) =>
+      knex('rmm_integrations')
+        .where({ tenant: this.tenantId, integration_id: this.integrationId })
+        .update(updateData)
+    );
   }
 
   private async emitSyncStartedEvent(syncType: 'full' | 'incremental'): Promise<void> {
@@ -1098,7 +1138,24 @@ export async function syncNinjaOneOrganizationsActivity(input: {
 
   try {
     const { tenantId, integrationId } = input;
-    const knex = await getAdminConnection();
+    let knex = await getAdminConnection();
+
+    // Wrap each write so a stale read-only connection from PgBouncer/Patroni
+    // post-failover is recovered transparently. Re-binds the outer `knex`
+    // var on refresh so subsequent operations use the new pool.
+    const writeWithRetry = async <T>(label: string, op: () => Promise<T>): Promise<T> => {
+      try {
+        return await op();
+      } catch (err) {
+        if (!isReadOnlyError(err)) throw err;
+        logger.warn(
+          `[syncNinjaOneOrganizationsActivity:${label}] admin pool returned a read-only connection; refreshing and retrying once`,
+          { tenantId, error: err instanceof Error ? err.message : String(err) }
+        );
+        knex = await refreshAdminConnection();
+        return await op();
+      }
+    };
 
     const integration = await knex('rmm_integrations')
       .where({ tenant: tenantId, integration_id: integrationId, provider: 'ninjaone' })
@@ -1108,12 +1165,14 @@ export async function syncNinjaOneOrganizationsActivity(input: {
       throw new Error('NinjaOne integration not configured');
     }
 
-    await knex('rmm_integrations')
-      .where({ tenant: tenantId, integration_id: integrationId })
-      .update({
-        sync_status: 'syncing',
-        updated_at: knex.fn.now(),
-      });
+    await writeWithRetry('markSyncing', () =>
+      knex('rmm_integrations')
+        .where({ tenant: tenantId, integration_id: integrationId })
+        .update({
+          sync_status: 'syncing',
+          updated_at: knex.fn.now(),
+        })
+    );
 
     const client = await createNinjaOneClient(tenantId);
     const organizations: NinjaOneOrganization[] = await client.getOrganizations();
@@ -1131,24 +1190,28 @@ export async function syncNinjaOneOrganizationsActivity(input: {
           .first();
 
         if (existingMapping) {
-          await knex('rmm_organization_mappings')
-            .where({ tenant: tenantId, mapping_id: existingMapping.mapping_id })
-            .update({
-              external_organization_name: org.name,
-              metadata: JSON.stringify({ description: org.description, tags: org.tags }),
-              updated_at: knex.fn.now(),
-            });
+          await writeWithRetry('updateOrgMapping', () =>
+            knex('rmm_organization_mappings')
+              .where({ tenant: tenantId, mapping_id: existingMapping.mapping_id })
+              .update({
+                external_organization_name: org.name,
+                metadata: JSON.stringify({ description: org.description, tags: org.tags }),
+                updated_at: knex.fn.now(),
+              })
+          );
           itemsUpdated++;
         } else {
-          await knex('rmm_organization_mappings').insert({
-            tenant: tenantId,
-            integration_id: integration.integration_id,
-            external_organization_id: String(org.id),
-            external_organization_name: org.name,
-            auto_sync_assets: true,
-            auto_create_tickets: false,
-            metadata: JSON.stringify({ description: org.description, tags: org.tags }),
-          });
+          await writeWithRetry('insertOrgMapping', () =>
+            knex('rmm_organization_mappings').insert({
+              tenant: tenantId,
+              integration_id: integration.integration_id,
+              external_organization_id: String(org.id),
+              external_organization_name: org.name,
+              auto_sync_assets: true,
+              auto_create_tickets: false,
+              metadata: JSON.stringify({ description: org.description, tags: org.tags }),
+            })
+          );
           itemsCreated++;
         }
       } catch (orgError) {
@@ -1158,14 +1221,16 @@ export async function syncNinjaOneOrganizationsActivity(input: {
       }
     }
 
-    await knex('rmm_integrations')
-      .where({ tenant: tenantId, integration_id: integrationId })
-      .update({
-        sync_status: 'completed',
-        last_sync_at: knex.fn.now(),
-        sync_error: errors.length > 0 ? errors.join('; ') : null,
-        updated_at: knex.fn.now(),
-      });
+    await writeWithRetry('markCompleted', () =>
+      knex('rmm_integrations')
+        .where({ tenant: tenantId, integration_id: integrationId })
+        .update({
+          sync_status: 'completed',
+          last_sync_at: knex.fn.now(),
+          sync_error: errors.length > 0 ? errors.join('; ') : null,
+          updated_at: knex.fn.now(),
+        })
+    );
 
     return {
       success: errors.length === 0,
@@ -1184,14 +1249,19 @@ export async function syncNinjaOneOrganizationsActivity(input: {
     logger.error('[NinjaOneActions] Error syncing organizations (Temporal worker):', extractErrorInfo(error));
 
     try {
-      const knex = await getAdminConnection();
-      await knex('rmm_integrations')
-        .where({ tenant: input.tenantId, integration_id: input.integrationId })
-        .update({
-          sync_status: 'error',
-          sync_error: errorMessage,
-          updated_at: knex.fn.now(),
-        });
+      await retryOnAdminReadOnly(
+        async () => {
+          const knex = await getAdminConnection();
+          await knex('rmm_integrations')
+            .where({ tenant: input.tenantId, integration_id: input.integrationId })
+            .update({
+              sync_status: 'error',
+              sync_error: errorMessage,
+              updated_at: knex.fn.now(),
+            });
+        },
+        { logLabel: 'syncNinjaOneOrganizationsActivity:errorPath' }
+      );
     } catch {
       // Ignore update errors
     }

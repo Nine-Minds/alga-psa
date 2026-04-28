@@ -4,7 +4,7 @@
  */
 
 import { Context } from '@temporalio/activity';
-import { getAdminConnection } from '@alga-psa/db/admin.js';
+import { getAdminConnection, withAdminTransactionRetryReadOnly } from '@alga-psa/db/admin.js';
 import type { Knex } from 'knex';
 
 const logger = () => Context.current().log;
@@ -30,47 +30,45 @@ export async function updateTenantLicenseCount(
   });
 
   try {
-    const knex = await getAdminConnection();
-    
-    await knex.transaction(async (trx: Knex.Transaction) => {
+    await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
       // Check for idempotency if event ID is provided
       if (input.eventId) {
         const existing = await trx('tenants')
-          .where({ 
+          .where({
             tenant: input.tenantId,
-            stripe_event_id: input.eventId 
+            stripe_event_id: input.eventId
           })
           .first();
-        
+
         if (existing) {
-          log.info('Event already processed, skipping update', { 
+          log.info('Event already processed, skipping update', {
             tenantId: input.tenantId,
-            eventId: input.eventId 
+            eventId: input.eventId
           });
           return;
         }
       }
-      
+
       // Update the tenant's license count
       const result = await trx('tenants')
         .where({ tenant: input.tenantId })
         .update({
           licensed_user_count: input.licenseCount,
-          last_license_update: knex.fn.now(),
+          last_license_update: trx.fn.now(),
           stripe_event_id: input.eventId || null,
-          updated_at: knex.fn.now()
+          updated_at: trx.fn.now()
         });
-      
+
       if (result === 0) {
         throw new Error(`Tenant not found: ${input.tenantId}`);
       }
-      
-      log.info('Tenant license count updated successfully', { 
+
+      log.info('Tenant license count updated successfully', {
         tenantId: input.tenantId,
-        licenseCount: input.licenseCount 
+        licenseCount: input.licenseCount
       });
     });
-    
+
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     log.error('Failed to update tenant license count', { 

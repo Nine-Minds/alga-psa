@@ -9,6 +9,7 @@ import type { Knex as KnexType } from './knex-turbopack';
 import { getKnexConfig } from './knexfile';
 import logger from '@alga-psa/core/logger';
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { isReadOnlyError, retryOnReadOnly } from './readOnlyRetry';
 
 type PoolConfig = KnexType.PoolConfig & {
   afterCreate?: (connection: any, done: (err: Error | null, connection: any) => void) => void;
@@ -79,6 +80,50 @@ export async function getConnection(tenantId?: string | null): Promise<KnexType>
   return sharedKnexInstance;
 }
 
+/**
+ * Destroy the cached tenant Knex pool. Used by refreshTenantConnection()
+ * to discard a pool that's started handing out read-only backend
+ * connections (e.g. PgBouncer in front of a Patroni HA setup retains
+ * stale backend connections after a coordinator failover).
+ */
+export async function destroyTenantConnection(): Promise<void> {
+  if (sharedKnexInstance) {
+    try {
+      await sharedKnexInstance.destroy();
+    } finally {
+      sharedKnexInstance = null;
+    }
+  }
+}
+
+/**
+ * Force-recreate the tenant pool. Callers should use this after catching a
+ * "read-only transaction" / "writing to worker nodes" / "cannot execute
+ * UPDATE in a read-only" error, so the next call to getConnection() returns
+ * a freshly-reconnected pool. Mirrors refreshAdminConnection() from
+ * @alga-psa/db/admin.
+ */
+export async function refreshTenantConnection(): Promise<KnexType> {
+  await destroyTenantConnection();
+  return await getConnection(null);
+}
+
+/**
+ * Run an operation against the tenant pool with one automatic retry on
+ * read-only errors. For callers that don't fit the single-transaction
+ * shape of withTenantTransactionRetryReadOnly (e.g. code that issues
+ * multiple separate queries inside runWithTenant blocks).
+ */
+export async function retryOnTenantReadOnly<T>(
+  op: () => Promise<T>,
+  context?: { logLabel?: string }
+): Promise<T> {
+  return retryOnReadOnly(op, refreshTenantConnection, {
+    logLabel: context?.logLabel ?? 'db/tenant',
+    logger,
+  });
+}
+
 export async function withTransaction<T>(
   tenantId: string,
   callback: (trx: KnexType.Transaction) => Promise<T>
@@ -117,6 +162,43 @@ export async function withTransaction<T>(
   }
 
   return knex.transaction(callback);
+}
+
+/**
+ * Run a callback inside a tenant-scoped transaction with one automatic
+ * retry on read-only errors.
+ *
+ * If the inner work throws a "read-only" error (see isReadOnlyError),
+ * this drops the cached tenant pool, recreates it, and re-runs the
+ * callback once. The original transaction has already been rolled back
+ * by Knex when its inner query failed, so the retry executes a fresh
+ * transaction against the new pool. Non-read-only errors propagate
+ * unchanged.
+ *
+ * Use this in temporal activities and other tenant-path code that does
+ * DB writes and may sit behind PgBouncer/Patroni HA.
+ */
+export async function withTenantTransactionRetryReadOnly<T>(
+  tenantId: string,
+  callback: (trx: KnexType.Transaction) => Promise<T>
+): Promise<T> {
+  try {
+    const knex = await getConnection(tenantId);
+    return await tenantContext.run(tenantId, () =>
+      knex.transaction((trx) => tenantContext.run(tenantId, () => callback(trx)))
+    );
+  } catch (err) {
+    if (!isReadOnlyError(err)) throw err;
+    logger.warn(
+      '[db/tenant] tenant pool returned a read-only connection (likely post-failover stale pool); refreshing pool and retrying once',
+      { error: err instanceof Error ? err.message : String(err) }
+    );
+    await refreshTenantConnection();
+    const knex = await getConnection(tenantId);
+    return await tenantContext.run(tenantId, () =>
+      knex.transaction((trx) => tenantContext.run(tenantId, () => callback(trx)))
+    );
+  }
 }
 
 export async function createTenantKnex(

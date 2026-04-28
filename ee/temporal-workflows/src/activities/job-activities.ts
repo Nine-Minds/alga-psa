@@ -1,5 +1,5 @@
 import { createLogger, format, transports } from 'winston';
-import { getAdminConnection } from '@alga-psa/db/admin.js';
+import { getAdminConnection, withAdminTransactionRetryReadOnly } from '@alga-psa/db/admin.js';
 import type { Knex } from 'knex';
 import type { JobStatus } from '../types/job.js';
 
@@ -30,8 +30,7 @@ async function runWithTenant<T>(
   tenantId: string,
   callback: (trx: Knex.Transaction) => Promise<T>
 ): Promise<T> {
-  const knex = await getAdminConnection();
-  return knex.transaction(async (trx) => {
+  return withAdminTransactionRetryReadOnly(async (trx) => {
     await trx.raw(`SET LOCAL app.current_tenant = '${tenantId}'`);
     return callback(trx);
   });
