@@ -50,7 +50,7 @@ export interface PauseSignal {
 }
 
 export interface CompleteSignal {
-  met: boolean;
+  met: boolean | null;
 }
 
 const activities = proxyActivities<{
@@ -256,7 +256,7 @@ export async function slaTicketWorkflow(
   // row has been deleted exit as 'cancelled' so the two cases are
   // distinguishable in workflow state and downstream metrics.
   const checkClosedAndComplete = async (
-    triggeredBy: 'startup' | 'wake'
+    triggeredBy: 'startup' | 'wake' | 'pause'
   ): Promise<boolean> => {
     const result = await activities.completeIfTicketClosed({
       tenantId,
@@ -319,13 +319,20 @@ export async function slaTicketWorkflow(
 
       while (state.pauseState.isPaused && !cancelled && !resolutionCompleted &&
              !(phase.phase === 'response' && responseCompleted)) {
-        await condition(
+        const resumedOrCompleted = await condition(
           () =>
             !state.pauseState.isPaused ||
             cancelled ||
             resolutionCompleted ||
-            (phase.phase === 'response' && responseCompleted)
+            (phase.phase === 'response' && responseCompleted),
+          60_000
         );
+
+        if (!resumedOrCompleted && state.pauseState.isPaused) {
+          if (await checkClosedAndComplete('pause')) {
+            break;
+          }
+        }
       }
 
       if (cancelled || resolutionCompleted) {

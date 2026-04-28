@@ -359,7 +359,7 @@ export async function recordResolution(
       met
     });
 
-    if (!options?.skipBackend && met !== null) {
+    if (!options?.skipBackend) {
       try {
         const backend = await SlaBackendFactory.getBackend();
         await backend.completeSla(ticketId, 'resolution', met);

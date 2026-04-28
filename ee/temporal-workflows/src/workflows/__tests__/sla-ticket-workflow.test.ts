@@ -318,4 +318,54 @@ describe('slaTicketWorkflow', () => {
       await env.teardown();
     }
   });
+
+  it('self-completes while paused when the close signal was missed', async () => {
+    let closeChecks = 0;
+    const sendCalls: Array<unknown> = [];
+    const { env, worker, taskQueue } = await setupWorkflowTest({
+      completeIfTicketClosed: async () => {
+        closeChecks += 1;
+        if (closeChecks < 2) {
+          return {
+            closed: false,
+            responseMet: null,
+            resolutionMet: null,
+          };
+        }
+
+        return {
+          closed: true,
+          responseMet: true,
+          resolutionMet: true,
+        };
+      },
+      sendSlaNotification: async (input: unknown) => {
+        sendCalls.push(input);
+      },
+    });
+    try {
+      await worker.runUntil(async () => {
+        const handle = await env.client.workflow.start(slaTicketWorkflow, {
+          args: [
+            {
+              ticketId: 'ticket-paused-close',
+              tenantId: 'tenant-paused-close',
+              policyTargets: [target],
+              businessHoursSchedule: schedule24x7,
+            },
+          ],
+          taskQueue,
+          workflowId: 'sla-ticket-tenant-paused-close-ticket-paused-close',
+        });
+
+        await handle.signal('pause', { reason: 'awaiting_client' });
+        await handle.result();
+      });
+
+      expect(closeChecks).toBeGreaterThanOrEqual(2);
+      expect(sendCalls).toEqual([]);
+    } finally {
+      await env.teardown();
+    }
+  });
 });
