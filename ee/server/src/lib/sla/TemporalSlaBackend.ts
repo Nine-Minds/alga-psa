@@ -75,7 +75,7 @@ export class TemporalSlaBackend implements ISlaBackend {
   async completeSla(
     ticketId: string,
     type: 'response' | 'resolution',
-    met: boolean
+    met: boolean | null
   ): Promise<void> {
     const handle = await this.getHandle(ticketId);
     const signalName = type === 'response' ? 'completeResponse' : 'completeResolution';

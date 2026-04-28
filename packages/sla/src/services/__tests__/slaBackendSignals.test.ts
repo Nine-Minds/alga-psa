@@ -118,6 +118,19 @@ describe('SLA backend signaling', () => {
     expect(backendMock.completeSla).toHaveBeenCalledWith(TICKET_ID, 'resolution', true);
   });
 
+  it("recordResolution still completes the backend when met is null", async () => {
+    const trx = createAdvancedMockTrx();
+    trx.setData('tickets', {
+      sla_policy_id: POLICY_ID,
+      sla_resolution_at: null,
+      sla_resolution_due_at: null,
+      sla_total_pause_minutes: 0,
+    });
+
+    await recordResolution(trx, TENANT_ID, TICKET_ID, new Date());
+    expect(backendMock.completeSla).toHaveBeenCalledWith(TICKET_ID, 'resolution', null);
+  });
+
   it('pauseSla signals backend.pauseSla()', async () => {
     const trx = createAdvancedMockTrx();
     trx.setData('tickets', {

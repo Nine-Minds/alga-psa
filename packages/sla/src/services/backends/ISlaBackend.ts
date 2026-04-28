@@ -18,7 +18,7 @@ export interface ISlaBackend {
   completeSla(
     ticketId: string,
     type: 'response' | 'resolution',
-    met: boolean
+    met: boolean | null
   ): Promise<void>;
   cancelSla(ticketId: string): Promise<void>;
   getSlaStatus(ticketId: string): Promise<ISlaStatus | null>;
