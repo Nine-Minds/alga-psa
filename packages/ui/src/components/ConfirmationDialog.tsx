@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './Dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter } from './Dialog';
 import { Button } from './Button';
 import { RadioGroup } from './RadioGroup';
 import { useRegisterUIComponent } from '../ui-reflection/useRegisterUIComponent';
@@ -83,6 +83,9 @@ export const ConfirmationDialog = ({
       }}
     >
       <DialogContent>
+        <DialogDescription className="sr-only">
+          {typeof message === 'string' ? message : title}
+        </DialogDescription>
         {typeof message === 'string' ? (
           <p className="text-gray-600">{message}</p>
         ) : (
