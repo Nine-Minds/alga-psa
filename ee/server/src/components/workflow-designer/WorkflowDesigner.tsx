@@ -303,7 +303,10 @@ const DESIGNER_PALETTE_COLLAPSED_WIDTH = 32;
 const DESIGNER_PALETTE_TOGGLE_OVERHANG = 16;
 const DESIGNER_CENTER_LEFT_EXTRA_PADDING = 16;
 const DESIGNER_CENTER_RIGHT_EXTRA_PADDING = 24;
-const DESIGNER_CENTER_MIN_WIDTH = 640;
+const DESIGNER_CENTER_MIN_WIDTH = 480;
+const DESIGNER_CENTER_MAX_WIDTH = 896;
+const DESIGNER_SIDEBAR_FLOATING_MIN_WIDTH = 252;
+const DESIGNER_FLOAT_MIN_WIDTH = 1100;
 
 type PipeSegment = {
   index: number;
@@ -1535,15 +1538,13 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       ? DESIGNER_PALETTE_COLLAPSED_WIDTH
       : DESIGNER_PALETTE_WIDTH;
     const anchorWidth = designerFloatAnchorRect.right - designerFloatAnchorRect.left;
-    const minimumFloatingWidth =
+    const fixedFloatingWidth =
       (DESIGNER_FLOAT_PANEL_OFFSET * 2)
       + currentPaletteWidth
       + DESIGNER_PALETTE_TOGGLE_OVERHANG
       + DESIGNER_CENTER_LEFT_EXTRA_PADDING
-      + DESIGNER_CENTER_MIN_WIDTH
-      + DESIGNER_CENTER_RIGHT_EXTRA_PADDING
-      + designerSidebarWidth;
-    const isStacked = anchorWidth < minimumFloatingWidth;
+      + DESIGNER_CENTER_RIGHT_EXTRA_PADDING;
+    const isStacked = anchorWidth < DESIGNER_FLOAT_MIN_WIDTH;
 
     if (isStacked) {
       return {
@@ -1558,8 +1559,35 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           maxHeight: 'none',
         } as React.CSSProperties,
         centerScrollStyle: {} as React.CSSProperties,
+        centerPaneStyle: undefined,
       };
     }
+
+    const availableEditorWidth = Math.max(
+      DESIGNER_CENTER_MIN_WIDTH + DESIGNER_SIDEBAR_FLOATING_MIN_WIDTH,
+      anchorWidth - fixedFloatingWidth
+    );
+    const preferredEditorWidth = DESIGNER_CENTER_MAX_WIDTH + designerSidebarWidth;
+    const editorWidthShortfall = Math.max(0, preferredEditorWidth - availableEditorWidth);
+    const sharedShrink = editorWidthShortfall / 2;
+    let centerShrink = Math.min(DESIGNER_CENTER_MAX_WIDTH - DESIGNER_CENTER_MIN_WIDTH, sharedShrink);
+    let sidebarShrink = Math.min(designerSidebarWidth - DESIGNER_SIDEBAR_FLOATING_MIN_WIDTH, sharedShrink);
+    let remainingShrink = editorWidthShortfall - centerShrink - sidebarShrink;
+
+    if (remainingShrink > 0) {
+      const sidebarShrinkRoom = designerSidebarWidth - DESIGNER_SIDEBAR_FLOATING_MIN_WIDTH - sidebarShrink;
+      const extraSidebarShrink = Math.min(sidebarShrinkRoom, remainingShrink);
+      sidebarShrink += extraSidebarShrink;
+      remainingShrink -= extraSidebarShrink;
+    }
+
+    if (remainingShrink > 0) {
+      const centerShrinkRoom = DESIGNER_CENTER_MAX_WIDTH - DESIGNER_CENTER_MIN_WIDTH - centerShrink;
+      centerShrink += Math.min(centerShrinkRoom, remainingShrink);
+    }
+
+    const effectiveCenterWidth = DESIGNER_CENTER_MAX_WIDTH - centerShrink;
+    const effectiveSidebarWidth = designerSidebarWidth - sidebarShrink;
 
     const paletteLeft = Math.min(
       Math.max(DESIGNER_FLOAT_EDGE_GUTTER, designerFloatAnchorRect.left + DESIGNER_FLOAT_PANEL_OFFSET),
@@ -1569,9 +1597,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     const sidebarLeft = Math.min(
       Math.max(
         DESIGNER_FLOAT_EDGE_GUTTER,
-        designerFloatAnchorRect.right - DESIGNER_FLOAT_PANEL_OFFSET - designerSidebarWidth
+        designerFloatAnchorRect.right - DESIGNER_FLOAT_PANEL_OFFSET - effectiveSidebarWidth
       ),
-      Math.max(DESIGNER_FLOAT_EDGE_GUTTER, window.innerWidth - DESIGNER_FLOAT_EDGE_GUTTER - designerSidebarWidth)
+      Math.max(DESIGNER_FLOAT_EDGE_GUTTER, window.innerWidth - DESIGNER_FLOAT_EDGE_GUTTER - effectiveSidebarWidth)
     );
     const maxHeight = Math.max(
       DESIGNER_FLOAT_MIN_HEIGHT,
@@ -1598,12 +1626,15 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         position: 'fixed',
         top,
         left: sidebarLeft,
-        width: designerSidebarWidth,
+        width: effectiveSidebarWidth,
         maxHeight,
       } as React.CSSProperties,
       centerScrollStyle: {
         paddingLeft: `${centerPaddingLeft}px`,
         paddingRight: `${centerPaddingRight}px`,
+      } as React.CSSProperties,
+      centerPaneStyle: {
+        maxWidth: effectiveCenterWidth,
       } as React.CSSProperties,
     };
   }, [designerFloatAnchorRect, designerSidebarWidth, isPaletteCollapsed]);
@@ -3548,7 +3579,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                 visible={Boolean(designerFloatAnchorRect)}
                 style={designerFloatingLayout?.paletteStyle}
                 layout={isDesignerStacked ? 'stacked' : 'floating'}
-                className={isDesignerStacked ? 'order-1 mx-4 mt-4 flex-none' : undefined}
+                className={isDesignerStacked ? 'order-1 mx-auto mt-4 w-[calc(100%-2rem)] max-w-4xl flex-none' : undefined}
                 search={search}
                 onSearchChange={setSearch}
                 registryError={registryError}
@@ -3771,7 +3802,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
             className={isDesignerStacked ? 'order-2 flex-none min-h-0 overflow-visible p-4' : 'flex-1 min-h-0 overflow-y-auto p-6 pl-72 pr-[460px]'}
             style={designerFloatingLayout?.centerScrollStyle}
           >
-          <div className="max-w-4xl mx-auto space-y-6">
+          <div className="max-w-4xl mx-auto space-y-6" style={designerFloatingLayout?.centerPaneStyle}>
                 {showInitialDesignerSkeleton ? (
                   <>
                     <Card className="p-4 space-y-4">

@@ -57,12 +57,7 @@ export function WorkflowDesignerPalette<TItem extends WorkflowDesignerPaletteIte
   const isStacked = layout === 'stacked';
   const containerStyle: React.CSSProperties | undefined = visible
     ? isStacked
-      ? {
-          ...(style || {}),
-          width: 'auto',
-          minWidth: 0,
-          maxWidth: 'none',
-        }
+      ? style
       : {
           ...(style || {}),
           width: outerWidth,
@@ -139,7 +134,7 @@ export function WorkflowDesignerPalette<TItem extends WorkflowDesignerPaletteIte
               <div className="text-[10px] font-semibold uppercase text-gray-400 tracking-wider mb-2">
                 {t(`designer.palette.categories.${category}`, { defaultValue: category })}
               </div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className={`${styles.itemGrid} ${isStacked ? styles.itemGridStacked : styles.itemGridFloating}`}>
                 {items.map((item) => {
                   const currentPaletteIndex = paletteIndex;
                   paletteIndex += 1;
