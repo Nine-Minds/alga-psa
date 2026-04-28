@@ -785,6 +785,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
       title: t('runDetails.stepTimeline.columns.attempt', { defaultValue: 'Attempt' }),
       dataIndex: 'attempt',
       width: '100px',
+      render: (_value: unknown, step: WorkflowRunStepRecord) => step.attempt,
     },
     {
       title: t('runDetails.stepTimeline.columns.duration', { defaultValue: 'Duration' }),
