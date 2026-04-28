@@ -3,10 +3,6 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
 import { createTestDbConnection, createTenant, createUser } from './_dbTestUtils';
-import {
-  createBucketOverlayForPlan,
-  createFixedPlanAssignment,
-} from '../../../../../server/test-utils/billingTestHelpers';
 
 const runtimeState = vi.hoisted(() => ({
   db: null as Knex | null,
@@ -130,6 +126,203 @@ async function grantWorkflowTimeTestPermissions(db: Knex, tenantId: string, user
     user_id: userId,
     role_id: roleId,
   });
+}
+
+type BillingFixtureContext = {
+  db: Knex;
+  tenantId: string;
+  clientId: string;
+  userId?: string;
+};
+
+type FixedPlanFixtureOptions = {
+  clientId?: string;
+  startDate?: string;
+  endDate?: string | null;
+  billingFrequency?: string;
+  planName?: string;
+  quantity?: number;
+  baseRateCents?: number;
+};
+
+type BucketOverlayFixtureOptions = {
+  serviceId?: string;
+  totalMinutes?: number;
+  totalHours?: number;
+  overageRateCents?: number;
+  allowRollover?: boolean;
+  billingPeriod?: string;
+  configId?: string;
+};
+
+async function createFixedPlanAssignment(
+  context: BillingFixtureContext,
+  serviceId: string,
+  options: FixedPlanFixtureOptions = {}
+): Promise<{ contractLineId: string; clientContractLineId: string; contractId: string; clientContractId: string }> {
+  const contractLineId = uuidv4();
+  const clientContractLineId = uuidv4();
+  const contractId = uuidv4();
+  const clientContractId = uuidv4();
+  const configId = uuidv4();
+  const targetClientId = options.clientId ?? context.clientId;
+  const startDate = options.startDate ?? '2025-02-01';
+  const endDate = options.endDate ?? null;
+  const billingFrequency = options.billingFrequency ?? 'monthly';
+  const planName = options.planName ?? 'Workflow Time Test Contract Line';
+  const quantity = options.quantity ?? 1;
+  const baseRateDollars = (options.baseRateCents ?? 1000) / 100;
+  const now = context.db.fn.now();
+
+  await context.db('contracts').insert({
+    tenant: context.tenantId,
+    contract_id: contractId,
+    contract_name: planName,
+    contract_description: `${planName} fixture`,
+    billing_frequency: billingFrequency,
+    is_active: true,
+    status: 'Active',
+    is_template: false,
+    currency_code: 'USD',
+    owner_client_id: targetClientId,
+    created_at: now,
+    updated_at: now,
+  });
+
+  await context.db('client_contracts').insert({
+    tenant: context.tenantId,
+    client_contract_id: clientContractId,
+    client_id: targetClientId,
+    contract_id: contractId,
+    start_date: startDate,
+    end_date: endDate,
+    is_active: true,
+    status: 'pending',
+    po_number: null,
+    po_amount: null,
+    po_required: false,
+    template_contract_id: null,
+    created_at: now,
+    updated_at: now,
+  });
+
+  await context.db('contract_lines').insert({
+    contract_line_id: contractLineId,
+    tenant: context.tenantId,
+    contract_id: contractId,
+    contract_line_name: planName,
+    billing_frequency: billingFrequency,
+    is_custom: false,
+    contract_line_type: 'Fixed',
+    custom_rate: baseRateDollars,
+    enable_proration: false,
+    billing_cycle_alignment: 'start',
+    billing_timing: 'arrears',
+    cadence_owner: 'client',
+  });
+
+  await context.db('contract_line_services').insert({
+    tenant: context.tenantId,
+    contract_line_id: contractLineId,
+    service_id: serviceId,
+    quantity,
+    custom_rate: null,
+  });
+
+  await context.db('contract_line_service_configuration').insert({
+    config_id: configId,
+    contract_line_id: contractLineId,
+    service_id: serviceId,
+    configuration_type: 'Fixed',
+    custom_rate: null,
+    quantity,
+    tenant: context.tenantId,
+  });
+
+  await context.db('contract_line_service_fixed_config').insert({
+    config_id: configId,
+    tenant: context.tenantId,
+    base_rate: baseRateDollars,
+  });
+
+  await context.db('client_contract_lines').insert({
+    tenant: context.tenantId,
+    client_contract_line_id: clientContractLineId,
+    client_id: targetClientId,
+    contract_line_id: contractLineId,
+    start_date: startDate,
+    end_date: endDate,
+    is_active: true,
+  });
+
+  return { contractLineId, clientContractLineId, contractId, clientContractId };
+}
+
+async function createBucketOverlayForPlan(
+  context: BillingFixtureContext,
+  contractLineId: string,
+  options: BucketOverlayFixtureOptions = {}
+): Promise<{ configId: string; serviceId: string }> {
+  const baseConfig = options.serviceId
+    ? await context.db('contract_line_service_configuration')
+      .where({
+        tenant: context.tenantId,
+        contract_line_id: contractLineId,
+        service_id: options.serviceId,
+      })
+      .whereNot('configuration_type', 'Bucket')
+      .first()
+    : await context.db('contract_line_service_configuration')
+      .where({ tenant: context.tenantId, contract_line_id: contractLineId })
+      .whereNot('configuration_type', 'Bucket')
+      .first();
+
+  const serviceId = options.serviceId ?? baseConfig?.service_id;
+  if (!serviceId) {
+    throw new Error(`Unable to determine service for bucket overlay on contract line ${contractLineId}`);
+  }
+
+  const configId = options.configId ?? uuidv4();
+  const totalMinutes = options.totalMinutes ?? Math.round((options.totalHours ?? 40) * 60);
+  const bucketColumns = await context.db('contract_line_service_bucket_config').columnInfo();
+  const totalColumn = bucketColumns.total_minutes ? 'total_minutes' : bucketColumns.total_hours ? 'total_hours' : null;
+  if (!totalColumn) {
+    throw new Error('Unable to determine total capacity column for contract bucket config');
+  }
+
+  await context.db('contract_line_services')
+    .insert({
+      tenant: context.tenantId,
+      contract_line_id: contractLineId,
+      service_id: serviceId,
+      quantity: baseConfig?.quantity ?? null,
+      custom_rate: baseConfig?.custom_rate ?? null,
+    })
+    .onConflict(['tenant', 'service_id', 'contract_line_id'])
+    .merge({ quantity: baseConfig?.quantity ?? null, custom_rate: baseConfig?.custom_rate ?? null });
+
+  await context.db('contract_line_service_configuration').insert({
+    config_id: configId,
+    contract_line_id: contractLineId,
+    service_id: serviceId,
+    configuration_type: 'Bucket',
+    custom_rate: null,
+    quantity: null,
+    tenant: context.tenantId,
+  });
+
+  const bucketConfig: Record<string, unknown> = {
+    config_id: configId,
+    tenant: context.tenantId,
+    billing_period: options.billingPeriod ?? 'monthly',
+    overage_rate: options.overageRateCents ?? 0,
+    allow_rollover: options.allowRollover ?? false,
+  };
+  bucketConfig[totalColumn] = totalColumn === 'total_minutes' ? totalMinutes : Math.round(totalMinutes / 60);
+
+  await context.db('contract_line_service_bucket_config').insert(bucketConfig);
+
+  return { configId, serviceId };
 }
 
 async function createClient(db: Knex, tenantId: string, name = 'Test Client'): Promise<string> {
