@@ -1,0 +1,299 @@
+[
+  {
+    "id": "T001",
+    "description": "DB-backed registry/API test verifies all new project actions are registered with expected ids, labels, sideEffectful flags, idempotency metadata, and JSON Schema input/output schemas.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F007",
+      "F009",
+      "F011",
+      "F013",
+      "F015",
+      "F017",
+      "F019",
+      "F021",
+      "F023",
+      "F030",
+      "F036",
+      "F043",
+      "F047",
+      "F049",
+      "F052",
+      "F059",
+      "F060",
+      "F066"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "DB-backed action handler test covers `projects.find` and `projects.search` happy paths, including nullable not-found behavior and paginated search result metadata.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F006",
+      "F007",
+      "F008"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "DB-backed action handler test covers `projects.find_phase` and `projects.search_phases` with project scoping, deterministic ordering, and not-found error mode.",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F010",
+      "F011",
+      "F012"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "DB-backed action handler test covers `projects.find_task` and `projects.search_tasks` with project/phase/status filters, text query, first_task, total, and pagination metadata.",
+    "implemented": true,
+    "featureIds": [
+      "F013",
+      "F014",
+      "F015",
+      "F016"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "DB-backed permission/authorization test verifies project find/search/task search results are tenant-scoped and exclude unauthorized project records.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F006",
+      "F008",
+      "F010",
+      "F012",
+      "F014",
+      "F016"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "DB-backed action handler test covers `projects.update`, `projects.update_phase`, and `projects.update_task` happy paths for name/title and description changes, including changed output and audit records.",
+    "implemented": true,
+    "featureIds": [
+      "F017",
+      "F018",
+      "F019",
+      "F020",
+      "F021",
+      "F022",
+      "F067"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "DB-backed validation test verifies generic update actions reject empty patches, missing targets, and unauthorized updates without mutating data.",
+    "implemented": true,
+    "featureIds": [
+      "F017",
+      "F018",
+      "F019",
+      "F020",
+      "F021",
+      "F022",
+      "F003"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "DB-backed action handler test covers `projects.move_task` same-project move to another phase without explicit status and verifies status mapping remap, WBS/order change, task location, and audit output.",
+    "implemented": true,
+    "featureIds": [
+      "F023",
+      "F024",
+      "F026",
+      "F028",
+      "F029"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "DB-backed action handler test covers `projects.move_task` cross-project move without explicit status and verifies target project status mapping resolution plus project_ticket_links project/phase updates.",
+    "implemented": true,
+    "featureIds": [
+      "F023",
+      "F025",
+      "F027",
+      "F028",
+      "F029"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "DB-backed action handler test covers `projects.move_task` validation failures for missing task, missing target phase, and invalid explicit status mapping.",
+    "implemented": true,
+    "featureIds": [
+      "F023",
+      "F024",
+      "F025",
+      "F029"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "DB-backed action handler test covers `projects.assign_task` assigning a primary user and additional users, reconciling task resources, returning assignment output, and writing an audit record.",
+    "implemented": true,
+    "featureIds": [
+      "F030",
+      "F031",
+      "F033",
+      "F034",
+      "F035"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "DB-backed action handler test covers `projects.assign_task` no-op behavior when the primary and additional users already match.",
+    "implemented": true,
+    "featureIds": [
+      "F032",
+      "F034",
+      "F035"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "DB-backed action handler test covers `projects.assign_task` validation failures for inactive/missing primary or additional users without partial assignment changes.",
+    "implemented": true,
+    "featureIds": [
+      "F031",
+      "F033",
+      "F035"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "DB-backed action handler test covers `projects.duplicate_task` happy path copying core task fields, resetting actual hours, applying copy suffix, assigning target phase/status, and returning new task metadata.",
+    "implemented": true,
+    "featureIds": [
+      "F036",
+      "F037",
+      "F041",
+      "F042"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "DB-backed action handler test covers `projects.duplicate_task` optional copy of checklist, primary/additional assignees, and authorized ticket links with copied relation counts.",
+    "implemented": true,
+    "featureIds": [
+      "F038",
+      "F039",
+      "F040",
+      "F041",
+      "F042"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "DB-backed destructive action test covers `projects.delete_task` happy path cleaning task ticket links and checklist items before deleting the task.",
+    "implemented": true,
+    "featureIds": [
+      "F043",
+      "F045",
+      "F046"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "DB-backed destructive guard test verifies `projects.delete_task` refuses deletion when project_task time entries exist and leaves task/link/checklist data intact.",
+    "implemented": true,
+    "featureIds": [
+      "F043",
+      "F044",
+      "F046"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "DB-backed destructive action test covers `projects.delete_phase` and `projects.delete` representative happy/validation paths, including project deletion validation result shape and cleanup of tags/link records.",
+    "implemented": true,
+    "featureIds": [
+      "F047",
+      "F048",
+      "F049",
+      "F050",
+      "F051"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "DB-backed action handler test covers `projects.link_ticket_to_task` creating both `project_ticket_links` and `ticket_entity_links` with project/phase metadata and audit output.",
+    "implemented": true,
+    "featureIds": [
+      "F052",
+      "F053",
+      "F054",
+      "F055",
+      "F056",
+      "F057"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "DB-backed idempotency test verifies repeated `projects.link_ticket_to_task` calls do not create duplicate effective links and report created/existing state correctly.",
+    "implemented": true,
+    "featureIds": [
+      "F054",
+      "F055",
+      "F056"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "DB-backed action handler test covers `projects.add_tag` creating missing tag definitions, idempotently mapping project tags, separating added/existing results, and honoring action-provided idempotency.",
+    "implemented": true,
+    "featureIds": [
+      "F058",
+      "F059"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "DB-backed action handler test covers `projects.add_task_tag` creating missing project_task tag definitions, idempotently mapping task tags, separating added/existing results, and honoring action-provided idempotency.",
+    "implemented": true,
+    "featureIds": [
+      "F058",
+      "F060"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Schema/picker metadata test verifies new action fields expose project, phase, task, and project-task-status picker metadata with expected dependency paths and no tag picker metadata.",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F061",
+      "F062",
+      "F063",
+      "F064",
+      "F065"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Workflow designer fixed-picker test verifies project, phase, task, and status picker resources render in fixed-value mode and show dependency-disabled explanations until required parent fixed values are selected.",
+    "implemented": true,
+    "featureIds": [
+      "F061",
+      "F062",
+      "F063",
+      "F064",
+      "F065"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Compatibility regression test verifies existing `projects.create_task` remains registered and can still create a task after shared project workflow helpers or picker metadata are introduced.",
+    "implemented": true,
+    "featureIds": [
+      "F068"
+    ]
+  }
+]

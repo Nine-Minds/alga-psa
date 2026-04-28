@@ -1,5 +1,23 @@
 import type { IScheduleEntry, IHoliday } from '@alga-psa/types';
-import { Frequency, RRule, Weekday } from 'rrule';
+import * as rrulePkg from 'rrule';
+import type { Frequency, Weekday } from 'rrule';
+
+type RRuleConstructor = typeof import('rrule').RRule;
+
+const rruleExports = rrulePkg as unknown as {
+  RRule?: RRuleConstructor;
+  default?: { RRule?: RRuleConstructor };
+};
+
+function resolveRRule(): RRuleConstructor {
+  const resolved = rruleExports.RRule ?? rruleExports.default?.RRule;
+  if (!resolved) {
+    throw new Error('Unable to resolve RRule export from rrule package');
+  }
+  return resolved;
+}
+
+const RRule = resolveRRule();
 
 /**
  * Helper to format a date as YYYY-MM-DD string.
