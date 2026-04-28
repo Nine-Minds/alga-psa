@@ -136,6 +136,132 @@ function applyDefaultContactPhoneJoin(
 }
 
 /**
+ * One row of the joined ticket-detail shape every email handler needs.
+ * Loosely typed because handlers consume many of these as `any` today.
+ */
+type TicketEmailRow = Record<string, any> | undefined;
+
+/**
+ * The full joined ticket-detail fetch used by every TICKET_* email handler.
+ * Filters on (ticket_id, tenant) so Citus prunes to a single shard.
+ */
+async function fetchTicketForEmail(
+  db: Knex,
+  tenantId: string,
+  ticketId: string
+): Promise<TicketEmailRow> {
+  return db('tickets as t')
+    .select(
+      't.*',
+      'dcl.email as client_email',
+      'c.client_name',
+      'co.email as contact_email',
+      'co.full_name as contact_name',
+      'cpn_default.phone_number as contact_phone',
+      'p.priority_name',
+      'p.color as priority_color',
+      's.name as status_name',
+      'au.email as assigned_to_email',
+      db.raw("TRIM(CONCAT(COALESCE(au.first_name, ''), ' ', COALESCE(au.last_name, ''))) as assigned_to_name"),
+      db.raw("TRIM(CONCAT(COALESCE(eb.first_name, ''), ' ', COALESCE(eb.last_name, ''))) as created_by_name"),
+      'ch.board_name',
+      'cat.category_name',
+      'subcat.category_name as subcategory_name',
+      'cl.location_name',
+      'cl.address_line1',
+      'cl.address_line2',
+      'cl.city',
+      'cl.state_province',
+      'cl.postal_code',
+      'cl.country_code'
+    )
+    .leftJoin('clients as c', function() {
+      this.on('t.client_id', 'c.client_id')
+          .andOn('t.tenant', 'c.tenant');
+    })
+    .leftJoin('client_locations as dcl', function() {
+      this.on('dcl.client_id', '=', 't.client_id')
+          .andOn('dcl.tenant', '=', 't.tenant')
+          .andOn('dcl.is_default', '=', db.raw('true'))
+          .andOn('dcl.is_active', '=', db.raw('true'));
+    })
+    .leftJoin('contacts as co', function() {
+      this.on('t.contact_name_id', 'co.contact_name_id')
+          .andOn('t.tenant', 'co.tenant');
+    })
+    .modify((queryBuilder) => applyDefaultContactPhoneJoin(queryBuilder, db))
+    .leftJoin('users as au', function() {
+      this.on('t.assigned_to', 'au.user_id')
+          .andOn('t.tenant', 'au.tenant');
+    })
+    .leftJoin('users as eb', function() {
+      this.on('t.entered_by', 'eb.user_id')
+          .andOn('t.tenant', 'eb.tenant');
+    })
+    .leftJoin('priorities as p', function() {
+      this.on('t.priority_id', 'p.priority_id')
+          .andOn('t.tenant', 'p.tenant');
+    })
+    .leftJoin('statuses as s', function() {
+      this.on('t.status_id', 's.status_id')
+          .andOn('t.tenant', 's.tenant');
+    })
+    .leftJoin('boards as ch', function() {
+      this.on('t.board_id', 'ch.board_id')
+          .andOn('t.tenant', 'ch.tenant');
+    })
+    .leftJoin('categories as cat', function() {
+      this.on('t.category_id', 'cat.category_id')
+          .andOn('t.tenant', 'cat.tenant');
+    })
+    .leftJoin('categories as subcat', function() {
+      this.on('t.subcategory_id', 'subcat.category_id')
+          .andOn('t.tenant', 'subcat.tenant');
+    })
+    .leftJoin('client_locations as cl', function() {
+      this.on('t.location_id', 'cl.location_id')
+          .andOn('t.tenant', 'cl.tenant');
+    })
+    .where({ 't.ticket_id': ticketId, 't.tenant': tenantId })
+    .first();
+}
+
+/**
+ * Short-lived in-memory cache for fetchTicketForEmail, scoped to a single
+ * Node process. Used by the accumulator flush path so that one accumulator
+ * tick processing N pending notifications for the same ticket only runs the
+ * heavy Citus join once instead of N times. TTL is intentionally short — we
+ * just want to collapse a burst of recipients, not serve stale ticket data.
+ */
+const TICKET_EMAIL_CACHE_TTL_MS = 60_000;
+const ticketEmailCache = new Map<
+  string,
+  { value: TicketEmailRow; expiresAt: number }
+>();
+
+async function getCachedTicketForEmail(
+  db: Knex,
+  tenantId: string,
+  ticketId: string
+): Promise<TicketEmailRow> {
+  const key = `${tenantId}:${ticketId}`;
+  const now = Date.now();
+  const cached = ticketEmailCache.get(key);
+  if (cached && cached.expiresAt > now) {
+    return cached.value;
+  }
+  const value = await fetchTicketForEmail(db, tenantId, ticketId);
+  ticketEmailCache.set(key, { value, expiresAt: now + TICKET_EMAIL_CACHE_TTL_MS });
+  // Opportunistic eviction of expired entries to bound memory.
+  if (ticketEmailCache.size > 256) {
+    for (const [k, entry] of ticketEmailCache) {
+      if (entry.expiresAt <= now) ticketEmailCache.delete(k);
+    }
+  }
+  return value;
+}
+
+/**
  * Wrapper function that checks notification preferences before sending email
  * @param params - Same params as sendEventEmail
  * @param subtypeName - Name of the notification subtype (e.g., "Ticket Created")
@@ -535,80 +661,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     
     // Get ticket details
     console.log('[EmailSubscriber] Fetching ticket details:', { ticketId: payload.ticketId });
-    const ticket = await db('tickets as t')
-      .select(
-        't.*',
-        'dcl.email as client_email',
-        'c.client_name',
-        'co.email as contact_email',
-        'co.full_name as contact_name',
-        'cpn_default.phone_number as contact_phone',
-        'p.priority_name',
-        'p.color as priority_color',
-        's.name as status_name',
-        'au.email as assigned_to_email',
-        db.raw("TRIM(CONCAT(COALESCE(au.first_name, ''), ' ', COALESCE(au.last_name, ''))) as assigned_to_name"),
-        db.raw("TRIM(CONCAT(COALESCE(eb.first_name, ''), ' ', COALESCE(eb.last_name, ''))) as created_by_name"),
-        'ch.board_name',
-        'cat.category_name',
-        'subcat.category_name as subcategory_name',
-        'cl.location_name',
-        'cl.address_line1',
-        'cl.address_line2',
-        'cl.city',
-        'cl.state_province',
-        'cl.postal_code',
-        'cl.country_code'
-      )
-      .leftJoin('clients as c', function() {
-        this.on('t.client_id', 'c.client_id')
-            .andOn('t.tenant', 'c.tenant');
-      })
-      .leftJoin('client_locations as dcl', function() {
-        this.on('dcl.client_id', '=', 't.client_id')
-            .andOn('dcl.tenant', '=', 't.tenant')
-            .andOn('dcl.is_default', '=', db.raw('true'))
-            .andOn('dcl.is_active', '=', db.raw('true'));
-      })
-      .leftJoin('contacts as co', function() {
-        this.on('t.contact_name_id', 'co.contact_name_id')
-            .andOn('t.tenant', 'co.tenant');
-      })
-      .modify((queryBuilder) => applyDefaultContactPhoneJoin(queryBuilder, db))
-      .leftJoin('users as au', function() {
-        this.on('t.assigned_to', 'au.user_id')
-            .andOn('t.tenant', 'au.tenant');
-      })
-      .leftJoin('users as eb', function() {
-        this.on('t.entered_by', 'eb.user_id')
-            .andOn('t.tenant', 'eb.tenant');
-      })
-      .leftJoin('priorities as p', function() {
-        this.on('t.priority_id', 'p.priority_id')
-            .andOn('t.tenant', 'p.tenant');
-      })
-      .leftJoin('statuses as s', function() {
-        this.on('t.status_id', 's.status_id')
-            .andOn('t.tenant', 's.tenant');
-      })
-      .leftJoin('boards as ch', function() {
-        this.on('t.board_id', 'ch.board_id')
-            .andOn('t.tenant', 'ch.tenant');
-      })
-      .leftJoin('categories as cat', function() {
-        this.on('t.category_id', 'cat.category_id')
-            .andOn('t.tenant', 'cat.tenant');
-      })
-      .leftJoin('categories as subcat', function() {
-        this.on('t.subcategory_id', 'subcat.category_id')
-            .andOn('t.tenant', 'subcat.tenant');
-      })
-      .leftJoin('client_locations as cl', function() {
-        this.on('t.location_id', 'cl.location_id')
-            .andOn('t.tenant', 'cl.tenant');
-      })
-      .where('t.ticket_id', payload.ticketId)
-      .first();
+    const ticket = await fetchTicketForEmail(db, tenantId, payload.ticketId);
 
     if (!ticket) {
       logger.warn('Could not send ticket created email - missing ticket:', {
@@ -913,80 +966,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       tenantId
     });
     // Get ticket details with all required fields
-    const ticket = await db('tickets as t')
-      .select(
-        't.*',
-        'dcl.email as client_email',
-        'c.client_name',
-        'co.email as contact_email',
-        'co.full_name as contact_name',
-        'cpn_default.phone_number as contact_phone',
-        'p.priority_name',
-        'p.color as priority_color',
-        's.name as status_name',
-        'au.email as assigned_to_email',
-        db.raw("TRIM(CONCAT(COALESCE(au.first_name, ''), ' ', COALESCE(au.last_name, ''))) as assigned_to_name"),
-        db.raw("TRIM(CONCAT(COALESCE(eb.first_name, ''), ' ', COALESCE(eb.last_name, ''))) as created_by_name"),
-        'ch.board_name',
-        'cat.category_name',
-        'subcat.category_name as subcategory_name',
-        'cl.location_name',
-        'cl.address_line1',
-        'cl.address_line2',
-        'cl.city',
-        'cl.state_province',
-        'cl.postal_code',
-        'cl.country_code'
-      )
-      .leftJoin('clients as c', function() {
-        this.on('t.client_id', 'c.client_id')
-            .andOn('t.tenant', 'c.tenant');
-      })
-      .leftJoin('client_locations as dcl', function() {
-        this.on('dcl.client_id', '=', 't.client_id')
-            .andOn('dcl.tenant', '=', 't.tenant')
-            .andOn('dcl.is_default', '=', db.raw('true'))
-            .andOn('dcl.is_active', '=', db.raw('true'));
-      })
-      .leftJoin('contacts as co', function() {
-        this.on('t.contact_name_id', 'co.contact_name_id')
-            .andOn('t.tenant', 'co.tenant');
-      })
-      .modify((queryBuilder) => applyDefaultContactPhoneJoin(queryBuilder, db))
-      .leftJoin('users as au', function() {
-        this.on('t.assigned_to', 'au.user_id')
-            .andOn('t.tenant', 'au.tenant');
-      })
-      .leftJoin('users as eb', function() {
-        this.on('t.entered_by', 'eb.user_id')
-            .andOn('t.tenant', 'eb.tenant');
-      })
-      .leftJoin('priorities as p', function() {
-        this.on('t.priority_id', 'p.priority_id')
-            .andOn('t.tenant', 'p.tenant');
-      })
-      .leftJoin('statuses as s', function() {
-        this.on('t.status_id', 's.status_id')
-            .andOn('t.tenant', 's.tenant');
-      })
-      .leftJoin('boards as ch', function() {
-        this.on('t.board_id', 'ch.board_id')
-            .andOn('t.tenant', 'ch.tenant');
-      })
-      .leftJoin('categories as cat', function() {
-        this.on('t.category_id', 'cat.category_id')
-            .andOn('t.tenant', 'cat.tenant');
-      })
-      .leftJoin('categories as subcat', function() {
-        this.on('t.subcategory_id', 'subcat.category_id')
-            .andOn('t.tenant', 'subcat.tenant');
-      })
-      .leftJoin('client_locations as cl', function() {
-        this.on('t.location_id', 'cl.location_id')
-            .andOn('t.tenant', 'cl.tenant');
-      })
-      .where('t.ticket_id', payload.ticketId)
-      .first();
+    const ticket = await fetchTicketForEmail(db, tenantId, payload.ticketId);
 
     if (!ticket) {
       console.warn('[EmailSubscriber] Could not find ticket:', {
@@ -1426,80 +1406,7 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
     const db = await getConnection(tenantId);
 
     // Get current ticket details (may have changed since accumulation started)
-    const ticket = await db('tickets as t')
-      .select(
-        't.*',
-        'dcl.email as client_email',
-        'c.client_name',
-        'co.email as contact_email',
-        'co.full_name as contact_name',
-        'cpn_default.phone_number as contact_phone',
-        'p.priority_name',
-        'p.color as priority_color',
-        's.name as status_name',
-        'au.email as assigned_to_email',
-        db.raw("TRIM(CONCAT(COALESCE(au.first_name, ''), ' ', COALESCE(au.last_name, ''))) as assigned_to_name"),
-        db.raw("TRIM(CONCAT(COALESCE(eb.first_name, ''), ' ', COALESCE(eb.last_name, ''))) as created_by_name"),
-        'ch.board_name',
-        'cat.category_name',
-        'subcat.category_name as subcategory_name',
-        'cl.location_name',
-        'cl.address_line1',
-        'cl.address_line2',
-        'cl.city',
-        'cl.state_province',
-        'cl.postal_code',
-        'cl.country_code'
-      )
-      .leftJoin('clients as c', function() {
-        this.on('t.client_id', 'c.client_id')
-            .andOn('t.tenant', 'c.tenant');
-      })
-      .leftJoin('client_locations as dcl', function() {
-        this.on('dcl.client_id', '=', 't.client_id')
-            .andOn('dcl.tenant', '=', 't.tenant')
-            .andOn('dcl.is_default', '=', db.raw('true'))
-            .andOn('dcl.is_active', '=', db.raw('true'));
-      })
-      .leftJoin('contacts as co', function() {
-        this.on('t.contact_name_id', 'co.contact_name_id')
-            .andOn('t.tenant', 'co.tenant');
-      })
-      .modify((queryBuilder) => applyDefaultContactPhoneJoin(queryBuilder, db))
-      .leftJoin('users as au', function() {
-        this.on('t.assigned_to', 'au.user_id')
-            .andOn('t.tenant', 'au.tenant');
-      })
-      .leftJoin('users as eb', function() {
-        this.on('t.entered_by', 'eb.user_id')
-            .andOn('t.tenant', 'eb.tenant');
-      })
-      .leftJoin('priorities as p', function() {
-        this.on('t.priority_id', 'p.priority_id')
-            .andOn('t.tenant', 'p.tenant');
-      })
-      .leftJoin('statuses as s', function() {
-        this.on('t.status_id', 's.status_id')
-            .andOn('t.tenant', 's.tenant');
-      })
-      .leftJoin('boards as ch', function() {
-        this.on('t.board_id', 'ch.board_id')
-            .andOn('t.tenant', 'ch.tenant');
-      })
-      .leftJoin('categories as cat', function() {
-        this.on('t.category_id', 'cat.category_id')
-            .andOn('t.tenant', 'cat.tenant');
-      })
-      .leftJoin('categories as subcat', function() {
-        this.on('t.subcategory_id', 'subcat.category_id')
-            .andOn('t.tenant', 'subcat.tenant');
-      })
-      .leftJoin('client_locations as cl', function() {
-        this.on('t.location_id', 'cl.location_id')
-            .andOn('t.tenant', 'cl.tenant');
-      })
-      .where('t.ticket_id', ticketId)
-      .first();
+    const ticket = await getCachedTicketForEmail(db, tenantId, ticketId);
 
     if (!ticket) {
       logger.warn('[TicketEmailSubscriber] Could not find ticket for accumulated notification:', {
@@ -1690,80 +1597,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
     const db = await getConnection(tenantId);
 
     // Get ticket details with all required fields
-    const ticket = await db('tickets as t')
-      .select(
-        't.*',
-        'dcl.email as client_email',
-        'c.client_name',
-        'co.email as contact_email',
-        'co.full_name as contact_name',
-        'cpn_default.phone_number as contact_phone',
-        'p.priority_name',
-        'p.color as priority_color',
-        's.name as status_name',
-        'au.email as assigned_to_email',
-        db.raw("TRIM(CONCAT(COALESCE(au.first_name, ''), ' ', COALESCE(au.last_name, ''))) as assigned_to_name"),
-        db.raw("TRIM(CONCAT(COALESCE(eb.first_name, ''), ' ', COALESCE(eb.last_name, ''))) as created_by_name"),
-        'ch.board_name',
-        'cat.category_name',
-        'subcat.category_name as subcategory_name',
-        'cl.location_name',
-        'cl.address_line1',
-        'cl.address_line2',
-        'cl.city',
-        'cl.state_province',
-        'cl.postal_code',
-        'cl.country_code'
-      )
-      .leftJoin('clients as c', function() {
-        this.on('t.client_id', 'c.client_id')
-            .andOn('t.tenant', 'c.tenant');
-      })
-      .leftJoin('client_locations as dcl', function() {
-        this.on('dcl.client_id', '=', 't.client_id')
-            .andOn('dcl.tenant', '=', 't.tenant')
-            .andOn('dcl.is_default', '=', db.raw('true'))
-            .andOn('dcl.is_active', '=', db.raw('true'));
-      })
-      .leftJoin('contacts as co', function() {
-        this.on('t.contact_name_id', 'co.contact_name_id')
-            .andOn('t.tenant', 'co.tenant');
-      })
-      .modify((queryBuilder) => applyDefaultContactPhoneJoin(queryBuilder, db))
-      .leftJoin('users as au', function() {
-        this.on('t.assigned_to', 'au.user_id')
-            .andOn('t.tenant', 'au.tenant');
-      })
-      .leftJoin('users as eb', function() {
-        this.on('t.entered_by', 'eb.user_id')
-            .andOn('t.tenant', 'eb.tenant');
-      })
-      .leftJoin('priorities as p', function() {
-        this.on('t.priority_id', 'p.priority_id')
-            .andOn('t.tenant', 'p.tenant');
-      })
-      .leftJoin('statuses as s', function() {
-        this.on('t.status_id', 's.status_id')
-            .andOn('t.tenant', 's.tenant');
-      })
-      .leftJoin('boards as ch', function() {
-        this.on('t.board_id', 'ch.board_id')
-            .andOn('t.tenant', 'ch.tenant');
-      })
-      .leftJoin('categories as cat', function() {
-        this.on('t.category_id', 'cat.category_id')
-            .andOn('t.tenant', 'cat.tenant');
-      })
-      .leftJoin('categories as subcat', function() {
-        this.on('t.subcategory_id', 'subcat.category_id')
-            .andOn('t.tenant', 'subcat.tenant');
-      })
-      .leftJoin('client_locations as cl', function() {
-        this.on('t.location_id', 'cl.location_id')
-            .andOn('t.tenant', 'cl.tenant');
-      })
-      .where('t.ticket_id', payload.ticketId)
-      .first();
+    const ticket = await fetchTicketForEmail(db, tenantId, payload.ticketId);
 
     if (!ticket) {
       logger.warn('Could not send ticket assigned email - missing ticket:', {
@@ -2119,80 +1953,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     const db = await getConnection(tenantId);
 
     // Get ticket details with all required fields
-    const ticket = await db('tickets as t')
-      .select(
-        't.*',
-        'dcl.email as client_email',
-        'c.client_name',
-        'co.email as contact_email',
-        'co.full_name as contact_name',
-        'cpn_default.phone_number as contact_phone',
-        'p.priority_name',
-        'p.color as priority_color',
-        's.name as status_name',
-        'au.email as assigned_to_email',
-        db.raw("TRIM(CONCAT(COALESCE(au.first_name, ''), ' ', COALESCE(au.last_name, ''))) as assigned_to_name"),
-        db.raw("TRIM(CONCAT(COALESCE(eb.first_name, ''), ' ', COALESCE(eb.last_name, ''))) as created_by_name"),
-        'ch.board_name',
-        'cat.category_name',
-        'subcat.category_name as subcategory_name',
-        'cl.location_name',
-        'cl.address_line1',
-        'cl.address_line2',
-        'cl.city',
-        'cl.state_province',
-        'cl.postal_code',
-        'cl.country_code'
-      )
-      .leftJoin('clients as c', function() {
-        this.on('t.client_id', 'c.client_id')
-            .andOn('t.tenant', 'c.tenant');
-      })
-      .leftJoin('client_locations as dcl', function() {
-        this.on('dcl.client_id', '=', 't.client_id')
-            .andOn('dcl.tenant', '=', 't.tenant')
-            .andOn('dcl.is_default', '=', db.raw('true'))
-            .andOn('dcl.is_active', '=', db.raw('true'));
-      })
-      .leftJoin('contacts as co', function() {
-        this.on('t.contact_name_id', 'co.contact_name_id')
-            .andOn('t.tenant', 'co.tenant');
-      })
-      .modify((queryBuilder) => applyDefaultContactPhoneJoin(queryBuilder, db))
-      .leftJoin('users as au', function() {
-        this.on('t.assigned_to', 'au.user_id')
-            .andOn('t.tenant', 'au.tenant');
-      })
-      .leftJoin('users as eb', function() {
-        this.on('t.entered_by', 'eb.user_id')
-            .andOn('t.tenant', 'eb.tenant');
-      })
-      .leftJoin('priorities as p', function() {
-        this.on('t.priority_id', 'p.priority_id')
-            .andOn('t.tenant', 'p.tenant');
-      })
-      .leftJoin('statuses as s', function() {
-        this.on('t.status_id', 's.status_id')
-            .andOn('t.tenant', 's.tenant');
-      })
-      .leftJoin('boards as ch', function() {
-        this.on('t.board_id', 'ch.board_id')
-            .andOn('t.tenant', 'ch.tenant');
-      })
-      .leftJoin('categories as cat', function() {
-        this.on('t.category_id', 'cat.category_id')
-            .andOn('t.tenant', 'cat.tenant');
-      })
-      .leftJoin('categories as subcat', function() {
-        this.on('t.subcategory_id', 'subcat.category_id')
-            .andOn('t.tenant', 'subcat.tenant');
-      })
-      .leftJoin('client_locations as cl', function() {
-        this.on('t.location_id', 'cl.location_id')
-            .andOn('t.tenant', 'cl.tenant');
-      })
-      .where('t.ticket_id', payload.ticketId)
-      .first();
+    const ticket = await fetchTicketForEmail(db, tenantId, payload.ticketId);
 
     if (!ticket) {
       logger.warn('Could not send ticket comment email - missing ticket:', {
@@ -2691,80 +2452,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     const db = await getConnection(tenantId);
 
     // Get ticket details with all required fields
-    const ticket = await db('tickets as t')
-      .select(
-        't.*',
-        'dcl.email as client_email',
-        'c.client_name',
-        'co.email as contact_email',
-        'co.full_name as contact_name',
-        'cpn_default.phone_number as contact_phone',
-        'p.priority_name',
-        'p.color as priority_color',
-        's.name as status_name',
-        'au.email as assigned_to_email',
-        db.raw("TRIM(CONCAT(COALESCE(au.first_name, ''), ' ', COALESCE(au.last_name, ''))) as assigned_to_name"),
-        db.raw("TRIM(CONCAT(COALESCE(eb.first_name, ''), ' ', COALESCE(eb.last_name, ''))) as created_by_name"),
-        'ch.board_name',
-        'cat.category_name',
-        'subcat.category_name as subcategory_name',
-        'cl.location_name',
-        'cl.address_line1',
-        'cl.address_line2',
-        'cl.city',
-        'cl.state_province',
-        'cl.postal_code',
-        'cl.country_code'
-      )
-      .leftJoin('clients as c', function() {
-        this.on('t.client_id', 'c.client_id')
-            .andOn('t.tenant', 'c.tenant');
-      })
-      .leftJoin('client_locations as dcl', function() {
-        this.on('dcl.client_id', '=', 't.client_id')
-            .andOn('dcl.tenant', '=', 't.tenant')
-            .andOn('dcl.is_default', '=', db.raw('true'))
-            .andOn('dcl.is_active', '=', db.raw('true'));
-      })
-      .leftJoin('contacts as co', function() {
-        this.on('t.contact_name_id', 'co.contact_name_id')
-            .andOn('t.tenant', 'co.tenant');
-      })
-      .modify((queryBuilder) => applyDefaultContactPhoneJoin(queryBuilder, db))
-      .leftJoin('users as au', function() {
-        this.on('t.assigned_to', 'au.user_id')
-            .andOn('t.tenant', 'au.tenant');
-      })
-      .leftJoin('users as eb', function() {
-        this.on('t.entered_by', 'eb.user_id')
-            .andOn('t.tenant', 'eb.tenant');
-      })
-      .leftJoin('priorities as p', function() {
-        this.on('t.priority_id', 'p.priority_id')
-            .andOn('t.tenant', 'p.tenant');
-      })
-      .leftJoin('statuses as s', function() {
-        this.on('t.status_id', 's.status_id')
-            .andOn('t.tenant', 's.tenant');
-      })
-      .leftJoin('boards as ch', function() {
-        this.on('t.board_id', 'ch.board_id')
-            .andOn('t.tenant', 'ch.tenant');
-      })
-      .leftJoin('categories as cat', function() {
-        this.on('t.category_id', 'cat.category_id')
-            .andOn('t.tenant', 'cat.tenant');
-      })
-      .leftJoin('categories as subcat', function() {
-        this.on('t.subcategory_id', 'subcat.category_id')
-            .andOn('t.tenant', 'subcat.tenant');
-      })
-      .leftJoin('client_locations as cl', function() {
-        this.on('t.location_id', 'cl.location_id')
-            .andOn('t.tenant', 'cl.tenant');
-      })
-      .where('t.ticket_id', payload.ticketId)
-      .first();
+    const ticket = await fetchTicketForEmail(db, tenantId, payload.ticketId);
 
     if (!ticket) {
       logger.warn('Could not send ticket closed email - missing ticket:', {
