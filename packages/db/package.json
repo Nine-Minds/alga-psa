@@ -41,10 +41,14 @@
     "./connection": {
       "import": "./dist/lib/connection.js",
       "types": "./src/lib/connection.ts"
+    },
+    "./workDate": {
+      "import": "./dist/lib/workDate.js",
+      "types": "./src/lib/workDate.ts"
     }
   },
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b && if [ -d dist/db/src ]; then cp -R dist/db/src/. dist/; fi && tsc-alias -p tsconfig.json -f --resolve-full-paths",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint src/"
@@ -59,6 +63,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "tsc-alias": "^1.8.16",
     "typescript": "^5.7.3"
   }
 }

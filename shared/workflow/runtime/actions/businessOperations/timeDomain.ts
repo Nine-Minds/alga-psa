@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
-import { computeWorkDateFields, resolveUserTimeZone } from '@alga-psa/db';
+import { computeWorkDateFields, resolveUserTimeZone } from '@alga-psa/db/workDate';
 import { Temporal } from '@js-temporal/polyfill';
 import { toISODate, toPlainDate } from '@alga-psa/core';
 import { hasPermissionByUserId } from './shared';
