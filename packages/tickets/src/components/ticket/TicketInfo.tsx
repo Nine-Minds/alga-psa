@@ -25,7 +25,7 @@ import { ResponseStateDisplay } from '../ResponseStateSelect';
 import styles from './TicketDetails.module.css';
 import { getTicketCategories, getTicketCategoriesByBoard, BoardCategoryData } from '@alga-psa/tickets/actions';
 import { ItilLabels, calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
-import { Pencil, Check, X, HelpCircle, Save, AlertCircle, PauseCircle, Users, Mail } from 'lucide-react';
+import { Pencil, Check, X, HelpCircle, Save, PauseCircle, Users, Mail } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
@@ -936,9 +936,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           {/* Unsaved changes alert banner */}
           {hasUnsavedChanges && (
             <Alert variant="warning" className="mb-4">
-              <AlertDescription className="flex items-center gap-2">
-                <AlertCircle className="h-4 w-4" />
-                <span>{t('info.unsavedChanges', 'You have unsaved changes. Click "Save Changes" to apply them.')}</span>
+              <AlertDescription>
+                {t('info.unsavedChanges', 'You have unsaved changes. Click "Save Changes" to apply them.')}
               </AlertDescription>
             </Alert>
           )}
