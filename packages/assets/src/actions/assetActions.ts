@@ -1856,7 +1856,6 @@ type RawLinkedTicket = {
     assigned_team_id?: string | null;
     client_id?: string | null;
     board_id?: string | null;
-    is_client_visible?: boolean | null;
     title: string | null;
     status_id: string | null;
     status_name: string | null;
@@ -2062,7 +2061,6 @@ async function fetchAssetLinkedTickets(
             't.assigned_team_id',
             't.client_id',
             't.board_id',
-            't.is_client_visible',
             't.title',
             't.status_id',
             's.name as status_name',
@@ -2090,7 +2088,6 @@ async function fetchAssetLinkedTickets(
                     clientId: row.client_id ?? null,
                     boardId: row.board_id ?? undefined,
                     teamIds: row.assigned_team_id ? [row.assigned_team_id] : [],
-                    is_client_visible: row.is_client_visible === true,
                     statusId: row.status_id,
                 },
                 requestCache: authorizationContext.requestCache,
