@@ -1095,5 +1095,21 @@
     "bundle": {
       "childrenDescription": "Ticket figli raggruppati in questo ticket master"
     }
+  },
+  "timeEntries": {
+    "title": "Tempo registrato",
+    "loading": "Caricamento delle voci di tempo…",
+    "loadError": "Impossibile caricare le voci di tempo",
+    "empty": "Nessun tempo è stato ancora registrato su questo ticket.",
+    "myEntries": "Le mie voci",
+    "otherTeam": "Altri membri del team",
+    "othersAnonymized": "{{count}} voci di altri membri del team ({{duration}})",
+    "noService": "Nessun servizio",
+    "unknownUser": "Utente sconosciuto",
+    "statusDraft": "Bozza",
+    "statusSubmitted": "Inviato",
+    "statusApproved": "Approvato",
+    "statusChangesRequested": "Modifiche richieste",
+    "statusUnknown": "Sconosciuto"
   }
 }

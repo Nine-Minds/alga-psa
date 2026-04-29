@@ -1095,5 +1095,21 @@
     "bundle": {
       "childrenDescription": "Tickets enfants regroupés dans ce ticket maître"
     }
+  },
+  "timeEntries": {
+    "title": "Temps enregistré",
+    "loading": "Chargement des entrées de temps…",
+    "loadError": "Impossible de charger les entrées de temps",
+    "empty": "Aucun temps n'a encore été enregistré sur ce ticket.",
+    "myEntries": "Mes entrées",
+    "otherTeam": "Autres membres de l'équipe",
+    "othersAnonymized": "{{count}} entrées d'autres membres de l'équipe ({{duration}})",
+    "noService": "Aucun service",
+    "unknownUser": "Utilisateur inconnu",
+    "statusDraft": "Brouillon",
+    "statusSubmitted": "Soumis",
+    "statusApproved": "Approuvé",
+    "statusChangesRequested": "Modifications demandées",
+    "statusUnknown": "Inconnu"
   }
 }

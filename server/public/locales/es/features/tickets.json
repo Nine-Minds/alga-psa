@@ -1095,5 +1095,21 @@
     "bundle": {
       "childrenDescription": "Tickets secundarios agrupados en este ticket principal"
     }
+  },
+  "timeEntries": {
+    "title": "Tiempo registrado",
+    "loading": "Cargando entradas de tiempo…",
+    "loadError": "No se pudieron cargar las entradas de tiempo",
+    "empty": "Aún no se ha registrado tiempo en este ticket.",
+    "myEntries": "Mis entradas",
+    "otherTeam": "Otros miembros del equipo",
+    "othersAnonymized": "{{count}} entradas de otros miembros del equipo ({{duration}})",
+    "noService": "Sin servicio",
+    "unknownUser": "Usuario desconocido",
+    "statusDraft": "Borrador",
+    "statusSubmitted": "Enviado",
+    "statusApproved": "Aprobado",
+    "statusChangesRequested": "Cambios solicitados",
+    "statusUnknown": "Desconocido"
   }
 }

@@ -1095,5 +1095,21 @@
     "bundle": {
       "childrenDescription": "Child tickets bundled in this master ticket"
     }
+  },
+  "timeEntries": {
+    "title": "Logged Time",
+    "loading": "Loading time entries…",
+    "loadError": "Could not load time entries",
+    "empty": "No time has been logged on this ticket yet.",
+    "myEntries": "My entries",
+    "otherTeam": "Other team members",
+    "othersAnonymized": "{{count}} entries by other team members ({{duration}})",
+    "noService": "No service",
+    "unknownUser": "Unknown user",
+    "statusDraft": "Draft",
+    "statusSubmitted": "Submitted",
+    "statusApproved": "Approved",
+    "statusChangesRequested": "Changes Requested",
+    "statusUnknown": "Unknown"
   }
 }

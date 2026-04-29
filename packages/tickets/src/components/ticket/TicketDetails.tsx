@@ -379,6 +379,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [elapsedTime, setElapsedTime] = useState(0);
     const [isRunning, setIsRunning] = useState(false);
     const [timeDescription, setTimeDescription] = useState('');
+    const [timeEntriesRefreshKey, setTimeEntriesRefreshKey] = useState(0);
     const [tags, setTags] = useState<ITag[]>([]);
     const { tags: allTags } = useTags();
     const [currentTimeSheet, setCurrentTimeSheet] = useState<ITimeSheet | null>(null);
@@ -1315,6 +1316,11 @@ const handleClose = () => {
                 return;
             }
 
+            const baseOnComplete = createTicketTimeEntryOnComplete({
+                stopTracking,
+                setElapsedTime,
+                setIsRunning,
+            });
             await launchTimeEntry({
                 openDrawer,
                 closeDrawer,
@@ -1324,11 +1330,10 @@ const handleClose = () => {
                     elapsedTime,
                     timeDescription,
                 }),
-                onComplete: createTicketTimeEntryOnComplete({
-                    stopTracking,
-                    setElapsedTime,
-                    setIsRunning,
-                }),
+                onComplete: () => {
+                    baseOnComplete();
+                    setTimeEntriesRefreshKey((value) => value + 1);
+                },
             });
         } catch (error) {
             handleError(error, t('messages.prepareTimeEntryFailed'));
@@ -2275,6 +2280,7 @@ const handleClose = () => {
                                     onRemoveTeamAssignment={handleRemoveTeamAssignment}
                                     onAssignTeam={handleAssignTeam}
                                     isLiveTicketTimerEnabled={isLiveTicketTimerEnabled}
+                                    timeEntriesRefreshKey={timeEntriesRefreshKey}
                                 />
                         </Suspense>
                         

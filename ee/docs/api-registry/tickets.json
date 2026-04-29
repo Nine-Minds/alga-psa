@@ -604,6 +604,98 @@
           "required": ["comment_text"]
         }
       }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/tickets/{id}/time-entries"
+      },
+      "metadata": {
+        "displayName": "Get Ticket Time Entries",
+        "summary": "List time entries logged on a ticket",
+        "description": "Returns a permission-aware summary of the time logged on a ticket. Always includes the caller's own time entries and a total. When the caller has the `timesheet:read_all` permission, other team members' entries are returned in full detail. Otherwise the response only exposes an anonymized aggregate (`othersEntryCount` + `othersTotalMinutes`) so that totals stay accurate without leaking individual entries.",
+        "rbacResource": "ticket",
+        "approvalRequired": false,
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Ticket identifier.",
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responseSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object",
+              "properties": {
+                "entries": {
+                  "type": "array",
+                  "description": "Visible time entries — always includes the caller's own entries; includes other users' entries only when `canViewOthers` is true.",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "entry_id": { "type": "string", "format": "uuid" },
+                      "user_id": { "type": "string", "format": "uuid" },
+                      "user_name": { "type": "string", "nullable": true },
+                      "start_time": { "type": "string", "format": "date-time" },
+                      "end_time": { "type": "string", "format": "date-time" },
+                      "work_date": { "type": "string", "format": "date", "nullable": true },
+                      "billable_duration": { "type": "integer", "description": "Duration in minutes." },
+                      "notes": { "type": "string", "nullable": true },
+                      "approval_status": {
+                        "type": "string",
+                        "enum": ["DRAFT", "SUBMITTED", "APPROVED", "CHANGES_REQUESTED"]
+                      },
+                      "service_id": { "type": "string", "format": "uuid", "nullable": true },
+                      "service_name": { "type": "string", "nullable": true },
+                      "is_own": { "type": "boolean" }
+                    }
+                  }
+                },
+                "ownTotalMinutes": {
+                  "type": "integer",
+                  "description": "Total billable minutes logged by the calling user."
+                },
+                "othersTotalMinutes": {
+                  "type": "integer",
+                  "description": "Total billable minutes logged by other users (always populated, even when individual entries are hidden)."
+                },
+                "totalMinutes": {
+                  "type": "integer",
+                  "description": "Sum of `ownTotalMinutes` and `othersTotalMinutes`."
+                },
+                "ownEntryCount": { "type": "integer" },
+                "othersEntryCount": { "type": "integer" },
+                "canViewOthers": {
+                  "type": "boolean",
+                  "description": "True when the caller has `timesheet:read_all` and therefore sees other users' entries in `entries`. When false, `entries` only contains the caller's own entries and `othersEntryCount`/`othersTotalMinutes` represent the anonymized aggregate."
+                }
+              },
+              "required": [
+                "entries",
+                "ownTotalMinutes",
+                "othersTotalMinutes",
+                "totalMinutes",
+                "ownEntryCount",
+                "othersEntryCount",
+                "canViewOthers"
+              ]
+            }
+          }
+        },
+        "examples": [
+          {
+            "name": "Read time logged on a ticket",
+            "request": {
+              "params": { "id": "11111111-1111-1111-1111-111111111111" }
+            },
+            "notes": "Use this endpoint to render time-tracking summaries on the ticket detail page or in mobile clients without paging through the global timesheet list."
+          }
+        ]
+      }
     }
   ]
 }

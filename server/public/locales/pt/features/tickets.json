@@ -1095,5 +1095,21 @@
     "bundle": {
       "childrenDescription": "Child tickets bundled in this master ticket"
     }
+  },
+  "timeEntries": {
+    "title": "Tempo registrado",
+    "loading": "Carregando registros de tempo…",
+    "loadError": "Não foi possível carregar os registros de tempo",
+    "empty": "Ainda não foi registrado tempo neste chamado.",
+    "myEntries": "Minhas entradas",
+    "otherTeam": "Outros membros da equipe",
+    "othersAnonymized": "{{count}} entradas de outros membros da equipe ({{duration}})",
+    "noService": "Sem serviço",
+    "unknownUser": "Usuário desconhecido",
+    "statusDraft": "Rascunho",
+    "statusSubmitted": "Enviado",
+    "statusApproved": "Aprovado",
+    "statusChangesRequested": "Alterações solicitadas",
+    "statusUnknown": "Desconhecido"
   }
 }

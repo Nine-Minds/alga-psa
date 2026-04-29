@@ -1095,5 +1095,21 @@
     "bundle": {
       "childrenDescription": "Onderliggende tickets gebundeld in dit hoofdticket"
     }
+  },
+  "timeEntries": {
+    "title": "Geregistreerde tijd",
+    "loading": "Tijdregistraties laden…",
+    "loadError": "Kan tijdregistraties niet laden",
+    "empty": "Er is nog geen tijd geregistreerd op dit ticket.",
+    "myEntries": "Mijn registraties",
+    "otherTeam": "Andere teamleden",
+    "othersAnonymized": "{{count}} registraties van andere teamleden ({{duration}})",
+    "noService": "Geen dienst",
+    "unknownUser": "Onbekende gebruiker",
+    "statusDraft": "Concept",
+    "statusSubmitted": "Ingediend",
+    "statusApproved": "Goedgekeurd",
+    "statusChangesRequested": "Wijzigingen aangevraagd",
+    "statusUnknown": "Onbekend"
   }
 }

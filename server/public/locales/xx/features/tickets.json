@@ -1095,5 +1095,21 @@
     "bundle": {
       "childrenDescription": "11111"
     }
+  },
+  "timeEntries": {
+    "title": "11111",
+    "loading": "11111",
+    "loadError": "11111",
+    "empty": "11111",
+    "myEntries": "11111",
+    "otherTeam": "11111",
+    "othersAnonymized": "11111 {{count}} 11111 {{duration}} 11111",
+    "noService": "11111",
+    "unknownUser": "11111",
+    "statusDraft": "11111",
+    "statusSubmitted": "11111",
+    "statusApproved": "11111",
+    "statusChangesRequested": "11111",
+    "statusUnknown": "11111"
   }
 }

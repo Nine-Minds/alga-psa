@@ -1095,5 +1095,21 @@
     "bundle": {
       "childrenDescription": "Untergeordnete Tickets, die in diesem Master-Ticket gebündelt sind"
     }
+  },
+  "timeEntries": {
+    "title": "Erfasste Zeit",
+    "loading": "Zeiteinträge werden geladen…",
+    "loadError": "Zeiteinträge konnten nicht geladen werden",
+    "empty": "Für dieses Ticket wurde noch keine Zeit erfasst.",
+    "myEntries": "Meine Einträge",
+    "otherTeam": "Andere Teammitglieder",
+    "othersAnonymized": "{{count}} Einträge von anderen Teammitgliedern ({{duration}})",
+    "noService": "Keine Leistung",
+    "unknownUser": "Unbekannter Benutzer",
+    "statusDraft": "Entwurf",
+    "statusSubmitted": "Eingereicht",
+    "statusApproved": "Genehmigt",
+    "statusChangesRequested": "Änderungen angefordert",
+    "statusUnknown": "Unbekannt"
   }
 }
