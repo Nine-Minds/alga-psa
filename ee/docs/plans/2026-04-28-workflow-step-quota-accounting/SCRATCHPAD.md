@@ -83,3 +83,4 @@ Rolling notes for the workflow step quota accounting plan. Keep decisions, disco
   - Unlimited reservation increments.
 - Command run:
   - `cd server && npm test -- src/test/integration/workflowStepQuotaService.integration.test.ts` (pass).
+- Added T005 coverage in `server/src/test/integration/workflowStepQuotaService.integration.test.ts` to verify uniqueness and upsert behavior on `(tenant, period_start, period_end)`.

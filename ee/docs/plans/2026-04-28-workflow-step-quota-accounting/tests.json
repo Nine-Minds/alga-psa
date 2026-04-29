@@ -38,7 +38,7 @@
   {
     "id": "T005",
     "description": "DB integration: migrated workflow_step_usage_periods supports insert/upsert by tenant, period_start, and period_end and enforces uniqueness.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F002"

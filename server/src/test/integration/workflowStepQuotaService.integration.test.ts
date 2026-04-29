@@ -101,6 +101,50 @@ afterAll(async () => {
 });
 
 describe('workflowStepQuotaService', () => {
+  it('enforces uniqueness on (tenant, period_start, period_end) and supports upsert', async () => {
+    const tenant = uuidv4();
+    await seedTenant(db, tenant, 'pro');
+    const periodStart = '2026-04-01T00:00:00.000Z';
+    const periodEnd = '2026-05-01T00:00:00.000Z';
+
+    await db('workflow_step_usage_periods').insert({
+      tenant,
+      period_start: periodStart,
+      period_end: periodEnd,
+      period_source: 'fallback_calendar',
+      stripe_subscription_id: null,
+      effective_limit: 750,
+      used_count: 1,
+      limit_source: 'tier_default',
+      tier: 'pro',
+    });
+
+    await db('workflow_step_usage_periods')
+      .insert({
+        tenant,
+        period_start: periodStart,
+        period_end: periodEnd,
+        period_source: 'fallback_calendar',
+        stripe_subscription_id: null,
+        effective_limit: 750,
+        used_count: 2,
+        limit_source: 'tier_default',
+        tier: 'pro',
+      })
+      .onConflict(['tenant', 'period_start', 'period_end'])
+      .merge({
+        used_count: 2,
+        updated_at: db.fn.now(),
+      });
+
+    const rows = await db('workflow_step_usage_periods')
+      .where({ tenant, period_start: periodStart, period_end: periodEnd })
+      .select('*');
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].used_count).toBe(2);
+  });
+
   it('uses active Stripe period for resolver with stripe_subscription source', async () => {
     const tenant = uuidv4();
     await seedTenant(db, tenant, 'pro');
