@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { resolveTier, type TenantTier } from '@alga-psa/types';
+import logger from '@alga-psa/core/logger';
 
 const WORKFLOW_STEP_LIMIT_METADATA_KEY = 'workflow_step_limit';
 const ACTIVE_STATUSES = ['trialing', 'active', 'past_due', 'unpaid'] as const;
@@ -99,6 +100,12 @@ function parseLimitMetadata(raw: unknown, source: 'stripe_price_metadata' | 'str
   return null;
 }
 
+function isMetadataValuePresent(raw: unknown): boolean {
+  if (raw == null) return false;
+  if (typeof raw === 'string' && raw.trim() === '') return false;
+  return true;
+}
+
 async function hasStripeTables(knex: Knex): Promise<boolean> {
   const [subs, prices, products] = await Promise.all([
     knex.schema.hasTable('stripe_subscriptions'),
@@ -138,8 +145,17 @@ async function resolveMetadataLimit(knex: Knex, tenant: string, priceId: string)
     .where({ tenant, stripe_price_id: priceId })
     .first<{ metadata?: Record<string, unknown> | null; stripe_product_id?: string | null }>();
 
-  const priceValue = parseLimitMetadata(price?.metadata?.[WORKFLOW_STEP_LIMIT_METADATA_KEY], 'stripe_price_metadata');
+  const priceRaw = price?.metadata?.[WORKFLOW_STEP_LIMIT_METADATA_KEY];
+  const priceValue = parseLimitMetadata(priceRaw, 'stripe_price_metadata');
   if (priceValue) return priceValue;
+  if (isMetadataValuePresent(priceRaw)) {
+    logger.warn('[WorkflowStepQuotaService] Invalid workflow_step_limit metadata on Stripe price; falling back', {
+      tenant,
+      stripePriceId: priceId,
+      metadataKey: WORKFLOW_STEP_LIMIT_METADATA_KEY,
+      metadataValue: priceRaw,
+    });
+  }
 
   if (!price?.stripe_product_id) return null;
 
@@ -147,7 +163,19 @@ async function resolveMetadataLimit(knex: Knex, tenant: string, priceId: string)
     .where({ tenant, stripe_product_id: price.stripe_product_id })
     .first<{ metadata?: Record<string, unknown> | null }>();
 
-  return parseLimitMetadata(product?.metadata?.[WORKFLOW_STEP_LIMIT_METADATA_KEY], 'stripe_product_metadata');
+  const productRaw = product?.metadata?.[WORKFLOW_STEP_LIMIT_METADATA_KEY];
+  const productValue = parseLimitMetadata(productRaw, 'stripe_product_metadata');
+  if (productValue) return productValue;
+  if (isMetadataValuePresent(productRaw)) {
+    logger.warn('[WorkflowStepQuotaService] Invalid workflow_step_limit metadata on Stripe product; falling back to tier default', {
+      tenant,
+      stripePriceId: priceId,
+      stripeProductId: price.stripe_product_id,
+      metadataKey: WORKFLOW_STEP_LIMIT_METADATA_KEY,
+      metadataValue: productRaw,
+    });
+  }
+  return null;
 }
 
 export class WorkflowStepQuotaService {
@@ -179,11 +207,23 @@ export class WorkflowStepQuotaService {
         const fallback = currentUtcMonthPeriod(now);
         periodStart = fallback.periodStart;
         periodEnd = fallback.periodEnd;
+        logger.info('[WorkflowStepQuotaService] Using fallback calendar period (no valid active Stripe subscription period)', {
+          tenant,
+          periodStart,
+          periodEnd,
+          tier,
+        });
       }
     } else {
       const fallback = currentUtcMonthPeriod(now);
       periodStart = fallback.periodStart;
       periodEnd = fallback.periodEnd;
+      logger.info('[WorkflowStepQuotaService] Using fallback calendar period (Stripe tables unavailable)', {
+        tenant,
+        periodStart,
+        periodEnd,
+        tier,
+      });
     }
 
     const usage = await knex<UsageRow>('workflow_step_usage_periods')
@@ -250,6 +290,15 @@ export class WorkflowStepQuotaService {
       }
 
       if (usage.effective_limit != null && usage.used_count >= usage.effective_limit) {
+        logger.warn('[WorkflowStepQuotaService] Workflow step quota exceeded at reservation', {
+          tenant: summary.tenant,
+          periodStart: summary.periodStart,
+          periodEnd: summary.periodEnd,
+          periodSource: summary.periodSource,
+          limitSource: summary.limitSource,
+          effectiveLimit: usage.effective_limit,
+          usedCount: usage.used_count,
+        });
         return {
           allowed: false,
           summary: {
@@ -269,6 +318,15 @@ export class WorkflowStepQuotaService {
         .returning('*');
 
       const usedCountAfter = updated.used_count;
+      logger.debug('[WorkflowStepQuotaService] Reserved workflow step quota', {
+        tenant: summary.tenant,
+        periodStart: summary.periodStart,
+        periodEnd: summary.periodEnd,
+        periodSource: summary.periodSource,
+        limitSource: summary.limitSource,
+        effectiveLimit: updated.effective_limit,
+        usedCountAfter,
+      });
       return {
         allowed: true,
         usedCountAfter,

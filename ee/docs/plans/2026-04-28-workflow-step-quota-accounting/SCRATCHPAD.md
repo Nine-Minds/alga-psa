@@ -84,3 +84,10 @@ Rolling notes for the workflow step quota accounting plan. Keep decisions, disco
 - Command run:
   - `cd server && npm test -- src/test/integration/workflowStepQuotaService.integration.test.ts` (pass).
 - Added T005 coverage in `server/src/test/integration/workflowStepQuotaService.integration.test.ts` to verify uniqueness and upsert behavior on `(tenant, period_start, period_end)`.
+- Added structured observability logs in `shared/workflow/runtime/services/workflowStepQuotaService.ts`:
+  - `logger.debug` on successful quota reservation with tenant/period/limit context.
+  - `logger.warn` on quota exhaustion at reservation with tenant/period/used/limit context.
+  - `logger.warn` when invalid `workflow_step_limit` metadata is detected on Stripe price/product and fallback resolution is used.
+  - `logger.info` when resolver uses fallback UTC calendar periods due to missing Stripe period or missing Stripe tables.
+- Validation command run:
+  - `cd server && npm test -- src/test/integration/workflowStepQuotaService.integration.test.ts` (pass).

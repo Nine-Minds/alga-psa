@@ -146,7 +146,7 @@
   {
     "id": "F018",
     "description": "Log quota reservation, quota exhaustion, invalid metadata fallback, and fallback-calendar usage with structured workflow/runtime context.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Observability"
     ]
