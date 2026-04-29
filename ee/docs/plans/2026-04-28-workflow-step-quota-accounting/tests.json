@@ -173,7 +173,7 @@
   {
     "id": "T020",
     "description": "Documentation review: support and engineering notes describe quota source, default limits, metadata override, pause/resume behavior, and reconciliation procedure.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]

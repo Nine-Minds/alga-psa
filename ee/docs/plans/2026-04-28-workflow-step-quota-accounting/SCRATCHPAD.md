@@ -112,3 +112,9 @@ Rolling notes for the workflow step quota accounting plan. Keep decisions, disco
   - New case fires 12 concurrent reservations against finite limit 3 and asserts exactly 3 allows, 9 denies, and persisted `used_count=3`.
 - Validation command run:
   - `cd server && npm test -- src/test/integration/workflowStepQuotaService.integration.test.ts` (pass).
+- Added minimal run-level quota pause surfacing in workflow run detail responses:
+  - `listWorkflowRunStepsAction` and `exportWorkflowRunDetailAction` now return `quotaPause` derived from active quota wait payload.
+- Added reconciliation helper to quota service:
+  - `workflowStepQuotaService.reconcileUsagePeriod(tenant, periodStart, periodEnd)` compares counter usage to step ledger count and returns drift.
+- Added support/engineering documentation:
+  - `ee/docs/plans/2026-04-28-workflow-step-quota-accounting/OPERATIONS.md` covering quota source/limits, pause/resume behavior, and reconciliation runbook.

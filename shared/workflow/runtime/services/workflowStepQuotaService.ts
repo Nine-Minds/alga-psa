@@ -47,6 +47,15 @@ export type WorkflowStepQuotaReservationResult =
     summary: WorkflowStepQuotaSummary;
   };
 
+export type WorkflowStepQuotaReconciliation = {
+  tenant: string;
+  periodStart: string;
+  periodEnd: string;
+  counterUsedCount: number;
+  ledgerStepCount: number;
+  drift: number;
+};
+
 type StripeSubscriptionRow = {
   stripe_subscription_id: string;
   stripe_price_id: string;
@@ -337,6 +346,42 @@ export class WorkflowStepQuotaService {
         },
       };
     });
+  }
+
+  async reconcileUsagePeriod(
+    knex: Knex,
+    tenant: string,
+    periodStart: string,
+    periodEnd: string
+  ): Promise<WorkflowStepQuotaReconciliation> {
+    const usage = await knex<UsageRow>('workflow_step_usage_periods')
+      .where({
+        tenant,
+        period_start: periodStart,
+        period_end: periodEnd,
+      })
+      .first();
+
+    const ledgerRow = await knex('workflow_run_steps as s')
+      .join('workflow_runs as r', 'r.run_id', 's.run_id')
+      .where('r.tenant_id', tenant)
+      .andWhere('s.started_at', '>=', periodStart)
+      .andWhere('s.started_at', '<', periodEnd)
+      .count<{ count: string }>('s.step_id as count')
+      .first();
+
+    const counterUsedCount = usage?.used_count ?? 0;
+    const ledgerStepCount = Number(ledgerRow?.count ?? 0);
+    const drift = counterUsedCount - ledgerStepCount;
+
+    return {
+      tenant,
+      periodStart,
+      periodEnd,
+      counterUsedCount,
+      ledgerStepCount,
+      drift,
+    };
   }
 }
 

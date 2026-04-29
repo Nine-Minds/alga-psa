@@ -106,6 +106,21 @@ const EXPORT_EVENTS_LIMIT = 1000;
 const EXPORT_AUDIT_LIMIT = 5000;
 const EXPORT_LOGS_LIMIT = 5000;
 
+const extractQuotaPauseSummary = (waits: Array<{ wait_type?: string | null; status?: string | null; payload?: any }>) => {
+  const quotaWait = waits.find((wait) => wait.wait_type === 'quota' && wait.status === 'WAITING');
+  const payload = quotaWait?.payload;
+  if (!payload || typeof payload !== 'object') return null;
+  return {
+    reason: payload.reason ?? 'workflow_step_quota_exceeded',
+    periodStart: payload.periodStart ?? null,
+    periodEnd: payload.periodEnd ?? null,
+    usedCount: payload.usedCount ?? null,
+    effectiveLimit: payload.effectiveLimit ?? null,
+    periodSource: payload.periodSource ?? null,
+    limitSource: payload.limitSource ?? null,
+  };
+};
+
 const csvEscape = (value: unknown) => {
   if (value === null || value === undefined) return '';
   const text = String(value);
@@ -2660,7 +2675,13 @@ export const listWorkflowRunStepsAction = withAuth(async (user, { tenant }, inpu
     envelope_json: applyRunStudioRedactions(snapshot.envelope_json, cfg) as any
   }));
 
-  return { steps, snapshots: sanitizedSnapshots, invocations: redactedInvocations, waits };
+  return {
+    steps,
+    snapshots: sanitizedSnapshots,
+    invocations: redactedInvocations,
+    waits,
+    quotaPause: extractQuotaPauseSummary(waits),
+  };
 });
 
 export const exportWorkflowRunDetailAction = withAuth(async (user, { tenant }, input: unknown) => {
@@ -2710,7 +2731,8 @@ export const exportWorkflowRunDetailAction = withAuth(async (user, { tenant }, i
     steps,
     snapshots: sanitizedSnapshots,
     invocations: sanitizedInvocations,
-    waits
+    waits,
+    quotaPause: extractQuotaPauseSummary(waits),
   };
 });
 
