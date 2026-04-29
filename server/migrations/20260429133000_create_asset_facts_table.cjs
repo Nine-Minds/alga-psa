@@ -29,6 +29,30 @@ exports.up = async function(knex) {
     table.index(['tenant', 'asset_id'], 'asset_facts_tenant_asset_idx');
     table.unique(['tenant', 'asset_id', 'source_type', 'namespace', 'fact_key'], 'asset_facts_tenant_asset_fact_current_uk');
   });
+
+  const citusEnabled = await knex.raw(`
+    SELECT EXISTS (
+      SELECT 1
+      FROM pg_extension
+      WHERE extname = 'citus'
+    ) AS enabled;
+  `);
+
+  if (citusEnabled.rows?.[0]?.enabled) {
+    const alreadyDistributed = await knex.raw(`
+      SELECT EXISTS (
+        SELECT 1
+        FROM pg_dist_partition
+        WHERE logicalrelid = 'asset_facts'::regclass
+      ) AS is_distributed;
+    `);
+
+    if (!alreadyDistributed.rows?.[0]?.is_distributed) {
+      await knex.raw("SELECT create_distributed_table('asset_facts', 'tenant', colocate_with => 'assets')");
+    }
+  } else {
+    console.warn('[create_asset_facts_table] Skipping create_distributed_table (Citus extension unavailable)');
+  }
 };
 
 /**
@@ -38,3 +62,6 @@ exports.up = async function(knex) {
 exports.down = async function(knex) {
   await knex.schema.dropTableIfExists('asset_facts');
 };
+
+// create_distributed_table cannot run inside a transaction block.
+exports.config = { transaction: false };
