@@ -62,7 +62,8 @@ import {
 import {
   cancelWorkflowRuntimeV2TemporalRun,
   signalWorkflowRuntimeV2Event,
-  signalWorkflowRuntimeV2HumanTask
+  signalWorkflowRuntimeV2HumanTask,
+  signalWorkflowRuntimeV2QuotaResume
 } from '../lib/workflowRuntimeV2Temporal';
 import { resolveWorkflowEventCorrelation } from '../lib/workflowEventCorrelation';
 import type { DeletionValidationResult } from '@alga-psa/types';
@@ -105,6 +106,21 @@ const EXPORT_RUNS_LIMIT = 1000;
 const EXPORT_EVENTS_LIMIT = 1000;
 const EXPORT_AUDIT_LIMIT = 5000;
 const EXPORT_LOGS_LIMIT = 5000;
+
+const extractQuotaPauseSummary = (waits: Array<{ wait_type?: string | null; status?: string | null; payload?: any }>) => {
+  const quotaWait = waits.find((wait) => wait.wait_type === 'quota' && wait.status === 'WAITING');
+  const payload = quotaWait?.payload;
+  if (!payload || typeof payload !== 'object') return null;
+  return {
+    reason: payload.reason ?? 'workflow_step_quota_exceeded',
+    periodStart: payload.periodStart ?? null,
+    periodEnd: payload.periodEnd ?? null,
+    usedCount: payload.usedCount ?? null,
+    effectiveLimit: payload.effectiveLimit ?? null,
+    periodSource: payload.periodSource ?? null,
+    limitSource: payload.limitSource ?? null,
+  };
+};
 
 const csvEscape = (value: unknown) => {
   if (value === null || value === undefined) return '';
@@ -2660,7 +2676,13 @@ export const listWorkflowRunStepsAction = withAuth(async (user, { tenant }, inpu
     envelope_json: applyRunStudioRedactions(snapshot.envelope_json, cfg) as any
   }));
 
-  return { steps, snapshots: sanitizedSnapshots, invocations: redactedInvocations, waits };
+  return {
+    steps,
+    snapshots: sanitizedSnapshots,
+    invocations: redactedInvocations,
+    waits,
+    quotaPause: extractQuotaPauseSummary(waits),
+  };
 });
 
 export const exportWorkflowRunDetailAction = withAuth(async (user, { tenant }, input: unknown) => {
@@ -2710,7 +2732,8 @@ export const exportWorkflowRunDetailAction = withAuth(async (user, { tenant }, i
     steps,
     snapshots: sanitizedSnapshots,
     invocations: sanitizedInvocations,
-    waits
+    waits,
+    quotaPause: extractQuotaPauseSummary(waits),
   };
 });
 
@@ -2855,6 +2878,112 @@ export const resumeWorkflowRunAction = withAuth(async (user, { tenant }, input: 
   });
 
   return { ok: true };
+});
+
+export const resumeWorkflowRunFromQuotaPauseAction = withAuth(async (user, { tenant }, input: unknown) => {
+  initializeWorkflowRuntimeV2();
+  const parsed = RunActionInput.parse(input);
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'admin', knex);
+  const runRecord = await requireRunTenantAccess(knex, parsed.runId, tenant);
+
+  if (runRecord.status !== 'WAITING') {
+    return throwHttpError(409, 'Run is not waiting');
+  }
+
+  const quotaWait = await knex('workflow_run_waits')
+    .where({
+      run_id: parsed.runId,
+      wait_type: 'quota',
+      status: 'WAITING',
+    })
+    .orderBy('created_at', 'asc')
+    .first<{ wait_id: string; step_path: string | null }>();
+
+  if (!quotaWait) {
+    return throwHttpError(409, 'Run is not quota-paused');
+  }
+  if (!quotaWait.step_path || runRecord.node_path !== quotaWait.step_path) {
+    return throwHttpError(409, 'Quota pause is stale for this run');
+  }
+
+  const { workflowStepQuotaService } = await import('@alga-psa/workflows/runtime/core');
+  const quotaSummary = await workflowStepQuotaService.resolveQuotaSummary(knex, runRecord.tenant_id ?? tenant);
+  const quotaExhausted = quotaSummary.effectiveLimit != null && quotaSummary.usedCount >= quotaSummary.effectiveLimit;
+
+  if (quotaExhausted) {
+    return {
+      ok: false,
+      resumed: false,
+      reason: 'quota_exhausted',
+      quota: {
+        usedCount: quotaSummary.usedCount,
+        effectiveLimit: quotaSummary.effectiveLimit,
+        periodEnd: quotaSummary.periodEnd,
+        periodStart: quotaSummary.periodStart,
+        periodSource: quotaSummary.periodSource,
+        limitSource: quotaSummary.limitSource,
+      },
+    };
+  }
+
+  await WorkflowRunWaitModelV2.update(knex, quotaWait.wait_id, {
+    status: 'RESOLVED',
+    resolved_at: new Date().toISOString(),
+  });
+
+  const resumePayload = {
+    __admin_override: true,
+    reason: parsed.reason,
+    waitId: quotaWait.wait_id,
+    waitType: 'quota',
+    quotaResume: true,
+  };
+
+  await WorkflowRunModelV2.update(knex, parsed.runId, {
+    status: 'RUNNING',
+    resume_event_name: runRecord.engine === 'temporal' ? null : 'ADMIN_RESUME',
+    resume_event_payload: runRecord.engine === 'temporal' ? null : resumePayload,
+    resume_error: null,
+    error_json: null,
+  });
+
+  await WorkflowRunLogModelV2.create(knex, {
+    run_id: parsed.runId,
+    tenant_id: runRecord?.tenant_id ?? null,
+    step_path: quotaWait.step_path ?? null,
+    level: 'INFO',
+    message: 'Quota-paused run resumed by operator',
+    context_json: {
+      reason: parsed.reason,
+      waitId: quotaWait.wait_id,
+      waitType: 'quota',
+    },
+    source: parsed.source ?? 'api',
+  });
+
+  await auditWorkflowEvent(knex, user, {
+    operation: 'workflow_run_resume',
+    tableName: 'workflow_runs',
+    recordId: parsed.runId,
+    changedData: { status: 'RUNNING' },
+    details: { reason: parsed.reason, waitType: 'quota' },
+    source: parsed.source ?? 'api'
+  });
+
+  if (runRecord.engine === 'temporal') {
+    await signalWorkflowRuntimeV2QuotaResume({
+      runId: parsed.runId,
+      waitId: quotaWait.wait_id,
+      reason: parsed.reason,
+      resumedBy: `admin-${user.user_id}`,
+    });
+  } else {
+    const runtime = new WorkflowRuntimeV2();
+    await runtime.executeRun(knex, parsed.runId, `admin-${user.user_id}`);
+  }
+
+  return { ok: true, resumed: true };
 });
 
 export const retryWorkflowRunAction = withAuth(async (user, { tenant }, input: unknown) => {

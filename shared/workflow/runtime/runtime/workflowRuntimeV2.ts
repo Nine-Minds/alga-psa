@@ -27,11 +27,12 @@ import { parseNodePath } from '../utils/nodePathUtils';
 import WorkflowDefinitionModelV2 from '../../persistence/workflowDefinitionModelV2';
 import WorkflowDefinitionVersionModelV2 from '../../persistence/workflowDefinitionVersionModelV2';
 import WorkflowRunModelV2, { type WorkflowRunRecord } from '../../persistence/workflowRunModelV2';
-import WorkflowRunStepModelV2 from '../../persistence/workflowRunStepModelV2';
+import WorkflowRunStepModelV2, { type WorkflowRunStepRecord } from '../../persistence/workflowRunStepModelV2';
 import WorkflowRunWaitModelV2 from '../../persistence/workflowRunWaitModelV2';
 import WorkflowActionInvocationModelV2 from '../../persistence/workflowActionInvocationModelV2';
 import WorkflowRunSnapshotModelV2 from '../../persistence/workflowRunSnapshotModelV2';
 import WorkflowRunLogModelV2 from '../../persistence/workflowRunLogModelV2';
+import { workflowStepQuotaService } from '../services/workflowStepQuotaService';
 import { ZodError } from 'zod';
 import { createHash } from 'crypto';
 
@@ -262,9 +263,18 @@ export class WorkflowRuntimeV2 {
         return;
       }
 
-      const stepStart = Date.now();
-      const attempt = await this.nextAttempt(knex, runId, currentPath);
-      const stepRecord = await WorkflowRunStepModelV2.create(knex, {
+      const resumedWaitStepRecord = await this.getResumableWaitStepRecord(knex, run, currentPath);
+      const resumedStepStartedAt = resumedWaitStepRecord?.started_at ? new Date(resumedWaitStepRecord.started_at).getTime() : NaN;
+      const stepStart = Number.isNaN(resumedStepStartedAt) ? Date.now() : resumedStepStartedAt;
+      if (!resumedWaitStepRecord && run.tenant_id) {
+        const reservation = await workflowStepQuotaService.reserveStepStart(knex, run.tenant_id);
+        if (!reservation.allowed) {
+          await this.pauseForQuota(knex, run, currentPath, reservation.summary);
+          return;
+        }
+      }
+      const attempt = resumedWaitStepRecord?.attempt ?? await this.nextAttempt(knex, runId, currentPath);
+      const stepRecord = resumedWaitStepRecord ?? await WorkflowRunStepModelV2.create(knex, {
         run_id: runId,
         step_path: currentPath,
         definition_step_id: step.id,
@@ -274,7 +284,7 @@ export class WorkflowRuntimeV2 {
 
       await this.logRunEvent(knex, run, {
         level: 'INFO',
-        message: 'Step started',
+        message: resumedWaitStepRecord ? 'Step resumed from wait' : 'Step started',
         stepId: stepRecord.step_id,
         stepPath: currentPath,
         context: {
@@ -968,6 +978,103 @@ export class WorkflowRuntimeV2 {
     const last = await WorkflowRunStepModelV2.getLatestByRunAndPath(knex, runId, stepPath);
     if (!last) return 1;
     return last.attempt + 1;
+  }
+
+  private async getResumableWaitStepRecord(
+    knex: Knex,
+    run: WorkflowRunRecord,
+    stepPath: string
+  ): Promise<WorkflowRunStepRecord | null> {
+    if (!run.resume_event_name && !run.resume_error) return null;
+
+    const latest = await WorkflowRunStepModelV2.getLatestByRunAndPath(knex, run.run_id, stepPath);
+    if (!latest || latest.status !== 'STARTED') return null;
+
+    const resolvedWait = await knex('workflow_run_waits')
+      .where({
+        run_id: run.run_id,
+        step_path: stepPath,
+        status: 'RESOLVED'
+      })
+      .whereIn('wait_type', ['event', 'human', 'time'])
+      .orderBy('resolved_at', 'desc')
+      .first<{ wait_id: string }>();
+
+    return resolvedWait ? latest : null;
+  }
+
+  private async pauseForQuota(
+    knex: Knex,
+    run: WorkflowRunRecord,
+    stepPath: string,
+    summary: {
+      periodStart: string;
+      periodEnd: string;
+      usedCount: number;
+      effectiveLimit: number | null;
+      periodSource: string;
+      limitSource: string;
+      tenant: string;
+    }
+  ): Promise<void> {
+    const existingWait = await knex('workflow_run_waits')
+      .where({
+        run_id: run.run_id,
+        step_path: stepPath,
+        wait_type: 'quota',
+        status: 'WAITING',
+      })
+      .first<{ wait_id: string }>();
+
+    const payload = {
+      reason: 'workflow_step_quota_exceeded',
+      tenant: summary.tenant,
+      periodStart: summary.periodStart,
+      periodEnd: summary.periodEnd,
+      usedCount: summary.usedCount,
+      effectiveLimit: summary.effectiveLimit,
+      periodSource: summary.periodSource,
+      limitSource: summary.limitSource,
+    };
+
+    if (existingWait) {
+      await WorkflowRunWaitModelV2.update(knex, existingWait.wait_id, {
+        timeout_at: summary.periodEnd,
+        payload,
+      });
+    } else {
+      await WorkflowRunWaitModelV2.create(knex, {
+        run_id: run.run_id,
+        step_path: stepPath,
+        wait_type: 'quota',
+        timeout_at: summary.periodEnd,
+        status: 'WAITING',
+        payload,
+      });
+    }
+
+    await WorkflowRunModelV2.update(knex, run.run_id, {
+      status: 'WAITING',
+      node_path: stepPath,
+      resume_event_name: null,
+      resume_event_payload: null,
+      resume_error: null,
+      error_json: {
+        category: 'QuotaExceeded',
+        message: 'Workflow step quota exceeded for current billing period',
+        nodePath: stepPath,
+        at: new Date().toISOString(),
+        data: payload
+      },
+    });
+
+    await this.logRunEvent(knex, run, {
+      level: 'WARN',
+      message: 'Workflow step quota exceeded; run paused',
+      stepPath,
+      context: payload,
+      source: 'runtime',
+    });
   }
 
   private async markRunCompleted(knex: Knex, runId: string, status: WorkflowRunStatus): Promise<void> {

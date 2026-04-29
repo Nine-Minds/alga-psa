@@ -1,6 +1,11 @@
-import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleSlaTimerJob } from './index';
+import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleSlaTimerJob, scheduleWorkflowQuotaResumeScanJob } from './index';
 import logger from '@alga-psa/core/logger';
 import { getConnection } from 'server/src/lib/db/db';
+
+const isEnterpriseWorkflowEdition = (): boolean =>
+  process.env.EDITION === 'enterprise'
+  || process.env.EDITION === 'ee'
+  || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
 /**
  * Initialize all scheduled jobs for the application
@@ -224,6 +229,23 @@ export async function initializeScheduledJobs(): Promise<void> {
        }
      } catch (error) {
        logger.error('Failed to schedule AI session key cleanup job', error);
+     }
+   }
+
+   if (isEnterpriseWorkflowEdition()) {
+     try {
+       const cron = '*/5 * * * *';
+       const quotaResumeJobId = await scheduleWorkflowQuotaResumeScanJob(cron);
+       if (quotaResumeJobId) {
+         logger.info(`Scheduled workflow quota resume scan job with ID ${quotaResumeJobId}`);
+       } else {
+         logger.info('Workflow quota resume scan job already scheduled (singleton active)', {
+           cron,
+           returnedJobId: quotaResumeJobId,
+         });
+       }
+     } catch (error) {
+       logger.error('Failed to schedule workflow quota resume scan job', error);
      }
    }
    

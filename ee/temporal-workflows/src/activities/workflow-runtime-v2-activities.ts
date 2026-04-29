@@ -31,6 +31,7 @@ import {
   WorkflowTaskModel,
   WorkflowTaskStatus,
 } from '@alga-psa/workflows/persistence';
+import { workflowStepQuotaService } from '@alga-psa/workflows/runtime/core';
 
 export async function executeWorkflowRuntimeV2Run(input: {
   runId: string;
@@ -135,10 +136,70 @@ export async function projectWorkflowRuntimeV2StepStart(input: {
   runId: string;
   stepPath: string;
   definitionStepId: string;
-}): Promise<{ stepId: string }> {
+}): Promise<{ stepId: string | null; quotaPaused?: boolean }> {
   return retryOnAdminReadOnly(
     async () => {
       const knex = await getAdminConnection();
+      const run = await WorkflowRunModelV2.getById(knex, input.runId);
+      if (!run) {
+        throw new Error(`Run ${input.runId} not found`);
+      }
+
+      if (run.tenant_id) {
+        const reservation = await workflowStepQuotaService.reserveStepStart(knex, run.tenant_id);
+        if (!reservation.allowed) {
+          const existingWait = await knex('workflow_run_waits')
+            .where({
+              run_id: input.runId,
+              step_path: input.stepPath,
+              wait_type: 'quota',
+              status: 'WAITING',
+            })
+            .first<{ wait_id: string }>();
+          const payload = {
+            reason: 'workflow_step_quota_exceeded',
+            tenant: reservation.summary.tenant,
+            periodStart: reservation.summary.periodStart,
+            periodEnd: reservation.summary.periodEnd,
+            usedCount: reservation.summary.usedCount,
+            effectiveLimit: reservation.summary.effectiveLimit,
+            periodSource: reservation.summary.periodSource,
+            limitSource: reservation.summary.limitSource,
+          };
+          if (existingWait) {
+            await WorkflowRunWaitModelV2.update(knex, existingWait.wait_id, {
+              timeout_at: reservation.summary.periodEnd,
+              payload,
+            });
+          } else {
+            await WorkflowRunWaitModelV2.create(knex, {
+              run_id: input.runId,
+              step_path: input.stepPath,
+              wait_type: 'quota',
+              timeout_at: reservation.summary.periodEnd,
+              status: 'WAITING',
+              payload,
+            });
+          }
+
+          await WorkflowRunModelV2.update(knex, input.runId, {
+            node_path: input.stepPath,
+            status: 'WAITING',
+            error_json: {
+              category: 'QuotaExceeded',
+              message: 'Workflow step quota exceeded for current billing period',
+              nodePath: input.stepPath,
+              at: new Date().toISOString(),
+              data: payload,
+            },
+          });
+          return {
+            stepId: null,
+            quotaPaused: true,
+          };
+        }
+      }
+
       const latest = await WorkflowRunStepModelV2.getLatestByRunAndPath(knex, input.runId, input.stepPath);
       const attempt = (latest?.attempt ?? 0) + 1;
       const step = await WorkflowRunStepModelV2.create(knex, {
