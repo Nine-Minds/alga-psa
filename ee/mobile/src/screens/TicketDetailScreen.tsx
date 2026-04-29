@@ -59,6 +59,7 @@ import { CommentsSection } from "../features/ticketDetail/components/CommentsSec
 import { DescriptionSection } from "../features/ticketDetail/components/DescriptionSection";
 import { DocumentsSection } from "../features/ticketDetail/components/DocumentsSection";
 import { MaterialsSection } from "../features/ticketDetail/components/MaterialsSection";
+import { TimeEntriesSection } from "../features/ticketDetail/components/TimeEntriesSection";
 
 type Props = NativeStackScreenProps<RootStackParamList, "TicketDetail">;
 
@@ -179,7 +180,10 @@ export function TicketDetailBody({
   const priorityHook = useTicketPriority({ ...deps, fetchTicket });
   const dueDateHook = useTicketDueDate({ ...deps, ticket, fetchTicket });
   const watchHook = useTicketWatch({ ...deps, ticket, fetchTicket });
-  const timeEntryHook = useTimeEntry(deps);
+  const [timeEntriesRefreshKey, setTimeEntriesRefreshKey] = useState(0);
+  const timeEntryHook = useTimeEntry(deps, {
+    onCreated: () => setTimeEntriesRefreshKey((value) => value + 1),
+  });
   const assignmentHook = useTicketAssignment({ ...deps, fetchTicket });
   const contactHook = useTicketContact({ ...deps, fetchTicket });
   const titleHook = useTicketTitle({ ...deps, ticket, setTicket: ticketData.setTicket });
@@ -645,6 +649,14 @@ export function TicketDetailBody({
             client={client}
             apiKey={session.accessToken}
             ticketId={ticketId}
+          />
+          <View style={{ height: spacing.sm }} />
+          <TimeEntriesSection
+            client={client}
+            apiKey={session.accessToken}
+            ticketId={ticketId}
+            refreshKey={timeEntriesRefreshKey}
+            meUserId={meUserId}
           />
           <View style={{ height: spacing.sm }} />
           <KeyValue label={t("detail.created")} value={formatDateTimeWithRelative(ticket.entered_at)} />
