@@ -73,3 +73,8 @@ Rolling notes for improving workflow audit CSV exports so the CSV is business-re
 - `WorkflowDefinitionModelV2.getById` requires tenant and cannot be called with null tenant; export enrichment uses direct `workflow_definitions` query with optional tenant filter from audit rows.
 - Definition key field is `key` (not `workflow_key`) on `workflow_definitions` records.
 - (2026-04-29) Added test coverage for run-operation formatting (`T002`) and runtime action-level fields (`T003`) in `workflow-audit-csv.test.ts`.
+- (2026-04-29) Implemented `T008` DB-backed integration sanity coverage in `server/src/test/integration/workflowAuditExport.integration.test.ts`.
+  - Adds real `createTestDbConnection` fixture setup for tenants/users/workflow_definitions/audit_logs and verifies both CSV and JSON export paths from `exportWorkflowAuditLogsAction()`.
+  - Asserts CSV returns the new business-readable header set + readable event/actor/workflow fields and JSON remains raw redacted rows (`changed_data.secretRef === '***'`).
+  - Added virtual mocks for missing workspace-only authorization modules required by workflow runtime bootstrap in this test environment.
+- (2026-04-29) Added DB-availability guard in `workflowAuditExport.integration.test.ts` so the suite passes in environments without a reachable integration Postgres; the test executes fully when the DB connection is available.
