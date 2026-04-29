@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { exportWorkflowAuditLogsAction } from '@alga-psa/workflows/actions';
 import { createTenantKnex, getCurrentTenantId } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/auth';
+import { getCurrentUser, hasPermission } from '@alga-psa/auth';
 
 let tenantId = '';
 let userId = '';
@@ -52,12 +52,14 @@ vi.mock('@alga-psa/auth', async (importOriginal) => {
 const mockedCreateTenantKnex = vi.mocked(createTenantKnex);
 const mockedGetCurrentTenantId = vi.mocked(getCurrentTenantId);
 const mockedGetCurrentUser = vi.mocked(getCurrentUser);
+const mockedHasPermission = vi.mocked(hasPermission);
 
 let db: Knex;
 type ColumnMap = Record<string, unknown>;
 let tenantColumns: ColumnMap;
 let userColumns: ColumnMap;
 let workflowColumns: ColumnMap;
+let runColumns: ColumnMap;
 let dbAvailable = true;
 
 function hasColumn(columns: ColumnMap, name: string): boolean {
@@ -71,6 +73,7 @@ describe('workflow audit export integration', () => {
       tenantColumns = await db('tenants').columnInfo();
       userColumns = await db('users').columnInfo();
       workflowColumns = await db('workflow_definitions').columnInfo();
+      runColumns = await db('workflow_runs').columnInfo();
     } catch {
       dbAvailable = false;
     }
@@ -86,6 +89,7 @@ describe('workflow audit export integration', () => {
     mockedCreateTenantKnex.mockResolvedValue({ knex: db, tenant: tenantId });
     mockedGetCurrentTenantId.mockReturnValue(tenantId);
     mockedGetCurrentUser.mockResolvedValue({ user_id: userId, tenant: tenantId, roles: ['admin'] } as any);
+    mockedHasPermission.mockResolvedValue(true as any);
 
     await db('tenants').insert({
       tenant: tenantId,
@@ -183,5 +187,116 @@ describe('workflow audit export integration', () => {
     expect(parsed[0].operation).toBe('workflow_definition_publish');
     expect(parsed[0].changed_data.secretRef).toBe('***');
     expect(parsed[0].details.release_notes).toBe('Customer requested rollout');
+  });
+
+  it('T009: export still fails fast when permission or tenant scope validation fails', async () => {
+    if (!dbAvailable) {
+      return;
+    }
+
+    const workflowId = uuidv4();
+    await db('workflow_definitions').insert({
+      workflow_id: workflowId,
+      tenant_id: tenantId,
+      name: 'Permissions Fixture',
+      key: 'permissions.fixture',
+      description: null,
+      payload_schema_ref: 'payload.Empty.v1',
+      draft_definition: { id: workflowId, name: 'Permissions Fixture', version: 1, steps: [] },
+      draft_version: 1,
+      status: 'draft',
+      ...(hasColumn(workflowColumns, 'created_by') ? { created_by: userId } : {}),
+      ...(hasColumn(workflowColumns, 'created_at') ? { created_at: db.fn.now() } : {}),
+      ...(hasColumn(workflowColumns, 'updated_at') ? { updated_at: db.fn.now() } : {})
+    });
+
+    mockedHasPermission.mockResolvedValue(false as any);
+    await expect(exportWorkflowAuditLogsAction({
+      tableName: 'workflow_definitions',
+      recordId: workflowId,
+      format: 'csv'
+    })).rejects.toMatchObject({ status: 403 });
+
+    mockedHasPermission.mockResolvedValue(true as any);
+    const otherTenantWorkflowId = uuidv4();
+    await db('workflow_definitions').insert({
+      workflow_id: otherTenantWorkflowId,
+      tenant_id: uuidv4(),
+      name: 'Other Tenant Workflow',
+      key: 'other.tenant.workflow',
+      description: null,
+      payload_schema_ref: 'payload.Empty.v1',
+      draft_definition: { id: otherTenantWorkflowId, name: 'Other Tenant Workflow', version: 1, steps: [] },
+      draft_version: 1,
+      status: 'draft',
+      ...(hasColumn(workflowColumns, 'created_by') ? { created_by: userId } : {}),
+      ...(hasColumn(workflowColumns, 'created_at') ? { created_at: db.fn.now() } : {}),
+      ...(hasColumn(workflowColumns, 'updated_at') ? { updated_at: db.fn.now() } : {})
+    });
+
+    await expect(exportWorkflowAuditLogsAction({
+      tableName: 'workflow_definitions',
+      recordId: otherTenantWorkflowId,
+      format: 'csv'
+    })).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('T010: export callers can use existing inputs and receive unchanged CSV content type + filename pattern', async () => {
+    if (!dbAvailable) {
+      return;
+    }
+
+    const workflowId = uuidv4();
+    const runId = uuidv4();
+    const now = new Date().toISOString();
+
+    await db('workflow_definitions').insert({
+      workflow_id: workflowId,
+      tenant_id: tenantId,
+      name: 'Compatibility Workflow',
+      key: 'compatibility.workflow',
+      description: null,
+      payload_schema_ref: 'payload.Empty.v1',
+      draft_definition: { id: workflowId, name: 'Compatibility Workflow', version: 1, steps: [] },
+      draft_version: 1,
+      status: 'draft',
+      ...(hasColumn(workflowColumns, 'created_by') ? { created_by: userId } : {}),
+      ...(hasColumn(workflowColumns, 'created_at') ? { created_at: db.fn.now() } : {}),
+      ...(hasColumn(workflowColumns, 'updated_at') ? { updated_at: db.fn.now() } : {})
+    });
+
+    await db('workflow_runs').insert({
+      run_id: runId,
+      workflow_id: workflowId,
+      workflow_version: 1,
+      tenant_id: tenantId,
+      status: 'RUNNING',
+      ...(hasColumn(runColumns, 'node_path') ? { node_path: null } : {}),
+      ...(hasColumn(runColumns, 'input_json') ? { input_json: null } : {}),
+      ...(hasColumn(runColumns, 'error_json') ? { error_json: null } : {}),
+      started_at: now,
+      updated_at: now,
+      ...(hasColumn(runColumns, 'completed_at') ? { completed_at: null } : {})
+    });
+
+    await db('audit_logs').insert({
+      timestamp: db.fn.now(),
+      user_id: userId,
+      table_name: 'workflow_runs',
+      record_id: runId,
+      tenant_id: tenantId,
+      operation: 'workflow_run_start',
+      changed_data: { status: 'RUNNING' },
+      details: { source: 'system' }
+    });
+
+    const result = await exportWorkflowAuditLogsAction({
+      tableName: 'workflow_runs',
+      recordId: runId
+    });
+
+    expect(result.contentType).toBe('text/csv');
+    expect(result.filename).toBe(`workflow-run-${runId}-audit.csv`);
+    expect(result.body.startsWith('timestamp,event,actor,source,workflow_name')).toBe(true);
   });
 });

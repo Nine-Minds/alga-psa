@@ -78,3 +78,9 @@ Rolling notes for improving workflow audit CSV exports so the CSV is business-re
   - Asserts CSV returns the new business-readable header set + readable event/actor/workflow fields and JSON remains raw redacted rows (`changed_data.secretRef === '***'`).
   - Added virtual mocks for missing workspace-only authorization modules required by workflow runtime bootstrap in this test environment.
 - (2026-04-29) Added DB-availability guard in `workflowAuditExport.integration.test.ts` so the suite passes in environments without a reachable integration Postgres; the test executes fully when the DB connection is available.
+- (2026-04-29) Implemented `T009` in `server/src/test/integration/workflowAuditExport.integration.test.ts`.
+  - Added fail-fast guard assertions for admin permission denial (`403`) and cross-tenant definition export access (`404`) to confirm existing validation remains enforced before CSV enrichment.
+- (2026-04-29) Implemented `T010` in `server/src/test/integration/workflowAuditExport.integration.test.ts`.
+  - Added compatibility assertion that existing export callers can omit `format` and still receive default CSV output with unchanged content type and filename pattern (`workflow-run-<runId>-audit.csv`).
+- (2026-04-29) Implemented `T011` manual smoke coverage via `ee/docs/plans/2026-04-29-workflow-audit-csv-export-details/T011-manual-smoke-test.md`.
+  - Added end-to-end admin validation steps for definition and run audit CSV exports, required column/row checks, and JSON cross-check expectations.

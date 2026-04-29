@@ -92,7 +92,7 @@
   {
     "id": "T009",
     "description": "DB-backed guard test: unauthorized or cross-tenant audit export still fails through existing permission/tenant validation before CSV enrichment",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020",
       "F021"
@@ -101,7 +101,7 @@
   {
     "id": "T010",
     "description": "Compatibility test: existing UI/API callers can invoke CSV export without new parameters and receive unchanged content type and filename pattern",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002",
       "F023"
@@ -110,7 +110,7 @@
   {
     "id": "T011",
     "description": "Manual smoke test: create/edit/publish a workflow, start and operate on a run, export definition and run audit CSVs, and verify readable front columns plus trailing support IDs",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F004",
