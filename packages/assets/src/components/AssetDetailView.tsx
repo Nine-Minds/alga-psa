@@ -21,6 +21,7 @@ export const AssetDetailView: React.FC<AssetDetailViewProps> = ({ assetId }) => 
     asset, 
     metrics, 
     rmmData, 
+    assetFacts,
     isLoading, 
     refreshRmmData, 
     isRefreshing 
@@ -69,6 +70,7 @@ export const AssetDetailView: React.FC<AssetDetailViewProps> = ({ assetId }) => 
         <AssetDashboardGrid 
           asset={asset}
           rmmData={rmmData}
+          assetFacts={assetFacts}
           metrics={metrics}
           isLoading={isLoading}
           onRefreshRmm={refreshRmmData}

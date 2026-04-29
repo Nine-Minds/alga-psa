@@ -273,4 +273,81 @@ describe('TaniumGatewayClient', () => {
 
     await expect(client.testConnection()).rejects.toThrow(/failed to return computer groups/i);
   });
+
+  it('parses Endpoint Criticality with Level readings into endpoint keyed values', async () => {
+    gatewayPostMock.mockResolvedValue({
+      headers: { 'content-type': 'application/json' },
+      data: {
+        data: {
+          endpoints: {
+            edges: [
+              {
+                node: {
+                  id: 'endpoint-1',
+                  criticality: {
+                    columns: [
+                      { name: 'criticality_level', values: ['High'] },
+                    ],
+                  },
+                },
+              },
+            ],
+            pageInfo: { hasNextPage: false, endCursor: 'abc' },
+          },
+        },
+      },
+    });
+
+    const client = new TaniumGatewayClient({
+      gatewayUrl: 'https://tk-nineminds.titankube.com/plugin/products/gateway',
+      apiToken: 'token-valid',
+    });
+
+    const readings = await client.listEndpointCriticalityReadings({ computerGroupId: '30229' });
+    expect(readings.get('endpoint-1')).toMatchObject({
+      endpointId: 'endpoint-1',
+      label: 'High',
+      multiplier: 1.67,
+      isAvailable: true,
+    });
+  });
+
+  it('tolerates unknown criticality columns without throwing', async () => {
+    gatewayPostMock.mockResolvedValue({
+      headers: { 'content-type': 'application/json' },
+      data: {
+        data: {
+          endpoints: {
+            edges: [
+              {
+                node: {
+                  id: 'endpoint-1',
+                  criticality: {
+                    columns: [
+                      { name: 'mystery_col', values: ['strange'] },
+                    ],
+                  },
+                },
+              },
+            ],
+            pageInfo: { hasNextPage: false, endCursor: 'abc' },
+          },
+        },
+      },
+    });
+
+    const client = new TaniumGatewayClient({
+      gatewayUrl: 'https://tk-nineminds.titankube.com/plugin/products/gateway',
+      apiToken: 'token-valid',
+    });
+
+    const readings = await client.listEndpointCriticalityReadings({ computerGroupId: '30229' });
+    expect(readings.get('endpoint-1')).toMatchObject({
+      endpointId: 'endpoint-1',
+      label: null,
+      multiplier: null,
+      isAvailable: false,
+    });
+    expect(readings.get('endpoint-1')?.columns[0]?.name).toBe('mystery_col');
+  });
 });

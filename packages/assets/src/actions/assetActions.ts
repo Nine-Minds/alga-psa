@@ -35,6 +35,7 @@ import {
     SecurityStatus,
     WarrantyStatus,
     DeletionValidationResult,
+    AssetFact,
 } from '@alga-psa/types';
 import type { IDocument } from '@alga-psa/types';
 import { validateData } from '@alga-psa/validation';
@@ -79,6 +80,7 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
+import { listAvailableAssetFactsForAsset } from 'server/src/lib/assets/assetFactsService';
 
 type AssetExtensionType = WorkstationAsset | NetworkDeviceAsset | ServerAsset | MobileDeviceAsset | PrinterAsset;
 
@@ -531,6 +533,18 @@ export const getAsset = withAuth(async (user, { tenant }, asset_id: string): Pro
     });
 
     return asset;
+});
+
+export const getAvailableAssetFacts = withAuth(async (user, { tenant }, asset_id: string): Promise<AssetFact[]> => {
+    const { knex } = await createTenantKnex();
+    if (!await hasPermission(user, 'asset', 'read')) {
+        throw new Error('Permission denied: Cannot read asset facts');
+    }
+
+    return withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetFact[]> => {
+        await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
+        return listAvailableAssetFactsForAsset(trx, { tenant, assetId: asset_id });
+    });
 });
 
 export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: string): Promise<AssetDetailBundle> => {

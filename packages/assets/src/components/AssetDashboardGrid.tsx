@@ -4,11 +4,12 @@ import { HardwareSpecsPanel } from './panels/HardwareSpecsPanel';
 import { SecurityPatchingPanel } from './panels/SecurityPatchingPanel';
 import { AssetInfoPanel } from './panels/AssetInfoPanel';
 import { AssetNotesPanel } from './panels/AssetNotesPanel';
-import type { Asset, RmmCachedData, AssetSummaryMetrics } from '@alga-psa/types';
+import type { Asset, AssetFact, RmmCachedData, AssetSummaryMetrics } from '@alga-psa/types';
 
 interface AssetDashboardGridProps {
   asset: Asset;
   rmmData: RmmCachedData | null | undefined;
+  assetFacts: AssetFact[] | undefined;
   metrics: AssetSummaryMetrics | undefined;
   isLoading: boolean;
   onRefreshRmm: () => void;
@@ -18,6 +19,7 @@ interface AssetDashboardGridProps {
 export const AssetDashboardGrid: React.FC<AssetDashboardGridProps> = ({
   asset,
   rmmData,
+  assetFacts,
   metrics,
   isLoading,
   onRefreshRmm,
@@ -29,6 +31,7 @@ export const AssetDashboardGrid: React.FC<AssetDashboardGridProps> = ({
       <div className="lg:col-span-2 flex flex-col gap-6">
         <RmmVitalsPanel 
           asset={asset}
+          assetFacts={assetFacts}
           data={rmmData} 
           isLoading={isLoading} 
           onRefresh={onRefreshRmm}
