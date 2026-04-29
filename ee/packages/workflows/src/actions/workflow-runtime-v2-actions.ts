@@ -1216,17 +1216,38 @@ const auditWorkflowEvent = async (
   }
 ) => {
   const roleNames = user.roles?.map((role) => role.role_name) ?? [];
-  await auditLog(knex, {
-    userId: user.user_id,
-    operation: params.operation,
-    tableName: params.tableName,
-    recordId: params.recordId,
-    changedData: params.changedData ?? {},
-    details: {
-      ...params.details,
-      actorRoles: roleNames,
-      source: params.source ?? 'api'
-    }
+  const tenantId = typeof user.tenant === 'string' && user.tenant.trim().length ? user.tenant : null;
+
+  if (!tenantId) {
+    await auditLog(knex, {
+      userId: user.user_id,
+      operation: params.operation,
+      tableName: params.tableName,
+      recordId: params.recordId,
+      changedData: params.changedData ?? {},
+      details: {
+        ...params.details,
+        actorRoles: roleNames,
+        source: params.source ?? 'api'
+      }
+    });
+    return;
+  }
+
+  await knex.transaction(async (trx) => {
+    await trx.raw("select set_config('app.current_tenant', ?, true)", [tenantId]);
+    await auditLog(trx, {
+      userId: user.user_id,
+      operation: params.operation,
+      tableName: params.tableName,
+      recordId: params.recordId,
+      changedData: params.changedData ?? {},
+      details: {
+        ...params.details,
+        actorRoles: roleNames,
+        source: params.source ?? 'api'
+      }
+    });
   });
 };
 
@@ -2620,15 +2641,16 @@ export async function exportWorkflowAuditLogsAction(input: unknown) {
     };
   }
 
-  const { knex } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
   const tenantFromLogs =
-    typeof result.logs[0]?.tenant_id === 'string' && result.logs[0].tenant_id.trim().length
-      ? result.logs[0].tenant_id
+    typeof result.logs[0]?.tenant === 'string' && result.logs[0].tenant.trim().length
+      ? result.logs[0].tenant
       : null;
+  const tenantForEnrichment = typeof tenant === 'string' && tenant.trim().length ? tenant : tenantFromLogs;
   const actorByUserId = await buildActorMap(
     knex,
     result.logs.map((log: any) => String(log.user_id ?? '')).filter(Boolean),
-    tenantFromLogs
+    tenantForEnrichment
   );
 
   const context = {
@@ -2642,8 +2664,8 @@ export async function exportWorkflowAuditLogsAction(input: unknown) {
 
   if (parsed.tableName === 'workflow_definitions') {
     const workflowQuery = knex('workflow_definitions').where({ workflow_id: parsed.recordId });
-    if (tenantFromLogs) {
-      workflowQuery.andWhere({ tenant_id: tenantFromLogs });
+    if (tenantForEnrichment) {
+      workflowQuery.andWhere({ tenant_id: tenantForEnrichment });
     }
     const workflow = await workflowQuery.first();
     if (workflow) {
@@ -2666,8 +2688,8 @@ export async function exportWorkflowAuditLogsAction(input: unknown) {
     }
     if (context.workflowId) {
       const workflowQuery = knex('workflow_definitions').where({ workflow_id: context.workflowId });
-      if (tenantFromLogs) {
-        workflowQuery.andWhere({ tenant_id: tenantFromLogs });
+      if (tenantForEnrichment) {
+        workflowQuery.andWhere({ tenant_id: tenantForEnrichment });
       }
       const workflow = await workflowQuery.first();
       if (workflow) {

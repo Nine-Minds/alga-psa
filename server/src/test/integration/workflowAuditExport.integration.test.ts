@@ -145,13 +145,14 @@ describe('workflow audit export integration', () => {
     });
 
     await db('audit_logs').insert({
+      audit_id: uuidv4(),
+      tenant: tenantId,
       timestamp: db.fn.now(),
       user_id: userId,
       table_name: 'workflow_definitions',
       record_id: workflowId,
-      tenant_id: tenantId,
       operation: 'workflow_definition_publish',
-      changed_data: { published_version: 1, reason: 'Ready to ship', secretRef: 'super-secret' },
+      changed_data: { publishedVersion: 1, reason: 'Ready to ship', secretRef: 'super-secret' },
       details: { source: 'workflow_designer', release_notes: 'Customer requested rollout' }
     });
 
@@ -280,11 +281,12 @@ describe('workflow audit export integration', () => {
     });
 
     await db('audit_logs').insert({
+      audit_id: uuidv4(),
+      tenant: tenantId,
       timestamp: db.fn.now(),
       user_id: userId,
       table_name: 'workflow_runs',
       record_id: runId,
-      tenant_id: tenantId,
       operation: 'workflow_run_start',
       changed_data: { status: 'RUNNING' },
       details: { source: 'system' }

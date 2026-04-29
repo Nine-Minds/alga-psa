@@ -18,6 +18,9 @@ Rolling notes for improving workflow audit CSV exports so the CSV is business-re
 
 ## Discoveries / Constraints
 
+- (2026-04-29) Review follow-up: real workflow audit payloads use a mix of camelCase and snake_case keys (`publishedVersion`, `draftVersion`, `workflowVersion`, `nodePath`, plus runtime `action_id`/`step_path`). Formatter aliases must support both shapes.
+- (2026-04-29) Review follow-up: `audit_logs` stores tenant in `tenant`, not `tenant_id`; CSV enrichment should prefer authenticated tenant context and only fall back to `audit_logs.tenant`.
+- (2026-04-29) Review follow-up: server Vitest runs from `server/`, so EE workflow action tests need an explicit include pattern under `../ee/packages/workflows/src/actions`.
 - (2026-04-29) Current CSV export in `ee/packages/workflows/src/actions/workflow-runtime-v2-actions.ts` only includes `timestamp`, `operation`, `user_id`, `table_name`, and `record_id`.
 - (2026-04-29) Current export path already redacts `changed_data` and `details` via `listWorkflowAuditLogsAction()` before CSV/JSON serialization.
 - (2026-04-29) Current export limit is `EXPORT_AUDIT_LIMIT = 5000`.

@@ -73,21 +73,22 @@ const KNOWN_EVENT_LABELS: Record<string, string> = {
   workflow_run_requeue_event: 'Event wait requeued'
 };
 
-const KNOWN_FIELD_KEYS = new Set([
-  'status',
-  'run_status',
-  'reason',
-  'workflow_version',
-  'draft_version',
-  'published_version',
-  'step_path',
-  'node_path',
-  'action_id',
-  'action_version',
-  'source',
-  'workflow_name',
-  'workflow_key'
-]);
+const FIELD_GROUPS = [
+  { label: 'status', keys: ['status', 'runStatus', 'run_status'] },
+  { label: 'reason', keys: ['reason'] },
+  {
+    label: 'workflow version',
+    keys: ['workflowVersion', 'workflow_version', 'draftVersion', 'draft_version', 'publishedVersion', 'published_version']
+  },
+  { label: 'step path', keys: ['stepPath', 'step_path', 'nodePath', 'node_path'] },
+  { label: 'action id', keys: ['actionId', 'action_id'] },
+  { label: 'action version', keys: ['actionVersion', 'action_version'] },
+  { label: 'source', keys: ['source'] },
+  { label: 'workflow name', keys: ['workflowName', 'workflow_name', 'name'] },
+  { label: 'workflow key', keys: ['workflowKey', 'workflow_key', 'key'] }
+] as const;
+
+const KNOWN_FIELD_KEYS: Set<string> = new Set(FIELD_GROUPS.flatMap((group) => [...group.keys]));
 
 const csvEscape = (value: unknown) => {
   if (value === null || value === undefined) return '';
@@ -140,37 +141,40 @@ const summarizeUnmappedValue = (value: unknown): string | null => {
   return String(value);
 };
 
-const normalizeFieldLabel = (key: string) => key.replace(/_/g, ' ');
+const pickField = (
+  changedData: Record<string, unknown>,
+  details: Record<string, unknown>,
+  keys: readonly string[]
+): string => pickFirst(...keys.flatMap((key) => [details[key], changedData[key]]));
 
 const collectKnownFields = (changedData: Record<string, unknown>, details: Record<string, unknown>) => {
-  const source = pickFirst(details.source, changedData.source);
-  const workflowVersion = pickFirst(
-    details.workflow_version,
-    changedData.workflow_version,
-    details.draft_version,
-    changedData.draft_version,
-    details.published_version,
-    changedData.published_version
-  );
-  const runStatus = pickFirst(details.run_status, changedData.run_status, details.status, changedData.status);
-  const reason = pickFirst(details.reason, changedData.reason);
-  const stepPath = pickFirst(details.step_path, changedData.step_path, details.node_path, changedData.node_path);
-  const actionId = pickFirst(details.action_id, changedData.action_id);
-  const actionVersion = pickFirst(details.action_version, changedData.action_version);
+  const source = pickField(changedData, details, ['source']);
+  const workflowVersion = pickField(changedData, details, [
+    'workflowVersion',
+    'workflow_version',
+    'draftVersion',
+    'draft_version',
+    'publishedVersion',
+    'published_version'
+  ]);
+  const runStatus = pickField(changedData, details, ['runStatus', 'run_status', 'status']);
+  const reason = pickField(changedData, details, ['reason']);
+  const stepPath = pickField(changedData, details, ['stepPath', 'step_path', 'nodePath', 'node_path']);
+  const actionId = pickField(changedData, details, ['actionId', 'action_id']);
+  const actionVersion = pickField(changedData, details, ['actionVersion', 'action_version']);
   const action = [actionId, actionVersion ? `v${actionVersion}` : ''].filter(Boolean).join(' ');
-  const workflowName = pickFirst(details.workflow_name, changedData.workflow_name);
-  const workflowKey = pickFirst(details.workflow_key, changedData.workflow_key);
+  const workflowName = pickField(changedData, details, ['workflowName', 'workflow_name', 'name']);
+  const workflowKey = pickField(changedData, details, ['workflowKey', 'workflow_key', 'key']);
 
   return { source, workflowVersion, runStatus, reason, stepPath, action, workflowName, workflowKey };
 };
 
 const buildChangedFields = (changedData: Record<string, unknown>, details: Record<string, unknown>): string => {
   const labels: string[] = [];
-  for (const key of KNOWN_FIELD_KEYS) {
-    const value = details[key] ?? changedData[key];
-    const text = toDisplayText(value);
+  for (const group of FIELD_GROUPS) {
+    const text = pickField(changedData, details, group.keys);
     if (!text) continue;
-    labels.push(normalizeFieldLabel(key));
+    labels.push(group.label);
   }
   return labels.join('; ');
 };

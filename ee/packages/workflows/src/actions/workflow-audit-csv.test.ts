@@ -30,7 +30,7 @@ describe('workflowAuditCsv formatter', () => {
         user_id: 'u-1',
         table_name: 'workflow_definitions',
         record_id: 'wf-1',
-        changed_data: { published_version: 12 },
+        changed_data: { publishedVersion: 12 },
         details: { source: 'ui', reason: 'Approved for prod' }
       }
     ];
@@ -47,7 +47,7 @@ describe('workflowAuditCsv formatter', () => {
     expect(row.workflow_name).toBe('Onboarding');
     expect(row.workflow_key).toBe('onboarding');
     expect(row.workflow_version).toBe('12');
-    expect(row.changed_fields).toContain('published version');
+    expect(row.changed_fields).toContain('workflow version');
     expect(row.summary).toContain('Workflow published');
     expect(row.workflow_id).toBe('wf-1');
     expect(row.operation).toBe('workflow_definition_publish');
@@ -96,8 +96,8 @@ describe('workflowAuditCsv formatter', () => {
         user_id: 'u-9',
         table_name: 'workflow_runs',
         record_id: 'run-9',
-        changed_data: { run_status: 'queued', reason: 'Manual retry' },
-        details: { source: 'api' }
+        changed_data: { status: 'queued' },
+        details: { source: 'api', reason: 'Manual retry', nodePath: 'root.retry_step' }
       }
     ];
 
@@ -121,6 +121,7 @@ describe('workflowAuditCsv formatter', () => {
     expect(row.workflow_version).toBe('11');
     expect(row.run_status).toBe('queued');
     expect(row.reason).toBe('Manual retry');
+    expect(row.step_path).toBe('root.retry_step');
     expect(row.summary).toContain('Run retried');
     expect(row.run_id).toBe('run-9');
     expect(row.workflow_id).toBe('wf-9');
