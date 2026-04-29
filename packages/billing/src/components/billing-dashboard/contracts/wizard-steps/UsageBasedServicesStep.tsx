@@ -168,7 +168,7 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor={`unit-rate-${index}`} className="text-sm flex items-center gap-2">
+                  <Label htmlFor={`unit-rate-${index}`} className="text-sm flex items-center gap-2 h-5">
                     <Coins className="h-3 w-3" />
                     {t('wizardUsage.labels.ratePerUnit', { defaultValue: 'Rate per Unit' })}
                   </Label>
@@ -216,7 +216,7 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor={`unit-measure-${index}`} className="text-sm">
+                  <Label htmlFor={`unit-measure-${index}`} className="text-sm flex items-center gap-2 h-5">
                     {t('wizardUsage.labels.unitOfMeasure', { defaultValue: 'Unit of Measure' })}
                   </Label>
                   <Input
