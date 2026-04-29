@@ -118,3 +118,8 @@ Rolling notes for the workflow step quota accounting plan. Keep decisions, disco
   - `workflowStepQuotaService.reconcileUsagePeriod(tenant, periodStart, periodEnd)` compares counter usage to step ledger count and returns drift.
 - Added support/engineering documentation:
   - `ee/docs/plans/2026-04-28-workflow-step-quota-accounting/OPERATIONS.md` covering quota source/limits, pause/resume behavior, and reconciliation runbook.
+- Added diagnostic/observability integration coverage in `server/src/test/integration/workflowStepQuotaService.integration.test.ts`:
+  - Reconciliation drift test for `reconcileUsagePeriod()` (`counterUsedCount`, `ledgerStepCount`, `drift`).
+  - Structured log assertions for invalid metadata fallback, reservation success, quota exhaustion, and fallback-calendar usage.
+- Validation command run:
+  - `cd server && npm test -- src/test/integration/workflowStepQuotaService.integration.test.ts` (pass after fixture fix for `workflow_definitions.tenant_id`).

@@ -157,7 +157,7 @@
   {
     "id": "T018",
     "description": "Diagnostic integration: reconciliation reports drift between workflow_step_usage_periods.used_count and workflow_run_steps joined to workflow_runs for a tenant period.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]
@@ -165,7 +165,7 @@
   {
     "id": "T019",
     "description": "Observability: quota reservation, quota exceeded, resume, invalid metadata fallback, and fallback-calendar usage emit structured logs or workflow run logs with tenant and period context.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ]

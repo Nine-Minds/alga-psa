@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from 'vitest';
 import type { Knex } from 'knex';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { workflowStepQuotaService } from '../../../../shared/workflow/runtime/services/workflowStepQuotaService';
+import logger from '@alga-psa/core/logger';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -266,5 +267,103 @@ describe('workflowStepQuotaService', () => {
 
     const row = await db('workflow_step_usage_periods').where({ tenant }).first<{ used_count: number }>();
     expect(row?.used_count).toBe(3);
+  });
+
+  it('reports reconciliation drift between usage counter and step ledger', async () => {
+    const tenant = uuidv4();
+    await seedTenant(db, tenant, 'pro');
+    const periodStart = '2026-04-01T00:00:00.000Z';
+    const periodEnd = '2026-05-01T00:00:00.000Z';
+
+    await db('workflow_step_usage_periods').insert({
+      tenant,
+      period_start: periodStart,
+      period_end: periodEnd,
+      period_source: 'fallback_calendar',
+      stripe_subscription_id: null,
+      effective_limit: 750,
+      used_count: 5,
+      limit_source: 'tier_default',
+      tier: 'pro',
+    });
+
+    const workflowId = uuidv4();
+    await db('workflow_definitions').insert({
+      workflow_id: workflowId,
+      tenant_id: tenant,
+      name: 'Quota Drift Workflow',
+      payload_schema_ref: 'schema://none',
+      draft_definition: {},
+      draft_version: 1,
+      status: 'published',
+    });
+
+    const runId = uuidv4();
+    await db('workflow_runs').insert({
+      run_id: runId,
+      tenant_id: tenant,
+      workflow_id: workflowId,
+      workflow_version: 1,
+      status: 'RUNNING',
+      node_path: '0',
+      started_at: '2026-04-10T00:00:00.000Z',
+      input_json: {},
+    });
+
+    await db('workflow_run_steps').insert([
+      { step_id: uuidv4(), run_id: runId, step_path: '0', definition_step_id: 'a', status: 'SUCCEEDED', attempt: 1, started_at: '2026-04-10T00:00:00.000Z' },
+      { step_id: uuidv4(), run_id: runId, step_path: '1', definition_step_id: 'b', status: 'SUCCEEDED', attempt: 1, started_at: '2026-04-10T00:00:01.000Z' },
+      { step_id: uuidv4(), run_id: runId, step_path: '2', definition_step_id: 'c', status: 'SUCCEEDED', attempt: 1, started_at: '2026-04-10T00:00:02.000Z' },
+    ]);
+
+    const reconciliation = await workflowStepQuotaService.reconcileUsagePeriod(db, tenant, periodStart, periodEnd);
+    expect(reconciliation.counterUsedCount).toBe(5);
+    expect(reconciliation.ledgerStepCount).toBe(3);
+    expect(reconciliation.drift).toBe(2);
+  });
+
+  it('emits structured observability logs for fallback, invalid metadata fallback, reservation, and quota exhaustion', async () => {
+    const tenant = uuidv4();
+    await seedTenant(db, tenant, 'solo');
+    await seedStripePeriod(db, tenant, {
+      status: 'active',
+      start: '2026-04-01T00:00:00.000Z',
+      end: '2026-05-01T00:00:00.000Z',
+      workflowStepLimitPrice: 'invalid',
+      workflowStepLimitProduct: '1',
+    });
+
+    const infoSpy = vi.spyOn(logger, 'info');
+    const warnSpy = vi.spyOn(logger, 'warn');
+    const debugSpy = vi.spyOn(logger, 'debug');
+
+    await workflowStepQuotaService.resolveQuotaSummary(db, tenant, new Date('2026-04-20T00:00:00.000Z'));
+    await workflowStepQuotaService.reserveStepStart(db, tenant);
+    await workflowStepQuotaService.reserveStepStart(db, tenant);
+
+    const fallbackTenant = uuidv4();
+    await seedTenant(db, fallbackTenant, 'pro');
+    await workflowStepQuotaService.resolveQuotaSummary(db, fallbackTenant, new Date('2026-04-20T00:00:00.000Z'));
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Invalid workflow_step_limit metadata on Stripe price'),
+      expect.objectContaining({ tenant })
+    );
+    expect(debugSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Reserved workflow step quota'),
+      expect.objectContaining({ tenant })
+    );
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Workflow step quota exceeded at reservation'),
+      expect.objectContaining({ tenant })
+    );
+    expect(infoSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Using fallback calendar period'),
+      expect.objectContaining({ tenant: fallbackTenant })
+    );
+
+    infoSpy.mockRestore();
+    warnSpy.mockRestore();
+    debugSpy.mockRestore();
   });
 });
