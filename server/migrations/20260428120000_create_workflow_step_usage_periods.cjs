@@ -28,6 +28,18 @@ exports.up = async function up(knex) {
     CHECK (period_start < period_end)
   `);
 
+  await knex.schema.raw(`
+    ALTER TABLE workflow_step_usage_periods
+    ADD CONSTRAINT workflow_step_usage_periods_used_count_check
+    CHECK (used_count >= 0)
+  `);
+
+  await knex.schema.raw(`
+    ALTER TABLE workflow_step_usage_periods
+    ADD CONSTRAINT workflow_step_usage_periods_effective_limit_check
+    CHECK (effective_limit IS NULL OR effective_limit > 0)
+  `);
+
   const dbUserServer = process.env.DB_USER_SERVER;
   if (dbUserServer) {
     const escapedUser = dbUserServer.replace(/"/g, '""');

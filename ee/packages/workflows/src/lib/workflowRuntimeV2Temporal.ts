@@ -1,6 +1,7 @@
 export {
   WORKFLOW_RUNTIME_V2_EVENT_SIGNAL,
   WORKFLOW_RUNTIME_V2_HUMAN_TASK_SIGNAL,
+  WORKFLOW_RUNTIME_V2_QUOTA_RESUME_SIGNAL,
   WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE,
   WORKFLOW_RUNTIME_V2_TEMPORAL_WORKFLOW,
   type WorkflowRuntimeV2TemporalRunInput,
@@ -9,6 +10,7 @@ export {
 import {
   WORKFLOW_RUNTIME_V2_EVENT_SIGNAL,
   WORKFLOW_RUNTIME_V2_HUMAN_TASK_SIGNAL,
+  WORKFLOW_RUNTIME_V2_QUOTA_RESUME_SIGNAL,
   WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE,
   WORKFLOW_RUNTIME_V2_TEMPORAL_WORKFLOW,
   type WorkflowRuntimeV2TemporalRunInput,
@@ -100,6 +102,35 @@ export async function signalWorkflowRuntimeV2HumanTask(input: {
       taskId: input.taskId,
       eventName: input.eventName ?? 'HUMAN_TASK_COMPLETED',
       payload: input.payload ?? {},
+    });
+  } finally {
+    await connection.close().catch(() => undefined);
+  }
+}
+
+export async function signalWorkflowRuntimeV2QuotaResume(input: {
+  runId: string;
+  waitId?: string | null;
+  reason?: string | null;
+  resumedBy?: string | null;
+}): Promise<void> {
+  const temporal = await import('@temporalio/client');
+  const connection = await temporal.Connection.connect({
+    address: process.env.TEMPORAL_ADDRESS || DEFAULT_TEMPORAL_ADDRESS,
+  });
+  const client = new temporal.Client({
+    connection,
+    namespace: process.env.TEMPORAL_NAMESPACE || DEFAULT_TEMPORAL_NAMESPACE,
+  });
+
+  const temporalWorkflowId = `workflow-runtime-v2:run:${input.runId}`;
+  try {
+    const handle = client.workflow.getHandle(temporalWorkflowId);
+    await handle.signal(WORKFLOW_RUNTIME_V2_QUOTA_RESUME_SIGNAL, {
+      waitId: input.waitId ?? null,
+      reason: input.reason ?? 'quota_available',
+      resumedBy: input.resumedBy ?? null,
+      resumedAt: new Date().toISOString(),
     });
   } finally {
     await connection.close().catch(() => undefined);

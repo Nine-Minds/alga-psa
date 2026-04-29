@@ -62,7 +62,8 @@ import {
 import {
   cancelWorkflowRuntimeV2TemporalRun,
   signalWorkflowRuntimeV2Event,
-  signalWorkflowRuntimeV2HumanTask
+  signalWorkflowRuntimeV2HumanTask,
+  signalWorkflowRuntimeV2QuotaResume
 } from '../lib/workflowRuntimeV2Temporal';
 import { resolveWorkflowEventCorrelation } from '../lib/workflowEventCorrelation';
 import type { DeletionValidationResult } from '@alga-psa/types';
@@ -2885,7 +2886,6 @@ export const resumeWorkflowRunFromQuotaPauseAction = withAuth(async (user, { ten
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'admin', knex);
   const runRecord = await requireRunTenantAccess(knex, parsed.runId, tenant);
-  assertLegacyRunControlSupported(runRecord, 'resume');
 
   if (runRecord.status !== 'WAITING') {
     return throwHttpError(409, 'Run is not waiting');
@@ -2902,6 +2902,9 @@ export const resumeWorkflowRunFromQuotaPauseAction = withAuth(async (user, { ten
 
   if (!quotaWait) {
     return throwHttpError(409, 'Run is not quota-paused');
+  }
+  if (!quotaWait.step_path || runRecord.node_path !== quotaWait.step_path) {
+    return throwHttpError(409, 'Quota pause is stale for this run');
   }
 
   const { workflowStepQuotaService } = await import('@alga-psa/workflows/runtime/core');
@@ -2939,9 +2942,10 @@ export const resumeWorkflowRunFromQuotaPauseAction = withAuth(async (user, { ten
 
   await WorkflowRunModelV2.update(knex, parsed.runId, {
     status: 'RUNNING',
-    resume_event_name: 'ADMIN_RESUME',
-    resume_event_payload: resumePayload,
+    resume_event_name: runRecord.engine === 'temporal' ? null : 'ADMIN_RESUME',
+    resume_event_payload: runRecord.engine === 'temporal' ? null : resumePayload,
     resume_error: null,
+    error_json: null,
   });
 
   await WorkflowRunLogModelV2.create(knex, {
@@ -2967,8 +2971,17 @@ export const resumeWorkflowRunFromQuotaPauseAction = withAuth(async (user, { ten
     source: parsed.source ?? 'api'
   });
 
-  const runtime = new WorkflowRuntimeV2();
-  await runtime.executeRun(knex, parsed.runId, `admin-${user.user_id}`);
+  if (runRecord.engine === 'temporal') {
+    await signalWorkflowRuntimeV2QuotaResume({
+      runId: parsed.runId,
+      waitId: quotaWait.wait_id,
+      reason: parsed.reason,
+      resumedBy: `admin-${user.user_id}`,
+    });
+  } else {
+    const runtime = new WorkflowRuntimeV2();
+    await runtime.executeRun(knex, parsed.runId, `admin-${user.user_id}`);
+  }
 
   return { ok: true, resumed: true };
 });

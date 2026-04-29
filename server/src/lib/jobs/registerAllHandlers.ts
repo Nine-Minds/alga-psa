@@ -88,7 +88,9 @@ export async function registerAllJobHandlers(
   const {
     jobService,
     storageService,
-    includeEnterprise = process.env.EDITION === 'enterprise',
+    includeEnterprise = process.env.EDITION === 'enterprise'
+      || process.env.EDITION === 'ee'
+      || process.env.NEXT_PUBLIC_EDITION === 'enterprise',
     force = false,
   } = options;
 
@@ -347,7 +349,7 @@ export async function registerAllJobHandlers(
 
   if (!includeEnterprise) {
     // SLA timer handler - checks SLA thresholds and sends notifications
-  JobHandlerRegistry.register<SlaTimerJobData & BaseJobData>(
+    JobHandlerRegistry.register<SlaTimerJobData & BaseJobData>(
       {
         name: 'sla-timer',
         handler: async (_jobId, data) => {
@@ -357,19 +359,7 @@ export async function registerAllJobHandlers(
         timeoutMs: 300000, // 5 minutes
       },
       registerOpts
-  );
-
-  JobHandlerRegistry.register<WorkflowQuotaResumeScanJobData & BaseJobData>(
-    {
-      name: 'workflow-quota-resume-scan',
-      handler: async (_jobId, data) => {
-        await workflowQuotaResumeScanHandler(data);
-      },
-      retry: { maxAttempts: 2 },
-      timeoutMs: 120000,
-    },
-    registerOpts
-  );
+    );
   }
 
   // ============================================================================
@@ -377,6 +367,17 @@ export async function registerAllJobHandlers(
   // ============================================================================
 
   if (includeEnterprise) {
+    JobHandlerRegistry.register<WorkflowQuotaResumeScanJobData & BaseJobData>(
+      {
+        name: 'workflow-quota-resume-scan',
+        handler: async (_jobId, data) => {
+          await workflowQuotaResumeScanHandler(data);
+        },
+        retry: { maxAttempts: 2 },
+        timeoutMs: 120000,
+      },
+      registerOpts
+    );
     // Cleanup AI session keys handler (EE only)
     JobHandlerRegistry.register<CleanupAiSessionKeysJobData & BaseJobData>(
       {
@@ -426,6 +427,12 @@ export function getAvailableJobHandlers(): string[] {
     // SLA
     'sla-timer',
     // Enterprise-only
-    ...(process.env.EDITION === 'enterprise' ? ['cleanup-ai-session-keys'] : []),
+    ...(
+      process.env.EDITION === 'enterprise'
+      || process.env.EDITION === 'ee'
+      || process.env.NEXT_PUBLIC_EDITION === 'enterprise'
+        ? ['cleanup-ai-session-keys', 'workflow-quota-resume-scan']
+        : []
+    ),
   ];
 }

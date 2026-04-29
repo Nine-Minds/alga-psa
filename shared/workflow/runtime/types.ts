@@ -525,7 +525,8 @@ export type WorkflowErrorCategory =
   | 'ExpressionError'
   | 'TransientError'
   | 'ActionError'
-  | 'TimeoutError';
+  | 'TimeoutError'
+  | 'QuotaExceeded';
 
 export type PublishError = {
   severity: 'error' | 'warning';

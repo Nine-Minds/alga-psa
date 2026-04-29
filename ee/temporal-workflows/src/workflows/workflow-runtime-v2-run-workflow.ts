@@ -2,6 +2,7 @@ import { condition, continueAsNew, defineQuery, defineSignal, executeChild, prox
 import {
   WORKFLOW_RUNTIME_V2_EVENT_SIGNAL,
   WORKFLOW_RUNTIME_V2_HUMAN_TASK_SIGNAL,
+  WORKFLOW_RUNTIME_V2_QUOTA_RESUME_SIGNAL,
   WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE,
   type WorkflowRuntimeV2TemporalRunInput,
 } from '@alga-psa/workflows/lib/workflowRuntimeV2TemporalContract';
@@ -195,8 +196,12 @@ type WorkflowRuntimeV2HumanTaskSignalPayload = {
 
 const workflowRuntimeV2HumanTaskSignal = defineSignal<[WorkflowRuntimeV2HumanTaskSignalPayload]>(WORKFLOW_RUNTIME_V2_HUMAN_TASK_SIGNAL);
 
+const workflowRuntimeV2QuotaResumeSignal = defineSignal<[
+  { waitId?: string | null; reason?: string | null; resumedBy?: string | null; resumedAt?: string | null }
+]>(WORKFLOW_RUNTIME_V2_QUOTA_RESUME_SIGNAL);
+
 type WorkflowRuntimeV2CurrentWait = {
-  type: 'time.wait' | 'event.wait' | 'human.task';
+  type: 'time.wait' | 'event.wait' | 'human.task' | 'quota';
   stepPath: string;
   descriptor: Record<string, unknown>;
 };
@@ -234,6 +239,10 @@ export async function workflowRuntimeV2RunWorkflow(
   const pendingHumanTaskSignals: WorkflowRuntimeV2HumanTaskSignalPayload[] = [];
   setHandler(workflowRuntimeV2HumanTaskSignal, (signal) => {
     pendingHumanTaskSignals.push(normalizeHumanTaskSignalPayload(signal));
+  });
+  let quotaResumeRequested = false;
+  setHandler(workflowRuntimeV2QuotaResumeSignal, () => {
+    quotaResumeRequested = true;
   });
   let queryCurrentStepPath: string | null = null;
   let queryStepCount = 0;
@@ -325,9 +334,21 @@ export async function workflowRuntimeV2RunWorkflow(
       definitionStepId: current.step.id,
     });
     if (stepProjection.quotaPaused || !stepProjection.stepId) {
-      return {
-        scopes: state.scopes,
+      queryCurrentWait = {
+        type: 'quota',
+        stepPath: current.path,
+        descriptor: { reason: 'workflow_step_quota_exceeded' },
       };
+      const quotaResumeReceived = await condition(
+        () => quotaResumeRequested,
+        3650 * 24 * 60 * 60 * 1000
+      );
+      if (!quotaResumeReceived) {
+        return { scopes: state.scopes };
+      }
+      quotaResumeRequested = false;
+      queryCurrentWait = null;
+      continue;
     }
 
     try {

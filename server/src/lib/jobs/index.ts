@@ -34,6 +34,11 @@ import logger from '@alga-psa/core/logger';
 import type { IRecurringRunExecutionWindowIdentity } from '@alga-psa/types';
 import type { IRecurringDueSelectionInput } from '@alga-psa/types';
 
+const isEnterpriseWorkflowEdition = (): boolean =>
+  process.env.EDITION === 'enterprise'
+  || process.env.EDITION === 'ee'
+  || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+
 // =============================================================================
 // NEW JOB RUNNER ABSTRACTION EXPORTS
 // =============================================================================
@@ -181,12 +186,14 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       );
     }
 
-    jobScheduler.registerJobHandler<WorkflowQuotaResumeScanJobData>(
-      'workflow-quota-resume-scan',
-      async (job: Job<WorkflowQuotaResumeScanJobData>) => {
-        await workflowQuotaResumeScanHandler(job.data);
-      }
-    );
+    if (isEnterpriseWorkflowEdition()) {
+      jobScheduler.registerJobHandler<WorkflowQuotaResumeScanJobData>(
+        'workflow-quota-resume-scan',
+        async (job: Job<WorkflowQuotaResumeScanJobData>) => {
+          await workflowQuotaResumeScanHandler(job.data);
+        }
+      );
+    }
 
     // Note: Password reset token cleanup is handled automatically during token operations
     // No pg-boss job needed
@@ -487,6 +494,9 @@ export const scheduleWorkflowQuotaResumeScanJob = async (
   cronExpression: string = '*/5 * * * *',
   batchSize: number = 100
 ): Promise<string | null> => {
+  if (!isEnterpriseWorkflowEdition()) {
+    return null;
+  }
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleRecurringJob<WorkflowQuotaResumeScanJobData>(
     'workflow-quota-resume-scan',

@@ -185,6 +185,13 @@ export async function projectWorkflowRuntimeV2StepStart(input: {
           await WorkflowRunModelV2.update(knex, input.runId, {
             node_path: input.stepPath,
             status: 'WAITING',
+            error_json: {
+              category: 'QuotaExceeded',
+              message: 'Workflow step quota exceeded for current billing period',
+              nodePath: input.stepPath,
+              at: new Date().toISOString(),
+              data: payload,
+            },
           });
           return {
             stepId: null,

@@ -6,6 +6,7 @@ type WaitRow = {
   step_path: string;
   tenant_id: string;
   engine: string | null;
+  node_path?: string | null;
   status: 'WAITING' | 'RESOLVED';
 };
 
@@ -14,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   resolveQuotaSummary: vi.fn(),
   executeRun: vi.fn(),
   createRunLog: vi.fn(),
+  signalQuotaResume: vi.fn(),
 }));
 
 vi.mock('@alga-psa/db/admin', () => ({
@@ -35,6 +37,10 @@ vi.mock('@alga-psa/workflows/persistence', () => ({
   },
 }));
 
+vi.mock('@alga-psa/workflows/lib/workflowRuntimeV2Temporal', () => ({
+  signalWorkflowRuntimeV2QuotaResume: mocks.signalQuotaResume,
+}));
+
 function buildMockKnex(initialWaits: WaitRow[]) {
   const waits = new Map(initialWaits.map((wait) => [wait.wait_id, { ...wait }]));
   let selectedWaitIds: string[] = [];
@@ -47,6 +53,7 @@ function buildMockKnex(initialWaits: WaitRow[]) {
       step_path: w.step_path,
       tenant_id: w.tenant_id,
       engine: w.engine,
+      node_path: w.node_path ?? w.step_path,
     }));
   };
 
@@ -106,6 +113,7 @@ describe('workflowQuotaResumeScanHandler', () => {
     vi.clearAllMocks();
     mocks.createRunLog.mockResolvedValue(undefined);
     mocks.executeRun.mockResolvedValue(undefined);
+    mocks.signalQuotaResume.mockResolvedValue(undefined);
   });
 
   it('resumes only eligible tenants and sets runs back to RUNNING without pre-consuming quota', async () => {
@@ -131,6 +139,29 @@ describe('workflowQuotaResumeScanHandler', () => {
       expect.anything(),
       expect.objectContaining({ run_id: 'run-b1' }),
     );
+  });
+
+  it('signals Temporal runs instead of executing them with the DB runtime', async () => {
+    const { knex } = buildMockKnex([
+      { wait_id: 'wait-temporal', run_id: 'run-temporal', step_path: 'root.steps[1]', tenant_id: 'tenant-1', engine: 'temporal', status: 'WAITING' },
+    ]);
+    mocks.getAdminConnection.mockResolvedValue(knex);
+    mocks.resolveQuotaSummary.mockResolvedValue({
+      effectiveLimit: null,
+      usedCount: 0,
+      periodStart: '2026-04-01T00:00:00.000Z',
+      periodEnd: '2026-05-01T00:00:00.000Z',
+    });
+
+    const { workflowQuotaResumeScanHandler } = await import('../../../lib/jobs/handlers/workflowQuotaResumeScanHandler');
+    await workflowQuotaResumeScanHandler({ tenantId: 'ignored', batchSize: 10 });
+
+    expect(mocks.executeRun).not.toHaveBeenCalled();
+    expect(mocks.signalQuotaResume).toHaveBeenCalledWith(expect.objectContaining({
+      runId: 'run-temporal',
+      waitId: 'wait-temporal',
+      reason: 'quota_available',
+    }));
   });
 
   it('does not resolve the same wait twice across repeated scans', async () => {

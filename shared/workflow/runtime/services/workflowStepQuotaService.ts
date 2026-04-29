@@ -57,6 +57,7 @@ export type WorkflowStepQuotaReconciliation = {
 };
 
 type StripeSubscriptionRow = {
+  tenant: string;
   stripe_subscription_id: string;
   stripe_price_id: string;
   status: string;
@@ -79,6 +80,7 @@ type UsageRow = {
   used_count: number;
   limit_source: WorkflowStepQuotaLimitSource;
   tier: TenantTier;
+  updated_at?: string | Date;
 };
 
 function toIso(value: string | Date): string {
@@ -129,13 +131,16 @@ async function getTenantTier(knex: Knex, tenant: string): Promise<TenantTier> {
   return resolveTier(row?.plan ?? null).tier;
 }
 
-async function findPreferredSubscription(knex: Knex, tenant: string): Promise<StripeSubscriptionRow | null> {
+async function findPreferredSubscription(knex: Knex, tenant: string, now: Date): Promise<StripeSubscriptionRow | null> {
+  const nowIso = now.toISOString();
   const subscriptions = await knex<StripeSubscriptionRow>('stripe_subscriptions')
     .where({ tenant })
     .whereIn('status', ACTIVE_STATUSES as unknown as string[])
     .whereNotNull('current_period_start')
     .whereNotNull('current_period_end')
-    .select('stripe_subscription_id', 'stripe_price_id', 'status', 'current_period_start', 'current_period_end');
+    .andWhere('current_period_start', '<=', nowIso)
+    .andWhere('current_period_end', '>', nowIso)
+    .select('tenant', 'stripe_subscription_id', 'stripe_price_id', 'status', 'current_period_start', 'current_period_end');
 
   const sorted = subscriptions
     .filter((row) => row.current_period_start && row.current_period_end)
@@ -143,7 +148,7 @@ async function findPreferredSubscription(knex: Knex, tenant: string): Promise<St
       const left = STATUS_PRIORITY[a.status] ?? Number.MAX_SAFE_INTEGER;
       const right = STATUS_PRIORITY[b.status] ?? Number.MAX_SAFE_INTEGER;
       if (left !== right) return left - right;
-      return new Date(a.current_period_start as string).getTime() - new Date(b.current_period_start as string).getTime();
+      return new Date(b.current_period_start as string).getTime() - new Date(a.current_period_start as string).getTime();
     });
 
   return sorted[0] ?? null;
@@ -200,7 +205,7 @@ export class WorkflowStepQuotaService {
     let limitSource: WorkflowStepQuotaLimitSource = 'tier_default';
 
     if (await hasStripeTables(knex)) {
-      const subscription = await findPreferredSubscription(knex, tenant);
+      const subscription = await findPreferredSubscription(knex, tenant, now);
       if (subscription?.current_period_start && subscription.current_period_end) {
         periodStart = toIso(subscription.current_period_start);
         periodEnd = toIso(subscription.current_period_end);
