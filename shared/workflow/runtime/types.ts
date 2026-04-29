@@ -518,7 +518,7 @@ export function isWorkflowTimeTrigger(trigger: WorkflowTrigger | null | undefine
 
 export type WorkflowRunStatus = 'RUNNING' | 'WAITING' | 'SUCCEEDED' | 'FAILED' | 'CANCELED';
 export type WorkflowRunStepStatus = 'STARTED' | 'SUCCEEDED' | 'FAILED' | 'RETRY_SCHEDULED' | 'CANCELED';
-export type WorkflowRunWaitType = 'event' | 'retry' | 'human' | 'timeout' | 'time';
+export type WorkflowRunWaitType = 'event' | 'retry' | 'human' | 'timeout' | 'time' | 'quota';
 
 export type WorkflowErrorCategory =
   | 'ValidationError'

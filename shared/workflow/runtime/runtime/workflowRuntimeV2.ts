@@ -32,6 +32,7 @@ import WorkflowRunWaitModelV2 from '../../persistence/workflowRunWaitModelV2';
 import WorkflowActionInvocationModelV2 from '../../persistence/workflowActionInvocationModelV2';
 import WorkflowRunSnapshotModelV2 from '../../persistence/workflowRunSnapshotModelV2';
 import WorkflowRunLogModelV2 from '../../persistence/workflowRunLogModelV2';
+import { workflowStepQuotaService } from '../services/workflowStepQuotaService';
 import { ZodError } from 'zod';
 import { createHash } from 'crypto';
 
@@ -263,6 +264,13 @@ export class WorkflowRuntimeV2 {
       }
 
       const stepStart = Date.now();
+      if (run.tenant_id) {
+        const reservation = await workflowStepQuotaService.reserveStepStart(knex, run.tenant_id);
+        if (!reservation.allowed) {
+          await this.pauseForQuota(knex, run, currentPath, reservation.summary);
+          return;
+        }
+      }
       const attempt = await this.nextAttempt(knex, runId, currentPath);
       const stepRecord = await WorkflowRunStepModelV2.create(knex, {
         run_id: runId,
@@ -968,6 +976,73 @@ export class WorkflowRuntimeV2 {
     const last = await WorkflowRunStepModelV2.getLatestByRunAndPath(knex, runId, stepPath);
     if (!last) return 1;
     return last.attempt + 1;
+  }
+
+  private async pauseForQuota(
+    knex: Knex,
+    run: WorkflowRunRecord,
+    stepPath: string,
+    summary: {
+      periodStart: string;
+      periodEnd: string;
+      usedCount: number;
+      effectiveLimit: number | null;
+      periodSource: string;
+      limitSource: string;
+      tenant: string;
+    }
+  ): Promise<void> {
+    const existingWait = await knex('workflow_run_waits')
+      .where({
+        run_id: run.run_id,
+        step_path: stepPath,
+        wait_type: 'quota',
+        status: 'WAITING',
+      })
+      .first<{ wait_id: string }>();
+
+    const payload = {
+      reason: 'workflow_step_quota_exceeded',
+      tenant: summary.tenant,
+      periodStart: summary.periodStart,
+      periodEnd: summary.periodEnd,
+      usedCount: summary.usedCount,
+      effectiveLimit: summary.effectiveLimit,
+      periodSource: summary.periodSource,
+      limitSource: summary.limitSource,
+    };
+
+    if (existingWait) {
+      await WorkflowRunWaitModelV2.update(knex, existingWait.wait_id, {
+        timeout_at: summary.periodEnd,
+        payload,
+      });
+    } else {
+      await WorkflowRunWaitModelV2.create(knex, {
+        run_id: run.run_id,
+        step_path: stepPath,
+        wait_type: 'quota',
+        timeout_at: summary.periodEnd,
+        status: 'WAITING',
+        payload,
+      });
+    }
+
+    await WorkflowRunModelV2.update(knex, run.run_id, {
+      status: 'WAITING',
+      node_path: stepPath,
+      resume_event_name: null,
+      resume_event_payload: null,
+      resume_error: null,
+    });
+
+    await this.logRunEvent(knex, run, {
+      level: 'WARN',
+      message: 'Workflow step quota exceeded; run paused',
+      stepPath,
+      context: payload,
+      source: 'runtime',
+    });
   }
 
   private async markRunCompleted(knex: Knex, runId: string, status: WorkflowRunStatus): Promise<void> {

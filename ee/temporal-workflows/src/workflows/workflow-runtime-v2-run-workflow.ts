@@ -45,7 +45,7 @@ const activities = proxyActivities<{
     runId: string;
     stepPath: string;
     definitionStepId: string;
-  }): Promise<{ stepId: string }>;
+  }): Promise<{ stepId: string | null; quotaPaused?: boolean }>;
   projectWorkflowRuntimeV2StepCompletion(input: {
     runId: string;
     stepId: string;
@@ -324,6 +324,11 @@ export async function workflowRuntimeV2RunWorkflow(
       stepPath: current.path,
       definitionStepId: current.step.id,
     });
+    if (stepProjection.quotaPaused || !stepProjection.stepId) {
+      return {
+        scopes: state.scopes,
+      };
+    }
 
     try {
       if (current.step.type === 'control.return') {

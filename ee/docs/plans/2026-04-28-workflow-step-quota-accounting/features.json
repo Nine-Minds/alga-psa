@@ -1,0 +1,256 @@
+[
+  {
+    "id": "F001",
+    "description": "Create the workflow_step_usage_periods table keyed by tenant, period_start, and period_end with fields for period source, effective limit, used count, limit source, tier, Stripe subscription id, metadata, and timestamps.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations > New enforcement table"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Add indexes and tenant isolation/RLS support for workflow_step_usage_periods consistent with workflow runtime tables.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations > New enforcement table",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Implement a quota resolver that selects the tenant's active Stripe subscription period when available.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations > Stripe integration"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Implement fallback quota periods using the current UTC calendar month when no valid active Stripe subscription period exists.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Data / API / Integrations > Quota resolver"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Resolve tenant tier defaults for workflow step limits: solo 150, pro 750, and premium 10000.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Data / API / Integrations > Quota resolver"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Read workflow_step_limit from Stripe price metadata and use it as the highest-precedence finite or unlimited limit override.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations > Stripe integration"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Read workflow_step_limit from Stripe product metadata as a fallback override when price metadata is missing or invalid.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations > Stripe integration"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Treat workflow_step_limit=unlimited as effective_limit null while continuing to record used_count.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations > Stripe integration"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Ignore invalid workflow_step_limit metadata and fall back to the next valid source without crashing workflow execution.",
+    "implemented": true,
+    "prdRefs": [
+      "Non-functional Requirements",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Implement an atomic quota reservation service that upserts and locks the tenant period row before incrementing used_count.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations > New enforcement table"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Reject finite quota reservations without incrementing used_count when used_count is already at or above effective_limit.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Allow unlimited quota reservations to increment used_count and continue execution regardless of current count.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Integrate quota reservation into WorkflowRuntimeV2 before workflow_run_steps STARTED rows are created.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations > Runtime integration points"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Integrate quota reservation into projectWorkflowRuntimeV2StepStart before Temporal workflow_run_steps STARTED rows are created.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations > Runtime integration points"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Create or reuse a workflow_run_waits record with wait_type quota when a reservation is rejected for quota exhaustion.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations > Quota wait payload"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Mark quota-exhausted runs WAITING at the current node_path without creating a workflow_run_steps row for the blocked step.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Ensure quota pauses are treated as controlled waits rather than workflow failures, retryable step errors, or auto-pause failure-rate inputs.",
+    "implemented": true,
+    "prdRefs": [
+      "Non-goals",
+      "Requirements > Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Log quota reservation, quota exhaustion, invalid metadata fallback, and fallback-calendar usage with structured workflow/runtime context.",
+    "implemented": false,
+    "prdRefs": [
+      "Observability"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Implement a scheduled workflow-quota-resume-scan job that finds WAITING quota waits and resumes eligible runs.",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations > Scheduled job"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Add locking and batch limits to the quota resume scan so concurrent scans do not resolve the same waits.",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Non-functional Requirements",
+      "Data / API / Integrations > Scheduled job"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Resume at most the finite remaining capacity for a tenant during each scan while relying on runtime reservation for final enforcement.",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows > Background scheduler"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Add a manual resume action for quota-paused workflow runs that verifies tenant ownership, permissions, and quota eligibility.",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations > Manual resume API/action",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Return a helpful exhausted-quota response from manual resume when quota is still unavailable, including usage, limit, and reset time.",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Trigger or enqueue normal workflow execution after an automatic or manual quota resume without pre-consuming quota.",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Expose minimal run-level quota pause information through existing run logs, wait records, or inspector surfaces.",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Implement a reconciliation helper that compares workflow_step_usage_periods.used_count to workflow_run_steps joined through workflow_runs for the same tenant and period.",
+    "implemented": false,
+    "prdRefs": [
+      "Observability",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Ensure workflow retries consume a new step unit only when the retry step attempt starts.",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Ensure forEach body executions consume one step unit per item attempt.",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Ensure wait and human task steps consume one step unit when first entered and do not double-count while merely waiting.",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Document quota source, limits, pause behavior, resume behavior, and reconciliation procedure for future support and engineering use.",
+    "implemented": false,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Observability"
+    ]
+  }
+]

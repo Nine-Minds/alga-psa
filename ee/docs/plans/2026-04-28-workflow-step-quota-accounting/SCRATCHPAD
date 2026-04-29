@@ -1,0 +1,4 @@
+
+- (2026-04-28) Implemented `server/migrations/20260428120000_create_workflow_step_usage_periods.cjs` for `workflow_step_usage_periods` with primary key `(tenant, period_start, period_end)`, `tenant` FK isolation, and required quota fields.
+- (2026-04-28) Added period indexes `idx_workflow_step_usage_periods_tenant_period_end` and `idx_workflow_step_usage_periods_period_end` plus period bounds check `period_start < period_end`.
+- (2026-04-28) Migration grants server DB user privileges when `DB_USER_SERVER` is present, matching newer migration conventions.
