@@ -42,7 +42,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'workflow_task_history', 'workflow_form_schemas',
 
   // Workflow runtime V2 (child tables first, then parent)
-  'workflow_run_logs', 'workflow_runtime_events',
+  'workflow_run_logs', 'workflow_runtime_events', 'workflow_step_usage_periods',
   'workflow_runs', 'tenant_workflow_schedule', 'workflow_definitions',
 
   // Task/project details
