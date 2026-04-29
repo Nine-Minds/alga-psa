@@ -13,16 +13,19 @@ import type { NormalizedRmmExternalDeviceSnapshot } from '@alga-psa/integrations
 import {
   normalizeTaniumGatewayUrl,
   TaniumGatewayClient,
+  type TaniumEndpointCriticalityReading,
   type TaniumEndpointRecord,
 } from '../../integrations/tanium/taniumGatewayClient';
 import { runRmmSyncWithTransport } from '../../integrations/rmm/sync/syncOrchestration';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
+import { upsertAssetFact } from '@alga-psa/assets/lib/assetFactsService';
 
 const PROVIDER = 'tanium' as const;
 
 const TANIUM_GATEWAY_URL_SECRET = 'tanium_gateway_url';
 const TANIUM_API_TOKEN_SECRET = 'tanium_api_token';
 const TANIUM_ASSET_API_URL_SECRET = 'tanium_asset_api_url';
+const TANIUM_CRITICALITY_SENSOR_NAME = 'Endpoint Criticality with Level';
 
 function sanitizeError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -118,6 +121,29 @@ function mapEndpointToSnapshot(args: {
       systemInfo: endpoint.metadata ?? null,
     },
     metadata: endpoint.metadata ?? {},
+  };
+}
+
+type TaniumCriticalityFactCandidate = {
+  isAvailable: boolean;
+  valueText: string | null;
+  valueNumber: number | null;
+  valueJson: Record<string, unknown>;
+};
+
+function toCriticalityFactCandidate(reading: TaniumEndpointCriticalityReading): TaniumCriticalityFactCandidate {
+  return {
+    isAvailable: reading.isAvailable,
+    valueText: reading.label,
+    valueNumber: reading.multiplier,
+    valueJson: {
+      sensorName: TANIUM_CRITICALITY_SENSOR_NAME,
+      columns: reading.columns,
+      rawValues: reading.columns.map((column) => ({
+        name: column.name,
+        values: column.values,
+      })),
+    },
   };
 }
 
@@ -581,6 +607,23 @@ export const triggerTaniumFullSync = withAdvancedAssetsAccess(async (user, { ten
       const externalScopeId = String(scope.external_organization_id);
       const resolvedClientId = String(scope.client_id);
       let endpoints = await client.listEndpoints({ computerGroupId: externalScopeId });
+      let criticalityByEndpointId = new Map<string, TaniumCriticalityFactCandidate>();
+      let criticalityQuerySucceeded = false;
+
+      try {
+        await client.getCriticalitySensorMetadata();
+        const criticalityReadings = await client.listEndpointCriticalityReadings({ computerGroupId: externalScopeId });
+        criticalityByEndpointId = new Map(
+          Array.from(criticalityReadings.entries()).map(([endpointId, reading]) => [endpointId, toCriticalityFactCandidate(reading)])
+        );
+        criticalityQuerySucceeded = true;
+      } catch (criticalityError) {
+        console.warn('Tanium criticality enrichment failed; continuing inventory sync', {
+          tenant,
+          scopeId: externalScopeId,
+          error: sanitizeError(criticalityError),
+        });
+      }
 
       if (endpoints.length === 0 && useAssetApiFallback) {
         const fallbackEndpoints = await client.listAgedOutAssetFallback({ computerGroupId: externalScopeId });
@@ -608,6 +651,43 @@ export const triggerTaniumFullSync = withAdvancedAssetsAccess(async (user, { ten
           if (ingestResult.action === 'marked_deleted') deleted += 1;
           if (ingestResult.action === 'failed' && ingestResult.error) {
             errors.push(`${endpoint.id}: ${ingestResult.error}`);
+          }
+
+          if (ingestResult.assetId) {
+            const foundCandidate = criticalityByEndpointId.get(endpoint.id);
+            const candidate = foundCandidate || (
+              criticalityQuerySucceeded
+                ? {
+                    isAvailable: false,
+                    valueText: null,
+                    valueNumber: null,
+                    valueJson: {
+                      sensorName: TANIUM_CRITICALITY_SENSOR_NAME,
+                      reason: 'endpoint_missing_or_unavailable',
+                    },
+                  } satisfies TaniumCriticalityFactCandidate
+                : null
+            );
+
+            if (candidate) {
+              await upsertAssetFact(knex, {
+                tenant,
+                assetId: ingestResult.assetId,
+                sourceType: 'integration',
+                provider: PROVIDER,
+                integrationId: integration.integration_id,
+                namespace: 'tanium',
+                factKey: 'criticality',
+                label: 'Tanium Criticality',
+                valueText: candidate.valueText,
+                valueNumber: candidate.valueNumber,
+                valueJson: candidate.valueJson,
+                source: 'tanium.gateway.sensor.Endpoint Criticality with Level',
+                sourceUpdatedAt: null,
+                lastSyncedAt: new Date(),
+                isAvailable: candidate.isAvailable,
+              });
+            }
           }
         } catch (error) {
           processed += 1;

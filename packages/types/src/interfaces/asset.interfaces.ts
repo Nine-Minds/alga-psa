@@ -23,6 +23,29 @@ export interface AssetRelationship {
 // RMM Provider types
 export type RmmProvider = 'ninjaone' | 'tacticalrmm' | 'tanium' | 'datto' | 'connectwise_automate';
 export type RmmAgentStatus = 'online' | 'offline' | 'overdue' | 'unknown';
+export type AssetFactSourceType = 'integration' | 'manual' | 'system';
+
+export interface AssetFact {
+  asset_fact_id: string;
+  tenant: string;
+  asset_id: string;
+  source_type: AssetFactSourceType;
+  provider?: string | null;
+  integration_id?: string | null;
+  namespace: string;
+  fact_key: string;
+  label: string;
+  value_text?: string | null;
+  value_number?: number | null;
+  value_bool?: boolean | null;
+  value_json: Record<string, unknown>;
+  source: string;
+  source_updated_at?: string | null;
+  last_synced_at?: string | null;
+  is_available: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
 export interface Asset {
   asset_id: string;

@@ -154,7 +154,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Asset details
   'asset_maintenance_notifications', 'asset_maintenance_history', 'asset_service_history',
   'asset_ticket_associations', 'asset_document_associations', 'asset_relationships',
-  'asset_history', 'asset_associations', 'asset_software',
+  'asset_history', 'asset_associations', 'asset_software', 'asset_facts',
   'workstation_assets', 'server_assets', 'network_device_assets', 'mobile_device_assets', 'printer_assets',
 
   // Software catalog

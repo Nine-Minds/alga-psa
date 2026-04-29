@@ -1,0 +1,205 @@
+[
+  {
+    "id": "F001",
+    "description": "Add a CE/base `asset_facts` migration with tenant-aware primary key, asset foreign key, typed value columns, JSON raw value storage, availability flag, sync timestamps, and rollback.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Add a tenant-safe unique constraint or index for one current fact per `(tenant, asset_id, source_type, namespace, fact_key)`.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Add shared TypeScript interfaces for asset facts, fact upsert input, and fact read DTOs.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Add a reusable server-side asset facts service that upserts available integration-sourced facts with tenant and asset filters.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Add asset facts service behavior to mark an explicit endpoint-level no-result as unavailable while preserving raw provider metadata.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Add asset facts read behavior for loading available facts for a tenant-scoped asset detail view.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Add Tanium Gateway sensor metadata lookup for `Endpoint Criticality with Level` so implementation can verify/preserve returned columns.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Add a Tanium Gateway client method that paginates endpoint criticality readings by optional computer group filter using `sensorReadings`.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Parse `Endpoint Criticality with Level` readings into normalized criticality facts with display text, numeric multiplier when available, and raw columns/values.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Handle unknown criticality column names defensively by preserving raw columns and avoiding sync failure when normalized parsing is incomplete.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Run Tanium criticality enrichment as a separate best-effort query from the main endpoint inventory query.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Leave existing criticality facts untouched when the global criticality query fails for a mapped scope.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Log a warning for global Tanium criticality enrichment failure without marking the full inventory sync failed solely for that reason.",
+    "implemented": true,
+    "prdRefs": [
+      "Observability"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Attach parsed Tanium criticality facts to endpoint processing during `triggerTaniumFullSync` by Tanium endpoint id.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Upsert the Tanium criticality asset fact after shared RMM ingestion returns an Alga asset id.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Do not attempt to upsert a Tanium criticality fact when shared ingestion skips an endpoint without an asset id.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Store Tanium criticality facts with `source_type=integration`, `provider=tanium`, `namespace=tanium`, `fact_key=criticality`, and source metadata identifying the Gateway sensor.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Add an asset detail server/action data path that includes available asset facts alongside the existing asset detail payload or via a dedicated tenant-safe call.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Render a Tanium Criticality badge/card on asset detail only when an available Tanium criticality fact exists.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Map known Tanium criticality labels (`Low`, `Medium`, `High`, `Critical`) to compact theme-aware display treatments.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Hide missing or unavailable asset facts from the primary asset detail surface.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Preserve existing Tanium `system_info` behavior and do not move general Tanium metadata into asset facts in this phase.",
+    "implemented": true,
+    "prdRefs": [
+      "Non-goals",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Keep provider-sourced facts read-only from UI surfaces in this phase.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Non-goals"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Document the facts terminology and Tanium criticality source details in the plan scratchpad for future workflow/AI/filtering follow-up work.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Open Questions"
+    ]
+  }
+]

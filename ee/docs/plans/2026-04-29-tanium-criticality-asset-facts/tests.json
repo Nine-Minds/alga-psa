@@ -1,0 +1,103 @@
+[
+  {
+    "id": "T001",
+    "description": "DB integration: migrated schema supports inserting/upserting and reading an available Tanium criticality fact for an asset with tenant-scoped predicates.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F004",
+      "F006",
+      "F017"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "DB integration guard: asset fact uniqueness prevents duplicate current facts for the same tenant, asset, source type, namespace, and key while allowing different tenants/assets/keys.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F004"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "DB integration: explicit no-result upsert marks a fact unavailable, clears display values, and preserves raw provider metadata.",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Unit: Tanium Gateway criticality query parses `Endpoint Criticality with Level` sensor columns into endpoint-id keyed facts with label, multiplier, and raw values.",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F009",
+      "F010"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Unit: Tanium Gateway criticality parser tolerates unknown column names by preserving raw columns and returning a safe unavailable or partially parsed fact rather than throwing.",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F010"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Unit: Tanium criticality enrichment failure is isolated from endpoint inventory sync and logs/warns without failing the full sync result solely due to criticality.",
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F012",
+      "F013"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Unit: Tanium full sync upserts an asset fact after shared ingestion returns an asset id and skips fact upsert when ingestion returns no asset id.",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F015",
+      "F016",
+      "F017"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Unit/UI: asset detail data path returns available facts for a tenant-scoped asset and renders a Tanium Criticality indicator when present.",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F018",
+      "F019",
+      "F020"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Unit/UI: asset detail hides missing or unavailable facts and does not render an empty criticality placeholder.",
+    "implemented": true,
+    "featureIds": [
+      "F019",
+      "F021"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Regression: Tanium asset enrichment still writes existing `system_info` metadata and does not require criticality facts for normal inventory sync success.",
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F012",
+      "F022"
+    ]
+  }
+]
