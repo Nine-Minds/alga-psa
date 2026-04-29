@@ -18,7 +18,7 @@ import {
 } from '../../integrations/tanium/taniumGatewayClient';
 import { runRmmSyncWithTransport } from '../../integrations/rmm/sync/syncOrchestration';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
-import { upsertAssetFact } from 'server/src/lib/assets/assetFactsService';
+import { upsertAssetFact } from '@alga-psa/assets/lib/assetFactsService';
 
 const PROVIDER = 'tanium' as const;
 

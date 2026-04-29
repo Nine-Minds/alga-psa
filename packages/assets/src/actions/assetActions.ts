@@ -80,7 +80,7 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
-import { listAvailableAssetFactsForAsset } from 'server/src/lib/assets/assetFactsService';
+import { listAvailableAssetFactsForAsset } from '../lib/assetFactsService';
 
 type AssetExtensionType = WorkstationAsset | NetworkDeviceAsset | ServerAsset | MobileDeviceAsset | PrinterAsset;
 

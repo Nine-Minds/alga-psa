@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { listAvailableAssetFactsForAsset, upsertAssetFact } from '@/lib/assets/assetFactsService';
+import { listAvailableAssetFactsForAsset, upsertAssetFact } from './assetFactsService';
 
 type DbState = {
   asset_facts: Array<any>;

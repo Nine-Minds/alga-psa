@@ -31,6 +31,11 @@
       "import": "./dist/components/*.js",
       "require": "./dist/components/*.js"
     },
+    "./lib/*": {
+      "types": "./dist/lib/*.d.ts",
+      "import": "./dist/lib/*.js",
+      "require": "./dist/lib/*.js"
+    },
     "./context/*": {
       "import": "./src/context/*.tsx",
       "types": "./src/context/*.tsx"
