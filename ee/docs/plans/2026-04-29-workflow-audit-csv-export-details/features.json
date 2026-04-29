@@ -1,0 +1,221 @@
+[
+  {
+    "id": "F001",
+    "description": "Workflow audit CSV export uses a new stable business-readable column set instead of the previous five raw audit columns",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Requirements > Functional Requirements",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "CSV branch of `exportWorkflowAuditLogsAction()` preserves existing input contract, filename pattern, content type, row limit, and ordering",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Requirements > Functional Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "JSON branch of `exportWorkflowAuditLogsAction()` remains a raw redacted export and is not converted to the business CSV presentation model",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Non-goals",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Known workflow definition audit operations map to readable event labels and summaries",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Known workflow run audit operations map to readable event labels and summaries",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Unknown audit operations export with a readable fallback event label derived from the operation string",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Known `changed_data` and `details` fields populate first-class columns such as source, workflow version, run status, reason, step path, and action",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "`changed_fields` lists only populated business-relevant changed fields and omits null, undefined, and empty values",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "`summary` is synthesized as a short human-readable sentence for known and fallback audit events",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Safe unmapped scalar fields from redacted audit data are included in `additional_details` as semicolon-separated `key=value` text",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Requirements > Functional Requirements",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Unmapped arrays and objects are summarized in `additional_details` rather than emitted as raw JSON blobs",
+    "implemented": true,
+    "prdRefs": [
+      "Non-goals",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Actor enrichment resolves exported audit `user_id` values to readable actor names/emails when user rows are available",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Data / API / Integrations",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Actor formatting supports system actions, missing/deleted users, name-only users, email-only users, and full name plus email users",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "CSV retains `actor_user_id` as a trailing technical reference column while showing readable `actor` near the front",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Workflow definition export enriches rows with current workflow name, key, and workflow ID context when available",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Workflow run export enriches rows with run ID, workflow ID, workflow version, current run status, workflow name, and workflow key when available",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Raw record references are moved to trailing columns: actor user ID, workflow ID, run ID, record type, operation, and audit ID",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "CSV formatting uses already-redacted audit data and preserves redacted `***` values through flattening and additional-details formatting",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "CSV escaping remains correct for values containing commas, quotes, and newlines in any business-readable field",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Missing users, deleted workflow definitions, or deleted run context produce readable fallbacks instead of crashing an authorized export",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Existing permission checks and tenant-scoped validation remain enforced before audit rows are exported",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Runtime action-level audit entries expose step path and action ID/version in first-class columns when present",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "UI export buttons and API export routes continue to work without caller changes because they reuse `exportWorkflowAuditLogsAction()`",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Formatter helpers are structured so representative operation mappings, additional-details behavior, and enrichment fallbacks can be tested directly",
+    "implemented": true,
+    "prdRefs": [
+      "Open Questions",
+      "Acceptance Criteria"
+    ]
+  }
+]

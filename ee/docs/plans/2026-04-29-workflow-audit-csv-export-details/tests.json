@@ -1,0 +1,125 @@
+[
+  {
+    "id": "T001",
+    "description": "Formatter unit test: representative workflow definition operations export readable events, summaries, workflow context, changed fields, and trailing IDs",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F004",
+      "F007",
+      "F008",
+      "F009",
+      "F015",
+      "F017"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Formatter unit test: representative workflow run operations export readable events, summaries, run status, reason, workflow/run context, and trailing IDs",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F005",
+      "F007",
+      "F008",
+      "F009",
+      "F016",
+      "F017"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Formatter unit test: runtime action-level audit entry exports step path and action metadata as first-class columns and summarizes any extra safe fields",
+    "implemented": false,
+    "featureIds": [
+      "F007",
+      "F010",
+      "F011",
+      "F022"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Formatter unit test: unknown operation uses readable fallback event label and preserves safe unmapped scalar values in `additional_details`",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F010",
+      "F011"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "CSV safety test: commas, quotes, and newlines in actor, summary, reason, and additional-details values are escaped into valid CSV",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Redaction test: values already redacted to `***` remain redacted after field mapping and `additional_details` formatting",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Enrichment unit/integration test: actor formatting covers full name plus email, email-only, name-only, system, and unresolved user cases",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F013",
+      "F014",
+      "F020"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "DB-backed integration sanity test: authorized definition audit CSV export queries real audit/workflow/user data and returns the new business-readable columns while JSON export remains raw redacted rows",
+    "implemented": false,
+    "featureIds": [
+      "F002",
+      "F003",
+      "F012",
+      "F015",
+      "F018",
+      "F021",
+      "F024"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "DB-backed guard test: unauthorized or cross-tenant audit export still fails through existing permission/tenant validation before CSV enrichment",
+    "implemented": false,
+    "featureIds": [
+      "F020",
+      "F021"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Compatibility test: existing UI/API callers can invoke CSV export without new parameters and receive unchanged content type and filename pattern",
+    "implemented": false,
+    "featureIds": [
+      "F002",
+      "F023"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Manual smoke test: create/edit/publish a workflow, start and operate on a run, export definition and run audit CSVs, and verify readable front columns plus trailing support IDs",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F004",
+      "F005",
+      "F012",
+      "F015",
+      "F016",
+      "F017",
+      "F023"
+    ]
+  }
+]
