@@ -147,3 +147,31 @@ export interface ITimeSheetView extends Omit<ITimeSheet, 'time_period'> {
 export interface ITimeSheetApprovalView extends Omit<ITimeSheetApproval, 'time_period'> {
   time_period?: ITimePeriodView;
 }
+
+export interface TicketTimeEntrySummaryEntry {
+  entry_id: string;
+  user_id: string;
+  user_name: string | null;
+  start_time: string;
+  end_time: string;
+  work_date: string | null;
+  billable_duration: number;
+  notes: string | null;
+  approval_status: TimeSheetStatus;
+  service_id: string | null;
+  service_name: string | null;
+  is_own: boolean;
+}
+
+export interface TicketTimeEntriesSummary {
+  entries: TicketTimeEntrySummaryEntry[];
+  ownTotalMinutes: number;
+  ownEntryCount: number;
+  othersTotalMinutes: number;
+  othersEntryCount: number;
+  othersVisibleMinutes: number;
+  othersVisibleCount: number;
+  othersHiddenMinutes: number;
+  othersHiddenCount: number;
+  totalMinutes: number;
+}

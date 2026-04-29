@@ -9,6 +9,8 @@ describe('AgentScheduleDrawer', () => {
     const callbacks = {
       renderAgentSchedule: (agentId: string) => <div data-testid={`calendar-${agentId}`} />,
       launchTimeEntry: vi.fn(),
+      fetchTimeEntriesForTicket: vi.fn(),
+      deleteTimeEntry: vi.fn(),
     };
 
     const { getByTestId } = render(

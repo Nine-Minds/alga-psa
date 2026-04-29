@@ -64,7 +64,6 @@ import TicketNavigation from './TicketNavigation';
 import TicketOriginBadge from '../TicketOriginBadge';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { buildTicketTimeEntryContext, createTicketTimeEntryOnComplete } from '../../lib/timeEntryContext';
-import { deleteTimeEntry } from '@alga-psa/scheduling/actions';
 import { getTicketOrigin } from '../../lib/ticketOrigin';
 import {
     setTicketWatchListOnAttributes,
@@ -425,7 +424,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // NOTE: ITIL categories are now managed through the unified category system
 
     const { openDrawer, closeDrawer, replaceDrawer } = useDrawer();
-    const { launchTimeEntry } = useSchedulingCallbacks();
+    const { launchTimeEntry, deleteTimeEntry } = useSchedulingCallbacks();
     const router = useRouter();
     // Create a single instance of the service
     const intervalService = useMemo(() => new IntervalTrackingService(), []);

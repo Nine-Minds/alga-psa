@@ -4,7 +4,14 @@ import type { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { formatISO } from 'date-fns';
-import type { IUser, TimeSheetStatus } from '@alga-psa/types';
+import type {
+  IUser,
+  TimeSheetStatus,
+  TicketTimeEntrySummaryEntry,
+  TicketTimeEntriesSummary,
+} from '@alga-psa/types';
+
+export type { TicketTimeEntrySummaryEntry, TicketTimeEntriesSummary };
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -14,34 +21,6 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { resolveManagedSubjectUserIds } from './timeEntryDelegationAuth';
-
-export interface TicketTimeEntrySummaryEntry {
-  entry_id: string;
-  user_id: string;
-  user_name: string | null;
-  start_time: string;
-  end_time: string;
-  work_date: string | null;
-  billable_duration: number;
-  notes: string | null;
-  approval_status: TimeSheetStatus;
-  service_id: string | null;
-  service_name: string | null;
-  is_own: boolean;
-}
-
-export interface TicketTimeEntriesSummary {
-  entries: TicketTimeEntrySummaryEntry[];
-  ownTotalMinutes: number;
-  ownEntryCount: number;
-  othersTotalMinutes: number;
-  othersEntryCount: number;
-  othersVisibleMinutes: number;
-  othersVisibleCount: number;
-  othersHiddenMinutes: number;
-  othersHiddenCount: number;
-  totalMinutes: number;
-}
 
 interface RawRow {
   entry_id: string;

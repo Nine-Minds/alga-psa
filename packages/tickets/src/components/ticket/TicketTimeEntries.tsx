@@ -5,12 +5,12 @@ import { Clock, ChevronDown, ChevronRight, EyeOff, Pencil, Trash2 } from 'lucide
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
+import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { formatMinutesAsHoursAndMinutes, formatDateTime, utcToLocal, getUserTimeZone } from '@alga-psa/core';
-import {
-  fetchTimeEntriesForTicket,
-  type TicketTimeEntriesSummary,
-  type TicketTimeEntrySummaryEntry,
-} from '@alga-psa/scheduling/actions/timeEntryTicketActions';
+import type {
+  TicketTimeEntriesSummary,
+  TicketTimeEntrySummaryEntry,
+} from '@alga-psa/types';
 
 interface TicketTimeEntriesProps {
   id?: string;
@@ -59,6 +59,7 @@ const TicketTimeEntries: React.FC<TicketTimeEntriesProps> = ({
   onDeleteEntry,
 }) => {
   const { t } = useTranslation('features/tickets');
+  const { fetchTimeEntriesForTicket } = useSchedulingCallbacks();
   const [summary, setSummary] = useState<TicketTimeEntriesSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -101,7 +102,7 @@ const TicketTimeEntries: React.FC<TicketTimeEntriesProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [ticketId, refreshKey]);
+  }, [ticketId, refreshKey, fetchTimeEntriesForTicket]);
 
   const myEntries = useMemo(
     () => (summary?.entries ?? []).filter((entry) => entry.user_id === currentUserId),
