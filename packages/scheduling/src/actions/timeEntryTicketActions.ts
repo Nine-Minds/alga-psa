@@ -10,8 +10,6 @@ import type {
   TicketTimeEntrySummaryEntry,
   TicketTimeEntriesSummary,
 } from '@alga-psa/types';
-
-export type { TicketTimeEntrySummaryEntry, TicketTimeEntriesSummary };
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
