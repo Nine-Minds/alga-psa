@@ -21,7 +21,12 @@ import type { Knex } from 'knex';
 import { getPortalDomain } from 'server/src/models/PortalDomainModel';
 import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
 import { TenantEmailService } from '@alga-psa/email';
-import { NotificationAccumulator, PendingNotification, AccumulatedChange } from '../../notifications/NotificationAccumulator';
+import {
+  NotificationAccumulator,
+  PendingNotification,
+  AccumulatedChange,
+  RetryableAccumulatorError,
+} from '../../notifications/NotificationAccumulator';
 import { isValidEmail } from '@alga-psa/core';
 import { resolveEffectiveTimeZone } from '../../utils/workDate';
 import { rewriteTicketCommentImagesToCid } from './ticketCommentInlineImageEmail';
@@ -358,6 +363,55 @@ async function resolveNotificationGate(
   return gate;
 }
 
+function extractErrorText(error: unknown): string {
+  if (!error) {
+    return '';
+  }
+
+  if (error instanceof Error) {
+    return `${error.message} ${error.stack ?? ''}`.trim();
+  }
+
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+}
+
+function isTransientDatabaseSaturationError(error: unknown): boolean {
+  const text = extractErrorText(error).toLowerCase();
+  const code = typeof error === 'object' && error !== null
+    ? String((error as { code?: unknown }).code ?? '').toLowerCase()
+    : '';
+
+  return code === '08006'
+    || text.includes('remaining connection slots are reserved')
+    || text.includes('too many clients already')
+    || text.includes('sorry, too many clients already')
+    || text.includes('failed to acquire connection')
+    || text.includes('unable to acquire a connection')
+    || text.includes('knex: timeout acquiring a connection');
+}
+
+function toRetryableAccumulatorError(
+  error: unknown,
+  retryAfterMs = 30_000
+): RetryableAccumulatorError {
+  if (error instanceof RetryableAccumulatorError) {
+    return error;
+  }
+
+  return new RetryableAccumulatorError(
+    error instanceof Error ? error.message : 'Transient notification flush failure',
+    { retryAfterMs }
+  );
+}
+
 /**
  * Wrapper function that checks notification preferences before sending email
  * @param params - Same params as sendEventEmail
@@ -526,13 +580,16 @@ async function formatChanges(db: any, changes: Record<string, unknown>, tenantId
   const formattedChanges = await Promise.all(
     Object.entries(changes).map(async ([field, value]): Promise<string> => {
       // Handle structured change objects with old/new values
-      if (typeof value === 'object' && value !== null) {
+      if (typeof value === 'object' && value !== null && ('old' in value || 'new' in value)) {
         const { old: oldVal, new: newVal } = value as { old?: unknown; new?: unknown };
         if (oldVal !== undefined && newVal !== undefined) {
           const resolvedOldValue = await resolveValue(db, field, oldVal, tenantId, timeZone);
           const resolvedNewValue = await resolveValue(db, field, newVal, tenantId, timeZone);
           return `${formatFieldName(field)}: ${resolvedOldValue} → ${resolvedNewValue}`;
         }
+        const presentVal = newVal !== undefined ? newVal : oldVal;
+        const resolvedValue = await resolveValue(db, field, presentVal, tenantId, timeZone);
+        return `${formatFieldName(field)}: ${resolvedValue}`;
       }
       const resolvedValue = await resolveValue(db, field, value, tenantId, timeZone);
       return `${formatFieldName(field)}: ${resolvedValue}`;
@@ -1020,17 +1077,34 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
  * Handle ticket updated events
  */
 async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
-    console.log('[EmailSubscriber] Starting ticket update handler:', {
-      eventId: event.id,
-      ticketId: event.payload.ticketId,
-      changes: event.payload.changes
-    });
+  console.log('[EmailSubscriber] Starting ticket update handler:', {
+    eventId: event.id,
+    ticketId: event.payload.ticketId,
+    changes: event.payload.changes
+  });
 
   const { payload } = event;
   const { tenantId } = payload;
   // Resolve userId from domain-specific field (updatedByUserId) or base field (actorUserId),
   // falling back to legacy userId for backward compatibility
   const updaterUserId = (payload as any).updatedByUserId || payload.actorUserId || (payload as any).userId;
+  const accumulator = NotificationAccumulator.getInstance();
+
+  if (accumulator.isReady()) {
+    logger.debug('[TicketEmailSubscriber] Routing ticket update through accumulator', {
+      ticketId: payload.ticketId,
+      tenantId
+    });
+
+    await accumulator.accumulate({
+      tenantId,
+      ticketId: payload.ticketId,
+      eventType: 'TICKET_UPDATED',
+      userId: updaterUserId || '',
+      payload: payload as unknown as Record<string, unknown>,
+    });
+    return;
+  }
 
   try {
     console.log('[EmailSubscriber] Creating tenant database connection:', {
@@ -1209,123 +1283,103 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     const ticketingFromAddress = await resolveTicketingFromAddress(db, tenantId);
     const activeWatcherEmails = extractActiveWatcherEmails(ticket.attributes);
 
-    // Check if notification accumulator is initialized
-    const accumulator = NotificationAccumulator.getInstance();
-    const useAccumulator = accumulator.isReady();
+    logger.debug('[TicketEmailSubscriber] Accumulator not ready, sending immediately', {
+      ticketId: payload.ticketId,
+      tenantId
+    });
+    const sentEmails = new Set<string>();
+    const sendIfUnique = async (
+      params: SendEmailParams,
+      subtypeName: string,
+      recipientUserId?: string | null
+    ) => {
+      const email = params.to?.trim();
+      if (!isValidEmail(email)) {
+        return;
+      }
 
-    if (useAccumulator) {
-      // Route through accumulator - notifications will be batched and sent later
-      logger.debug('[TicketEmailSubscriber] Routing ticket update through accumulator', {
-        ticketId: payload.ticketId,
-        tenantId
+      const key = normalizeRecipientEmail(email);
+      if (sentEmails.has(key)) {
+        return;
+      }
+
+      sentEmails.add(key);
+      await sendNotificationIfEnabled(params, subtypeName, recipientUserId ?? undefined);
+    };
+
+    // Send to primary recipient (contact or client) - external user, no userId
+    if (isValidEmail(primaryEmail)) {
+      await sendIfUnique({
+        tenantId,
+        ...emailEntityContext,
+        contactId: primaryContactId,
+        to: primaryEmail,
+        subject: `Ticket Updated: ${ticket.title}`,
+        template: 'ticket-updated',
+        context: buildContext(portalUrl),
+        replyContext: {
+          ticketId: ticket.ticket_id || payload.ticketId,
+          threadId: ticket.email_metadata?.threadId
+        },
+        from: ticketingFromAddress
+      }, 'Ticket Updated');
+    }
+
+    // Send to assigned user if different from primary recipient
+    if (isValidEmail(assignedEmail) && assignedEmail !== primaryEmail) {
+      await sendIfUnique({
+        tenantId,
+        ...emailEntityContext,
+        to: assignedEmail,
+        subject: `Ticket Updated: ${ticket.title}`,
+        template: 'ticket-updated',
+        context: buildContext(internalUrl),
+        replyContext: {
+          ticketId: ticket.ticket_id || payload.ticketId,
+          threadId: ticket.email_metadata?.threadId
+        },
+        from: ticketingFromAddress
+      }, 'Ticket Updated', ticket.assigned_to);
+    }
+
+    // Get and notify all additional resources
+    const additionalResources = await db('ticket_resources as tr')
+      .select('u.email as email', 'u.user_id as user_id')
+      .leftJoin('users as u', function() {
+        this.on('tr.additional_user_id', 'u.user_id')
+            .andOn('tr.tenant', 'u.tenant');
+      })
+      .where({
+        'tr.ticket_id': payload.ticketId,
+        'tr.tenant': tenantId
       });
-      const accumulatedRecipients = new Set<string>();
-      const accumulateIfUnique = async (params: {
-        recipientEmail: string;
-        recipientUserId?: string;
-        isInternal: boolean;
-      }) => {
-        const email = params.recipientEmail?.trim();
-        if (!isValidEmail(email)) {
-          return;
-        }
 
-        const key = normalizeRecipientEmail(email);
-        if (accumulatedRecipients.has(key)) {
-          return;
-        }
-
-        accumulatedRecipients.add(key);
-        await accumulator.accumulate({
-          tenantId,
-          ticketId: payload.ticketId,
-          recipientEmail: email,
-          recipientUserId: params.recipientUserId,
-          isInternal: params.isInternal,
-          userId: updaterUserId || '',
-          changes: payload.changes || {}
-        });
-      };
-
-      // Accumulate for primary recipient (contact or client) - external user
-      if (isValidEmail(primaryEmail)) {
-        await accumulateIfUnique({
-          recipientEmail: primaryEmail,
-          isInternal: false,
-        });
-      }
-
-      // Get and accumulate for all additional resources
-      const additionalResources = await db('ticket_resources as tr')
-        .select('u.email as email', 'u.user_id as user_id')
-        .leftJoin('users as u', function() {
-          this.on('tr.additional_user_id', 'u.user_id')
-              .andOn('tr.tenant', 'u.tenant');
-        })
-        .where({
-          'tr.ticket_id': payload.ticketId,
-          'tr.tenant': tenantId
-        });
-
-      // Accumulate for assigned user if different from primary recipient
-      if (isValidEmail(assignedEmail) && assignedEmail !== primaryEmail) {
-        await accumulateIfUnique({
-          recipientEmail: assignedEmail,
-          recipientUserId: ticket.assigned_to,
-          isInternal: true,
-        });
-      }
-
-      for (const resource of additionalResources) {
-        if (isValidEmail(resource.email)) {
-          await accumulateIfUnique({
-            recipientEmail: resource.email,
-            recipientUserId: resource.user_id,
-            isInternal: true,
-          });
-        }
-      }
-
-      for (const watcherEmail of activeWatcherEmails) {
-        await accumulateIfUnique({
-          recipientEmail: watcherEmail,
-          isInternal: false,
-        });
-      }
-
-    } else {
-      // Fallback: Send immediately if accumulator is not initialized
-      logger.debug('[TicketEmailSubscriber] Accumulator not ready, sending immediately', {
-        ticketId: payload.ticketId,
-        tenantId
-      });
-      const sentEmails = new Set<string>();
-      const sendIfUnique = async (
-        params: SendEmailParams,
-        subtypeName: string,
-        recipientUserId?: string | null
-      ) => {
-        const email = params.to?.trim();
-        if (!isValidEmail(email)) {
-          return;
-        }
-
-        const key = normalizeRecipientEmail(email);
-        if (sentEmails.has(key)) {
-          return;
-        }
-
-        sentEmails.add(key);
-        await sendNotificationIfEnabled(params, subtypeName, recipientUserId ?? undefined);
-      };
-
-      // Send to primary recipient (contact or client) - external user, no userId
-      if (isValidEmail(primaryEmail)) {
+    // Send to all additional resources
+    for (const resource of additionalResources) {
+      if (isValidEmail(resource.email)) {
         await sendIfUnique({
           tenantId,
           ...emailEntityContext,
-          contactId: primaryContactId,
-          to: primaryEmail,
+          to: resource.email,
+          subject: `Ticket Updated: ${ticket.title}`,
+          template: 'ticket-updated',
+          context: buildContext(internalUrl),
+          replyContext: {
+            ticketId: ticket.ticket_id || payload.ticketId,
+            threadId: ticket.email_metadata?.threadId
+          },
+          from: ticketingFromAddress
+        }, 'Ticket Updated', resource.user_id);
+      }
+    }
+
+    await sendOneEmailPerWatcher(
+      activeWatcherEmails,
+      async (watcherEmail) => {
+        await sendIfUnique({
+          tenantId,
+          ...emailEntityContext,
+          to: watcherEmail,
           subject: `Ticket Updated: ${ticket.title}`,
           template: 'ticket-updated',
           context: buildContext(portalUrl),
@@ -1335,78 +1389,11 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
           },
           from: ticketingFromAddress
         }, 'Ticket Updated');
+      },
+      {
+        excludeEmails: sentEmails,
       }
-
-      // Send to assigned user if different from primary recipient
-      if (isValidEmail(assignedEmail) && assignedEmail !== primaryEmail) {
-        await sendIfUnique({
-          tenantId,
-          ...emailEntityContext,
-          to: assignedEmail,
-          subject: `Ticket Updated: ${ticket.title}`,
-          template: 'ticket-updated',
-          context: buildContext(internalUrl),
-          replyContext: {
-            ticketId: ticket.ticket_id || payload.ticketId,
-            threadId: ticket.email_metadata?.threadId
-          },
-          from: ticketingFromAddress
-        }, 'Ticket Updated', ticket.assigned_to);
-      }
-
-      // Get and notify all additional resources
-      const additionalResources = await db('ticket_resources as tr')
-        .select('u.email as email', 'u.user_id as user_id')
-        .leftJoin('users as u', function() {
-          this.on('tr.additional_user_id', 'u.user_id')
-              .andOn('tr.tenant', 'u.tenant');
-        })
-        .where({
-          'tr.ticket_id': payload.ticketId,
-          'tr.tenant': tenantId
-        });
-
-      // Send to all additional resources
-      for (const resource of additionalResources) {
-        if (isValidEmail(resource.email)) {
-          await sendIfUnique({
-            tenantId,
-            ...emailEntityContext,
-            to: resource.email,
-            subject: `Ticket Updated: ${ticket.title}`,
-            template: 'ticket-updated',
-            context: buildContext(internalUrl),
-            replyContext: {
-              ticketId: ticket.ticket_id || payload.ticketId,
-              threadId: ticket.email_metadata?.threadId
-            },
-            from: ticketingFromAddress
-          }, 'Ticket Updated', resource.user_id);
-        }
-      }
-
-      await sendOneEmailPerWatcher(
-        activeWatcherEmails,
-        async (watcherEmail) => {
-          await sendIfUnique({
-            tenantId,
-            ...emailEntityContext,
-            to: watcherEmail,
-            subject: `Ticket Updated: ${ticket.title}`,
-            template: 'ticket-updated',
-            context: buildContext(portalUrl),
-            replyContext: {
-              ticketId: ticket.ticket_id || payload.ticketId,
-              threadId: ticket.email_metadata?.threadId
-            },
-            from: ticketingFromAddress
-          }, 'Ticket Updated');
-        },
-        {
-          excludeEmails: sentEmails,
-        }
-      );
-    }
+    );
 
   } catch (error) {
     logger.error('Error handling ticket updated event:', {
@@ -1471,16 +1458,33 @@ async function formatAccumulatedChanges(
  * Handle accumulated ticket updates - called by the NotificationAccumulator flush
  */
 export async function handleAccumulatedTicketUpdates(notification: PendingNotification): Promise<void> {
-  const { tenantId, ticketId, recipientEmail, recipientUserId, isInternal, accumulatedChanges } = notification;
+  const { tenantId, ticketId, eventType, accumulatedEvents } = notification;
 
   logger.info('[TicketEmailSubscriber] Processing accumulated ticket updates', {
     tenantId,
     ticketId,
-    recipientEmail,
-    changeCount: accumulatedChanges.length
+    eventType,
+    eventCount: accumulatedEvents.length
   });
 
   try {
+    if (eventType === 'TICKET_ASSIGNED') {
+      const latestEvent = accumulatedEvents[accumulatedEvents.length - 1];
+      if (!latestEvent) {
+        logger.warn('[TicketEmailSubscriber] Missing accumulated ticket assignment payload', {
+          tenantId,
+          ticketId,
+        });
+        return;
+      }
+
+      await sendTicketAssignedNotifications(
+        `accumulated:${tenantId}:${ticketId}:${latestEvent.timestamp}`,
+        latestEvent.payload as TicketAssignedEvent['payload']
+      );
+      return;
+    }
+
     const db = await getConnection(tenantId);
 
     // Get current ticket details (may have changed since accumulation started)
@@ -1490,6 +1494,27 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
       logger.warn('[TicketEmailSubscriber] Could not find ticket for accumulated notification:', {
         ticketId,
         tenantId
+      });
+      return;
+    }
+
+    const accumulatedChanges: AccumulatedChange[] = accumulatedEvents
+      .map((accumulatedEvent) => ({
+        timestamp: accumulatedEvent.timestamp,
+        userId: accumulatedEvent.userId,
+        changes: (
+          (accumulatedEvent.payload as {
+            changes?: Record<string, { old?: unknown; new?: unknown }>;
+          }).changes ?? {}
+        ),
+      }))
+      .filter((changeSet) => Object.keys(changeSet.changes).length > 0);
+
+    if (accumulatedChanges.length === 0) {
+      logger.info('[TicketEmailSubscriber] Skipping accumulated ticket update with no changes', {
+        tenantId,
+        ticketId,
+        eventType,
       });
       return;
     }
@@ -1586,11 +1611,9 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
     // Format all accumulated changes
     const formattedChanges = await formatAccumulatedChanges(db, accumulatedChanges, tenantId, emailTimeZone);
 
-    // Determine the URL based on whether recipient is internal or external
     const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
-    const ticketUrl = isInternal ? internalUrl : portalUrl;
 
-    const ticketContext = {
+    const baseTicketContext = {
       id: ticket.ticket_number,
       title: ticket.title,
       description,
@@ -1614,40 +1637,135 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
       locationSummary,
       changes: formattedChanges,
       updateCount: accumulatedChanges.length,
-      url: ticketUrl
     };
 
+    const buildContext = (url: string) => ({
+      ticket: {
+        ...baseTicketContext,
+        url,
+      },
+    });
+
     const ticketingFromAddress = await resolveTicketingFromAddress(db, tenantId);
+    const activeWatcherEmails = extractActiveWatcherEmails(ticket.attributes);
+    const primaryEmail = safeString(ticket.contact_email) || safeString(ticket.client_email);
+    const primaryContactId =
+      safeString(ticket.contact_email) && ticket.contact_name_id ? String(ticket.contact_name_id).trim() : undefined;
+    const emailEntityContext = {
+      entityType: 'ticket',
+      entityId: ticket.ticket_id || ticketId,
+    };
+    const sentEmails = new Set<string>();
+    const sendIfUnique = async (
+      params: SendEmailParams,
+      subtypeName: string,
+      recipientUserId?: string | null
+    ) => {
+      const email = params.to?.trim();
+      if (!isValidEmail(email)) {
+        return;
+      }
+
+      const key = normalizeRecipientEmail(email);
+      if (sentEmails.has(key)) {
+        return;
+      }
+
+      sentEmails.add(key);
+      await sendNotificationIfEnabled(params, subtypeName, recipientUserId ?? undefined);
+    };
 
     // Build subject line indicating multiple updates if applicable
     const subjectSuffix = accumulatedChanges.length > 1 ? ` (${accumulatedChanges.length} updates)` : '';
-    const normalizedRecipient = recipientEmail.trim().toLowerCase();
-    const contactEmail = safeString(ticket.contact_email);
-    const contactId =
-      !isInternal && contactEmail && contactEmail.trim().toLowerCase() === normalizedRecipient
-        ? (ticket.contact_name_id ? String(ticket.contact_name_id).trim() : undefined)
-        : undefined;
 
-    await sendNotificationIfEnabled({
-      tenantId,
-      entityType: 'ticket',
-      entityId: ticket.ticket_id,
-      contactId,
-      to: recipientEmail,
-      subject: `Ticket Updated: ${ticket.title}${subjectSuffix}`,
-      template: 'ticket-updated',
-      context: { ticket: ticketContext },
-      replyContext: {
-        ticketId: ticket.ticket_id,
-        threadId: ticket.email_metadata?.threadId
+    if (isValidEmail(primaryEmail)) {
+      await sendIfUnique({
+        tenantId,
+        ...emailEntityContext,
+        contactId: primaryContactId,
+        to: primaryEmail,
+        subject: `Ticket Updated: ${ticket.title}${subjectSuffix}`,
+        template: 'ticket-updated',
+        context: buildContext(portalUrl),
+        replyContext: {
+          ticketId: ticket.ticket_id || ticketId,
+          threadId: ticket.email_metadata?.threadId
+        },
+        from: ticketingFromAddress
+      }, 'Ticket Updated');
+    }
+
+    if (isValidEmail(assignedEmail) && assignedEmail !== primaryEmail) {
+      await sendIfUnique({
+        tenantId,
+        ...emailEntityContext,
+        to: assignedEmail,
+        subject: `Ticket Updated: ${ticket.title}${subjectSuffix}`,
+        template: 'ticket-updated',
+        context: buildContext(internalUrl),
+        replyContext: {
+          ticketId: ticket.ticket_id || ticketId,
+          threadId: ticket.email_metadata?.threadId
+        },
+        from: ticketingFromAddress
+      }, 'Ticket Updated', ticket.assigned_to);
+    }
+
+    const additionalResources = await db('ticket_resources as tr')
+      .select('u.email as email', 'u.user_id as user_id')
+      .leftJoin('users as u', function() {
+        this.on('tr.additional_user_id', 'u.user_id')
+            .andOn('tr.tenant', 'u.tenant');
+      })
+      .where({
+        'tr.ticket_id': ticketId,
+        'tr.tenant': tenantId
+      });
+
+    for (const resource of additionalResources) {
+      if (isValidEmail(resource.email)) {
+        await sendIfUnique({
+          tenantId,
+          ...emailEntityContext,
+          to: resource.email,
+          subject: `Ticket Updated: ${ticket.title}${subjectSuffix}`,
+          template: 'ticket-updated',
+          context: buildContext(internalUrl),
+          replyContext: {
+            ticketId: ticket.ticket_id || ticketId,
+            threadId: ticket.email_metadata?.threadId
+          },
+          from: ticketingFromAddress
+        }, 'Ticket Updated', resource.user_id);
+      }
+    }
+
+    await sendOneEmailPerWatcher(
+      activeWatcherEmails,
+      async (watcherEmail) => {
+        await sendIfUnique({
+          tenantId,
+          ...emailEntityContext,
+          to: watcherEmail,
+          subject: `Ticket Updated: ${ticket.title}${subjectSuffix}`,
+          template: 'ticket-updated',
+          context: buildContext(portalUrl),
+          replyContext: {
+            ticketId: ticket.ticket_id || ticketId,
+            threadId: ticket.email_metadata?.threadId
+          },
+          from: ticketingFromAddress
+        }, 'Ticket Updated');
       },
-      from: ticketingFromAddress
-    }, 'Ticket Updated', recipientUserId);
+      {
+        excludeEmails: sentEmails,
+      }
+    );
 
-    logger.info('[TicketEmailSubscriber] Sent accumulated ticket update notification', {
+    logger.info('[TicketEmailSubscriber] Sent accumulated ticket update notifications', {
       tenantId,
       ticketId,
-      recipientEmail,
+      recipientCount: sentEmails.size,
       changeCount: accumulatedChanges.length
     });
 
@@ -1656,19 +1774,23 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
       error: error instanceof Error ? error.message : 'Unknown error',
       tenantId,
       ticketId,
-      recipientEmail
+      eventType
     });
+    if (isTransientDatabaseSaturationError(error)) {
+      throw toRetryableAccumulatorError(error);
+    }
     throw error;
   }
 }
 
 /**
- * Handle ticket closed events
+ * Handle ticket assignment notifications after any accumulation delay
  */
-async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
-  const { payload } = event;
+async function sendTicketAssignedNotifications(
+  eventId: string,
+  payload: TicketAssignedEvent['payload']
+): Promise<void> {
   const { tenantId } = payload;
-  // Resolve userId from domain-specific field or base field, falling back to legacy
   const assignerUserId = (payload as any).assignedByUserId || payload.actorUserId || (payload as any).userId;
 
   try {
@@ -1679,7 +1801,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
 
     if (!ticket) {
       logger.warn('Could not send ticket assigned email - missing ticket:', {
-        eventId: event.id,
+        eventId,
         ticketId: payload.ticketId
       });
       return;
@@ -2014,11 +2136,39 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
   } catch (error) {
     logger.error('Error handling ticket assigned event:', {
       error,
-      eventId: event.id,
+      eventId,
       ticketId: payload.ticketId
     });
     throw error;
   }
+}
+
+/**
+ * Handle ticket assigned events
+ */
+async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
+  const { payload } = event;
+  const { tenantId } = payload;
+  const assignerUserId = (payload as any).assignedByUserId || payload.actorUserId || (payload as any).userId;
+  const accumulator = NotificationAccumulator.getInstance();
+
+  if (accumulator.isReady()) {
+    logger.debug('[TicketEmailSubscriber] Routing ticket assignment through accumulator', {
+      ticketId: payload.ticketId,
+      tenantId
+    });
+
+    await accumulator.accumulate({
+      tenantId,
+      ticketId: payload.ticketId,
+      eventType: 'TICKET_ASSIGNED',
+      userId: assignerUserId || '',
+      payload: payload as unknown as Record<string, unknown>,
+    });
+    return;
+  }
+
+  await sendTicketAssignedNotifications(event.id, payload);
 }
 
 async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise<void> {

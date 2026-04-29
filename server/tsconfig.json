@@ -110,6 +110,12 @@
       "@alga-psa/email/*": [
         "../packages/email/src/*"
       ],
+      "@alga-psa/formatting": [
+        "../packages/formatting/src"
+      ],
+      "@alga-psa/formatting/*": [
+        "../packages/formatting/src/*"
+      ],
       "@alga-psa/core": [
         "../packages/core/src"
       ],
