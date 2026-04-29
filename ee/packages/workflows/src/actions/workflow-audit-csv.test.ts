@@ -87,6 +87,87 @@ describe('workflowAuditCsv formatter', () => {
     expect(row.additional_details).toContain('trigger=object');
   });
 
+  it('T002: formats workflow run audit rows with run context/status/reason and trailing ids', () => {
+    const logs: WorkflowAuditCsvLog[] = [
+      {
+        audit_id: 'a-4',
+        timestamp: '2026-04-29T10:00:00.000Z',
+        operation: 'workflow_run_retry',
+        user_id: 'u-9',
+        table_name: 'workflow_runs',
+        record_id: 'run-9',
+        changed_data: { run_status: 'queued', reason: 'Manual retry' },
+        details: { source: 'api' }
+      }
+    ];
+
+    const [row] = buildWorkflowAuditCsvRows(logs, {
+      actorByUserId: new Map([['u-9', 'Retry User <retry@example.com>']]),
+      context: {
+        workflowId: 'wf-9',
+        runId: 'run-9',
+        workflowName: 'Retry Flow',
+        workflowKey: 'retry_flow',
+        workflowVersion: 11,
+        runStatus: 'running'
+      }
+    });
+
+    expect(row.event).toBe('Run retried');
+    expect(row.actor).toBe('Retry User <retry@example.com>');
+    expect(row.source).toBe('api');
+    expect(row.workflow_name).toBe('Retry Flow');
+    expect(row.workflow_key).toBe('retry_flow');
+    expect(row.workflow_version).toBe('11');
+    expect(row.run_status).toBe('queued');
+    expect(row.reason).toBe('Manual retry');
+    expect(row.summary).toContain('Run retried');
+    expect(row.run_id).toBe('run-9');
+    expect(row.workflow_id).toBe('wf-9');
+    expect(row.record_type).toBe('workflow_runs');
+    expect(row.operation).toBe('workflow_run_retry');
+    expect(row.audit_id).toBe('a-4');
+  });
+
+  it('T003: runtime action-level row exposes step/action fields and summarizes extra safe values', () => {
+    const logs: WorkflowAuditCsvLog[] = [
+      {
+        audit_id: 'a-5',
+        timestamp: '2026-04-29T10:00:00.000Z',
+        operation: 'workflow_run_resume',
+        user_id: 'u-10',
+        table_name: 'workflow_runs',
+        record_id: 'run-10',
+        changed_data: { diagnostics: ['a', 'b', 'c'] },
+        details: {
+          step_path: 'root.actions.send_email',
+          action_id: 'send_email',
+          action_version: 4,
+          source: 'worker'
+        }
+      }
+    ];
+
+    const [row] = buildWorkflowAuditCsvRows(logs, {
+      actorByUserId: new Map([['u-10', 'Worker User']]),
+      context: {
+        workflowId: 'wf-10',
+        runId: 'run-10',
+        workflowName: 'Escalation',
+        workflowKey: 'escalation',
+        workflowVersion: 6,
+        runStatus: 'running'
+      }
+    });
+
+    expect(row.step_path).toBe('root.actions.send_email');
+    expect(row.action).toBe('send_email v4');
+    expect(row.changed_fields).toContain('step path');
+    expect(row.changed_fields).toContain('action id');
+    expect(row.changed_fields).toContain('action version');
+    expect(row.additional_details).toContain('diagnostics=3 items');
+  });
+
   it('T005/T006: keeps redacted text and escapes csv-sensitive values', () => {
     const logs: WorkflowAuditCsvLog[] = [
       {

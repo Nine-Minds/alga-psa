@@ -72,3 +72,4 @@ Rolling notes for improving workflow audit CSV exports so the CSV is business-re
 
 - `WorkflowDefinitionModelV2.getById` requires tenant and cannot be called with null tenant; export enrichment uses direct `workflow_definitions` query with optional tenant filter from audit rows.
 - Definition key field is `key` (not `workflow_key`) on `workflow_definitions` records.
+- (2026-04-29) Added test coverage for run-operation formatting (`T002`) and runtime action-level fields (`T003`) in `workflow-audit-csv.test.ts`.

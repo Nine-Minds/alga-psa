@@ -16,7 +16,7 @@
   {
     "id": "T002",
     "description": "Formatter unit test: representative workflow run operations export readable events, summaries, run status, reason, workflow/run context, and trailing IDs",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F005",
@@ -30,7 +30,7 @@
   {
     "id": "T003",
     "description": "Formatter unit test: runtime action-level audit entry exports step path and action metadata as first-class columns and summarizes any extra safe fields",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F010",
