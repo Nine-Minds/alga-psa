@@ -604,6 +604,116 @@
           "required": ["comment_text"]
         }
       }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/tickets/{id}/time-entries"
+      },
+      "metadata": {
+        "displayName": "Get Ticket Time Entries",
+        "summary": "List time entries logged on a ticket",
+        "description": "Returns an authorization-aware summary of the time logged on a ticket. Each entry is evaluated through the authorization kernel against `time_entry:read`; the caller always sees their own entries, plus any other users' entries the kernel allows (e.g. team members managed by the caller, or entries permitted by an assigned authorization bundle). Entries the caller cannot see are still counted toward an anonymized aggregate (`othersHiddenCount` + `othersHiddenMinutes`) so that totals stay accurate without leaking individual entries.",
+        "rbacResource": "ticket",
+        "approvalRequired": false,
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Ticket identifier.",
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responseSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object",
+              "properties": {
+                "entries": {
+                  "type": "array",
+                  "description": "Visible time entries — always includes the caller's own entries; includes other users' entries that the authorization kernel allows for the caller (e.g. via team management or an authorization bundle).",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "entry_id": { "type": "string", "format": "uuid" },
+                      "user_id": { "type": "string", "format": "uuid" },
+                      "user_name": { "type": "string", "nullable": true },
+                      "start_time": { "type": "string", "format": "date-time" },
+                      "end_time": { "type": "string", "format": "date-time" },
+                      "work_date": { "type": "string", "format": "date", "nullable": true },
+                      "billable_duration": { "type": "integer", "description": "Duration in minutes." },
+                      "notes": { "type": "string", "nullable": true },
+                      "approval_status": {
+                        "type": "string",
+                        "enum": ["DRAFT", "SUBMITTED", "APPROVED", "CHANGES_REQUESTED"]
+                      },
+                      "service_id": { "type": "string", "format": "uuid", "nullable": true },
+                      "service_name": { "type": "string", "nullable": true },
+                      "is_own": { "type": "boolean" }
+                    }
+                  }
+                },
+                "ownTotalMinutes": {
+                  "type": "integer",
+                  "description": "Total billable minutes logged by the calling user."
+                },
+                "ownEntryCount": { "type": "integer" },
+                "othersTotalMinutes": {
+                  "type": "integer",
+                  "description": "Total billable minutes logged by other users (always populated, even when individual entries are hidden)."
+                },
+                "othersEntryCount": {
+                  "type": "integer",
+                  "description": "Total count of entries logged by other users (always populated)."
+                },
+                "othersVisibleMinutes": {
+                  "type": "integer",
+                  "description": "Subset of `othersTotalMinutes` for entries the caller is authorized to see in `entries`."
+                },
+                "othersVisibleCount": {
+                  "type": "integer",
+                  "description": "Subset of `othersEntryCount` for entries the caller is authorized to see in `entries`."
+                },
+                "othersHiddenMinutes": {
+                  "type": "integer",
+                  "description": "Remaining minutes from other users' entries that the caller is not authorized to see; surfaced as an anonymized aggregate."
+                },
+                "othersHiddenCount": {
+                  "type": "integer",
+                  "description": "Remaining count of other users' entries that the caller is not authorized to see; surfaced as an anonymized aggregate."
+                },
+                "totalMinutes": {
+                  "type": "integer",
+                  "description": "Sum of `ownTotalMinutes` and `othersTotalMinutes`."
+                }
+              },
+              "required": [
+                "entries",
+                "ownTotalMinutes",
+                "ownEntryCount",
+                "othersTotalMinutes",
+                "othersEntryCount",
+                "othersVisibleMinutes",
+                "othersVisibleCount",
+                "othersHiddenMinutes",
+                "othersHiddenCount",
+                "totalMinutes"
+              ]
+            }
+          }
+        },
+        "examples": [
+          {
+            "name": "Read time logged on a ticket",
+            "request": {
+              "params": { "id": "11111111-1111-1111-1111-111111111111" }
+            },
+            "notes": "Use this endpoint to render time-tracking summaries on the ticket detail page or in mobile clients without paging through the global timesheet list."
+          }
+        ]
+      }
     }
   ]
 }

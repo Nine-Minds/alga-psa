@@ -34,6 +34,7 @@ import {
 } from '../../auth/rbac';
 import { authorizeApiResourceRead } from './authorizationKernel';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
+import { fetchTimeEntriesForTicketCore } from '@alga-psa/scheduling/actions/timeEntryTicketActions';
 import {
   ApiRequest,
   UnauthorizedError,
@@ -697,6 +698,39 @@ export class ApiTicketController extends ApiBaseController {
           await this.ticketService.deleteTicketDocument(ticketId, documentId, apiRequest.context!);
 
           return NextResponse.json(createSuccessResponse(null), { status: 200 });
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Get time entries logged on a ticket. Returns the caller's own entries and,
+   * for callers with `timesheet:read_all`, full detail for other team members'
+   * entries. Otherwise an aggregated count + total minutes is returned in lieu
+   * of individual entries.
+   */
+  getTimeEntries() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
+
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+
+          const summary = await fetchTimeEntriesForTicketCore(
+            apiRequest.context!.user!,
+            apiRequest.context!.tenant,
+            knex,
+            ticketId,
+          );
+
+          return createSuccessResponse(summary, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);

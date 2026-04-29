@@ -305,6 +305,13 @@
       "message": "Hierdoor wordt de urenstaat teruggezet naar Wijzigingen aangevraagd, zodat de tijdsinvoer kan worden bewerkt."
     }
   },
+  "timeSheetTable": {
+    "empty": {
+      "title": "Geen werkitems op uw urenstaat",
+      "description": "Voeg een nieuw werkitem toe om uw tijd voor deze week bij te houden.",
+      "getStarted": "Aan de slag"
+    }
+  },
   "timeSheetList": {
     "delete": {
       "title": "Werkitem verwijderen",

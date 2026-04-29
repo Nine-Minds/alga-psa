@@ -4,8 +4,8 @@ import React from 'react';
 import { toast } from 'react-hot-toast';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { getCurrentTimePeriod } from '../actions/timePeriodsActions';
-import { fetchOrCreateTimeSheet, saveTimeEntry } from '../actions/timeEntryActions';
-import type { IExtendedWorkItem, TimeEntryWorkItemContext } from '@alga-psa/types';
+import { fetchOrCreateTimeSheet, saveTimeEntry, getTimeEntryById } from '../actions/timeEntryActions';
+import type { IExtendedWorkItem, ITimeEntryWithWorkItem, TimeEntryWorkItemContext } from '@alga-psa/types';
 import TimeEntryDialog from '../components/time-management/time-entry/time-sheet/TimeEntryDialog';
 import type { OpenDrawerFn } from '@alga-psa/ui/context';
 
@@ -14,6 +14,7 @@ interface LaunchTimeEntryParams {
   closeDrawer: () => void;
   context: TimeEntryWorkItemContext;
   onComplete?: () => void;
+  existingEntryId?: string;
 }
 
 const buildWorkItem = (context: TimeEntryWorkItemContext): Omit<IExtendedWorkItem, 'tenant'> => {
@@ -52,12 +53,21 @@ const deriveDefaultTimes = (context: TimeEntryWorkItemContext) => {
   return { defaultStartTime: undefined, defaultEndTime: undefined };
 };
 
-export async function launchTimeEntryForWorkItem({ openDrawer, closeDrawer, context, onComplete }: LaunchTimeEntryParams): Promise<void> {
+export async function launchTimeEntryForWorkItem({ openDrawer, closeDrawer, context, onComplete, existingEntryId }: LaunchTimeEntryParams): Promise<void> {
   try {
     const user = await getCurrentUser();
     if (!user?.user_id) {
       toast.error('Unable to load current user for time entry.');
       return;
+    }
+
+    let existingEntry: ITimeEntryWithWorkItem | null = null;
+    if (existingEntryId) {
+      existingEntry = await getTimeEntryById(existingEntryId);
+      if (!existingEntry) {
+        toast.error('Time entry not found.');
+        return;
+      }
     }
 
     const currentTimePeriod = await getCurrentTimePeriod();
@@ -66,10 +76,14 @@ export async function launchTimeEntryForWorkItem({ openDrawer, closeDrawer, cont
       return;
     }
 
-    const timeSheet = await fetchOrCreateTimeSheet(user.user_id, currentTimePeriod.period_id);
+    const timeSheetId = existingEntry?.time_sheet_id
+      ?? (await fetchOrCreateTimeSheet(user.user_id, currentTimePeriod.period_id)).id;
+
     const workItem = buildWorkItem(context);
     const { defaultStartTime, defaultEndTime } = deriveDefaultTimes(context);
-    const date = context.startTime || defaultStartTime || new Date();
+    const baseDate = existingEntry?.start_time
+      ? new Date(existingEntry.start_time)
+      : context.startTime || defaultStartTime || new Date();
 
     openDrawer(
       <TimeEntryDialog
@@ -86,12 +100,13 @@ export async function launchTimeEntryForWorkItem({ openDrawer, closeDrawer, cont
           }
         }}
         workItem={workItem}
-        date={date}
+        date={baseDate}
+        existingEntries={existingEntry ? [existingEntry] : undefined}
         timePeriod={currentTimePeriod}
         isEditable={true}
         defaultStartTime={defaultStartTime}
         defaultEndTime={defaultEndTime}
-        timeSheetId={timeSheet.id}
+        timeSheetId={timeSheetId}
         inDrawer={true}
       />,
       undefined,

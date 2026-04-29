@@ -3,7 +3,9 @@
  */
 
 import i18next, { TFunction } from 'i18next';
-import HttpBackend from 'i18next-http-backend';
+import FsBackend from 'i18next-fs-backend';
+import fs from 'fs';
+import path from 'path';
 import { cache } from 'react';
 import { cookies, headers } from 'next/headers.js';
 import {
@@ -16,6 +18,37 @@ import {
 import { getConnection } from '@alga-psa/db/tenant';
 
 /**
+ * Resolve the on-disk path to the locales directory.
+ *
+ * Why: server-side i18n previously fetched its own static locale files over
+ * HTTP, which deadlocked SSR and broke whenever the dev port differed from
+ * NEXT_PUBLIC_URL. Reading from disk avoids both.
+ */
+function resolveLocalesLoadPath(): string {
+  if (process.env.I18N_LOCALES_DIR) {
+    return path.join(process.env.I18N_LOCALES_DIR, '{{lng}}/{{ns}}.json');
+  }
+
+  const candidates = [
+    path.join(process.cwd(), 'public/locales'),            // server/ as cwd
+    path.join(process.cwd(), '../server/public/locales'),  // ee/server/ as cwd
+    path.join(process.cwd(), 'server/public/locales'),     // monorepo root as cwd
+  ];
+
+  for (const dir of candidates) {
+    try {
+      if (fs.existsSync(dir)) {
+        return path.join(dir, '{{lng}}/{{ns}}.json');
+      }
+    } catch {
+      // ignore and try next candidate
+    }
+  }
+
+  return path.join(process.cwd(), 'public/locales/{{lng}}/{{ns}}.json');
+}
+
+/**
  * Initialize i18next for server-side rendering
  */
 async function initI18next(locale: SupportedLocale, namespaces: string[] = []) {
@@ -26,13 +59,13 @@ async function initI18next(locale: SupportedLocale, namespaces: string[] = []) {
   );
 
   await instance
-    .use(HttpBackend)
+    .use(FsBackend)
     .init({
       ...I18N_CONFIG,
       ns: requestedNamespaces,
       lng: locale,
       backend: {
-        loadPath: `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/locales/{{lng}}/{{ns}}.json`,
+        loadPath: resolveLocalesLoadPath(),
       },
     });
 

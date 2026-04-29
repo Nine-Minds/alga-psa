@@ -217,6 +217,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'get', path: '/api/v1/tickets/{id}/comments', summary: 'List ticket comments', description: 'Lists comments for ticket UUID.', family: 'ticket' },
     { method: 'post', path: '/api/v1/tickets/{id}/comments', summary: 'Add ticket comment', description: 'Adds comment to ticket UUID.', family: 'ticket' },
     { method: 'put', path: '/api/v1/tickets/{id}/status', summary: 'Update ticket status', description: 'Updates status for ticket UUID.', family: 'ticket' },
+    { method: 'get', path: '/api/v1/tickets/{id}/time-entries', summary: 'List ticket time entries', description: 'Returns the caller\'s time entries on the ticket plus, when permitted, other team members\' entries (or an anonymized aggregate when the caller lacks timesheet:read_all).', family: 'ticket' },
 
     { method: 'get', path: '/api/v1/time-entries', summary: 'List time entries', description: 'Lists time entries via ApiBaseController list flow.', family: 'time_entry' },
     { method: 'post', path: '/api/v1/time-entries', summary: 'Create time entry', description: 'Creates time entry.', family: 'time_entry' },

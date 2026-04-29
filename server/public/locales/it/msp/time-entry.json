@@ -305,6 +305,13 @@
       "message": "Ciò riporterà il foglio presenze in Modifiche richieste in modo che le voci di tempo possano essere modificate."
     }
   },
+  "timeSheetTable": {
+    "empty": {
+      "title": "Nessun elemento di lavoro nel foglio presenze",
+      "description": "Aggiungi un nuovo elemento di lavoro per iniziare a registrare il tempo per questa settimana.",
+      "getStarted": "Inizia"
+    }
+  },
   "timeSheetList": {
     "delete": {
       "title": "Elimina elemento di lavoro",

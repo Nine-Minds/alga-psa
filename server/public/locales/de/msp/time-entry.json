@@ -305,6 +305,13 @@
       "message": "Dadurch wird die Arbeitszeittabelle wieder in den Bereich „Angeforderte Änderungen“ verschoben, sodass Zeiteinträge bearbeitet werden können."
     }
   },
+  "timeSheetTable": {
+    "empty": {
+      "title": "Keine Arbeitselemente auf Ihrem Stundenzettel",
+      "description": "Fügen Sie ein neues Arbeitselement hinzu, um die Zeiterfassung für diese Woche zu starten.",
+      "getStarted": "Loslegen"
+    }
+  },
   "timeSheetList": {
     "delete": {
       "title": "Arbeitselement löschen",

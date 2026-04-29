@@ -43,6 +43,8 @@ describe('SchedulingContext', () => {
     const callbacks = {
       renderAgentSchedule: (agentId: string) => <div data-testid={`custom-${agentId}`} />,
       launchTimeEntry: launchSpy,
+      fetchTimeEntriesForTicket: vi.fn(),
+      deleteTimeEntry: vi.fn(),
     };
 
     const wrapper = ({ children }: { children: React.ReactNode }) => (

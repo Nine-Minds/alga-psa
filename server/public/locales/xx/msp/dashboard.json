@@ -38,6 +38,25 @@
     "description": "11111",
     "cta": "11111"
   },
+  "mobileApp": {
+    "title": "11111",
+    "description": "11111",
+    "appStore": "11111",
+    "playStore": "11111",
+    "appStoreQrAlt": "11111",
+    "playStoreQrAlt": "11111",
+    "hide": "11111",
+    "hiding": "11111",
+    "dismissAria": "11111",
+    "dismissError": "11111",
+    "restore": "11111",
+    "restoring": "11111",
+    "restoreError": "11111",
+    "hidden": {
+      "title": "11111",
+      "subtitle": "11111"
+    }
+  },
   "onboarding": {
     "completeTitle": "11111",
     "incompleteTitle": "11111",
@@ -155,24 +174,5 @@
       "restoreFailed": "11111"
     }
   },
-  "mspDashboard": "11111",
-  "mobileApp": {
-    "title": "11111",
-    "description": "11111",
-    "appStore": "11111",
-    "playStore": "11111",
-    "appStoreQrAlt": "11111",
-    "playStoreQrAlt": "11111",
-    "hide": "11111",
-    "hiding": "11111",
-    "dismissAria": "11111",
-    "dismissError": "11111",
-    "restore": "11111",
-    "restoring": "11111",
-    "restoreError": "11111",
-    "hidden": {
-      "title": "11111",
-      "subtitle": "11111"
-    }
-  }
+  "mspDashboard": "11111"
 }

@@ -1095,5 +1095,31 @@
     "bundle": {
       "childrenDescription": "Zgłoszenia podrzędne zgrupowane w tym zgłoszeniu głównym"
     }
+  },
+  "timeEntries": {
+    "title": "Zarejestrowany czas",
+    "loading": "Ładowanie wpisów czasu…",
+    "loadError": "Nie można załadować wpisów czasu",
+    "empty": "Na tym zgłoszeniu nie zarejestrowano jeszcze czasu.",
+    "myEntries": "Moje wpisy",
+    "otherTeam": "Inni członkowie zespołu",
+    "othersAnonymized": "{{count}} wpisów innych członków zespołu ({{duration}})",
+    "noService": "Brak usługi",
+    "unknownUser": "Nieznany użytkownik",
+    "statusDraft": "Wersja robocza",
+    "statusSubmitted": "Przesłane",
+    "statusApproved": "Zatwierdzone",
+    "statusChangesRequested": "Zażądano zmian",
+    "statusUnknown": "Nieznany",
+    "edit": "Edytuj wpis czasu",
+    "delete": "Usuń wpis czasu",
+    "deleteConfirmTitle": "Usunąć wpis czasu?",
+    "deleteConfirmMessage": "Wpis czasu zostanie trwale usunięty. Tej akcji nie można cofnąć.",
+    "deleteConfirmAction": "Usuń",
+    "duration": {
+      "hr": "godz.",
+      "hrs": "godz.",
+      "min": "min"
+    }
   }
 }
