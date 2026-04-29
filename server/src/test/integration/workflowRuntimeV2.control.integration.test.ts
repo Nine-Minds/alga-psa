@@ -15,10 +15,12 @@ import {
   submitWorkflowEventAction,
   listWorkflowEventsAction,
   resumeWorkflowRunAction,
+  resumeWorkflowRunFromQuotaPauseAction,
   retryWorkflowRunAction,
   cancelWorkflowRunAction
 } from '@alga-psa/workflows/actions';
 import { WorkflowRuntimeV2 } from '@alga-psa/workflows/runtime';
+import { workflowStepQuotaService } from '@alga-psa/workflows/runtime';
 import { getActionRegistryV2, getSchemaRegistry } from '@alga-psa/workflows/runtime';
 import WorkflowRunModelV2 from '@alga-psa/workflows/persistence/workflowRunModelV2';
 import WorkflowRunStepModelV2 from '@alga-psa/workflows/persistence/workflowRunStepModelV2';
@@ -115,6 +117,14 @@ let tenantId: string;
 let userId: string;
 
 const actionRestores: Array<() => void> = [];
+
+async function latestWorkflowStepUsageCount(tenant: string): Promise<number> {
+  const row = await db('workflow_step_usage_periods')
+    .where({ tenant })
+    .orderBy('updated_at', 'desc')
+    .first<{ used_count: number }>();
+  return row?.used_count ?? 0;
+}
 
 function stubAction(actionId: string, version: number, handler: any) {
   const registry = getActionRegistryV2();
@@ -1417,5 +1427,194 @@ describe('workflow runtime v2 control-flow + waits integration tests', () => {
     await Promise.all([worker.tick(), worker.tick()]);
     const waits = await db('workflow_run_waits').where({ run_id: run.runId, wait_type: 'retry', status: 'WAITING' });
     expect(waits.length).toBe(0);
+  });
+
+  it('DB runtime reserves quota before STARTED step row creation and executes under limit.', async () => {
+    const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
+    await publishWorkflow(workflowId, 1);
+    const runtime = new WorkflowRuntimeV2();
+    const runId = await runtime.startRun(db, { workflowId, version: 1, payload: {}, tenantId });
+    const reserveSpy = vi.spyOn(workflowStepQuotaService, 'reserveStepStart');
+    reserveSpy.mockImplementation(async (knex, tenant) => {
+      const existingStepRows = await knex('workflow_run_steps').where({ run_id: runId });
+      expect(existingStepRows).toHaveLength(0);
+      return {
+        allowed: true,
+        summary: await workflowStepQuotaService.resolveQuotaSummary(knex, tenant),
+        usedCountAfter: 1,
+      };
+    });
+    try {
+      await runtime.executeRun(db, runId, 'worker');
+    } finally {
+      reserveSpy.mockRestore();
+    }
+    const steps = await WorkflowRunStepModelV2.listByRun(db, runId);
+    expect(steps).toHaveLength(1);
+    expect(steps[0].status).toBe('SUCCEEDED');
+  });
+
+  it('DB runtime quota exhaustion pauses run with quota wait and no blocked step row.', async () => {
+    const workflowId = await createDraftWorkflow({ steps: [stateSetStep('s1', 'A'), stateSetStep('s2', 'B')] });
+    await publishWorkflow(workflowId, 1);
+    const runtime = new WorkflowRuntimeV2();
+    const runId = await runtime.startRun(db, { workflowId, version: 1, payload: {}, tenantId });
+    const reserveSpy = vi.spyOn(workflowStepQuotaService, 'reserveStepStart');
+    let calls = 0;
+    reserveSpy.mockImplementation(async (knex, tenant) => {
+      calls += 1;
+      if (calls === 1) {
+        return {
+          allowed: true,
+          summary: await workflowStepQuotaService.resolveQuotaSummary(knex, tenant),
+          usedCountAfter: 1,
+        };
+      }
+      return {
+        allowed: false,
+        summary: {
+          ...(await workflowStepQuotaService.resolveQuotaSummary(knex, tenant)),
+          usedCount: 1,
+          effectiveLimit: 1,
+          remaining: 0,
+        },
+      };
+    });
+    try {
+      await runtime.executeRun(db, runId, 'worker');
+    } finally {
+      reserveSpy.mockRestore();
+    }
+
+    const run = await WorkflowRunModelV2.getById(db, runId);
+    const quotaWait = await db('workflow_run_waits').where({ run_id: runId, wait_type: 'quota', status: 'WAITING' }).first();
+    const steps = await WorkflowRunStepModelV2.listByRun(db, runId);
+    expect(run?.status).toBe('WAITING');
+    expect(run?.node_path).toBe('root.steps[1]');
+    expect(quotaWait).toBeDefined();
+    expect(steps).toHaveLength(1);
+    expect(steps[0].definition_step_id).toBe('s1');
+  });
+
+  it('Retry step attempts consume additional quota when each attempt starts.', async () => {
+    const workflowId = await createDraftWorkflow({ steps: [{ id: 'retry', type: 'test.retryNode', config: { key: 'quota-retry', failCount: 1 } }] });
+    await publishWorkflow(workflowId, 1);
+    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    await db('workflow_run_waits').where({ run_id: run.runId, wait_type: 'retry' }).update({ timeout_at: new Date(Date.now() - 500).toISOString() });
+    const worker = new WorkflowRuntimeV2Worker('worker');
+    await worker.tick();
+    expect(await latestWorkflowStepUsageCount(tenantId)).toBe(2);
+  });
+
+  it('forEach body executions consume one quota unit per item attempt.', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [forEachStep('for-1', { items: { $expr: 'payload.items' }, itemVar: 'item', body: [assignStep('assign-item', { 'vars.last': { $expr: 'vars.item' } })] })]
+    });
+    await publishWorkflow(workflowId, 1);
+    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: { items: [1, 2, 3] } });
+    const bodySteps = await db('workflow_run_steps').where({ run_id: run.runId, definition_step_id: 'assign-item' });
+    expect(bodySteps).toHaveLength(3);
+    expect(await latestWorkflowStepUsageCount(tenantId)).toBe(4);
+  });
+
+  it('event.wait consumes quota on first entry and does not double-count when resumed.', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [eventWaitStep('wait-1', { eventName: 'PING', correlationKeyExpr: { $expr: '"quota-key"' } })]
+    });
+    await publishWorkflow(workflowId, 1);
+    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    const usedBeforeResume = await latestWorkflowStepUsageCount(tenantId);
+    expect(usedBeforeResume).toBe(1);
+    await submitWorkflowEventAction({ eventName: 'PING', correlationKey: 'quota-key', payload: {} });
+    const usedAfterResume = await latestWorkflowStepUsageCount(tenantId);
+    const runRecord = await WorkflowRunModelV2.getById(db, run.runId);
+    expect(runRecord?.status).toBe('SUCCEEDED');
+    expect(usedAfterResume).toBe(1);
+  });
+
+  it('Manual quota resume resumes eligible run and still goes through runtime quota reservation.', async () => {
+    const workflowId = await createDraftWorkflow({ steps: [stateSetStep('s1', 'A'), stateSetStep('s2', 'B')] });
+    await publishWorkflow(workflowId, 1);
+    const runtime = new WorkflowRuntimeV2();
+    const runId = await runtime.startRun(db, { workflowId, version: 1, payload: {}, tenantId });
+    const reserveSpy = vi.spyOn(workflowStepQuotaService, 'reserveStepStart');
+    let call = 0;
+    reserveSpy.mockImplementation(async (knex, tenant) => {
+      call += 1;
+      if (call === 2) {
+        return {
+          allowed: false,
+          summary: {
+            ...(await workflowStepQuotaService.resolveQuotaSummary(knex, tenant)),
+            usedCount: 1,
+            effectiveLimit: 1,
+            remaining: 0,
+          },
+        };
+      }
+      return {
+        allowed: true,
+        summary: await workflowStepQuotaService.resolveQuotaSummary(knex, tenant),
+        usedCountAfter: call,
+      };
+    });
+    try {
+      await runtime.executeRun(db, runId, 'worker');
+      const before = await WorkflowRunModelV2.getById(db, runId);
+      expect(before?.status).toBe('WAITING');
+      const resumeResult = await resumeWorkflowRunFromQuotaPauseAction({ runId, reason: 'quota available' });
+      expect(resumeResult).toEqual({ ok: true, resumed: true });
+      expect(reserveSpy).toHaveBeenCalledTimes(3);
+      const after = await WorkflowRunModelV2.getById(db, runId);
+      expect(after?.status).toBe('SUCCEEDED');
+    } finally {
+      reserveSpy.mockRestore();
+    }
+  });
+
+  it('Manual quota resume returns usage, limit, and reset time when still exhausted.', async () => {
+    const workflowId = await createDraftWorkflow({ steps: [stateSetStep('only-step', 'A')] });
+    await publishWorkflow(workflowId, 1);
+    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    await WorkflowRunModelV2.update(db, run.runId, { status: 'WAITING' });
+    await WorkflowRunWaitModelV2.create(db, {
+      run_id: run.runId,
+      step_path: 'root.steps[0]',
+      wait_type: 'quota',
+      timeout_at: '2026-05-01T00:00:00.000Z',
+      status: 'WAITING',
+      payload: { reason: 'workflow_step_quota_exceeded' },
+    });
+    const summarySpy = vi.spyOn(workflowStepQuotaService, 'resolveQuotaSummary');
+    summarySpy.mockResolvedValue({
+      tenant: tenantId,
+      periodStart: '2026-04-01T00:00:00.000Z',
+      periodEnd: '2026-05-01T00:00:00.000Z',
+      periodSource: 'fallback_calendar',
+      stripeSubscriptionId: null,
+      effectiveLimit: 10,
+      usedCount: 10,
+      remaining: 0,
+      tier: 'pro',
+      limitSource: 'tier_default',
+    });
+    try {
+      const result = await resumeWorkflowRunFromQuotaPauseAction({ runId: run.runId, reason: 'try resume' });
+      expect(result).toEqual({
+        ok: false,
+        resumed: false,
+        reason: 'quota_exhausted',
+        quota: {
+          usedCount: 10,
+          effectiveLimit: 10,
+          periodEnd: '2026-05-01T00:00:00.000Z',
+          periodStart: '2026-04-01T00:00:00.000Z',
+          periodSource: 'fallback_calendar',
+          limitSource: 'tier_default',
+        },
+      });
+    } finally {
+      summarySpy.mockRestore();
+    }
   });
 });

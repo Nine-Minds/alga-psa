@@ -223,7 +223,7 @@
   {
     "id": "F027",
     "description": "Ensure workflow retries consume a new step unit only when the retry step attempt starts.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements"
     ]
@@ -231,7 +231,7 @@
   {
     "id": "F028",
     "description": "Ensure forEach body executions consume one step unit per item attempt.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements"
     ]
@@ -239,7 +239,7 @@
   {
     "id": "F029",
     "description": "Ensure wait and human task steps consume one step unit when first entered and do not double-count while merely waiting.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements"
     ]

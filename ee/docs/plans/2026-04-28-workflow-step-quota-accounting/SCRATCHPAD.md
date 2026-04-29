@@ -123,3 +123,24 @@ Rolling notes for the workflow step quota accounting plan. Keep decisions, disco
   - Structured log assertions for invalid metadata fallback, reservation success, quota exhaustion, and fallback-calendar usage.
 - Validation command run:
   - `cd server && npm test -- src/test/integration/workflowStepQuotaService.integration.test.ts` (pass after fixture fix for `workflow_definitions.tenant_id`).
+- Added DB runtime quota integration coverage in `server/src/test/integration/workflowRuntimeV2.control.integration.test.ts`:
+  - Reserve-before-step-start assertion (no `workflow_run_steps` rows exist before reservation callback returns).
+  - Quota exhaustion on second step pauses run with `wait_type='quota'`, keeps `node_path`, and avoids blocked-step row creation.
+  - Retry and forEach attempt accounting assertions against `workflow_step_usage_periods.used_count`.
+  - Event wait accounting assertion that first entry consumes quota and resume does not double count.
+- Added Temporal coverage:
+  - `ee/temporal-workflows/src/activities/__tests__/workflow-runtime-v2-activities.test.ts` adds `projectWorkflowRuntimeV2StepStart` tests for reserve-before-start and quota pause projection.
+  - `ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts` adds quota paused short-circuit behavior test (`stepId:null`, `quotaPaused:true`).
+- Validation attempts:
+  - `cd server && npm test -- src/test/integration/workflowRuntimeV2.control.integration.test.ts` fails in current env with known module resolution issue: `@alga-psa/authorization/kernel` missing from runtime action import graph.
+  - `cd ee/temporal-workflows && TEMPORAL_TEST_SKIP_ENV_BOOTSTRAP=1 npm test -- src/activities/__tests__/workflow-runtime-v2-activities.test.ts src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts`:
+    - activities tests pass.
+    - workflow tests fail in current env due package resolution of `@alga-psa/workflows/lib/workflowRuntimeV2TemporalContract` when run in isolation.
+- Added manual quota resume integration coverage in `server/src/test/integration/workflowRuntimeV2.control.integration.test.ts`:
+  - Resume succeeds when quota is available and runtime re-entry still calls quota reservation.
+  - Resume returns `quota_exhausted` response with `usedCount`, `effectiveLimit`, `periodStart`, and `periodEnd` when quota remains exhausted.
+- Added unit job coverage in `server/src/test/unit/jobs/workflowQuotaResumeScanHandler.unit.test.ts`:
+  - Finite exhausted tenants are skipped while eligible tenants are resolved/resumed.
+  - Repeated scans do not resolve/execute the same wait twice once status has moved to `RESOLVED`.
+- Validation command run:
+  - `cd server && npm test -- src/test/unit/jobs/workflowQuotaResumeScanHandler.unit.test.ts` (pass).

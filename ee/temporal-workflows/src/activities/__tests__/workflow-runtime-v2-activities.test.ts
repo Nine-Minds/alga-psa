@@ -10,10 +10,18 @@ const mocks = vi.hoisted(() => ({
   resolveExpressionsWithSecrets: vi.fn(),
   actionRegistryGet: vi.fn(),
   actionHandler: vi.fn(),
+  getRunById: vi.fn(),
+  getLatestStepByPath: vi.fn(),
+  createRunStep: vi.fn(),
+  updateRun: vi.fn(),
+  createWait: vi.fn(),
+  updateWait: vi.fn(),
+  reserveStepStart: vi.fn(),
 }));
 
 vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: mocks.getAdminConnection,
+  retryOnAdminReadOnly: async (fn: () => Promise<unknown>) => fn(),
 }));
 
 vi.mock('@alga-psa/workflows/runtime/core', () => ({
@@ -32,6 +40,9 @@ vi.mock('@alga-psa/workflows/runtime/core', () => ({
   generateIdempotencyKey: () => 'generated-idempotency-key',
   initializeWorkflowRuntimeV2: mocks.initializeWorkflowRuntimeV2,
   createSecretResolverFromProvider: (provider: unknown) => provider,
+  workflowStepQuotaService: {
+    reserveStepStart: mocks.reserveStepStart,
+  },
 }));
 
 vi.mock('@alga-psa/shared/workflow/secrets', () => ({
@@ -47,9 +58,18 @@ vi.mock('@alga-psa/workflows/persistence', () => ({
     update: mocks.updateInvocation,
   },
   WorkflowDefinitionVersionModelV2: {},
-  WorkflowRunStepModelV2: {},
-  WorkflowRunModelV2: {},
-  WorkflowRunWaitModelV2: {},
+  WorkflowRunStepModelV2: {
+    getLatestByRunAndPath: mocks.getLatestStepByPath,
+    create: mocks.createRunStep,
+  },
+  WorkflowRunModelV2: {
+    getById: mocks.getRunById,
+    update: mocks.updateRun,
+  },
+  WorkflowRunWaitModelV2: {
+    create: mocks.createWait,
+    update: mocks.updateWait,
+  },
   WorkflowTaskModel: {},
   WorkflowTaskStatus: {
     PENDING: 'PENDING',
@@ -59,7 +79,15 @@ vi.mock('@alga-psa/workflows/persistence', () => ({
 describe('workflow-runtime-v2 activities', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.getAdminConnection.mockResolvedValue({});
+    const waitsQuery = {
+      where: vi.fn().mockReturnThis(),
+      first: vi.fn().mockResolvedValue(null),
+    };
+    const knex = ((table: string) => {
+      if (table === 'workflow_run_waits') return waitsQuery;
+      throw new Error(`Unexpected table ${table}`);
+    }) as any;
+    mocks.getAdminConnection.mockResolvedValue(knex);
     mocks.resolveInputMapping.mockResolvedValue({});
     mocks.resolveExpressionsWithSecrets.mockResolvedValue(null);
     mocks.findInvocationByIdempotency.mockResolvedValue(null);
@@ -79,6 +107,31 @@ describe('workflow-runtime-v2 activities', () => {
         parse: (value: unknown) => value,
       },
       handler: mocks.actionHandler,
+    });
+    mocks.getRunById.mockResolvedValue({
+      run_id: 'run-1',
+      tenant_id: 'tenant-1',
+    });
+    mocks.getLatestStepByPath.mockResolvedValue(null);
+    mocks.createRunStep.mockResolvedValue({ step_id: 'step-1' });
+    mocks.updateRun.mockResolvedValue(undefined);
+    mocks.createWait.mockResolvedValue({ wait_id: 'wait-1' });
+    mocks.updateWait.mockResolvedValue(undefined);
+    mocks.reserveStepStart.mockResolvedValue({
+      allowed: true,
+      summary: {
+        tenant: 'tenant-1',
+        periodStart: '2026-04-01T00:00:00.000Z',
+        periodEnd: '2026-05-01T00:00:00.000Z',
+        periodSource: 'fallback_calendar',
+        stripeSubscriptionId: null,
+        effectiveLimit: 750,
+        usedCount: 1,
+        remaining: 749,
+        tier: 'pro',
+        limitSource: 'tier_default',
+      },
+      usedCountAfter: 1,
     });
   });
 
@@ -155,5 +208,53 @@ describe('workflow-runtime-v2 activities', () => {
         },
       }),
     );
+  });
+
+  it('projects STARTED step only after successful quota reservation', async () => {
+    const { projectWorkflowRuntimeV2StepStart } = await import('../workflow-runtime-v2-activities');
+    const result = await projectWorkflowRuntimeV2StepStart({
+      runId: 'run-1',
+      stepPath: 'root.steps[0]',
+      definitionStepId: 'step-a',
+    });
+    expect(mocks.reserveStepStart).toHaveBeenCalledWith(expect.anything(), 'tenant-1');
+    expect(mocks.createRunStep).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        run_id: 'run-1',
+        step_path: 'root.steps[0]',
+        definition_step_id: 'step-a',
+        status: 'STARTED',
+        attempt: 1,
+      }),
+    );
+    expect(result).toEqual({ stepId: 'step-1' });
+  });
+
+  it('returns quotaPaused and does not create STARTED row when reservation is denied', async () => {
+    mocks.reserveStepStart.mockResolvedValueOnce({
+      allowed: false,
+      summary: {
+        tenant: 'tenant-1',
+        periodStart: '2026-04-01T00:00:00.000Z',
+        periodEnd: '2026-05-01T00:00:00.000Z',
+        periodSource: 'fallback_calendar',
+        stripeSubscriptionId: null,
+        effectiveLimit: 1,
+        usedCount: 1,
+        remaining: 0,
+        tier: 'pro',
+        limitSource: 'tier_default',
+      },
+    });
+    const { projectWorkflowRuntimeV2StepStart } = await import('../workflow-runtime-v2-activities');
+    const result = await projectWorkflowRuntimeV2StepStart({
+      runId: 'run-1',
+      stepPath: 'root.steps[0]',
+      definitionStepId: 'step-a',
+    });
+    expect(result).toEqual({ stepId: null, quotaPaused: true });
+    expect(mocks.createRunStep).not.toHaveBeenCalled();
+    expect(mocks.createWait).toHaveBeenCalled();
   });
 });
