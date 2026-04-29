@@ -11,17 +11,25 @@ export interface AccumulatedChange {
   changes: Record<string, { old?: unknown; new?: unknown }>;
 }
 
+export type AccumulatedTicketEventType = 'TICKET_UPDATED' | 'TICKET_ASSIGNED';
+
+export interface AccumulatedTicketEvent {
+  timestamp: string;
+  userId: string;
+  eventType: AccumulatedTicketEventType;
+  payload: Record<string, unknown>;
+}
+
 /**
- * Pending notification record stored in Redis
+ * Pending ticket notification record stored in Redis
  */
 export interface PendingNotification {
   tenantId: string;
   ticketId: string;
-  recipientEmail: string;
-  recipientUserId?: string;
-  isInternal: boolean; // true for assigned users/resources, false for contacts/clients
-  accumulatedChanges: AccumulatedChange[];
+  eventType: AccumulatedTicketEventType;
+  accumulatedEvents: AccumulatedTicketEvent[];
   createdAt: string;
+  retryCount: number;
 }
 
 /**
@@ -39,6 +47,20 @@ const DEFAULT_CONFIG: AccumulatorConfig = {
   flushIntervalMs: 5_000, // 5 seconds
 };
 
+const MAX_FLUSH_RETRIES = 5;
+const BASE_RETRY_DELAY_MS = 30_000;
+const MAX_RETRY_DELAY_MS = 15 * 60_000;
+
+export class RetryableAccumulatorError extends Error {
+  retryAfterMs?: number;
+
+  constructor(message: string, options?: { retryAfterMs?: number }) {
+    super(message);
+    this.name = 'RetryableAccumulatorError';
+    this.retryAfterMs = options?.retryAfterMs;
+  }
+}
+
 /**
  * Callback function type for processing accumulated notifications
  */
@@ -47,11 +69,11 @@ export type FlushCallback = (notification: PendingNotification) => Promise<void>
 /**
  * NotificationAccumulator - Accumulates ticket update notifications and sends them in batches
  *
- * This service intercepts ticket update events and accumulates them by ticket+recipient combination.
- * After a configurable time window, it flushes the accumulated changes as a single notification.
+ * This service intercepts ticket events and accumulates them by ticket+event type.
+ * After a configurable time window, it flushes the accumulated event batch as a single notification flow.
  *
  * Redis storage structure:
- * - Hash: `{prefix}email-accumulator:pending:{tenantId}:{ticketId}:{recipientEmail}` - notification data
+ * - Hash: `{prefix}email-accumulator:pending:{tenantId}:{ticketId}:{eventType}` - notification data
  * - Sorted Set: `{prefix}email-accumulator:flush_times` - flush timestamps for polling
  *
  * The `email-accumulator` namespace ensures these keys are isolated from other notification systems
@@ -67,7 +89,7 @@ export class NotificationAccumulator {
   private isInitialized = false;
 
   /** Namespace for email accumulator keys, follows emailservice::vN convention */
-  private static readonly ACCUMULATOR_NAMESPACE = 'emailservice::accumulator::v1:';
+  private static readonly ACCUMULATOR_NAMESPACE = 'emailservice::accumulator::v2:';
 
   private constructor(config: Partial<AccumulatorConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -118,9 +140,12 @@ export class NotificationAccumulator {
   /**
    * Generate Redis key for a pending notification
    */
-  private getPendingKey(tenantId: string, ticketId: string, recipientEmail: string): string {
-    const normalizedEmail = recipientEmail.toLowerCase().trim();
-    return `${this.prefix}notification:pending:${tenantId}:${ticketId}:${normalizedEmail}`;
+  private getPendingKey(
+    tenantId: string,
+    ticketId: string,
+    eventType: AccumulatedTicketEventType
+  ): string {
+    return `${this.prefix}notification:pending:${tenantId}:${ticketId}:${eventType}`;
   }
 
   /**
@@ -131,33 +156,32 @@ export class NotificationAccumulator {
   }
 
   /**
-   * Add a ticket update to the accumulator
+   * Add a ticket event to the accumulator
    */
   async accumulate(params: {
     tenantId: string;
     ticketId: string;
-    recipientEmail: string;
-    recipientUserId?: string;
-    isInternal: boolean;
+    eventType: AccumulatedTicketEventType;
     userId: string;
-    changes: Record<string, { old?: unknown; new?: unknown }>;
+    payload: Record<string, unknown>;
   }): Promise<void> {
     if (!this.redis) {
       throw new Error('NotificationAccumulator not initialized');
     }
 
-    const { tenantId, ticketId, recipientEmail, recipientUserId, isInternal, userId, changes } = params;
-    const pendingKey = this.getPendingKey(tenantId, ticketId, recipientEmail);
+    const { tenantId, ticketId, eventType, userId, payload } = params;
+    const pendingKey = this.getPendingKey(tenantId, ticketId, eventType);
     const flushTimesKey = this.getFlushTimesKey();
 
     try {
       // Check if there's an existing pending notification
       const existingData = await this.redis.get(pendingKey);
 
-      const newChange: AccumulatedChange = {
+      const newEvent: AccumulatedTicketEvent = {
         timestamp: new Date().toISOString(),
         userId,
-        changes
+        eventType,
+        payload
       };
 
       let notification: PendingNotification;
@@ -165,30 +189,29 @@ export class NotificationAccumulator {
       if (existingData) {
         // Append to existing notification
         notification = JSON.parse(existingData);
-        notification.accumulatedChanges.push(newChange);
+        notification.accumulatedEvents.push(newEvent);
 
         logger.debug('[NotificationAccumulator] Appending to existing notification', {
           tenantId,
           ticketId,
-          recipientEmail,
-          totalChanges: notification.accumulatedChanges.length
+          eventType,
+          totalEvents: notification.accumulatedEvents.length
         });
       } else {
         // Create new pending notification
         notification = {
           tenantId,
           ticketId,
-          recipientEmail,
-          recipientUserId,
-          isInternal,
-          accumulatedChanges: [newChange],
-          createdAt: new Date().toISOString()
+          eventType,
+          accumulatedEvents: [newEvent],
+          createdAt: new Date().toISOString(),
+          retryCount: 0,
         };
 
         logger.debug('[NotificationAccumulator] Creating new pending notification', {
           tenantId,
           ticketId,
-          recipientEmail
+          eventType
         });
       }
 
@@ -202,9 +225,9 @@ export class NotificationAccumulator {
       logger.debug('[NotificationAccumulator] Accumulated change', {
         tenantId,
         ticketId,
-        recipientEmail,
+        eventType,
         flushAt: new Date(flushTime).toISOString(),
-        changeCount: notification.accumulatedChanges.length
+        eventCount: notification.accumulatedEvents.length
       });
 
     } catch (error) {
@@ -212,10 +235,30 @@ export class NotificationAccumulator {
         error: error instanceof Error ? error.message : 'Unknown error',
         tenantId,
         ticketId,
-        recipientEmail
+        eventType
       });
       throw error;
     }
+  }
+
+  private resolveRetryDelay(retryCount: number, retryAfterMs?: number): number {
+    if (typeof retryAfterMs === 'number' && Number.isFinite(retryAfterMs) && retryAfterMs > 0) {
+      return Math.min(retryAfterMs, MAX_RETRY_DELAY_MS);
+    }
+
+    const delay = Math.min(
+      BASE_RETRY_DELAY_MS * Math.pow(2, Math.max(0, retryCount)),
+      MAX_RETRY_DELAY_MS
+    );
+    const jitter = delay * 0.1 * (Math.random() * 2 - 1);
+    return Math.floor(delay + jitter);
+  }
+
+  private isRetryableError(error: unknown): error is RetryableAccumulatorError {
+    return error instanceof RetryableAccumulatorError
+      || (typeof error === 'object'
+        && error !== null
+        && (error as { name?: unknown }).name === 'RetryableAccumulatorError');
   }
 
   /**
@@ -298,11 +341,38 @@ export class NotificationAccumulator {
           logger.info('[NotificationAccumulator] Flushed notification', {
             tenantId: notification.tenantId,
             ticketId: notification.ticketId,
-            recipientEmail: notification.recipientEmail,
-            changeCount: notification.accumulatedChanges.length
+            eventType: notification.eventType,
+            eventCount: notification.accumulatedEvents.length
           });
 
         } catch (error) {
+          if (this.isRetryableError(error)) {
+            const data = await this.redis.get(pendingKey);
+            if (data) {
+              const notification = JSON.parse(data) as PendingNotification;
+              const nextRetryCount = (notification.retryCount ?? 0) + 1;
+
+              if (nextRetryCount <= MAX_FLUSH_RETRIES) {
+                notification.retryCount = nextRetryCount;
+                await this.redis.set(pendingKey, JSON.stringify(notification));
+
+                const retryDelayMs = this.resolveRetryDelay(nextRetryCount - 1, error.retryAfterMs);
+                await this.redis.zAdd(flushTimesKey, {
+                  score: Date.now() + retryDelayMs,
+                  value: pendingKey,
+                });
+
+                logger.warn('[NotificationAccumulator] Requeued retryable flush failure', {
+                  pendingKey,
+                  retryCount: nextRetryCount,
+                  retryDelayMs,
+                  error: error.message,
+                });
+                continue;
+              }
+            }
+          }
+
           logger.error('[NotificationAccumulator] Failed to flush notification:', {
             error: error instanceof Error ? error.message : 'Unknown error',
             pendingKey
