@@ -61,32 +61,38 @@ async function resolveTicketingFromAddress(knex: Knex, tenantId: string) {
   return undefined;
 }
 
-async function resolveTicketLinks(
-  knex: Knex,
-  tenantId: string,
-  ticketId: string,
-  ticketNumber?: string | null
-): Promise<{ internalUrl: string; portalUrl: string }> {
-  const internalBase = getBaseUrl();
-  const internalUrl = `${internalBase}/msp/tickets/${ticketId}`;
+type PortalLinkContext = {
+  internalBase: string;
+  portalHost: string | null;
+  isActiveVanityDomain: boolean;
+  tenantSlug: string;
+};
 
+/**
+ * Resolve the tenant-level portal-domain context once per handler invocation.
+ * The DB call (getPortalDomain) doesn't depend on ticketId, so callers that
+ * iterate over many tickets (bundle children, accumulator recipients) should
+ * call this once and feed the result into buildTicketLinks per ticket.
+ */
+async function resolvePortalLinkContext(
+  knex: Knex,
+  tenantId: string
+): Promise<PortalLinkContext> {
+  const internalBase = getBaseUrl();
   let portalHost: string | null = null;
   let isActiveVanityDomain = false;
 
   try {
     const portalDomain = await getPortalDomain(knex, tenantId);
-    if (portalDomain) {
-      // Only use custom domain if it's active and ready to serve traffic
-      if (portalDomain.status === 'active' && portalDomain.domain) {
-        portalHost = portalDomain.domain;
-        isActiveVanityDomain = true;
-      } else if (portalDomain.canonicalHost) {
-        // Use canonical host if:
-        // - No custom domain is configured, OR
-        // - Custom domain exists but is not yet active
-        portalHost = portalDomain.canonicalHost;
-        isActiveVanityDomain = false;
-      }
+    // Only use a portal-specific host when the tenant has an *active* custom
+    // (vanity) domain. The portal_domains row's canonical_host (e.g.
+    // <prefix>.portal.algapsa.com) is just a placeholder shown during DNS
+    // verification — it's not necessarily a routable URL — so falling back to
+    // it produces broken links. Leave portalHost null in every other case so
+    // buildTicketLinks emits https://<NEXTAUTH host>/client-portal/...?tenant=<slug>.
+    if (portalDomain && portalDomain.status === 'active' && portalDomain.domain) {
+      portalHost = portalDomain.domain;
+      isActiveVanityDomain = true;
     }
   } catch (error) {
     logger.warn('[TicketEmailSubscriber] Failed to resolve portal domain for ticket link', {
@@ -95,31 +101,48 @@ async function resolveTicketLinks(
     });
   }
 
-  const tenantSlug = buildTenantPortalSlug(tenantId);
+  return {
+    internalBase,
+    portalHost,
+    isActiveVanityDomain,
+    tenantSlug: buildTenantPortalSlug(tenantId),
+  };
+}
+
+function buildTicketLinks(
+  ctx: PortalLinkContext,
+  ticketId: string
+): { internalUrl: string; portalUrl: string } {
+  const internalUrl = `${ctx.internalBase}/msp/tickets/${ticketId}`;
   const baseParams = new URLSearchParams();
-  // Always use ticket UUID for the URL path
   const clientPortalPath = `/client-portal/tickets/${ticketId}`;
   let portalUrl: string;
 
-  if (portalHost) {
-    const sanitizedHost = normalizeHost(portalHost);
-
-    if (isActiveVanityDomain) {
-      // Active vanity domains don't need tenant parameter (they use OTT/domain-based detection)
+  if (ctx.portalHost) {
+    const sanitizedHost = normalizeHost(ctx.portalHost);
+    if (ctx.isActiveVanityDomain) {
       portalUrl = `https://${sanitizedHost}${clientPortalPath}${baseParams.toString() ? '?' + baseParams.toString() : ''}`;
     } else {
-      // Canonical host always needs tenant parameter for authentication
-      baseParams.set('tenant', tenantSlug);
+      baseParams.set('tenant', ctx.tenantSlug);
       portalUrl = `https://${sanitizedHost}${clientPortalPath}?${baseParams.toString()}`;
     }
   } else {
-    // Fallback to canonical host with tenant parameter
-    const fallbackBase = internalBase.endsWith('/') ? internalBase.slice(0, -1) : internalBase;
-    baseParams.set('tenant', tenantSlug);
+    const fallbackBase = ctx.internalBase.endsWith('/') ? ctx.internalBase.slice(0, -1) : ctx.internalBase;
+    baseParams.set('tenant', ctx.tenantSlug);
     portalUrl = `${fallbackBase}${clientPortalPath}?${baseParams.toString()}`;
   }
 
   return { internalUrl, portalUrl };
+}
+
+async function resolveTicketLinks(
+  knex: Knex,
+  tenantId: string,
+  ticketId: string,
+  _ticketNumber?: string | null
+): Promise<{ internalUrl: string; portalUrl: string }> {
+  const ctx = await resolvePortalLinkContext(knex, tenantId);
+  return buildTicketLinks(ctx, ticketId);
 }
 
 function applyDefaultContactPhoneJoin(
@@ -262,6 +285,80 @@ async function getCachedTicketForEmail(
 }
 
 /**
+ * Tenant-scoped notification gate decision. Resolved once per
+ * (tenant, subtypeName) and reused across every recipient of a single event,
+ * so a team-wide fan-out doesn't repeat four small lookups per recipient.
+ */
+type NotificationGate =
+  | { kind: 'allowed'; subtype: { id: number; category_id: number } }
+  | { kind: 'globally-disabled' }
+  | { kind: 'subtype-missing' }
+  | { kind: 'subtype-disabled' }
+  | { kind: 'category-disabled'; categoryId: number };
+
+const NOTIFICATION_GATE_CACHE_TTL_MS = 30_000;
+const notificationGateCache = new Map<
+  string,
+  { value: NotificationGate; expiresAt: number }
+>();
+
+async function resolveNotificationGate(
+  knex: Knex,
+  tenantId: string,
+  subtypeName: string
+): Promise<NotificationGate> {
+  const key = `${tenantId}:${subtypeName}`;
+  const now = Date.now();
+  const cached = notificationGateCache.get(key);
+  if (cached && cached.expiresAt > now) {
+    return cached.value;
+  }
+
+  const settings = await knex('notification_settings')
+    .where({ tenant: tenantId })
+    .first();
+
+  let gate: NotificationGate;
+
+  if (settings && !settings.is_enabled) {
+    gate = { kind: 'globally-disabled' };
+  } else {
+    const subtype = await knex('notification_subtypes')
+      .where({ name: subtypeName })
+      .first();
+
+    if (!subtype) {
+      gate = { kind: 'subtype-missing' };
+    } else {
+      const [subtypeSetting, categorySetting] = await Promise.all([
+        knex('tenant_notification_subtype_settings')
+          .where({ tenant: tenantId, subtype_id: subtype.id })
+          .first(),
+        knex('tenant_notification_category_settings')
+          .where({ tenant: tenantId, category_id: subtype.category_id })
+          .first(),
+      ]);
+
+      if (subtypeSetting && !subtypeSetting.is_enabled) {
+        gate = { kind: 'subtype-disabled' };
+      } else if (categorySetting && !categorySetting.is_enabled) {
+        gate = { kind: 'category-disabled', categoryId: subtype.category_id };
+      } else {
+        gate = { kind: 'allowed', subtype: { id: subtype.id, category_id: subtype.category_id } };
+      }
+    }
+  }
+
+  notificationGateCache.set(key, { value: gate, expiresAt: now + NOTIFICATION_GATE_CACHE_TTL_MS });
+  if (notificationGateCache.size > 256) {
+    for (const [k, entry] of notificationGateCache) {
+      if (entry.expiresAt <= now) notificationGateCache.delete(k);
+    }
+  }
+  return gate;
+}
+
+/**
  * Wrapper function that checks notification preferences before sending email
  * @param params - Same params as sendEventEmail
  * @param subtypeName - Name of the notification subtype (e.g., "Ticket Created")
@@ -284,12 +381,9 @@ async function sendNotificationIfEnabled(
 
     const { knex } = await createTenantKnex();
 
-    // 1. Check global notification settings
-    const settings = await knex('notification_settings')
-      .where({ tenant: params.tenantId })
-      .first();
+    const gate = await resolveNotificationGate(knex, params.tenantId, subtypeName);
 
-    if (settings && !settings.is_enabled) {
+    if (gate.kind === 'globally-disabled') {
       logger.info('[TicketEmailSubscriber] Notifications disabled globally for tenant:', {
         tenantId: params.tenantId,
         recipient: params.to,
@@ -298,28 +392,16 @@ async function sendNotificationIfEnabled(
       return;
     }
 
-    // 2. Look up notification subtype ID
-    const subtype = await knex('notification_subtypes')
-      .where({ name: subtypeName })
-      .first();
-
-    if (!subtype) {
+    if (gate.kind === 'subtype-missing') {
       logger.warn('[TicketEmailSubscriber] Notification subtype not found:', {
         subtypeName,
         recipient: params.to
       });
-      // Continue anyway to avoid breaking existing functionality
       await sendEventEmail(params);
       return;
     }
 
-    // 3. Check tenant-specific subtype setting
-    const subtypeSetting = await knex('tenant_notification_subtype_settings')
-      .where({ tenant: params.tenantId, subtype_id: subtype.id })
-      .first();
-
-    const isSubtypeEnabled = subtypeSetting?.is_enabled ?? true;
-    if (!isSubtypeEnabled) {
+    if (gate.kind === 'subtype-disabled') {
       logger.info('[TicketEmailSubscriber] Subtype disabled for tenant:', {
         subtypeName,
         tenantId: params.tenantId,
@@ -328,20 +410,16 @@ async function sendNotificationIfEnabled(
       return;
     }
 
-    // 4. Check tenant-specific category setting
-    const categorySetting = await knex('tenant_notification_category_settings')
-      .where({ tenant: params.tenantId, category_id: subtype.category_id })
-      .first();
-
-    const isCategoryEnabled = categorySetting?.is_enabled ?? true;
-    if (!isCategoryEnabled) {
+    if (gate.kind === 'category-disabled') {
       logger.info('[TicketEmailSubscriber] Category disabled for tenant:', {
-        categoryId: subtype.category_id,
+        categoryId: gate.categoryId,
         tenantId: params.tenantId,
         recipient: params.to
       });
       return;
     }
+
+    const subtype = gate.subtype;
 
     // 5. For internal users, check user preferences and rate limiting
     if (recipientUserId) {
@@ -2303,6 +2381,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         .where({ 't.tenant': tenantId, 't.master_ticket_id': payload.ticketId });
 
       if (bundleChildren.length > 0) {
+        const bundlePortalCtx = await resolvePortalLinkContext(db, tenantId);
         for (const child of bundleChildren) {
           const isChildContactAuthor = Boolean(
             commentAuthorContactId &&
@@ -2324,7 +2403,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
             headers['References'] = [...refs, childMessageId].join(' ');
           }
 
-          const { portalUrl: childPortalUrl } = await resolveTicketLinks(db, tenantId, child.ticket_id, child.ticket_number);
+          const { portalUrl: childPortalUrl } = buildTicketLinks(bundlePortalCtx, child.ticket_id);
 
           await sendIfUnique({
             tenantId,
@@ -2702,6 +2781,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       .where({ 't.tenant': tenantId, 't.master_ticket_id': payload.ticketId });
 
     if (bundleChildren.length > 0) {
+      const bundlePortalCtx = await resolvePortalLinkContext(db, tenantId);
       for (const child of bundleChildren) {
         const childPrimaryEmail = safeString(child.contact_email) || safeString(child.client_email);
         if (!childPrimaryEmail) continue;
@@ -2715,7 +2795,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
           headers['References'] = [...refs, childMessageId].join(' ');
         }
 
-        const { portalUrl: childPortalUrl } = await resolveTicketLinks(db, tenantId, child.ticket_id, child.ticket_number);
+        const { portalUrl: childPortalUrl } = buildTicketLinks(bundlePortalCtx, child.ticket_id);
 
         await sendIfUnique({
           tenantId,
