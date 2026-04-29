@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Clock, ChevronDown, ChevronRight, EyeOff } from 'lucide-react';
+import { Clock, ChevronDown, ChevronRight, EyeOff, Pencil, Trash2 } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
+import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { formatMinutesAsHoursAndMinutes, formatDateTime, utcToLocal, getUserTimeZone } from '@alga-psa/core';
 import {
   fetchTimeEntriesForTicket,
@@ -20,6 +21,11 @@ interface TicketTimeEntriesProps {
    * Increment this value to force the panel to re-fetch (e.g. after a new entry is saved).
    */
   refreshKey?: number;
+  /**
+   * Edit/delete are only ever exposed for entries owned by the current user.
+   */
+  onEditEntry?: (entry: TicketTimeEntrySummaryEntry) => void;
+  onDeleteEntry?: (entry: TicketTimeEntrySummaryEntry) => void;
 }
 
 const APPROVAL_STATUS_LABEL_KEYS: Record<string, string> = {
@@ -36,11 +42,11 @@ const APPROVAL_STATUS_FALLBACK: Record<string, string> = {
   CHANGES_REQUESTED: 'Changes Requested',
 };
 
-const APPROVAL_STATUS_BADGE_CLASS: Record<string, string> = {
-  DRAFT: 'bg-gray-100 text-gray-700',
-  SUBMITTED: 'bg-blue-100 text-blue-700',
-  APPROVED: 'bg-green-100 text-green-700',
-  CHANGES_REQUESTED: 'bg-amber-100 text-amber-800',
+const APPROVAL_STATUS_BADGE_VARIANT: Record<string, BadgeVariant> = {
+  DRAFT: 'default-muted',
+  SUBMITTED: 'secondary',
+  APPROVED: 'success',
+  CHANGES_REQUESTED: 'warning',
 };
 
 const TicketTimeEntries: React.FC<TicketTimeEntriesProps> = ({
@@ -49,6 +55,8 @@ const TicketTimeEntries: React.FC<TicketTimeEntriesProps> = ({
   currentUserId,
   dateTimeFormat = 'MMM d, yyyy h:mm a',
   refreshKey = 0,
+  onEditEntry,
+  onDeleteEntry,
 }) => {
   const { t } = useTranslation('features/tickets');
   const [summary, setSummary] = useState<TicketTimeEntriesSummary | null>(null);
@@ -57,6 +65,14 @@ const TicketTimeEntries: React.FC<TicketTimeEntriesProps> = ({
   const [showMine, setShowMine] = useState(true);
   const [showOthers, setShowOthers] = useState(false);
   const userTimeZone = useMemo(() => getUserTimeZone(), []);
+  const durationLabels = useMemo(
+    () => ({
+      hr: t('timeEntries.duration.hr', 'hr'),
+      hrs: t('timeEntries.duration.hrs', 'hrs'),
+      min: t('timeEntries.duration.min', 'min'),
+    }),
+    [t],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -100,7 +116,7 @@ const TicketTimeEntries: React.FC<TicketTimeEntriesProps> = ({
     return (
       <div
         {...withDataAutomationId({ id: `${id}-time-entries-loading` })}
-        className="text-xs text-muted-foreground py-2"
+        className="text-sm text-muted-foreground py-2"
       >
         {t('timeEntries.loading', 'Loading time entries…')}
       </div>
@@ -111,7 +127,7 @@ const TicketTimeEntries: React.FC<TicketTimeEntriesProps> = ({
     return (
       <div
         {...withDataAutomationId({ id: `${id}-time-entries-error` })}
-        className="text-xs text-red-600 py-2"
+        className="text-sm text-red-600 py-2"
       >
         {t('timeEntries.loadError', 'Could not load time entries')}
       </div>
@@ -139,14 +155,14 @@ const TicketTimeEntries: React.FC<TicketTimeEntriesProps> = ({
           {...withDataAutomationId({ id: `${id}-time-entries-total` })}
           className="text-sm font-semibold text-[rgb(var(--color-text-900))]"
         >
-          {formatMinutesAsHoursAndMinutes(summary.totalMinutes)}
+          {formatMinutesAsHoursAndMinutes(summary.totalMinutes, durationLabels)}
         </span>
       </div>
 
       {!hasAnyEntries && (
         <p
           {...withDataAutomationId({ id: `${id}-time-entries-empty` })}
-          className="text-xs text-muted-foreground"
+          className="text-sm text-muted-foreground"
         >
           {t('timeEntries.empty', 'No time has been logged on this ticket yet.')}
         </p>
@@ -157,21 +173,21 @@ const TicketTimeEntries: React.FC<TicketTimeEntriesProps> = ({
           <button
             {...withDataAutomationId({ id: `${id}-time-entries-mine-toggle` })}
             type="button"
-            className="w-full flex items-center justify-between text-xs font-medium text-[rgb(var(--color-text-800))] hover:text-[rgb(var(--color-text-900))]"
+            className="w-full flex items-center justify-between text-sm font-medium text-[rgb(var(--color-text-800))] hover:text-[rgb(var(--color-text-900))]"
             onClick={() => setShowMine((value) => !value)}
             aria-expanded={showMine}
           >
             <span className="flex items-center gap-1">
               {showMine ? (
-                <ChevronDown className="w-3 h-3" />
+                <ChevronDown className="w-3.5 h-3.5" />
               ) : (
-                <ChevronRight className="w-3 h-3" />
+                <ChevronRight className="w-3.5 h-3.5" />
               )}
               {t('timeEntries.myEntries', 'My entries')}{' '}
               <span className="text-muted-foreground">({summary.ownEntryCount})</span>
             </span>
             <span className="text-muted-foreground">
-              {formatMinutesAsHoursAndMinutes(summary.ownTotalMinutes)}
+              {formatMinutesAsHoursAndMinutes(summary.ownTotalMinutes, durationLabels)}
             </span>
           </button>
 
@@ -185,6 +201,9 @@ const TicketTimeEntries: React.FC<TicketTimeEntriesProps> = ({
                   dateTimeFormat={dateTimeFormat}
                   timeZone={userTimeZone}
                   showUserName={false}
+                  durationLabels={durationLabels}
+                  onEdit={onEditEntry}
+                  onDelete={onDeleteEntry}
                 />
               ))}
             </ul>
@@ -192,26 +211,26 @@ const TicketTimeEntries: React.FC<TicketTimeEntriesProps> = ({
         </div>
       )}
 
-      {summary.othersEntryCount > 0 && summary.canViewOthers && (
+      {summary.othersVisibleCount > 0 && (
         <div {...withDataAutomationId({ id: `${id}-time-entries-others` })}>
           <button
             {...withDataAutomationId({ id: `${id}-time-entries-others-toggle` })}
             type="button"
-            className="w-full flex items-center justify-between text-xs font-medium text-[rgb(var(--color-text-800))] hover:text-[rgb(var(--color-text-900))]"
+            className="w-full flex items-center justify-between text-sm font-medium text-[rgb(var(--color-text-800))] hover:text-[rgb(var(--color-text-900))]"
             onClick={() => setShowOthers((value) => !value)}
             aria-expanded={showOthers}
           >
             <span className="flex items-center gap-1">
               {showOthers ? (
-                <ChevronDown className="w-3 h-3" />
+                <ChevronDown className="w-3.5 h-3.5" />
               ) : (
-                <ChevronRight className="w-3 h-3" />
+                <ChevronRight className="w-3.5 h-3.5" />
               )}
               {t('timeEntries.otherTeam', 'Other team members')}{' '}
-              <span className="text-muted-foreground">({summary.othersEntryCount})</span>
+              <span className="text-muted-foreground">({summary.othersVisibleCount})</span>
             </span>
             <span className="text-muted-foreground">
-              {formatMinutesAsHoursAndMinutes(summary.othersTotalMinutes)}
+              {formatMinutesAsHoursAndMinutes(summary.othersVisibleMinutes, durationLabels)}
             </span>
           </button>
 
@@ -225,6 +244,7 @@ const TicketTimeEntries: React.FC<TicketTimeEntriesProps> = ({
                   dateTimeFormat={dateTimeFormat}
                   timeZone={userTimeZone}
                   showUserName
+                  durationLabels={durationLabels}
                 />
               ))}
             </ul>
@@ -232,19 +252,19 @@ const TicketTimeEntries: React.FC<TicketTimeEntriesProps> = ({
         </div>
       )}
 
-      {summary.othersEntryCount > 0 && !summary.canViewOthers && (
+      {summary.othersHiddenCount > 0 && (
         <div
           {...withDataAutomationId({ id: `${id}-time-entries-others-anonymized` })}
-          className="rounded-md border border-dashed border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-bg-50))] px-3 py-2 text-xs text-muted-foreground flex items-center gap-2"
+          className="rounded-md border border-dashed border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-bg-50))] px-3 py-2 text-sm text-muted-foreground flex items-center gap-2"
         >
-          <EyeOff className="w-3 h-3 flex-shrink-0" />
+          <EyeOff className="w-3.5 h-3.5 flex-shrink-0" />
           <span>
             {t(
               'timeEntries.othersAnonymized',
               '{{count}} entries by other team members ({{duration}})',
               {
-                count: summary.othersEntryCount,
-                duration: formatMinutesAsHoursAndMinutes(summary.othersTotalMinutes),
+                count: summary.othersHiddenCount,
+                duration: formatMinutesAsHoursAndMinutes(summary.othersHiddenMinutes, durationLabels),
               },
             )}
           </span>
@@ -260,6 +280,9 @@ interface TimeEntryRowProps {
   dateTimeFormat: string;
   timeZone: string;
   showUserName: boolean;
+  durationLabels?: { hr?: string; hrs?: string; min?: string };
+  onEdit?: (entry: TicketTimeEntrySummaryEntry) => void;
+  onDelete?: (entry: TicketTimeEntrySummaryEntry) => void;
 }
 
 const TimeEntryRow: React.FC<TimeEntryRowProps> = ({
@@ -268,6 +291,9 @@ const TimeEntryRow: React.FC<TimeEntryRowProps> = ({
   dateTimeFormat,
   timeZone,
   showUserName,
+  durationLabels,
+  onEdit,
+  onDelete,
 }) => {
   const { t } = useTranslation('features/tickets');
   const startLabel = useMemo(() => {
@@ -283,11 +309,13 @@ const TimeEntryRow: React.FC<TimeEntryRowProps> = ({
     APPROVAL_STATUS_LABEL_KEYS[statusKey] ?? 'timeEntries.statusUnknown',
     APPROVAL_STATUS_FALLBACK[statusKey] ?? statusKey,
   );
+  const canEdit = entry.is_own && Boolean(onEdit) && (statusKey === 'DRAFT' || statusKey === 'CHANGES_REQUESTED');
+  const canDelete = entry.is_own && Boolean(onDelete) && (statusKey === 'DRAFT' || statusKey === 'CHANGES_REQUESTED');
 
   return (
     <li
       {...withDataAutomationId({ id })}
-      className="text-xs rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-bg-50))] px-3 py-2 space-y-1"
+      className="text-sm rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-bg-50))] px-3 py-2 space-y-1"
     >
       <div className="flex items-center justify-between gap-2">
         <span className="font-medium text-[rgb(var(--color-text-900))]">
@@ -295,27 +323,58 @@ const TimeEntryRow: React.FC<TimeEntryRowProps> = ({
             ? entry.user_name || t('timeEntries.unknownUser', 'Unknown user')
             : startLabel}
         </span>
-        <span className="font-semibold text-[rgb(var(--color-text-800))]">
-          {formatMinutesAsHoursAndMinutes(entry.billable_duration)}
-        </span>
+        <div className="flex items-center gap-2">
+          {canEdit && (
+            <button
+              {...withDataAutomationId({ id: `${id}-edit` })}
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onEdit?.(entry);
+              }}
+              className="p-1 rounded hover:bg-[rgb(var(--color-bg-100))] text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))]"
+              aria-label={t('timeEntries.edit', 'Edit time entry')}
+              title={t('timeEntries.edit', 'Edit time entry')}
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {canDelete && (
+            <button
+              {...withDataAutomationId({ id: `${id}-delete` })}
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onDelete?.(entry);
+              }}
+              className="p-1 rounded hover:bg-red-50 text-[rgb(var(--color-text-600))] hover:text-red-600"
+              aria-label={t('timeEntries.delete', 'Delete time entry')}
+              title={t('timeEntries.delete', 'Delete time entry')}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+          <span className="font-semibold text-[rgb(var(--color-text-800))]">
+            {formatMinutesAsHoursAndMinutes(entry.billable_duration, durationLabels)}
+          </span>
+        </div>
       </div>
       {showUserName && (
-        <div className="text-[11px] text-muted-foreground">{startLabel}</div>
+        <div className="text-xs text-muted-foreground">{startLabel}</div>
       )}
-      <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+      <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
         <span className="truncate">
           {entry.service_name || t('timeEntries.noService', 'No service')}
         </span>
-        <span
-          className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
-            APPROVAL_STATUS_BADGE_CLASS[statusKey] ?? 'bg-gray-100 text-gray-700'
-          }`}
+        <Badge
+          variant={APPROVAL_STATUS_BADGE_VARIANT[statusKey] ?? 'outline'}
+          size="sm"
         >
           {statusLabel}
-        </span>
+        </Badge>
       </div>
       {entry.notes && (
-        <div className="text-[11px] text-[rgb(var(--color-text-700))] line-clamp-2 whitespace-pre-wrap">
+        <div className="text-xs text-[rgb(var(--color-text-700))] line-clamp-2 whitespace-pre-wrap">
           {entry.notes}
         </div>
       )}

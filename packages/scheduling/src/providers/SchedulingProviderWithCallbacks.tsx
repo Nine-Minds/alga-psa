@@ -13,8 +13,7 @@ interface SchedulingProviderWithCallbacksProps {
 export const SchedulingProviderWithCallbacks: React.FC<SchedulingProviderWithCallbacksProps> = ({ children }) => {
   const callbacks = useMemo<SchedulingCallbacks>(() => ({
     renderAgentSchedule: (agentId: string) => <AgentScheduleView agentId={agentId} />,
-    launchTimeEntry: (params) =>
-      launchTimeEntryForWorkItem(params),
+    launchTimeEntry: (params) => launchTimeEntryForWorkItem(params),
   }), []);
 
   return (

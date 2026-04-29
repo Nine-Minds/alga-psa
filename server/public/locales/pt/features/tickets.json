@@ -1110,6 +1110,16 @@
     "statusSubmitted": "Enviado",
     "statusApproved": "Aprovado",
     "statusChangesRequested": "Alterações solicitadas",
-    "statusUnknown": "Desconhecido"
+    "statusUnknown": "Desconhecido",
+    "edit": "Editar entrada de tempo",
+    "delete": "Excluir entrada de tempo",
+    "deleteConfirmTitle": "Excluir entrada de tempo?",
+    "deleteConfirmMessage": "A entrada de tempo será excluída permanentemente. Esta ação não pode ser desfeita.",
+    "deleteConfirmAction": "Excluir",
+    "duration": {
+      "hr": "h",
+      "hrs": "h",
+      "min": "min"
+    }
   }
 }

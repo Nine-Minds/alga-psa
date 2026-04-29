@@ -130,19 +130,32 @@ export function hoursToMinutes(hours: number | null | undefined): number | null 
   return Math.round(hours * 60);
 }
 
-export function formatMinutesAsHoursAndMinutes(minutes: number | null | undefined): string {
+export interface DurationLabels {
+  hr?: string;
+  hrs?: string;
+  min?: string;
+}
+
+export function formatMinutesAsHoursAndMinutes(
+  minutes: number | null | undefined,
+  labels?: DurationLabels,
+): string {
+  const hrLabel = labels?.hr ?? 'hr';
+  const hrsLabel = labels?.hrs ?? 'hrs';
+  const minLabel = labels?.min ?? 'min';
+
   if (minutes === null || minutes === undefined) {
-    return '0 hrs';
+    return `0 ${hrsLabel}`;
   }
 
   const hours = Math.floor(minutes / 60);
   const remainingMinutes = Math.round(minutes % 60);
 
-  const hourText = hours === 1 ? 'hr' : 'hrs';
+  const hourText = hours === 1 ? hrLabel : hrsLabel;
 
   if (remainingMinutes === 0) {
     return `${hours} ${hourText}`;
   }
-  return `${hours} ${hourText} ${remainingMinutes} min`;
+  return `${hours} ${hourText} ${remainingMinutes} ${minLabel}`;
 }
 

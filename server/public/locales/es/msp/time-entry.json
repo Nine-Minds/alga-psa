@@ -305,6 +305,13 @@
       "message": "Esto moverá la hoja de horas nuevamente a Cambios solicitados para que se puedan editar las entradas de horas."
     }
   },
+  "timeSheetTable": {
+    "empty": {
+      "title": "No hay elementos de trabajo en su hoja de horas",
+      "description": "Agregue un nuevo elemento de trabajo para comenzar a registrar su tiempo esta semana.",
+      "getStarted": "Comenzar"
+    }
+  },
   "timeSheetList": {
     "delete": {
       "title": "Eliminar elemento de trabajo",

@@ -305,6 +305,13 @@
       "message": "Cela déplacera la feuille de temps vers Modifications demandées afin que les entrées de temps puissent être modifiées."
     }
   },
+  "timeSheetTable": {
+    "empty": {
+      "title": "Aucun élément de travail sur votre feuille de temps",
+      "description": "Ajoutez un nouvel élément de travail pour commencer à suivre votre temps cette semaine.",
+      "getStarted": "Commencer"
+    }
+  },
   "timeSheetList": {
     "delete": {
       "title": "Supprimer l'élément de travail",

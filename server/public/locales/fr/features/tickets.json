@@ -1110,6 +1110,16 @@
     "statusSubmitted": "Soumis",
     "statusApproved": "Approuvé",
     "statusChangesRequested": "Modifications demandées",
-    "statusUnknown": "Inconnu"
+    "statusUnknown": "Inconnu",
+    "edit": "Modifier l'entrée de temps",
+    "delete": "Supprimer l'entrée de temps",
+    "deleteConfirmTitle": "Supprimer l'entrée de temps ?",
+    "deleteConfirmMessage": "Cette entrée de temps sera définitivement supprimée. Cette action est irréversible.",
+    "deleteConfirmAction": "Supprimer",
+    "duration": {
+      "hr": "h",
+      "hrs": "h",
+      "min": "min"
+    }
   }
 }

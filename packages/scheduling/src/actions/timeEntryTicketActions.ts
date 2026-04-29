@@ -5,6 +5,15 @@ import { createTenantKnex } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { formatISO } from 'date-fns';
 import type { IUser, TimeSheetStatus } from '@alga-psa/types';
+import {
+  BuiltinAuthorizationKernelProvider,
+  BundleAuthorizationKernelProvider,
+  RequestLocalAuthorizationCache,
+  createAuthorizationKernel,
+  type AuthorizationSubject,
+} from '@alga-psa/authorization/kernel';
+import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+import { resolveManagedSubjectUserIds } from './timeEntryDelegationAuth';
 
 export interface TicketTimeEntrySummaryEntry {
   entry_id: string;
@@ -24,11 +33,14 @@ export interface TicketTimeEntrySummaryEntry {
 export interface TicketTimeEntriesSummary {
   entries: TicketTimeEntrySummaryEntry[];
   ownTotalMinutes: number;
-  othersTotalMinutes: number;
-  totalMinutes: number;
   ownEntryCount: number;
+  othersTotalMinutes: number;
   othersEntryCount: number;
-  canViewOthers: boolean;
+  othersVisibleMinutes: number;
+  othersVisibleCount: number;
+  othersHiddenMinutes: number;
+  othersHiddenCount: number;
+  totalMinutes: number;
 }
 
 interface RawRow {
@@ -51,6 +63,20 @@ function normalizeWorkDate(value: Date | string | null): string | null {
   return value.slice(0, 10);
 }
 
+function redactEntry(
+  entry: TicketTimeEntrySummaryEntry,
+  redactedFields: string[],
+): TicketTimeEntrySummaryEntry {
+  if (redactedFields.length === 0) return entry;
+  const next = { ...entry };
+  for (const field of redactedFields) {
+    if (field in next) {
+      (next as Record<string, unknown>)[field] = null;
+    }
+  }
+  return next;
+}
+
 /**
  * Core logic shared between the session-bound server action and the API controller.
  * Callers must have already authenticated the user and resolved the tenant context.
@@ -68,8 +94,6 @@ export async function fetchTimeEntriesForTicketCore(
   if (!await hasPermission(user, 'timeentry', 'read', db)) {
     throw new Error('Permission denied: Cannot read time entries');
   }
-
-  const canViewOthers = await hasPermission(user, 'timesheet', 'read_all', db);
 
   const rows: RawRow[] = await db('time_entries')
     .leftJoin('users', function joinUsers() {
@@ -100,11 +124,38 @@ export async function fetchTimeEntriesForTicketCore(
       db.raw(`TRIM(CONCAT_WS(' ', NULLIF(users.first_name, ''), NULLIF(users.last_name, ''))) AS user_name`),
     );
 
+  const managedUserIds = await resolveManagedSubjectUserIds(db, tenant, user);
+
+  const subject: AuthorizationSubject = {
+    tenant,
+    userId: user.user_id,
+    userType: user.user_type,
+    clientId: user.clientId ?? null,
+    roleIds: [],
+    teamIds: [],
+    managedUserIds,
+    portfolioClientIds: user.clientId ? [user.clientId] : [],
+  };
+
+  const kernel = createAuthorizationKernel({
+    builtinProvider: new BuiltinAuthorizationKernelProvider({
+      relationshipRules: [{ template: 'own_or_managed' }],
+    }),
+    bundleProvider: new BundleAuthorizationKernelProvider({
+      resolveRules: async (input) => resolveBundleNarrowingRulesForEvaluation(db, input),
+    }),
+    rbacEvaluator: async () => true,
+  });
+
+  const requestCache = new RequestLocalAuthorizationCache();
+
   const visible: TicketTimeEntrySummaryEntry[] = [];
   let ownTotal = 0;
-  let othersTotal = 0;
   let ownCount = 0;
+  let othersTotal = 0;
   let othersCount = 0;
+  let othersVisibleTotal = 0;
+  let othersVisibleCount = 0;
 
   for (const row of rows) {
     const isOwn = row.user_id === user.user_id;
@@ -118,32 +169,61 @@ export async function fetchTimeEntriesForTicketCore(
       othersCount += 1;
     }
 
-    if (isOwn || canViewOthers) {
-      visible.push({
-        entry_id: row.entry_id,
-        user_id: row.user_id,
-        user_name: row.user_name?.trim() || null,
-        start_time: formatISO(row.start_time),
-        end_time: formatISO(row.end_time),
-        work_date: normalizeWorkDate(row.work_date),
-        billable_duration: minutes,
-        notes: row.notes,
-        approval_status: row.approval_status,
-        service_id: row.service_id,
-        service_name: row.service_name,
-        is_own: isOwn,
-      });
+    const decision = isOwn
+      ? { allowed: true, redactedFields: [] as string[] }
+      : await kernel.authorizeResource({
+          subject,
+          resource: { type: 'time_entry', action: 'read' },
+          record: {
+            id: row.entry_id,
+            ownerUserId: row.user_id,
+            assignedUserIds: [row.user_id],
+          },
+          requestCache,
+          knex: db,
+        });
+
+    if (!decision.allowed) {
+      continue;
+    }
+
+    const entry: TicketTimeEntrySummaryEntry = {
+      entry_id: row.entry_id,
+      user_id: row.user_id,
+      user_name: row.user_name?.trim() || null,
+      start_time: formatISO(row.start_time),
+      end_time: formatISO(row.end_time),
+      work_date: normalizeWorkDate(row.work_date),
+      billable_duration: minutes,
+      notes: row.notes,
+      approval_status: row.approval_status,
+      service_id: row.service_id,
+      service_name: row.service_name,
+      is_own: isOwn,
+    };
+
+    visible.push(redactEntry(entry, decision.redactedFields));
+
+    if (!isOwn) {
+      othersVisibleTotal += minutes;
+      othersVisibleCount += 1;
     }
   }
+
+  const othersHiddenCount = othersCount - othersVisibleCount;
+  const othersHiddenTotal = othersTotal - othersVisibleTotal;
 
   return {
     entries: visible,
     ownTotalMinutes: ownTotal,
-    othersTotalMinutes: othersTotal,
-    totalMinutes: ownTotal + othersTotal,
     ownEntryCount: ownCount,
+    othersTotalMinutes: othersTotal,
     othersEntryCount: othersCount,
-    canViewOthers,
+    othersVisibleMinutes: othersVisibleTotal,
+    othersVisibleCount,
+    othersHiddenMinutes: othersHiddenTotal,
+    othersHiddenCount,
+    totalMinutes: ownTotal + othersTotal,
   };
 }
 

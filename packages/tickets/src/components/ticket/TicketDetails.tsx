@@ -64,6 +64,7 @@ import TicketNavigation from './TicketNavigation';
 import TicketOriginBadge from '../TicketOriginBadge';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { buildTicketTimeEntryContext, createTicketTimeEntryOnComplete } from '../../lib/timeEntryContext';
+import { deleteTimeEntry } from '@alga-psa/scheduling/actions';
 import { getTicketOrigin } from '../../lib/ticketOrigin';
 import {
     setTicketWatchListOnAttributes,
@@ -395,6 +396,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [commentToDelete, setCommentToDelete] = useState<PendingCommentDelete | null>(null);
     const [isDeletingComment, setIsDeletingComment] = useState(false);
     const [isTimeEntryPeriodDialogOpen, setIsTimeEntryPeriodDialogOpen] = useState(false);
+    const [pendingDeleteTimeEntry, setPendingDeleteTimeEntry] = useState<{ entry_id: string; user_name: string | null } | null>(null);
+    const [isDeletingTimeEntry, setIsDeletingTimeEntry] = useState(false);
 
     // Debounced search for child tickets
     const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -1340,6 +1343,51 @@ const handleClose = () => {
         }
     };
 
+    const handleEditTimeEntry = async (entry: { entry_id: string }) => {
+        try {
+            if (!ticket.ticket_id) {
+                toast.error(t('messages.ticketIdMissing'));
+                return;
+            }
+
+            await launchTimeEntry({
+                openDrawer,
+                closeDrawer,
+                context: buildTicketTimeEntryContext({
+                    ticket,
+                    clientName: client?.client_name ?? null,
+                    elapsedTime: 0,
+                    timeDescription: '',
+                }),
+                existingEntryId: entry.entry_id,
+                onComplete: () => {
+                    setTimeEntriesRefreshKey((value) => value + 1);
+                },
+            });
+        } catch (error) {
+            handleError(error, t('messages.prepareTimeEntryFailed'));
+        }
+    };
+
+    const handleRequestDeleteTimeEntry = (entry: { entry_id: string; user_name: string | null }) => {
+        setPendingDeleteTimeEntry(entry);
+    };
+
+    const handleConfirmDeleteTimeEntry = async () => {
+        if (!pendingDeleteTimeEntry) return;
+        setIsDeletingTimeEntry(true);
+        try {
+            await deleteTimeEntry(pendingDeleteTimeEntry.entry_id);
+            toast.success(t('messages.timeEntryDeleted', { defaultValue: 'Time entry deleted' }));
+            setTimeEntriesRefreshKey((value) => value + 1);
+        } catch (error) {
+            handleError(error, t('messages.deleteTimeEntryFailed', { defaultValue: 'Failed to delete time entry' }));
+        } finally {
+            setIsDeletingTimeEntry(false);
+            setPendingDeleteTimeEntry(null);
+        }
+    };
+
     const handleUpdateWatchList = async (watchList: TicketWatchListEntry[]): Promise<boolean> => {
         if (!ticket.ticket_id || isWatchListSaving) {
             return false;
@@ -1984,6 +2032,22 @@ const handleClose = () => {
                     cancelLabel="Cancel"
                 />
 
+                <ConfirmationDialog
+                    id={`${id}-delete-time-entry-dialog`}
+                    isOpen={pendingDeleteTimeEntry !== null}
+                    onClose={() => {
+                        if (!isDeletingTimeEntry) setPendingDeleteTimeEntry(null);
+                    }}
+                    onConfirm={handleConfirmDeleteTimeEntry}
+                    title={t('timeEntries.deleteConfirmTitle', { defaultValue: 'Delete time entry?' })}
+                    message={t('timeEntries.deleteConfirmMessage', {
+                        defaultValue: 'This will permanently delete the time entry. This action cannot be undone.',
+                    })}
+                    confirmLabel={t('timeEntries.deleteConfirmAction', { defaultValue: 'Delete' })}
+                    cancelLabel={t('common.cancel', { defaultValue: 'Cancel' })}
+                    isConfirming={isDeletingTimeEntry}
+                />
+
                 <div className="flex gap-6 min-w-0">
                     <div className="flex-grow col-span-2 min-w-0" id="ticket-main-content">
                         <Suspense fallback={<div id="ticket-info-skeleton" className="animate-pulse bg-gray-200 dark:bg-gray-800 h-64 rounded-lg mb-6"></div>}>
@@ -2281,6 +2345,8 @@ const handleClose = () => {
                                     onAssignTeam={handleAssignTeam}
                                     isLiveTicketTimerEnabled={isLiveTicketTimerEnabled}
                                     timeEntriesRefreshKey={timeEntriesRefreshKey}
+                                    onEditTimeEntry={handleEditTimeEntry}
+                                    onDeleteTimeEntry={handleRequestDeleteTimeEntry}
                                 />
                         </Suspense>
                         

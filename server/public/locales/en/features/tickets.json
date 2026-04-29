@@ -1110,6 +1110,16 @@
     "statusSubmitted": "Submitted",
     "statusApproved": "Approved",
     "statusChangesRequested": "Changes Requested",
-    "statusUnknown": "Unknown"
+    "statusUnknown": "Unknown",
+    "edit": "Edit time entry",
+    "delete": "Delete time entry",
+    "deleteConfirmTitle": "Delete time entry?",
+    "deleteConfirmMessage": "This will permanently delete the time entry. This action cannot be undone.",
+    "deleteConfirmAction": "Delete",
+    "duration": {
+      "hr": "hr",
+      "hrs": "hrs",
+      "min": "min"
+    }
   }
 }

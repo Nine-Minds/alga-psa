@@ -1110,6 +1110,16 @@
     "statusSubmitted": "Przesłane",
     "statusApproved": "Zatwierdzone",
     "statusChangesRequested": "Zażądano zmian",
-    "statusUnknown": "Nieznany"
+    "statusUnknown": "Nieznany",
+    "edit": "Edytuj wpis czasu",
+    "delete": "Usuń wpis czasu",
+    "deleteConfirmTitle": "Usunąć wpis czasu?",
+    "deleteConfirmMessage": "Wpis czasu zostanie trwale usunięty. Tej akcji nie można cofnąć.",
+    "deleteConfirmAction": "Usuń",
+    "duration": {
+      "hr": "godz.",
+      "hrs": "godz.",
+      "min": "min"
+    }
   }
 }

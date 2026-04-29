@@ -19,6 +19,7 @@ export interface SchedulingCallbacks {
     closeDrawer: () => void;
     context: TimeEntryWorkItemContext;
     onComplete?: () => void;
+    existingEntryId?: string;
   }) => Promise<void>;
 }
 

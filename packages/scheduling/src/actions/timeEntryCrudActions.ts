@@ -1266,9 +1266,18 @@ export const getTimeEntryById = withAuth(async (
           throw new Error(`Unknown work item type: ${entry.work_item_type}`);
       }
 
-      // Return the complete time entry with work item details
+      // Return the complete time entry with work item details.
+      // Knex returns timestamps as Date objects; downstream callers (TimeEntryProvider)
+      // expect ISO strings and pass them to date-fns parseISO, which requires strings.
       const result: ITimeEntryWithWorkItem = {
         ...entry,
+        start_time: formatISO(entry.start_time),
+        end_time: formatISO(entry.end_time),
+        created_at: formatISO(entry.created_at),
+        updated_at: formatISO(entry.updated_at),
+        work_date: (entry.work_date as unknown) instanceof Date
+          ? (entry.work_date as unknown as Date).toISOString().slice(0, 10)
+          : (typeof entry.work_date === 'string' ? entry.work_date.slice(0, 10) : undefined),
         workItem: workItemDetails
       };
       return result;

@@ -1110,6 +1110,16 @@
     "statusSubmitted": "Eingereicht",
     "statusApproved": "Genehmigt",
     "statusChangesRequested": "Änderungen angefordert",
-    "statusUnknown": "Unbekannt"
+    "statusUnknown": "Unbekannt",
+    "edit": "Zeiteintrag bearbeiten",
+    "delete": "Zeiteintrag löschen",
+    "deleteConfirmTitle": "Zeiteintrag löschen?",
+    "deleteConfirmMessage": "Dieser Zeiteintrag wird endgültig gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteConfirmAction": "Löschen",
+    "duration": {
+      "hr": "Std.",
+      "hrs": "Std.",
+      "min": "Min."
+    }
   }
 }

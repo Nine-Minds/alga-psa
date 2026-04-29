@@ -305,6 +305,13 @@
       "message": "Spowoduje to przeniesienie arkusza czasu pracy z powrotem do żądanych zmian, aby można było edytować wpisy czasu."
     }
   },
+  "timeSheetTable": {
+    "empty": {
+      "title": "Brak elementów pracy w arkuszu czasu pracy",
+      "description": "Dodaj nowy element pracy, aby rozpocząć śledzenie czasu w tym tygodniu.",
+      "getStarted": "Rozpocznij"
+    }
+  },
   "timeSheetList": {
     "delete": {
       "title": "Usuń element pracy",

@@ -1110,6 +1110,16 @@
     "statusSubmitted": "Ingediend",
     "statusApproved": "Goedgekeurd",
     "statusChangesRequested": "Wijzigingen aangevraagd",
-    "statusUnknown": "Onbekend"
+    "statusUnknown": "Onbekend",
+    "edit": "Tijdsregistratie bewerken",
+    "delete": "Tijdsregistratie verwijderen",
+    "deleteConfirmTitle": "Tijdsregistratie verwijderen?",
+    "deleteConfirmMessage": "De tijdsregistratie wordt permanent verwijderd. Deze actie kan niet ongedaan worden gemaakt.",
+    "deleteConfirmAction": "Verwijderen",
+    "duration": {
+      "hr": "uur",
+      "hrs": "uur",
+      "min": "min"
+    }
   }
 }

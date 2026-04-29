@@ -453,7 +453,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
       {/* Only show delete button and status for existing entries that have been saved */}
       {(entry?.entry_id && !isNewEntry && isEditable) && (
-        <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+        <div className="flex items-center justify-between">
           <div className="flex items-center">
             {entry?.isDirty && (
               <span className="text-yellow-500 text-sm mr-2">
@@ -642,7 +642,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
               {t('common.units.minutesShort', { defaultValue: 'm' })}
             </span>
           </div>
-          <div className="inline-flex h-10 items-center gap-3 rounded-md border border-gray-200 bg-gray-50 px-3">
+          <div className="inline-flex h-10 items-center gap-3 px-1">
             <Switch
               id={`${id}-billable-duration-${index}`}
               checked={entry?.billable_duration > 0}

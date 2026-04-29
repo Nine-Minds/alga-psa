@@ -1110,6 +1110,16 @@
     "statusSubmitted": "55555",
     "statusApproved": "55555",
     "statusChangesRequested": "55555",
-    "statusUnknown": "55555"
+    "statusUnknown": "55555",
+    "edit": "55555",
+    "delete": "55555",
+    "deleteConfirmTitle": "55555",
+    "deleteConfirmMessage": "55555",
+    "deleteConfirmAction": "55555",
+    "duration": {
+      "hr": "55555",
+      "hrs": "55555",
+      "min": "55555"
+    }
   }
 }

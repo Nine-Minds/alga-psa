@@ -98,6 +98,8 @@ interface TicketPropertiesProps {
   onRemoveTeamAssignment?: (mode: 'remove_all' | 'keep_all' | 'selective', keepUserIds?: string[]) => Promise<void>;
   onAssignTeam?: (teamId: string) => Promise<void>;
   timeEntriesRefreshKey?: number;
+  onEditTimeEntry?: (entry: { entry_id: string }) => void;
+  onDeleteTimeEntry?: (entry: { entry_id: string; user_name: string | null }) => void;
 }
 
 // Helper function to format location display
@@ -181,6 +183,8 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   onRemoveTeamAssignment,
   onAssignTeam,
   timeEntriesRefreshKey = 0,
+  onEditTimeEntry,
+  onDeleteTimeEntry,
 }) => {
   const { openDrawer } = useDrawer();
   const { renderQuickAddContact } = useQuickAddClient();
@@ -464,6 +468,8 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               currentUserId={userId}
               dateTimeFormat={dateTimeFormat}
               refreshKey={timeEntriesRefreshKey}
+              onEditEntry={onEditTimeEntry}
+              onDeleteEntry={onDeleteTimeEntry}
             />
           )}
 

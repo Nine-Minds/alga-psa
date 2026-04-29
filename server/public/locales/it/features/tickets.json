@@ -1110,6 +1110,16 @@
     "statusSubmitted": "Inviato",
     "statusApproved": "Approvato",
     "statusChangesRequested": "Modifiche richieste",
-    "statusUnknown": "Sconosciuto"
+    "statusUnknown": "Sconosciuto",
+    "edit": "Modifica registrazione tempo",
+    "delete": "Elimina registrazione tempo",
+    "deleteConfirmTitle": "Eliminare la registrazione tempo?",
+    "deleteConfirmMessage": "Questa registrazione tempo verrà eliminata definitivamente. Questa azione non può essere annullata.",
+    "deleteConfirmAction": "Elimina",
+    "duration": {
+      "hr": "h",
+      "hrs": "h",
+      "min": "min"
+    }
   }
 }

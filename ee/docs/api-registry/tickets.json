@@ -613,7 +613,7 @@
       "metadata": {
         "displayName": "Get Ticket Time Entries",
         "summary": "List time entries logged on a ticket",
-        "description": "Returns a permission-aware summary of the time logged on a ticket. Always includes the caller's own time entries and a total. When the caller has the `timesheet:read_all` permission, other team members' entries are returned in full detail. Otherwise the response only exposes an anonymized aggregate (`othersEntryCount` + `othersTotalMinutes`) so that totals stay accurate without leaking individual entries.",
+        "description": "Returns an authorization-aware summary of the time logged on a ticket. Each entry is evaluated through the authorization kernel against `time_entry:read`; the caller always sees their own entries, plus any other users' entries the kernel allows (e.g. team members managed by the caller, or entries permitted by an assigned authorization bundle). Entries the caller cannot see are still counted toward an anonymized aggregate (`othersHiddenCount` + `othersHiddenMinutes`) so that totals stay accurate without leaking individual entries.",
         "rbacResource": "ticket",
         "approvalRequired": false,
         "parameters": [
@@ -633,7 +633,7 @@
               "properties": {
                 "entries": {
                   "type": "array",
-                  "description": "Visible time entries — always includes the caller's own entries; includes other users' entries only when `canViewOthers` is true.",
+                  "description": "Visible time entries — always includes the caller's own entries; includes other users' entries that the authorization kernel allows for the caller (e.g. via team management or an authorization bundle).",
                   "items": {
                     "type": "object",
                     "properties": {
@@ -659,29 +659,47 @@
                   "type": "integer",
                   "description": "Total billable minutes logged by the calling user."
                 },
+                "ownEntryCount": { "type": "integer" },
                 "othersTotalMinutes": {
                   "type": "integer",
                   "description": "Total billable minutes logged by other users (always populated, even when individual entries are hidden)."
                 },
+                "othersEntryCount": {
+                  "type": "integer",
+                  "description": "Total count of entries logged by other users (always populated)."
+                },
+                "othersVisibleMinutes": {
+                  "type": "integer",
+                  "description": "Subset of `othersTotalMinutes` for entries the caller is authorized to see in `entries`."
+                },
+                "othersVisibleCount": {
+                  "type": "integer",
+                  "description": "Subset of `othersEntryCount` for entries the caller is authorized to see in `entries`."
+                },
+                "othersHiddenMinutes": {
+                  "type": "integer",
+                  "description": "Remaining minutes from other users' entries that the caller is not authorized to see; surfaced as an anonymized aggregate."
+                },
+                "othersHiddenCount": {
+                  "type": "integer",
+                  "description": "Remaining count of other users' entries that the caller is not authorized to see; surfaced as an anonymized aggregate."
+                },
                 "totalMinutes": {
                   "type": "integer",
                   "description": "Sum of `ownTotalMinutes` and `othersTotalMinutes`."
-                },
-                "ownEntryCount": { "type": "integer" },
-                "othersEntryCount": { "type": "integer" },
-                "canViewOthers": {
-                  "type": "boolean",
-                  "description": "True when the caller has `timesheet:read_all` and therefore sees other users' entries in `entries`. When false, `entries` only contains the caller's own entries and `othersEntryCount`/`othersTotalMinutes` represent the anonymized aggregate."
                 }
               },
               "required": [
                 "entries",
                 "ownTotalMinutes",
-                "othersTotalMinutes",
-                "totalMinutes",
                 "ownEntryCount",
+                "othersTotalMinutes",
                 "othersEntryCount",
-                "canViewOthers"
+                "othersVisibleMinutes",
+                "othersVisibleCount",
+                "othersHiddenMinutes",
+                "othersHiddenCount",
+                "totalMinutes"
               ]
             }
           }
