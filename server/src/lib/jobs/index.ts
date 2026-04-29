@@ -23,6 +23,10 @@ import {
   GooglePubSubVerificationJobData
 } from './handlers/calendarWebhookMaintenanceHandler';
 import { slaTimerHandler, SlaTimerJobData } from './handlers/slaTimerHandler';
+import {
+  workflowQuotaResumeScanHandler,
+  WorkflowQuotaResumeScanJobData,
+} from './handlers/workflowQuotaResumeScanHandler';
 import { JobService } from '../../services/job.service';
 import { getConnection } from '../db/db';
 import { StorageService } from '../../lib/storage/StorageService';
@@ -177,6 +181,13 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       );
     }
 
+    jobScheduler.registerJobHandler<WorkflowQuotaResumeScanJobData>(
+      'workflow-quota-resume-scan',
+      async (job: Job<WorkflowQuotaResumeScanJobData>) => {
+        await workflowQuotaResumeScanHandler(job.data);
+      }
+    );
+
     // Note: Password reset token cleanup is handled automatically during token operations
     // No pg-boss job needed
 
@@ -200,7 +211,8 @@ export type {
   AssetImportJobData,
   EmailWebhookMaintenanceJobData,
   RenewalQueueProcessorJobData,
-  SlaTimerJobData
+  SlaTimerJobData,
+  WorkflowQuotaResumeScanJobData
 };
 // Export job scheduling helper functions
 export const scheduleInvoiceGeneration = async (
@@ -468,5 +480,17 @@ export const scheduleSlaTimerJob = async (
     'sla-timer',
     cronExpression,
     { tenantId }
+  );
+};
+
+export const scheduleWorkflowQuotaResumeScanJob = async (
+  cronExpression: string = '*/5 * * * *',
+  batchSize: number = 100
+): Promise<string | null> => {
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<WorkflowQuotaResumeScanJobData>(
+    'workflow-quota-resume-scan',
+    cronExpression,
+    { tenantId: 'system', batchSize }
   );
 };

@@ -1,4 +1,4 @@
-import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleSlaTimerJob } from './index';
+import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleSlaTimerJob, scheduleWorkflowQuotaResumeScanJob } from './index';
 import logger from '@alga-psa/core/logger';
 import { getConnection } from 'server/src/lib/db/db';
 
@@ -225,6 +225,21 @@ export async function initializeScheduledJobs(): Promise<void> {
      } catch (error) {
        logger.error('Failed to schedule AI session key cleanup job', error);
      }
+   }
+
+   try {
+     const cron = '*/5 * * * *';
+     const quotaResumeJobId = await scheduleWorkflowQuotaResumeScanJob(cron);
+     if (quotaResumeJobId) {
+       logger.info(`Scheduled workflow quota resume scan job with ID ${quotaResumeJobId}`);
+     } else {
+       logger.info('Workflow quota resume scan job already scheduled (singleton active)', {
+         cron,
+         returnedJobId: quotaResumeJobId,
+       });
+     }
+   } catch (error) {
+     logger.error('Failed to schedule workflow quota resume scan job', error);
    }
    
    logger.info('All scheduled jobs initialized');

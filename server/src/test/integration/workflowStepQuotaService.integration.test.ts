@@ -244,4 +244,27 @@ describe('workflowStepQuotaService', () => {
     expect(row?.effective_limit).toBeNull();
     expect(row?.used_count).toBe(4);
   });
+
+  it('does not allow concurrent finite reservations to exceed effective_limit', async () => {
+    const tenant = uuidv4();
+    await seedTenant(db, tenant, 'solo');
+    await seedStripePeriod(db, tenant, {
+      status: 'active',
+      start: '2026-04-01T00:00:00.000Z',
+      end: '2026-05-01T00:00:00.000Z',
+      workflowStepLimitPrice: '3',
+    });
+
+    const reservations = await Promise.all(
+      Array.from({ length: 12 }).map(() => workflowStepQuotaService.reserveStepStart(db, tenant))
+    );
+
+    const allowedCount = reservations.filter((reservation) => reservation.allowed).length;
+    const deniedCount = reservations.length - allowedCount;
+    expect(allowedCount).toBe(3);
+    expect(deniedCount).toBe(9);
+
+    const row = await db('workflow_step_usage_periods').where({ tenant }).first<{ used_count: number }>();
+    expect(row?.used_count).toBe(3);
+  });
 });

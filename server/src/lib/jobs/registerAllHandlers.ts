@@ -53,6 +53,10 @@ import {
   WorkflowScheduledRunJobData,
 } from './handlers/workflowScheduledRunHandlers';
 import { slaTimerHandler, SlaTimerJobData } from './handlers/slaTimerHandler';
+import {
+  workflowQuotaResumeScanHandler,
+  WorkflowQuotaResumeScanJobData,
+} from './handlers/workflowQuotaResumeScanHandler';
 
 /**
  * Options for registering handlers
@@ -343,7 +347,7 @@ export async function registerAllJobHandlers(
 
   if (!includeEnterprise) {
     // SLA timer handler - checks SLA thresholds and sends notifications
-    JobHandlerRegistry.register<SlaTimerJobData & BaseJobData>(
+  JobHandlerRegistry.register<SlaTimerJobData & BaseJobData>(
       {
         name: 'sla-timer',
         handler: async (_jobId, data) => {
@@ -353,7 +357,19 @@ export async function registerAllJobHandlers(
         timeoutMs: 300000, // 5 minutes
       },
       registerOpts
-    );
+  );
+
+  JobHandlerRegistry.register<WorkflowQuotaResumeScanJobData & BaseJobData>(
+    {
+      name: 'workflow-quota-resume-scan',
+      handler: async (_jobId, data) => {
+        await workflowQuotaResumeScanHandler(data);
+      },
+      retry: { maxAttempts: 2 },
+      timeoutMs: 120000,
+    },
+    registerOpts
+  );
   }
 
   // ============================================================================

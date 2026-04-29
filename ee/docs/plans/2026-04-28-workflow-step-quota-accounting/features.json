@@ -154,7 +154,7 @@
   {
     "id": "F019",
     "description": "Implement a scheduled workflow-quota-resume-scan job that finds WAITING quota waits and resumes eligible runs.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations > Scheduled job"
     ]
@@ -162,7 +162,7 @@
   {
     "id": "F020",
     "description": "Add locking and batch limits to the quota resume scan so concurrent scans do not resolve the same waits.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Non-functional Requirements",
       "Data / API / Integrations > Scheduled job"
@@ -171,7 +171,7 @@
   {
     "id": "F021",
     "description": "Resume at most the finite remaining capacity for a tenant during each scan while relying on runtime reservation for final enforcement.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows > Background scheduler"
     ]
@@ -179,7 +179,7 @@
   {
     "id": "F022",
     "description": "Add a manual resume action for quota-paused workflow runs that verifies tenant ownership, permissions, and quota eligibility.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations > Manual resume API/action",
       "Security / Permissions"
@@ -188,7 +188,7 @@
   {
     "id": "F023",
     "description": "Return a helpful exhausted-quota response from manual resume when quota is still unavailable, including usage, limit, and reset time.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ]
@@ -196,7 +196,7 @@
   {
     "id": "F024",
     "description": "Trigger or enqueue normal workflow execution after an automatic or manual quota resume without pre-consuming quota.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Acceptance Criteria (Definition of Done)"

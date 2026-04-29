@@ -2857,6 +2857,100 @@ export const resumeWorkflowRunAction = withAuth(async (user, { tenant }, input: 
   return { ok: true };
 });
 
+export const resumeWorkflowRunFromQuotaPauseAction = withAuth(async (user, { tenant }, input: unknown) => {
+  initializeWorkflowRuntimeV2();
+  const parsed = RunActionInput.parse(input);
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'admin', knex);
+  const runRecord = await requireRunTenantAccess(knex, parsed.runId, tenant);
+  assertLegacyRunControlSupported(runRecord, 'resume');
+
+  if (runRecord.status !== 'WAITING') {
+    return throwHttpError(409, 'Run is not waiting');
+  }
+
+  const quotaWait = await knex('workflow_run_waits')
+    .where({
+      run_id: parsed.runId,
+      wait_type: 'quota',
+      status: 'WAITING',
+    })
+    .orderBy('created_at', 'asc')
+    .first<{ wait_id: string; step_path: string | null }>();
+
+  if (!quotaWait) {
+    return throwHttpError(409, 'Run is not quota-paused');
+  }
+
+  const { workflowStepQuotaService } = await import('@alga-psa/workflows/runtime/core');
+  const quotaSummary = await workflowStepQuotaService.resolveQuotaSummary(knex, runRecord.tenant_id ?? tenant);
+  const quotaExhausted = quotaSummary.effectiveLimit != null && quotaSummary.usedCount >= quotaSummary.effectiveLimit;
+
+  if (quotaExhausted) {
+    return {
+      ok: false,
+      resumed: false,
+      reason: 'quota_exhausted',
+      quota: {
+        usedCount: quotaSummary.usedCount,
+        effectiveLimit: quotaSummary.effectiveLimit,
+        periodEnd: quotaSummary.periodEnd,
+        periodStart: quotaSummary.periodStart,
+        periodSource: quotaSummary.periodSource,
+        limitSource: quotaSummary.limitSource,
+      },
+    };
+  }
+
+  await WorkflowRunWaitModelV2.update(knex, quotaWait.wait_id, {
+    status: 'RESOLVED',
+    resolved_at: new Date().toISOString(),
+  });
+
+  const resumePayload = {
+    __admin_override: true,
+    reason: parsed.reason,
+    waitId: quotaWait.wait_id,
+    waitType: 'quota',
+    quotaResume: true,
+  };
+
+  await WorkflowRunModelV2.update(knex, parsed.runId, {
+    status: 'RUNNING',
+    resume_event_name: 'ADMIN_RESUME',
+    resume_event_payload: resumePayload,
+    resume_error: null,
+  });
+
+  await WorkflowRunLogModelV2.create(knex, {
+    run_id: parsed.runId,
+    tenant_id: runRecord?.tenant_id ?? null,
+    step_path: quotaWait.step_path ?? null,
+    level: 'INFO',
+    message: 'Quota-paused run resumed by operator',
+    context_json: {
+      reason: parsed.reason,
+      waitId: quotaWait.wait_id,
+      waitType: 'quota',
+    },
+    source: parsed.source ?? 'api',
+  });
+
+  await auditWorkflowEvent(knex, user, {
+    operation: 'workflow_run_resume',
+    tableName: 'workflow_runs',
+    recordId: parsed.runId,
+    changedData: { status: 'RUNNING' },
+    details: { reason: parsed.reason, waitType: 'quota' },
+    source: parsed.source ?? 'api'
+  });
+
+  const runtime = new WorkflowRuntimeV2();
+  await runtime.executeRun(knex, parsed.runId, `admin-${user.user_id}`);
+
+  return { ok: true, resumed: true };
+});
+
 export const retryWorkflowRunAction = withAuth(async (user, { tenant }, input: unknown) => {
   initializeWorkflowRuntimeV2();
   const parsed = RunActionInput.parse(input);

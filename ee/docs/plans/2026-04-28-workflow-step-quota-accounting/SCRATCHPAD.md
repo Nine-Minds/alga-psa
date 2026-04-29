@@ -91,3 +91,24 @@ Rolling notes for the workflow step quota accounting plan. Keep decisions, disco
   - `logger.info` when resolver uses fallback UTC calendar periods due to missing Stripe period or missing Stripe tables.
 - Validation command run:
   - `cd server && npm test -- src/test/integration/workflowStepQuotaService.integration.test.ts` (pass).
+- Added scheduled quota resume scan job handler: `server/src/lib/jobs/handlers/workflowQuotaResumeScanHandler.ts`.
+  - Scans `workflow_run_waits` with `wait_type='quota'` and `status='WAITING'`.
+  - Uses `FOR UPDATE SKIP LOCKED` + configurable `batchSize` (default 100) for concurrency-safe scan batches.
+  - Applies per-tenant capacity gating from `workflowStepQuotaService.resolveQuotaSummary()`:
+    - finite tenants resume up to `effectiveLimit - usedCount`
+    - unlimited tenants resume all selected waits
+  - Resolves selected waits, sets runs to `RUNNING`, writes run log entries, and re-enters DB runtime via `WorkflowRuntimeV2.executeRun()` without pre-consuming quota.
+- Registered/scheduled job plumbing:
+  - `server/src/lib/jobs/registerAllHandlers.ts` registration name `workflow-quota-resume-scan`.
+  - `server/src/lib/jobs/index.ts` legacy registration + `scheduleWorkflowQuotaResumeScanJob()`.
+  - `server/src/lib/jobs/initializeScheduledJobs.ts` schedules recurring scan cron `*/5 * * * *`.
+- Added manual quota resume action:
+  - `ee/packages/workflows/src/actions/workflow-runtime-v2-actions.ts` exports `resumeWorkflowRunFromQuotaPauseAction`.
+  - Verifies permission and tenant ownership, requires `WAITING` + `quota` wait, checks current quota summary, returns structured exhausted-quota response when still blocked, otherwise resolves quota wait and executes runtime (no bypass of step-start reservation).
+- Validation attempt:
+  - `cd server && npm test -- src/test/integration/workflowRuntimeV2.control.integration.test.ts` (fails in current env due missing module resolution for `@alga-psa/authorization/kernel`, unrelated to quota changes).
+- Added test coverage for concurrent finite quota reservations:
+  - `server/src/test/integration/workflowStepQuotaService.integration.test.ts`
+  - New case fires 12 concurrent reservations against finite limit 3 and asserts exactly 3 allows, 9 denies, and persisted `used_count=3`.
+- Validation command run:
+  - `cd server && npm test -- src/test/integration/workflowStepQuotaService.integration.test.ts` (pass).

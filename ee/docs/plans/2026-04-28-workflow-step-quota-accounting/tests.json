@@ -56,7 +56,7 @@
   {
     "id": "T007",
     "description": "DB integration: concurrent finite reservations cannot increase used_count beyond effective_limit.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010",
       "F011"
