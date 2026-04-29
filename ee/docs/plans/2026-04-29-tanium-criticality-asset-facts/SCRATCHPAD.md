@@ -117,3 +117,9 @@ Working notes for adding CE asset facts and using them as the Tanium criticality
 
 - (2026-04-29) EE action tests use `withAuth` wrappers directly; test invocations must pass explicit `(user, { tenant })` args.
 - (2026-04-29) Asset package targeted test runs currently include additional files in this workspace, exposing unrelated baseline failures outside this change.
+- (2026-04-29) Added `server/src/test/unit/assets/assetFactsService.test.ts` to cover T001/T002/T003 service behaviors:
+  - tenant-scoped insert/read,
+  - uniqueness/upsert semantics for current fact key,
+  - explicit unavailable upsert preserving raw metadata.
+- (2026-04-29) Verification command:
+  - `cd server && npx vitest run src/test/unit/assets/assetFactsService.test.ts` (pass)

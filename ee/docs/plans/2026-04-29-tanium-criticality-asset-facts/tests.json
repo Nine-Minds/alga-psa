@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "DB integration: migrated schema supports inserting/upserting and reading an available Tanium criticality fact for an asset with tenant-scoped predicates.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F002",
@@ -15,7 +15,7 @@
   {
     "id": "T002",
     "description": "DB integration guard: asset fact uniqueness prevents duplicate current facts for the same tenant, asset, source type, namespace, and key while allowing different tenants/assets/keys.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F002",
@@ -25,7 +25,7 @@
   {
     "id": "T003",
     "description": "DB integration: explicit no-result upsert marks a fact unavailable, clears display values, and preserves raw provider metadata.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]
