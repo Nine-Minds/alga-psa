@@ -28,7 +28,7 @@ import {
   useWorkflowRunSortOptions,
   useWorkflowRunStatusOptions,
 } from '@alga-psa/workflows/hooks/useWorkflowEnumOptions';
-import WorkflowRunDetails from './WorkflowRunDetails';
+import WorkflowRunDetailsPanel from '../workflow-run-studio/WorkflowRunDetailsPanel';
 import {
   getWorkflowScheduleStatusBadgeClass,
   isTimeTriggeredRun
@@ -1020,7 +1020,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
                 </Button>
               </div>
             </div>
-            <WorkflowRunDetails
+            <WorkflowRunDetailsPanel
               runId={selectedRunId}
               workflowName={workflowNameMap.get(selectedRun?.workflow_id ?? '')}
               workflowTrigger={workflowTriggerMap.get(selectedRun?.workflow_id ?? '')}

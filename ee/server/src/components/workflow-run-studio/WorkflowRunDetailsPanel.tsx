@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Play, StopCircle, RotateCcw, Repeat, RefreshCw } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { mapWorkflowServerError } from './workflowServerErrors';
+import { mapWorkflowServerError } from '../workflow-designer/workflowServerErrors';
 
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -48,11 +48,11 @@ import { pathDepth } from '@alga-psa/workflows/authoring';
 import {
   getWorkflowScheduleStatusBadgeClass,
   isTimeTriggeredRun
-} from './workflowRunTriggerPresentation';
+} from '../workflow-designer/workflowRunTriggerPresentation';
 import {
   useFormatWorkflowRunTrigger,
   useFormatWorkflowScheduleStatus,
-} from './useWorkflowRunTriggerPresentation';
+} from '../workflow-designer/useWorkflowRunTriggerPresentation';
 
 type WorkflowRunRecord = {
   run_id: string;
@@ -310,7 +310,7 @@ interface WorkflowRunDetailsProps {
   onClose?: () => void;
 }
 
-const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
+const WorkflowRunDetailsPanel: React.FC<WorkflowRunDetailsProps> = ({
   runId,
   workflowName,
   workflowTrigger,
@@ -1694,6 +1694,62 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
         </Card>
       )}
 
+      {!selectedStep && canAdmin && (
+        <Card className="p-4 space-y-4">
+          <div>
+            <div className="text-sm font-medium text-gray-700">
+              {t('runDetails.audit.title', { defaultValue: 'Audit Trail' })}
+            </div>
+            <div className="text-xs text-gray-500">
+              {t('runDetails.audit.description', {
+                defaultValue: 'Administrative actions for this run.',
+              })}
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Button
+                id="workflow-run-audit-export"
+                variant="outline"
+                onClick={handleAuditExport}
+              >
+                {t('runDetails.actions.exportAuditCsv', { defaultValue: 'Export Audit CSV' })}
+              </Button>
+            </div>
+            <div className="mt-3">
+              {auditLoading && auditLogs.length === 0 && (
+                <div className="py-2 text-sm text-gray-500">
+                  {t('runDetails.audit.loading', { defaultValue: 'Loading audit trail...' })}
+                </div>
+              )}
+              {!auditLoading && auditLogs.length === 0 && (
+                <div className="py-6 text-center text-sm text-gray-500">{noAuditEntriesLabel}</div>
+              )}
+              {auditLogs.length > 0 && (
+                <DataTable
+                  id="workflow-run-audit-trail"
+                  data={auditLogs}
+                  columns={auditColumns}
+                  pagination={false}
+                  pageSize={Math.max(auditLogs.length, 1)}
+                  initialSorting={[{ id: 'timestamp', desc: true }]}
+                />
+              )}
+              {auditCursor !== null && (
+                <div className="flex justify-center mt-3">
+                  <Button
+                    id="workflow-run-audit-load-more"
+                    variant="outline"
+                    onClick={() => fetchAuditLogs(auditCursor, true)}
+                    disabled={auditLoading}
+                  >
+                    {t('runDetails.actions.loadMore', { defaultValue: 'Load more' })}
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </Card>
+      )}
+
       <ConfirmationDialog
         id="workflow-run-resume-confirm"
         isOpen={confirmAction === 'resume'}
@@ -1833,4 +1889,4 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
   );
 };
 
-export default WorkflowRunDetails;
+export default WorkflowRunDetailsPanel;

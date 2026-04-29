@@ -51,6 +51,7 @@ import WorkflowRunList from './WorkflowRunList';
 import WorkflowDeadLetterQueue from './WorkflowDeadLetterQueue';
 import WorkflowEventList from './WorkflowEventList';
 import WorkflowRunDialog from './WorkflowRunDialog';
+import WorkflowDesignerAuditPanel from './WorkflowDesignerAuditPanel';
 import WorkflowGraph from '../workflow-graph/WorkflowGraph';
 import WorkflowListV2 from '@alga-psa/workflows/components/automation-hub/WorkflowList';
 import EventsCatalogV2 from '@alga-psa/workflows/components/automation-hub/EventsCatalogV2';
@@ -3703,6 +3704,13 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                   {isSavingMetadata ? 'Saving...' : 'Save Settings'}
                 </Button>
               </Card>
+            )}
+            {activeWorkflowId && activeWorkflowRecord && canAdmin && (
+              <WorkflowDesignerAuditPanel
+                workflowId={activeWorkflowId}
+                workflowName={activeWorkflowRecord.name ?? activeDefinition?.name ?? null}
+                canAdmin={canAdmin}
+              />
             )}
             {selectedStep && activeDefinition ? (
               canManage || selectedStep.type === 'action.call' ? (

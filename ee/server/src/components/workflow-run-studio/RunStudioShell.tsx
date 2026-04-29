@@ -18,7 +18,7 @@ import { useFormatWorkflowRunStatus } from '@alga-psa/workflows/hooks/useWorkflo
 import { type NodeStep, type Step, type WorkflowDefinition } from '@alga-psa/workflows/runtime/client';
 import toast from 'react-hot-toast';
 import WorkflowGraph from '../workflow-graph/WorkflowGraph';
-import WorkflowRunDetails from '../workflow-designer/WorkflowRunDetails';
+import WorkflowRunDetailsPanel from './WorkflowRunDetailsPanel';
 
 const statusBadgeClasses: Record<string, string> = {
   RUNNING: 'bg-cyan-500/15 text-cyan-600 border-cyan-500/30',
@@ -322,7 +322,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
         </Card>
 
         <div className="min-h-0 min-w-0 overflow-y-auto pr-2 pb-6">
-          <WorkflowRunDetails
+          <WorkflowRunDetailsPanel
             runId={runId}
             workflowName={workflowName}
             canAdmin={canAdmin}

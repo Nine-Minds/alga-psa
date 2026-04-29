@@ -10,7 +10,11 @@ export default defineConfig({
     environment: 'node',
     // This repo keeps a large number of tests under workspace packages (e.g. ../packages/*).
     // Include them explicitly because Vitest's default include globs do not match paths outside the config root.
-    include: ['src/**/*.{test,spec}.?(c|m)[jt]s?(x)', '../packages/**/*.{test,spec}.?(c|m)[jt]s?(x)'],
+    include: [
+      'src/**/*.{test,spec}.?(c|m)[jt]s?(x)',
+      '../packages/**/*.{test,spec}.?(c|m)[jt]s?(x)',
+      '../ee/packages/workflows/src/actions/**/*.{test,spec}.?(c|m)[jt]s?(x)'
+    ],
     setupFiles: [path.resolve(__dirname, './src/test/setup.ts')],
     globalSetup: [path.resolve(__dirname, './vitest.globalSetup.js')],
     isolate: true,

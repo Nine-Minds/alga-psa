@@ -92,6 +92,12 @@ import {
   UpdateWorkflowDefinitionMetadataInput,
   WorkflowIdInput
 } from './workflow-runtime-v2-schemas';
+import {
+  WORKFLOW_AUDIT_CSV_HEADERS,
+  buildActorMap,
+  buildCsv as buildWorkflowAuditCsv,
+  buildWorkflowAuditCsvRows
+} from './workflow-audit-csv';
 
 const throwHttpError = (status: number, message: string, details?: unknown): never => {
   const error = new Error(message) as Error & { status?: number; details?: unknown };
@@ -1226,17 +1232,38 @@ const auditWorkflowEvent = async (
   }
 ) => {
   const roleNames = user.roles?.map((role) => role.role_name) ?? [];
-  await auditLog(knex, {
-    userId: user.user_id,
-    operation: params.operation,
-    tableName: params.tableName,
-    recordId: params.recordId,
-    changedData: params.changedData ?? {},
-    details: {
-      ...params.details,
-      actorRoles: roleNames,
-      source: params.source ?? 'api'
-    }
+  const tenantId = typeof user.tenant === 'string' && user.tenant.trim().length ? user.tenant : null;
+
+  if (!tenantId) {
+    await auditLog(knex, {
+      userId: user.user_id,
+      operation: params.operation,
+      tableName: params.tableName,
+      recordId: params.recordId,
+      changedData: params.changedData ?? {},
+      details: {
+        ...params.details,
+        actorRoles: roleNames,
+        source: params.source ?? 'api'
+      }
+    });
+    return;
+  }
+
+  await knex.transaction(async (trx) => {
+    await trx.raw("select set_config('app.current_tenant', ?, true)", [tenantId]);
+    await auditLog(trx, {
+      userId: user.user_id,
+      operation: params.operation,
+      tableName: params.tableName,
+      recordId: params.recordId,
+      changedData: params.changedData ?? {},
+      details: {
+        ...params.details,
+        actorRoles: roleNames,
+        source: params.source ?? 'api'
+      }
+    });
   });
 };
 
@@ -2630,16 +2657,68 @@ export async function exportWorkflowAuditLogsAction(input: unknown) {
     };
   }
 
-  const headers = ['timestamp', 'operation', 'user_id', 'table_name', 'record_id'];
-  const rows = result.logs.map((log: any) => [
-    log.timestamp,
-    log.operation,
-    log.user_id ?? '',
-    log.table_name,
-    log.record_id
-  ]);
+  const { knex, tenant } = await createTenantKnex();
+  const tenantFromLogs =
+    typeof result.logs[0]?.tenant === 'string' && result.logs[0].tenant.trim().length
+      ? result.logs[0].tenant
+      : null;
+  const tenantForEnrichment = typeof tenant === 'string' && tenant.trim().length ? tenant : tenantFromLogs;
+  const actorByUserId = await buildActorMap(
+    knex,
+    result.logs.map((log: any) => String(log.user_id ?? '')).filter(Boolean),
+    tenantForEnrichment
+  );
+
+  const context = {
+    workflowId: null as string | null,
+    runId: null as string | null,
+    workflowName: null as string | null,
+    workflowKey: null as string | null,
+    workflowVersion: null as number | string | null,
+    runStatus: null as string | null
+  };
+
+  if (parsed.tableName === 'workflow_definitions') {
+    const workflowQuery = knex('workflow_definitions').where({ workflow_id: parsed.recordId });
+    if (tenantForEnrichment) {
+      workflowQuery.andWhere({ tenant_id: tenantForEnrichment });
+    }
+    const workflow = await workflowQuery.first();
+    if (workflow) {
+      context.workflowId = workflow.workflow_id;
+      context.workflowName = workflow.name ?? null;
+      context.workflowKey = workflow.key ?? null;
+      context.workflowVersion = workflow.published_version ?? workflow.draft_version ?? null;
+    } else {
+      context.workflowId = parsed.recordId;
+    }
+  } else {
+    const run = await WorkflowRunModelV2.getById(knex, parsed.recordId);
+    if (run) {
+      context.runId = run.run_id;
+      context.workflowId = run.workflow_id;
+      context.workflowVersion = run.workflow_version ?? null;
+      context.runStatus = run.status ?? null;
+    } else {
+      context.runId = parsed.recordId;
+    }
+    if (context.workflowId) {
+      const workflowQuery = knex('workflow_definitions').where({ workflow_id: context.workflowId });
+      if (tenantForEnrichment) {
+        workflowQuery.andWhere({ tenant_id: tenantForEnrichment });
+      }
+      const workflow = await workflowQuery.first();
+      if (workflow) {
+        context.workflowName = workflow.name ?? null;
+        context.workflowKey = workflow.key ?? null;
+      }
+    }
+  }
+
+  const csvRows = buildWorkflowAuditCsvRows(result.logs as any, { actorByUserId, context });
+  const rows = csvRows.map((row) => WORKFLOW_AUDIT_CSV_HEADERS.map((header) => row[header]));
   return {
-    body: buildCsv(headers, rows),
+    body: buildWorkflowAuditCsv(WORKFLOW_AUDIT_CSV_HEADERS, rows),
     contentType: 'text/csv',
     filename
   };
