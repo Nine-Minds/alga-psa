@@ -260,30 +260,6 @@ spec:
               function collectActiveOperations(events, podsJson) {
                 const operations = [];
                 const seen = new Set();
-                for (const event of events || []) {
-                  const message = String(event.message || '');
-                  if (!/pulling image/i.test(message) || /successfully pulled|failed to pull/i.test(message)) continue;
-                  const image = imageFromMessage(message);
-                  const component = componentFromObject(event.involvedObject) || 'unknown';
-                  const key = `${component}:${image || message}`;
-                  if (seen.has(key)) continue;
-                  seen.add(key);
-                  const size = imageSizeEstimate(image);
-                  operations.push({
-                    component,
-                    operation: 'pulling_image',
-                    image,
-                    ...size,
-                    progressPercent: null,
-                    progressAvailable: false,
-                    progressReason: 'Kubernetes does not expose image pull byte progress.',
-                    startedAt: event.lastTimestamp || null,
-                    elapsedSeconds: elapsedSecondsSince(event.lastTimestamp),
-                    message: image
-                      ? `Pulling image ${image}. This can take several minutes on a local VM.`
-                      : message,
-                  });
-                }
 
                 for (const pod of podsJson?.items || []) {
                   const podName = pod.metadata?.name || '';
@@ -314,6 +290,35 @@ spec:
                         : `Preparing ${component}: ${waiting.reason}.`,
                     });
                   }
+                }
+
+                if (operations.length > 0 || (podsJson?.items || []).length > 0) {
+                  return operations;
+                }
+
+                for (const event of events || []) {
+                  const message = String(event.message || '');
+                  if (!/pulling image/i.test(message) || /successfully pulled|failed to pull/i.test(message)) continue;
+                  const image = imageFromMessage(message);
+                  const component = componentFromObject(event.involvedObject) || 'unknown';
+                  const key = `${component}:${image || message}`;
+                  if (seen.has(key)) continue;
+                  seen.add(key);
+                  const size = imageSizeEstimate(image);
+                  operations.push({
+                    component,
+                    operation: 'pulling_image',
+                    image,
+                    ...size,
+                    progressPercent: null,
+                    progressAvailable: false,
+                    progressReason: 'Kubernetes does not expose image pull byte progress.',
+                    startedAt: event.lastTimestamp || null,
+                    elapsedSeconds: elapsedSecondsSince(event.lastTimestamp),
+                    message: image
+                      ? `Pulling image ${image}. This can take several minutes on a local VM.`
+                      : message,
+                  });
                 }
                 return operations;
               }
