@@ -27,7 +27,7 @@
     "releaseBranch": "release/1.0-rc5",
     "valuesProfile": "talos-single-node",
     "images": {
-      "algaCore": "94446747",
+      "algaCore": "a2cbb430",
       "workflowWorker": "61e4a00e",
       "emailService": "61e4a00e",
       "temporalWorker": "61e4a00e"

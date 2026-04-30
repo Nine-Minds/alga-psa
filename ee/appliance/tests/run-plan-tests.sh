@@ -132,7 +132,7 @@ require_text "$(cat "$ROOT/ee/helm/temporal/templates/ui.yaml")" 'enableServiceL
 require_text "$(cat "$bootstrap_tmp/values/alga-core.talos-single-node.yaml")" 'appUrl: "https://psa.example.test"'
 require_text "$(cat "$bootstrap_tmp/values/alga-core.talos-single-node.yaml")" 'host: "psa.example.test"'
 require_text "$(cat "$bootstrap_tmp/values/alga-core.talos-single-node.yaml")" 'domainSuffix: ""'
-require_text "$(cat "$bootstrap_tmp/values/alga-core.talos-single-node.yaml")" 'tag: "94446747"'
+require_text "$(cat "$bootstrap_tmp/values/alga-core.talos-single-node.yaml")" 'tag: "a2cbb430"'
 require_text "$(cat "$bootstrap_tmp/values/workflow-worker.talos-single-node.yaml")" 'tag: "61e4a00e"'
 
 current_branch="$(git -C "$ROOT" rev-parse --abbrev-ref HEAD)"
@@ -434,7 +434,7 @@ jq -e '.title == "Alga Talos Appliance Release Manifest"' "$ROOT/ee/appliance/re
 jq -e '.channel == "candidate"' "$ROOT/ee/appliance/releases/channels/candidate.json" >/dev/null
 jq -e '.channel == "stable"' "$ROOT/ee/appliance/releases/channels/stable.json" >/dev/null
 jq -e '.app.releaseBranch == "release/1.0-rc5"' "$ROOT/ee/appliance/releases/1.0-rc5/release.json" >/dev/null
-jq -e '.app.images.algaCore == "94446747"' "$ROOT/ee/appliance/releases/1.0-rc5/release.json" >/dev/null
+jq -e '.app.images.algaCore == "a2cbb430"' "$ROOT/ee/appliance/releases/1.0-rc5/release.json" >/dev/null
 yq eval '.customization' "$ROOT/ee/appliance/schematics/metal-amd64.yaml" >/dev/null
 kubectl apply --dry-run=client -f "$ROOT/ee/appliance/manifests/local-path-storage.yaml" >/dev/null
 kubectl apply --dry-run=client -f "$ROOT/ee/appliance/flux/base/platform/appliance-status.yaml" >/dev/null
