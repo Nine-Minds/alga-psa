@@ -105,7 +105,33 @@
       "subtitle": "Últimas actualizaciones de tu cuenta",
       "empty": "Aún sin actividad",
       "emptyHint": "Cuando se actualicen tickets o lleguen facturas, las verás aquí.",
-      "viewTickets": "Ver todos los tickets"
+      "viewTickets": "Ver todos los tickets",
+      "titles": {
+        "ticket": "Nuevo ticket: {{name}}",
+        "invoice": "Factura {{name}} generada",
+        "asset": "Mantenimiento de activo: {{name}}",
+        "project": "Proyecto actualizado: {{name}}",
+        "quote": {
+          "_default": "Cotización {{name}}",
+          "sent": "Cotización {{name}} enviada para revisión",
+          "accepted": "Cotización {{name}} aceptada",
+          "rejected": "Cotización {{name}} rechazada",
+          "expired": "Cotización {{name}} expirada"
+        },
+        "service_request": {
+          "_default": "Solicitud de servicio: {{name}}",
+          "pending": "Solicitud de servicio enviada: {{name}}",
+          "succeeded": "Solicitud de servicio cumplida: {{name}}",
+          "failed": "Solicitud de servicio fallida: {{name}}"
+        },
+        "appointment": {
+          "_default": "Cita: {{name}}",
+          "pending": "Cita solicitada: {{name}}",
+          "approved": "Cita confirmada: {{name}}",
+          "declined": "Cita rechazada: {{name}}",
+          "cancelled": "Cita cancelada: {{name}}"
+        }
+      }
     },
     "devices": {
       "title": "Tus dispositivos",

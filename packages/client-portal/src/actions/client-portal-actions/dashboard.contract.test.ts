@@ -26,4 +26,19 @@ describe('dashboard action contract', () => {
     expect(source).toContain('extractPlainTextFromBlockNote');
     expect(source).toContain('summarizeForActivity');
   });
+
+  it('emits all seven activity types', () => {
+    // Original three plus quote/project/service_request/appointment.
+    expect(source).toMatch(/type:\s*['"]ticket['"]/);
+    expect(source).toMatch(/type:\s*['"]invoice['"]/);
+    expect(source).toMatch(/type:\s*['"]asset['"]/);
+    expect(source).toMatch(/type:\s*['"]quote['"]/);
+    expect(source).toMatch(/type:\s*['"]project['"]/);
+    expect(source).toMatch(/type:\s*['"]service_request['"]/);
+    expect(source).toMatch(/type:\s*['"]appointment['"]/);
+  });
+
+  it('only surfaces client-meaningful quote states', () => {
+    expect(source).toMatch(/whereIn\('status',\s*\[\s*'sent',\s*'accepted',\s*'rejected',\s*'expired'\s*\]\)/);
+  });
 });

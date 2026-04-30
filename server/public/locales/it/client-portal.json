@@ -105,7 +105,33 @@
       "subtitle": "Ultimi aggiornamenti del tuo account",
       "empty": "Nessuna attività ancora",
       "emptyHint": "Quando i ticket vengono aggiornati o arrivano le fatture, le vedrai qui.",
-      "viewTickets": "Mostra tutti i ticket"
+      "viewTickets": "Mostra tutti i ticket",
+      "titles": {
+        "ticket": "Nuovo ticket: {{name}}",
+        "invoice": "Fattura {{name}} generata",
+        "asset": "Manutenzione asset: {{name}}",
+        "project": "Progetto aggiornato: {{name}}",
+        "quote": {
+          "_default": "Preventivo {{name}}",
+          "sent": "Preventivo {{name}} inviato per revisione",
+          "accepted": "Preventivo {{name}} accettato",
+          "rejected": "Preventivo {{name}} rifiutato",
+          "expired": "Preventivo {{name}} scaduto"
+        },
+        "service_request": {
+          "_default": "Richiesta di servizio: {{name}}",
+          "pending": "Richiesta di servizio inviata: {{name}}",
+          "succeeded": "Richiesta di servizio completata: {{name}}",
+          "failed": "Richiesta di servizio fallita: {{name}}"
+        },
+        "appointment": {
+          "_default": "Appuntamento: {{name}}",
+          "pending": "Appuntamento richiesto: {{name}}",
+          "approved": "Appuntamento confermato: {{name}}",
+          "declined": "Appuntamento rifiutato: {{name}}",
+          "cancelled": "Appuntamento annullato: {{name}}"
+        }
+      }
     },
     "devices": {
       "title": "I tuoi dispositivi",

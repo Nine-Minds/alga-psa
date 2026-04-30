@@ -105,7 +105,33 @@
       "subtitle": "Dernières mises à jour de votre compte",
       "empty": "Aucune activité pour l'instant",
       "emptyHint": "Lorsque des tickets seront mis à jour ou que des factures arriveront, vous les verrez ici.",
-      "viewTickets": "Voir tous les tickets"
+      "viewTickets": "Voir tous les tickets",
+      "titles": {
+        "ticket": "Nouveau ticket : {{name}}",
+        "invoice": "Facture {{name}} générée",
+        "asset": "Maintenance d'actif : {{name}}",
+        "project": "Projet mis à jour : {{name}}",
+        "quote": {
+          "_default": "Devis {{name}}",
+          "sent": "Devis {{name}} envoyé pour examen",
+          "accepted": "Devis {{name}} accepté",
+          "rejected": "Devis {{name}} refusé",
+          "expired": "Devis {{name}} expiré"
+        },
+        "service_request": {
+          "_default": "Demande de service : {{name}}",
+          "pending": "Demande de service envoyée : {{name}}",
+          "succeeded": "Demande de service traitée : {{name}}",
+          "failed": "Demande de service échouée : {{name}}"
+        },
+        "appointment": {
+          "_default": "Rendez-vous : {{name}}",
+          "pending": "Rendez-vous demandé : {{name}}",
+          "approved": "Rendez-vous confirmé : {{name}}",
+          "declined": "Rendez-vous refusé : {{name}}",
+          "cancelled": "Rendez-vous annulé : {{name}}"
+        }
+      }
     },
     "devices": {
       "title": "Vos appareils",

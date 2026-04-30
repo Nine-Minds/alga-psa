@@ -105,7 +105,33 @@
       "subtitle": "Najnowsze aktualizacje konta",
       "empty": "Brak ostatniej aktywności",
       "emptyHint": "Gdy zgłoszenia będą aktualizowane lub pojawią się faktury, zobaczysz je tutaj.",
-      "viewTickets": "Pokaż wszystkie zgłoszenia"
+      "viewTickets": "Pokaż wszystkie zgłoszenia",
+      "titles": {
+        "ticket": "Nowe zgłoszenie: {{name}}",
+        "invoice": "Wystawiono fakturę {{name}}",
+        "asset": "Konserwacja zasobu: {{name}}",
+        "project": "Zaktualizowano projekt: {{name}}",
+        "quote": {
+          "_default": "Wycena {{name}}",
+          "sent": "Wycena {{name}} wysłana do akceptacji",
+          "accepted": "Wycena {{name}} zaakceptowana",
+          "rejected": "Wycena {{name}} odrzucona",
+          "expired": "Wycena {{name}} wygasła"
+        },
+        "service_request": {
+          "_default": "Zgłoszenie serwisowe: {{name}}",
+          "pending": "Zgłoszenie serwisowe wysłane: {{name}}",
+          "succeeded": "Zgłoszenie serwisowe zrealizowane: {{name}}",
+          "failed": "Zgłoszenie serwisowe nieudane: {{name}}"
+        },
+        "appointment": {
+          "_default": "Wizyta: {{name}}",
+          "pending": "Wizyta zarezerwowana: {{name}}",
+          "approved": "Wizyta potwierdzona: {{name}}",
+          "declined": "Wizyta odrzucona: {{name}}",
+          "cancelled": "Wizyta anulowana: {{name}}"
+        }
+      }
     },
     "devices": {
       "title": "Twoje urządzenia",

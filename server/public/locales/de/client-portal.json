@@ -105,7 +105,33 @@
       "subtitle": "Neueste Updates aus deinem Konto",
       "empty": "Noch keine Aktivität",
       "emptyHint": "Wenn Tickets aktualisiert werden oder Rechnungen eintreffen, siehst du sie hier.",
-      "viewTickets": "Alle Tickets anzeigen"
+      "viewTickets": "Alle Tickets anzeigen",
+      "titles": {
+        "ticket": "Neues Ticket: {{name}}",
+        "invoice": "Rechnung {{name}} erstellt",
+        "asset": "Asset-Wartung: {{name}}",
+        "project": "Projekt aktualisiert: {{name}}",
+        "quote": {
+          "_default": "Angebot {{name}}",
+          "sent": "Angebot {{name}} zur Prüfung gesendet",
+          "accepted": "Angebot {{name}} angenommen",
+          "rejected": "Angebot {{name}} abgelehnt",
+          "expired": "Angebot {{name}} abgelaufen"
+        },
+        "service_request": {
+          "_default": "Service-Anfrage: {{name}}",
+          "pending": "Service-Anfrage eingereicht: {{name}}",
+          "succeeded": "Service-Anfrage erfüllt: {{name}}",
+          "failed": "Service-Anfrage fehlgeschlagen: {{name}}"
+        },
+        "appointment": {
+          "_default": "Termin: {{name}}",
+          "pending": "Termin angefragt: {{name}}",
+          "approved": "Termin bestätigt: {{name}}",
+          "declined": "Termin abgelehnt: {{name}}",
+          "cancelled": "Termin abgesagt: {{name}}"
+        }
+      }
     },
     "devices": {
       "title": "Deine Geräte",

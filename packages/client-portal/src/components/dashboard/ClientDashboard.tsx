@@ -10,6 +10,7 @@ import {
   getRecentActivity,
   getClientAssets,
   type RecentActivity,
+  type RecentActivityType,
   type DashboardMetrics,
 } from '@alga-psa/client-portal/actions';
 import type { Asset } from '@alga-psa/types';
@@ -33,6 +34,7 @@ import {
   Activity as ActivityIcon,
   PlusCircle,
   LayoutTemplate,
+  FileSignature,
 } from 'lucide-react';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { toBrowserDate } from '../appointments/dateUtils';
@@ -58,6 +60,30 @@ function activityVisuals(type: RecentActivity['type']): {
         iconBg: 'bg-emerald-50',
         iconText: 'text-emerald-600',
       };
+    case 'quote':
+      return {
+        Icon: FileSignature,
+        iconBg: 'bg-violet-50',
+        iconText: 'text-violet-600',
+      };
+    case 'project':
+      return {
+        Icon: Layers,
+        iconBg: 'bg-sky-50',
+        iconText: 'text-sky-600',
+      };
+    case 'service_request':
+      return {
+        Icon: LayoutTemplate,
+        iconBg: 'bg-indigo-50',
+        iconText: 'text-indigo-600',
+      };
+    case 'appointment':
+      return {
+        Icon: Calendar,
+        iconBg: 'bg-cyan-50',
+        iconText: 'text-cyan-600',
+      };
     case 'ticket':
     default:
       return {
@@ -66,6 +92,31 @@ function activityVisuals(type: RecentActivity['type']): {
         iconText: 'text-[rgb(var(--color-primary-600))]',
       };
   }
+}
+
+/**
+ * Resolve the i18n key for an activity row. Some types have status-specific
+ * variants (`quote.accepted`, `appointment.declined`); fall back to the
+ * type-only key when the status doesn't have a dedicated translation.
+ *
+ * For types with status variants the locale uses a nested object shape
+ * (`titles.quote.{sent,accepted,…,_default}`); the type-only types
+ * (`ticket`, `invoice`, `asset`, `project`) keep a flat string.
+ */
+function activityTitleKey(activity: RecentActivity): string {
+  const validStatusByType: Partial<Record<RecentActivityType, ReadonlySet<string>>> = {
+    quote: new Set(['sent', 'accepted', 'rejected', 'expired']),
+    service_request: new Set(['pending', 'succeeded', 'failed']),
+    appointment: new Set(['pending', 'approved', 'declined', 'cancelled']),
+  };
+  const allowed = validStatusByType[activity.type];
+  if (allowed) {
+    if (activity.status && allowed.has(activity.status)) {
+      return `dashboard.activity.titles.${activity.type}.${activity.status}`;
+    }
+    return `dashboard.activity.titles.${activity.type}._default`;
+  }
+  return `dashboard.activity.titles.${activity.type}`;
 }
 
 function deviceIcon(type: Asset['asset_type']): React.ComponentType<{ className?: string }> {
@@ -83,6 +134,39 @@ function deviceIcon(type: Asset['asset_type']): React.ComponentType<{ className?
     default:
       return HardDrive;
   }
+}
+
+// Pick black or white text based on the average luminance of the hero
+// gradient (read from --color-primary-500 / --color-primary-700, which can be
+// rebranded per tenant or flipped by theme).
+function useHeroTextColor(): 'black' | 'white' {
+  const [color, setColor] = useState<'black' | 'white'>('white');
+
+  useEffect(() => {
+    const compute = () => {
+      const styles = getComputedStyle(document.documentElement);
+      const parse = (name: string) =>
+        styles.getPropertyValue(name).trim().split(/\s+/).map(Number);
+      const relLum = ([r, g, b]: number[]) => {
+        const lin = (v: number) => {
+          const s = v / 255;
+          return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+        };
+        return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+      };
+      const start = parse('--color-primary-500');
+      const end = parse('--color-primary-700');
+      if (start.length !== 3 || end.length !== 3 || [...start, ...end].some(Number.isNaN)) return;
+      const avg = (relLum(start) + relLum(end)) / 2;
+      setColor(avg > 0.5 ? 'black' : 'white');
+    };
+    compute();
+    const observer = new MutationObserver(compute);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
+
+  return color;
 }
 
 function getGreeting(t: TranslateFn): string {
@@ -113,6 +197,10 @@ const DASHBOARD_PREVIEW_APPOINTMENTS = 3;
 export function ClientDashboard() {
   const { t, i18n } = useTranslation('client-portal');
   const locale = i18n.language || undefined;
+  const heroTextColor = useHeroTextColor();
+  const heroTextClass = heroTextColor === 'black' ? 'text-black' : 'text-white';
+  const heroTextMutedClass = heroTextColor === 'black' ? 'text-black/70' : 'text-white/80';
+  const heroTextSubtleClass = heroTextColor === 'black' ? 'text-black/75' : 'text-white/85';
   const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
@@ -293,15 +381,17 @@ export function ClientDashboard() {
   return (
     <div className="space-y-6">
       {/* Welcome Hero */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[rgb(var(--color-primary-500))] to-[rgb(var(--color-primary-700))] px-8 py-7 text-white shadow-sm">
-        <div className="relative z-10 max-w-2xl">
-          <div className="text-xs font-medium uppercase tracking-wider text-white/80">
+      {/* Text color is computed from the gradient's luminance (see
+          useHeroTextColor) so it tracks the actual background, not the theme. */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[rgb(var(--color-primary-500))] to-[rgb(var(--color-primary-700))] px-8 py-7 shadow-sm">
+        <div className="max-w-2xl">
+          <div className={`text-xs font-medium uppercase tracking-wider ${heroTextMutedClass}`}>
             {t('dashboard.welcomeBack', 'Welcome back')}
           </div>
-          <h2 className="mt-1 text-2xl font-semibold">
+          <h2 className={`mt-1 text-2xl font-semibold ${heroTextClass}`} style={{ color: heroTextColor }}>
             {greeting}{firstName ? `, ${firstName}` : ''}! <span aria-hidden>👋</span>
           </h2>
-          <p className="mt-2 text-sm text-white/85">
+          <p className={`mt-2 text-sm ${heroTextSubtleClass}`}>
             {t('dashboard.heroSubtitle', "Here's a snapshot of your IT support activity. Our team is standing by to help you stay productive.")}
           </p>
         </div>
@@ -402,7 +492,10 @@ export function ClientDashboard() {
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-baseline justify-between gap-2">
                           <div className="text-sm font-medium text-[rgb(var(--color-text-900))] truncate">
-                            {activity.title}
+                            {t(activityTitleKey(activity), {
+                              defaultValue: activity.title,
+                              name: activity.name ?? activity.title,
+                            })}
                           </div>
                           <div className="text-xs text-[rgb(var(--color-text-500))] flex-shrink-0">
                             {timeAgo(activity.timestamp, t, locale)}

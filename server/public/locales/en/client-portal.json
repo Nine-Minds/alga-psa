@@ -134,7 +134,33 @@
       "subtitle": "Latest updates across your account",
       "empty": "No recent activity yet",
       "emptyHint": "When tickets are updated or invoices arrive, you will see them here.",
-      "viewTickets": "View all tickets"
+      "viewTickets": "View all tickets",
+      "titles": {
+        "ticket": "New ticket: {{name}}",
+        "invoice": "Invoice {{name}} generated",
+        "asset": "Asset maintenance: {{name}}",
+        "project": "Project updated: {{name}}",
+        "quote": {
+          "_default": "Quote {{name}}",
+          "sent": "Quote {{name}} sent for review",
+          "accepted": "Quote {{name}} accepted",
+          "rejected": "Quote {{name}} rejected",
+          "expired": "Quote {{name}} expired"
+        },
+        "service_request": {
+          "_default": "Service request: {{name}}",
+          "pending": "Service request submitted: {{name}}",
+          "succeeded": "Service request fulfilled: {{name}}",
+          "failed": "Service request failed: {{name}}"
+        },
+        "appointment": {
+          "_default": "Appointment: {{name}}",
+          "pending": "Appointment requested: {{name}}",
+          "approved": "Appointment confirmed: {{name}}",
+          "declined": "Appointment declined: {{name}}",
+          "cancelled": "Appointment cancelled: {{name}}"
+        }
+      }
     },
     "devices": {
       "title": "Your devices",

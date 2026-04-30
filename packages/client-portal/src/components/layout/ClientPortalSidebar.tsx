@@ -268,7 +268,6 @@ export function ClientPortalSidebar({
           {branding?.logoUrl ? (
             <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center overflow-hidden flex-shrink-0">
               {/* Logo URL is arbitrary tenant input; <img> avoids next/image domain allowlist. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={branding.logoUrl}
                 alt={branding.clientName || 'Client Logo'}

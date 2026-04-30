@@ -134,7 +134,33 @@
       "subtitle": "11111",
       "empty": "11111",
       "emptyHint": "11111",
-      "viewTickets": "11111"
+      "viewTickets": "11111",
+      "titles": {
+        "ticket": "11111 {{name}} 11111",
+        "invoice": "11111 {{name}} 11111",
+        "asset": "11111 {{name}} 11111",
+        "project": "11111 {{name}} 11111",
+        "quote": {
+          "_default": "11111 {{name}} 11111",
+          "sent": "11111 {{name}} 11111",
+          "accepted": "11111 {{name}} 11111",
+          "rejected": "11111 {{name}} 11111",
+          "expired": "11111 {{name}} 11111"
+        },
+        "service_request": {
+          "_default": "11111 {{name}} 11111",
+          "pending": "11111 {{name}} 11111",
+          "succeeded": "11111 {{name}} 11111",
+          "failed": "11111 {{name}} 11111"
+        },
+        "appointment": {
+          "_default": "11111 {{name}} 11111",
+          "pending": "11111 {{name}} 11111",
+          "approved": "11111 {{name}} 11111",
+          "declined": "11111 {{name}} 11111",
+          "cancelled": "11111 {{name}} 11111"
+        }
+      }
     },
     "devices": {
       "title": "11111",

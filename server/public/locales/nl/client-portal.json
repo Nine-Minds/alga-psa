@@ -105,7 +105,33 @@
       "subtitle": "Laatste updates van je account",
       "empty": "Nog geen activiteit",
       "emptyHint": "Wanneer tickets worden bijgewerkt of facturen binnenkomen, zie je ze hier.",
-      "viewTickets": "Alle tickets bekijken"
+      "viewTickets": "Alle tickets bekijken",
+      "titles": {
+        "ticket": "Nieuw ticket: {{name}}",
+        "invoice": "Factuur {{name}} gegenereerd",
+        "asset": "Apparaatonderhoud: {{name}}",
+        "project": "Project bijgewerkt: {{name}}",
+        "quote": {
+          "_default": "Offerte {{name}}",
+          "sent": "Offerte {{name}} ter beoordeling verzonden",
+          "accepted": "Offerte {{name}} geaccepteerd",
+          "rejected": "Offerte {{name}} afgewezen",
+          "expired": "Offerte {{name}} verlopen"
+        },
+        "service_request": {
+          "_default": "Serviceverzoek: {{name}}",
+          "pending": "Serviceverzoek ingediend: {{name}}",
+          "succeeded": "Serviceverzoek afgehandeld: {{name}}",
+          "failed": "Serviceverzoek mislukt: {{name}}"
+        },
+        "appointment": {
+          "_default": "Afspraak: {{name}}",
+          "pending": "Afspraak aangevraagd: {{name}}",
+          "approved": "Afspraak bevestigd: {{name}}",
+          "declined": "Afspraak afgewezen: {{name}}",
+          "cancelled": "Afspraak geannuleerd: {{name}}"
+        }
+      }
     },
     "devices": {
       "title": "Je apparaten",

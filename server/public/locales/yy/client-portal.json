@@ -134,7 +134,33 @@
       "subtitle": "55555",
       "empty": "55555",
       "emptyHint": "55555",
-      "viewTickets": "55555"
+      "viewTickets": "55555",
+      "titles": {
+        "ticket": "55555 {{name}} 55555",
+        "invoice": "55555 {{name}} 55555",
+        "asset": "55555 {{name}} 55555",
+        "project": "55555 {{name}} 55555",
+        "quote": {
+          "_default": "55555 {{name}} 55555",
+          "sent": "55555 {{name}} 55555",
+          "accepted": "55555 {{name}} 55555",
+          "rejected": "55555 {{name}} 55555",
+          "expired": "55555 {{name}} 55555"
+        },
+        "service_request": {
+          "_default": "55555 {{name}} 55555",
+          "pending": "55555 {{name}} 55555",
+          "succeeded": "55555 {{name}} 55555",
+          "failed": "55555 {{name}} 55555"
+        },
+        "appointment": {
+          "_default": "55555 {{name}} 55555",
+          "pending": "55555 {{name}} 55555",
+          "approved": "55555 {{name}} 55555",
+          "declined": "55555 {{name}} 55555",
+          "cancelled": "55555 {{name}} 55555"
+        }
+      }
     },
     "devices": {
       "title": "55555",
