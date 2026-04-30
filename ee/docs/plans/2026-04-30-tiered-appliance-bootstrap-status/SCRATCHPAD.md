@@ -547,3 +547,11 @@ Suggested implementation order:
 
 - `validate_background_image_tags()` intentionally no-ops during `--dry-run`; `T018` requires non-dry-run execution with mocked Kubernetes/Flux/Talos commands to stay deterministic.
 - Existing global `run-plan-tests.sh` failure (`release-version must follow x.y.z`) predates this pass and still prevents a single fully-green end-to-end run of that script in this environment.
+
+### Current Blocker (Remaining `T020`-`T023`)
+
+- Remaining tests are explicit local UTM/Talos smoke runs and require a runnable VM/hypervisor workflow.
+- Session preflight result:
+  - `utmctl` unavailable (`command not found`).
+  - `talosctl` client exists, but no connected Talos server context was available in this session.
+- Result: `T020`-`T023` are blocked in this environment pending UTM/Talos runtime availability.
