@@ -529,6 +529,8 @@ function toCanonicalStatus(status) {
           },
         ];
 
+  const hasLoginBlockingBlocker = blockers.some((blocker) => blocker.loginBlocking);
+
   let rollupState = 'installing';
   let rollupMessage = 'Appliance installation is in progress.';
   let nextAction = 'Wait for readiness checks to complete.';
@@ -537,19 +539,11 @@ function toCanonicalStatus(status) {
     rollupState = 'installing';
     rollupMessage = activeOperations[0].message || 'Appliance installation is in progress.';
     nextAction = 'Wait for the active operation to complete. Image pulls can take several minutes on a local VM.';
-  } else if (!platformReady || !coreReady || !bootstrapReady || !loginReady) {
-    if (blockers.length > 0) {
-      rollupState = 'failed_action_required';
-      rollupMessage = blockers[0].layer === 'Bootstrap job failure'
-        ? blockers[0].reason
-        : 'A core platform blocker requires action before login is available.';
-      nextAction = blockers[0].nextAction;
-    }
-  } else if (fullyHealthy) {
+  } else if (fullyHealthy && !hasLoginBlockingBlocker) {
     rollupState = 'fully_healthy';
     rollupMessage = 'All selected services are healthy.';
     nextAction = 'No immediate action required.';
-  } else if (loginReady) {
+  } else if (loginReady && !hasLoginBlockingBlocker) {
     if (backgroundReady) {
       rollupState = 'ready_to_log_in';
       rollupMessage = 'Alga is ready to log in.';
@@ -558,6 +552,14 @@ function toCanonicalStatus(status) {
       rollupState = 'ready_with_background_issues';
       rollupMessage = 'Alga is ready to log in. Background services need attention.';
       nextAction = blockers[0]?.nextAction || 'Open the login URL and review background blockers.';
+    }
+  } else if (!platformReady || !coreReady || !bootstrapReady || !loginReady) {
+    if (blockers.length > 0) {
+      rollupState = 'failed_action_required';
+      rollupMessage = blockers[0].layer === 'Bootstrap job failure'
+        ? blockers[0].reason
+        : 'A core platform blocker requires action before login is available.';
+      nextAction = blockers[0].nextAction;
     }
   }
 
