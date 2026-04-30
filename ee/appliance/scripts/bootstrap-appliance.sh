@@ -27,6 +27,8 @@ TEMPORAL_WORKER_TAG=""
 ALGA_AUTH_KEY_VALUE=""
 REPO_URL=""
 REPO_BRANCH=""
+REPO_BRANCH_FROM_CURRENT=false
+REQUIRE_REMOTE_BRANCH=false
 REPO_PATH="ee/appliance/flux/base"
 OUTPUT_DIR_OVERRIDE=""
 DRY_RUN=false
@@ -72,7 +74,8 @@ Options:
   --kubeconfig <path>            Existing kubeconfig path (explicitly reuses installed cluster)
   --talosconfig <path>           Existing talosconfig path
   --repo-url <url>               Git repository URL for Flux source
-  --repo-branch <branch>         Git repository branch for Flux source
+  --repo-branch <branch|current> Git repository branch for Flux source; use current to test the checked-out branch
+  --require-remote-branch        Validate that --repo-branch exists on --repo-url before mutating the appliance
   --repo-path <path>             Repo path for Flux kustomization (default: ee/appliance/flux/base)
   --alga-core-tag <tag>          Override manifest tag for alga-core server/setup image
   --workflow-worker-tag <tag>    Override manifest tag for workflow-worker image
@@ -94,6 +97,9 @@ default operator config root.
 Bootstrap modes:
   fresh    Wipes existing appliance namespaces and local-path data before reinstall
   recover  Preserves existing appliance state and reuses surviving PVC-backed data
+
+Branch-under-test workflow:
+  Pass --repo-branch current to resolve the local checked-out Git branch and use it as the Flux source branch. The branch must already exist on --repo-url because Flux fetches from Git, not the local worktree. The script warns when the local branch has unpushed commits or uncommitted changes that Flux cannot see.
 EOF
 }
 
@@ -293,12 +299,92 @@ resolve_release_version() {
   RELEASE_VERSION="$latest_release"
 }
 
+current_git_branch() {
+  local branch
+  branch="$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+  if [ -z "$branch" ] || [ "$branch" = "HEAD" ]; then
+    echo "Unable to resolve current Git branch from $REPO_ROOT. Pass an explicit --repo-branch." >&2
+    exit 1
+  fi
+  printf '%s\n' "$branch"
+}
+
+remote_branch_sha() {
+  local repo_url="$1"
+  local branch="$2"
+  git -C "$REPO_ROOT" ls-remote --heads "$repo_url" "$branch" 2>/dev/null | awk 'NR == 1 { print $1 }'
+}
+
+validate_repo_branch_source() {
+  local remote_sha=""
+  local local_sha=""
+
+  if [ -z "$REPO_URL" ] || [ -z "$REPO_BRANCH" ]; then
+    return 0
+  fi
+
+  if [ "$REPO_BRANCH_FROM_CURRENT" = false ] && [ "$REQUIRE_REMOTE_BRANCH" = false ]; then
+    return 0
+  fi
+
+  remote_sha="$(remote_branch_sha "$REPO_URL" "$REPO_BRANCH")"
+  if [ -z "$remote_sha" ]; then
+    cat >&2 <<EOF
+Flux source branch is not available on the configured remote.
+
+  Repo URL:    $REPO_URL
+  Repo branch: $REPO_BRANCH
+
+Flux reads from the Git server, not the local worktree. Push this branch to the remote or pass a different --repo-branch.
+EOF
+    exit 1
+  fi
+
+  if [ "$REPO_BRANCH_FROM_CURRENT" = true ]; then
+    local_sha="$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || true)"
+    if [ -n "$local_sha" ] && [ "$remote_sha" != "$local_sha" ]; then
+      if git -C "$REPO_ROOT" merge-base --is-ancestor "$remote_sha" "$local_sha" >/dev/null 2>&1; then
+        echo "Warning: current branch $REPO_BRANCH has local commits that are not on $REPO_URL; Flux will use remote commit $remote_sha." >&2
+      else
+        echo "Warning: current branch $REPO_BRANCH differs from $REPO_URL; Flux will use remote commit $remote_sha." >&2
+      fi
+    fi
+
+    if [ -n "$(git -C "$REPO_ROOT" status --porcelain 2>/dev/null || true)" ]; then
+      echo "Warning: local worktree has uncommitted changes; Flux will not see them until they are committed and pushed." >&2
+    fi
+  fi
+}
+
+print_repo_source_summary() {
+  local mode="configured"
+  if [ "$REPO_BRANCH_FROM_CURRENT" = true ]; then
+    mode="branch-under-test"
+  fi
+
+  cat <<EOF
+Flux source:
+  Repo URL:        $REPO_URL
+  Repo branch:     $REPO_BRANCH
+  Repo path:       $REPO_PATH
+  Source mode:     $mode
+  Release version: $RELEASE_VERSION
+  Release branch:  ${RELEASE_APP_BRANCH:-unknown}
+EOF
+
+  if [ -n "${RELEASE_APP_BRANCH:-}" ] && [ "$REPO_BRANCH" != "$RELEASE_APP_BRANCH" ]; then
+    echo "  Note: Flux source branch differs from release manifest branch; testing manifests/charts from $REPO_BRANCH with release artifacts from $RELEASE_VERSION."
+  fi
+}
+
 resolve_repo_defaults() {
   if [ -z "$REPO_URL" ]; then
     REPO_URL="$(git -C "$REPO_ROOT" remote get-url origin 2>/dev/null || true)"
   fi
 
-  if [ -z "$REPO_BRANCH" ]; then
+  if [ "$REPO_BRANCH_FROM_CURRENT" = true ]; then
+    REPO_BRANCH="$(current_git_branch)"
+  elif [ -z "$REPO_BRANCH" ]; then
     REPO_BRANCH="$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
   fi
 }
@@ -451,6 +537,9 @@ resolve_runtime_inputs() {
   if [ -n "$APP_URL" ]; then
     url_host "$APP_URL" >/dev/null
   fi
+
+  validate_repo_branch_source
+  print_repo_source_summary
 }
 
 release_field() {
@@ -506,10 +595,10 @@ validate_background_image_tags() {
   done
 
   if [ "${#missing[@]}" -gt 0 ]; then
-    echo "Release artifact blocker: one or more background image tags are missing:" >&2
+    echo "Release artifact warning: one or more background image tags are missing:" >&2
     printf '  - %s\n' "${missing[@]}" >&2
+    echo "Background image issues will be reported by appliance status and do not block core login readiness." >&2
     echo "Next action: publish the missing tags or update ee/appliance/releases/$RELEASE_VERSION/release.json." >&2
-    exit 1
   fi
 }
 
@@ -1086,9 +1175,16 @@ prepull_images() {
   fi
 
   talos_cmd image pull "ghcr.io/nine-minds/alga-psa-ee:${ALGA_CORE_TAG}"
-  talos_cmd image pull "ghcr.io/nine-minds/workflow-worker:${WORKFLOW_WORKER_TAG}"
-  talos_cmd image pull "ghcr.io/nine-minds/email-service:${EMAIL_SERVICE_TAG}"
-  talos_cmd image pull "ghcr.io/nine-minds/temporal-worker:${TEMPORAL_WORKER_TAG}"
+
+  local background_image
+  for background_image in \
+    "ghcr.io/nine-minds/workflow-worker:${WORKFLOW_WORKER_TAG}" \
+    "ghcr.io/nine-minds/email-service:${EMAIL_SERVICE_TAG}" \
+    "ghcr.io/nine-minds/temporal-worker:${TEMPORAL_WORKER_TAG}"; do
+    if ! talos_cmd image pull "$background_image"; then
+      echo "Warning: failed to pre-pull non-login-blocking background image $background_image" >&2
+    fi
+  done
 }
 
 promote_bootstrap_mode_to_recover() {
@@ -1120,6 +1216,51 @@ promote_bootstrap_mode_to_recover() {
     reconcile.fluxcd.io/requestedAt="$requested_at" --overwrite >/dev/null
   kubectl --kubeconfig "$KUBECONFIG_PATH" -n alga-system wait --for=condition=Ready --timeout=30m helmrelease/alga-core
   BOOTSTRAP_MODE="recover"
+}
+
+status_url() {
+  local status_ip
+  status_ip="$(status_node_ip)"
+  if [ -z "$status_ip" ]; then
+    printf 'http://<node-ip>:8080\n'
+  else
+    printf 'http://%s:8080\n' "$status_ip"
+  fi
+}
+
+wait_for_status_service() {
+  local status_ip
+  local attempt
+  status_ip="$(status_node_ip)"
+
+  if $DRY_RUN; then
+    echo "+ wait for appliance-status health endpoint on $(status_url)"
+    return 0
+  fi
+
+  if [ -z "$status_ip" ]; then
+    echo "Warning: unable to derive node IP for appliance status URL." >&2
+    return 1
+  fi
+
+  for attempt in $(seq 1 60); do
+    if curl -fsS "http://${status_ip}:8080/healthz?token=${STATUS_TOKEN}" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 2
+  done
+
+  echo "Warning: appliance-status did not become reachable on http://${status_ip}:8080 within 120s; continuing core bootstrap." >&2
+  return 1
+}
+
+print_status_access() {
+  local phase_label="${1:-available}"
+  cat <<EOF
+Appliance status UI (${phase_label}):
+  URL:   $(status_url)
+  Token: ${STATUS_TOKEN}
+EOF
 }
 
 wait_for_bootstrap() {
@@ -1221,8 +1362,18 @@ while [ "$#" -gt 0 ]; do
       shift 2
       ;;
     --repo-branch)
-      REPO_BRANCH="$2"
+      if [ "$2" = "current" ]; then
+        REPO_BRANCH_FROM_CURRENT=true
+        REPO_BRANCH=""
+      else
+        REPO_BRANCH_FROM_CURRENT=false
+        REPO_BRANCH="$2"
+      fi
       shift 2
+      ;;
+    --require-remote-branch)
+      REQUIRE_REMOTE_BRANCH=true
+      shift
       ;;
     --repo-path)
       REPO_PATH="$2"
@@ -1305,8 +1456,10 @@ ensure_alga_auth_secret
 apply_runtime_values
 apply_release_selection
 prepull_images
-validate_background_image_tags
 install_gitops_sync
+print_status_access "submitted"
+wait_for_status_service || true
+validate_background_image_tags
 wait_for_bootstrap
 
 persist_operator_metadata
@@ -1315,7 +1468,7 @@ cat <<EOF
 Appliance bootstrap submitted.
 
 Appliance status UI:
-  URL:   http://$(status_node_ip):8080
+  URL:   $(status_url)
   Token: ${STATUS_TOKEN}
 
 Persisted operator files:

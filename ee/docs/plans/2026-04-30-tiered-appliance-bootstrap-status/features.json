@@ -179,7 +179,7 @@
   },
   {
     "id": "F022",
-    "description": "Validate release manifest image references before applying background releases and report missing tags as release artifact blockers.",
+    "description": "Validate release manifest image references before applying background releases and report missing background tags as non-login-blocking release artifact warnings.",
     "implemented": true,
     "prdRefs": [
       "Durable Fixes from Observed Run",

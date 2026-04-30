@@ -132,8 +132,47 @@ require_text "$(cat "$ROOT/ee/helm/temporal/templates/ui.yaml")" 'enableServiceL
 require_text "$(cat "$bootstrap_tmp/values/alga-core.talos-single-node.yaml")" 'appUrl: "https://psa.example.test"'
 require_text "$(cat "$bootstrap_tmp/values/alga-core.talos-single-node.yaml")" 'host: "psa.example.test"'
 require_text "$(cat "$bootstrap_tmp/values/alga-core.talos-single-node.yaml")" 'domainSuffix: ""'
-require_text "$(cat "$bootstrap_tmp/values/alga-core.talos-single-node.yaml")" 'tag: 94446747'
-require_text "$(cat "$bootstrap_tmp/values/workflow-worker.talos-single-node.yaml")" 'tag: 61e4a00e'
+require_text "$(cat "$bootstrap_tmp/values/alga-core.talos-single-node.yaml")" 'tag: "94446747"'
+require_text "$(cat "$bootstrap_tmp/values/workflow-worker.talos-single-node.yaml")" 'tag: "61e4a00e"'
+
+current_branch="$(git -C "$ROOT" rev-parse --abbrev-ref HEAD)"
+branch_remote_tmp="$(mktemp -d)"
+git init --bare "$branch_remote_tmp/alga-psa.git" >/dev/null 2>&1
+git -C "$ROOT" push "$branch_remote_tmp/alga-psa.git" "HEAD:refs/heads/$current_branch" >/dev/null 2>&1
+branch_test_tmp="$(mktemp -d)"
+branch_test_output="$({
+  bash "$ROOT/ee/appliance/scripts/bootstrap-appliance.sh" \
+    --release-version 1.0-rc5 \
+    --bootstrap-mode recover \
+    --node-ip 192.0.2.10 \
+    --app-url https://psa.example.test \
+    --repo-url "$branch_remote_tmp/alga-psa.git" \
+    --repo-branch current \
+    --kubeconfig /tmp/example.kubeconfig \
+    --config-dir "$branch_test_tmp" \
+    --dry-run
+} 2>&1)"
+require_text "$branch_test_output" "Repo branch:     $current_branch"
+require_text "$branch_test_output" "Source mode:     branch-under-test"
+require_text "$branch_test_output" "Flux source branch differs from release manifest branch"
+require_text "$branch_test_output" "local worktree has uncommitted changes"
+missing_branch_output="$({
+  set +e
+  bash "$ROOT/ee/appliance/scripts/bootstrap-appliance.sh" \
+    --release-version 1.0-rc5 \
+    --bootstrap-mode recover \
+    --node-ip 192.0.2.10 \
+    --app-url https://psa.example.test \
+    --repo-url "$branch_remote_tmp/alga-psa.git" \
+    --repo-branch does-not-exist \
+    --require-remote-branch \
+    --kubeconfig /tmp/example.kubeconfig \
+    --config-dir "$branch_test_tmp/missing" \
+    --dry-run
+  echo "exit_code:$?"
+} 2>&1)"
+require_text "$missing_branch_output" "Flux source branch is not available on the configured remote."
+require_text "$missing_branch_output" "exit_code:1"
 
 printf 'stale\n' > "$bootstrap_tmp/kubeconfig"
 stale_bootstrap_dry_run_output="$(
@@ -201,7 +240,15 @@ cat >"$t013_fakebin/talosctl" <<'EOF'
 printf 'talosctl %s\n' "$*" >>"${BOOTSTRAP_MOCK_LOG:?}"
 exit 0
 EOF
-chmod +x "$t013_fakebin/kubectl" "$t013_fakebin/flux" "$t013_fakebin/talosctl"
+cat >"$t013_fakebin/curl" <<'EOF'
+#!/usr/bin/env bash
+printf 'curl %s\n' "$*" >>"${BOOTSTRAP_MOCK_LOG:?}"
+if [[ "$*" == *":8080/healthz"* ]]; then
+  exit 0
+fi
+exec /usr/bin/curl "$@"
+EOF
+chmod +x "$t013_fakebin/kubectl" "$t013_fakebin/flux" "$t013_fakebin/talosctl" "$t013_fakebin/curl"
 printf 'apiVersion: v1\nclusters: []\ncontexts: []\nusers: []\n' > "$t013_tmp/reuse.kubeconfig"
 printf 'context: appliance\n' > "$t013_tmp/reuse.talosconfig"
 export BOOTSTRAP_MOCK_LOG="$t013_tmp/mock.log"
@@ -210,6 +257,7 @@ t013_output="$(
   bash "$ROOT/ee/appliance/scripts/bootstrap-appliance.sh" \
     --release-version 1.0-rc5 \
     --bootstrap-mode recover \
+    --node-ip 192.0.2.77 \
     --repo-url https://github.com/example/alga-psa.git \
     --repo-branch main \
     --kubeconfig "$t013_tmp/reuse.kubeconfig" \
@@ -275,23 +323,29 @@ cleanup_t014
 trap - EXIT
 
 # T015: RBAC grants read-only resource visibility without secret access or mutation verbs.
-require_text "$(yq eval '.rules[] | select(.apiGroups == [\"\"]) | .resources[]' "$ROOT/ee/appliance/flux/base/platform/appliance-status.yaml")" "nodes"
-require_text "$(yq eval '.rules[] | select(.apiGroups == [\"\"]) | .resources[]' "$ROOT/ee/appliance/flux/base/platform/appliance-status.yaml")" "pods"
-require_text "$(yq eval '.rules[] | select(.apiGroups == [\"\"]) | .resources[]' "$ROOT/ee/appliance/flux/base/platform/appliance-status.yaml")" "persistentvolumeclaims"
-require_text "$(yq eval '.rules[] | select(.apiGroups == [\"\"]) | .resources[]' "$ROOT/ee/appliance/flux/base/platform/appliance-status.yaml")" "events"
-require_text "$(yq eval '.rules[] | select(.apiGroups == [\"\"]) | .resources[]' "$ROOT/ee/appliance/flux/base/platform/appliance-status.yaml")" "configmaps"
-require_text "$(yq eval '.rules[] | .resources[]' "$ROOT/ee/appliance/flux/base/platform/appliance-status.yaml")" "jobs"
-require_text "$(yq eval '.rules[] | .resources[]' "$ROOT/ee/appliance/flux/base/platform/appliance-status.yaml")" "gitrepositories"
-require_text "$(yq eval '.rules[] | .resources[]' "$ROOT/ee/appliance/flux/base/platform/appliance-status.yaml")" "kustomizations"
-require_text "$(yq eval '.rules[] | .resources[]' "$ROOT/ee/appliance/flux/base/platform/appliance-status.yaml")" "helmreleases"
-t015_verbs="$(yq eval '.rules[] | .verbs[]' "$ROOT/ee/appliance/flux/base/platform/appliance-status.yaml")"
+t015_rules_file="$ROOT/ee/appliance/flux/base/platform/appliance-status.yaml"
+t015_core_resources="$(yq eval 'select(.kind == "ClusterRole") | .rules[] | select(.apiGroups[0] == "") | .resources[]' "$t015_rules_file")"
+t015_apps_resources="$(yq eval 'select(.kind == "ClusterRole") | .rules[] | select(.apiGroups[0] == "apps") | .resources[]' "$t015_rules_file")"
+t015_all_resources="$(yq eval 'select(.kind == "ClusterRole") | .rules[] | .resources[]' "$t015_rules_file")"
+require_text "$t015_core_resources" "nodes"
+require_text "$t015_core_resources" "pods"
+require_text "$t015_core_resources" "persistentvolumeclaims"
+require_text "$t015_apps_resources" "deployments"
+require_text "$t015_apps_resources" "statefulsets"
+require_text "$t015_core_resources" "events"
+require_text "$t015_core_resources" "configmaps"
+require_text "$t015_all_resources" "jobs"
+require_text "$t015_all_resources" "gitrepositories"
+require_text "$t015_all_resources" "kustomizations"
+require_text "$t015_all_resources" "helmreleases"
+t015_verbs="$(yq eval 'select(.kind == "ClusterRole") | .rules[] | .verbs[]' "$t015_rules_file")"
 require_not_text "$t015_verbs" "create"
 require_not_text "$t015_verbs" "update"
 require_not_text "$t015_verbs" "patch"
 require_not_text "$t015_verbs" "delete"
-require_not_text "$(yq eval '.rules[] | .resources[]' "$ROOT/ee/appliance/flux/base/platform/appliance-status.yaml")" "secrets"
+require_not_text "$t015_all_resources" "secrets"
 
-# T018: release validation fails fast when background image tags are missing.
+# T018: release validation reports missing background image tags without blocking core bootstrap.
 t018_tmp="$(mktemp -d)"
 t018_fakebin="$t018_tmp/fakebin"
 mkdir -p "$t018_fakebin"
@@ -309,6 +363,9 @@ exit 0
 EOF
 cat >"$t018_fakebin/curl" <<'EOF'
 #!/usr/bin/env bash
+if [[ "$*" == *":8080/healthz"* ]]; then
+  exit 0
+fi
 if [[ "$*" == *"ghcr.io/token?scope=repository:nine-minds/workflow-worker:pull"* ]]; then
   printf '{"token":"mock-token"}\n'
   exit 0
@@ -336,6 +393,7 @@ t018_output="$(
   bash "$ROOT/ee/appliance/scripts/bootstrap-appliance.sh" \
     --release-version 1.0-rc5 \
     --bootstrap-mode recover \
+    --node-ip 192.0.2.77 \
     --repo-url https://github.com/example/alga-psa.git \
     --repo-branch main \
     --kubeconfig "$t018_cfg/reuse.kubeconfig" \
@@ -344,10 +402,11 @@ t018_output="$(
     2>&1
   echo "exit_code:$?"
 )"
-require_text "$t018_output" "Release artifact blocker: one or more background image tags are missing:"
+require_text "$t018_output" "Release artifact warning: one or more background image tags are missing:"
 require_text "$t018_output" "ghcr.io/nine-minds/workflow-worker:61e4a00e"
 require_text "$t018_output" "ghcr.io/nine-minds/temporal-worker:61e4a00e"
-require_text "$t018_output" "exit_code:1"
+require_text "$t018_output" "Background image issues will be reported by appliance status and do not block core login readiness."
+require_text "$t018_output" "exit_code:0"
 
 # T019: Flux tiered dependencies and status tiering semantics remain non-login-blocking for background failures.
 require_text "$(cat "$ROOT/ee/appliance/flux/base/flux/kustomizations.yaml")" "name: alga-platform"

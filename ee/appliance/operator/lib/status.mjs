@@ -261,17 +261,6 @@ function determineTopBlocker(status) {
     };
   }
 
-  const interruptedPull = detectInterruptedImagePull(status);
-  if (interruptedPull) {
-    return {
-      layer: 'Image pull interruption',
-      component: interruptedPull.component || 'unknown',
-      loginBlocking: false,
-      reason: `Image pull interrupted and retryable: ${interruptedPull.message}`,
-      nextAction: 'Wait for automatic retry or restart the affected pod if retries stall.',
-    };
-  }
-
   const missingImage = detectMissingImageTag(status);
   if (missingImage) {
     const isLoginBlocking = missingImage.tier !== 'background';
@@ -282,6 +271,17 @@ function determineTopBlocker(status) {
       loginBlocking: isLoginBlocking,
       reason: `Image tag not found: ${imageDescriptor}`,
       nextAction: 'Publish the missing image tag or update the appliance release manifest to a valid tag.',
+    };
+  }
+
+  const interruptedPull = detectInterruptedImagePull(status);
+  if (interruptedPull) {
+    return {
+      layer: 'Image pull interruption',
+      component: interruptedPull.component || 'unknown',
+      loginBlocking: false,
+      reason: `Image pull interrupted and retryable: ${interruptedPull.message}`,
+      nextAction: 'Wait for automatic retry or restart the affected pod if retries stall.',
     };
   }
 
@@ -425,7 +425,6 @@ function toCanonicalStatus(status) {
   const platformKustomizationReady = fluxEntryReady(status.flux.kustomizations, 'alga-platform');
   const platformSourcesReady = fluxSourcesHealthy(status.flux.sources);
   const platformReady =
-    status.host.status === 'healthy' &&
     status.cluster.apiReachable &&
     status.cluster.status === 'healthy' &&
     platformKustomizationReady &&
@@ -522,7 +521,7 @@ function toCanonicalStatus(status) {
 function summarizeEvents(eventsJson) {
   const items = eventsJson?.items || [];
   return items
-    .slice(0, 20)
+    .slice(-20)
     .map((item) => ({
       namespace: item.metadata?.namespace || 'unknown',
       reason: item.reason || 'Unknown',

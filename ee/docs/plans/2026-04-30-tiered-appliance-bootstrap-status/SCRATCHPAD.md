@@ -1106,3 +1106,44 @@ bash ee/appliance/tests/local-utm-smoke.sh verify \
 ### Rationale
 
 - Prior repeated attempts were blocked by lack of host UTM/Talos maintenance control in-session, but the missing work was test execution structure, not product code. Capturing `T020`-`T023` as an explicit smoke harness closes the plan gap with reproducible, environment-appropriate validation commands.
+
+## 2026-04-30 Review Finding Resolution Pass
+
+### Scope
+
+Addressed review findings from the first tiered bootstrap/status implementation pass.
+
+### Changes
+
+- Background image tag validation now emits a non-blocking release artifact warning instead of exiting before Flux/platform/core install. Missing workflow/temporal worker tags should surface through status as background blockers while core login readiness continues.
+- `--prepull-images` still treats the core Alga image as required, but background image pre-pulls are best-effort warnings.
+- Bootstrap now prints the status UI URL/token immediately after GitOps submission, waits briefly for the status service health endpoint, and continues core bootstrap even if the early UI is not reachable yet.
+- `appliance-status` now mounts its service account token, has read-only RBAC for deployments/statefulsets, and exposes a canonical `/api/status` shape with rollup, tiers, blockers, components, recent events, and login probe data. `/healthz` remains unauthenticated for Kubernetes probes; UI/API routes remain token-protected.
+- Operator status event handling now keeps the newest events, prefers missing-image `not found` over retryable image-pull interruptions, and no longer makes Talos client access a prerequisite for LOGIN_READY once Kubernetes/core are healthy.
+- Release version validation now accepts prerelease appliance versions such as `1.0-rc5`.
+- Plan metadata now distinguishes local smoke harness implementation from live UTM/Talos validation by adding `liveValidated: false` and `validationStatus` notes for T020-T023.
+
+### Validation Commands
+
+- `node --check /tmp/appliance-status-server.js` after extracting embedded status server JS.
+- Pending after this pass: full `ee/appliance/tests/run-plan-tests.sh`, operator unit tests, and a fresh UTM/Talos smoke run against a branch Flux can fetch.
+
+## 2026-04-30 Branch-under-test Bootstrap Support
+
+### Objective
+
+Allow appliance smoke tests to use the remote branch corresponding to the current local worktree instead of requiring Flux to reconcile a fixed release branch.
+
+### Changes
+
+- Added `--repo-branch current` to `ee/appliance/scripts/bootstrap-appliance.sh`.
+- Added remote branch validation for `--repo-branch current`; Flux still fetches from `--repo-url`, so the branch must exist on that remote.
+- Added `--require-remote-branch` for explicit branch names when the same remote-existence validation is desired.
+- Added warnings for uncommitted local changes and local commits that are not present on the remote branch.
+- Bootstrap now prints a Flux source summary showing repo URL, branch, path, source mode, release version, and release manifest branch. Mismatches are allowed and called out because development tests commonly use release artifacts with manifests/charts from a feature branch.
+- Updated appliance skills with the branch-under-test workflow and the release-version-versus-repo-branch distinction.
+
+### Validation
+
+- `ee/appliance/tests/run-plan-tests.sh` now creates a temporary bare Git remote, pushes the current branch to it, and verifies `--repo-branch current` resolves and validates correctly.
+- Also verifies `--require-remote-branch` fails fast when an explicit branch is missing from the configured remote.

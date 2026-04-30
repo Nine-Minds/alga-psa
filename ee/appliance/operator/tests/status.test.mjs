@@ -419,6 +419,84 @@ test('T008: image pull context canceled is classified as retryable interruption'
   assert.match(status.topBlocker.nextAction, /automatic retry/i);
 });
 
+test('image tag not found takes precedence over older interrupted pull events', async () => {
+  const responses = healthyResponses();
+  responses['kubectl --kubeconfig /tmp/kubeconfig -n msp get deployment/workflow-worker -o json'] = {
+    ok: true,
+    output: JSON.stringify({ spec: { replicas: 1 }, status: { readyReplicas: 0 } }),
+  };
+  responses['kubectl --kubeconfig /tmp/kubeconfig get events --sort-by=.metadata.creationTimestamp -A -o json'] = {
+    ok: true,
+    output: JSON.stringify({
+      items: [
+        {
+          metadata: { namespace: 'msp', creationTimestamp: '2026-04-30T00:00:00Z' },
+          reason: 'Failed',
+          type: 'Warning',
+          message: 'Failed to pull image "ghcr.io/nine-minds/workflow-worker:61e4a00e": context canceled',
+          involvedObject: { kind: 'Pod', name: 'workflow-worker-6c5f8f7d9b-abcde' },
+        },
+        {
+          metadata: { namespace: 'msp', creationTimestamp: '2026-04-30T00:01:00Z' },
+          reason: 'Failed',
+          type: 'Warning',
+          message: 'Failed to pull image "ghcr.io/nine-minds/workflow-worker:61e4a00e": not found',
+          involvedObject: { kind: 'Pod', name: 'workflow-worker-6c5f8f7d9b-abcde' },
+        },
+      ],
+    }),
+  };
+
+  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+    runner: new MockCaptureRunner(responses),
+  });
+
+  assert.equal(status.topBlocker.layer, 'Image tag availability');
+  assert.equal(status.topBlocker.component, 'workflow-worker');
+  assert.equal(status.topBlocker.loginBlocking, false);
+});
+
+test('recent events keep the latest entries instead of stale oldest entries', async () => {
+  const responses = healthyResponses();
+  responses['kubectl --kubeconfig /tmp/kubeconfig get events --sort-by=.metadata.creationTimestamp -A -o json'] = {
+    ok: true,
+    output: JSON.stringify({
+      items: Array.from({ length: 25 }, (_, index) => ({
+        metadata: { namespace: 'msp', creationTimestamp: `2026-04-30T00:${String(index).padStart(2, '0')}:00Z` },
+        reason: 'Pulled',
+        type: 'Normal',
+        message: `event-${index}`,
+        involvedObject: { kind: 'Pod', name: `pod-${index}` },
+      })),
+    }),
+  };
+
+  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+    runner: new MockCaptureRunner(responses),
+  });
+
+  assert.equal(status.canonical.recentEvents.length, 20);
+  assert.equal(status.canonical.recentEvents[0].message, 'event-5');
+  assert.equal(status.canonical.recentEvents[19].message, 'event-24');
+});
+
+test('Talos client auth failure does not block LOGIN_READY when Kubernetes and core are healthy', async () => {
+  const responses = healthyResponses();
+  responses['talosctl --talosconfig /tmp/talosconfig -n 10.0.0.2 -e 10.0.0.2 health --wait-timeout 20s'] = {
+    ok: false,
+    output: 'x509: certificate signed by unknown authority',
+  };
+
+  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+    runner: new MockCaptureRunner(responses),
+  });
+
+  assert.equal(status.host.status, 'unreachable');
+  assert.equal(status.canonical.tiers.platform.ready, true);
+  assert.equal(status.canonical.tiers.login.ready, true);
+  assert.equal(status.canonical.rollup.state, 'fully_healthy');
+});
+
 test('T009: helm timeout with db subPath failure reports db storage blocker as top cause', async () => {
   const responses = healthyResponses();
   responses['kubectl --kubeconfig /tmp/kubeconfig -n alga-system get helmreleases.helm.toolkit.fluxcd.io -o json'] = {

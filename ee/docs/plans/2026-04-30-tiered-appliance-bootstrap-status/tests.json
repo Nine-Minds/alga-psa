@@ -153,7 +153,7 @@
   },
   {
     "id": "T018",
-    "description": "Integration: release manifest validation fails fast when workflow-worker or temporal-worker image tags are missing from GHCR.",
+    "description": "Integration: release validation reports workflow-worker or temporal-worker image tags missing from GHCR without blocking core bootstrap.",
     "implemented": true,
     "featureIds": [
       "F022"
@@ -176,7 +176,9 @@
       "F005",
       "F006",
       "F008"
-    ]
+    ],
+    "liveValidated": false,
+    "validationStatus": "smoke harness implemented; fresh UTM/Talos run still required"
   },
   {
     "id": "T021",
@@ -185,7 +187,9 @@
     "featureIds": [
       "F017",
       "F026"
-    ]
+    ],
+    "liveValidated": false,
+    "validationStatus": "smoke harness implemented; fresh UTM/Talos run still required"
   },
   {
     "id": "T022",
@@ -195,7 +199,9 @@
       "F014",
       "F021",
       "F022"
-    ]
+    ],
+    "liveValidated": false,
+    "validationStatus": "smoke harness implemented; fresh UTM/Talos run still required"
   },
   {
     "id": "T023",
@@ -205,7 +211,9 @@
       "F018",
       "F019",
       "F025"
-    ]
+    ],
+    "liveValidated": false,
+    "validationStatus": "smoke harness implemented; fresh UTM/Talos run still required"
   },
   {
     "id": "T024",

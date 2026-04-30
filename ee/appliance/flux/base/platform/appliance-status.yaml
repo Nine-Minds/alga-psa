@@ -12,6 +12,9 @@ rules:
   - apiGroups: [""]
     resources: ["nodes", "pods", "persistentvolumeclaims", "events", "configmaps"]
     verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets"]
+    verbs: ["get", "list", "watch"]
   - apiGroups: ["batch"]
     resources: ["jobs"]
     verbs: ["get", "list", "watch"]
@@ -54,7 +57,7 @@ spec:
         app.kubernetes.io/name: appliance-status
     spec:
       serviceAccountName: appliance-status
-      automountServiceAccountToken: false
+      automountServiceAccountToken: true
       containers:
         - name: status
           image: node:20-alpine
@@ -64,28 +67,60 @@ spec:
             - -c
             - |
               cat <<'JS' >/tmp/server.js
+              const fs = require('fs');
               const http = require('http');
+              const https = require('https');
+
               const token = process.env.STATUS_TOKEN || '';
               const hostIp = process.env.HOST_IP || '';
-              const loginUrl = hostIp ? `http://${hostIp}:3000` : null;
+              const namespace = process.env.POD_NAMESPACE || 'appliance-system';
+              const serviceHost = process.env.KUBERNETES_SERVICE_HOST;
+              const servicePort = process.env.KUBERNETES_SERVICE_PORT || '443';
+              const saTokenPath = '/var/run/secrets/kubernetes.io/serviceaccount/token';
+              const caPath = '/var/run/secrets/kubernetes.io/serviceaccount/ca.crt';
 
-              function readOverview() {
-                return {
-                  installState: 'installing',
-                  currentPhase: 'bootstrap_in_progress',
-                  loginUrl,
-                  nextAction: 'Keep this page open and refresh while core services bootstrap.',
-                  message: loginUrl
-                    ? 'Appliance bootstrap is in progress. Login will be available once core services are ready.'
-                    : 'Appliance bootstrap is in progress.',
-                  timestamp: new Date().toISOString(),
-                };
+              const COMPONENTS = [
+                { name: 'alga-core', kind: 'deployment', resource: 'alga-core-sebastian', tier: 'login' },
+                { name: 'db', kind: 'statefulset', resource: 'db', tier: 'core' },
+                { name: 'redis', kind: 'statefulset', resource: 'redis', tier: 'core' },
+                { name: 'pgbouncer', kind: 'deployment', resource: 'pgbouncer', tier: 'core' },
+                { name: 'temporal', kind: 'deployment', resource: 'temporal', tier: 'background' },
+                { name: 'workflow-worker', kind: 'deployment', resource: 'workflow-worker', tier: 'background' },
+                { name: 'email-service', kind: 'deployment', resource: 'email-service', tier: 'background' },
+                { name: 'temporal-worker', kind: 'deployment', resource: 'temporal-worker', tier: 'background' },
+              ];
+
+              function readFile(path) {
+                try { return fs.readFileSync(path, 'utf8').trim(); } catch { return ''; }
               }
 
-              function readDiagnostics() {
-                const overview = readOverview();
+              const kubeToken = readFile(saTokenPath);
+              const kubeCa = fs.existsSync(caPath) ? fs.readFileSync(caPath) : undefined;
+
+              function timestampOf(event) {
+                return event.lastTimestamp || event.eventTime || event.metadata?.creationTimestamp || '';
+              }
+
+              function fallbackCanonical() {
+                const loginUrl = hostIp ? `http://${hostIp}:3000` : null;
+                const now = new Date().toISOString();
                 return {
-                  overview,
+                  service: 'appliance-status',
+                  status: 'installing',
+                  siteId: 'appliance-single-node',
+                  timestamp: now,
+                  release: { selectedReleaseVersion: null, appVersion: null, channel: null, gitRevision: null },
+                  urls: { statusUrl: hostIp ? `http://${hostIp}:8080` : null, loginUrl },
+                  loginUrl,
+                  rollup: {
+                    state: 'installing',
+                    message: loginUrl
+                      ? 'Appliance bootstrap is in progress. Login will be available once core services are ready.'
+                      : 'Appliance bootstrap is in progress.',
+                    nextAction: 'Keep this page open and refresh while core services bootstrap.',
+                  },
+                  currentPhase: 'bootstrap_in_progress',
+                  nextAction: 'Keep this page open and refresh while core services bootstrap.',
                   tiers: {
                     platform: { ready: false, status: 'progressing' },
                     core: { ready: false, status: 'progressing' },
@@ -94,25 +129,339 @@ spec:
                     background: { ready: false, status: 'progressing' },
                     fullHealth: { ready: false, status: 'progressing' },
                   },
-                  components: [
-                    { name: 'alga-core', layer: 'core', status: 'progressing' },
-                    { name: 'workflow-worker', layer: 'background', status: 'pending' },
-                    { name: 'temporal', layer: 'background', status: 'pending' },
-                  ],
                   topBlockers: [],
+                  components: [],
                   recentEvents: [],
-                  flux: {
-                    source: { status: 'unknown' },
-                    helmReleases: [],
-                  },
-                  supportBundle: {
-                    available: true,
-                    action: 'run_script',
-                    script: 'ee/appliance/scripts/collect-support-bundle.sh',
-                    requiresToken: true,
-                    note: 'Bundle download endpoint is deferred; run via CLI/operator for now.',
-                  },
+                  loginProbe: { checked: false, reachable: false, statusCode: null, location: null },
                 };
+              }
+
+              function kubeGet(path) {
+                if (!serviceHost || !kubeToken) return Promise.resolve(null);
+                return new Promise((resolve) => {
+                  const req = https.request({
+                    host: serviceHost,
+                    port: servicePort,
+                    method: 'GET',
+                    path,
+                    ca: kubeCa,
+                    headers: { Authorization: `Bearer ${kubeToken}`, Accept: 'application/json' },
+                    timeout: 3000,
+                  }, (res) => {
+                    let body = '';
+                    res.setEncoding('utf8');
+                    res.on('data', (chunk) => { body += chunk; });
+                    res.on('end', () => {
+                      if (res.statusCode < 200 || res.statusCode >= 300) return resolve(null);
+                      try { resolve(JSON.parse(body)); } catch { resolve(null); }
+                    });
+                  });
+                  req.on('timeout', () => req.destroy());
+                  req.on('error', () => resolve(null));
+                  req.end();
+                });
+              }
+
+              function httpProbe(rawUrl) {
+                if (!rawUrl) return Promise.resolve({ checked: false, reachable: false, statusCode: null, location: null });
+                return new Promise((resolve) => {
+                  let parsed;
+                  try { parsed = new URL(rawUrl); } catch { return resolve({ checked: true, reachable: false, statusCode: null, location: null }); }
+                  const lib = parsed.protocol === 'https:' ? https : http;
+                  const req = lib.request(parsed, { method: 'HEAD', timeout: 3000, rejectUnauthorized: false }, (res) => {
+                    const code = res.statusCode || null;
+                    const location = res.headers.location || null;
+                    const redirect = [301, 302, 307, 308].includes(code);
+                    const validLocation = !redirect || !location || location.includes('/msp/dashboard') || location.includes('/login') || location.includes(parsed.host);
+                    resolve({ checked: true, reachable: !!code && code >= 200 && code < 400 && validLocation, statusCode: code, location });
+                    res.resume();
+                  });
+                  req.on('timeout', () => req.destroy());
+                  req.on('error', () => resolve({ checked: true, reachable: false, statusCode: null, location: null }));
+                  req.end();
+                });
+              }
+
+              function readyCondition(item) {
+                return (item?.status?.conditions || []).find((entry) => entry.type === 'Ready') || null;
+              }
+
+              function fluxItems(items) {
+                return (items || []).map((item) => {
+                  const ready = readyCondition(item);
+                  return {
+                    name: item.metadata?.name || 'unknown',
+                    ready: ready?.status === 'True',
+                    status: ready?.status || 'Unknown',
+                    message: ready?.message || '',
+                    revision: item.status?.artifact?.revision || item.status?.lastAppliedRevision || '',
+                  };
+                });
+              }
+
+              function readinessStatus(ready, total) {
+                if (!total) return 'unknown';
+                if (ready >= total) return 'healthy';
+                if (ready > 0) return 'degraded';
+                return 'unhealthy';
+              }
+
+              function resourceReadiness(kind, item) {
+                if (!item) return { status: 'unknown', ready: 0, total: 0 };
+                const total = item.spec?.replicas ?? 1;
+                const ready = item.status?.readyReplicas ?? 0;
+                return { status: readinessStatus(ready, total), ready, total };
+              }
+
+              function statusFromBool(ready) {
+                return ready ? 'healthy' : 'degraded';
+              }
+
+              function componentFromObject(name) {
+                const value = String(name || '').toLowerCase();
+                if (value.includes('workflow-worker')) return 'workflow-worker';
+                if (value.includes('temporal-worker')) return 'temporal-worker';
+                if (value.includes('email-service')) return 'email-service';
+                if (value.includes('temporal')) return 'temporal';
+                if (value.includes('alga-core-sebastian') || value.includes('alga-core')) return 'alga-core';
+                if (value.includes('db-')) return 'db';
+                return null;
+              }
+
+              function summarizeEvents(json) {
+                const items = (json?.items || []).slice().sort((a, b) => timestampOf(a).localeCompare(timestampOf(b)));
+                return items.slice(-20).map((item) => ({
+                  namespace: item.metadata?.namespace || item.involvedObject?.namespace || 'unknown',
+                  reason: item.reason || 'Unknown',
+                  type: item.type || 'Normal',
+                  message: item.message || '',
+                  lastTimestamp: timestampOf(item) || null,
+                  involvedObject: `${item.involvedObject?.kind || 'Unknown'}/${item.involvedObject?.name || 'unknown'}`,
+                }));
+              }
+
+              function parseAppUrl(configMap) {
+                for (const value of Object.values(configMap?.data || {})) {
+                  const match = String(value).match(/appUrl:\s*["']?([^\n"']+)/);
+                  if (match) return match[1].trim();
+                }
+                return null;
+              }
+
+              function summarizeBootstrapJob(jobsJson) {
+                const items = jobsJson?.items || [];
+                const job = items.find((entry) => /bootstrap/i.test(entry.metadata?.name || '') && /alga-core/i.test(entry.metadata?.name || '')) ||
+                  items.find((entry) => /bootstrap/i.test(entry.metadata?.name || ''));
+                if (!job) return { state: 'waiting', completed: false, failed: false, name: null };
+                const conditions = job.status?.conditions || [];
+                const completed = conditions.some((entry) => entry.type === 'Complete' && entry.status === 'True') || (job.status?.succeeded || 0) > 0;
+                const failed = conditions.some((entry) => entry.type === 'Failed' && entry.status === 'True');
+                const active = (job.status?.active || 0) > 0;
+                if (failed) return { state: 'failed', completed: false, failed: true, name: job.metadata?.name || null };
+                if (completed) return { state: 'completed', completed: true, failed: false, name: job.metadata?.name || null };
+                if (active) return { state: 'running', completed: false, failed: false, name: job.metadata?.name || null };
+                return { state: 'waiting', completed: false, failed: false, name: job.metadata?.name || null };
+              }
+
+              function detectMissingImage(events) {
+                const match = events.find((entry) => /imagepullbackoff|failed to pull image|errimagepull/i.test(entry.message || '') && /not found/i.test(entry.message || ''));
+                if (!match) return null;
+                const component = componentFromObject(match.involvedObject);
+                const tier = COMPONENTS.find((entry) => entry.name === component)?.tier || 'background';
+                const image = (String(match.message || '').match(/([a-z0-9./_-]+:[a-zA-Z0-9._-]+)/) || [])[1] || null;
+                return { component, tier, image, message: match.message || 'Image tag not found' };
+              }
+
+              function detectInterruptedPull(events) {
+                const match = events.find((entry) => /failed to pull image|imagepullbackoff|errimagepull/i.test(entry.message || '') && /(context canceled|cancelled|context deadline exceeded)/i.test(entry.message || ''));
+                if (!match) return null;
+                return { component: componentFromObject(match.involvedObject), message: match.message || 'Image pull interrupted' };
+              }
+
+              function firstNotReady(entries, names) {
+                return names
+                  .map((name) => entries.find((entry) => entry.name === name))
+                  .find((entry) => entry && entry.ready !== true && entry.status !== 'unknown') || null;
+              }
+
+              function makeBlocker(state, loginReady) {
+                const missingImage = detectMissingImage(state.recentEvents);
+                if (missingImage) {
+                  const loginBlocking = missingImage.tier !== 'background';
+                  return {
+                    layer: 'Image tag availability',
+                    component: missingImage.component || 'unknown',
+                    loginBlocking,
+                    reason: `Image tag not found: ${missingImage.image || 'referenced image tag'}`,
+                    nextAction: 'Publish the missing image tag or update the appliance release manifest to a valid tag.',
+                  };
+                }
+                const interrupted = detectInterruptedPull(state.recentEvents);
+                if (interrupted) {
+                  return {
+                    layer: 'Image pull interruption',
+                    component: interrupted.component || 'unknown',
+                    loginBlocking: false,
+                    reason: `Image pull interrupted and retryable: ${interrupted.message}`,
+                    nextAction: 'Wait for automatic retry or restart the affected pod if retries stall.',
+                  };
+                }
+                const badCore = firstNotReady(state.components, ['db', 'redis', 'pgbouncer', 'alga-core']);
+                if (badCore) {
+                  return {
+                    layer: 'workload readiness failure',
+                    component: badCore.name,
+                    loginBlocking: true,
+                    reason: `${badCore.name} is ${badCore.status}`,
+                    nextAction: 'Check workload pods and recent events, then collect a support bundle.',
+                  };
+                }
+                const badSource = (state.sources || []).find((entry) => !entry.ready);
+                const badKustomization = (state.kustomizations || []).find((entry) => !entry.ready);
+                if (badSource || badKustomization) {
+                  const row = badSource || badKustomization;
+                  return {
+                    layer: 'Flux source/reconcile failure',
+                    component: row.name,
+                    loginBlocking: !loginReady,
+                    reason: row.message || 'One or more Flux resources are not Ready',
+                    nextAction: 'Review Flux GitRepository and Kustomization conditions.',
+                  };
+                }
+                const badHelm = (state.helmReleases || []).find((entry) => !entry.ready);
+                if (badHelm) {
+                  return {
+                    layer: 'Helm release failure',
+                    component: badHelm.name,
+                    loginBlocking: !loginReady,
+                    reason: badHelm.message || 'One or more appliance HelmRelease objects are not Ready',
+                    nextAction: 'Inspect HelmRelease status and reconcile events.',
+                  };
+                }
+                const badBackground = (state.components || []).find((entry) => entry.tier === 'background' && !entry.ready && entry.status !== 'unknown');
+                if (badBackground) {
+                  return {
+                    layer: 'background workload readiness failure',
+                    component: badBackground.name,
+                    loginBlocking: false,
+                    reason: `${badBackground.name} is ${badBackground.status}`,
+                    nextAction: 'Review background workload pods. Login can continue if core is ready.',
+                  };
+                }
+                return { layer: 'none', reason: 'No blocker detected', nextAction: 'No immediate action required.' };
+              }
+
+              async function collectCanonical() {
+                const fallback = fallbackCanonical();
+                if (!serviceHost || !kubeToken) return fallback;
+
+                const [nodesJson, sourcesJson, kustomizationsJson, helmJson, selectionJson, valuesJson, jobsJson, eventsJson] = await Promise.all([
+                  kubeGet('/api/v1/nodes'),
+                  kubeGet('/apis/source.toolkit.fluxcd.io/v1/namespaces/flux-system/gitrepositories'),
+                  kubeGet('/apis/kustomize.toolkit.fluxcd.io/v1/namespaces/flux-system/kustomizations'),
+                  kubeGet('/apis/helm.toolkit.fluxcd.io/v2/namespaces/alga-system/helmreleases'),
+                  kubeGet('/api/v1/namespaces/alga-system/configmaps/appliance-release-selection'),
+                  kubeGet('/api/v1/namespaces/alga-system/configmaps/appliance-values-alga-core'),
+                  kubeGet('/apis/batch/v1/namespaces/msp/jobs'),
+                  kubeGet('/api/v1/events'),
+                ]);
+
+                const resources = await Promise.all(COMPONENTS.map(async (component) => {
+                  const path = component.kind === 'deployment'
+                    ? `/apis/apps/v1/namespaces/msp/deployments/${component.resource}`
+                    : `/apis/apps/v1/namespaces/msp/statefulsets/${component.resource}`;
+                  const item = await kubeGet(path);
+                  const readiness = resourceReadiness(component.kind, item);
+                  return {
+                    name: component.name,
+                    tier: component.tier,
+                    ready: readiness.status === 'healthy',
+                    status: readiness.status,
+                    message: item ? '' : 'Resource not found or unavailable',
+                    namespace: 'msp',
+                  };
+                }));
+
+                const sources = fluxItems(sourcesJson?.items);
+                const kustomizations = fluxItems(kustomizationsJson?.items);
+                const helmReleases = fluxItems(helmJson?.items);
+                const recentEvents = summarizeEvents(eventsJson);
+                const appUrl = parseAppUrl(valuesJson) || fallback.urls.loginUrl;
+                const loginProbe = await httpProbe(appUrl);
+                const nodesReady = (nodesJson?.items || []).length > 0 && (nodesJson?.items || []).every((node) => readyCondition(node)?.status === 'True');
+                const platformReady = nodesReady && sources.some((entry) => entry.name === 'alga-appliance' && entry.ready) && kustomizations.some((entry) => entry.name === 'alga-platform' && entry.ready);
+                const coreReady = ['db', 'redis', 'pgbouncer'].every((name) => resources.find((entry) => entry.name === name)?.ready === true);
+                const webReady = resources.find((entry) => entry.name === 'alga-core')?.ready === true;
+                const bootstrapJob = summarizeBootstrapJob(jobsJson);
+                const helmHealthy = helmReleases.length > 0 && helmReleases.every((entry) => entry.ready);
+                const bootstrapReady = coreReady && (bootstrapJob.completed || helmHealthy);
+                const loginReady = coreReady && webReady && loginProbe.reachable === true;
+                const backgroundReady = resources.filter((entry) => entry.tier === 'background').every((entry) => entry.ready);
+                const fullyHealthy = loginReady && backgroundReady;
+                const state = { components: resources, recentEvents, sources, kustomizations, helmReleases };
+                const topBlocker = makeBlocker(state, loginReady);
+                const blockers = topBlocker.layer === 'none' ? [] : [{
+                  severity: topBlocker.loginBlocking === false ? 'background' : 'critical',
+                  component: topBlocker.component || topBlocker.layer,
+                  layer: topBlocker.layer,
+                  reason: topBlocker.reason,
+                  nextAction: topBlocker.nextAction,
+                  loginBlocking: typeof topBlocker.loginBlocking === 'boolean' ? topBlocker.loginBlocking : !loginReady,
+                }];
+
+                let rollupState = 'installing';
+                let rollupMessage = 'Appliance installation is in progress.';
+                let nextAction = 'Wait for readiness checks to complete.';
+                if (!platformReady || !coreReady || !bootstrapReady || !loginReady) {
+                  const blocking = blockers.find((entry) => entry.loginBlocking !== false);
+                  if (blocking) {
+                    rollupState = 'failed_action_required';
+                    rollupMessage = 'A core platform blocker requires action before login is available.';
+                    nextAction = blocking.nextAction;
+                  }
+                } else if (fullyHealthy) {
+                  rollupState = 'fully_healthy';
+                  rollupMessage = 'All selected services are healthy.';
+                  nextAction = 'No immediate action required.';
+                } else if (loginReady) {
+                  rollupState = backgroundReady ? 'ready_to_log_in' : 'ready_with_background_issues';
+                  rollupMessage = backgroundReady ? 'Alga is ready to log in.' : 'Alga is ready to log in. Background services need attention.';
+                  nextAction = backgroundReady ? 'Open the login URL.' : (blockers[0]?.nextAction || 'Open the login URL and review background blockers.');
+                }
+
+                const releaseBranch = selectionJson?.data?.releaseBranch || null;
+                const sourceRevision = sources.find((entry) => entry.name === 'alga-appliance')?.revision || null;
+                const gitRevision = sourceRevision && releaseBranch ? `${releaseBranch}@${sourceRevision}` : releaseBranch || sourceRevision;
+                const result = {
+                  service: 'appliance-status',
+                  status: rollupState,
+                  siteId: selectionJson?.data?.siteId || 'appliance-single-node',
+                  timestamp: new Date().toISOString(),
+                  release: {
+                    selectedReleaseVersion: selectionJson?.data?.releaseVersion || null,
+                    appVersion: selectionJson?.data?.appVersion || null,
+                    channel: selectionJson?.data?.channel || null,
+                    gitRevision,
+                  },
+                  urls: { statusUrl: hostIp ? `http://${hostIp}:8080` : null, loginUrl: appUrl },
+                  loginUrl: appUrl,
+                  rollup: { state: rollupState, message: rollupMessage, nextAction },
+                  currentPhase: rollupState,
+                  nextAction,
+                  tiers: {
+                    platform: { ready: platformReady, status: statusFromBool(platformReady) },
+                    core: { ready: coreReady, status: statusFromBool(coreReady) },
+                    bootstrap: { ready: bootstrapReady, status: statusFromBool(bootstrapReady) },
+                    login: { ready: loginReady, status: statusFromBool(loginReady) },
+                    background: { ready: backgroundReady, status: statusFromBool(backgroundReady) },
+                    fullHealth: { ready: fullyHealthy, status: statusFromBool(fullyHealthy) },
+                  },
+                  topBlockers: blockers,
+                  components: resources,
+                  recentEvents,
+                  loginProbe,
+                };
+                return result;
               }
 
               function unauthorized(res) {
@@ -126,63 +475,88 @@ spec:
               function isAuthorized(req) {
                 if (!token) return false;
                 const auth = req.headers.authorization || '';
-                if (auth.startsWith('Bearer ')) {
-                  return auth.slice('Bearer '.length).trim() === token;
-                }
-
+                if (auth.startsWith('Bearer ')) return auth.slice('Bearer '.length).trim() === token;
                 const url = new URL(req.url, 'http://localhost');
                 return url.searchParams.get('token') === token;
               }
 
-              const server = http.createServer((req, res) => {
-                if (!isAuthorized(req)) {
-                  unauthorized(res);
-                  return;
-                }
+              function overviewFromStatus(status) {
+                return {
+                  installState: status.rollup.state,
+                  currentPhase: status.currentPhase,
+                  loginUrl: status.urls.loginUrl,
+                  nextAction: status.rollup.nextAction,
+                  message: status.rollup.message,
+                  timestamp: status.timestamp,
+                };
+              }
 
-                if (req.url.startsWith('/api/status')) {
-                  const overview = readOverview();
-                  res.writeHead(200, { 'Content-Type': 'application/json' });
-                  res.end(JSON.stringify({
-                    status: overview.installState,
-                    service: 'appliance-status',
-                    message: overview.message,
-                    currentPhase: overview.currentPhase,
-                    loginUrl: overview.loginUrl,
-                    nextAction: overview.nextAction,
-                    timestamp: overview.timestamp,
-                  }));
-                  return;
-                }
+              function diagnosticsFromStatus(status) {
+                return {
+                  overview: overviewFromStatus(status),
+                  tiers: status.tiers,
+                  components: status.components,
+                  topBlockers: status.topBlockers,
+                  recentEvents: status.recentEvents,
+                  flux: { note: 'Flux source, Kustomization, and Helm details are summarized into tiers and blockers.' },
+                  supportBundle: {
+                    available: true,
+                    action: 'run_script',
+                    script: 'ee/appliance/scripts/collect-support-bundle.sh',
+                    requiresToken: true,
+                    note: 'Bundle download endpoint is deferred; run via CLI/operator for now.',
+                  },
+                };
+              }
 
-                if (req.url.startsWith('/api/overview')) {
-                  res.writeHead(200, { 'Content-Type': 'application/json' });
-                  res.end(JSON.stringify(readOverview()));
-                  return;
-                }
-
-                if (req.url.startsWith('/api/diagnostics')) {
-                  res.writeHead(200, { 'Content-Type': 'application/json' });
-                  res.end(JSON.stringify(readDiagnostics()));
-                  return;
-                }
-
+              const server = http.createServer(async (req, res) => {
                 if (req.url.startsWith('/healthz')) {
                   res.writeHead(200, { 'Content-Type': 'text/plain' });
                   res.end('ok');
                   return;
                 }
 
-                if (req.url.startsWith('/diagnostics')) {
-                  const page = '<!doctype html><html><head><meta charset="utf-8" /><title>Appliance Diagnostics</title><style>body{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;margin:24px;line-height:1.45}.card{max-width:920px;border:1px solid #ddd;border-radius:8px;padding:16px}pre{background:#f8f8f8;border:1px solid #eee;padding:12px;overflow:auto}</style></head><body><div class=\"card\"><h1>Advanced Diagnostics</h1><p>Readiness tiers, components, blockers, events, and Flux/Helm state.</p><pre id=\"diag\">Loading...</pre></div><script>fetch(\"/api/diagnostics\"+window.location.search).then((r)=>{if(!r.ok)throw new Error(\"Unauthorized or unavailable\");return r.json();}).then((data)=>{document.getElementById(\"diag\").textContent=JSON.stringify(data,null,2);}).catch((err)=>{document.getElementById(\"diag\").textContent=err.message;});</script></body></html>';
-                  res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-                  res.end(page);
+                if (!isAuthorized(req)) {
+                  unauthorized(res);
                   return;
                 }
 
-                const page = '<!doctype html><html><head><meta charset="utf-8" /><title>Appliance Status</title><style>body{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;margin:24px;line-height:1.45}.card{max-width:760px;border:1px solid #ddd;border-radius:8px;padding:16px}h1{margin-top:0}.row{margin:8px 0}.label{font-weight:600}code{background:#f4f4f4;padding:2px 4px;border-radius:4px}</style></head><body><div class=\"card\"><h1>Appliance Status</h1><p id=\"summary\">Loading status...</p><div class=\"row\"><span class=\"label\">Install state:</span> <span id=\"install-state\">-</span></div><div class=\"row\"><span class=\"label\">Current phase:</span> <span id=\"phase\">-</span></div><div class=\"row\"><span class=\"label\">Login URL:</span> <span id=\"login-url\">-</span></div><div class=\"row\"><span class=\"label\">Next action:</span> <span id=\"next-action\">-</span></div><div class=\"row\"><small>API: <code>/api/status</code> and <code>/api/overview</code> (token required)</small></div></div><script>fetch(\"/api/overview\"+window.location.search).then((r)=>{if(!r.ok)throw new Error(\"Unauthorized or unavailable\");return r.json();}).then((data)=>{document.getElementById(\"summary\").textContent=data.message||\"Appliance status loaded.\";document.getElementById(\"install-state\").textContent=data.installState||\"-\";document.getElementById(\"phase\").textContent=data.currentPhase||\"-\";document.getElementById(\"login-url\").textContent=data.loginUrl||\"Not available yet\";document.getElementById(\"next-action\").textContent=data.nextAction||\"-\";}).catch((err)=>{document.getElementById(\"summary\").textContent=err.message;});</script></body></html>';
-                res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-                res.end(page);
+                try {
+                  if (req.url.startsWith('/api/status')) {
+                    const status = await collectCanonical();
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify(status));
+                    return;
+                  }
+
+                  if (req.url.startsWith('/api/overview')) {
+                    const status = await collectCanonical();
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify(overviewFromStatus(status)));
+                    return;
+                  }
+
+                  if (req.url.startsWith('/api/diagnostics')) {
+                    const status = await collectCanonical();
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify(diagnosticsFromStatus(status)));
+                    return;
+                  }
+
+                  if (req.url.startsWith('/diagnostics')) {
+                    const page = '<!doctype html><html><head><meta charset="utf-8" /><title>Appliance Diagnostics</title><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:24px;line-height:1.45}.card{max-width:920px;border:1px solid #ddd;border-radius:8px;padding:16px}pre{background:#f8f8f8;border:1px solid #eee;padding:12px;overflow:auto}</style></head><body><div class="card"><h1>Advanced Diagnostics</h1><p>Readiness tiers, components, blockers, and recent events.</p><pre id="diag">Loading...</pre></div><script>fetch("/api/diagnostics"+window.location.search).then((r)=>{if(!r.ok)throw new Error("Unauthorized or unavailable");return r.json();}).then((data)=>{document.getElementById("diag").textContent=JSON.stringify(data,null,2);}).catch((err)=>{document.getElementById("diag").textContent=err.message;});</script></body></html>';
+                    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+                    res.end(page);
+                    return;
+                  }
+
+                  const page = '<!doctype html><html><head><meta charset="utf-8" /><title>Appliance Status</title><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:24px;line-height:1.45}.card{max-width:760px;border:1px solid #ddd;border-radius:8px;padding:16px}h1{margin-top:0}.row{margin:8px 0}.label{font-weight:600}code{background:#f4f4f4;padding:2px 4px;border-radius:4px}</style></head><body><div class="card"><h1>Appliance Status</h1><p id="summary">Loading status...</p><div class="row"><span class="label">Install state:</span> <span id="install-state">-</span></div><div class="row"><span class="label">Current phase:</span> <span id="phase">-</span></div><div class="row"><span class="label">Login URL:</span> <span id="login-url">-</span></div><div class="row"><span class="label">Next action:</span> <span id="next-action">-</span></div><div class="row"><small>API: <code>/api/status</code>, <code>/api/overview</code>, and <code>/api/diagnostics</code> (token required)</small></div></div><script>fetch("/api/overview"+window.location.search).then((r)=>{if(!r.ok)throw new Error("Unauthorized or unavailable");return r.json();}).then((data)=>{document.getElementById("summary").textContent=data.message||"Appliance status loaded.";document.getElementById("install-state").textContent=data.installState||"-";document.getElementById("phase").textContent=data.currentPhase||"-";document.getElementById("login-url").textContent=data.loginUrl||"Not available yet";document.getElementById("next-action").textContent=data.nextAction||"-";}).catch((err)=>{document.getElementById("summary").textContent=err.message;});</script></body></html>';
+                  res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+                  res.end(page);
+                } catch (error) {
+                  res.writeHead(500, { 'Content-Type': 'application/json' });
+                  res.end(JSON.stringify({ error: 'status_collection_failed', message: error.message }));
+                }
               });
 
               server.listen(8080, '0.0.0.0');
@@ -198,6 +572,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.hostIP
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           ports:
             - name: http
               containerPort: 8080

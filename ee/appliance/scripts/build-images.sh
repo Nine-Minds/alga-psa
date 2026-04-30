@@ -268,8 +268,8 @@ if [ -z "${RELEASE_VERSION:-}" ] || [ -z "${TALOS_VERSION:-}" ] || [ -z "${KUBER
   exit 1
 fi
 
-if ! [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  echo "release-version must follow x.y.z" >&2
+if ! [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?(-[A-Za-z0-9._-]+)?$ ]]; then
+  echo "release-version must follow x.y, x.y.z, or include a prerelease suffix such as x.y-rc1 or x.y.z-rc1" >&2
   exit 1
 fi
 
