@@ -67,7 +67,7 @@
   {
     "id": "T008",
     "description": "Unit: image pull 'context canceled' is classified as a retryable/interrupted pull rather than a missing image tag.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]

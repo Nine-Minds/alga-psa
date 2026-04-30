@@ -343,3 +343,23 @@ Suggested implementation order:
 ### Validation (F014/T006/T007)
 
 - `node --test ee/appliance/operator/tests/status.test.mjs`
+
+- `F015`: Implemented interrupted image-pull detection separate from missing-tag detection.
+- `T008`: Added unit test for context-canceled image pull classification.
+
+### F015/T008 Implementation Details
+
+- Updated `ee/appliance/operator/lib/status.mjs`:
+  - Added `detectInterruptedImagePull(status)` scanning event messages for pull interruptions (`context canceled`, `cancelled`, `context deadline exceeded`).
+  - Prioritized interruption classification before missing-tag classification in `determineTopBlocker`.
+  - Emits blocker:
+    - layer: `Image pull interruption`
+    - loginBlocking: `false`
+    - retry-focused nextAction.
+- Added `T008` in `ee/appliance/operator/tests/status.test.mjs`:
+  - uses email-service event with `context canceled`
+  - asserts interruption blocker layer/component/retryable guidance.
+
+### Validation (F015/T008)
+
+- `node --test ee/appliance/operator/tests/status.test.mjs`

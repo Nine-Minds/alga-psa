@@ -208,6 +208,23 @@ function detectMissingImageTag(status) {
   };
 }
 
+function detectInterruptedImagePull(status) {
+  const events = status.recentEvents || [];
+  const match = events.find((entry) => {
+    const message = String(entry.message || '');
+    return /failed to pull image|imagepullbackoff|errimagepull/i.test(message) && /(context canceled|cancelled|context deadline exceeded)/i.test(message);
+  });
+  if (!match) {
+    return null;
+  }
+
+  const component = inferComponentFromObjectName(match.involvedObject || '');
+  return {
+    component,
+    message: match.message || 'Image pull interrupted',
+  };
+}
+
 function determineTopBlocker(status) {
   const dnsSignal = detectDnsFailure(status);
   if (dnsSignal) {
@@ -224,6 +241,17 @@ function determineTopBlocker(status) {
       layer: 'Core Postgres storage initialization',
       reason: `Postgres PVC/subPath initialization failed: ${postgresSubPathSignal}`,
       nextAction: 'Repair or recreate the Postgres PVC subPath (db-data) and restart the db pod.',
+    };
+  }
+
+  const interruptedPull = detectInterruptedImagePull(status);
+  if (interruptedPull) {
+    return {
+      layer: 'Image pull interruption',
+      component: interruptedPull.component || 'unknown',
+      loginBlocking: false,
+      reason: `Image pull interrupted and retryable: ${interruptedPull.message}`,
+      nextAction: 'Wait for automatic retry or restart the affected pod if retries stall.',
     };
   }
 

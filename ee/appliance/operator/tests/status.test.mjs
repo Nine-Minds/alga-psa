@@ -353,3 +353,34 @@ test('T007: alga-core missing image tag is classified as login-blocking blocker'
   assert.equal(status.topBlocker.loginBlocking, true);
   assert.match(status.topBlocker.reason, /alga-psa-ee:deadbeef/i);
 });
+
+test('T008: image pull context canceled is classified as retryable interruption', async () => {
+  const responses = healthyResponses();
+  responses['kubectl --kubeconfig /tmp/kubeconfig -n msp get deployment/email-service -o json'] = {
+    ok: true,
+    output: JSON.stringify({ spec: { replicas: 1 }, status: { readyReplicas: 0 } }),
+  };
+  responses['kubectl --kubeconfig /tmp/kubeconfig get events --sort-by=.metadata.creationTimestamp -A -o json'] = {
+    ok: true,
+    output: JSON.stringify({
+      items: [
+        {
+          metadata: { namespace: 'msp', creationTimestamp: '2026-04-30T00:00:00Z' },
+          reason: 'Failed',
+          type: 'Warning',
+          message: 'Failed to pull image "ghcr.io/nine-minds/email-service:61e4a00e": context canceled',
+          involvedObject: { kind: 'Pod', name: 'email-service-7cc4f7f9d8-abcde' },
+        },
+      ],
+    }),
+  };
+
+  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+    runner: new MockCaptureRunner(responses),
+  });
+
+  assert.equal(status.topBlocker.layer, 'Image pull interruption');
+  assert.equal(status.topBlocker.component, 'email-service');
+  assert.match(status.topBlocker.reason, /retryable/i);
+  assert.match(status.topBlocker.nextAction, /automatic retry/i);
+});

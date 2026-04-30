@@ -120,7 +120,7 @@
   {
     "id": "F015",
     "description": "Detect interrupted image pulls separately from missing image tags and report them as retryable image pull interruptions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Blocker Detection Requirements"
     ]
