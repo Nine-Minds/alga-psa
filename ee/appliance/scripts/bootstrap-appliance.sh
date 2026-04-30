@@ -1124,6 +1124,8 @@ install_gitops_sync() {
   if $DRY_RUN; then
     echo "+ flux --kubeconfig $KUBECONFIG_PATH create source git alga-appliance --url=$REPO_URL --branch=$REPO_BRANCH --interval=1m --export | kubectl apply -f -"
     echo "+ flux --kubeconfig $KUBECONFIG_PATH create kustomization alga-appliance --source=GitRepository/alga-appliance.flux-system --path=./$REPO_PATH --prune=true --wait=true --export | kubectl apply -f -"
+    echo "+ flux --kubeconfig $KUBECONFIG_PATH reconcile source git alga-appliance -n flux-system"
+    echo "+ kubectl --kubeconfig $KUBECONFIG_PATH -n flux-system annotate kustomization/alga-appliance reconcile.fluxcd.io/requestedAt=<timestamp> --overwrite"
     return 0
   fi
 
@@ -1144,6 +1146,12 @@ install_gitops_sync() {
     --export | kubectl --kubeconfig "$KUBECONFIG_PATH" apply -f -
 
   kubectl --kubeconfig "$KUBECONFIG_PATH" -n flux-system wait --for=condition=Ready --timeout=5m gitrepository/alga-appliance
+
+  flux --kubeconfig "$KUBECONFIG_PATH" reconcile source git alga-appliance -n flux-system
+  local requested_at
+  requested_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  kubectl --kubeconfig "$KUBECONFIG_PATH" -n flux-system annotate kustomization/alga-appliance \
+    reconcile.fluxcd.io/requestedAt="$requested_at" --overwrite >/dev/null
 }
 
 wait_for_alga_core_release() {
