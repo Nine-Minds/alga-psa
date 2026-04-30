@@ -104,7 +104,7 @@
   {
     "id": "F013",
     "description": "Detect Postgres PVC/subPath initialization failures and classify them as login-blocking core storage blockers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Blocker Detection Requirements"
     ]

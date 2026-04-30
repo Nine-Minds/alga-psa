@@ -41,7 +41,7 @@
   {
     "id": "T005",
     "description": "Unit: Postgres subPath creation failure is classified as a login-blocking core storage blocker, not a generic pod failure.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013",
       "F016"

@@ -300,3 +300,23 @@ Suggested implementation order:
 ### Validation (F012/T004)
 
 - `node --test ee/appliance/operator/tests/status.test.mjs`
+
+- `F013`: Implemented Postgres PVC/subPath blocker detection as a core login-blocking storage issue.
+- `T005`: Added unit test coverage for subPath failure classification.
+
+### F013/T005 Implementation Details
+
+- Updated `ee/appliance/operator/lib/status.mjs`:
+  - Added `detectPostgresSubPathFailure(status)` over recent Kubernetes event messages.
+  - Prioritized Postgres subPath detection in `determineTopBlocker` with:
+    - layer: `Core Postgres storage initialization`
+    - reason includes matched subPath signal
+    - nextAction guidance to repair/recreate Postgres PVC subPath and restart db pod.
+- Added `T005` case in `ee/appliance/operator/tests/status.test.mjs`:
+  - forces `db` not ready
+  - injects event `failed to create subPath directory for volumeMount "db-data"`
+  - asserts specialized core storage blocker is selected.
+
+### Validation (F013/T005)
+
+- `node --test ee/appliance/operator/tests/status.test.mjs`

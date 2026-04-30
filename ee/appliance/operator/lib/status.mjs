@@ -172,6 +172,11 @@ function detectDnsFailure(status) {
   return signals.find((value) => /\blookup\b/i.test(value) && /\b(connection refused|no such host|server misbehaving|i\/o timeout)\b/i.test(value));
 }
 
+function detectPostgresSubPathFailure(status) {
+  const messages = (status.recentEvents || []).map((entry) => String(entry.message || ''));
+  return messages.find((value) => /failed to create subpath directory/i.test(value) || /volumemount "db-data"/i.test(value));
+}
+
 function determineTopBlocker(status) {
   const dnsSignal = detectDnsFailure(status);
   if (dnsSignal) {
@@ -179,6 +184,15 @@ function determineTopBlocker(status) {
       layer: 'Platform DNS resolution',
       reason: `DNS resolver failure detected: ${dnsSignal}`,
       nextAction: 'Configure explicit DNS servers (for example 1.1.1.1,8.8.8.8) in bootstrap settings, then retry.',
+    };
+  }
+
+  const postgresSubPathSignal = detectPostgresSubPathFailure(status);
+  if (postgresSubPathSignal) {
+    return {
+      layer: 'Core Postgres storage initialization',
+      reason: `Postgres PVC/subPath initialization failed: ${postgresSubPathSignal}`,
+      nextAction: 'Repair or recreate the Postgres PVC subPath (db-data) and restart the db pod.',
     };
   }
 

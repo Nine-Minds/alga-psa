@@ -261,3 +261,33 @@ test('T004: DNS resolver failures are classified with explicit DNS remediation g
   assert.match(status.topBlocker.reason, /DNS resolver failure detected/i);
   assert.match(status.topBlocker.nextAction, /Configure explicit DNS servers/i);
 });
+
+test('T005: Postgres subPath failure is classified as a core storage blocker', async () => {
+  const responses = healthyResponses();
+  responses['kubectl --kubeconfig /tmp/kubeconfig -n msp get statefulset/db -o json'] = {
+    ok: true,
+    output: JSON.stringify({ spec: { replicas: 1 }, status: { readyReplicas: 0 } }),
+  };
+  responses['kubectl --kubeconfig /tmp/kubeconfig get events --sort-by=.metadata.creationTimestamp -A -o json'] = {
+    ok: true,
+    output: JSON.stringify({
+      items: [
+        {
+          metadata: { namespace: 'msp', creationTimestamp: '2026-04-30T00:00:00Z' },
+          reason: 'Failed',
+          type: 'Warning',
+          message: 'failed to create subPath directory for volumeMount "db-data"',
+          involvedObject: { kind: 'Pod', name: 'db-0' },
+        },
+      ],
+    }),
+  };
+
+  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+    runner: new MockCaptureRunner(responses),
+  });
+
+  assert.equal(status.topBlocker.layer, 'Core Postgres storage initialization');
+  assert.match(status.topBlocker.reason, /PVC\/subPath initialization failed/i);
+  assert.match(status.topBlocker.nextAction, /repair or recreate the Postgres PVC subPath/i);
+});
