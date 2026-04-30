@@ -28,6 +28,29 @@
   font-size: 17px;
 }
 
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+.tabs button {
+  cursor: pointer;
+  border: 1px solid rgb(var(--color-border-200));
+  border-radius: 999px;
+  background: rgb(var(--color-card));
+  color: rgb(var(--color-text-700));
+  padding: 8px 14px;
+  font-weight: 750;
+}
+
+.tabs .activeTab {
+  border-color: rgb(var(--color-primary-100));
+  background: rgb(var(--color-primary-50));
+  color: rgb(var(--color-primary-700));
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -187,6 +210,64 @@
 
 .event p {
   margin: 6px 0 0;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.toolbar h2 {
+  margin-bottom: 0;
+}
+
+.toolbar select {
+  border: 1px solid rgb(var(--color-border-200));
+  border-radius: 10px;
+  background: rgb(var(--color-card));
+  color: rgb(var(--color-text-900));
+  padding: 8px 10px;
+}
+
+.tableWrap {
+  overflow: auto;
+  border: 1px solid rgb(var(--color-border-200));
+  border-radius: 14px;
+}
+
+.tableWrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.tableWrap th,
+.tableWrap td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgb(var(--color-border-100));
+  text-align: left;
+  white-space: nowrap;
+}
+
+.tableWrap th {
+  background: rgb(var(--color-background));
+  color: rgb(var(--color-text-500));
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tableWrap tr {
+  cursor: pointer;
+}
+
+.tableWrap tr:hover,
+.selectedRow {
+  background: rgb(var(--color-primary-50));
 }
 
 @media (max-width: 850px) {

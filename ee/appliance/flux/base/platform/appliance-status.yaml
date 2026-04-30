@@ -98,6 +98,8 @@ spec:
                 { name: 'temporal-worker', kind: 'deployment', resource: 'temporal-worker', tier: 'background' },
               ];
 
+              const APPLIANCE_NAMESPACES = ['msp', 'alga-system', 'appliance-system', 'flux-system', 'local-path-storage', 'kube-system'];
+
               function readFile(path) {
                 try { return fs.readFileSync(path, 'utf8').trim(); } catch { return ''; }
               }
@@ -362,6 +364,94 @@ spec:
                   lastTimestamp: timestampOf(item) || null,
                   involvedObject: `${item.involvedObject?.kind || 'Unknown'}/${item.involvedObject?.name || 'unknown'}`,
                 }));
+              }
+
+              function podAgeSeconds(pod) {
+                const timestamp = pod.metadata?.creationTimestamp;
+                if (!timestamp) return null;
+                const parsed = Date.parse(timestamp);
+                if (!Number.isFinite(parsed)) return null;
+                return Math.max(0, Math.floor((Date.now() - parsed) / 1000));
+              }
+
+              function podDisplayStatus(pod) {
+                if (pod.metadata?.deletionTimestamp) return 'Terminating';
+                const statuses = [...(pod.status?.initContainerStatuses || []), ...(pod.status?.containerStatuses || [])];
+                const waiting = statuses.find((entry) => entry.state?.waiting);
+                if (waiting) return waiting.state.waiting.reason || 'Waiting';
+                const terminated = statuses.find((entry) => entry.state?.terminated && entry.state.terminated.exitCode !== 0);
+                if (terminated) return terminated.state.terminated.reason || 'Error';
+                return pod.status?.phase || 'Unknown';
+              }
+
+              function summarizePod(pod) {
+                const regularStatuses = pod.status?.containerStatuses || [];
+                const allStatuses = [...(pod.status?.initContainerStatuses || []), ...regularStatuses];
+                const containers = [...(pod.spec?.initContainers || []), ...(pod.spec?.containers || [])].map((container) => container.name);
+                const ready = regularStatuses.filter((entry) => entry.ready).length;
+                const total = pod.spec?.containers?.length || regularStatuses.length || 0;
+                const restarts = allStatuses.reduce((sum, entry) => sum + (entry.restartCount || 0), 0);
+                return {
+                  namespace: pod.metadata?.namespace || 'unknown',
+                  name: pod.metadata?.name || 'unknown',
+                  status: podDisplayStatus(pod),
+                  phase: pod.status?.phase || 'Unknown',
+                  ready,
+                  total,
+                  readyText: `${ready}/${total}`,
+                  restarts,
+                  ageSeconds: podAgeSeconds(pod),
+                  nodeName: pod.spec?.nodeName || null,
+                  podIP: pod.status?.podIP || null,
+                  containers,
+                  createdAt: pod.metadata?.creationTimestamp || null,
+                };
+              }
+
+              function podRank(pod) {
+                if (['Running', 'Succeeded'].includes(pod.status) && pod.ready === pod.total) return 2;
+                if (pod.status === 'Pending' || pod.status === 'ContainerCreating' || pod.status === 'PodInitializing') return 1;
+                return 0;
+              }
+
+              async function collectPods(scope = 'appliance') {
+                const json = scope && scope !== 'all' && scope !== 'appliance'
+                  ? await kubeGet(`/api/v1/namespaces/${encodeURIComponent(scope)}/pods`)
+                  : await kubeGet('/api/v1/pods');
+                let pods = (json?.items || []).map(summarizePod);
+                if (!scope || scope === 'appliance') {
+                  pods = pods.filter((pod) => APPLIANCE_NAMESPACES.includes(pod.namespace));
+                }
+                pods.sort((a, b) =>
+                  (podRank(a) - podRank(b)) ||
+                  a.namespace.localeCompare(b.namespace) ||
+                  a.name.localeCompare(b.name)
+                );
+                return {
+                  scope: scope || 'appliance',
+                  namespaces: ['appliance', 'all', ...APPLIANCE_NAMESPACES],
+                  pods,
+                  timestamp: new Date().toISOString(),
+                };
+              }
+
+              async function collectPodLogs(namespaceName, podName, containerName, tailLines = 300) {
+                if (!namespaceName || !podName) {
+                  return { namespace: namespaceName || null, pod: podName || null, container: containerName || null, lines: [], error: 'namespace and pod are required' };
+                }
+                const safeTail = Math.max(20, Math.min(Number.parseInt(String(tailLines || 300), 10) || 300, 2000));
+                const params = new URLSearchParams({ tailLines: String(safeTail), timestamps: 'true' });
+                if (containerName) params.set('container', containerName);
+                const text = await kubeGetText(`/api/v1/namespaces/${encodeURIComponent(namespaceName)}/pods/${encodeURIComponent(podName)}/log?${params.toString()}`);
+                return {
+                  namespace: namespaceName,
+                  pod: podName,
+                  container: containerName || null,
+                  tailLines: safeTail,
+                  lines: text ? String(text).split(/\r?\n/).filter(Boolean) : [],
+                  available: !!text,
+                  timestamp: new Date().toISOString(),
+                };
               }
 
               function parseAppUrl(configMap) {
@@ -734,6 +824,27 @@ spec:
                 }
 
                 try {
+                  if (req.url.startsWith('/api/pods/logs')) {
+                    const url = new URL(req.url, 'http://localhost');
+                    const logs = await collectPodLogs(
+                      url.searchParams.get('namespace'),
+                      url.searchParams.get('pod'),
+                      url.searchParams.get('container'),
+                      url.searchParams.get('tailLines') || 300,
+                    );
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify(logs));
+                    return;
+                  }
+
+                  if (req.url.startsWith('/api/pods')) {
+                    const url = new URL(req.url, 'http://localhost');
+                    const pods = await collectPods(url.searchParams.get('namespace') || 'appliance');
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify(pods));
+                    return;
+                  }
+
                   if (req.url.startsWith('/api/status')) {
                     const status = await collectCanonical();
                     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -794,6 +905,10 @@ spec:
                       h1 { margin: 0; font-size: clamp(28px, 4vw, 44px); letter-spacing: -0.04em; }
                       h2 { margin: 0 0 10px; font-size: 16px; }
                       .summary { color: rgb(var(--color-text-700)); font-size: 17px; max-width: 860px; }
+                      .tabs { display:flex; gap:8px; margin: 0 0 16px; flex-wrap: wrap; }
+                      .tab-button { border:1px solid rgb(var(--color-border-200)); background: rgb(var(--color-card)); color: rgb(var(--color-text-700)); border-radius: 999px; padding: 8px 14px; cursor:pointer; font-weight:700; }
+                      .tab-button.active { background: rgb(var(--color-primary-50)); color: rgb(var(--color-primary-700)); border-color: rgb(var(--color-primary-100)); }
+                      .tab-panel[hidden] { display:none; }
                       .grid { display: grid; gap: 14px; }
                       .grid.cols { grid-template-columns: repeat(12, minmax(0, 1fr)); }
                       .card { background: rgb(var(--color-card)); border: 1px solid rgb(var(--color-border-200)); border-radius: 16px; padding: 16px; box-shadow: 0 10px 30px rgba(15, 23, 42, .06); }
@@ -805,18 +920,27 @@ spec:
                       .label { color: rgb(var(--color-text-500)); }
                       .value { font-weight: 650; text-align: right; word-break: break-word; }
                       .badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 5px 10px; font-size: 12px; font-weight: 700; border: 1px solid rgb(var(--color-border-200)); background: rgb(var(--color-border-100)); }
-                      .badge.ready, .badge.fully_healthy, .badge.ready_to_log_in, .badge.ready_with_background_issues { color: rgb(var(--color-success)); background: rgba(22,163,74,.1); border-color: rgba(22,163,74,.25); }
-                      .badge.installing, .badge.progressing { color: rgb(var(--color-primary-700)); background: rgb(var(--color-primary-50)); border-color: rgb(var(--color-primary-100)); }
-                      .badge.failed_action_required, .badge.degraded, .badge.unhealthy { color: rgb(var(--color-error)); background: rgba(220,38,38,.08); border-color: rgba(220,38,38,.22); }
+                      .badge.ready, .badge.fully_healthy, .badge.ready_to_log_in, .badge.ready_with_background_issues, .badge.healthy, .badge.Running, .badge.Succeeded { color: rgb(var(--color-success)); background: rgba(22,163,74,.1); border-color: rgba(22,163,74,.25); }
+                      .badge.installing, .badge.progressing, .badge.ContainerCreating, .badge.PodInitializing, .badge.Pending { color: rgb(var(--color-primary-700)); background: rgb(var(--color-primary-50)); border-color: rgb(var(--color-primary-100)); }
+                      .badge.failed_action_required, .badge.degraded, .badge.unhealthy, .badge.Error, .badge.Failed, .badge.CrashLoopBackOff, .badge.ImagePullBackOff { color: rgb(var(--color-error)); background: rgba(220,38,38,.08); border-color: rgba(220,38,38,.22); }
                       .tiers { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
                       .tier { border: 1px solid rgb(var(--color-border-200)); border-radius: 12px; padding: 12px; background: linear-gradient(180deg, #fff, rgb(var(--color-background))); }
                       .tier-name { font-weight: 750; text-transform: capitalize; }
                       .op { border: 1px solid rgb(var(--color-primary-100)); background: rgb(var(--color-primary-50)); border-radius: 14px; padding: 14px; }
                       .blocker { border-left: 4px solid rgb(var(--color-error)); background: rgba(220,38,38,.06); border-radius: 12px; padding: 12px; margin-top: 8px; }
                       code { background: rgb(var(--color-border-100)); border: 1px solid rgb(var(--color-border-200)); border-radius: 6px; padding: 2px 5px; }
-                      pre { margin: 0; padding: 14px; border-radius: 12px; background: #0f172a; color: #dbeafe; overflow: auto; max-height: 360px; font-size: 12px; line-height: 1.5; }
+                      pre { margin: 0; padding: 14px; border-radius: 12px; background: #0f172a; color: #dbeafe; overflow: auto; max-height: 420px; font-size: 12px; line-height: 1.5; }
                       .events { display: grid; gap: 8px; }
                       .event { border: 1px solid rgb(var(--color-border-200)); border-radius: 10px; padding: 10px; }
+                      .toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
+                      select { border:1px solid rgb(var(--color-border-200)); border-radius:10px; padding:8px 10px; background:rgb(var(--color-card)); color:rgb(var(--color-text-900)); }
+                      .table-wrap { overflow:auto; border:1px solid rgb(var(--color-border-200)); border-radius:14px; }
+                      table { width:100%; border-collapse:collapse; font-size:13px; }
+                      th, td { padding:10px 12px; border-bottom:1px solid rgb(var(--color-border-100)); text-align:left; white-space:nowrap; }
+                      th { color:rgb(var(--color-text-500)); font-size:12px; text-transform:uppercase; letter-spacing:.04em; background:rgb(var(--color-background)); }
+                      tr { cursor:pointer; }
+                      tr:hover, tr.selected { background:rgb(var(--color-primary-50)); }
+                      .logs-header { display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
                       .footer { margin-top: 16px; font-size: 12px; color: rgb(var(--color-text-500)); }
                       @media (max-width: 850px) { .shell { padding: 16px; } .grid.cols { grid-template-columns: 1fr; } .span-8,.span-4,.span-6,.span-12 { grid-column: auto; } .row { display: block; } .value { display: block; text-align: left; margin-top: 3px; } }
                     </style>
@@ -828,42 +952,51 @@ spec:
                         <h1>Install status</h1>
                         <div id="summary" class="summary">Loading status...</div>
                       </section>
-                      <section class="grid cols">
-                        <div class="card span-8">
-                          <h2>Overview</h2>
-                          <div class="kv">
-                            <div class="row"><span class="label">Install state</span><span class="value"><span id="install-state" class="badge">-</span></span></div>
-                            <div class="row"><span class="label">Current phase</span><span id="phase" class="value">-</span></div>
-                            <div class="row"><span class="label">Login URL</span><span id="login-url" class="value">-</span></div>
-                            <div class="row"><span class="label">Next action</span><span id="next-action" class="value">-</span></div>
+                      <nav class="tabs" aria-label="Appliance status tabs">
+                        <button class="tab-button active" data-tab="overview">Overview</button>
+                        <button class="tab-button" data-tab="pods">Pods</button>
+                        <button class="tab-button" data-tab="diagnostics">Diagnostics</button>
+                      </nav>
+                      <section id="tab-overview" class="tab-panel">
+                        <div class="grid cols">
+                          <div class="card span-8">
+                            <h2>Overview</h2>
+                            <div class="kv">
+                              <div class="row"><span class="label">Install state</span><span class="value"><span id="install-state" class="badge">-</span></span></div>
+                              <div class="row"><span class="label">Current phase</span><span id="phase" class="value">-</span></div>
+                              <div class="row"><span class="label">Login URL</span><span id="login-url" class="value">-</span></div>
+                              <div class="row"><span class="label">Next action</span><span id="next-action" class="value">-</span></div>
+                            </div>
                           </div>
-                        </div>
-                        <div class="card span-4">
-                          <h2>Current operation</h2>
-                          <div id="operations" class="muted">Checking active work...</div>
-                        </div>
-                        <div class="card span-12">
-                          <h2>Readiness tiers</h2>
-                          <div id="tiers" class="tiers">-</div>
-                        </div>
-                        <div class="card span-6">
-                          <h2>Blockers</h2>
-                          <div id="blockers" class="muted">-</div>
-                        </div>
-                        <div class="card span-6">
-                          <h2>Bootstrap log</h2>
-                          <div id="bootstrap-log-status" class="muted">No bootstrap log loaded yet.</div>
-                          <pre id="bootstrap-log" hidden></pre>
-                        </div>
-                        <div class="card span-12">
-                          <h2>Recent events</h2>
-                          <div id="events" class="events muted">-</div>
+                          <div class="card span-4"><h2>Current operation</h2><div id="operations" class="muted">Checking active work...</div></div>
+                          <div class="card span-12"><h2>Readiness tiers</h2><div id="tiers" class="tiers">-</div></div>
+                          <div class="card span-6"><h2>Blockers</h2><div id="blockers" class="muted">-</div></div>
+                          <div class="card span-6"><h2>Bootstrap log</h2><div id="bootstrap-log-status" class="muted">No bootstrap log loaded yet.</div><pre id="bootstrap-log" hidden></pre></div>
+                          <div class="card span-12"><h2>Recent events</h2><div id="events" class="events muted">-</div></div>
                         </div>
                       </section>
-                      <div class="footer">API: <code>/api/status</code>, <code>/api/overview</code>, and <code>/api/diagnostics</code> require this token.</div>
+                      <section id="tab-pods" class="tab-panel" hidden>
+                        <div class="grid cols">
+                          <div class="card span-12">
+                            <div class="toolbar"><h2>Pods</h2><label class="muted">Namespace <select id="pod-namespace"><option value="appliance">Appliance namespaces</option><option value="all">All namespaces</option><option value="msp">msp</option><option value="alga-system">alga-system</option><option value="appliance-system">appliance-system</option><option value="flux-system">flux-system</option><option value="local-path-storage">local-path-storage</option><option value="kube-system">kube-system</option></select></label></div>
+                            <div id="pods-status" class="muted">Loading pods...</div>
+                            <div class="table-wrap"><table><thead><tr><th>Namespace</th><th>Pod</th><th>Status</th><th>Ready</th><th>Restarts</th><th>Age</th><th>Node</th></tr></thead><tbody id="pods-body"></tbody></table></div>
+                          </div>
+                          <div class="card span-12">
+                            <div class="logs-header"><h2 id="pod-log-title">Pod logs</h2><label class="muted">Container <select id="pod-container"></select></label></div>
+                            <div id="pod-log-status" class="muted">Select a pod to view logs.</div>
+                            <pre id="pod-log" hidden></pre>
+                          </div>
+                        </div>
+                      </section>
+                      <section id="tab-diagnostics" class="tab-panel" hidden>
+                        <div class="card"><h2>Diagnostics</h2><p class="muted">Raw readiness, blocker, component, operation, bootstrap, and event details.</p><pre id="diag">Loading diagnostics...</pre></div>
+                      </section>
+                      <div class="footer">API: <code>/api/status</code>, <code>/api/overview</code>, <code>/api/pods</code>, <code>/api/pods/logs</code>, and <code>/api/diagnostics</code> require this token.</div>
                     </main>
                     <script>
-                      function fmtSeconds(s){ if(s==null)return "unknown"; if(s<60)return s+"s"; return Math.floor(s/60)+"m "+(s%60)+"s"; }
+                      let selectedPod=null; let podRows=[]; let activeTab='overview';
+                      function fmtSeconds(s){ if(s==null)return 'unknown'; if(s<60)return s+'s'; return Math.floor(s/60)+'m '+(s%60)+'s'; }
                       function esc(value){ return String(value ?? '').replace(/[&<>"']/g, (ch)=>({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch])); }
                       function badgeClass(value){ return 'badge '+String(value || '').replace(/[^a-z0-9_-]/gi, '_'); }
                       function renderOps(ops){ const el=document.getElementById('operations'); if(!ops||!ops.length){el.textContent='No active image pull or long-running operation detected.';return;} el.innerHTML=ops.map((op)=>'<div class="op"><div><strong>'+esc(op.component||'component')+'</strong>: '+esc(op.message||op.operation)+'</div><div>Image: <code>'+esc(op.image||'unknown')+'</code></div><div>Estimated size: '+esc(op.estimatedSizeHuman||'unknown')+'</div><div>Elapsed: '+fmtSeconds(op.elapsedSeconds)+'</div><div class="muted">Pull progress: '+(op.progressAvailable?esc(op.progressPercent)+'%':'not available from Kubernetes')+'</div></div>').join(''); }
@@ -871,9 +1004,20 @@ spec:
                       function renderBlockers(blockers){ const el=document.getElementById('blockers'); if(!blockers||!blockers.length){el.textContent='No action-required blockers detected.';return;} el.innerHTML=blockers.map((b)=>'<div class="blocker"><strong>'+esc(b.component||b.layer)+'</strong><div>'+esc(b.reason)+'</div><div class="muted">'+esc(b.nextAction||'')+'</div>'+(b.loginBlocking===false?'<div class="muted">background / non-login-blocking</div>':'')+'</div>').join(''); }
                       function renderBootstrap(bootstrap){ const status=document.getElementById('bootstrap-log-status'); const pre=document.getElementById('bootstrap-log'); const logs=bootstrap?.logs; if(!logs?.available){ status.textContent=bootstrap?.job?.name ? 'No log excerpt available for '+bootstrap.job.name+'.' : 'No bootstrap job log available yet.'; pre.hidden=true; return; } status.innerHTML='<strong>'+esc(logs.pod)+'</strong> / '+esc(logs.container)+(logs.detectedErrors?.length?'<div class="blocker"><strong>Detected error</strong><div>'+esc(logs.detectedErrors.at(-1))+'</div></div>':''); pre.hidden=false; pre.textContent=(logs.tail||[]).join('\\n'); }
                       function renderEvents(events){ const el=document.getElementById('events'); const rows=(events||[]).slice(-8).reverse(); if(!rows.length){ el.textContent='No recent events.'; return; } el.innerHTML=rows.map((ev)=>'<div class="event"><strong>'+esc(ev.type)+' '+esc(ev.reason)+'</strong> <span class="muted">'+esc(ev.namespace)+' '+esc(ev.involvedObject||'')+'</span><div>'+esc(ev.message)+'</div></div>').join(''); }
-                      async function load(){ const r=await fetch('/api/status'+window.location.search); if(!r.ok) throw new Error('Unauthorized or unavailable'); const data=await r.json(); document.getElementById('summary').textContent=data.rollup?.message||'Appliance status loaded.'; const state=data.rollup?.state||data.status||'-'; const stateEl=document.getElementById('install-state'); stateEl.textContent=state; stateEl.className=badgeClass(state); document.getElementById('phase').textContent=data.currentPhase||state; document.getElementById('login-url').textContent=data.urls?.loginUrl||data.loginUrl||'Not available yet'; document.getElementById('next-action').textContent=data.rollup?.nextAction||data.nextAction||'-'; renderOps(data.activeOperations); renderTiers(data.tiers); renderBlockers(data.topBlockers); renderBootstrap(data.bootstrap); renderEvents(data.recentEvents); }
-                      load().catch((err)=>{document.getElementById('summary').textContent=err.message;});
-                      setInterval(()=>load().catch(()=>{}), 5000);
+                      async function loadStatus(){ const r=await fetch('/api/status'+window.location.search); if(!r.ok) throw new Error('Unauthorized or unavailable'); const data=await r.json(); document.getElementById('summary').textContent=data.rollup?.message||'Appliance status loaded.'; const state=data.rollup?.state||data.status||'-'; const stateEl=document.getElementById('install-state'); stateEl.textContent=state; stateEl.className=badgeClass(state); document.getElementById('phase').textContent=data.currentPhase||state; document.getElementById('login-url').textContent=data.urls?.loginUrl||data.loginUrl||'Not available yet'; document.getElementById('next-action').textContent=data.rollup?.nextAction||data.nextAction||'-'; renderOps(data.activeOperations); renderTiers(data.tiers); renderBlockers(data.topBlockers); renderBootstrap(data.bootstrap); renderEvents(data.recentEvents); document.getElementById('diag').textContent=JSON.stringify(data,null,2); }
+                      function fmtAge(s){ return fmtSeconds(s); }
+                      function renderPods(){ const body=document.getElementById('pods-body'); body.innerHTML=podRows.map((pod,idx)=>'<tr data-index="'+idx+'" class="'+(selectedPod&&selectedPod.namespace===pod.namespace&&selectedPod.name===pod.name?'selected':'')+'"><td>'+esc(pod.namespace)+'</td><td>'+esc(pod.name)+'</td><td><span class="'+badgeClass(pod.status)+'">'+esc(pod.status)+'</span></td><td>'+esc(pod.readyText)+'</td><td>'+esc(pod.restarts)+'</td><td>'+fmtAge(pod.ageSeconds)+'</td><td>'+esc(pod.nodeName||'-')+'</td></tr>').join(''); [...body.querySelectorAll('tr')].forEach((tr)=>tr.addEventListener('click',()=>selectPod(podRows[Number(tr.dataset.index)]))); document.getElementById('pods-status').textContent=podRows.length+' pods loaded.'; }
+                      async function loadPods(){ const ns=document.getElementById('pod-namespace').value || 'appliance'; const r=await fetch('/api/pods?namespace='+encodeURIComponent(ns)+'&'+window.location.search.slice(1)); if(!r.ok) throw new Error('Unable to load pods'); const data=await r.json(); podRows=data.pods||[]; if(selectedPod&&!podRows.some((p)=>p.namespace===selectedPod.namespace&&p.name===selectedPod.name)){ selectedPod=null; document.getElementById('pod-log-status').textContent='Select a pod to view logs.'; document.getElementById('pod-log').hidden=true; } renderPods(); }
+                      function selectPod(pod){ selectedPod=pod; const select=document.getElementById('pod-container'); select.innerHTML=(pod.containers||[]).map((name)=>'<option value="'+esc(name)+'">'+esc(name)+'</option>').join(''); document.getElementById('pod-log-title').textContent='Logs: '+pod.namespace+'/'+pod.name; renderPods(); loadPodLogs(); }
+                      async function loadPodLogs(){ if(!selectedPod) return; const container=document.getElementById('pod-container').value || (selectedPod.containers||[])[0] || ''; const params=new URLSearchParams({namespace:selectedPod.namespace,pod:selectedPod.name,container,tailLines:'300'}); const tokenParams=new URLSearchParams(window.location.search); for(const [k,v] of tokenParams.entries()) params.set(k,v); const r=await fetch('/api/pods/logs?'+params.toString()); if(!r.ok) throw new Error('Unable to load pod logs'); const data=await r.json(); document.getElementById('pod-log-status').textContent=(data.available?'Loaded':'No logs available')+' for '+selectedPod.namespace+'/'+selectedPod.name+(container?' / '+container:''); const pre=document.getElementById('pod-log'); pre.hidden=false; pre.textContent=(data.lines||[]).join('\n'); }
+                      function showTab(tab){ activeTab=tab; document.querySelectorAll('.tab-button').forEach((btn)=>btn.classList.toggle('active',btn.dataset.tab===tab)); document.querySelectorAll('.tab-panel').forEach((panel)=>panel.hidden=panel.id!=='tab-'+tab); if(tab==='pods') loadPods().catch((err)=>document.getElementById('pods-status').textContent=err.message); }
+                      document.querySelectorAll('.tab-button').forEach((btn)=>btn.addEventListener('click',()=>showTab(btn.dataset.tab)));
+                      document.getElementById('pod-namespace').addEventListener('change',()=>{ selectedPod=null; loadPods().catch((err)=>document.getElementById('pods-status').textContent=err.message); });
+                      document.getElementById('pod-container').addEventListener('change',()=>loadPodLogs().catch((err)=>document.getElementById('pod-log-status').textContent=err.message));
+                      loadStatus().catch((err)=>{document.getElementById('summary').textContent=err.message;});
+                      setInterval(()=>loadStatus().catch(()=>{}), 5000);
+                      setInterval(()=>{ if(activeTab==='pods') loadPods().catch(()=>{}); }, 5000);
+                      setInterval(()=>{ if(activeTab==='pods' && selectedPod) loadPodLogs().catch(()=>{}); }, 5000);
                     </script>
                   </body>
                   </html>`;
