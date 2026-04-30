@@ -84,6 +84,10 @@ function healthyResponses() {
       ok: true,
       output: JSON.stringify({ data: { 'alga-core.talos-single-node.yaml': 'appUrl: https://psa.example.com' } }),
     },
+    'kubectl --kubeconfig /tmp/kubeconfig -n msp get jobs.batch -o json': {
+      ok: true,
+      output: JSON.stringify({ items: [] }),
+    },
     'kubectl --kubeconfig /tmp/kubeconfig get events --sort-by=.metadata.creationTimestamp -A -o json': {
       ok: true,
       output: JSON.stringify({
@@ -419,6 +423,41 @@ test('T009: helm timeout with db subPath failure reports db storage blocker as t
   assert.equal(status.flux.helmStatus, 'unhealthy');
   assert.equal(status.topBlocker.layer, 'Core Postgres storage initialization');
   assert.match(status.topBlocker.reason, /subPath/i);
+});
+
+test('T010: bootstrap job completion plus seeded users query sets BOOTSTRAP_READY true', async () => {
+  const responses = healthyResponses();
+  responses['kubectl --kubeconfig /tmp/kubeconfig -n alga-system get helmreleases.helm.toolkit.fluxcd.io -o json'] = {
+    ok: true,
+    output: JSON.stringify({
+      items: [{ metadata: { name: 'alga-core' }, status: { conditions: readyCondition('False', 'still reconciling') } }],
+    }),
+  };
+  responses['kubectl --kubeconfig /tmp/kubeconfig -n msp get jobs.batch -o json'] = {
+    ok: true,
+    output: JSON.stringify({
+      items: [
+        {
+          metadata: { name: 'alga-core-bootstrap' },
+          status: { conditions: [{ type: 'Complete', status: 'True' }], succeeded: 1 },
+        },
+      ],
+    }),
+  };
+  responses[
+    "kubectl --kubeconfig /tmp/kubeconfig -n msp exec db-0 -- sh -c PGPASSWORD=$POSTGRES_PASSWORD psql -U postgres -d server -tAc 'select count(*) from users;'"
+  ] = {
+    ok: true,
+    output: '7\n',
+  };
+
+  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+    runner: new MockCaptureRunner(responses),
+  });
+
+  assert.equal(status.bootstrap.job.completed, true);
+  assert.equal(status.bootstrap.seed.usersCount, 7);
+  assert.equal(status.canonical.tiers.bootstrap.ready, true);
 });
 
 test('T011: Temporal schema compatibility errors are classified with autosetup guidance', async () => {

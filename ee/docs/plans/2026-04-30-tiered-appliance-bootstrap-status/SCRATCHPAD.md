@@ -399,3 +399,27 @@ Suggested implementation order:
 ### Validation (F018/F019/T011/T012)
 
 - `node --test ee/appliance/operator/tests/status.test.mjs`
+
+- `F017`: Implemented bootstrap job state detection and seed-user query signal feeding BOOTSTRAP_READY.
+- `T010`: Added unit coverage for completed bootstrap job + seeded users -> bootstrap ready.
+
+### F017/T010 Implementation Details
+
+- Updated `ee/appliance/operator/lib/status.mjs`:
+  - Added `summarizeBootstrapJob()` with states: `waiting`, `running`, `failed`, `completed`.
+  - Added `status.bootstrap` model:
+    - `job` (state/completed/failed/name)
+    - `seed.usersCount` (nullable)
+  - Collects `jobs.batch` in `msp` and detects bootstrap job state.
+  - When bootstrap job is completed, runs seed probe query:
+    - `kubectl -n msp exec db-0 -- sh -c "... select count(*) from users;"`
+  - BOOTSTRAP_READY now uses:
+    - core ready AND
+    - either (bootstrap job completed + users count > 0) OR fallback to previous helm-health path when job completion is not yet observed.
+- Added `T010` in `ee/appliance/operator/tests/status.test.mjs`:
+  - mocks completed bootstrap job, seeded users count `7`, and unhealthy helm release,
+  - asserts `status.canonical.tiers.bootstrap.ready === true`.
+
+### Validation (F017/T010)
+
+- `node --test ee/appliance/operator/tests/status.test.mjs`

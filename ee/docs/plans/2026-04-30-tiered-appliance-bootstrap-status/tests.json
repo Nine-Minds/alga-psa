@@ -83,7 +83,7 @@
   {
     "id": "T010",
     "description": "Unit: bootstrap job completion plus database seed query maps to BOOTSTRAP_READY=true.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017",
       "F026"

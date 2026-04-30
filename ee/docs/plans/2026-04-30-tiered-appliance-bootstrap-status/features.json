@@ -136,7 +136,7 @@
   {
     "id": "F017",
     "description": "Detect bootstrap job states including waiting, running, failed, and completed, and summarize migration/seed success for BOOTSTRAP_READY.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Readiness Model",
       "Blocker Detection Requirements"

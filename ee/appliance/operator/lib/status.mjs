@@ -389,7 +389,12 @@ function toCanonicalStatus(status) {
     status.cluster.apiReachable &&
     status.cluster.status === 'healthy' &&
     status.flux.status === 'healthy';
-  const bootstrapReady = status.flux.helmStatus === 'healthy' && coreReady;
+  const seedUsersCount = status.bootstrap?.seed?.usersCount;
+  const hasVerifiedSeedUsers = Number.isFinite(seedUsersCount) && seedUsersCount > 0;
+  const bootstrapReady =
+    coreReady &&
+    ((status.bootstrap?.job?.completed === true && hasVerifiedSeedUsers) ||
+      (status.bootstrap?.job?.completed !== true && status.flux.helmStatus === 'healthy'));
   const fullyHealthy = loginReady && backgroundReady;
 
   const blockers =
@@ -484,6 +489,35 @@ function summarizeEvents(eventsJson) {
       lastTimestamp: item.lastTimestamp || item.eventTime || item.metadata?.creationTimestamp || null,
       involvedObject: `${item.involvedObject?.kind || 'Unknown'}/${item.involvedObject?.name || 'unknown'}`,
     }));
+}
+
+function summarizeBootstrapJob(jobsJson) {
+  const items = jobsJson?.items || [];
+  const job =
+    items.find((entry) => /bootstrap/i.test(entry.metadata?.name || '') && /alga-core/i.test(entry.metadata?.name || '')) ||
+    items.find((entry) => /bootstrap/i.test(entry.metadata?.name || '')) ||
+    null;
+
+  if (!job) {
+    return { state: 'waiting', completed: false, failed: false, name: null };
+  }
+
+  const conditions = job.status?.conditions || [];
+  const complete = conditions.some((entry) => entry.type === 'Complete' && entry.status === 'True');
+  const failed = conditions.some((entry) => entry.type === 'Failed' && entry.status === 'True');
+  const active = (job.status?.active || 0) > 0;
+  const succeeded = (job.status?.succeeded || 0) > 0;
+
+  if (failed) {
+    return { state: 'failed', completed: false, failed: true, name: job.metadata?.name || null };
+  }
+  if (complete || succeeded) {
+    return { state: 'completed', completed: true, failed: false, name: job.metadata?.name || null };
+  }
+  if (active) {
+    return { state: 'running', completed: false, failed: false, name: job.metadata?.name || null };
+  }
+  return { state: 'waiting', completed: false, failed: false, name: job.metadata?.name || null };
 }
 
 export async function collectStatus(env, options = {}) {
@@ -596,6 +630,11 @@ export async function collectStatus(env, options = {}) {
     },
   };
 
+  const bootstrap = {
+    job: { state: 'waiting', completed: false, failed: false, name: null },
+    seed: { usersCount: null },
+  };
+
   if (cluster.apiReachable) {
     const selection = await kubeJson(shell, kubeconfig, 'alga-system', 'configmap/appliance-release-selection');
     release.selectedReleaseVersion = selection.json?.data?.releaseVersion || null;
@@ -618,6 +657,30 @@ export async function collectStatus(env, options = {}) {
             release.actualImages.setupImage &&
             release.desiredImages.setupImage !== release.actualImages.setupImage)),
     };
+
+    const jobs = await kubeJson(shell, kubeconfig, 'msp', 'jobs.batch');
+    bootstrap.job = summarizeBootstrapJob(jobs.json);
+
+    if (bootstrap.job.completed) {
+      const usersResult = await shell.runCapture('kubectl', [
+        '--kubeconfig',
+        kubeconfig,
+        '-n',
+        'msp',
+        'exec',
+        'db-0',
+        '--',
+        'sh',
+        '-c',
+        "PGPASSWORD=$POSTGRES_PASSWORD psql -U postgres -d server -tAc 'select count(*) from users;'",
+      ]);
+      if (usersResult.ok) {
+        const parsed = Number.parseInt(String(usersResult.output || '').trim(), 10);
+        if (Number.isFinite(parsed)) {
+          bootstrap.seed.usersCount = parsed;
+        }
+      }
+    }
   }
 
   if (release.selectedReleaseVersion) {
@@ -657,6 +720,7 @@ export async function collectStatus(env, options = {}) {
     flux,
     workloads,
     release,
+    bootstrap,
     recentEvents,
   };
 
